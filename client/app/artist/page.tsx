@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, DollarSign, Star, MapPin, Instagram, Youtube, Edit, Camera, Play } from "lucide-react"
 import Image from "next/image"
+import Navbar from "../Navbar"
+import Footer from "../Footer"
 
 export default function ArtistDashboard() {
   const [isEditing, setIsEditing] = useState(false)
@@ -79,6 +81,7 @@ export default function ArtistDashboard() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+        <Navbar/>
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Artist Dashboard</h1>
           <div className="flex items-center space-x-4">
@@ -366,6 +369,7 @@ export default function ArtistDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+      <Footer/>
     </div>
   )
 }

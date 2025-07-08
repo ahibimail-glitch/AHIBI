@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, MapPin, Users, Filter, Search, Heart } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import Navbar from "../Navbar"
+import Footer from "../Footer"
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -142,13 +144,14 @@ export default function EventsPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+      <Navbar/>
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+          {/* <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Discover Events</h1>
             <Button variant="outline" asChild>
               <Link href="/">← Back to Home</Link>
             </Button>
-          </div>
+          </div> */}
 
           {/* Search and Filters */}
           <div className="flex flex-col md:flex-row gap-4">
@@ -373,6 +376,7 @@ export default function EventsPage() {
           )}
         </section>
       </div>
+      <Footer/>
     </div>
   )
 }

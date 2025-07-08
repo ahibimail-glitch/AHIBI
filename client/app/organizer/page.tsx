@@ -23,6 +23,8 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import Footer from "../Footer"
+import Navbar from "../Navbar"
 
 export default function OrganizerDashboard() {
   const [activeTab, setActiveTab] = useState("events")
@@ -115,6 +117,7 @@ export default function OrganizerDashboard() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+          <Navbar/>
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Organizer Dashboard</h1>
           <div className="flex items-center space-x-4">
@@ -428,6 +431,7 @@ export default function OrganizerDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+      <Footer/>
     </div>
   )
 }

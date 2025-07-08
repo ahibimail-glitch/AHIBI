@@ -15,9 +15,12 @@ import {
   Users,
   Ticket,
   ArrowRight,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import Navbar from "./Navbar";
+import Footer from "./Footer";
 
 export default function HomePage() {
   const featuredEvents = [
@@ -89,47 +92,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="w-full py-4 flex justify-center bg-transparent sticky top-0 z-50">
-        <nav className="flex items-center justify-between px-6 py-2 rounded-full bg-[#0F172A] w-full max-w-6xl shadow-md">
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <img
-              src="/images/Logo.png"
-              alt="Ahibi logo"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
-
-          {/* Navigation Links */}
-          <div className="hidden md:flex space-x-6 text-gray-300 font-medium">
-            <Link href="/events" className="hover:text-white transition">
-              Events
-            </Link>
-            <Link href="/organizer" className="hover:text-white transition">
-              Organize
-            </Link>
-            <Link href="/artist" className="hover:text-white transition">
-              Artists
-            </Link>
-            <Link href="/venue" className="hover:text-white transition">
-              Venues
-            </Link>
-            <Link href="/about" className="hover:text-white transition">
-              About
-            </Link>
-            <Link href="/blog" className="hover:text-white transition">
-              Blog
-            </Link>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex space-x-3">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium">
-              Login
-            </button>
-          </div>
-        </nav>
-      </header>
+      <Navbar/>
 
       {/* Hero Section */}
       <section className="py-12 md:py-20 ">
@@ -280,85 +243,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-muted py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Ticket className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold">Ahibi</span>
-              </div>
-              <p className="text-muted-foreground">
-                Next-generation event management ecosystem for seamless event
-                experiences.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">For Users</h3>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>
-                  <Link href="/events" className="hover:text-foreground">
-                    Browse Events
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/tickets" className="hover:text-foreground">
-                    My Tickets
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/support" className="hover:text-foreground">
-                    Support
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">For Partners</h3>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>
-                  <Link href="/organizer" className="hover:text-foreground">
-                    Organizers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/artist" className="hover:text-foreground">
-                    Artists
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/venue" className="hover:text-foreground">
-                    Venues
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>
-                  <Link href="/about" className="hover:text-foreground">
-                    About
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-foreground">
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="hover:text-foreground">
-                    Privacy
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
-            <p>&copy; 2024 Ahibi. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 }
