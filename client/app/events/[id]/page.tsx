@@ -60,15 +60,15 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     },
     location: "Mumbai, India",
     images: [
-      "/placeholder.svg?height=400&width=600",
-      "/placeholder.svg?height=400&width=600",
-      "/placeholder.svg?height=400&width=600",
-      "/placeholder.svg?height=400&width=600",
+      "/images/carausel1.jpg?height=400&width=600",
+      "/images/carausel1.jpg?height=400&width=600",
+      "/images/carausel1.jpg?height=400&width=600",
+      "/images/carausel1.jpg?height=400&width=600",
     ],
     tags: ["Music", "Festival", "Outdoor", "Multi-day"],
     organizer: {
       name: "MusicEvents Pro",
-      avatar: "/placeholder.svg?height=50&width=50",
+      avatar: "/images/carausel1.jpg?height=50&width=50",
       rating: 4.8,
       eventsOrganized: 25,
       contact: {
@@ -80,19 +80,19 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
       {
         name: "DJ Rhythm",
         genre: "Electronic",
-        image: "/placeholder.svg?height=100&width=100",
+        image: "/images/carausel1.jpg?height=100&width=100",
         rating: 4.8,
       },
       {
         name: "The Rock Band",
         genre: "Rock",
-        image: "/placeholder.svg?height=100&width=100",
+        image: "/images/carausel1.jpg?height=100&width=100",
         rating: 4.6,
       },
       {
         name: "Indie Collective",
         genre: "Indie",
-        image: "/placeholder.svg?height=100&width=100",
+        image: "/images/carausel1.jpg?height=100&width=100",
         rating: 4.7,
       },
     ],
@@ -148,21 +148,21 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
       title: "Jazz Night Under Stars",
       date: "July 22, 2024",
       price: "₹800",
-      image: "/placeholder.svg?height=150&width=200",
+      image: "/images/carausel1.jpg?height=150&width=200",
     },
     {
       id: 3,
       title: "Electronic Music Showcase",
       date: "August 5, 2024",
       price: "₹1,200",
-      image: "/placeholder.svg?height=150&width=200",
+      image: "/images/carausel1.jpg?height=150&width=200",
     },
     {
       id: 4,
       title: "Indie Rock Festival",
       date: "August 12, 2024",
       price: "₹1,800",
-      image: "/placeholder.svg?height=150&width=200",
+      image: "/images/carausel1.jpg?height=150&width=200",
     },
   ]
 
@@ -194,7 +194,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             {/* Hero Image */}
             <div className="relative">
               <Image
-                src={event.images[0] || "/placeholder.svg"}
+                src={event.images[0] || "/images/carausel1.jpg"}
                 alt={event.title}
                 width={600}
                 height={400}
@@ -279,7 +279,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                   {event.artists.map((artist, index) => (
                     <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg">
                       <Image
-                        src={artist.image || "/placeholder.svg"}
+                        src={artist.image || "/images/carausel1.jpg"}
                         alt={artist.name}
                         width={100}
                         height={100}
@@ -353,7 +353,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
               <CardContent>
                 <div className="flex items-center space-x-4">
                   <Avatar className="w-16 h-16">
-                    <AvatarImage src={event.organizer.avatar || "/placeholder.svg"} />
+                    <AvatarImage src={event.organizer.avatar || "/images/carausel1.jpg"} />
                     <AvatarFallback>ME</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -515,7 +515,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             {relatedEvents.map((relatedEvent) => (
               <Card key={relatedEvent.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <Image
-                  src={relatedEvent.image || "/placeholder.svg"}
+                  src={relatedEvent.image || "/images/carausel1.jpg"}
                   alt={relatedEvent.title}
                   width={200}
                   height={150}

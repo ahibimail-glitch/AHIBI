@@ -26,8 +26,8 @@ export default function ArtistDashboard() {
     location: "Mumbai, India",
     rating: 4.8,
     totalBookings: 156,
-    avatar: "/placeholder.svg?height=100&width=100",
-    coverImage: "/placeholder.svg?height=300&width=800",
+    avatar: "/images/carausel1.jpg?height=100&width=100",
+    coverImage: "/images/carausel1.jpg?height=300&width=800",
   }
 
   const bookingRequests = [
@@ -71,10 +71,10 @@ export default function ArtistDashboard() {
   ]
 
   const gallery = [
-    { type: "image", src: "/placeholder.svg?height=200&width=300", title: "Live Performance 1" },
-    { type: "image", src: "/placeholder.svg?height=200&width=300", title: "Studio Session" },
-    { type: "video", src: "/placeholder.svg?height=200&width=300", title: "Performance Video" },
-    { type: "image", src: "/placeholder.svg?height=200&width=300", title: "Event Setup" },
+    { type: "image", src: "/images/carausel1.jpg?height=200&width=300", title: "Live Performance 1" },
+    { type: "image", src: "/images/carausel1.jpg?height=200&width=300", title: "Studio Session" },
+    { type: "video", src: "/images/carausel1.jpg?height=200&width=300", title: "Performance Video" },
+    { type: "image", src: "/images/carausel1.jpg?height=200&width=300", title: "Event Setup" },
   ]
 
   return (
@@ -98,7 +98,7 @@ export default function ArtistDashboard() {
         <Card className="mb-6">
           <div className="relative">
             <Image
-              src={artistData.coverImage || "/placeholder.svg"}
+              src={artistData.coverImage || "/images/carausel1.jpg"}
               alt="Cover"
               width={800}
               height={300}
@@ -113,7 +113,7 @@ export default function ArtistDashboard() {
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={artistData.avatar || "/placeholder.svg"} />
+                  <AvatarImage src={artistData.avatar || "/images/carausel1.jpg"} />
                   <AvatarFallback>DJ</AvatarFallback>
                 </Avatar>
                 <Button size="sm" variant="secondary" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0">
@@ -263,7 +263,7 @@ export default function ArtistDashboard() {
                   {gallery.map((item, index) => (
                     <div key={index} className="relative group">
                       <Image
-                        src={item.src || "/placeholder.svg"}
+                        src={item.src || "/images/carausel1.jpg"}
                         alt={item.title}
                         width={300}
                         height={200}

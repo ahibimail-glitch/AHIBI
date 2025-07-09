@@ -43,7 +43,7 @@ export default function ProfilePage() {
     dateOfBirth: "1990-05-15",
     gender: "male",
     interests: ["Music", "Technology", "Food", "Art"],
-    avatar: "/placeholder.svg?height=100&width=100",
+    avatar: "/images/carausel1.jpg?height=100&width=100",
   })
 
   const [preferences, setPreferences] = useState({
@@ -69,7 +69,7 @@ export default function ProfilePage() {
       date: "July 15, 2024",
       status: "confirmed",
       amount: "₹1,500",
-      image: "/placeholder.svg?height=60&width=80",
+      image: "/images/carausel1.jpg?height=60&width=80",
     },
     {
       id: 2,
@@ -77,7 +77,7 @@ export default function ProfilePage() {
       date: "August 20, 2024",
       status: "upcoming",
       amount: "₹2,500",
-      image: "/placeholder.svg?height=60&width=80",
+      image: "/images/carausel1.jpg?height=60&width=80",
     },
     {
       id: 3,
@@ -85,7 +85,7 @@ export default function ProfilePage() {
       date: "June 10, 2024",
       status: "completed",
       amount: "₹800",
-      image: "/placeholder.svg?height=60&width=80",
+      image: "/images/carausel1.jpg?height=60&width=80",
     },
   ]
 
@@ -95,21 +95,21 @@ export default function ProfilePage() {
       title: "Jazz Night Under Stars",
       date: "July 22, 2024",
       price: "₹800",
-      image: "/placeholder.svg?height=100&width=150",
+      image: "/images/carausel1.jpg?height=100&width=150",
     },
     {
       id: 2,
       title: "Food & Wine Festival",
       date: "August 5, 2024",
       price: "₹1,200",
-      image: "/placeholder.svg?height=100&width=150",
+      image: "/images/carausel1.jpg?height=100&width=150",
     },
     {
       id: 3,
       title: "Art Exhibition Opening",
       date: "August 10, 2024",
       price: "₹500",
-      image: "/placeholder.svg?height=100&width=150",
+      image: "/images/carausel1.jpg?height=100&width=150",
     },
   ]
 
@@ -168,7 +168,7 @@ export default function ProfilePage() {
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={profileData.avatar || "/placeholder.svg"} />
+                  <AvatarImage src={profileData.avatar || "/images/carausel1.jpg"} />
                   <AvatarFallback>
                     {profileData.name
                       .split(" ")
@@ -268,7 +268,7 @@ export default function ProfilePage() {
                   {recentBookings.map((booking) => (
                     <div key={booking.id} className="flex items-center space-x-4 p-3 border rounded-lg">
                       <Image
-                        src={booking.image || "/placeholder.svg"}
+                        src={booking.image || "/images/carausel1.jpg"}
                         alt={booking.event}
                         width={80}
                         height={60}
@@ -311,7 +311,7 @@ export default function ProfilePage() {
                   {savedEvents.slice(0, 3).map((event) => (
                     <div key={event.id} className="flex items-center space-x-4 p-3 border rounded-lg">
                       <Image
-                        src={event.image || "/placeholder.svg"}
+                        src={event.image || "/images/carausel1.jpg"}
                         alt={event.title}
                         width={150}
                         height={100}
@@ -349,7 +349,7 @@ export default function ProfilePage() {
                     <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <Image
-                          src={booking.image || "/placeholder.svg"}
+                          src={booking.image || "/images/carausel1.jpg"}
                           alt={booking.event}
                           width={80}
                           height={60}
@@ -398,7 +398,7 @@ export default function ProfilePage() {
                   {savedEvents.map((event) => (
                     <div key={event.id} className="border rounded-lg overflow-hidden">
                       <Image
-                        src={event.image || "/placeholder.svg"}
+                        src={event.image || "/images/carausel1.jpg"}
                         alt={event.title}
                         width={150}
                         height={100}

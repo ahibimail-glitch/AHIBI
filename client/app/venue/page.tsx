@@ -34,9 +34,9 @@ export default function VenueDashboard() {
     rating: 4.6,
     totalBookings: 89,
     images: [
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
-      "/placeholder.svg?height=300&width=400",
+      "/images/carausel1.jpg?height=300&width=400",
+      "/images/carausel1.jpg?height=300&width=400",
+      "/images/carausel1.jpg?height=300&width=400",
     ],
   }
 
@@ -152,7 +152,7 @@ export default function VenueDashboard() {
                   {venueData.images.map((image, index) => (
                     <Image
                       key={index}
-                      src={image || "/placeholder.svg"}
+                      src={image || "/images/carausel1.jpg"}
                       alt={`Venue ${index + 1}`}
                       width={400}
                       height={300}

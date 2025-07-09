@@ -29,7 +29,7 @@ export default function EventsPage() {
       location: "Mumbai, India",
       price: "₹1,500",
       originalPrice: "₹2,000",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
       tags: ["Music", "Festival", "Outdoor"],
       organizer: "MusicEvents Pro",
       attendees: 450,
@@ -46,7 +46,7 @@ export default function EventsPage() {
       location: "Delhi, India",
       price: "₹800",
       originalPrice: "₹1,000",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
       tags: ["Comedy", "Indoor", "Entertainment"],
       organizer: "Laugh Factory",
       attendees: 85,
@@ -63,7 +63,7 @@ export default function EventsPage() {
       location: "Bangalore, India",
       price: "₹2,500",
       originalPrice: "₹3,000",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
       tags: ["Technology", "Conference", "Networking"],
       organizer: "TechCorp Events",
       attendees: 200,
@@ -80,7 +80,7 @@ export default function EventsPage() {
       location: "Pune, India",
       price: "₹1,200",
       originalPrice: "₹1,500",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
       tags: ["Food", "Wine", "Festival"],
       organizer: "Gourmet Events",
       attendees: 120,
@@ -97,7 +97,7 @@ export default function EventsPage() {
       location: "Chennai, India",
       price: "₹500",
       originalPrice: "₹700",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
       tags: ["Art", "Exhibition", "Culture"],
       organizer: "Art Collective",
       attendees: 45,
@@ -114,7 +114,7 @@ export default function EventsPage() {
       location: "Hyderabad, India",
       price: "₹1,000",
       originalPrice: "₹1,200",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
       tags: ["Dance", "Workshop", "Learning"],
       organizer: "Dance Academy",
       attendees: 30,
@@ -220,7 +220,7 @@ export default function EventsPage() {
                 <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
                   <div className="relative">
                     <Image
-                      src={event.image || "/placeholder.svg"}
+                      src={event.image || "/images/carausel1.jpg"}
                       alt={event.title}
                       width={300}
                       height={200}
@@ -298,7 +298,7 @@ export default function EventsPage() {
                 <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
                   <div className="relative">
                     <Image
-                      src={event.image || "/placeholder.svg"}
+                      src={event.image || "/images/carausel1.jpg"}
                       alt={event.title}
                       width={300}
                       height={200}

@@ -39,7 +39,7 @@ export default function OrganizerDashboard() {
       ticketsSold: 450,
       totalTickets: 500,
       revenue: "₹6,75,000",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
     },
     {
       id: 2,
@@ -50,7 +50,7 @@ export default function OrganizerDashboard() {
       ticketsSold: 120,
       totalTickets: 300,
       revenue: "₹3,00,000",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
     },
     {
       id: 3,
@@ -61,7 +61,7 @@ export default function OrganizerDashboard() {
       ticketsSold: 0,
       totalTickets: 150,
       revenue: "₹0",
-      image: "/placeholder.svg?height=200&width=300",
+      image: "/images/carausel1.jpg?height=200&width=300",
     },
   ]
 
@@ -72,7 +72,7 @@ export default function OrganizerDashboard() {
       genre: "Electronic",
       price: "₹25,000",
       rating: 4.8,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/images/carausel1.jpg?height=100&width=100",
     },
     {
       id: 2,
@@ -80,7 +80,7 @@ export default function OrganizerDashboard() {
       genre: "Rock",
       price: "₹40,000",
       rating: 4.6,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/images/carausel1.jpg?height=100&width=100",
     },
     {
       id: 3,
@@ -88,7 +88,7 @@ export default function OrganizerDashboard() {
       genre: "Comedy",
       price: "₹15,000",
       rating: 4.9,
-      image: "/placeholder.svg?height=100&width=100",
+      image: "/images/carausel1.jpg?height=100&width=100",
     },
   ]
 
@@ -100,7 +100,7 @@ export default function OrganizerDashboard() {
       capacity: 500,
       price: "₹50,000",
       rating: 4.6,
-      image: "/placeholder.svg?height=100&width=150",
+      image: "/images/carausel1.jpg?height=100&width=150",
     },
     {
       id: 2,
@@ -109,7 +109,7 @@ export default function OrganizerDashboard() {
       capacity: 1000,
       price: "₹75,000",
       rating: 4.4,
-      image: "/placeholder.svg?height=100&width=150",
+      image: "/images/carausel1.jpg?height=100&width=150",
     },
   ]
 
@@ -205,7 +205,7 @@ export default function OrganizerDashboard() {
                 <Card key={event.id} className="overflow-hidden">
                   <div className="relative">
                     <Image
-                      src={event.image || "/placeholder.svg"}
+                      src={event.image || "/images/carausel1.jpg"}
                       alt={event.title}
                       width={300}
                       height={200}
@@ -296,7 +296,7 @@ export default function OrganizerDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center space-x-4 mb-4">
                       <Image
-                        src={artist.image || "/placeholder.svg"}
+                        src={artist.image || "/images/carausel1.jpg"}
                         alt={artist.name}
                         width={100}
                         height={100}
@@ -353,7 +353,7 @@ export default function OrganizerDashboard() {
                   <CardContent className="p-6">
                     <div className="flex space-x-4">
                       <Image
-                        src={venue.image || "/placeholder.svg"}
+                        src={venue.image || "/images/carausel1.jpg"}
                         alt={venue.name}
                         width={150}
                         height={100}
