@@ -142,33 +142,21 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-        {/* <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Ticket className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Ahibi</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" asChild>
-              <Link href="/events">Browse Events</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/auth">Login</Link>
-            </Button>
-          </div>
-        </div> */}
+      <header className=" sticky top-0 z-50">
         <Navbar />
       </header>
 
       {/* Hero Section */}
       <section className="py-12 md:py-20 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-8xl font-bold bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-300 bg-clip-text text-transparent">
             Click. Book. Go!
           </h1>
+
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
             Discover top events, book artists, list venues, and manage every
-            detail — all in one powerful platform.
+            detail<br/>
+             — all in one powerful platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
@@ -256,8 +244,12 @@ export default function HomePage() {
                         </div>
 
                         <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge variant="outline" className="text-white">{event.type}</Badge>
-                          <Badge variant="outline" className="text-white">{event.setting}</Badge>
+                          <Badge variant="outline" className="text-white">
+                            {event.type}
+                          </Badge>
+                          <Badge variant="outline" className="text-white">
+                            {event.setting}
+                          </Badge>
                         </div>
 
                         <Button className="w-full" asChild>
@@ -311,7 +303,7 @@ export default function HomePage() {
       </section>
 
       {/* Join the Ahibi Ecosystem */}
-      <section className="py-12 md:py-16 bg-muted/50">
+      {/* <section className="py-12 md:py-16 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">
@@ -343,7 +335,7 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* The Ahibi Impact */}
       <section className="py-12 md:py-16">
@@ -367,7 +359,7 @@ export default function HomePage() {
       </section>
 
       {/* About Ahibi */}
-      <section className="py-12 md:py-16 bg-muted/50">
+      {/* <section className="py-12 md:py-16 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-6">About Ahibi</h2>
@@ -387,7 +379,7 @@ export default function HomePage() {
             </Button>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Footer */}
       <Footer />

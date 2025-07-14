@@ -1,21 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Calendar, DollarSign, Star, MapPin, Instagram, Youtube, Edit, Camera, Play } from "lucide-react"
-import Image from "next/image"
-import Navbar from "../Navbar"
-import Footer from "../Footer"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Calendar,
+  DollarSign,
+  Star,
+  MapPin,
+  Instagram,
+  Youtube,
+  Edit,
+  Camera,
+  Play,
+} from "lucide-react";
+import Image from "next/image";
+import Navbar from "@/app/Navbar";
+import Footer from "@/app/Footer";
 
 export default function ArtistDashboard() {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(false);
 
   const artistData = {
     name: "DJ Rhythm",
@@ -28,7 +44,7 @@ export default function ArtistDashboard() {
     totalBookings: 156,
     avatar: "/images/carausel1.jpg?height=100&width=100",
     coverImage: "/images/carausel1.jpg?height=300&width=800",
-  }
+  };
 
   const bookingRequests = [
     {
@@ -49,7 +65,7 @@ export default function ArtistDashboard() {
       offer: "₹45,000",
       status: "pending",
     },
-  ]
+  ];
 
   const upcomingEvents = [
     {
@@ -68,30 +84,46 @@ export default function ArtistDashboard() {
       payment: "₹28,000",
       status: "confirmed",
     },
-  ]
+  ];
 
   const gallery = [
-    { type: "image", src: "/images/carausel1.jpg?height=200&width=300", title: "Live Performance 1" },
-    { type: "image", src: "/images/carausel1.jpg?height=200&width=300", title: "Studio Session" },
-    { type: "video", src: "/images/carausel1.jpg?height=200&width=300", title: "Performance Video" },
-    { type: "image", src: "/images/carausel1.jpg?height=200&width=300", title: "Event Setup" },
-  ]
+    {
+      type: "image",
+      src: "/images/carausel1.jpg?height=200&width=300",
+      title: "Live Performance 1",
+    },
+    {
+      type: "image",
+      src: "/images/carausel1.jpg?height=200&width=300",
+      title: "Studio Session",
+    },
+    {
+      type: "video",
+      src: "/images/carausel1.jpg?height=200&width=300",
+      title: "Performance Video",
+    },
+    {
+      type: "image",
+      src: "/images/carausel1.jpg?height=200&width=300",
+      title: "Event Setup",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-        <Navbar/>
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Artist Dashboard</h1>
-          <div className="flex items-center space-x-4">
-            <Badge variant="secondary">Verified Artist</Badge>
-            <Button variant="outline" size="sm">
-              View Public Profile
-            </Button>
-          </div>
-        </div>
+        <Navbar />
       </header>
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Artist Dashboard</h1>
+        <div className="flex items-center space-x-4">
+          <Badge variant="secondary">Verified Artist</Badge>
+          <Button variant="outline" size="sm">
+            View Public Profile
+          </Button>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-6">
         {/* Artist Profile Header */}
@@ -104,7 +136,11 @@ export default function ArtistDashboard() {
               height={300}
               className="w-full h-48 md:h-64 object-cover rounded-t-lg"
             />
-            <Button size="sm" variant="secondary" className="absolute top-4 right-4">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="absolute top-4 right-4"
+            >
               <Camera className="h-4 w-4 mr-1" />
               Change Cover
             </Button>
@@ -113,17 +149,27 @@ export default function ArtistDashboard() {
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={artistData.avatar || "/images/carausel1.jpg"} />
+                  <AvatarImage
+                    src={artistData.avatar || "/images/carausel1.jpg"}
+                  />
                   <AvatarFallback>DJ</AvatarFallback>
                 </Avatar>
-                <Button size="sm" variant="secondary" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                >
                   <Camera className="h-4 w-4" />
                 </Button>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-2xl font-bold">{artistData.name}</h2>
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(!isEditing)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(!isEditing)}
+                  >
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Profile
                   </Button>
@@ -175,7 +221,9 @@ export default function ArtistDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle>Booking Requests</CardTitle>
-                  <CardDescription>New requests waiting for your response</CardDescription>
+                  <CardDescription>
+                    New requests waiting for your response
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {bookingRequests.map((request) => (
@@ -184,7 +232,9 @@ export default function ArtistDashboard() {
                         <h3 className="font-semibold">{request.event}</h3>
                         <Badge variant="outline">{request.offer}</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-1">by {request.organizer}</p>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        by {request.organizer}
+                      </p>
                       <p className="text-sm text-muted-foreground mb-1">
                         <Calendar className="h-4 w-4 inline mr-1" />
                         {request.date}
@@ -197,7 +247,11 @@ export default function ArtistDashboard() {
                         <Button size="sm" className="flex-1">
                           Accept
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1 bg-transparent">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 bg-transparent"
+                        >
                           Counter Offer
                         </Button>
                         <Button size="sm" variant="outline">
@@ -220,7 +274,9 @@ export default function ArtistDashboard() {
                     <div key={event.id} className="p-4 border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-semibold">{event.event}</h3>
-                        <Badge className="bg-green-100 text-green-800">{event.status}</Badge>
+                        <Badge className="bg-green-100 text-green-800">
+                          {event.status}
+                        </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
                         <Calendar className="h-4 w-4 inline mr-1" />
@@ -230,7 +286,9 @@ export default function ArtistDashboard() {
                         <MapPin className="h-4 w-4 inline mr-1" />
                         {event.venue}
                       </p>
-                      <p className="text-sm font-medium text-green-600">Payment: {event.payment}</p>
+                      <p className="text-sm font-medium text-green-600">
+                        Payment: {event.payment}
+                      </p>
                     </div>
                   ))}
                 </CardContent>
@@ -242,11 +300,15 @@ export default function ArtistDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Availability Calendar</CardTitle>
-                <CardDescription>Manage your availability for bookings</CardDescription>
+                <CardDescription>
+                  Manage your availability for bookings
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-96 border rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Interactive calendar component would be implemented here</p>
+                  <p className="text-muted-foreground">
+                    Interactive calendar component would be implemented here
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -256,7 +318,9 @@ export default function ArtistDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Media Gallery</CardTitle>
-                <CardDescription>Showcase your work with photos and videos</CardDescription>
+                <CardDescription>
+                  Showcase your work with photos and videos
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -294,17 +358,23 @@ export default function ArtistDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Earnings & Payouts</CardTitle>
-                <CardDescription>Track your income and payment history</CardDescription>
+                <CardDescription>
+                  Track your income and payment history
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">This Month</h3>
-                    <p className="text-3xl font-bold text-green-600">₹1,25,000</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      ₹1,25,000
+                    </p>
                   </div>
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">Pending</h3>
-                    <p className="text-3xl font-bold text-orange-600">₹45,000</p>
+                    <p className="text-3xl font-bold text-orange-600">
+                      ₹45,000
+                    </p>
                   </div>
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">Total Earned</h3>
@@ -313,7 +383,9 @@ export default function ArtistDashboard() {
                 </div>
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold mb-4">Recent Transactions</h3>
-                  <p className="text-center text-muted-foreground">Transaction history would be displayed here</p>
+                  <p className="text-center text-muted-foreground">
+                    Transaction history would be displayed here
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -323,7 +395,9 @@ export default function ArtistDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Profile Settings</CardTitle>
-                <CardDescription>Update your profile information</CardDescription>
+                <CardDescription>
+                  Update your profile information
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -369,7 +443,7 @@ export default function ArtistDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-      <Footer/>
+      <Footer />
     </div>
-  )
+  );
 }

@@ -1,28 +1,41 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, MapPin, Users, Filter, Search, Heart } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import Navbar from "../Navbar"
-import Footer from "../Footer"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar, MapPin, Users, Filter, Search, Heart } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
 
 export default function EventsPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCity, setSelectedCity] = useState("all")
-  const [selectedGenre, setSelectedGenre] = useState("all")
-  const [selectedDate, setSelectedDate] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCity, setSelectedCity] = useState("all");
+  const [selectedGenre, setSelectedGenre] = useState("all");
+  const [selectedDate, setSelectedDate] = useState("all");
 
   const events = [
     {
       id: 1,
       title: "Summer Music Festival 2024",
-      description: "The biggest music festival of the year featuring top artists",
+      description:
+        "The biggest music festival of the year featuring top artists",
       date: "July 15, 2024",
       time: "6:00 PM",
       venue: "Central Park Arena",
@@ -121,94 +134,127 @@ export default function EventsPage() {
       capacity: 50,
       featured: false,
     },
-  ]
+  ];
 
-  const cities = ["Mumbai", "Delhi", "Bangalore", "Pune", "Chennai", "Hyderabad"]
-  const genres = ["Music", "Comedy", "Technology", "Food", "Art", "Dance"]
+  const cities = [
+    "Mumbai",
+    "Delhi",
+    "Bangalore",
+    "Pune",
+    "Chennai",
+    "Hyderabad",
+  ];
+  const genres = ["Music", "Comedy", "Technology", "Food", "Art", "Dance"];
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch =
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCity = selectedCity === "all" || event.location.includes(selectedCity)
+      event.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCity =
+      selectedCity === "all" || event.location.includes(selectedCity);
     const matchesGenre =
-      selectedGenre === "all" || event.tags.some((tag) => tag.toLowerCase().includes(selectedGenre.toLowerCase()))
+      selectedGenre === "all" ||
+      event.tags.some((tag) =>
+        tag.toLowerCase().includes(selectedGenre.toLowerCase())
+      );
 
-    return matchesSearch && matchesCity && matchesGenre
-  })
+    return matchesSearch && matchesCity && matchesGenre;
+  });
 
-  const featuredEvents = filteredEvents.filter((event) => event.featured)
-  const regularEvents = filteredEvents.filter((event) => !event.featured)
+  const featuredEvents = filteredEvents.filter((event) => event.featured);
+  const regularEvents = filteredEvents.filter((event) => !event.featured);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-      <Navbar/>
-        <div className="container mx-auto px-4 py-4">
-          {/* <div className="flex items-center justify-between mb-4">
+        <Navbar />
+      </header>
+      <section className="bg-gradient-to-b from-teal-400 via-blue-500 to-indigo-600 text-white py-16">
+  <div className="container mx-auto px-4 text-center">
+    <h1 className="text-4xl md:text-6xl font-bold mb-4">
+      Discover Unforgettable Events
+    </h1>
+    <p className="text-xl md:text-2xl text-white/90 mb-8">
+      Explore and book unique experiences happening around you
+    </p>
+    <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-white/90 text-lg">
+      <div className="flex items-center gap-2">
+        <span>🎤</span> 10+ Live Performances
+      </div>
+      <div className="flex items-center gap-2">
+        <span>📆</span> 15 Upcoming Events
+      </div>
+      <div className="flex items-center gap-2">
+        <span>🌆</span> 12+ Cities Covered
+      </div>
+    </div>
+  </div>
+</section>
+
+      <div className="container mx-auto px-4 py-4">
+        {/* <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Discover Events</h1>
             <Button variant="outline" asChild>
               <Link href="/">← Back to Home</Link>
             </Button>
           </div> */}
 
-          {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={selectedCity} onValueChange={setSelectedCity}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="City" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cities</SelectItem>
-                  {cities.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Search and Filters */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={selectedCity} onValueChange={setSelectedCity}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="City" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cities</SelectItem>
+                {cities.map((city) => (
+                  <SelectItem key={city} value={city}>
+                    {city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Genre" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Genres</SelectItem>
-                  {genres.map((genre) => (
-                    <SelectItem key={genre} value={genre}>
-                      {genre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Genre" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genres</SelectItem>
+                {genres.map((genre) => (
+                  <SelectItem key={genre} value={genre}>
+                    {genre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Select value={selectedDate} onValueChange={setSelectedDate}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Any Date</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={selectedDate} onValueChange={setSelectedDate}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Any Date</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-6">
         {/* Featured Events */}
@@ -217,7 +263,10 @@ export default function EventsPage() {
             <h2 className="text-2xl font-bold mb-6">Featured Events</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredEvents.map((event) => (
-                <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                <Card
+                  key={event.id}
+                  className="overflow-hidden hover:shadow-lg transition-shadow group"
+                >
                   <div className="relative">
                     <Image
                       src={event.image || "/images/carausel1.jpg"}
@@ -227,25 +276,39 @@ export default function EventsPage() {
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute top-4 left-4">
-                      <Badge className="bg-gradient-to-r from-primary to-secondary text-white">Featured</Badge>
+                      <Badge className="bg-gradient-to-r from-primary to-secondary text-white">
+                        Featured
+                      </Badge>
                     </div>
                     <div className="absolute top-4 right-4">
-                      <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 w-8 p-0"
+                      >
                         <Heart className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="absolute bottom-4 right-4">
                       <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-1">
-                        <span className="text-lg font-bold text-primary">{event.price}</span>
+                        <span className="text-lg font-bold text-primary">
+                          {event.price}
+                        </span>
                         {event.originalPrice && (
-                          <span className="text-sm text-muted-foreground line-through ml-2">{event.originalPrice}</span>
+                          <span className="text-sm text-muted-foreground line-through ml-2">
+                            {event.originalPrice}
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
                   <CardHeader>
-                    <CardTitle className="line-clamp-2">{event.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">{event.description}</CardDescription>
+                    <CardTitle className="line-clamp-2">
+                      {event.title}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {event.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 mb-4">
@@ -264,13 +327,19 @@ export default function EventsPage() {
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {event.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="text-xs"
+                        >
                           {tag}
                         </Badge>
                       ))}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">by {event.organizer}</span>
+                      <span className="text-sm text-muted-foreground">
+                        by {event.organizer}
+                      </span>
                       <Button asChild>
                         <Link href={`/events/${event.id}`}>Book Now</Link>
                       </Button>
@@ -285,7 +354,9 @@ export default function EventsPage() {
         {/* All Events */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">{featuredEvents.length > 0 ? "More Events" : "All Events"}</h2>
+            <h2 className="text-2xl font-bold">
+              {featuredEvents.length > 0 ? "More Events" : "All Events"}
+            </h2>
             <div className="flex items-center text-sm text-muted-foreground">
               <Filter className="h-4 w-4 mr-1" />
               {filteredEvents.length} events found
@@ -295,7 +366,10 @@ export default function EventsPage() {
           {regularEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {regularEvents.map((event) => (
-                <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow group">
+                <Card
+                  key={event.id}
+                  className="overflow-hidden hover:shadow-lg transition-shadow group"
+                >
                   <div className="relative">
                     <Image
                       src={event.image || "/images/carausel1.jpg"}
@@ -305,22 +379,34 @@ export default function EventsPage() {
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute top-4 right-4">
-                      <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 w-8 p-0"
+                      >
                         <Heart className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="absolute bottom-4 right-4">
                       <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-1">
-                        <span className="text-lg font-bold text-primary">{event.price}</span>
+                        <span className="text-lg font-bold text-primary">
+                          {event.price}
+                        </span>
                         {event.originalPrice && (
-                          <span className="text-sm text-muted-foreground line-through ml-2">{event.originalPrice}</span>
+                          <span className="text-sm text-muted-foreground line-through ml-2">
+                            {event.originalPrice}
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
                   <CardHeader>
-                    <CardTitle className="line-clamp-2">{event.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">{event.description}</CardDescription>
+                    <CardTitle className="line-clamp-2">
+                      {event.title}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {event.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 mb-4">
@@ -339,13 +425,19 @@ export default function EventsPage() {
                     </div>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {event.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
+                        <Badge
+                          key={tag}
+                          variant="secondary"
+                          className="text-xs"
+                        >
                           {tag}
                         </Badge>
                       ))}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">by {event.organizer}</span>
+                      <span className="text-sm text-muted-foreground">
+                        by {event.organizer}
+                      </span>
                       <Button asChild>
                         <Link href={`/events/${event.id}`}>Book Now</Link>
                       </Button>
@@ -364,10 +456,10 @@ export default function EventsPage() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setSearchQuery("")
-                  setSelectedCity("all")
-                  setSelectedGenre("all")
-                  setSelectedDate("all")
+                  setSearchQuery("");
+                  setSelectedCity("all");
+                  setSelectedGenre("all");
+                  setSelectedDate("all");
                 }}
               >
                 Clear Filters
@@ -376,7 +468,7 @@ export default function EventsPage() {
           )}
         </section>
       </div>
-      <Footer/>
+      <Footer />
     </div>
-  )
+  );
 }

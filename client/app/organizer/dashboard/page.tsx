@@ -1,12 +1,24 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Calendar,
   MapPin,
@@ -20,14 +32,15 @@ import {
   Ticket,
   Music,
   Building2,
-} from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import Footer from "../Footer"
-import Navbar from "../Navbar"
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import Navbar from "@/app/Navbar";
+import Footer from "@/app/Footer";
+
 
 export default function OrganizerDashboard() {
-  const [activeTab, setActiveTab] = useState("events")
+  const [activeTab, setActiveTab] = useState("events");
 
   const myEvents = [
     {
@@ -63,7 +76,7 @@ export default function OrganizerDashboard() {
       revenue: "₹0",
       image: "/images/carausel1.jpg?height=200&width=300",
     },
-  ]
+  ];
 
   const availableArtists = [
     {
@@ -90,7 +103,7 @@ export default function OrganizerDashboard() {
       rating: 4.9,
       image: "/images/carausel1.jpg?height=100&width=100",
     },
-  ]
+  ];
 
   const availableVenues = [
     {
@@ -111,26 +124,26 @@ export default function OrganizerDashboard() {
       rating: 4.4,
       image: "/images/carausel1.jpg?height=100&width=150",
     },
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-          <Navbar/>
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Organizer Dashboard</h1>
-          <div className="flex items-center space-x-4">
-            <Badge variant="secondary">Event Organizer</Badge>
-            <Button asChild>
-              <Link href="/organizer/create-event">
-                <Plus className="h-4 w-4 mr-1" />
-                Create Event
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <Navbar />
       </header>
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Organizer Dashboard</h1>
+        <div className="flex items-center space-x-4">
+          <Badge variant="secondary">Event Organizer</Badge>
+          <Button asChild>
+            <Link href="/organizer/create-event">
+              <Plus className="h-4 w-4 mr-1" />
+              Create Event
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       <div className="container mx-auto px-4 py-6">
         {/* Stats Overview */}
@@ -181,7 +194,11 @@ export default function OrganizerDashboard() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="events">My Events</TabsTrigger>
             <TabsTrigger value="artists">Find Artists</TabsTrigger>
@@ -216,15 +233,17 @@ export default function OrganizerDashboard() {
                         event.status === "approved"
                           ? "bg-green-500"
                           : event.status === "pending"
-                            ? "bg-yellow-500"
-                            : "bg-gray-500"
+                          ? "bg-yellow-500"
+                          : "bg-gray-500"
                       }`}
                     >
                       {event.status}
                     </Badge>
                   </div>
                   <CardHeader>
-                    <CardTitle className="line-clamp-2">{event.title}</CardTitle>
+                    <CardTitle className="line-clamp-2">
+                      {event.title}
+                    </CardTitle>
                     <div className="space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-1" />
@@ -247,11 +266,17 @@ export default function OrganizerDashboard() {
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-primary h-2 rounded-full"
-                          style={{ width: `${(event.ticketsSold / event.totalTickets) * 100}%` }}
+                          style={{
+                            width: `${
+                              (event.ticketsSold / event.totalTickets) * 100
+                            }%`,
+                          }}
                         ></div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-lg font-bold text-green-600">{event.revenue}</span>
+                        <span className="text-lg font-bold text-green-600">
+                          {event.revenue}
+                        </span>
                         <div className="flex space-x-2">
                           <Button size="sm" variant="outline">
                             <Eye className="h-4 w-4" />
@@ -304,7 +329,9 @@ export default function OrganizerDashboard() {
                       />
                       <div className="flex-1">
                         <h3 className="font-semibold">{artist.name}</h3>
-                        <p className="text-sm text-muted-foreground">{artist.genre}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {artist.genre}
+                        </p>
                         <div className="flex items-center mt-1">
                           <span className="text-sm">⭐ {artist.rating}</span>
                         </div>
@@ -375,7 +402,9 @@ export default function OrganizerDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center justify-between mt-3">
-                          <span className="text-lg font-bold">{venue.price}</span>
+                          <span className="text-lg font-bold">
+                            {venue.price}
+                          </span>
                           <div className="flex space-x-2">
                             <Button size="sm" variant="outline">
                               View Details
@@ -398,40 +427,54 @@ export default function OrganizerDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Event Analytics</CardTitle>
-                <CardDescription>Performance insights for your events</CardDescription>
+                <CardDescription>
+                  Performance insights for your events
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">Total Revenue</h3>
-                    <p className="text-3xl font-bold text-green-600">₹18,45,000</p>
-                    <p className="text-sm text-muted-foreground">+25% from last month</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      ₹18,45,000
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      +25% from last month
+                    </p>
                   </div>
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">Avg Ticket Price</h3>
                     <p className="text-3xl font-bold">₹1,250</p>
-                    <p className="text-sm text-muted-foreground">+5% increase</p>
+                    <p className="text-sm text-muted-foreground">
+                      +5% increase
+                    </p>
                   </div>
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">Conversion Rate</h3>
                     <p className="text-3xl font-bold">68%</p>
-                    <p className="text-sm text-muted-foreground">Above average</p>
+                    <p className="text-sm text-muted-foreground">
+                      Above average
+                    </p>
                   </div>
                   <div className="p-4 border rounded-lg text-center">
                     <h3 className="font-semibold text-lg">Repeat Customers</h3>
                     <p className="text-3xl font-bold">32%</p>
-                    <p className="text-sm text-muted-foreground">Growing steadily</p>
+                    <p className="text-sm text-muted-foreground">
+                      Growing steadily
+                    </p>
                   </div>
                 </div>
                 <div className="h-64 border rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Analytics charts and graphs would be implemented here</p>
+                  <p className="text-muted-foreground">
+                    Analytics charts and graphs would be implemented here
+                  </p>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
-      <Footer/>
+      <Footer />
     </div>
-  )
+  );
 }

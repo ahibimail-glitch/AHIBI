@@ -27,6 +27,8 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import Navbar from "@/app/Navbar"
+import Footer from "@/app/Footer"
 
 export default function EventDetailPage({ params }: { params: { id: string } }) {
   const [selectedTicketType, setSelectedTicketType] = useState("general")
@@ -170,7 +172,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        {/* <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Button variant="outline" asChild>
             <Link href="/events">← Back to Events</Link>
           </Button>
@@ -184,7 +186,8 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
               Share
             </Button>
           </div>
-        </div>
+        </div> */}
+        <Navbar/>
       </header>
 
       <div className="container mx-auto px-4 py-6">
@@ -536,6 +539,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
           </div>
         </section>
       </div>
+      <Footer/>
     </div>
   )
 }

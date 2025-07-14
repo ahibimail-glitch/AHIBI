@@ -29,14 +29,12 @@ export default function Navbar() {
             <Link href="/events" className="hover:text-white transition">
               Events
             </Link>
-            <Link href="/organizer" className="hover:text-white transition">
-              Organize
-            </Link>
-            <Link href="/artist" className="hover:text-white transition">
+
+            <Link href="/allArtists" className="hover:text-white transition">
               Artists
             </Link>
-            <Link href="/venue" className="hover:text-white transition">
-              Venues
+            <Link href="/partners" className="hover:text-white transition">
+              Partners
             </Link>
             <Link href="/about" className="hover:text-white transition">
               About
