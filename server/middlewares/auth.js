@@ -40,12 +40,12 @@ exports.protect = async (req, res, next) => {
       }
 
       // Check if user is active
-      if (req.user.status !== 'active') {
-        return res.status(403).json({
-          success: false,
-          message: 'Your account is not active'
-        });
-      }
+      // if (req.user.status !== 'active') {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: 'Your account is not active'
+      //   });
+      // }
 
       next();
     } catch (error) {

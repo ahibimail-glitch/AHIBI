@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { User, Menu, X } from "lucide-react";
@@ -7,6 +9,22 @@ import Link from "next/link";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check login status on mount
+  React.useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem('token'));
+    // Listen for login/logout changes across tabs
+    const syncLogin = () => setIsLoggedIn(!!localStorage.getItem('token'));
+    window.addEventListener('storage', syncLogin);
+    return () => window.removeEventListener('storage', syncLogin);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    window.location.href = '/auth';
+  };
 
   return (
     <div>
@@ -43,16 +61,27 @@ export default function Navbar() {
 
           {/* Action Buttons */}
           <div className="hidden md:flex space-x-3">
-            <Link href="/profile">
-              <Button variant="outline" className="rounded-full h-10 w-10 p-0">
-                <User className="h-5 w-5 mx-auto" />
-              </Button>
-            </Link>
-            <Link href="/auth">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium">
-                Login
+            {isLoggedIn && (
+              <Link href="/profile">
+                <Button variant="outline" className="rounded-full h-10 w-10 p-0">
+                  <User className="h-5 w-5 mx-auto" />
+                </Button>
+              </Link>
+            )}
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full font-medium"
+              >
+                Logout
               </button>
-            </Link>
+            ) : (
+              <Link href="/auth">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium">
+                  Login
+                </button>
+              </Link>
+            )}
           </div>
 
           {/* Hamburger Menu Button */}

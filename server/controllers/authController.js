@@ -13,20 +13,45 @@ exports.sendOtp = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { phone } = req.body;
+  const { phone, mode } = req.body;
 
   try {
     // Check if user exists
     let user = await User.findOne({ phone });
 
-    // Create user if not found (minimal registration)
-    if (!user) {
-      user = new User({ phone });
-      await user.save();
+    // OTP logic for signup or login
+    if ((mode === 'signup' || !mode) && user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Number is already registered'
+      });
+    }
+    if (mode === 'login' && !user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Number is not registered'
+      });
+    }
+    // For login, generate OTP using user.setOtp() and store on user document
+    let otp;
+    if (mode === 'login' && user) {
+      otp = await user.setOtp();
+    } else {
+      // For signup, use in-memory temp store
+      otp = Math.floor(100000 + Math.random() * 900000).toString();
+      if (!global.tempOtps) global.tempOtps = {};
+      global.tempOtps[phone] = {
+        code: otp,
+        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+      };
     }
 
-    // Generate and set OTP
-    const otp = await user.setOtp();
+    // Store OTP and expiry in a temp store (in-memory, Redis, or DB). For now, use a simple in-memory store (for demo, not production safe)
+    if (!global.tempOtps) global.tempOtps = {};
+    global.tempOtps[phone] = {
+      code: otp,
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+    };
 
     // Send OTP via SMS service
     const smsResponse = await smsService.sendOtp(phone, otp);
@@ -71,49 +96,46 @@ exports.verifyOtp = async (req, res) => {
   const { phone, otp } = req.body;
 
   try {
-    // Check if user exists
-    const user = await User.findOne({ phone });
+    let user = await User.findOne({ phone });
 
+    // If user does not exist, check OTP in temp store and create user
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      if (!global.tempOtps || !global.tempOtps[phone]) {
+        return res.status(400).json({ success: false, message: 'OTP expired or not requested' });
+      }
+      const tempOtp = global.tempOtps[phone];
+      if (tempOtp.code !== otp || tempOtp.expiresAt < Date.now()) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+      // OTP is valid, create user
+      const { name, city, email } = req.body;
+      if (!name || !city) {
+        return res.status(400).json({ success: false, message: 'Name and city are required for signup.' });
+      }
+      user = new User({ phone, name, city, email });
+      await user.save();
+      delete global.tempOtps[phone];
+    } else {
+      // If user exists, verify OTP using user's method (for login)
+      const isValidOtp = await user.verifyOtp(otp);
+      if (!isValidOtp) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+      // Check if user is blocked
+      if (user.status === 'blocked') {
+        return res.status(403).json({ success: false, message: 'Your account has been blocked. Please contact support.' });
+      }
+      // Check if user requires approval
+      if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
+        return res.status(202).json({
+          success: true,
+          message: 'Your account is pending approval',
+          data: { pending: true, role: user.role }
+        });
+      }
     }
-
-    // Verify OTP
-    const isValidOtp = await user.verifyOtp(otp);
-
-    if (!isValidOtp) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired OTP'
-      });
-    }
-
-    // Check if user is blocked
-    if (user.status === 'blocked') {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account has been blocked. Please contact support.'
-      });
-    }
-
-    // Check if user requires approval
-    if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
-      return res.status(202).json({
-        success: true,
-        message: 'Your account is pending approval',
-        data: {
-          pending: true,
-          role: user.role
-        }
-      });
-    }
-
     // Generate JWT token
     const token = user.getSignedJwtToken();
-
     res.status(200).json({
       success: true,
       message: 'OTP verified successfully',

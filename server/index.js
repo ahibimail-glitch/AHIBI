@@ -8,13 +8,13 @@ require('dotenv').config();
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
-const artistRoutes = require('./routes/artist.routes');
-const venueRoutes = require('./routes/venue.routes');
-const organizerRoutes = require('./routes/organizer.routes');
-const eventRoutes = require('./routes/event.routes');
-const ticketRoutes = require('./routes/ticket.routes');
-const userRoutes = require('./routes/user.routes');
-const paymentRoutes = require('./routes/payment.routes');
+// const artistRoutes = require('./routes/artist.routes');
+// const venueRoutes = require('./routes/venue.routes');
+// const organizerRoutes = require('./routes/organizer.routes');
+// const eventRoutes = require('./routes/event.routes');
+// const ticketRoutes = require('./routes/ticket.routes');
+// const userRoutes = require('./routes/user.routes');
+// const paymentRoutes = require('./routes/payment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('./routes/support.routes');
 
@@ -33,14 +33,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Define API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/artists', artistRoutes);
-app.use('/api/venues', venueRoutes);
-app.use('/api/organizers', organizerRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/notifications', notificationRoutes);
+// app.use('/api/artists', artistRoutes);
+// app.use('/api/venues', venueRoutes);
+// app.use('/api/organizers', organizerRoutes);
+// app.use('/api/events', eventRoutes);
+// app.use('/api/tickets', ticketRoutes);
+// app.use('/api/users', userRoutes);
+// app.use('/api/payments', paymentRoutes);
+// app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 

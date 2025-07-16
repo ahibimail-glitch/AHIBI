@@ -1,5 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import {
   Ticket,
   Users,
@@ -10,119 +13,356 @@ import {
   Mail,
   Phone,
   MapPin,
-} from "lucide-react";
-import Link from "next/link";
-import Footer from "../Footer";
-import Navbar from "../Navbar";
+  Star,
+  Trophy,
+  Target,
+  Zap,
+  Globe,
+  CheckCircle,
+  TrendingUp,
+  Award,
+  Sparkles,
+  Rocket,
+  Shield,
+  Clock,
+  DollarSign,
+  BarChart3,
+  Headphones,
+  Camera,
+  Mic,
+  Play,
+  Quote,
+} from "lucide-react"
+import Link from "next/link"
+import Footer from "../Footer"
+import Navbar from "../Navbar"
 
 export default function AboutPage() {
   const stats = [
-    { number: "15+", label: "Events Hosted" },
-    { number: "35,000+", label: "Tickets Sold" },
-    { number: "10,000+", label: "Happy Users" },
-  ];
+    { number: "50K+", label: "Active Users", icon: Users, color: "text-blue-600" },
+    { number: "2,500+", label: "Events Created", icon: Calendar, color: "text-green-600" },
+    { number: "₹2.5Cr+", label: "Revenue Generated", icon: DollarSign, color: "text-purple-600" },
+    { number: "15+", label: "Cities Covered", icon: Globe, color: "text-orange-600" },
+    { number: "98%", label: "Customer Satisfaction", icon: Star, color: "text-yellow-600" },
+    { number: "24/7", label: "Support Available", icon: Headphones, color: "text-red-600" },
+  ]
+
+  const journey = [
+    {
+      year: "2022",
+      title: "The Beginning",
+      description: "Founded in Dimapur, Nagaland with a vision to digitize Northeast India's event ecosystem",
+      icon: Rocket,
+      color: "bg-blue-500",
+    },
+    {
+      year: "2023",
+      title: "First Major Events",
+      description: "Successfully managed 15+ large-scale events across Nagaland and Assam",
+      icon: Trophy,
+      color: "bg-green-500",
+    },
+    {
+      year: "2024",
+      title: "Platform Launch",
+      description: "Launched Ahibi 3.0 - the comprehensive event management ecosystem",
+      icon: Sparkles,
+      color: "bg-purple-500",
+    },
+    {
+      year: "2025",
+      title: "Pan-India Expansion",
+      description: "Expanding to major cities across India with enhanced features and partnerships",
+      icon: TrendingUp,
+      color: "bg-orange-500",
+    },
+  ]
+
+  const values = [
+    {
+      title: "Creator-First Philosophy",
+      description: "Every feature we build starts with asking: 'How does this help creators succeed?'",
+      icon: Music,
+      color: "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200",
+      features: ["Artist-friendly pricing", "Easy profile setup", "Direct booking system", "Revenue analytics"],
+    },
+    {
+      title: "Community-Driven Growth",
+      description: "We grow by empowering communities, not by extracting from them",
+      icon: Users,
+      color: "bg-gradient-to-br from-green-50 to-green-100 border-green-200",
+      features: ["Local partnerships", "Community events", "Grassroots support", "Cultural preservation"],
+    },
+    {
+      title: "Innovation with Purpose",
+      description: "Technology should solve real problems, not create new ones",
+      icon: Zap,
+      color: "bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200",
+      features: ["Smart automation", "AI-powered matching", "Real-time updates", "Mobile-first design"],
+    },
+    {
+      title: "Locally Rooted, Globally Minded",
+      description: "Born in Northeast India, built for the world's diverse event landscape",
+      icon: Globe,
+      color: "bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200",
+      features: ["Cultural sensitivity", "Multi-language support", "Regional customization", "Global standards"],
+    },
+  ]
+
+  const offerings = [
+    {
+      title: "Event Attendees",
+      subtitle: "Discover & Experience",
+      description: "Find amazing events, book instantly, and create unforgettable memories",
+      icon: Star,
+      features: [
+        "Smart event discovery",
+        "One-click booking",
+        "Digital tickets",
+        "Event reminders",
+        "Social sharing",
+        "Review system",
+      ],
+      color: "bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200",
+      cta: "Browse Events",
+      link: "/events",
+    },
+    {
+      title: "Artists & Performers",
+      subtitle: "Showcase & Grow",
+      description: "Build your brand, get discovered, and manage your performance career",
+      icon: Music,
+      features: [
+        "Professional profiles",
+        "Booking management",
+        "Calendar integration",
+        "Payment processing",
+        "Performance analytics",
+        "Fan engagement tools",
+      ],
+      color: "bg-gradient-to-br from-purple-50 to-pink-100 border-purple-200",
+      cta: "Join as Artist",
+      link: "/artist/auth/signup",
+    },
+    {
+      title: "Venue Owners",
+      subtitle: "List & Monetize",
+      description: "Maximize your space utilization with verified bookings and seamless management",
+      icon: Building2,
+      features: [
+        "Space showcase",
+        "Availability calendar",
+        "Booking automation",
+        "Revenue tracking",
+        "Maintenance scheduling",
+        "Customer reviews",
+      ],
+      color: "bg-gradient-to-br from-green-50 to-emerald-100 border-green-200",
+      cta: "List Your Venue",
+      link: "/venue/auth/signup",
+    },
+    {
+      title: "Event Organizers",
+      subtitle: "Plan & Execute",
+      description: "Create spectacular events with our comprehensive planning and management tools",
+      icon: Calendar,
+      features: [
+        "Event creation wizard",
+        "Artist marketplace",
+        "Venue booking",
+        "Ticket management",
+        "Marketing tools",
+        "Real-time analytics",
+      ],
+      color: "bg-gradient-to-br from-orange-50 to-yellow-100 border-orange-200",
+      cta: "Start Organizing",
+      link: "/organizer/auth/signup",
+    },
+  ]
+
+  const testimonials = [
+    {
+      name: "Priya Sharma",
+      role: "Independent Artist",
+      location: "Mumbai",
+      content:
+        "Ahibi transformed my music career. I went from playing small gigs to headlining major events across India. The platform's booking system and artist tools are incredible.",
+      rating: 5,
+      image: "/placeholder.svg?height=60&width=60",
+    },
+    {
+      name: "Rajesh Kumar",
+      role: "Event Organizer",
+      location: "Delhi",
+      content:
+        "Managing events used to be a nightmare with multiple platforms and endless coordination. Ahibi brought everything under one roof. Our efficiency increased by 300%.",
+      rating: 5,
+      image: "/placeholder.svg?height=60&width=60",
+    },
+    {
+      name: "Sarah Wilson",
+      role: "Venue Manager",
+      location: "Bangalore",
+      content:
+        "Our venue bookings doubled within 3 months of joining Ahibi. The automated scheduling and payment system saved us countless hours of manual work.",
+      rating: 5,
+      image: "/placeholder.svg?height=60&width=60",
+    },
+  ]
 
   const team = [
     {
       name: "Founder & CEO",
       role: "Visionary Leader",
-      description:
-        "Leading the digital transformation of event management in Northeast India",
+      description: "15+ years in tech and events, passionate about empowering creators",
+      image: "/placeholder.svg?height=120&width=120",
+      expertise: ["Product Strategy", "Business Development", "Team Leadership"],
     },
     {
-      name: "Tech Team",
-      role: "Innovation Drivers",
-      description: "Building scalable solutions for the event ecosystem",
+      name: "CTO",
+      role: "Technology Architect",
+      description: "Former Google engineer, expert in scalable systems and AI",
+      image: "/placeholder.svg?height=120&width=120",
+      expertise: ["System Architecture", "AI/ML", "Mobile Development"],
     },
     {
-      name: "Community Team",
-      role: "Culture Connectors",
-      description: "Bridging creators, organizers, and audiences across India",
+      name: "Head of Community",
+      role: "Culture Connector",
+      description: "Deep roots in Northeast India's cultural scene, community builder",
+      image: "/placeholder.svg?height=120&width=120",
+      expertise: ["Community Building", "Cultural Relations", "Partnership Development"],
     },
-  ];
+  ]
 
-  const values = [
+  const whyChoose = [
     {
-      title: "Creator-First",
-      description:
-        "We put artists, organizers, and venue owners at the center of everything we build",
-      icon: Music,
+      title: "All-in-One Ecosystem",
+      description: "From discovery to payment, everything works seamlessly together in one platform",
+      icon: Target,
+      stats: "5 platforms replaced by 1",
     },
     {
-      title: "Community-Driven",
-      description:
-        "From grassroots collectives to large-scale events, we serve everyone who creates or attends",
-      icon: Users,
+      title: "Real-Time Collaboration",
+      description: "Artists, organizers, and venues stay in sync with live updates and smart notifications",
+      icon: Zap,
+      stats: "99.9% uptime guarantee",
     },
     {
-      title: "Innovation-Focused",
-      description:
-        "We use technology to solve real problems in the event industry",
-      icon: Calendar,
+      title: "Transparent Pricing",
+      description: "No hidden fees, no surprise charges. What you see is what you pay",
+      icon: Shield,
+      stats: "0 hidden fees",
     },
     {
-      title: "Locally Rooted",
-      description:
-        "Born in Nagaland, built for India, with culture and community in mind",
-      icon: Building2,
+      title: "24/7 Support",
+      description: "Our dedicated support team is always ready to help you succeed",
+      icon: Clock,
+      stats: "< 2 hour response time",
     },
-  ];
-
-  const features = [
-    "Unified platform for all event needs",
-    "Real-time updates and smart alerts",
-    "Built for collaboration between all stakeholders",
-    "Mobile-first design for on-the-go management",
-    "Secure payments and booking system",
-    "Analytics and insights for better decisions",
-  ];
+  ]
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <section className="py-12 md:py-20 bg-gradient-to-br from-primary/10 via-background to-secondary/10">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            About Ahibi
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Header */}
+      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+        <Navbar/>
+      </header>
+
+      {/* Hero Section */}
+      <section className="py-20 md:py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-secondary/10" />
+        <div className="container mx-auto px-4 text-center relative">
+         
+          <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-primary via-purple-600 to-secondary bg-clip-text text-transparent leading-tight">
+            Revolutionizing
+            <br />
+            Event Experiences
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            A new way to create, manage and experience events
+          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed">
+            We're building the future of events - where creators thrive, organizers succeed, and audiences discover
+            amazing experiences. Join the revolution.
           </p>
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <Button size="lg" className="px-8 py-4 text-lg" asChild>
+              <Link href="/auth">
+                Start Your Journey <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="px-8 py-4 text-lg bg-transparent" asChild>
+              <Link href="/events">
+                <Play className="mr-2 h-5 w-5" />
+                Watch Demo
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="py-12 md:py-16">
+      {/* Stats Section */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="prose prose-lg max-w-none mb-12">
-              <p className="text-lg text-muted-foreground mb-6">
-                Events today are more than entertainment. They are movements,
-                milestones and memories in the making. Ahibi is the all-in-one
-                platform that powers this shift.
-              </p>
-              <p className="text-lg text-muted-foreground mb-6">
-                We bring together event organizers, artists, venue owners and
-                audiences into one seamless system. From planning and discovery
-                to booking and execution, Ahibi simplifies every step of the
-                journey.
-              </p>
-              <p className="text-lg text-muted-foreground mb-8">
-                Whether you are launching a local festival, performing at a
-                showcase or searching for your next unforgettable experience,
-                Ahibi helps you do it better, faster and smarter.
-              </p>
-            </div>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Trusted by Thousands</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Our platform powers events across India, from intimate gatherings to massive festivals
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+            {stats.map((stat, index) => (
+              <Card
+                key={index}
+                className="text-center border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50"
+              >
+                <CardContent className="pt-8 pb-6">
+                  <stat.icon className={`h-10 w-10 mx-auto mb-4 ${stat.color}`} />
+                  <div className="text-3xl font-bold text-gray-900 mb-2">{stat.number}</div>
+                  <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Mission */}
-            <Card className="mb-12">
-              <CardHeader>
-                <CardTitle className="text-2xl">Our Mission</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg text-muted-foreground">
-                  To digitize, professionalize and scale the event ecosystem by
-                  putting creators, organizers and audiences at the center.
+      {/* Mission & Vision */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge variant="outline" className="mb-6 px-4 py-2">
+                Our Mission
+              </Badge>
+              <h2 className="text-4xl font-bold mb-6">Empowering the Creative Economy</h2>
+              <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
+                We believe every creator deserves a platform to shine, every organizer should have the tools to succeed,
+                and every audience member should discover experiences that move them.
+              </p>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                Ahibi isn't just a platform - it's a movement to professionalize and democratize the event industry
+                across India.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Badge variant="secondary" className="px-4 py-2">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Creator-First
+                </Badge>
+                <Badge variant="secondary" className="px-4 py-2">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Technology-Driven
+                </Badge>
+                <Badge variant="secondary" className="px-4 py-2">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Community-Focused
+                </Badge>
+              </div>
+            </div>
+            <Card className="border-0 shadow-2xl bg-gradient-to-br from-primary/10 via-white to-secondary/10">
+              <CardContent className="p-8">
+                <Trophy className="h-16 w-16 text-primary mb-6" />
+                <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  To become India's leading event ecosystem where creativity meets opportunity, technology enables
+                  success, and every event creates lasting memories.
                 </p>
               </CardContent>
             </Card>
@@ -130,214 +370,328 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-12 md:py-16 bg-muted/50">
+      {/* Journey Timeline */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Milestones So Far</h2>
-            <p className="text-lg text-muted-foreground">
-              Our tools are shaped by real event experience from intimate gigs
-              to stadium-scale productions.
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Our Journey</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              From a small idea in Northeast India to a pan-India platform transforming events
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            {stats.map((stat, index) => (
-              <div key={index}>
-                <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-lg text-muted-foreground">
-                  {stat.label}
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {journey.map((milestone, index) => (
+              <Card
+                key={index}
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50"
+              >
+                <CardContent className="p-6 text-center">
+                  <div className={`inline-flex p-3 rounded-full ${milestone.color} text-white mb-4`}>
+                    <milestone.icon className="h-6 w-6" />
+                  </div>
+                  <div className="text-2xl font-bold text-primary mb-2">{milestone.year}</div>
+                  <h3 className="text-lg font-semibold mb-3">{milestone.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{milestone.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Core Values */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">What Drives Us</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Our core values shape every decision we make and every feature we build
+            </p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {values.map((value, index) => (
+              <Card key={index} className={`border-2 ${value.color} hover:shadow-xl transition-all duration-300 group`}>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="bg-primary/10 p-3 rounded-lg group-hover:bg-primary/20 transition-colors">
+                      <value.icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">{value.title}</CardTitle>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">{value.description}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {value.features.map((feature, featureIndex) => (
+                      <div key={featureIndex} className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
       {/* What We Offer */}
-      <section className="py-12 md:py-16">
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">What We Offer</h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Built for Everyone</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Comprehensive solutions tailored for every stakeholder in the event ecosystem
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>For Audiences</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Discover top events, book your tickets and get support with
-                  ease
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>For Artists</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Showcase your talent, receive bookings, manage your calendar
-                  and build your brand
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>For Venue Owners</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  List your space, manage availability and receive verified
-                  event bookings
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>For Event Organizers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Create events, hire artists, book venues and manage payments
-                  in one dashboard
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>For Admins</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Oversee platform activity, approve listings and access
-                  performance analytics in real time
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {offerings.map((offering, index) => (
+              <Card
+                key={index}
+                className={`border-2 ${offering.color} hover:shadow-xl transition-all duration-300 group`}
+              >
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-primary/10 p-3 rounded-lg group-hover:bg-primary/20 transition-colors">
+                        <offering.icon className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">{offering.title}</CardTitle>
+                        <p className="text-sm text-primary font-medium">{offering.subtitle}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed mb-4">{offering.description}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {offering.features.map((feature, featureIndex) => (
+                      <div key={featureIndex} className="flex items-center space-x-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full" asChild>
+                    <Link href={offering.link}>
+                      {offering.cta} <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">What Our Users Say</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Real stories from real people who've transformed their event experiences with Ahibi
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <Card
+                key={index}
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50"
+              >
+                <CardContent className="p-6">
+                  <Quote className="h-8 w-8 text-primary mb-4" />
+                  <p className="text-muted-foreground mb-6 leading-relaxed">"{testimonial.content}"</p>
+                  <div className="flex items-center space-x-4">
+                    <img
+                      src={testimonial.image || "/placeholder.svg"}
+                      alt={testimonial.name}
+                      className="h-12 w-12 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="font-semibold">{testimonial.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {testimonial.role} • {testimonial.location}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex mt-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Why Choose Ahibi */}
-      <section className="py-12 md:py-16 bg-muted/50">
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Why Choose Ahibi</h2>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Why Choose Ahibi</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              The advantages that make Ahibi the preferred choice for event management across India
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h3 className="text-xl font-semibold mb-3">Unified platform</h3>
-              <p className="text-muted-foreground mb-6">
-                From ticketing and talent to venue management and payments,
-                everything works together
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-3">
-                Built for collaboration
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Organizers, artists and venues operate in sync without hassle
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-3">Live control</h3>
-              <p className="text-muted-foreground mb-6">
-                Real-time updates, status tracking and smart alerts for every
-                stakeholder
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-3">
-                Born local, built to scale
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                We began in Nagaland with creators and culture in mind and we
-                are ready to serve events across India
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-3">
-                Inclusive by design
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                From grassroots collectives to large-scale events, Ahibi is made
-                for everyone who creates or attends
-              </p>
-            </div>
+            {whyChoose.map((item, index) => (
+              <Card
+                key={index}
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-gray-50 to-white group"
+              >
+                <CardContent className="p-8">
+                  <div className="flex items-start space-x-6">
+                    <div className="bg-primary/10 p-4 rounded-lg group-hover:bg-primary/20 transition-colors">
+                      <item.icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed mb-4">{item.description}</p>
+                      <Badge variant="secondary" className="px-3 py-1">
+                        <BarChart3 className="h-3 w-3 mr-1" />
+                        {item.stats}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* More Than a Platform */}
-      <section className="py-12 md:py-16">
+      {/* Team Section */}
+      <section className="py-20">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">More Than a Platform</h2>
-            <p className="text-lg text-muted-foreground mb-6">
-              Ahibi is building digital infrastructure for the cultural economy.
-              We want to help artists get discovered, organizers go professional
-              and communities enjoy better-managed events.
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Meet Our Team</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Passionate individuals working together to transform the event industry
             </p>
-            <p className="text-lg text-muted-foreground mb-8">
-              We believe the future of events is organized, connected and
-              creator-first. Ahibi is here to make that future a reality.
-            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {team.map((member, index) => (
+              <Card
+                key={index}
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50 text-center"
+              >
+                <CardContent className="p-8">
+                  <img
+                    src={member.image || "/placeholder.svg"}
+                    alt={member.name}
+                    className="h-24 w-24 rounded-full object-cover mx-auto mb-6"
+                  />
+                  <h3 className="text-xl font-semibold mb-2">{member.name}</h3>
+                  <p className="text-primary font-medium mb-3">{member.role}</p>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">{member.description}</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {member.expertise.map((skill, skillIndex) => (
+                      <Badge key={skillIndex} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Work With Us */}
-      <section className="py-12 md:py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Work With Us</h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              We collaborate with event organizers, tourism bodies, institutions
-              and creators across India. If you're building an event or looking
-              to modernize how events are run, we're ready to help.
-            </p>
-            <p className="text-xl font-semibold mb-8">
-              Let's build better events together.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link href="mailto:connect@ahibi.in">
-                  Contact Us <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/auth">Book a Demo</Link>
-              </Button>
-            </div>
+      {/* Call to Action */}
+      <section className="py-20 bg-gradient-to-r from-primary to-purple-600  text-white">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-4xl font-bold mb-6">Ready to Transform Your Events?</h2>
+          <p className="text-xl mb-12 max-w-3xl mx-auto opacity-90">
+            Join thousands of creators, organizers, and venues who are already building the future of events with Ahibi
+          </p>
+          <div className="flex flex-col sm:flex-row gap-6 justify-center">
+            <Button size="lg" variant="secondary" className="px-8 py-4 text-lg" asChild>
+              <Link href="/auth">
+                Start Free Today <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="px-8 py-4 text-lg border-white text-white hover:bg-white hover:text-primary bg-transparent"
+              asChild
+            >
+              <Link href="mailto:connect@ahibi.in">
+                <Mail className="mr-2 h-5 w-5" />
+                Contact Sales
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Contact Info */}
-      <section className="py-12 md:py-16">
+      {/* Newsletter Signup */}
+      {/* <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">Get in Touch</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-primary" />
-                  <span>connect@ahibi.in</span>
+          <Card className="max-w-2xl mx-auto border-0 shadow-xl bg-gradient-to-br from-primary/5 to-secondary/5">
+            <CardContent className="p-8 text-center">
+              <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="text-2xl font-bold mb-4">Stay Updated</h3>
+              <p className="text-muted-foreground mb-6">
+                Get the latest updates on new features, events, and industry insights
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Input placeholder="Enter your email" className="flex-1" />
+                <Button className="px-6">
+                  Subscribe <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section> */}
+
+      {/* Contact Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-6">Get in Touch</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Have questions? Want to partner with us? We'd love to hear from you.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100">
+              <CardContent className="p-8 text-center">
+                <div className="bg-blue-500 p-4 rounded-full inline-block mb-4">
+                  <Mail className="h-8 w-8 text-white" />
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-primary" />
-                  <span>+91 7005727288</span>
+                <h3 className="text-lg font-semibold mb-2">Email Us</h3>
+                <p className="text-muted-foreground mb-4">For general inquiries and support</p>
+                <p className="font-medium text-blue-600">connect@ahibi.in</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100">
+              <CardContent className="p-8 text-center">
+                <div className="bg-green-500 p-4 rounded-full inline-block mb-4">
+                  <Phone className="h-8 w-8 text-white" />
                 </div>
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <span>Dimapur, Nagaland, India</span>
+                <h3 className="text-lg font-semibold mb-2">Call Us</h3>
+                <p className="text-muted-foreground mb-4">Speak directly with our team</p>
+                <p className="font-medium text-green-600">+91 7005727288</p>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100">
+              <CardContent className="p-8 text-center">
+                <div className="bg-orange-500 p-4 rounded-full inline-block mb-4">
+                  <MapPin className="h-8 w-8 text-white" />
                 </div>
+                <h3 className="text-lg font-semibold mb-2">Visit Us</h3>
+                <p className="text-muted-foreground mb-4">Our headquarters</p>
+                <p className="font-medium text-orange-600">Dimapur, Nagaland</p>
               </CardContent>
             </Card>
           </div>
@@ -345,7 +699,7 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-      <Footer />
+     <Footer/>
     </div>
-  );
+  )
 }

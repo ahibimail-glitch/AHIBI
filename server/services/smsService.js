@@ -12,21 +12,27 @@ const smsService = {
    */
   sendOtp: async (phone, otp) => {
     try {
-      const response = await axios({
-        method: 'post',
-        url: 'https://www.fast2sms.com/dev/bulkV2',
-        headers: {
-          Authorization: process.env.FAST2SMS_API_KEY
-        },
-        data: {
-          variables_values: otp,
-          route: "otp",
-          numbers: phone
-        }
-      });
+      // Fast2SMS DLT API (GET request)
+      const axios = require('axios');
+      const apiKey = process.env.FAST2SMS_API_KEY;
+      const templateId = process.env.FAST2SMS_TEMPLATE_ID || '184006'; // fallback to your DLT template
+      const senderId = process.env.FAST2SMS_SENDER_ID || 'MELITA';
+      const validityMinutes = process.env.FAST2SMS_OTP_VALIDITY || '30';
+      
+      const params = {
+        authorization: apiKey,
+        route: 'dlt',
+        sender_id: senderId,
+        message: templateId,
+        variables_values: `${otp}|${validityMinutes}|`,
+        numbers: phone,
+        flash: '0'
+      };
+      
+      const response = await axios.get('https://www.fast2sms.com/dev/bulkV2', { params });
       
       return {
-        success: response.data.return,
+        success: response.data.return === true,
         message: response.data.message,
         data: response.data
       };
@@ -34,7 +40,7 @@ const smsService = {
       console.error('SMS service error:', error.response?.data || error.message);
       return {
         success: false,
-        message: 'Failed to send OTP',
+        message: error.response?.data?.message || 'Failed to send OTP',
         error: error.response?.data || error.message
       };
     }

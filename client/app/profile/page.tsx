@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { useState } from "react";
 import {
   Card,
@@ -48,17 +50,36 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
 
-  const [profileData, setProfileData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 9876543210",
-    city: "Mumbai",
-    bio: "Event enthusiast who loves discovering new experiences and connecting with like-minded people.",
-    dateOfBirth: "1990-05-15",
-    gender: "male",
-    interests: ["Music", "Technology", "Food", "Art"],
-    avatar: "/images/carausel1.jpg?height=100&width=100",
-  });
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Fetch user profile from backend
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setError(data.message || "Failed to fetch profile");
+        } else {
+          setProfileData(data.data.user);
+        }
+      } catch (e) {
+        setError("Network error. Please try again.");
+      }
+      setLoading(false);
+    };
+    fetchProfile();
+  }, []);
 
   const [preferences, setPreferences] = useState({
     emailNotifications: true,
@@ -157,9 +178,13 @@ export default function ProfilePage() {
     "Gaming",
   ];
 
+  if (loading) return <div className="flex justify-center items-center h-64">Loading...</div>;
+  if (error) return <div className="text-red-500 text-center py-8">{error}</div>;
+  if (!profileData) return <div className="text-center py-8">No profile data found.</div>;
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
         <Navbar />
       </header>
@@ -217,11 +242,15 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-muted-foreground mb-3">{profileData.bio}</p>
                 <div className="flex flex-wrap gap-2">
-                  {profileData.interests.map((interest) => (
-                    <Badge key={interest} variant="secondary">
-                      {interest}
-                    </Badge>
-                  ))}
+                  {Array.isArray(profileData.interests) && profileData.interests.length > 0 ? (
+                    profileData.interests.map((interest: string) => (
+                      <Badge key={interest} variant="secondary">
+                        {interest}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">No interests listed</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -305,8 +334,8 @@ export default function ProfilePage() {
                               booking.status === "confirmed"
                                 ? "default"
                                 : booking.status === "upcoming"
-                                ? "secondary"
-                                : "outline"
+                                  ? "secondary"
+                                  : "outline"
                             }
                             className="text-xs"
                           >
@@ -413,8 +442,8 @@ export default function ProfilePage() {
                               booking.status === "confirmed"
                                 ? "default"
                                 : booking.status === "upcoming"
-                                ? "secondary"
-                                : "outline"
+                                  ? "secondary"
+                                  : "outline"
                             }
                           >
                             {booking.status}
@@ -644,13 +673,12 @@ export default function ProfilePage() {
                       <Badge
                         key={interest}
                         variant={
-                          profileData.interests.includes(interest)
+                          Array.isArray(profileData.interests) && profileData.interests.includes(interest)
                             ? "default"
                             : "outline"
                         }
-                        className={`cursor-pointer ${
-                          !isEditing ? "pointer-events-none" : ""
-                        }`}
+                        className={`cursor-pointer ${!isEditing ? "pointer-events-none" : ""
+                          }`}
                         onClick={() =>
                           isEditing && handleInterestToggle(interest)
                         }

@@ -22,30 +22,18 @@ const UserSchema = new mongoose.Schema({
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email'],
     sparse: true // Allows null/undefined but enforces uniqueness if provided
   },
-  role: {
-    type: String,
-    enum: ['user', 'artist', 'venue', 'organizer', 'admin'],
-    default: 'user'
-  },
-  status: {
-    type: String,
-    enum: ['active', 'pending', 'rejected', 'blocked'],
-    default: function() {
-      // Users are active by default, but artists, venues and organizers need approval
-      return ['artist', 'venue', 'organizer'].includes(this.role) ? 'pending' : 'active';
-    }
-  },
+  
   profilePic: {
     type: String,
     default: ''
   },
+  city: {
+    type: String,
+    required: [true, 'City is required']
+  },
   otp: {
-    code: {
-      type: String
-    },
-    expiresAt: {
-      type: Date
-    }
+    code: { type: String, default: null },
+    expiresAt: { type: Date, default: null }
   },
   passwordResetToken: String,
   passwordResetExpires: Date,
