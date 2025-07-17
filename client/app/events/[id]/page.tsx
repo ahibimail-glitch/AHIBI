@@ -30,11 +30,12 @@ import Link from "next/link"
 import Navbar from "@/app/Navbar"
 import Footer from "@/app/Footer"
 /////
-type EventDetailPageProps = {
-  params: { id: string }
+interface PageProps {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export default function EventDetailPage({ params }: EventDetailPageProps) {
+export default function EventDetailPage({ params }: PageProps) {
   const [selectedTicketType, setSelectedTicketType] = useState("general")
   const [ticketQuantity, setTicketQuantity] = useState(1)
 
