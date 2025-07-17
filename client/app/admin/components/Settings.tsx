@@ -36,12 +36,12 @@ export default function Settings() {
     marketingEmails: true,
   });
 
-  const handleGeneralChange = (e) => {
+    const handleGeneralChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setGeneralSettings((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleNotificationChange = (id, checked) => {
+  const handleNotificationChange = (id: string, checked: boolean) => {
     setNotificationSettings((prev) => ({ ...prev, [id]: checked }));
   };
 
