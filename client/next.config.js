@@ -4,7 +4,7 @@ module.exports = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://ahibi-backend.onrender.com/api/:path*'
+        destination: 'https://ahibi.onrender.com/api/:path*'
       }
     ]
   }
