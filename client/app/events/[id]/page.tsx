@@ -29,7 +29,7 @@ import Image from "next/image"
 import Link from "next/link"
 import Navbar from "@/app/Navbar"
 import Footer from "@/app/Footer"
-
+/////
 type EventDetailPageProps = {
   params: { id: string }
 }
