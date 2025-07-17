@@ -29,13 +29,8 @@ import Image from "next/image"
 import Link from "next/link"
 import Navbar from "@/app/Navbar"
 import Footer from "@/app/Footer"
-/////
-interface PageProps {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
 
-export default function EventDetailPage({ params }: PageProps) {
+export default function EventDetailPage({ params }: { params: { id: string } }) {
   const [selectedTicketType, setSelectedTicketType] = useState("general")
   const [ticketQuantity, setTicketQuantity] = useState(1)
 
