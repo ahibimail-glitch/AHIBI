@@ -383,7 +383,7 @@ export default function AuthPage() {
                     })
                   }
                 />
-                <Label htmlFor="terms" className="text-sm" className="text-white">
+                <Label htmlFor="terms" className="text-sm text-white">
                   I agree to the{" "}
                   <Link href="/terms" className="underline">
                     Terms of Service
