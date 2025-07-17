@@ -46,11 +46,20 @@ import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 
+interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  bio: string;
+  interests: string[];
+  [key: string]: any; // Allow other properties
+}
+
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
 
-  const [profileData, setProfileData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -154,12 +163,15 @@ export default function ProfilePage() {
   };
 
   const handleInterestToggle = (interest: string) => {
-    setProfileData((prev) => ({
-      ...prev,
-      interests: prev.interests.includes(interest)
-        ? prev.interests.filter((i) => i !== interest)
-        : [...prev.interests, interest],
-    }));
+    setProfileData((prevProfile) => {
+      if (!prevProfile) return null;
+
+      const newInterests = prevProfile.interests.includes(interest)
+        ? prevProfile.interests.filter((i) => i !== interest)
+        : [...prevProfile.interests, interest];
+
+      return { ...prevProfile, interests: newInterests };
+    });
   };
 
   const availableInterests = [
