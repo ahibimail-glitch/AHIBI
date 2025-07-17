@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -8,11 +13,42 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  Music,
+  BarChart3,
+  Settings,
+  Shield,
+  Activity,
+  UserCheck,
+  CalendarCheck2,
+  ListOrdered,
+  PlusCircle,
+  Bell,
+  Calendar,
+  DollarSign,
+  Ticket,
+  Eye,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+
+// Import components
+import Dashboard from "./components/Dashboard";
+import ApprovalList from "./components/ApprovalList";
+import UsersComponent from "./components/Users";
+import Bookings from "./components/Bookings";
+import Organizers from "./components/Organizers";
+import Artists from "./components/Artists";
+import Venues from "./components/Venues";
+import Events from "./components/Events";
+import System from "./components/System";
+import CreateEventForm from "./components/CreateEventForm";
+import Analytics from "./components/Analytics";
+import SettingsComponent from "./components/Settings";
+// Import UI components
 import {
   Select,
   SelectContent,
@@ -20,44 +56,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  LayoutDashboard,
-  Users,
-  Calendar,
-  Building2,
-  Music,
-  DollarSign,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  BarChart3,
-  Settings,
-  Bell,
-  Shield,
-  Activity,
-  Eye,
-  Search,
-  Plus,
-  Clock,
-  Ticket,
-  UserCheck,
-  CalendarCheck2,
-  ListOrdered,
-  PlusCircle,
-  Upload,
-} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 // --- Helper function for sidebar button styling ---
-const SidebarButton = ({ icon: Icon, label, active, ...props }) => (
+interface SidebarButtonProps {
+  icon: React.ElementType;
+  label: string;
+  active: boolean;
+  onClick?: () => void;
+}
+
+const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonProps) => (
   <Button
     variant={active ? "secondary" : "ghost"}
     className="w-full justify-start"
@@ -68,7 +77,19 @@ const SidebarButton = ({ icon: Icon, label, active, ...props }) => (
   </Button>
 );
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function AdminDashboard() {
+  const router = useRouter();
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        router.replace("/admin/login");
+      }
+    }
+  }, [router]);
   const [activeView, setActiveView] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -211,37 +232,42 @@ export default function AdminDashboard() {
   const allBookings = [
     {
       id: "bk_1",
-      eventName: "Tech Summit 2025",
-      userName: "Aarav Sharma",
-      bookingDate: "2025-07-01",
+      event: "Tech Summit 2025",
+      customer: "Aarav Sharma",
+      date: "2025-07-01",
+      amount: "₹2,000",
       status: "Confirmed",
     },
     {
       id: "bk_2",
-      eventName: "Annual Music Festival",
-      userName: "Diya Patel",
-      bookingDate: "2025-07-02",
+      event: "Annual Music Festival",
+      customer: "Diya Patel",
+      date: "2025-07-02",
+      amount: "₹1,500",
       status: "Confirmed",
     },
     {
       id: "bk_3",
-      eventName: "Food Carnival",
-      userName: "Rohan Kumar",
-      bookingDate: "2025-07-03",
+      event: "Food Carnival",
+      customer: "Rohan Kumar",
+      date: "2025-07-03",
+      amount: "₹1,200",
       status: "Pending",
     },
     {
       id: "bk_4",
-      eventName: "Art Exhibition",
-      userName: "Priya Singh",
-      bookingDate: "2025-07-04",
+      event: "Art Exhibition",
+      customer: "Priya Singh",
+      date: "2025-07-04",
+      amount: "₹800",
       status: "Cancelled",
     },
     {
       id: "bk_5",
-      eventName: "Tech Summit 2025",
-      userName: "Vikram Reddy",
-      bookingDate: "2025-07-05",
+      event: "Tech Summit 2025",
+      customer: "Vikram Reddy",
+      date: "2025-07-05",
+      amount: "₹2,000",
       status: "Confirmed",
     },
   ];
@@ -256,9 +282,9 @@ export default function AdminDashboard() {
 
   // --- Reusable Components ---
 
-  const ApprovalList = ({ type }) => {
+  const ApprovalList = ({ type }: { type: "Organizer" | "Artist" | "Venue" | "Event" }) => {
     const items = pendingApprovals.filter((p) => p.type === type);
-    const icons = {
+    const icons: Record<"Organizer" | "Artist" | "Venue" | "Event", React.ElementType> = {
       Organizer: UserCheck,
       Artist: Music,
       Venue: Building2,
@@ -324,18 +350,24 @@ export default function AdminDashboard() {
       category: "",
       ticketPrice: "",
       capacity: "",
+      includeGst: false, // --- 2. ADD GST TO STATE ---
     });
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { id, value } = e.target;
       setEventData((prev) => ({ ...prev, [id]: value }));
     };
 
-    const handleSelectChange = (value) => {
+    const handleSelectChange = (value: string) => {
       setEventData((prev) => ({ ...prev, category: value }));
     };
 
-    const handleSubmit = (e) => {
+    // --- 3. ADD HANDLER FOR CHECKBOX ---
+    const handleGstChange = (checked: boolean) => {
+      setEventData((prev) => ({ ...prev, includeGst: checked }));
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       console.log("Submitting New Event:", eventData);
       alert(`Event "${eventData.eventName}" created successfully!`);
@@ -349,6 +381,7 @@ export default function AdminDashboard() {
         category: "",
         ticketPrice: "",
         capacity: "",
+        includeGst: false, // --- 5. RESET GST STATE ---
       });
       setActiveView("dashboard");
     };
@@ -445,6 +478,20 @@ export default function AdminDashboard() {
                   type="number"
                   placeholder="e.g., 500"
                 />
+                {eventData.ticketPrice && (
+                  <div className="text-xs text-gray-700 pt-1">
+                    Final Price: ₹{
+                      (() => {
+                        const price = parseFloat(eventData.ticketPrice);
+                        if (isNaN(price)) return "-";
+                        return eventData.includeGst
+                          ? (price * 1.18).toFixed(2)
+                          : price.toFixed(2);
+                      })()
+                    }
+                    {eventData.includeGst ? " (incl. 18% GST)" : " (no GST)"}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="capacity">Capacity</Label>
@@ -457,6 +504,28 @@ export default function AdminDashboard() {
                 />
               </div>
             </div>
+
+            {/* --- 4. ADD GST CHECKBOX UI --- */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeGst"
+                  checked={eventData.includeGst}
+                  onCheckedChange={handleGstChange}
+                />
+                <Label
+                  htmlFor="includeGst"
+                  className="text-sm font-medium leading-none"
+                >
+                  Apply 18% GST to the ticket price
+                </Label>
+              </div>
+              <p className="text-xs text-gray-500 pl-6">
+                If checked, the final price will include Goods and Services
+                Tax.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="event-poster">Event Poster</Label>
               <Input
@@ -483,193 +552,27 @@ export default function AdminDashboard() {
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-              {stats.map((stat) => (
-                <Card
-                  key={stat.title}
-                  className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-600">
-                          {stat.title}
-                        </p>
-                        <p className="text-3xl font-bold text-gray-900">
-                          {stat.value}
-                        </p>
-                        <div className="flex items-center">
-                          <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-                          <span className="text-sm font-medium text-green-600">
-                            {stat.change}
-                          </span>
-                        </div>
-                      </div>
-                      <div
-                        className={`p-3 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200`}
-                      >
-                        <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle>Welcome back!</CardTitle>
-                  <CardDescription>
-                    Here's a quick overview of your platform.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p>
-                    Select a view from the sidebar to manage different aspects
-                    of the platform.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <AlertCircle className="h-5 w-5 mr-2 text-orange-500" />{" "}
-                    Quick Actions
-                  </CardTitle>
-                  <CardDescription>Jump right into your tasks.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                  <Button onClick={() => setActiveView("users")}>
-                    <Users className="mr-2 h-4 w-4" /> Manage Users
-                  </Button>
-                  <Button onClick={() => setActiveView("bookings")}>
-                    <ListOrdered className="mr-2 h-4 w-4" /> View Bookings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveView("organizer-approvals")}
-                  >
-                    <UserCheck className="mr-2 h-4 w-4" /> Organizer Approvals
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setActiveView("artist-approvals")}
-                  >
-                    <Music className="mr-2 h-4 w-4" /> Artist Approvals
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        );
+        return <Dashboard stats={stats} setActiveView={setActiveView} />;
       case "organizer-approvals":
-        return <ApprovalList type="Organizer" />;
+        return <Organizers />;
       case "artist-approvals":
-        return <ApprovalList type="Artist" />;
+        return <Artists />;
       case "venue-approvals":
-        return <ApprovalList type="Venue" />;
+        return <Venues />;
       case "event-approvals":
-        return <ApprovalList type="Event" />;
+        return <Events />;
       case "users":
-        return (
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>User Management</CardTitle>
-                <div className="flex space-x-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search by name, email, or mobile..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-80"
-                    />
-                  </div>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" /> Add User
-                  </Button>
-                </div>
-              </div>
-              <CardDescription>
-                View, manage, and search for users on the platform.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Mobile Number</TableHead>
-                    <TableHead>Account Created On</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.mobile}</TableCell>
-                      <TableCell>{user.createdOn}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        );
+        return <UsersComponent searchQuery={searchQuery} setSearchQuery={setSearchQuery} users={allUsers} />;
       case "bookings":
-        return (
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle>All Bookings</CardTitle>
-              <CardDescription>
-                A complete log of all event bookings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Event Name</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Booking Date</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allBookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="font-medium">
-                        {booking.eventName}
-                      </TableCell>
-                      <TableCell>{booking.userName}</TableCell>
-                      <TableCell>{booking.bookingDate}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            booking.status === "Confirmed"
-                              ? "default"
-                              : booking.status === "Cancelled"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {booking.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        );
+        return <Bookings bookings={allBookings} />;
       case "create-event":
         return <CreateEventForm />;
+      case "analytics":
+        return <Analytics />;
+      case "settings":
+        return <SettingsComponent />;
+      case "system":
+        return <System />;
       default:
         return <div>Select a view</div>;
     }

@@ -19,8 +19,22 @@ const UserSchema = new mongoose.Schema({
   },
   email: {
     type: String,
+    required: function() {
+      return this.role === 'admin'; // Email required for admin
+    },
+    unique: function() {
+      return !!this.email;
+    },
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email'],
     sparse: true // Allows null/undefined but enforces uniqueness if provided
+  },
+  password: {
+    type: String,
+    required: function() {
+      return this.role === 'admin'; // Password required for admin
+    },
+    minlength: 6,
+    select: false // Don't return password by default
   },
   
   profilePic: {
@@ -101,6 +115,19 @@ UserSchema.methods.verifyOtp = async function(otp) {
   }
   
   return isMatch;
+};
+
+// Hash password before saving (only if modified)
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Compare entered password to hashed password
+UserSchema.methods.matchPassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
 module.exports = mongoose.model('User', UserSchema);

@@ -8,6 +8,7 @@ require('dotenv').config();
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
+const adminAuthRoutes = require('./routes/adminAuth.routes');
 // const artistRoutes = require('./routes/artist.routes');
 // const venueRoutes = require('./routes/venue.routes');
 // const organizerRoutes = require('./routes/organizer.routes');
@@ -32,6 +33,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Define API routes
 app.use('/api/auth', authRoutes);
+
+// Admin routes - auth first, then other admin routes
+app.use('/api/admin', adminAuthRoutes);  // This will handle /api/admin/login
 app.use('/api/admin', adminRoutes);
 // app.use('/api/artists', artistRoutes);
 // app.use('/api/venues', venueRoutes);
