@@ -30,7 +30,11 @@ import Link from "next/link"
 import Navbar from "@/app/Navbar"
 import Footer from "@/app/Footer"
 
-export default function EventDetailPage({ params }: { params: { id: string } }) {
+type EventDetailPageProps = {
+  params: { id: string }
+}
+
+export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [selectedTicketType, setSelectedTicketType] = useState("general")
   const [ticketQuantity, setTicketQuantity] = useState(1)
 
