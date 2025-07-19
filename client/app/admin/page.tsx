@@ -36,6 +36,7 @@ import System from "./components/System";
 import CreateEventForm from "./components/CreateEventForm";
 import Analytics from "./components/Analytics";
 import SettingsComponent from "./components/Settings";
+import ApprovedEvents from "./components/ApprovedEvents";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -118,6 +119,8 @@ export default function AdminDashboard() {
         return <Venues />;
       case "event-approvals":
         return <Events />;
+      case "approved-events":
+        return <ApprovedEvents />;
       case "users":
         return <UsersComponent searchQuery={searchQuery} setSearchQuery={setSearchQuery} users={filteredUsers} />;
       case "bookings":
@@ -160,7 +163,13 @@ export default function AdminDashboard() {
           <SidebarButton icon={UserCheck} label="Organizers" active={activeView === "organizer-approvals"} onClick={() => setActiveView("organizer-approvals")} />
           <SidebarButton icon={Music} label="Artists" active={activeView === "artist-approvals"} onClick={() => setActiveView("artist-approvals")} />
           <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => setActiveView("venue-approvals")} />
-          <SidebarButton icon={CalendarCheck2} label="Events" active={activeView === "event-approvals"} onClick={() => setActiveView("event-approvals")} />
+          <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => setActiveView("event-approvals")} />
+          <SidebarButton 
+            icon={CalendarCheck2} 
+            label="Approved Events" 
+            active={activeView === "approved-events"} 
+            onClick={() => setActiveView("approved-events")} 
+          />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>

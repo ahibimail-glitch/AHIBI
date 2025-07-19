@@ -82,6 +82,101 @@ const createEvent = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get events with optional status filter (Admin only)
+ * @route   GET /api/admin/events
+ * @access  Private (Admin only)
+ */
+const getEvents = async (req, res) => {
+  try {
+    const { status } = req.query;
+    
+    // Build query
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
+    
+    // If no status is provided, only return approved events by default
+    if (!status) {
+      query.status = 'approved';
+    }
+    
+    const events = await Event.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    return ApiResponse.success(res, 'Events fetched successfully', { events });
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    return ApiResponse.serverError(res, 'Error fetching events', error);
+  }
+};
+
+/**
+ * @desc    Approve an event (Admin only)
+ * @route   PUT /api/admin/events/:id/approve
+ * @access  Private (Admin only)
+ */
+const approveEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    // Update event status and approval info
+    event.status = 'approved';
+    event.approvedBy = req.user.id;
+    event.approvedAt = new Date();
+    
+    await event.save();
+    
+    return ApiResponse.success(res, 'Event approved successfully', { event });
+  } catch (error) {
+    console.error('Error approving event:', error);
+    return ApiResponse.serverError(res, 'Error approving event', error);
+  }
+};
+
+/**
+ * @desc    Reject an event (Admin only)
+ * @route   PUT /api/admin/events/:id/reject
+ * @access  Private (Admin only)
+ */
+const rejectEvent = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    
+    if (!reason) {
+      return ApiResponse.badRequest(res, 'Rejection reason is required');
+    }
+
+    const event = await Event.findById(req.params.id);
+    
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    // Update event status and rejection info
+    event.status = 'rejected';
+    event.rejectionReason = reason;
+    event.rejectedBy = req.user.id;
+    event.rejectedAt = new Date();
+    
+    await event.save();
+    
+    return ApiResponse.success(res, 'Event rejected successfully', { event });
+  } catch (error) {
+    console.error('Error rejecting event:', error);
+    return ApiResponse.serverError(res, 'Error rejecting event', error);
+  }
+};
+
 module.exports = {
-  createEvent
+  createEvent,
+  getEvents,
+  approveEvent,
+  rejectEvent
 };

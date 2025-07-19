@@ -12,7 +12,10 @@ router.use(protect);
 router.use(authorize('admin'));
 
 // Event management
+router.get('/events', eventController.getEvents);
 router.post('/events', validateEvent, eventController.createEvent);
+router.put('/events/:id/approve', eventController.approveEvent);
+router.put('/events/:id/reject', eventController.rejectEvent);
 
 // Dashboard statistics
 router.get('/dashboard', adminController.getDashboardStats);
