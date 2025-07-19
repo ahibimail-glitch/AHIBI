@@ -1,5 +1,8 @@
 // next.config.js
 module.exports = {
+  images: {
+    domains: ['placehold.co'],
+  },
   async rewrites() {
     return [
       {

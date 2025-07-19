@@ -1,13 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,456 +12,326 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, Users, Filter, Search, Heart } from "lucide-react";
+import { Calendar, MapPin, Search, Heart, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
+import { Event, EventsResponse } from "@/types/event";
+
+const CITIES = [
+  "Mumbai",
+  "Delhi",
+  "Bangalore",
+  "Pune",
+  "Chennai",
+  "Hyderabad",
+];
+
+const GENRES = ["Music", "Comedy", "Technology", "Food", "Art", "Dance"];
+
+// Format date for display
+const formatDate = (dateString: string | Date): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+// Format time for display
+const formatTime = (dateString: string | Date): string => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+// Get the lowest ticket price
+const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
+  if (!ticketTypes || ticketTypes.length === 0) return 'Free';
+  const prices = ticketTypes.map(t => t.price);
+  const minPrice = Math.min(...prices);
+  return minPrice === 0 ? 'Free' : `$${minPrice.toFixed(2)}`;
+};
+
+// Event card component
+interface EventCardProps {
+  event: Event;
+}
+
+const EventCard: React.FC<EventCardProps> = ({ event }) => (
+  <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+    <div className="relative h-48">
+      <Image
+        src={event.banner || "/placeholder.svg"}
+        alt={event.title}
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        priority={false}
+      />
+      <div className="absolute top-2 right-2">
+        <Button size="icon" variant="ghost" className="rounded-full bg-white/90 hover:bg-white">
+          <Heart className="h-5 w-5 text-gray-700" />
+        </Button>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+        <Badge variant="secondary" className="mb-2">
+          {event.category}
+        </Badge>
+        <h3 className="text-xl font-bold text-white line-clamp-1">{event.title}</h3>
+      </div>
+    </div>
+    <CardContent className="p-4 flex-1 flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Calendar className="h-4 w-4 flex-shrink-0" />
+          <span>{formatDate(event.startDate)}</span>
+          <span>•</span>
+          <span>{formatTime(event.startDate)}</span>
+        </div>
+        <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
+          {event.attendees || 0} Going
+        </Badge>
+      </div>
+      <div className="mt-auto">
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+          <MapPin className="h-4 w-4 flex-shrink-0 text-gray-500" />
+          <span className="line-clamp-1">
+            {event.location?.city}, {event.location?.address}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium">
+            From {getLowestPrice(event.ticketTypes)}
+          </span>
+          <Button asChild size="sm">
+            <Link href={`/events/${event.slug || event._id}`}>
+              View Details
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedGenre, setSelectedGenre] = useState("all");
-  const [selectedDate, setSelectedDate] = useState("all");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const events = [
-    {
-      id: 1,
-      title: "Summer Music Festival 2024",
-      description:
-        "The biggest music festival of the year featuring top artists",
-      date: "July 15, 2024",
-      time: "6:00 PM",
-      venue: "Central Park Arena",
-      location: "Mumbai, India",
-      price: "₹1,500",
-      originalPrice: "₹2,000",
-      image: "/images/carausel1.jpg?height=200&width=300",
-      tags: ["Music", "Festival", "Outdoor"],
-      organizer: "MusicEvents Pro",
-      attendees: 450,
-      capacity: 500,
-      featured: true,
-    },
-    {
-      id: 2,
-      title: "Stand-up Comedy Night",
-      description: "Laugh out loud with the best comedians in town",
-      date: "July 20, 2024",
-      time: "8:00 PM",
-      venue: "Comedy Club Downtown",
-      location: "Delhi, India",
-      price: "₹800",
-      originalPrice: "₹1,000",
-      image: "/images/carausel1.jpg?height=200&width=300",
-      tags: ["Comedy", "Indoor", "Entertainment"],
-      organizer: "Laugh Factory",
-      attendees: 85,
-      capacity: 150,
-      featured: false,
-    },
-    {
-      id: 3,
-      title: "Tech Conference 2024",
-      description: "Latest trends and innovations in technology",
-      date: "July 25, 2024",
-      time: "9:00 AM",
-      venue: "Convention Center",
-      location: "Bangalore, India",
-      price: "₹2,500",
-      originalPrice: "₹3,000",
-      image: "/images/carausel1.jpg?height=200&width=300",
-      tags: ["Technology", "Conference", "Networking"],
-      organizer: "TechCorp Events",
-      attendees: 200,
-      capacity: 300,
-      featured: true,
-    },
-    {
-      id: 4,
-      title: "Food & Wine Festival",
-      description: "Culinary delights and fine wines from around the world",
-      date: "August 5, 2024",
-      time: "12:00 PM",
-      venue: "Riverside Gardens",
-      location: "Pune, India",
-      price: "₹1,200",
-      originalPrice: "₹1,500",
-      image: "/images/carausel1.jpg?height=200&width=300",
-      tags: ["Food", "Wine", "Festival"],
-      organizer: "Gourmet Events",
-      attendees: 120,
-      capacity: 200,
-      featured: false,
-    },
-    {
-      id: 5,
-      title: "Art Exhibition Opening",
-      description: "Contemporary art showcase by emerging artists",
-      date: "August 10, 2024",
-      time: "7:00 PM",
-      venue: "Modern Art Gallery",
-      location: "Chennai, India",
-      price: "₹500",
-      originalPrice: "₹700",
-      image: "/images/carausel1.jpg?height=200&width=300",
-      tags: ["Art", "Exhibition", "Culture"],
-      organizer: "Art Collective",
-      attendees: 45,
-      capacity: 100,
-      featured: false,
-    },
-    {
-      id: 6,
-      title: "Dance Workshop Series",
-      description: "Learn various dance forms from professional instructors",
-      date: "August 15, 2024",
-      time: "4:00 PM",
-      venue: "Dance Studio Central",
-      location: "Hyderabad, India",
-      price: "₹1,000",
-      originalPrice: "₹1,200",
-      image: "/images/carausel1.jpg?height=200&width=300",
-      tags: ["Dance", "Workshop", "Learning"],
-      organizer: "Dance Academy",
-      attendees: 30,
-      capacity: 50,
-      featured: false,
-    },
-  ];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        const data: EventsResponse = await response.json();
+        console.log(data.data.events);
+        setEvents(data.data.events || []);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
+        console.error('Error fetching events:', errorMessage);
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const cities = [
-    "Mumbai",
-    "Delhi",
-    "Bangalore",
-    "Pune",
-    "Chennai",
-    "Hyderabad",
-  ];
-  const genres = ["Music", "Comedy", "Technology", "Food", "Art", "Dance"];
+    fetchEvents();
+  }, []);
 
   const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCity =
-      selectedCity === "all" || event.location.includes(selectedCity);
-    const matchesGenre =
-      selectedGenre === "all" ||
-      event.tags.some((tag) =>
-        tag.toLowerCase().includes(selectedGenre.toLowerCase())
-      );
-
+    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (event.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCity = selectedCity === "all" || 
+      (event.location?.city?.toLowerCase() === selectedCity.toLowerCase());
+    
+    const matchesGenre = selectedGenre === "all" || 
+      (event.category?.toLowerCase() === selectedGenre.toLowerCase());
+    
     return matchesSearch && matchesCity && matchesGenre;
   });
 
-  const featuredEvents = filteredEvents.filter((event) => event.featured);
-  const regularEvents = filteredEvents.filter((event) => !event.featured);
+  const featuredEvents = filteredEvents.filter((event) => event.isFeatured);
+  const regularEvents = filteredEvents.filter((event) => !event.isFeatured);
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-        <Navbar />
-      </header>
-      <section className="bg-gradient-to-b from-teal-400 via-blue-500 to-indigo-600 text-white py-16">
-  <div className="container mx-auto px-4 text-center">
-    <h1 className="text-4xl md:text-6xl font-bold mb-4">
-      Discover Unforgettable Events
-    </h1>
-    <p className="text-xl md:text-2xl text-white/90 mb-8">
-      Explore and book unique experiences happening around you
-    </p>
-    <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-white/90 text-lg">
-      <div className="flex items-center gap-2">
-        <span>🎤</span> 10+ Live Performances
-      </div>
-      <div className="flex items-center gap-2">
-        <span>📆</span> 15 Upcoming Events
-      </div>
-      <div className="flex items-center gap-2">
-        <span>🌆</span> 12+ Cities Covered
-      </div>
-    </div>
-  </div>
-</section>
-
-      <div className="container mx-auto px-4 py-4">
-        {/* <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Discover Events</h1>
-            <Button variant="outline" asChild>
-              <Link href="/">← Back to Home</Link>
-            </Button>
-          </div> */}
-
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search events..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Select value={selectedCity} onValueChange={setSelectedCity}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="City" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cities</SelectItem>
-                {cities.map((city) => (
-                  <SelectItem key={city} value={city}>
-                    {city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Genre" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Genres</SelectItem>
-                {genres.map((genre) => (
-                  <SelectItem key={genre} value={genre}>
-                    {genre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedDate} onValueChange={setSelectedDate}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any Date</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <p className="text-gray-600">Loading events...</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Featured Events */}
-        {featuredEvents.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Featured Events</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredEvents.map((event) => (
-                <Card
-                  key={event.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow group"
-                >
-                  <div className="relative">
-                    <Image
-                      src={event.image || "/images/carausel1.jpg"}
-                      alt={event.title}
-                      width={300}
-                      height={200}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-gradient-to-r from-primary to-secondary text-white">
-                        Featured
-                      </Badge>
-                    </div>
-                    <div className="absolute top-4 right-4">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 w-8 p-0"
-                      >
-                        <Heart className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="absolute bottom-4 right-4">
-                      <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-1">
-                        <span className="text-lg font-bold text-primary">
-                          {event.price}
-                        </span>
-                        {event.originalPrice && (
-                          <span className="text-sm text-muted-foreground line-through ml-2">
-                            {event.originalPrice}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle className="line-clamp-2">
-                      {event.title}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {event.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {event.date} at {event.time}
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {event.venue}, {event.location}
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Users className="h-4 w-4 mr-2" />
-                        {event.attendees}/{event.capacity} attending
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {event.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        by {event.organizer}
-                      </span>
-                      <Button asChild>
-                        <Link href={`/events/${event.id}`}>Book Now</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-2">Error loading events</h2>
+          <p className="text-gray-600">{error}</p>
+          <Button 
+            className="mt-4" 
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-        {/* All Events */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">
-              {featuredEvents.length > 0 ? "More Events" : "All Events"}
-            </h2>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Filter className="h-4 w-4 mr-1" />
-              {filteredEvents.length} events found
-            </div>
+  if (filteredEvents.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center p-6 max-w-md mx-auto">
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">No Events Found</h2>
+            <p className="text-gray-600 mb-4">We couldn't find any events matching your criteria.</p>
+            <Button 
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCity("all");
+                setSelectedGenre("all");
+              }}
+              variant="outline"
+            >
+              Clear Filters
+            </Button>
           </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
-          {regularEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regularEvents.map((event) => (
-                <Card
-                  key={event.id}
-                  className="overflow-hidden hover:shadow-lg transition-shadow group"
-                >
-                  <div className="relative">
-                    <Image
-                      src={event.image || "/images/carausel1.jpg"}
-                      alt={event.title}
-                      width={300}
-                      height={200}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-4 right-4">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 w-8 p-0"
-                      >
-                        <Heart className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="absolute bottom-4 right-4">
-                      <div className="bg-white/90 backdrop-blur rounded-lg px-3 py-1">
-                        <span className="text-lg font-bold text-primary">
-                          {event.price}
-                        </span>
-                        {event.originalPrice && (
-                          <span className="text-sm text-muted-foreground line-through ml-2">
-                            {event.originalPrice}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <CardHeader>
-                    <CardTitle className="line-clamp-2">
-                      {event.title}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {event.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {event.date} at {event.time}
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {event.venue}, {event.location}
-                      </div>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Users className="h-4 w-4 mr-2" />
-                        {event.attendees}/{event.capacity} attending
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {event.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        by {event.organizer}
-                      </span>
-                      <Button asChild>
-                        <Link href={`/events/${event.id}`}>Book Now</Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-4xl font-bold mb-4">Discover Amazing Events</h1>
+            <p className="text-xl mb-8">Find your next unforgettable experience</p>
+            
+            <div className="max-w-2xl mx-auto flex gap-2">
+              <Input
+                type="text"
+                placeholder="Search events..."
+                className="flex-1 bg-white/20 border-white/30 text-white placeholder-white/70"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Button className="bg-white text-blue-600 hover:bg-blue-50">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-muted-foreground mb-4">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg">No events found</p>
-                <p className="text-sm">Try adjusting your search filters</p>
-              </div>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-4">
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
+                <SelectTrigger className="w-[180px] bg-white/10 border-white/30 text-white">
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {CITIES.map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+                <SelectTrigger className="w-[180px] bg-white/10 border-white/30 text-white">
+                  <SelectValue placeholder="Select genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Genres</SelectItem>
+                  {GENRES.map((genre) => (
+                    <SelectItem key={genre} value={genre}>
+                      {genre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button
                 variant="outline"
+                className="bg-transparent border-white/30 text-white hover:bg-white/10"
                 onClick={() => {
                   setSearchQuery("");
                   setSelectedCity("all");
                   setSelectedGenre("all");
-                  setSelectedDate("all");
                 }}
               >
                 Clear Filters
               </Button>
             </div>
-          )}
+          </div>
         </section>
-      </div>
+
+        {/* Events Section */}
+        <section className="py-12">
+          <div className="container mx-auto px-4">
+            {featuredEvents.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold mb-6">Featured Events</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {featuredEvents.map((event) => (
+                    <EventCard key={event._id} event={event} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mb-8 flex justify-between items-center">
+              <h2 className="text-2xl font-bold">
+                {featuredEvents.length > 0 ? 'More Events' : 'All Events'}
+              </h2>
+              <p className="text-gray-600">{filteredEvents.length} events found</p>
+            </div>
+
+            {regularEvents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {regularEvents.map((event) => (
+                  <EventCard key={event._id} event={event} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <h3 className="text-xl font-medium text-gray-700 mb-2">No events found</h3>
+                <p className="text-gray-500 mb-6">Try adjusting your search or filters</p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCity("all");
+                    setSelectedGenre("all");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
       <Footer />
     </div>
   );

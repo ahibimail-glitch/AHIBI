@@ -12,7 +12,7 @@ const adminAuthRoutes = require('./routes/adminAuth.routes');
 // const artistRoutes = require('./routes/artist.routes');
 // const venueRoutes = require('./routes/venue.routes');
 // const organizerRoutes = require('./routes/organizer.routes');
-// const eventRoutes = require('./routes/event.routes');
+const eventRoutes = require('./routes/event.routes');
 // const ticketRoutes = require('./routes/ticket.routes');
 // const userRoutes = require('./routes/user.routes');
 // const paymentRoutes = require('./routes/payment.routes');
@@ -77,7 +77,7 @@ app.use('/api/admin', (req, res, next) => {
 // app.use('/api/artists', artistRoutes);
 // app.use('/api/venues', venueRoutes);
 // app.use('/api/organizers', organizerRoutes);
-// app.use('/api/events', eventRoutes);
+app.use('/api/events', eventRoutes);
 // app.use('/api/tickets', ticketRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/payments', paymentRoutes);

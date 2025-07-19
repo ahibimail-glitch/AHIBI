@@ -174,9 +174,72 @@ const rejectEvent = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all approved events (Public)
+ * @route   GET /api/events
+ * @access  Public
+ */
+const getPublicEvents = async (req, res) => {
+  try {
+    // Get query parameters for filtering
+    const { category, city, search, limit = 20, page = 1 } = req.query;
+    
+    // Build query for approved events only
+    const query = { 
+      status: 'approved',
+      startDate: { $gte: new Date() } // Only show upcoming events
+    };
+
+    // Add filters if provided
+    if (category) {
+      query.category = category;
+    }
+    
+    if (city) {
+      query['location.city'] = { $regex: city, $options: 'i' };
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { 'location.address': { $regex: search, $options: 'i' } },
+        { 'location.city': { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Get events with pagination
+    const [events, total] = await Promise.all([
+      Event.find(query)
+        .sort({ startDate: 1 }) // Sort by start date (ascending)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Event.countDocuments(query)
+    ]);
+
+    return ApiResponse.success(res, 'Events fetched successfully', {
+      events,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public events:', error);
+    return ApiResponse.serverError(res, 'Error fetching events', error);
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
+  getPublicEvents,
   approveEvent,
   rejectEvent
 };
