@@ -22,8 +22,18 @@ const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('
 // Create Express app
 const app = express();
 
+// Set up CORS with credentials support
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
 // Set up middleware
-app.use(cors());
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -31,12 +41,21 @@ app.use(morgan('dev'));
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Define API routes
 app.use('/api/auth', authRoutes);
 
 // Admin routes - auth first, then other admin routes
 app.use('/api/admin', adminAuthRoutes);  // This will handle /api/admin/login
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', (req, res, next) => {
+  console.log('Admin route accessed:', req.originalUrl);
+  next();
+}, adminRoutes);
 // app.use('/api/artists', artistRoutes);
 // app.use('/api/venues', venueRoutes);
 // app.use('/api/organizers', organizerRoutes);

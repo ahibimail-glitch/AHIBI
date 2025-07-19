@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -34,53 +34,77 @@ interface UsersProps {
   users?: User[];
 }
 
-export default function Users({ searchQuery, setSearchQuery, users }: UsersProps) {
-  // Use users from props or fallback to sample data if not provided
-  const allUsers: User[] = users?.length ? users : [
-    {
-      id: "usr_1",
-      name: "Aarav Sharma",
-      email: "aarav.sharma@example.com",
-      mobile: "9876543210",
-      createdOn: "2025-01-20",
-    },
-    {
-      id: "usr_2",
-      name: "Diya Patel",
-      email: "diya.patel@example.com",
-      mobile: "9876543211",
-      createdOn: "2025-02-15",
-    },
-    {
-      id: "usr_3",
-      name: "Rohan Kumar",
-      email: "rohan.kumar@example.com",
-      mobile: "9876543212",
-      createdOn: "2025-03-10",
-    },
-    {
-      id: "usr_4",
-      name: "Priya Singh",
-      email: "priya.singh@example.com",
-      mobile: "9876543213",
-      createdOn: "2025-04-05",
-    },
-    {
-      id: "usr_5",
-      name: "Vikram Reddy",
-      email: "vikram.reddy@example.com",
-      mobile: "9876543214",
-      createdOn: "2025-05-01",
-    },
-  ];
+export default function Users({ searchQuery, setSearchQuery }: UsersProps) {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = localStorage.getItem("admin_token");
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        
+        const res = await fetch(`${apiUrl}/api/admin/users`, {
+          method: 'GET',
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : "",
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'include',
+          mode: 'cors'
+        });
+        
+        if (!res.ok) {
+          let errorMessage = 'Failed to fetch users';
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // If we can't parse the error response, use the status text
+            errorMessage = res.statusText || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const response = await res.json();
+        
+        // Check if response has the expected data structure
+        if (!response.data || !Array.isArray(response.data.users)) {
+          throw new Error("Invalid data format received from server");
+        }
+        
+        // Map backend fields to User type
+        const backendUsers = response.data.users.map((u: any) => ({
+          id: u._id,
+          name: u.name || "",
+          email: u.email || "",
+          mobile: u.phone || u.mobile || "",
+          createdOn: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "",
+        }));
+        
+        setUsers(backendUsers);
+      } catch (err: any) {
+        setError(err.message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   // Filter users based on search query
-  const filteredUsers = searchQuery ? allUsers.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.mobile.includes(searchQuery)
-  ) : allUsers;
+  const filteredUsers = searchQuery
+    ? users.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.mobile.includes(searchQuery)
+      )
+    : users;
 
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
@@ -107,40 +131,36 @@ export default function Users({ searchQuery, setSearchQuery, users }: UsersProps
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Mobile</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.mobile}</TableCell>
-                <TableCell>{user.createdOn}</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600">
-                      Delete
-                    </Button>
-                  </div>
-                </TableCell>
+        {loading ? (
+          <div className="py-8 text-center text-gray-500">Loading users...</div>
+        ) : error ? (
+          <div className="py-8 text-center text-red-500">{error}</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Mobile</TableHead>
+                <TableHead>Created On</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.mobile}</TableCell>
+                  <TableCell>{user.createdOn}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
 }
+
