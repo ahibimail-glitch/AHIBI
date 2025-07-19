@@ -8,7 +8,7 @@ const router = express.Router();
 // @desc    Admin login with email/password
 // @access  Public
 router.post('/login', [
-  check('email', 'Please include a valid email').isEmail(),
+  check('username', 'Username is required').notEmpty(),
   check('password', 'Password is required').notEmpty()
 ], adminAuthController.login);
 

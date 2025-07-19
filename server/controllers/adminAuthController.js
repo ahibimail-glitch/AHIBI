@@ -1,8 +1,10 @@
-const User = require('../models/User');
+const Admin = require('../models/Admin');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 
 /**
- * @desc    Admin login with email & password
+ * @desc    Admin login with username & password
  * @route   POST /api/admin/login
  * @access  Public (admin only)
  */
@@ -12,40 +14,39 @@ exports.login = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
   try {
-    // Find admin by email and select password
-    const user = await User.findOne({ email, role: 'admin' }).select('+password');
-    if (!user) {
+    // Find admin by username
+    const admin = await Admin.findOne({ username }).select('+password');
+    if (!admin) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
     // Check password
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Check if admin is blocked
-    if (user.status === 'blocked') {
-      return res.status(403).json({ success: false, message: 'Your account has been blocked.' });
-    }
-
     // Generate JWT
-    const token = user.getSignedJwtToken();
+    const payload = {
+      id: admin._id,
+      username: admin.username,
+      role: 'admin'
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRE });
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: {
         token,
         user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          status: user.status,
-          profilePic: user.profilePic
+          id: admin._id,
+          username: admin.username,
+          role: 'admin'
         }
       }
     });

@@ -17,7 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 export default function AdminLogin() {
-    const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false); // Added for loading state
@@ -32,7 +32,7 @@ export default function AdminLogin() {
             const res = await fetch("/api/admin/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
             const data = await res.json();
 
@@ -73,13 +73,13 @@ export default function AdminLogin() {
                             </div>
                         )}
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="username">Username</Label>
                             <Input
-                                id="email"
-                                type="email"
-                                placeholder="admin@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                id="username"
+                                type="text"
+                                placeholder="admin"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 required
                                 disabled={isLoading}
                             />
