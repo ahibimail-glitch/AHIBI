@@ -1,13 +1,18 @@
 const express = require('express');
 const { check } = require('express-validator');
 const adminController = require('../controllers/adminController');
+const eventController = require('../controllers/eventController');
 const { protect, authorize } = require('../middlewares/auth');
+const { validateEvent } = require('../middlewares/validation');
 
 const router = express.Router();
 
 // Protect all admin routes
 router.use(protect);
 router.use(authorize('admin'));
+
+// Event management
+router.post('/events', validateEvent, eventController.createEvent);
 
 // Dashboard statistics
 router.get('/dashboard', adminController.getDashboardStats);

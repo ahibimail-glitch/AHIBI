@@ -40,8 +40,9 @@ export default function AdminLogin() {
                 throw new Error(data.message || "An unknown error occurred.");
             }
 
-            // Set token in both cookie and localStorage
+            // Store admin token and ID in localStorage
             localStorage.setItem("admin_token", data.data.token);
+            localStorage.setItem("admin_id", data.data.user.id);
             document.cookie = `admin_token=${data.data.token}; path=/; max-age=86400; SameSite=Lax`;
 
             // Wait a moment for storage to update before redirecting

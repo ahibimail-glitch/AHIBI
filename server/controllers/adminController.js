@@ -5,6 +5,7 @@ const Organizer = require('../models/Organizer');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
 const ApiResponse = require('../utils/apiResponse');
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * @desc    Dashboard statistics for admin
