@@ -90,22 +90,22 @@ const createEvent = async (req, res) => {
 const getEvents = async (req, res) => {
   try {
     const { status } = req.query;
-    
+
     // Build query
     const query = {};
     if (status) {
       query.status = status;
     }
-    
+
     // If no status is provided, only return approved events by default
     if (!status) {
       query.status = 'approved';
     }
-    
+
     const events = await Event.find(query)
       .sort({ createdAt: -1 })
       .lean();
-    
+
     return ApiResponse.success(res, 'Events fetched successfully', { events });
   } catch (error) {
     console.error('Error fetching events:', error);
@@ -121,7 +121,7 @@ const getEvents = async (req, res) => {
 const approveEvent = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
     }
@@ -130,9 +130,9 @@ const approveEvent = async (req, res) => {
     event.status = 'approved';
     event.approvedBy = req.user.id;
     event.approvedAt = new Date();
-    
+
     await event.save();
-    
+
     return ApiResponse.success(res, 'Event approved successfully', { event });
   } catch (error) {
     console.error('Error approving event:', error);
@@ -148,13 +148,13 @@ const approveEvent = async (req, res) => {
 const rejectEvent = async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     if (!reason) {
       return ApiResponse.badRequest(res, 'Rejection reason is required');
     }
 
     const event = await Event.findById(req.params.id);
-    
+
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
     }
@@ -164,9 +164,9 @@ const rejectEvent = async (req, res) => {
     event.rejectionReason = reason;
     event.rejectedBy = req.user.id;
     event.rejectedAt = new Date();
-    
+
     await event.save();
-    
+
     return ApiResponse.success(res, 'Event rejected successfully', { event });
   } catch (error) {
     console.error('Error rejecting event:', error);
@@ -183,9 +183,9 @@ const getPublicEvents = async (req, res) => {
   try {
     // Get query parameters for filtering
     const { category, city, search, limit = 20, page = 1 } = req.query;
-    
+
     // Build query for approved events only
-    const query = { 
+    const query = {
       status: 'approved',
       startDate: { $gte: new Date() } // Only show upcoming events
     };
@@ -194,11 +194,11 @@ const getPublicEvents = async (req, res) => {
     if (category) {
       query.category = category;
     }
-    
+
     if (city) {
       query['location.city'] = { $regex: city, $options: 'i' };
     }
-    
+
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -210,7 +210,7 @@ const getPublicEvents = async (req, res) => {
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    
+
     // Get events with pagination
     const [events, total] = await Promise.all([
       Event.find(query)
@@ -236,10 +236,46 @@ const getPublicEvents = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get a single event by ID (Public)
+ * @route   GET /api/events/:id
+ * @access  Public
+ */
+const getPublicEventById = async (req, res) => {
+  console.log(`Fetching event with ID: ${req.params.id}`);
+  try {
+    const event = await Event.findOne({
+      _id: req.params.id,
+      status: 'approved' // Only return approved events
+    })
+      .populate('organizer', 'name email avatar')
+      .select('-__v -createdAt -updatedAt');
+
+    if (!event) {
+      return res.status(404).json(
+        new ApiResponse(false, 'Event not found or not approved', null, 404)
+      );
+    }
+    // console.log('Event retrieved successfully:', event);
+
+    // Increment view count
+    //event.views = (event.views || 0) + 1;
+    await event.save();
+    return res.status(200).json(event);
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    return res.status(500).json(
+      new ApiResponse(false, 'Server error while fetching event', null, 500, error.message)
+    );
+  }
+};
+
+
 module.exports = {
   createEvent,
   getEvents,
   getPublicEvents,
+  getPublicEventById,
   approveEvent,
   rejectEvent
 };

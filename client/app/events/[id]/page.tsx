@@ -53,66 +53,81 @@ const EventCard = ({ event }: { event: { id: string; title: string; date: string
 );
 
 // Types
-type TicketType = {
+interface TicketType {
   _id: string;
   name: string;
   price: number;
   quantity: number;
   sold: number;
-  description?: string;
-  refundable?: boolean;
-  refundPolicy?: string;
-};
+  description: string;
+  benefits?: string[];
+}
 
-type EventOrganizer = {
+interface EventOrganizer {
   _id: string;
   name: string;
   avatar?: string;
   rating?: number;
-};
+}
 
-type EventLocation = {
-  venue: string;
+interface EventLocation {
   address: string;
   city: string;
-  state: string;
-  country: string;
+  state?: string;
+  country?: string;
   coordinates?: {
-    lat: number;
-    lng: number;
+    type: string;
+    coordinates: [number, number];
   };
-};
+}
 
-type EventStatus = 'draft' | 'published' | 'cancelled';
+interface EventRating {
+  average: number;
+  count: number;
+}
+
+interface PaymentStatus {
+  artistsPaid: boolean;
+  venuePaid: boolean;
+  organizerPaid: boolean;
+}
+
+interface ConvenienceFee {
+  percentage: number;
+  fixedAmount: number;
+}
 
 interface Event {
   _id: string;
   title: string;
   description: string;
-  longDescription?: string;
+  banner: string;
+  gallery: string[];
+  organizer: EventOrganizer | null;
+  artists: any[];
   startDate: string;
   endDate: string;
-  time: string;
-  location: EventLocation;
-  banner: string;
-  images: string[];
   category: string;
-  organizer: EventOrganizer;
-  ticketTypes: TicketType[];
   tags: string[];
-  status: EventStatus;
-  createdAt: string;
+  ticketTypes: TicketType[];
+  location: EventLocation;
+  convenience: ConvenienceFee;
+  rating: EventRating;
+  paymentStatus: PaymentStatus;
+  totalTickets: number;
+  ticketsSold: number;
+  totalRevenue: number;
+  status: string;
+  isPublic: boolean;
+  isSponsored: boolean;
+  isExternal: boolean;
+  isVirtual: boolean;
+  discounts: any[];
+  reviews: any[];
   updatedAt: string;
-  attendees?: number;
-  totalCapacity?: number;
-  highlights?: string[];
 }
 
-interface EventResponse {
-  success: boolean;
-  data: Event;
-  message?: string;
-}
+interface EventResponse extends Event {}
 
 interface EventDetailPageProps {
   params: {
@@ -124,398 +139,108 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [ticketQuantity, setTicketQuantity] = useState(1);
-  const [selectedTicketType, setSelectedTicketType] = useState<string>('');
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
   const router = useRouter();
 
-  // Mock data for development
-  const mockEvent: Event = {
-    _id: params.id,
-    title: "Summer Music Festival 2024",
-    description: "The biggest music festival of the year featuring top artists from around the world.",
-    longDescription: "Join us for an unforgettable weekend of music, food, and fun at the annual Summer Music Festival. Experience performances from top international and local artists across multiple stages. Enjoy a variety of food trucks, art installations, and interactive experiences throughout the festival grounds.",
-    startDate: "2024-07-15",
-    endDate: "2024-07-17",
-    time: "12:00 PM - 11:00 PM",
-    location: {
-      venue: "Sunset Park",
-      address: "1234 Music Lane",
-      city: "Mumbai",
-      state: "Maharashtra",
-      country: "India",
-      coordinates: {
-        lat: 19.0760,
-        lng: 72.8777,
-      },
-    },
-    banner: "/images/carausel1.jpg",
-    images: [
-      "/images/carausel1.jpg",
-      "/images/carausel2.jpg",
-      "/images/carausel3.jpg",
-      "/images/carausel4.jpg",
-    ],
-    category: "Music Festival",
-    organizer: {
-      _id: "org123",
-      name: "Music Events India",
-      avatar: "/images/logo.png",
-      rating: 4.8,
-    },
-    ticketTypes: [
-      {
-        _id: "ticket1",
-        name: "General Admission",
-        price: 1500,
-        quantity: 500,
-        sold: 250,
-        description: "Access to all general areas",
-        refundable: true,
-        refundPolicy: "Full refund up to 7 days before the event"
-      },
-      {
-        _id: "ticket2",
-        name: "VIP Pass",
-        price: 3500,
-        quantity: 100,
-        sold: 75,
-        description: "VIP access with premium viewing areas",
-        refundable: true,
-        refundPolicy: "Full refund up to 14 days before the event"
-      },
-    ],
-    tags: ["Music", "Festival", "Outdoor", "All Ages"],
-    status: "published",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    attendees: 325,
-    totalCapacity: 1000,
-    highlights: [
-      "50+ artists across 3 stages",
-      "Food and beverage stalls",
-      "Art installations",
-      "Free parking available"
-    ]
+  // Format date and time from ISO string
+  const formatDateTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return {
+        date: format(date, 'EEEE, MMMM d, yyyy'),
+        time: format(date, 'h:mm a'),
+        fullDateTime: format(date, "yyyy-MM-dd'T'HH:mm")
+      };
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return {
+        date: 'Date not available',
+        time: 'Time not available',
+        fullDateTime: ''
+      };
+    }
   };
 
   useEffect(() => {
     let isMounted = true;
-    
     const fetchEvent = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // In development, use mock data
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Using mock event data');
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-          if (isMounted) {
-            setEvent(mockEvent);
-            if (mockEvent.ticketTypes?.length > 0) {
-              setSelectedTicketType(mockEvent.ticketTypes[0]._id);
-            }
-          }
-          return;
-        }
-
         console.log(`Fetching event with ID: ${params.id}`);
         const response = await fetch(`/api/events/${params.id}`, {
-          cache: 'no-store' // Ensure we get fresh data
+          cache: 'no-store' 
         });
-        
+     
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Received event data:', data);
-        
+
         if (isMounted) {
-          if (data.success && data.event) {
-            setEvent(data.event);
-            if (data.event.ticketTypes?.length > 0) {
-              setSelectedTicketType(data.event.ticketTypes[0]._id);
-            }
-          } else {
-            throw new Error(data.message || 'Invalid event data received');
+          setEvent(data);
+          if (data.ticketTypes && data.ticketTypes.length > 0) {
+            setSelectedTicket(data.ticketTypes[0]);
           }
         }
       } catch (err) {
         console.error('Error fetching event:', err);
         if (isMounted) {
-          const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-          setError(errorMessage);
-          toast.error('Failed to load event details: ' + errorMessage);
+          setError(err instanceof Error ? err.message : 'Failed to load event');
         }
       } finally {
         if (isMounted) {
           setLoading(false);
-          setIsLoading(false);
         }
       }
     };
 
-    if (params.id) {
-      fetchEvent();
-    } else {
-      setError('No event ID provided');
-      setLoading(false);
-      setIsLoading(false);
-    }
+    fetchEvent();
 
     return () => {
       isMounted = false;
     };
   }, [params.id]);
 
-  // Loading state
-  if (loading || isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-            <p className="text-lg font-medium">Loading event details...</p>
-            <p className="text-sm text-muted-foreground">Please wait while we load the event information</p>
-          </div>
-        </div>
-        <Footer />
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
-  // Error state
-  if (error) {
+  if (error || !event) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-semibold text-red-700 mb-2">Error Loading Event</h2>
-            <p className="text-red-600 mb-4">{error}</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="outline" onClick={() => window.history.back()}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Go Back
-              </Button>
-              <Button variant="default" onClick={() => window.location.reload()}>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Try Again
-              </Button>
-            </div>
-          </div>
-        </div>
-        <Footer />
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h2 className="text-2xl font-bold mb-2">Error Loading Event</h2>
+        <p className="text-muted-foreground mb-4">{error || 'Invalid event data received'}</p>
+        <Button onClick={() => router.back()} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+        </Button>
       </div>
     );
   }
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return format(date, 'MMMM d, yyyy');
-    } catch (e) {
-      return dateString;
-    }
+  // Format dates
+  const startDateTime = formatDateTime(event.startDate);
+  const endDateTime = event.endDate ? formatDateTime(event.endDate) : null;
+  
+  // Format time range
+  const formatTimeRange = (start: string, end?: string) => {
+    const startTime = formatDateTime(start);
+    if (!end) return startTime.time;
+    const endTime = formatDateTime(end);
+    return `${startTime.time} - ${endTime.time}`;
   };
-
-  // Format time for display
-  const formatTime = (timeString: string) => {
-    try {
-      const [hours, minutes] = timeString.split(':');
-      const hour = parseInt(hours, 10);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const hour12 = hour % 12 || 12;
-      return `${hour12}:${minutes} ${ampm}`;
-    } catch (e) {
-      return timeString;
-    }
-  };
-
-  // Get selected ticket type
-  const selectedTicket = selectedTicketType && event
-    ? event.ticketTypes.find(t => t._id === selectedTicketType)
-    : null;
-
-  // Calculate available tickets
-  const availableTickets = selectedTicket ? selectedTicket.quantity - (selectedTicket.sold || 0) : 0;
-
-  // Handle ticket type selection
-  const handleTicketTypeChange = (value: string) => {
-    setSelectedTicketType(value);
-    setTicketQuantity(1); // Reset quantity when ticket type changes
-  };
-
-  // Calculate max tickets available for the selected ticket type
-  const maxTickets = selectedTicket
-    ? Math.max(0, selectedTicket.quantity - (selectedTicket.sold || 0))
-    : 0;
-
-  // Handle ticket quantity changes
-  const handleQuantityChange = (quantity: number) => {
-    if (quantity >= 1 && quantity <= maxTickets) {
-      setTicketQuantity(quantity);
-    }
-  };
-
-  // Handle booking
-  const handleBookNow = () => {
-    if (!selectedTicketType) {
-      toast.error('Please select a ticket type');
-      return;
-    }
-
-    if (!ticketQuantity) {
-      toast.error('Please select at least one ticket');
-      return;
-    }
-
-    // In a real app, you would redirect to checkout
-    toast.success(`Added ${ticketQuantity} ${selectedTicket?.name} ticket(s) to cart`);
-    console.log('Booking details:', {
-      eventId: event?._id,
-      eventTitle: event?.title,
-      ticketTypeId: selectedTicketType,
-      ticketType: selectedTicket?.name,
-      quantity: ticketQuantity,
-      totalPrice: selectedTicket?.price * ticketQuantity,
-    });
-  };
-
-  // Toggle bookmark
-  const toggleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    toast.success(isBookmarked ? 'Removed from saved events' : 'Saved to your events');
-  };
-
-  // Calculate total price
-  const calculateTotal = (): number => {
-    if (!event?.ticketTypes) return 0;
-
-    return event.ticketTypes.reduce((total, ticket) => {
-      const quantity = ticketQuantity;
-      return total + (ticket.price * quantity);
-    }, 0);
-  };
-
-  const total = calculateTotal();
-  const convenienceFee = Math.round(total * 0.1); // 10% convenience fee
-  const totalWithFees = total + convenienceFee;
-
-  // Mock related events (in a real app, this would come from an API)
-  const relatedEvents = [
-    {
-      id: '1',
-      title: 'Summer Music Festival After Party',
-      date: 'July 18, 2024',
-      image: '/images/carausel1.jpg',
-    },
-    {
-      id: '2',
-      title: 'Local Bands Night',
-      date: 'August 5, 2024',
-      image: '/images/carausel2.jpg',
-    },
-    {
-      id: '3',
-      title: 'Electronic Dance Music Festival',
-      date: 'August 15, 2024',
-      image: '/images/carausel3.jpg',
-    },
-  ];
-
-  const getMaxTickets = (): number => {
-    if (!event?.ticketTypes) return 0;
-    const selectedTicket = event.ticketTypes.find((t) => t._id === selectedTicketType);
-    return selectedTicket ? selectedTicket.quantity - (selectedTicket.sold || 0) : 0;
-  };
-
-  const getSelectedTicketPrice = (): number => {
-    if (!event?.ticketTypes) return 0;
-    const selectedTicket = event.ticketTypes.find((t) => t._id === selectedTicketType);
-    return selectedTicket ? selectedTicket.price : 0;
-  };
-
-  const getRefundPolicyText = (): string => {
-    if (!event?.ticketTypes || !selectedTicketType) return 'Select a ticket type to see refund policy';
-    const selectedTicket = event.ticketTypes.find((t) => t._id === selectedTicketType);
-    if (!selectedTicket) return 'Select a ticket type to see refund policy';
-
-    if (selectedTicket.refundable) {
-      return selectedTicket.refundPolicy || 'Refundable as per organizer\'s policy';
-    }
-    return 'Non-refundable. All sales are final.';
-  };
-
-  const handleCheckout = (): void => {
-    if (!selectedTicketType) {
-      toast.error('Please select a ticket type');
-      return;
-    }
-
-    // In a real app, you would redirect to checkout
-    // router.push(`/checkout?eventId=${event._id}&ticketTypeId=${selectedTicketType}&quantity=${ticketQuantity}`);
-
-    toast.success('Redirecting to checkout...');
-  };
-
-  const renderTicketTypeOptions = () => {
-    if (!event?.ticketTypes?.length) {
-      return <p className="text-muted-foreground">No ticket types available</p>;
-    }
-
-    return (
-      <Select value={selectedTicketType} onValueChange={setSelectedTicketType}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select a ticket type" />
-        </SelectTrigger>
-        <SelectContent>
-          {event.ticketTypes.map((ticket) => (
-            <SelectItem key={ticket._id} value={ticket._id}>
-              <div className="flex justify-between w-full">
-                <span>{ticket.name}</span>
-                <span className="ml-4 font-medium">₹{ticket.price.toLocaleString('en-IN')}</span>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
-  };
-
-  const renderTicketQuantity = () => {
-    const maxTickets = getMaxTickets();
-
-    return (
-      <div className="flex items-center justify-between p-4 border rounded-md">
-        <span className="text-sm font-medium">Quantity</span>
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTicketQuantity(Math.max(1, ticketQuantity - 1))}
-            disabled={ticketQuantity <= 1}
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-          <span className="w-8 text-center">{ticketQuantity}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTicketQuantity(Math.min(maxTickets, ticketQuantity + 1))}
-            disabled={ticketQuantity >= maxTickets}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
+  
+  const timeRange = formatTimeRange(event.startDate, event.endDate);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -534,11 +259,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={toggleBookmark}
-              className={isBookmarked ? 'bg-accent' : ''}
+              onClick={() => setIsFavorite(!isFavorite)}
+              className={isFavorite ? 'bg-accent' : ''}
             >
-              <Heart className={`h-4 w-4 mr-2 ${isBookmarked ? 'fill-current' : ''}`} />
-              {isBookmarked ? 'Saved' : 'Save'}
+              <Heart className={`h-4 w-4 mr-2 ${isFavorite ? 'fill-current' : ''}`} />
+              {isFavorite ? 'Saved' : 'Save'}
             </Button>
           </div>
         </div>
@@ -548,8 +273,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             {/* Hero Image */}
             <div className="relative w-full h-96 rounded-lg overflow-hidden mb-8">
               <Image
-                src={event?.banner || "/placeholder.svg"}
-                alt={event?.title}
+                src={event.banner || "/placeholder.svg"}
+                alt={event.title}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
@@ -559,28 +284,26 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             {/* Event Info */}
             <div>
-              <h1 className="text-4xl font-bold tracking-tight mb-4">{event?.title}</h1>
+              <h1 className="text-4xl font-bold tracking-tight mb-4">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6">
                 <div className="flex items-center">
                   <CalendarIcon className="h-5 w-5 mr-2" />
                   <span>
-                    {formatDate(event?.startDate)}
-                    {event?.endDate && (
+                    {startDateTime.date}
+                    {endDateTime && (
                       <>
                         <span className="mx-2">-</span>
                         <span>
-                          {formatDate(event?.endDate)}
+                          {endDateTime.date}
                         </span>
                       </>
                     )}
                   </span>
                 </div>
-                {event?.time && (
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 mr-2" />
-                    <span>{formatTime(event?.time)}</span>
-                  </div>
-                )}
+                <div className="flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  <span>{timeRange}</span>
+                </div>
               </div>
             </div>
 
@@ -588,7 +311,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">About This Event</h2>
               <p className="text-muted-foreground whitespace-pre-line">
-                {event?.longDescription || event?.description}
+                {event.description}
               </p>
             </div>
 
@@ -600,14 +323,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   <MapPin className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-medium">{event?.location.venue}</h3>
+                  <h3 className="font-medium">{event.location.address}</h3>
                   <p className="text-muted-foreground">
-                    {event?.location.address}, {event?.location.city}, {event?.location.state}, {event?.location.country}
+                    {[event.location.city, event.location.state, event.location.country]
+                      .filter(Boolean)
+                      .join(', ')}
                   </p>
-                  {event?.location.coordinates && (
+                  {event.location.coordinates && (
                     <Button variant="link" className="p-0 h-auto mt-2" asChild>
                       <a
-                        href={`https://www.google.com/maps?q=${event?.location.coordinates.lat},${event?.location.coordinates.lng}`}
+                        href={`https://www.google.com/maps?q=${event.location.coordinates?.coordinates?.[1]},${event.location.coordinates?.coordinates?.[0]}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -620,15 +345,99 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
 
             {/* Event Tags */}
-            {event?.tags && event?.tags.length > 0 && (
+            {event.tags && event.tags.length > 0 && (
               <div className="space-y-4">
                 <h2 className="text-2xl font-semibold">Tags</h2>
                 <div className="flex flex-wrap gap-2">
-                  {event?.tags.map((tag) => (
+                  {event.tags.map((tag: string) => (
                     <Badge key={tag} variant="secondary" className="text-sm">
                       {tag}
                     </Badge>
                   ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-8">
+            {/* Tickets */}
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <h2 className="text-2xl font-semibold mb-4">Tickets</h2>
+              {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                event.ticketTypes.map((ticket) => (
+                  <div key={ticket._id} className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 bg-muted rounded-lg p-3">
+                        <TicketIcon className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{ticket.name}</h4>
+                        <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                        {ticket.benefits && ticket.benefits.length > 0 && (
+                          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                            {ticket.benefits.map((benefit: string, i: number) => (
+                              <li key={i} className="flex items-center">
+                                <span className="mr-2">•</span>
+                                {benefit}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="mt-2">
+                          <span className="text-lg font-semibold">₹{ticket.price}</span>
+                          {event.convenience.percentage > 0 && (
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              + {event.convenience.percentage}% convenience fee
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        {ticket.sold} of {ticket.quantity} tickets sold
+                      </div>
+                      <Button
+                        variant={selectedTicket?._id === ticket._id ? 'default' : 'outline'}
+                        onClick={() => setSelectedTicket(ticket)}
+                        className="ml-auto"
+                        disabled={ticket.quantity <= ticket.sold}
+                      >
+                        {ticket.quantity <= ticket.sold ? 'Sold Out' : 
+                         selectedTicket?._id === ticket._id ? 'Selected' : 'Select'}
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">No tickets available</p>
+              )}
+            </div>
+
+            {/* Organizer */}
+            {event.organizer && (
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <h2 className="text-2xl font-semibold mb-4">Organizer</h2>
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12 bg-muted">
+                    {event.organizer.avatar ? (
+                      <AvatarImage src={event.organizer.avatar} alt={event.organizer.name} />
+                    ) : (
+                      <AvatarFallback>{event.organizer.name.charAt(0)}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div>
+                    <h3 className="font-medium">{event.organizer.name}</h3>
+                    {event.organizer.rating && (
+                      <div className="flex items-center mt-1">
+                        <Star className="h-4 w-4 text-yellow-500 fill-current mr-1" />
+                        <span className="text-sm text-muted-foreground">
+                          {event.organizer.rating.toFixed(1)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
