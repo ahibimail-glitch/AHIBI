@@ -13,6 +13,7 @@ const adminAuthRoutes = require('./routes/adminAuth.routes');
 // const venueRoutes = require('./routes/venue.routes');
 // const organizerRoutes = require('./routes/organizer.routes');
 const eventRoutes = require('./routes/event.routes');
+const uploadRoutes = require('./routes/upload.routes');
 // const ticketRoutes = require('./routes/ticket.routes');
 // const userRoutes = require('./routes/user.routes');
 // const paymentRoutes = require('./routes/payment.routes');
@@ -78,10 +79,11 @@ app.use('/api/admin', (req, res, next) => {
 // app.use('/api/venues', venueRoutes);
 // app.use('/api/organizers', organizerRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/upload', uploadRoutes);
 // app.use('/api/tickets', ticketRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/payments', paymentRoutes);
-// app.use('/api/notifications', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 
@@ -89,6 +91,12 @@ app.use('/api/admin/support', adminSupportRoutes);
 app.get('/', (req, res) => {
   res.send('Welcome to Ahibi 3.0 API');
 });
+
+// Import error handler
+const errorHandler = require('./middlewares/errorHandler');
+
+// Error handling middleware - must be after all other middleware and routes
+app.use(errorHandler.errorHandler);
 
 // MongoDB Connection
 const connectDB = async () => {

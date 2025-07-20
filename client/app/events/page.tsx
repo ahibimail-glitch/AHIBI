@@ -152,13 +152,13 @@ export default function EventsPage() {
   const filteredEvents = events.filter((event) => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (event.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCity = selectedCity === "all" || 
+
+    const matchesCity = selectedCity === "all" ||
       (event.location?.city?.toLowerCase() === selectedCity.toLowerCase());
-    
-    const matchesGenre = selectedGenre === "all" || 
+
+    const matchesGenre = selectedGenre === "all" ||
       (event.category?.toLowerCase() === selectedGenre.toLowerCase());
-    
+
     return matchesSearch && matchesCity && matchesGenre;
   });
 
@@ -182,8 +182,8 @@ export default function EventsPage() {
         <div className="text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-2">Error loading events</h2>
           <p className="text-gray-600">{error}</p>
-          <Button 
-            className="mt-4" 
+          <Button
+            className="mt-4"
             onClick={() => window.location.reload()}
           >
             Try Again
@@ -201,7 +201,7 @@ export default function EventsPage() {
           <div className="text-center p-6 max-w-md mx-auto">
             <h2 className="text-xl font-semibold text-gray-800 mb-2">No Events Found</h2>
             <p className="text-gray-600 mb-4">We couldn't find any events matching your criteria.</p>
-            <Button 
+            <Button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedCity("all");
@@ -225,64 +225,8 @@ export default function EventsPage() {
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold mb-4">Discover Amazing Events</h1>
-            <p className="text-xl mb-8">Find your next unforgettable experience</p>
-            
-            <div className="max-w-2xl mx-auto flex gap-2">
-              <Input
-                type="text"
-                placeholder="Search events..."
-                className="flex-1 bg-white/20 border-white/30 text-white placeholder-white/70"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Button className="bg-white text-blue-600 hover:bg-blue-50">
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </Button>
-            </div>
-
-            <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Select value={selectedCity} onValueChange={setSelectedCity}>
-                <SelectTrigger className="w-[180px] bg-white/10 border-white/30 text-white">
-                  <SelectValue placeholder="Select city" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cities</SelectItem>
-                  {CITIES.map((city) => (
-                    <SelectItem key={city} value={city}>
-                      {city}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-                <SelectTrigger className="w-[180px] bg-white/10 border-white/30 text-white">
-                  <SelectValue placeholder="Select genre" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Genres</SelectItem>
-                  {GENRES.map((genre) => (
-                    <SelectItem key={genre} value={genre}>
-                      {genre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                className="bg-transparent border-white/30 text-white hover:bg-white/10"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCity("all");
-                  setSelectedGenre("all");
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
+            <h1 className="text-4xl md:text-6xl font-bold mb-4">Discover Amazing Artists</h1>
+            <p className="text-xl md:text-2xl text-white/90 mb-8">Connect with talented performers for your next event</p>
           </div>
         </section>
 

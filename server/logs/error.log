@@ -1,0 +1,4 @@
+{"level":"error","message":"Photo upload failed: Cannot read properties of undefined (reading 'id')","service":"ahibi-association","timestamp":"2025-07-21 00:25:16"}
+{"level":"error","message":"Photo upload failed: Cannot read properties of undefined (reading 'id')","service":"ahibi-association","timestamp":"2025-07-21 00:29:22"}
+{"level":"error","message":"Photo upload failed: Upload failed: Missing required parameter - file","service":"ahibi-association","timestamp":"2025-07-21 00:31:47"}
+{"level":"error","message":"Photo upload failed: Cannot read properties of undefined (reading 'id')","service":"pickleball-association","timestamp":"2025-07-21 00:34:40"}
