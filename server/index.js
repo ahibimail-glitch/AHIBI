@@ -18,6 +18,7 @@ const uploadRoutes = require('./routes/upload.routes');
 // const userRoutes = require('./routes/user.routes');
 // const paymentRoutes = require('./routes/payment.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const bookingRoutes = require('./routes/booking.routes');
 const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('./routes/support.routes');
 
 // Create Express app
@@ -84,6 +85,7 @@ app.use('/api/upload', uploadRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/bookings', bookingRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 

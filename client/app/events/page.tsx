@@ -54,7 +54,7 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
   if (!ticketTypes || ticketTypes.length === 0) return 'Free';
   const prices = ticketTypes.map(t => t.price);
   const minPrice = Math.min(...prices);
-  return minPrice === 0 ? 'Free' : `$${minPrice.toFixed(2)}`;
+  return minPrice === 0 ? 'Free' : `₹${minPrice.toFixed(2)}`;
 };
 
 // Event card component
@@ -69,7 +69,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => (
         src={event.banner || "/placeholder.svg"}
         alt={event.title}
         fill
-        className="object-cover"
+        className="object-fill"
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         priority={false}
       />
@@ -106,7 +106,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => (
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium">
-            From {getLowestPrice(event.ticketTypes)}
+            Only {getLowestPrice(event.ticketTypes)}
           </span>
           <Button asChild size="sm">
             <Link href={`/events/${event.slug || event._id}`}>

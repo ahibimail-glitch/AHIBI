@@ -127,15 +127,36 @@ interface Event {
   updatedAt: string;
 }
 
-interface EventResponse extends Event {}
+interface EventResponse extends Event { }
 
 interface EventDetailPageProps {
   params: {
     id: string;
   };
 }
+interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  bio: string;
+  interests: string[];
+  [key: string]: any; // Allow other properties
+}
+interface BookingDetails {
+  _id: string;
+  event: string;
+  ticket: string;
+  quantity: number;
+  price: number;
+  total: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  user:object;
+}
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
+  const router = useRouter();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,7 +164,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
-  const router = useRouter();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+
 
   // Format date and time from ISO string
   const formatDateTime = (dateString: string) => {
@@ -164,6 +187,66 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     }
   };
 
+  const [isBooking, setIsBooking] = useState(false);
+
+  const handleBooking = async () => {
+    if (!selectedTicket || !user) {
+      toast.error('Please select a ticket and ensure you are logged in');
+      return;
+    }
+    
+    setIsBooking(true);
+    try {
+      // Get auth token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please log in to book tickets');
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          eventId: event?._id,
+          ticketId: selectedTicket._id,
+          quantity: quantity
+        })
+      });
+
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to book ticket');
+      }
+
+      toast.success('Ticket booked successfully!');
+      
+      // Navigate to booking invoice with the booking ID from the response
+      if (responseData.booking) {
+        router.push(`/events/${event?._id}/bookings/${responseData.booking.id}`);
+      } else {
+        console.error('No booking ID in response:', responseData);
+        toast.error('Error processing your booking. Please check your bookings.');
+        router.push('/profile/bookings');
+      }
+      
+    } catch (error) {
+      console.error('Booking error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to book ticket';
+      toast.error(errorMessage);
+      
+      // If unauthorized, redirect to login
+      if (errorMessage.includes('auth') || errorMessage.includes('login') || errorMessage.includes('token')) {
+        router.push('/auth?redirect=' + encodeURIComponent(window.location.pathname));
+      }
+    } finally {
+      setIsBooking(false);
+    }
+  }
+  
   useEffect(() => {
     let isMounted = true;
     const fetchEvent = async () => {
@@ -173,9 +256,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
         console.log(`Fetching event with ID: ${params.id}`);
         const response = await fetch(`/api/events/${params.id}`, {
-          cache: 'no-store' 
+          cache: 'no-store'
         });
-     
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -200,6 +283,29 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         }
       }
     };
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setError(data.message || "Failed to fetch profile");
+        } else {
+          setUser(data.data.user);
+        }
+      } catch (e) {
+        setError("Network error. Please try again.");
+      }
+      setLoading(false);
+    };
+    fetchProfile();
 
     fetchEvent();
 
@@ -231,7 +337,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   // Format dates
   const startDateTime = formatDateTime(event.startDate);
   const endDateTime = event.endDate ? formatDateTime(event.endDate) : null;
-  
+
   // Format time range
   const formatTimeRange = (start: string, end?: string) => {
     const startTime = formatDateTime(start);
@@ -239,14 +345,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     const endTime = formatDateTime(end);
     return `${startTime.time} - ${endTime.time}`;
   };
-  
+
   const timeRange = formatTimeRange(event.startDate, event.endDate);
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <div className="container mx-auto px-4 py-8 flex-1">
-        <div className="flex justify-between items-center mb-6">
+        {/* <div className="flex justify-between items-center mb-6">
           <Button variant="ghost" onClick={() => window.history.back()}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Events
@@ -266,7 +372,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               {isFavorite ? 'Saved' : 'Save'}
             </Button>
           </div>
-        </div>
+        </div> */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
@@ -276,7 +382,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 src={event.banner || "/placeholder.svg"}
                 alt={event.title}
                 fill
-                className="object-cover"
+                className="object-fill"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 priority
               />
@@ -332,8 +438,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   {event.location.coordinates && (
                     <Button variant="link" className="p-0 h-auto mt-2" asChild>
                       <a
-                        href={`https://www.google.com/maps?q=${event.location.coordinates?.coordinates?.[1]},${event.location.coordinates?.coordinates?.[0]}`}
-                        target="_blank"
+                        href={`https://www.google.com/maps?q=${encodeURIComponent(event.location.address)}+${encodeURIComponent(event.location.city)}`} target="_blank"
                         rel="noopener noreferrer"
                       >
                         View on map
@@ -400,12 +505,17 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       </div>
                       <Button
                         variant={selectedTicket?._id === ticket._id ? 'default' : 'outline'}
-                        onClick={() => setSelectedTicket(ticket)}
+                        onClick={() => {
+                          if (selectedTicket?._id === ticket._id) {
+                            handleBooking();
+                          } else {
+                            setSelectedTicket(ticket);
+                          }
+                        }}
                         className="ml-auto"
-                        disabled={ticket.quantity <= ticket.sold}
+                        disabled={ticket.quantity <= ticket.sold || isBooking}
                       >
-                        {ticket.quantity <= ticket.sold ? 'Sold Out' : 
-                         selectedTicket?._id === ticket._id ? 'Selected' : 'Select'}
+                        {isBooking ? 'Processing...' : ticket.quantity <= ticket.sold ? 'Sold Out' : selectedTicket?._id === ticket._id ? 'Confirm Booking' : 'Book Now'}
                       </Button>
                     </div>
                   </div>
