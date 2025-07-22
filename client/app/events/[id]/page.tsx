@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Minus,
   Plus,
@@ -14,25 +14,42 @@ import {
   Share2,
   Heart,
   Star,
-  Ticket as TicketIcon
-} from "lucide-react"
-import { format } from "date-fns"
-import Image from "next/image"
-import Link from "next/link"
-import dynamic from 'next/dynamic';
+  Ticket as TicketIcon,
+} from "lucide-react";
+import { format } from "date-fns";
+import Image from "next/image";
+import Link from "next/link";
+import dynamic from "next/dynamic";
 
 // UI Components
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // App Components - Using dynamic imports to avoid SSR issues
-import Navbar from "@/app/Navbar"
-import Footer from "@/app/Footer"
+import Navbar from "@/app/Navbar";
+import Footer from "@/app/Footer";
 // Event Card Component (simplified for related events)
-const EventCard = ({ event }: { event: { id: string; title: string; date: string; image: string } }) => (
+const EventCard = ({
+  event,
+}: {
+  event: { id: string; title: string; date: string; image: string };
+}) => (
   <Card className="overflow-hidden hover:shadow-lg transition-shadow">
     <div className="relative aspect-video">
       <Image
@@ -127,7 +144,7 @@ interface Event {
   updatedAt: string;
 }
 
-interface EventResponse extends Event { }
+interface EventResponse extends Event {}
 
 interface EventDetailPageProps {
   params: {
@@ -152,7 +169,7 @@ interface BookingDetails {
   status: string;
   createdAt: string;
   updatedAt: string;
-  user:object;
+  user: object;
 }
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
@@ -163,26 +180,25 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState("details");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [bookingDetails, setBookingDetails] = useState<any | null>(null);
-
 
   // Format date and time from ISO string
   const formatDateTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
       return {
-        date: format(date, 'EEEE, MMMM d, yyyy'),
-        time: format(date, 'h:mm a'),
-        fullDateTime: format(date, "yyyy-MM-dd'T'HH:mm")
+        date: format(date, "EEEE, MMMM d, yyyy"),
+        time: format(date, "h:mm a"),
+        fullDateTime: format(date, "yyyy-MM-dd'T'HH:mm"),
       };
     } catch (error) {
-      console.error('Error formatting date:', error);
+      console.error("Error formatting date:", error);
       return {
-        date: 'Date not available',
-        time: 'Time not available',
-        fullDateTime: ''
+        date: "Date not available",
+        time: "Time not available",
+        fullDateTime: "",
       };
     }
   };
@@ -190,63 +206,101 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isBooking, setIsBooking] = useState(false);
 
   const handleBooking = async () => {
-    if (!selectedTicket || !user) {
-      toast.error('Please select a ticket and ensure you are logged in');
+    console.log("Booking payload:", {
+      event,
+      user,
+      quantity,
+
+    });
+
+    // Validate required data
+    if (!selectedTicket) {
+      toast.error("Please select a ticket type");
       return;
     }
-    
+    if (!event || !event._id) {
+      toast.error("Event information is missing");
+      return;
+    }
+    if (!quantity || quantity < 1) {
+      toast.error("Please select a valid quantity");
+      return;
+    }
+
     setIsBooking(true);
     try {
       // Get auth token
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
-        throw new Error('Please log in to book tickets');
+        throw new Error("Please log in to book tickets");
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          eventId: event?._id,
-          ticketId: selectedTicket._id,
-          quantity: quantity
-        })
-      });
+      // Validate event and ticket data
+      if (!event) {
+        throw new Error("Event information not available");
+      }
+      
+      if (!selectedTicket) {
+        throw new Error("Please select a ticket");
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/bookings`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            event,
+            user,
+            quantity,
+            price: selectedTicket.price,
+            ticketType: selectedTicket.name,
+          }),
+        }
+      );
 
       const responseData = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to book ticket');
+        throw new Error(responseData.message || "Failed to book ticket");
       }
 
-      toast.success('Ticket booked successfully!');
-      
+      toast.success("Ticket booked successfully!");
+      console.log(responseData)
       // Navigate to booking invoice with the booking ID from the response
       if (responseData.booking) {
-        router.push(`/events/${event?._id}/bookings/${responseData.booking.id}`);
+        router.push(`/events/${event?._id}/bookings`);
       } else {
-        console.error('No booking ID in response:', responseData);
-        toast.error('Error processing your booking. Please check your bookings.');
-        router.push('/profile/bookings');
+        console.error("No booking ID in response:", responseData);
+        toast.error(
+          "Error processing your booking. Please check your bookings."
+        );
+        router.push("/profile/bookings");
       }
-      
     } catch (error) {
-      console.error('Booking error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to book ticket';
+      console.error("Booking error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to book ticket";
       toast.error(errorMessage);
-      
+
       // If unauthorized, redirect to login
-      if (errorMessage.includes('auth') || errorMessage.includes('login') || errorMessage.includes('token')) {
-        router.push('/auth?redirect=' + encodeURIComponent(window.location.pathname));
+      if (
+        errorMessage.includes("auth") ||
+        errorMessage.includes("login") ||
+        errorMessage.includes("token")
+      ) {
+        router.push(
+          "/auth?redirect=" + encodeURIComponent(window.location.pathname)
+        );
       }
     } finally {
       setIsBooking(false);
     }
-  }
-  
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchEvent = async () => {
@@ -256,7 +310,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
         console.log(`Fetching event with ID: ${params.id}`);
         const response = await fetch(`/api/events/${params.id}`, {
-          cache: 'no-store'
+          cache: "no-store",
         });
 
         if (!response.ok) {
@@ -264,7 +318,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         }
 
         const data = await response.json();
-        console.log('Received event data:', data);
+        console.log("Received event data:", data);
 
         if (isMounted) {
           setEvent(data);
@@ -273,9 +327,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           }
         }
       } catch (err) {
-        console.error('Error fetching event:', err);
+        console.error("Error fetching event:", err);
         if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load event');
+          setError(err instanceof Error ? err.message : "Failed to load event");
         }
       } finally {
         if (isMounted) {
@@ -288,12 +342,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       setError("");
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           }
-        });
+        );
         const data = await res.json();
         if (!res.ok || !data.success) {
           setError(data.message || "Failed to fetch profile");
@@ -326,7 +383,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <h2 className="text-2xl font-bold mb-2">Error Loading Event</h2>
-        <p className="text-muted-foreground mb-4">{error || 'Invalid event data received'}</p>
+        <p className="text-muted-foreground mb-4">
+          {error || "Invalid event data received"}
+        </p>
         <Button onClick={() => router.back()} variant="outline">
           <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
         </Button>
@@ -390,7 +449,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             {/* Event Info */}
             <div>
-              <h1 className="text-4xl font-bold tracking-tight mb-4">{event.title}</h1>
+              <h1 className="text-4xl font-bold tracking-tight mb-4">
+                {event.title}
+              </h1>
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6">
                 <div className="flex items-center">
                   <CalendarIcon className="h-5 w-5 mr-2" />
@@ -399,9 +460,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     {endDateTime && (
                       <>
                         <span className="mx-2">-</span>
-                        <span>
-                          {endDateTime.date}
-                        </span>
+                        <span>{endDateTime.date}</span>
                       </>
                     )}
                   </span>
@@ -431,14 +490,21 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <div>
                   <h3 className="font-medium">{event.location.address}</h3>
                   <p className="text-muted-foreground">
-                    {[event.location.city, event.location.state, event.location.country]
+                    {[
+                      event.location.city,
+                      event.location.state,
+                      event.location.country,
+                    ]
                       .filter(Boolean)
-                      .join(', ')}
+                      .join(", ")}
                   </p>
                   {event.location.coordinates && (
                     <Button variant="link" className="p-0 h-auto mt-2" asChild>
                       <a
-                        href={`https://www.google.com/maps?q=${encodeURIComponent(event.location.address)}+${encodeURIComponent(event.location.city)}`} target="_blank"
+                        href={`https://www.google.com/maps?q=${encodeURIComponent(
+                          event.location.address
+                        )}+${encodeURIComponent(event.location.city)}`}
+                        target="_blank"
                         rel="noopener noreferrer"
                       >
                         View on map
@@ -478,19 +544,25 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium">{ticket.name}</h4>
-                        <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {ticket.description}
+                        </p>
                         {ticket.benefits && ticket.benefits.length > 0 && (
                           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                            {ticket.benefits.map((benefit: string, i: number) => (
-                              <li key={i} className="flex items-center">
-                                <span className="mr-2">•</span>
-                                {benefit}
-                              </li>
-                            ))}
+                            {ticket.benefits.map(
+                              (benefit: string, i: number) => (
+                                <li key={i} className="flex items-center">
+                                  <span className="mr-2">•</span>
+                                  {benefit}
+                                </li>
+                              )
+                            )}
                           </ul>
                         )}
                         <div className="mt-2">
-                          <span className="text-lg font-semibold">₹{ticket.price}</span>
+                          <span className="text-lg font-semibold">
+                            ₹{ticket.price}
+                          </span>
                           {event.convenience.percentage > 0 && (
                             <span className="ml-2 text-sm text-muted-foreground">
                               + {event.convenience.percentage}% convenience fee
@@ -504,7 +576,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         {ticket.sold} of {ticket.quantity} tickets sold
                       </div>
                       <Button
-                        variant={selectedTicket?._id === ticket._id ? 'default' : 'outline'}
+                        variant={
+                          selectedTicket?._id === ticket._id
+                            ? "default"
+                            : "outline"
+                        }
                         onClick={() => {
                           if (selectedTicket?._id === ticket._id) {
                             handleBooking();
@@ -515,7 +591,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         className="ml-auto"
                         disabled={ticket.quantity <= ticket.sold || isBooking}
                       >
-                        {isBooking ? 'Processing...' : ticket.quantity <= ticket.sold ? 'Sold Out' : selectedTicket?._id === ticket._id ? 'Confirm Booking' : 'Book Now'}
+                        {isBooking
+                          ? "Processing..."
+                          : ticket.quantity <= ticket.sold
+                          ? "Sold Out"
+                          : selectedTicket?._id === ticket._id
+                          ? "Confirm Booking"
+                          : "Book Now"}
                       </Button>
                     </div>
                   </div>
@@ -532,9 +614,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12 bg-muted">
                     {event.organizer.avatar ? (
-                      <AvatarImage src={event.organizer.avatar} alt={event.organizer.name} />
+                      <AvatarImage
+                        src={event.organizer.avatar}
+                        alt={event.organizer.name}
+                      />
                     ) : (
-                      <AvatarFallback>{event.organizer.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>
+                        {event.organizer.name.charAt(0)}
+                      </AvatarFallback>
                     )}
                   </Avatar>
                   <div>
@@ -563,13 +650,19 @@ function Label({
   children,
   className,
   ...props
-}: { children: React.ReactNode; className?: string;[key: string]: any }) {
+}: {
+  children: React.ReactNode;
+  className?: string;
+  [key: string]: any;
+}) {
   return (
     <label
-      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className || ""}`}
+      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
+        className || ""
+      }`}
       {...props}
     >
       {children}
     </label>
-  )
+  );
 }

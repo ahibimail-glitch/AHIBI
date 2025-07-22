@@ -50,22 +50,29 @@ const BookingInvoiceCard = () => {
                     setLoading(false);
                     return;
                 }
-                const response = await fetch('/api/v1/bookings/my-bookings', {
+                const response = await fetch('/api/bookings/my-bookings', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',
                     },
+
                 });
+               // console.log(response)
                 if (!response.ok) {
                     throw new Error('Failed to fetch bookings.');
                 }
                 const data = await response.json();
-                if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+                const bookings=data.bookings;
+                console.log(bookings)
+
+                if (bookings && bookings.length > 0) {
                     // Sort bookings by createdAt descending, pick the most recent
-                    const sorted = [...data.data].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                    const sorted = [...bookings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
                     console.log(sorted[0]);
                     setBooking(sorted[0]);
-                } else {
+                    console.log("HELLO")
+                } 
+                else {
                     setError('No bookings found.');
                 }
             } catch (err: any) {

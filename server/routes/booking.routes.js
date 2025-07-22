@@ -1,84 +1,92 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../middleware/auth');
-const Booking = require('../models/Booking');
-const Event = require('../models/Event');
-const Ticket = require('../models/Ticket');
+const auth = require("../middlewares/auth");
+const Booking = require("../models/Booking");
+const Event = require("../models/Event");
+
 
 // @route   POST /api/bookings
 // @desc    Create a new booking
 // @access  Private
-router.post('/', auth, async (req, res) => {
+router.post("/", auth.protect, async (req, res) => {
   try {
-    const { eventId, ticketId, quantity } = req.body;
-    const userId = req.user.id;
+    // console.log("Booking payload:", req.body);
+    const { event, user, quantity, price, ticketType } = req.body;
+    //console.log("Booking payload:", { event, user, quantity });
 
     // Validate input
-    if (!eventId || !ticketId || !quantity || quantity < 1) {
-      return res.status(400).json({ message: 'Please provide eventId, ticketId, and valid quantity' });
+    if (!event || !user || !quantity || quantity < 1) {
+      return res.status(400).json({
+        message: "Please provide event,user, and valid quantity",
+      });
     }
 
-    // Get ticket details
-    const ticket = await Ticket.findById(ticketId);
-    if (!ticket) {
-      return res.status(404).json({ message: 'Ticket not found' });
+    // Fetch event and ticket
+    console.log("Fetching event and ticket...");
+    const isEvent = await Event.findById(event._id);
+    //console.log("Event:", event);
+    if (!isEvent) {
+      return res.status(404).json({ message: "Event not found" });
     }
 
-    // Check if ticket belongs to the event
-    if (ticket.event.toString() !== eventId) {
-      return res.status(400).json({ message: 'Ticket does not belong to this event' });
-    }
 
-    // Check ticket availability
-    if (ticket.quantity - ticket.sold < quantity) {
-      return res.status(400).json({ message: 'Not enough tickets available' });
-    }
 
-    // Calculate total price
-    const total = ticket.price * quantity;
+
+    console.log(price)
 
     // Create booking
     const booking = new Booking({
-      event: eventId,
-      user: userId,
-      ticket: ticketId,
+      event: event._id,
+      user: req.user._id,
       quantity,
-      price: ticket.price,
-      total,
-      status: 'pending',
-      paymentStatus: 'pending'
+      price: price,
+      total: price,
+      status: "confirmed",
+      paymentStatus: "completed",
+      ticketType: ticketType,
     });
 
     // Save booking
     await booking.save();
 
-    // Update ticket sold count
-    ticket.sold += quantity;
-    await ticket.save();
-
-    // Update event tickets sold count
-    await Event.findByIdAndUpdate(eventId, {
-      $inc: { ticketsSold: quantity, totalRevenue: total }
+    // Update event tickets sold   count
+    await Event.findByIdAndUpdate(event._id, {
+      $inc: { ticketsSold: quantity, totalRevenue: price },
     });
 
     res.status(201).json({
-      message: 'Booking created successfully',
+      message: "Booking created successfully",
       booking: {
         id: booking._id,
         event: booking.event,
-        ticket: booking.ticket,
         quantity: booking.quantity,
         price: booking.price,
         total: booking.total,
         status: booking.status,
         paymentStatus: booking.paymentStatus,
-        bookedAt: booking.bookedAt
-      }
+        bookedAt: booking.bookedAt,
+      },
     });
-
   } catch (error) {
-    console.error('Error creating booking:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("Error creating booking:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   GET /api/bookings/my-bookings
+// @desc    Get all bookings for the logged-in user
+// @access  Private
+router.get("/my-bookings", auth.protect, async (req, res) => {
+  try {
+    console.log(req.user)
+
+    const bookings = await Booking.find({ user: req.user._id }).sort({ bookedAt: -1 });
+
+  
+    console.log(bookings)
+    res.json({ bookings });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 

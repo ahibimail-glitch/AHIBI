@@ -11,9 +11,8 @@ const BookingSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  ticket: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Ticket',
+  ticketType: {
+    type: String,
     required: true
   },
   quantity: {
