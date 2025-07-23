@@ -6,7 +6,8 @@ import { CheckCircle, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import BookingInvoiceCard from '@/app/events/[id]/bookings/booking-invoice';
+// import BookingInvoiceCard from '@/app/events/[id]/bookings/booking-invoice';
+import ModernBookingTicket from '@/app/events/[id]/bookings/booking-invoice';
 
 export default function BookingSuccessPage() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function BookingSuccessPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
             Booking Confirmed!
           </h1>
-          <BookingInvoiceCard/>
+          <ModernBookingTicket/>
           
           <p className="text-gray-600 mb-8">
             Your booking has been confirmed. You'll receive a confirmation email shortly.

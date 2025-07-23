@@ -1,94 +1,98 @@
 import React, { useState } from 'react';
-import { FileText, Calendar, Clock, Users, MapPin, CreditCard, Download } from 'lucide-react';
+import { FileText, Calendar, Clock, Users, MapPin, CreditCard, Download, QrCode, Share2, Star, Ticket } from 'lucide-react';
+
 interface UserProfile {
     name: string;
     email: string;
     phone: string;
     bio: string;
     interests: string[];
-    [key: string]: any; // Allow other properties
+    [key: string]: any;
 }
-const BookingInvoiceCard = () => {
+
+const ModernBookingTicket = () => {
     const [booking, setBooking] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<UserProfile | null>(null);
-
-
 
     React.useEffect(() => {
         const fetchProfile = async () => {
             setLoading(true);
             setError("");
             try {
-                const token = localStorage.getItem("token");
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
+                // Simulated data for demo
+                setUser({
+                    name: "John Doe",
+                    email: "john.doe@example.com",
+                    phone: "+91 98765 43210",
+                    bio: "",
+                    interests: []
                 });
-                const data = await res.json();
-                if (!res.ok || !data.success) {
-                    setError(data.message || "Failed to fetch profile");
-                } else {
-                    setUser(data.data.user);
-                }
             } catch (e) {
                 setError("Network error. Please try again.");
             }
-            setLoading(false);
         };
 
         const fetchBookings = async () => {
             try {
                 setLoading(true);
                 setError(null);
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    setError('You must be logged in to view your bookings.');
-                    setLoading(false);
-                    return;
-                }
-                const response = await fetch('/api/bookings/my-bookings', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
+                
+                // Simulated booking data for demo
+                const mockBooking = {
+                    _id: "BK001234567890",
+                    user: {
+                        username: "john_doe",
+                        name: "John Doe",
+                        email: "john.doe@example.com",
+                        phone: "+91 98765 43210"
                     },
-
-                });
-               // console.log(response)
-                if (!response.ok) {
-                    throw new Error('Failed to fetch bookings.');
-                }
-                const data = await response.json();
-                const bookings=data.bookings;
-                console.log(bookings)
-
-                if (bookings && bookings.length > 0) {
-                    // Sort bookings by createdAt descending, pick the most recent
-                    const sorted = [...bookings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                    console.log(sorted[0]);
-                    setBooking(sorted[0]);
-                    console.log("HELLO")
-                } 
-                else {
-                    setError('No bookings found.');
-                }
+                    court: {
+                        name: "Premium Sports Arena",
+                        location: "Sector 18, Noida, Delhi NCR",
+                        type: "Badminton Court",
+                        amenities: ["Air Conditioned", "Premium Lighting", "Wooden Flooring"]
+                    },
+                    courtBy: "SportsPlex Management",
+                    startTime: new Date("2024-07-25T18:00:00"),
+                    endTime: new Date("2024-07-25T20:00:00"),
+                    players: 4,
+                    totalAmount: 1200,
+                    createdAt: new Date("2024-07-23T10:30:00"),
+                    notes: "Birthday celebration booking",
+                    timeSlots: [
+                        { startTime: "6:00 PM", endTime: "7:00 PM", price: 600 },
+                        { startTime: "7:00 PM", endTime: "8:00 PM", price: 600 }
+                    ],
+                    payment: {
+                        method: "UPI",
+                        transactionId: "TXN789456123",
+                        paidAt: new Date("2024-07-23T10:32:00"),
+                        status: "SUCCESS"
+                    },
+                    bookingCode: "SPX2024072501",
+                    venue: {
+                        rating: 4.8,
+                        reviews: 1250
+                    }
+                };
+                
+                setBooking(mockBooking);
+                setTimeout(() => setLoading(false), 1000);
             } catch (err: any) {
                 setError(err.message || 'Failed to load booking.');
-            } finally {
                 setLoading(false);
             }
         };
+
         fetchProfile();
         fetchBookings();
     }, []);
 
-
-
     const formatDate = (date: string | number | Date) => {
         return new Date(date).toLocaleDateString('en-US', {
+            weekday: 'short',
             month: 'short',
             day: 'numeric',
             year: 'numeric'
@@ -103,38 +107,74 @@ const BookingInvoiceCard = () => {
     };
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR'
         }).format(amount);
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'confirmed':
-                return 'bg-green-100 text-green-800';
-            case 'pending':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'cancelled':
-                return 'bg-red-100 text-red-800';
-            case 'completed':
-                return 'bg-blue-100 text-blue-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
+    const handleDownload = () => {
+        const ticketElement = document.getElementById('booking-ticket');
+        if (!ticketElement) return;
+
+        // Create a new window for printing
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const ticketHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Booking Ticket - ${booking.bookingCode}</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f8fafc; }
+                    .ticket { max-width: 400px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+                    .gradient-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white; }
+                    .ticket-info { padding: 24px; }
+                    .dashed-border { border-top: 2px dashed #e2e8f0; margin: 16px 0; }
+                    .qr-placeholder { width: 80px; height: 80px; background: #f1f5f9; border: 2px solid #cbd5e1; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #64748b; }
+                    @media print {
+                        body { background: white; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${ticketElement.outerHTML}
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(ticketHTML);
+        printWindow.document.close();
+        
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
     };
 
-    const handleDownload = () => {
-        alert('Invoice download functionality would be implemented soon');
+    const handleShare = () => {
+        if (navigator.share) {
+            navigator.share({
+                title: `Sports Booking - ${booking.court.name}`,
+                text: `I've booked ${booking.court.name} for ${formatDate(booking.startTime)}`,
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(`Booking Confirmed! ${booking.court.name} on ${formatDate(booking.startTime)} - Code: ${booking.bookingCode}`);
+            alert('Booking details copied to clipboard!');
+        }
     };
 
     if (loading) {
         return (
             <div className="flex justify-center items-center p-10">
-                <span className="text-gray-500">Loading invoice...</span>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
         );
     }
+
     if (error) {
         return (
             <div className="flex justify-center items-center p-10">
@@ -142,132 +182,152 @@ const BookingInvoiceCard = () => {
             </div>
         );
     }
+
     if (!booking) {
         return null;
     }
-    return (
-        <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center">
 
-                        <div>
-                            <h1 className="text-white text-lg font-semibold">Invoice</h1>
-                            <p className="text-blue-100 text-sm">Booking ID: #{booking._id}</p>
+    return (
+        <div className="max-w-sm mx-auto">
+            <div id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 hover:scale-105">
+                {/* Gradient Header */}
+                <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+                    <div className="absolute bottom-0 left-0 w-20 h-20 bg-white opacity-10 rounded-full -ml-10 -mb-10"></div>
+                    
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center">
+                                <Ticket className="w-6 h-6 text-white mr-2" />
+                                <span className="text-white font-bold text-lg">BOOKING CONFIRMED</span>
+                            </div>
+                            <div className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
+                                <span className="text-white text-xs font-semibold">PAID</span>
+                            </div>
+                        </div>
+                        
+                        <h1 className="text-white text-xl font-bold mb-2">{booking.court.name}</h1>
+                        <div className="flex items-center text-white text-opacity-90 text-sm">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            <span>{booking.court.location}</span>
+                        </div>
+                        
+                        {/* {booking.venue && (
+                            <div className="flex items-center mt-2 text-white text-opacity-90 text-sm">
+                                <Star className="w-4 h-4 mr-1 fill-current" />
+                                <span>{booking.venue.rating} • {booking.venue.reviews} reviews</span>
+                            </div>
+                        )} */}
+                    </div>
+                </div>
+
+                {/* Ticket Body */}
+                <div className="px-6 py-6">
+                    {/* Date and Time Highlight */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                                <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
+                                <p className="text-sm font-bold text-gray-900">{formatDate(booking.startTime)}</p>
+                            </div>
+                            <div className="text-center">
+                                <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
+                                <p className="text-sm font-bold text-gray-900">{formatTime(booking.startTime)} - {formatTime(booking.endTime)}</p>
+                            </div>
                         </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor('confirmed')}`}>
-                        {'confirmed'}
-                    </span>
-                </div>
-            </div>
 
-            {/* Customer & Booking Info */}
-            <div className="px-6 py-4">
-                <div className="flex items-center justify-between mb-4">
-                    <div className='align-left'>
-                        <p className="text-xs text-blue-700 mb-1 font-medium">{booking.user?.username || booking.user?.name || user?.name}</p>
-                        <p className="text-xs text-blue-700 mb-1 font-medium">{booking.user?.email || user?.email}</p>
-                        {booking.user?.phone && (
-                            <p className="text-gray-500 text-xs">{booking.user.phone || user?.phone}</p>
+                    {/* Booking Details */}
+                    <div className="space-y-4 mb-6">
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-600 text-sm">Booking Code</span>
+                            <span className="font-mono text-sm font-bold text-blue-600">{booking.bookingCode}</span>
+                        </div>
+                        
+                        
+                        
+    
+
+            
+                    </div>
+
+                  
+                    {/* Dashed Separator */}
+                    <div className="border-t-2 border-dashed border-gray-200 my-6 relative">
+                        <div className="absolute left-0 top-0 w-6 h-6 bg-gray-100 rounded-full -ml-3 -mt-3"></div>
+                        <div className="absolute right-0 top-0 w-6 h-6 bg-gray-100 rounded-full -mr-3 -mt-3"></div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="mb-6 text-blue-600">
+                        <h3 className="text-sm font-semibold mb-3">Customer Details</h3>
+                        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                            <p className="text-sm font-medium">{booking.user?.name || user?.name}</p>
+                            <p className="text-xs">{booking.user?.email || user?.email}</p>
+                            <p className="text-xs">{booking.user?.phone || user?.phone}</p>
+                        </div>
+                    </div>
+
+                    {/* Payment Info */}
+                    <div className="mb-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-lg font-bold text-gray-900">Total Amount</span>
+                            <span className="text-2xl font-bold text-green-600">{formatCurrency(booking.totalAmount)}</span>
+                        </div>
+                        
+                        {booking.payment && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        <CreditCard className="w-4 h-4 text-green-600 mr-2" />
+                                        <span className="text-sm font-medium text-green-800">Payment Successful</span>
+                                    </div>
+                                    <span className="text-xs font-mono text-green-700">{booking.payment.transactionId}</span>
+                                </div>
+                                <p className="text-xs text-green-700 mt-1">
+                                    {booking.payment.method} • Paid on {formatDate(booking.payment.paidAt)}
+                                </p>
+                            </div>
                         )}
                     </div>
-                    <div className="text-right">
-                        <p className="text-sm text-gray-600">Court By: {booking.courtBy}</p>
-                        <p className="text-xs text-gray-500">Booked on: {formatDate(booking.createdAt)} {formatTime(booking.createdAt)}</p>
-                    </div>
-                </div>
 
-                {/* Booking Notes */}
-                {booking.notes && (
-                    <div className="mb-2">
-                        <span className="inline-block bg-yellow-50 text-yellow-800 text-xs px-2 py-1 rounded">Note: {booking.notes}</span>
-                    </div>
-                )}
-
-                {/* Court Details */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div className="flex items-center mb-2">
-                        <MapPin className="w-4 h-4 text-gray-500 mr-2" />
-                        <span className="font-medium text-gray-900">{booking.court?.name}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                        <span>{booking.court?.location}</span>
-                        <span className="flex items-center">
-                            <Users className="w-4 h-4 mr-1" />
-                            {booking.players} players
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                        <span className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {formatDate(booking.startTime)}
-                        </span>
-                        <span className="flex items-center">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-                        </span>
-                    </div>
-                    {booking.court?.type && (
-                        <div className="text-xs text-gray-500 mt-1">Court Type: {booking.court.type}</div>
-                    )}
-                </div>
-
-                {/* Time Slots */}
-                <div className="mb-4">
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">Time Slots</h3>
-                    <div className="space-y-1">
-                        {booking.timeSlots?.map((slot: any, index: number) => (
-                            <div key={index} className="flex justify-between items-center py-1 text-sm">
-                                <span className="text-gray-600">{slot.startTime} - {slot.endTime}</span>
-                                <span className="text-gray-900 font-medium">{formatCurrency(slot.price)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Payment Summary */}
-                <div className="border-t pt-4">
-                    <div className="flex justify-between items-center mb-3">
-                        <span className="text-lg font-semibold text-gray-900">Total</span>
-                        <span className="text-lg font-bold text-green-600">{formatCurrency(booking.totalAmount)}</span>
-                    </div>
-
-                    {booking.payment && (
-                        <div className="bg-green-50 rounded-lg p-3">
-                            <div className="flex items-center mb-2">
-                                <CreditCard className="w-4 h-4 text-green-600 mr-2" />
-                                <span className="text-sm font-medium text-green-800">Payment Confirmed</span>
-                            </div>
-                            <div className="text-xs text-green-700">
-                                <p>{booking.payment.method} • {booking.payment.transactionId}</p>
-                                <p>Paid on {formatDate(booking.payment.paidAt)} {formatTime(booking.payment.paidAt)}</p>
-                            </div>
+                    {/* QR Code Placeholder
+                    <div className="text-center mb-6">
+                        <div className="w-20 h-20 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg mx-auto flex items-center justify-center mb-2">
+                            <QrCode className="w-8 h-8 text-gray-400" />
                         </div>
-                    )}
+                        <p className="text-xs text-gray-500">Scan QR code at venue</p>
+                    </div> */}
                 </div>
 
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t">
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-center sm:items-center">
-                    <div>
-                        <p className="text-xs text-gray-500">Thanks for booking with us!</p>
-                        <p className="text-xs text-gray-400">Generated on {formatDate(new Date())} {formatTime(new Date())}</p>
+                {/* Action Buttons */}
+                <div className="px-6 py-4 bg-gray-50 border-t">
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleDownload}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center"
+                        >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download Ticket
+                        </button>
+                        <button
+                            onClick={handleShare}
+                            className="bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center"
+                        >
+                            <Share2 className="w-4 h-4" />
+                        </button>
                     </div>
-                    {/* <button
-                        onClick={handleDownload}
-                        className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                        <Download className="w-4 h-4 mr-1" />
-                        Download
-                    </button> */}
+                    
+                    <div className="text-center mt-4">
+                        <p className="text-xs text-gray-500">Generated on {formatDate(new Date())}</p>
+                        <p className="text-xs text-gray-400 mt-1">Show this ticket at the venue</p>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
-export default BookingInvoiceCard; 
+export default ModernBookingTicket;
