@@ -144,7 +144,7 @@ interface Event {
   updatedAt: string;
 }
 
-interface EventResponse extends Event {}
+interface EventResponse extends Event { }
 
 interface EventDetailPageProps {
   params: {
@@ -239,7 +239,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       if (!event) {
         throw new Error("Event information not available");
       }
-      
+
       if (!selectedTicket) {
         throw new Error("Please select a ticket");
       }
@@ -272,7 +272,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       console.log(responseData)
       // Navigate to booking invoice with the booking ID from the response
       if (responseData.booking) {
-        localStorage.setItem('lastBookingId', responseData.booking.id);
+        // localStorage.setItem('lastBookingId', responseData.booking.id);
         router.push(`/events/${event?._id}/bookings`);
       } else {
         console.error("No booking ID in response:", responseData);
@@ -595,10 +595,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         {isBooking
                           ? "Processing..."
                           : ticket.quantity <= ticket.sold
-                          ? "Sold Out"
-                          : selectedTicket?._id === ticket._id
-                          ? "Confirm Booking"
-                          : "Book Now"}
+                            ? "Sold Out"
+                            : selectedTicket?._id === ticket._id
+                              ? "Confirm Booking"
+                              : "Book Now"}
                       </Button>
                     </div>
                   </div>
@@ -658,9 +658,8 @@ function Label({
 }) {
   return (
     <label
-      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
-        className || ""
-      }`}
+      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className || ""
+        }`}
       {...props}
     >
       {children}
