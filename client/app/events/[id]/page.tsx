@@ -272,6 +272,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       console.log(responseData)
       // Navigate to booking invoice with the booking ID from the response
       if (responseData.booking) {
+        localStorage.setItem('lastBookingId', responseData.booking.id);
         router.push(`/events/${event?._id}/bookings`);
       } else {
         console.error("No booking ID in response:", responseData);
