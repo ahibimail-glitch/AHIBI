@@ -86,7 +86,8 @@ const BookingInvoiceCard = () => {
     }, []);
 
 
-    const formatDate = (date) => {
+
+    const formatDate = (date: string | number | Date) => {
         return new Date(date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -94,21 +95,21 @@ const BookingInvoiceCard = () => {
         });
     };
 
-    const formatTime = (date) => {
+    const formatTime = (date: string | number | Date) => {
         return new Date(date).toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit'
         });
     };
 
-    const formatCurrency = (amount) => {
+    const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'INR'
         }).format(amount);
     };
 
-    const getStatusColor = (status) => {
+    const getStatusColor = (status: string) => {
         switch (status) {
             case 'confirmed':
                 return 'bg-green-100 text-green-800';
