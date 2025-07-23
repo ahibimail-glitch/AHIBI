@@ -135,8 +135,8 @@ export default function EventsPage() {
           throw new Error('Failed to fetch events');
         }
         const data: EventsResponse = await response.json();
-        console.log(data.events);
-        setEvents(data.events || []);
+        console.log(data.data.events);
+        setEvents(data.data.events || []);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
         console.error('Error fetching events:', errorMessage);

@@ -46,4 +46,7 @@ export interface EventsResponse {
     limit: number;
     pages: number;
   };
+  data: {
+    events: Event[];
+  };
 }
