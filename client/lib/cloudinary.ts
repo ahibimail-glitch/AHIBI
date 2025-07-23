@@ -302,7 +302,7 @@ export const uploadMultipleFiles = async (files: File[]): Promise<UploadResponse
   } catch (error) {
     console.error('Upload error:', error);
     return {
-      success: false,
+      status: 'error',
       message: error instanceof Error ? error.message : 'Failed to upload files',
     };
   }
