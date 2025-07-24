@@ -22,7 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2, Plus } from "lucide-react";
+
+interface TicketType {
+  name: string;
+  description: string;
+  price: string;
+  quantity: string;
+  benefits: string[];
+}
 
 interface CreateEventFormProps {
   onSuccess?: () => void;
@@ -42,12 +50,27 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     startDate: "",
     endDate: "",
     category: "",
-    ticketName: "General Admission",
-    ticketPrice: "",
-    capacity: "",
-    includeGst: false,
     image: "",
   });
+  
+  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
+    {
+      name: "General Admission",
+      description: "",
+      price: "",
+      quantity: "",
+      benefits: ["Entry to the event"]
+    }
+  ]);
+
+  const [fees, setFees] = useState({
+    gstPercentage: 18,
+    includeGst: false,
+    conveniencePercentage: 5,
+    convenienceFixedAmount: 0,
+    includeConvenience: true
+  });
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,8 +142,90 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     setEventData((prev) => ({ ...prev, category: value }));
   };
 
-  const handleGstChange = (checked: boolean) => {
-    setEventData((prev) => ({ ...prev, includeGst: checked }));
+  const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string) => {
+    setTicketTypes(prev => 
+      prev.map((ticket, i) => 
+        i === index 
+          ? { ...ticket, [field]: value }
+          : ticket
+      )
+    );
+  };
+
+  const handleBenefitChange = (ticketIndex: number, benefitIndex: number, value: string) => {
+    setTicketTypes(prev => 
+      prev.map((ticket, i) => 
+        i === ticketIndex 
+          ? { 
+              ...ticket, 
+              benefits: ticket.benefits.map((benefit, j) => 
+                j === benefitIndex ? value : benefit
+              )
+            }
+          : ticket
+      )
+    );
+  };
+
+  const addBenefit = (ticketIndex: number) => {
+    setTicketTypes(prev => 
+      prev.map((ticket, i) => 
+        i === ticketIndex 
+          ? { ...ticket, benefits: [...ticket.benefits, ""] }
+          : ticket
+      )
+    );
+  };
+
+  const removeBenefit = (ticketIndex: number, benefitIndex: number) => {
+    setTicketTypes(prev => 
+      prev.map((ticket, i) => 
+        i === ticketIndex 
+          ? { 
+              ...ticket, 
+              benefits: ticket.benefits.filter((_, j) => j !== benefitIndex)
+            }
+          : ticket
+      )
+    );
+  };
+
+  const addTicketType = () => {
+    setTicketTypes(prev => [
+      ...prev,
+      {
+        name: "",
+        description: "",
+        price: "",
+        quantity: "",
+        benefits: ["Entry to the event"]
+      }
+    ]);
+  };
+
+  const removeTicketType = (index: number) => {
+    if (ticketTypes.length > 1) {
+      setTicketTypes(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleFeeChange = (field: keyof typeof fees, value: boolean | number) => {
+    setFees(prev => ({ ...prev, [field]: value }));
+  };
+
+  const calculateFinalPrice = (basePrice: number) => {
+    let finalPrice = basePrice;
+    
+    if (fees.includeGst) {
+      finalPrice += (basePrice * fees.gstPercentage) / 100;
+    }
+    
+    if (fees.includeConvenience) {
+      finalPrice += (basePrice * fees.conveniencePercentage) / 100;
+      finalPrice += fees.convenienceFixedAmount;
+    }
+    
+    return finalPrice;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -132,13 +237,22 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       return;
     }
     
+    // Validate ticket types
+    const hasValidTickets = ticketTypes.every(ticket => 
+      ticket.name && ticket.price && ticket.quantity
+    );
+    
+    if (!hasValidTickets) {
+      setError('Please fill in all ticket type details');
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
 
     // Basic validation
     if (!eventData.eventName || !eventData.description || !eventData.venue || 
-        !eventData.startDate || !eventData.endDate || !eventData.category || 
-        !eventData.ticketPrice || !eventData.capacity) {
+        !eventData.startDate || !eventData.endDate || !eventData.category) {
       setError("Please fill in all required fields");
       setIsLoading(false);
       return;
@@ -171,12 +285,12 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     const payload = {
       title: eventData.eventName,
       description: eventData.description,
-      banner: eventData.image, // Use uploaded image URL
+      banner: eventData.image,
       category: categoryMap[eventData.category.toLowerCase()] || 'Other',
       startDate: new Date(eventData.startDate).toISOString(),
       endDate: new Date(eventData.endDate).toISOString(),
-      status: 'pending', // Default status for new events
-      organizer: adminId, // Set organizer to current admin
+      status: 'pending',
+      organizer: adminId,
       location: {
         address: eventData.venue,
         city: eventData.city || "Mumbai",
@@ -185,44 +299,39 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         pincode: eventData.pincode || "400001",
         type: 'Point',
         coordinates: [
-          parseFloat("72.8777"), // Default to Mumbai coordinates
+          parseFloat("72.8777"),
           parseFloat("19.0760")
         ]
       },
-      ticketTypes: [
-        {
-          name: eventData.ticketName || "General Admission",
-          price: parseFloat(eventData.ticketPrice) || 0,
-          quantity: parseInt(eventData.capacity, 10) || 0,
-          description: "General admission ticket",
-          benefits: ["Entry to the event"],
-          saleStartDate: new Date().toISOString(),
-          saleEndDate: new Date(eventData.endDate).toISOString(),
-          minOrder: 1,
-          maxOrder: 10,
-          isActive: true
-        }
-      ],
+      ticketTypes: ticketTypes.map(ticket => ({
+        name: ticket.name,
+        description: ticket.description || "",
+        price: parseFloat(ticket.price) || 0,
+        quantity: parseInt(ticket.quantity, 10) || 0,
+        benefits: ticket.benefits.filter(benefit => benefit.trim() !== ""),
+        sold: 0
+      })),
+      convenience: {
+        percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
+        fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0
+      }
     };
 
     try {
       // Use env variable or fallback
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const token = localStorage.getItem("admin_token"); // Changed from adminToken to admin_token
+      const token = localStorage.getItem("admin_token");
       
       if (!token) {
         setError("You are not authenticated. Please log in again.");
-        // Optionally redirect to login
         window.location.href = "/admin/login";
         return;
       }
       
       const endpoint = `${apiUrl}/api/admin/events`;
       
-      // Debug: Log URL and payload
       console.log("Submitting to:", endpoint);
       console.log("Payload:", payload);
-      console.log("Using token:", token ? "[token exists]" : "[no token]");
       
       const response = await axios.post(
         endpoint,
@@ -232,7 +341,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          validateStatus: (status) => status < 500, // Don't throw for 4xx errors
+          validateStatus: (status) => status < 500,
         }
       );
 
@@ -242,14 +351,11 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
           onSuccess();
         }
       } else if (response.status === 401) {
-        // Handle unauthorized (token expired or invalid)
         setError("Your session has expired. Please log in again.");
-        // Clear invalid token and redirect to login
         localStorage.removeItem("admin_token");
         window.location.href = "/admin/login";
         return;
       } else {
-        // Handle other error responses
         const errorMessage = response.data?.message || "Failed to create event";
         setError(errorMessage);
       }
@@ -263,128 +369,128 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4">
+    <div className="w-full max-w-6xl mx-auto p-4">
       <form onSubmit={handleSubmit}>
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg w-full">
+        <Card className="bg-card border border-border shadow-lg w-full">
           <CardHeader>
-            <CardTitle>Create New Event</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-foreground">Create New Event</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Fill in the details below to add a new event to the platform.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-4">
-              {/* Image Upload */}
-              <div className="space-y-2">
-                <Label htmlFor="eventImage">Event Image</Label>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-32 h-32 border-2 border-dashed rounded-lg overflow-hidden">
-                    {imagePreview ? (
-                      <img 
-                        src={imagePreview} 
-                        alt="Event preview" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <span>No image</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      id="eventImage"
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageChange}
-                      accept="image/*"
-                      className="hidden"
-                      disabled={isUploading}
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label htmlFor="eventImage">Event Image *</Label>
+              <div className="flex items-center gap-4">
+                <div className="relative w-32 h-32 border-2 border-dashed border-border rounded-lg overflow-hidden">
+                  {imagePreview ? (
+                    <img 
+                      src={imagePreview} 
+                      alt="Event preview" 
+                      className="w-full h-full object-cover"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                    >
-                      {isUploading ? 'Uploading...' : 'Upload Image'}
-                    </Button>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      JPG, PNG or WebP. Max 10MB
-                    </p>
-                  </div>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <span>No image</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <input
+                    id="eventImage"
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Upload Image'}
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    JPG, PNG or WebP. Max 10MB
+                  </p>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="eventName">Event Name</Label>
-                  <Input
-                    id="eventName"
-                    value={eventData.eventName}
-                    onChange={handleChange}
-                    placeholder="e.g., Annual Tech Conference"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="venue">Venue Address</Label>
-                  <Input
-                    id="venue"
-                    value={eventData.venue}
-                    onChange={handleChange}
-                    placeholder="e.g., 123 Main St, City Convention Center"
-                    required
-                  />
-                </div>
+            {/* Basic Event Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="eventName">Event Name *</Label>
+                <Input
+                  id="eventName"
+                  value={eventData.eventName}
+                  onChange={handleChange}
+                  placeholder="e.g., Annual Tech Conference"
+                  required
+                />
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={eventData.city}
-                    onChange={handleChange}
-                    placeholder="e.g., Mumbai"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={eventData.state}
-                    onChange={handleChange}
-                    placeholder="e.g., Maharashtra"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    id="country"
-                    value={eventData.country}
-                    onChange={handleChange}
-                    placeholder="e.g., India"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pincode">Pincode</Label>
-                  <Input
-                    id="pincode"
-                    value={eventData.pincode}
-                    onChange={handleChange}
-                    placeholder="e.g., 400001"
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="venue">Venue Address *</Label>
+                <Input
+                  id="venue"
+                  value={eventData.venue}
+                  onChange={handleChange}
+                  placeholder="e.g., 123 Main St, City Convention Center"
+                  required
+                />
+              </div>
+            </div>
+            
+            {/* Location Details */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={eventData.city}
+                  onChange={handleChange}
+                  placeholder="e.g., Mumbai"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State *</Label>
+                <Input
+                  id="state"
+                  value={eventData.state}
+                  onChange={handleChange}
+                  placeholder="e.g., Maharashtra"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country *</Label>
+                <Input
+                  id="country"
+                  value={eventData.country}
+                  onChange={handleChange}
+                  placeholder="e.g., India"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pincode">Pincode *</Label>
+                <Input
+                  id="pincode"
+                  value={eventData.pincode}
+                  onChange={handleChange}
+                  placeholder="e.g., 400001"
+                  required
+                />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="description">Event Description</Label>
+              <Label htmlFor="description">Event Description *</Label>
               <Textarea
                 id="description"
                 value={eventData.description}
@@ -394,9 +500,10 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Date and Category */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date & Time</Label>
+                <Label htmlFor="startDate">Start Date & Time *</Label>
                 <Input
                   id="startDate"
                   value={eventData.startDate}
@@ -406,7 +513,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endDate">End Date & Time</Label>
+                <Label htmlFor="endDate">End Date & Time *</Label>
                 <Input
                   id="endDate"
                   value={eventData.endDate}
@@ -415,11 +522,8 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   required
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Category *</Label>
                 <Select
                   onValueChange={handleSelectChange}
                   value={eventData.category}
@@ -429,80 +533,222 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="music">Music</SelectItem>
-                    <SelectItem value="tech">Technology</SelectItem>
-                    <SelectItem value="art">Art & Culture</SelectItem>
-                    <SelectItem value="food">Food & Drink</SelectItem>
+                    <SelectItem value="comedy">Comedy</SelectItem>
+                    <SelectItem value="theatre">Theatre</SelectItem>
+                    <SelectItem value="dance">Dance</SelectItem>
+                    <SelectItem value="food">Food</SelectItem>
+                    <SelectItem value="art">Art</SelectItem>
                     <SelectItem value="sports">Sports</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="education">Education</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ticketName">Ticket Type Name</Label>
-                <Input
-                  id="ticketName"
-                  value={eventData.ticketName}
-                  onChange={handleChange}
-                  placeholder="e.g., General Admission"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ticketPrice">Ticket Price (₹)</Label>
-                <Input
-                  id="ticketPrice"
-                  value={eventData.ticketPrice}
-                  onChange={handleChange}
-                  type="number"
-                  placeholder="e.g., 500"
-                  required
-                />
-                {eventData.ticketPrice && (
-                  <div className="text-xs text-gray-700 pt-1">
-                    Final Price: ₹{
-                      (() => {
-                        const price = parseFloat(eventData.ticketPrice);
-                        if (isNaN(price)) return "-";
-                        return eventData.includeGst
-                          ? (price * 1.18).toFixed(2)
-                          : price.toFixed(2);
-                      })()
-                    }
-                    {eventData.includeGst ? " (incl. 18% GST)" : " (no GST)"}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Capacity</Label>
-                <Input
-                  id="capacity"
-                  value={eventData.capacity}
-                  onChange={handleChange}
-                  type="number"
-                  placeholder="e.g., 200"
-                  required
-                />
-              </div>
             </div>
 
-            <div className="space-y-2 pt-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeGst"
-                  checked={eventData.includeGst}
-                  onCheckedChange={handleGstChange}
-                />
-                <Label htmlFor="includeGst" className="text-sm font-medium leading-none">
-                  Include 18% GST
-                </Label>
+            {/* Ticket Types Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">Ticket Types *</Label>
+                <Button type="button" variant="outline" onClick={addTicketType}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Ticket Type
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                If checked, 18% GST will be added to the ticket price
-              </p>
+
+              {ticketTypes.map((ticket, ticketIndex) => (
+                <Card key={ticketIndex} className="border border-border">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">
+                        Ticket Type {ticketIndex + 1}
+                      </CardTitle>
+                      {ticketTypes.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeTicketType(ticketIndex)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Ticket Name *</Label>
+                        <Input
+                          value={ticket.name}
+                          onChange={(e) => handleTicketTypeChange(ticketIndex, 'name', e.target.value)}
+                          placeholder="e.g., VIP, General Admission"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Input
+                          value={ticket.description}
+                          onChange={(e) => handleTicketTypeChange(ticketIndex, 'description', e.target.value)}
+                          placeholder="Brief description of this ticket type"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Price (₹) *</Label>
+                        <Input
+                          type="number"
+                          value={ticket.price}
+                          onChange={(e) => handleTicketTypeChange(ticketIndex, 'price', e.target.value)}
+                          placeholder="e.g., 500"
+                          required
+                        />
+                        {ticket.price && (
+                          <div className="text-xs text-muted-foreground pt-1">
+                            Final Price: ₹{calculateFinalPrice(parseFloat(ticket.price) || 0).toFixed(2)}
+                            {(fees.includeGst || fees.includeConvenience) && " (incl. fees)"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Quantity *</Label>
+                        <Input
+                          type="number"
+                          value={ticket.quantity}
+                          onChange={(e) => handleTicketTypeChange(ticketIndex, 'quantity', e.target.value)}
+                          placeholder="e.g., 100"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Benefits</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addBenefit(ticketIndex)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        {ticket.benefits.map((benefit, benefitIndex) => (
+                          <div key={benefitIndex} className="flex gap-2">
+                            <Input
+                              value={benefit}
+                              onChange={(e) => handleBenefitChange(ticketIndex, benefitIndex, e.target.value)}
+                              placeholder="e.g., Entry to the event"
+                            />
+                            {ticket.benefits.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeBenefit(ticketIndex, benefitIndex)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+
+            {/* Fees Configuration */}
+            <Card className="border border-border">
+              <CardHeader>
+                <CardTitle className="text-base">Fee Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* GST Configuration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="includeGst"
+                        checked={fees.includeGst}
+                        onCheckedChange={(checked) => handleFeeChange('includeGst', checked as boolean)}
+                      />
+                      <Label htmlFor="includeGst" className="text-sm font-medium">
+                        Include GST
+                      </Label>
+                    </div>
+                    {fees.includeGst && (
+                      <div className="space-y-2">
+                        <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
+                        <Input
+                          id="gstPercentage"
+                          type="number"
+                          value={fees.gstPercentage}
+                          onChange={(e) => handleFeeChange('gstPercentage', parseFloat(e.target.value) || 0)}
+                          placeholder="18"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Convenience Fee Configuration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="includeConvenience"
+                        checked={fees.includeConvenience}
+                        onCheckedChange={(checked) => handleFeeChange('includeConvenience', checked as boolean)}
+                      />
+                      <Label htmlFor="includeConvenience" className="text-sm font-medium">
+                        Include Convenience Fee
+                      </Label>
+                    </div>
+                    {fees.includeConvenience && (
+                      <div className="space-y-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
+                          <Input
+                            id="conveniencePercentage"
+                            type="number"
+                            value={fees.conveniencePercentage}
+                            onChange={(e) => handleFeeChange('conveniencePercentage', parseFloat(e.target.value) || 0)}
+                            placeholder="5"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="convenienceFixed">Fixed Amount (₹)</Label>
+                          <Input
+                            id="convenienceFixed"
+                            type="number"
+                            value={fees.convenienceFixedAmount}
+                            onChange={(e) => handleFeeChange('convenienceFixedAmount', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {error && (
-              <div className="p-4 text-red-500 bg-red-50 rounded-lg">
+              <div className="p-4 text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-lg">
                 {error}
               </div>
             )}
@@ -511,7 +757,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               <Button type="submit" disabled={isLoading || isUploading}>
                 {isLoading ? (
                   <>
-                    <span className="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
+                    <span className="mr-2">⏳</span>
                     Creating Event...
                   </>
                 ) : (

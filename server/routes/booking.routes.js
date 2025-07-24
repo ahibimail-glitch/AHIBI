@@ -49,10 +49,22 @@ router.post("/", auth.protect, async (req, res) => {
     // Save booking
     await booking.save();
 
-    // Update event tickets sold   count
-    await Event.findByIdAndUpdate(event._id, {
-      $inc: { ticketsSold: quantity, totalRevenue: price },
-    });
+    // Update event tickets sold count and ticket type sold
+    await Event.updateOne(
+      { _id: event._id, "ticketTypes.name": ticketType },
+      {
+        $inc: {
+          "ticketTypes.$.sold": quantity,
+          totalRevenue: price
+        }
+      }
+    );
+    
+    // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
+    const updatedEvent = await Event.findById(event._id);
+    if (updatedEvent) {
+      await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
+    }
 
     res.status(201).json({
       message: "Booking created successfully",
@@ -82,7 +94,7 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
 
     const bookings = await Booking.find({ user: req.user._id }).sort({ bookedAt: -1 });
 
-  
+
     console.log(bookings)
     res.json({ bookings });
   } catch (error) {

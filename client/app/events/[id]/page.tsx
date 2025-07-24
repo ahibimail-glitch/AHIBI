@@ -534,77 +534,132 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           {/* Sidebar */}
           <div className="space-y-8">
             {/* Tickets */}
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <h2 className="text-2xl font-semibold mb-4">Tickets</h2>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold">Tickets</h2>
+                <Badge variant="outline" className="px-3 py-1">
+                  {event.ticketTypes?.reduce((acc, t) => acc + (t.quantity - t.sold), 0) || 0} tickets remaining
+                </Badge>
+              </div>
+              
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                event.ticketTypes.map((ticket) => (
-                  <div key={ticket._id} className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 bg-muted rounded-lg p-3">
-                        <TicketIcon className="h-6 w-6" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium">{ticket.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {ticket.description}
-                        </p>
-                        {ticket.benefits && ticket.benefits.length > 0 && (
-                          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                            {ticket.benefits.map(
-                              (benefit: string, i: number) => (
-                                <li key={i} className="flex items-center">
-                                  <span className="mr-2">•</span>
-                                  {benefit}
-                                </li>
-                              )
-                            )}
-                          </ul>
-                        )}
-                        <div className="mt-2">
-                          <span className="text-lg font-semibold">
-                            ₹{ticket.price}
-                          </span>
-                          {event.convenience.percentage > 0 && (
-                            <span className="ml-2 text-sm text-muted-foreground">
-                              + {event.convenience.percentage}% convenience fee
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-muted-foreground">
-                        {ticket.sold} of {ticket.quantity} tickets sold
-                      </div>
-                      <Button
-                        variant={
-                          selectedTicket?._id === ticket._id
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => {
-                          if (selectedTicket?._id === ticket._id) {
-                            handleBooking();
-                          } else {
-                            setSelectedTicket(ticket);
-                          }
-                        }}
-                        className="ml-auto"
-                        disabled={ticket.quantity <= ticket.sold || isBooking}
+                <div className="space-y-6">
+                  {/* Group tickets by category/price */}
+                  {event.ticketTypes.map((ticket) => {
+                    // Calculate availability percentage
+                    const availabilityPercentage = Math.max(
+                      0,
+                      Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
+                    );
+                    
+                    // Determine status badge
+                    const isSoldOut = ticket.quantity <= ticket.sold;
+                    const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                    
+                    return (
+                      <Card 
+                        key={ticket._id} 
+                        className={`border ${selectedTicket?._id === ticket._id ? 'border-primary border-2' : 'border-border'} overflow-hidden transition-all duration-200 hover:shadow-md`}
                       >
-                        {isBooking
-                          ? "Processing..."
-                          : ticket.quantity <= ticket.sold
-                            ? "Sold Out"
-                            : selectedTicket?._id === ticket._id
-                              ? "Confirm Booking"
-                              : "Book Now"}
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-md ${isSoldOut ? 'bg-muted' : 'bg-primary/10'}`}>
+                                <TicketIcon className={`h-5 w-5 ${isSoldOut ? 'text-muted-foreground' : 'text-primary'}`} />
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg">{ticket.name}</CardTitle>
+                                {isSoldOut && (
+                                  <Badge variant="outline" className="mt-1 bg-muted text-muted-foreground">
+                                    Sold Out
+                                  </Badge>
+                                )}
+                                {isLimited && !isSoldOut && (
+                                  <Badge variant="outline" className="mt-1 bg-amber-50 text-amber-600 border-amber-200">
+                                    Limited Availability
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xl font-semibold">₹{ticket.price}</span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {ticket.description}
+                          </p>
+                          
+                          {/* Benefits list */}
+                          {ticket.benefits && ticket.benefits.length > 0 && (
+                            <div className="bg-muted/30 rounded-md p-3 mb-3">
+                              <p className="text-xs font-medium mb-2">INCLUDES:</p>
+                              <ul className="space-y-1.5 text-sm">
+                                {ticket.benefits.map((benefit: string, i: number) => (
+                                  <li key={i} className="flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0"></div>
+                                    <span className="text-muted-foreground">{benefit}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {/* Availability indicator */}
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                              <span className="text-muted-foreground">
+                                {ticket.sold} of {ticket.quantity} tickets sold
+                              </span>
+                              <span className={`font-medium ${isSoldOut ? 'text-destructive' : isLimited ? 'text-amber-600' : 'text-primary'}`}>
+                                {isSoldOut ? 'Sold Out' : `${ticket.quantity - ticket.sold} remaining`}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${isSoldOut ? 'bg-destructive' : isLimited ? 'bg-amber-500' : 'bg-primary'}`}
+                                style={{ width: `${100 - availabilityPercentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </CardContent>
+                        
+                        <CardFooter className="pt-2 flex justify-end">
+                          <Button
+                            variant={selectedTicket?._id === ticket._id ? "default" : "outline"}
+                            onClick={() => {
+                              if (selectedTicket?._id === ticket._id) {
+                                handleBooking();
+                              } else {
+                                setSelectedTicket(ticket);
+                              }
+                            }}
+                            className={`${isSoldOut ? 'opacity-50' : ''}`}
+                            disabled={isSoldOut || isBooking}
+                            size="sm"
+                          >
+                            {isBooking
+                              ? "Processing..."
+                              : isSoldOut
+                                ? "Sold Out"
+                                : selectedTicket?._id === ticket._id
+                                  ? "Confirm Booking"
+                                  : "Book Now"}
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
               ) : (
-                <p className="text-muted-foreground">No tickets available</p>
+                <div className="py-8 text-center">
+                  <div className="bg-muted/30 inline-flex rounded-full p-3 mb-4">
+                    <TicketIcon className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">No tickets available for this event</p>
+                </div>
               )}
             </div>
 
