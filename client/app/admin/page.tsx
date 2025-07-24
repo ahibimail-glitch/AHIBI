@@ -22,6 +22,7 @@ import {
   Calendar,
   DollarSign,
   Ticket,
+  QrCode,
 } from "lucide-react";
 
 // Import child components
@@ -133,6 +134,9 @@ export default function AdminDashboard() {
         return <SettingsComponent />;
       case "system":
         return <System />;
+      case "qr-scanner":
+        router.push("/admin/scan");
+        return null;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -156,6 +160,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => setActiveView("bookings")} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => setActiveView("users")} />
+          <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>

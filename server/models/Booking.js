@@ -41,6 +41,18 @@ const BookingSchema = new mongoose.Schema({
   paymentId: {
     type: String
   },
+  // QR code verification fields
+  entryVerified: {
+    type: Boolean,
+    default: false
+  },
+  entryVerifiedAt: {
+    type: Date
+  },
+  entryVerifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
   bookedAt: {
     type: Date,
     default: Date.now

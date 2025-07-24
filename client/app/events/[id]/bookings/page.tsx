@@ -9,9 +9,10 @@ import { Card } from '@/components/ui/card';
 // import BookingInvoiceCard from '@/app/events/[id]/bookings/booking-invoice';
 import ModernBookingTicket from '@/app/events/[id]/bookings/booking-invoice';
 
+
 export default function BookingSuccessPage() {
   const router = useRouter();
-  const [hasBooking, setHasBooking] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user has a recent booking
@@ -21,12 +22,10 @@ export default function BookingSuccessPage() {
       router.push('/');
       return;
     }
-    setHasBooking(true);
-    
-    // You can integrate with analytics here
+    setBookingId(lastBookingId);
   }, [router]);
 
-  if (!hasBooking) {
+  if (!bookingId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -50,11 +49,13 @@ export default function BookingSuccessPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-4">
             Booking Confirmed!
           </h1>
-          <ModernBookingTicket/>
-          
           <p className="text-gray-600 mb-8">
             Your booking has been confirmed. You'll receive a confirmation email shortly.
           </p>
+
+          <div className="my-8">
+            {bookingId && <ModernBookingTicket bookingId={bookingId} />}
+          </div>
 
           <div className="space-y-4">
             <Button
