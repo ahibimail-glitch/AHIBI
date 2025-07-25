@@ -186,8 +186,8 @@ const getPublicEvents = async (req, res) => {
 
     // Build query for approved events only
     const query = {
-      status: 'approved',
-      startDate: { $gte: new Date() } // Only show upcoming events
+      // status: 'approved',
+      // startDate: { $gte: new Date() } // Only show upcoming events
     };
 
     // Add filters if provided
