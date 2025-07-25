@@ -18,7 +18,6 @@ import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Event, EventsResponse } from "@/types/event";
-import { getApiUrl } from "@/config";
 
 const CITIES = [
   "Mumbai",
@@ -131,7 +130,7 @@ export default function EventsPage() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-                const response = await fetch(getApiUrl('api/events'));
+        const response = await fetch('/api/events');
         if (!response.ok) {
           throw new Error('Failed to fetch events');
         }
