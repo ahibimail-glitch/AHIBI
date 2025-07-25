@@ -29,6 +29,7 @@ interface TicketType {
   description: string;
   price: string;
   quantity: string;
+  capacity: string;
   benefits: string[];
 }
 
@@ -59,6 +60,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       description: "",
       price: "",
       quantity: "",
+      capacity: "1", // Default capacity is 1 entry per ticket
       benefits: ["Entry to the event"]
     }
   ]);
@@ -198,6 +200,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         description: "",
         price: "",
         quantity: "",
+        capacity: "1", // Default capacity is 1 entry per ticket
         benefits: ["Entry to the event"]
       }
     ]);
@@ -309,7 +312,8 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         price: parseFloat(ticket.price) || 0,
         quantity: parseInt(ticket.quantity, 10) || 0,
         benefits: ticket.benefits.filter(benefit => benefit.trim() !== ""),
-        sold: 0
+        sold: 0,
+        capacity: parseInt(ticket.capacity, 10) || 1,
       })),
       convenience: {
         percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
@@ -623,6 +627,24 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                           placeholder="e.g., 100"
                           required
                         />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Entry Capacity Per Ticket *</Label>
+                        <Input
+                          type="number"
+                          value={ticket.capacity}
+                          onChange={(e) => handleTicketTypeChange(ticketIndex, 'capacity', Math.max(1, parseInt(e.target.value) || 1).toString())}
+                          placeholder="e.g., 1"
+                          min="1"
+                          step="1"
+                          required
+                        />
+                        <div className="text-xs text-muted-foreground pt-1">
+                          <span className="font-medium">Maximum entries per ticket:</span> Set to 1 for single entry, 3 for family passes, or higher for season passes. This controls how many times each ticket can be scanned.
+                        </div>
                       </div>
                     </div>
 

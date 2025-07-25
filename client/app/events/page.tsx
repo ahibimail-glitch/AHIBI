@@ -93,9 +93,9 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => (
           <span>•</span>
           <span>{formatTime(event.startDate)}</span>
         </div>
-        <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
+        {/* <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
           {event.attendees || 0} Going
-        </Badge>
+        </Badge> */}
       </div>
       <div className="mt-auto">
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
@@ -106,7 +106,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => (
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium">
-            Only {getLowestPrice(event.ticketTypes)}
+            Starting from {getLowestPrice(event.ticketTypes)}
           </span>
           <Button asChild size="sm">
             <Link href={`/events/${event.slug || event._id}`}>

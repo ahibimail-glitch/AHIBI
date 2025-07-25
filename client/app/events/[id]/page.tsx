@@ -78,6 +78,7 @@ interface TicketType {
   sold: number;
   description: string;
   benefits?: string[];
+  capacity: number;
 }
 
 interface EventOrganizer {
@@ -541,7 +542,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   {event.ticketTypes?.reduce((acc, t) => acc + (t.quantity - t.sold), 0) || 0} tickets remaining
                 </Badge>
               </div>
-              
+
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">
                   {/* Group tickets by category/price */}
@@ -551,14 +552,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       0,
                       Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
                     );
-                    
+
                     // Determine status badge
                     const isSoldOut = ticket.quantity <= ticket.sold;
                     const isLimited = availabilityPercentage <= 20 && !isSoldOut;
-                    
+
                     return (
-                      <Card 
-                        key={ticket._id} 
+                      <Card
+                        key={ticket._id}
                         className={`border ${selectedTicket?._id === ticket._id ? 'border-primary border-2' : 'border-border'} overflow-hidden transition-all duration-200 hover:shadow-md`}
                       >
                         <CardHeader className="pb-2">
@@ -586,12 +587,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             </div>
                           </div>
                         </CardHeader>
-                        
+
                         <CardContent>
                           <p className="text-sm text-muted-foreground mb-3">
                             {ticket.description}
+                            <br />
+                            <Badge variant="outline" className="mt-1 bg-green-50 text-green-600 border-green-200">{ticket.capacity} person allowed</Badge>
                           </p>
-                          
+
                           {/* Benefits list */}
                           {ticket.benefits && ticket.benefits.length > 0 && (
                             <div className="bg-muted/30 rounded-md p-3 mb-3">
@@ -606,7 +609,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </ul>
                             </div>
                           )}
-                          
+
                           {/* Availability indicator */}
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-xs mb-1.5">
@@ -618,14 +621,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </span>
                             </div>
                             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                              <div 
+                              <div
                                 className={`h-full ${isSoldOut ? 'bg-destructive' : isLimited ? 'bg-amber-500' : 'bg-primary'}`}
                                 style={{ width: `${100 - availabilityPercentage}%` }}
                               ></div>
                             </div>
                           </div>
                         </CardContent>
-                        
+
                         <CardFooter className="pt-2 flex justify-end">
                           <Button
                             variant={selectedTicket?._id === ticket._id ? "default" : "outline"}

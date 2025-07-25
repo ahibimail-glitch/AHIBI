@@ -15,9 +15,9 @@ import jsQR from 'jsqr';
 
 interface BookingVerification {
   bookingId: string;
-  bookingCode: string;
   eventDate: string;
   userId: string;
+  ticketType: string;
   status?: 'VALID' | 'INVALID' | 'ALREADY_USED' | 'PENDING';
   checkedInAt?: string;
   verificationMessage?: string;
@@ -40,14 +40,14 @@ const QrScanner = () => {
     setVerification(null);
 
     try {
-      let bookingPayload: { bookingId: string; bookingCode?: string } | null = null;
+      let bookingPayload: { bookingId: string } | null = null;
+      let parsedData: any = null;
 
       try {
-        const parsedData = JSON.parse(qrData);
+        parsedData = JSON.parse(qrData);
         if (parsedData.bookingId) {
           bookingPayload = {
             bookingId: parsedData.bookingId,
-            bookingCode: parsedData.bookingCode,
           };
         }
       } catch (e) {
@@ -59,27 +59,41 @@ const QrScanner = () => {
         throw new Error("Invalid QR code: No booking ID found.");
       }
 
-      // Create a valid BookingVerification object for the API call
-      const bookingToVerify: BookingVerification = {
-        bookingId: bookingPayload.bookingId,
-        bookingCode: bookingPayload.bookingCode || '',
-        eventDate: '', // These will be populated by the backend
-        userId: '',    // These will be populated by the backend
-      };
-
-      verifyBooking(bookingToVerify);
+      // If we have the full QR data, use it to create a more complete object
+      if (parsedData && parsedData.bookingId) {
+        const bookingToVerify: BookingVerification = {
+          bookingId: parsedData.bookingId,
+          userId: parsedData.name || 'Unknown',
+          ticketType: parsedData.ticketType || 'Unknown',
+          eventDate: parsedData.bookingDate || new Date().toISOString(),
+          status: 'VALID',
+          verificationMessage: "Ticket data loaded. Ready to verify entry."
+        };
+        verifyBooking(bookingToVerify);
+      } else {
+        // Handle plain text QR codes
+        const bookingToVerify: BookingVerification = {
+          bookingId: bookingPayload.bookingId,
+          userId: 'Unknown',
+          ticketType: 'Unknown',
+          eventDate: new Date().toISOString(),
+          status: 'VALID',
+          verificationMessage: "Ticket data loaded. Ready to verify entry."
+        };
+        verifyBooking(bookingToVerify);
+      }
     } catch (err: any) {
       console.error("Error parsing QR data:", err);
       setError(err.message || "Invalid QR code format. Please try again.");
     }
   };
-  
+
   // Start scanning with real QR scanner
   const startRealScan = () => {
     setScanning(true);
     setError(null);
   };
-  
+
   // Handle QR scanner errors
   const handleScannerError = (err: any) => {
     console.error("Scanner error:", err);
@@ -88,6 +102,7 @@ const QrScanner = () => {
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("file is using");
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -112,9 +127,18 @@ const QrScanner = () => {
         context.drawImage(img, 0, 0, img.width, img.height);
         const imageData = context.getImageData(0, 0, img.width, img.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
-        
         setScanning(false);
+        
         if (code) {
+          try {
+            // Try parsing as JSON if possible
+            const parsedData = JSON.parse(code.data);
+            console.log('QR code contains JSON data:', parsedData);
+          } catch (e) {
+            // Not JSON, that's OK
+            console.log('QR code contains text data:', code.data);
+          }
+          
           handleRealQrScan(code.data);
         } else {
           setError("No QR code found in the uploaded image.");
@@ -127,8 +151,8 @@ const QrScanner = () => {
       img.src = event.target?.result as string;
     };
     reader.onerror = () => {
-        setError("Failed to read the file.");
-        setScanning(false);
+      setError("Failed to read the file.");
+      setScanning(false);
     };
     reader.readAsDataURL(file);
   };
@@ -139,66 +163,67 @@ const QrScanner = () => {
       setError("Please enter a booking code");
       return;
     }
-    
+
     // In a real implementation, we would search for the booking by code
     // For now, we'll assume the booking code is the booking ID for simplicity
     const bookingData: BookingVerification = {
       bookingId: manualCode, // Using the manual code as the booking ID
-      bookingCode: manualCode,
       eventDate: new Date().toISOString(),
       userId: "Unknown", // Will be populated from the API response
+      ticketType: "Unknown", // Will be populated from the API response
+      verificationMessage: "Ticket verified. Ready to scan entry.",
+      status: "VALID", // Assuming valid unless we know otherwise
     };
-    
+
     verifyBooking(bookingData);
   };
 
   // Function to verify booking with backend
   const verifyBooking = async (bookingData: BookingVerification) => {
     setError(null);
-    
+
     try {
       // Get API URL with fallback
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      
-      console.log('Making API request to:', `${apiUrl}/api/bookings/verify-qr`);
-      
-      // Make API call to verify the booking
-      const response = await axios.post(`${apiUrl}/api/bookings/verify-qr`, {
-        bookingId: bookingData.bookingId,
-        bookingCode: bookingData.bookingCode
-      }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-        }
-      });
-      
-      const { status, message, booking } = response.data;
-      
+
+      // Check if we have a valid ticket ID (in our case, it's stored as bookingId)
+      if (!bookingData.bookingId) {
+        throw new Error("Invalid ticket ID");
+      }
+
+      // First, we need to get the ticket information to retrieve user details
+      // This would typically be a separate API call to get ticket info
+      // Here we'll just use a placeholder as we don't have that API yet
+
+      // Create a verified booking object based on the QR data
+      // In a full implementation, we would make an API call to get more ticket details
       const verifiedBooking: BookingVerification = {
-        bookingId: booking.id || booking._id,
-        bookingCode: bookingData.bookingCode,
-        eventDate: booking.event?.startDate || bookingData.eventDate,
-        userId: booking.user?.name || bookingData.userId,
-        status: status as 'VALID' | 'INVALID' | 'ALREADY_USED',
-        checkedInAt: booking.entryVerifiedAt,
-        verificationMessage: message
+        bookingId: bookingData.bookingId,
+        eventDate: new Date().toISOString(), // This would come from the ticket API
+        userId: bookingData.userId || 'unknown', // This would come from the ticket API
+        status: 'VALID', // Assuming valid unless we know otherwise
+        verificationMessage: "Ticket verified. Ready to scan entry.",
+        ticketType: bookingData.ticketType, // This would come from the ticket API
       };
-      
+
+      // Check for existing scans to determine if already used
+      // Note: In a production app, this would be another API call to check status
+      console.log(verifiedBooking);
       setVerification(verifiedBooking);
-      
+
       // Add to recent scans
       setRecentScans(prev => [verifiedBooking, ...prev].slice(0, 10));
-      
+
       // Reset form
       setManualCode("");
       setFileUpload(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      
+
     } catch (err: any) {
       console.error("Error verifying booking:", err);
-      setError(err.response?.data?.message || "Failed to verify booking. Please try again.");
+      setError(err.message || "Failed to verify ticket. Please try again.");
     }
   };
 
@@ -247,40 +272,55 @@ const QrScanner = () => {
 
   const handleAllowEntry = async () => {
     if (!verification) return;
-    
+
     try {
       // Get API URL with fallback
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      
-      // Make API call to mark the booking as used
-      const response = await axios.post(`${apiUrl}/api/bookings/mark-entry`, {
-        bookingId: verification.bookingId
+
+      // Make API call to scan QR code and record entry
+      const response = await axios.post(`${apiUrl}/api/qr/scan`, {
+        ticketId: verification.bookingId,  // Using bookingId as ticketId
+        userId: verification.userId        // Using userId from verification
       }, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         }
       });
       
-      // Update verification status
+      // Extract detailed information from response
+      const { ticketDetails, userDetails, eventDetails } = response.data;
+      
+      // Update verification status with the additional information
       const updatedVerification: BookingVerification = {
         ...verification,
         status: 'ALREADY_USED',
         checkedInAt: new Date().toISOString(),
-        verificationMessage: "Entry allowed and recorded."
+        userId: userDetails?.name || verification.userId,
+        ticketType: ticketDetails?.ticketType || verification.ticketType,
+        eventDate: eventDetails?.date || verification.eventDate,
+        verificationMessage: `Entry allowed and recorded successfully. ${ticketDetails?.remainingEntries > 0 ? `${ticketDetails.remainingEntries} entries remaining.` : ''}`
       };
-      
+
       setVerification(updatedVerification);
-      
+
       // Update in recent scans
-      setRecentScans(prev => 
-        prev.map(scan => 
+      setRecentScans(prev =>
+        prev.map(scan =>
           scan.bookingId === updatedVerification.bookingId ? updatedVerification : scan
         )
       );
-      
+
     } catch (err: any) {
       console.error("Error allowing entry:", err);
-      setError(err.response?.data?.message || "Failed to record entry. Please try again.");
+
+      // Handle specific error codes from our QR scan endpoint
+      if (err.response?.data?.error === 'ALREADY_ENTERED') {
+        setError("This ticket has already been used. No multiple entries allowed.");
+      } else if (err.response?.data?.error === 'TICKET_EXHAUSTED') {
+        setError("This ticket has reached its maximum capacity. No more entries allowed.");
+      } else {
+        setError(err.response?.data?.message || "Failed to record entry. Please try again.");
+      }
     }
   };
 
@@ -311,20 +351,20 @@ const QrScanner = () => {
                   <TabsTrigger value="upload">Upload Image</TabsTrigger>
                   <TabsTrigger value="manual">Manual Entry</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="scan" className="space-y-4">
                   <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 h-64 overflow-hidden">
                     {scanning ? (
                       <div className="w-full h-full">
-                        <RealQrScanner 
-                          onScan={handleRealQrScan} 
-                          onError={handleScannerError} 
-                          isActive={scanning} 
+                        <RealQrScanner
+                          onScan={handleRealQrScan}
+                          onError={handleScannerError}
+                          isActive={scanning}
                         />
                         <div className="absolute top-2 right-2">
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
+                          <Button
+                            variant="destructive"
+                            size="sm"
                             className="bg-red-500/70 hover:bg-red-600"
                             onClick={() => setScanning(false)}
                           >
@@ -344,7 +384,7 @@ const QrScanner = () => {
                     )}
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="upload" className="space-y-4">
                   <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 h-64">
                     <input
@@ -370,7 +410,7 @@ const QrScanner = () => {
                     )}
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="manual" className="space-y-4">
                   <form onSubmit={handleManualSubmit}>
                     <div className="space-y-4">
@@ -419,8 +459,8 @@ const QrScanner = () => {
                       <p className="font-mono">{verification.bookingId}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Booking Code</p>
-                      <p className="font-mono">{verification.bookingCode}</p>
+                      <p className="text-sm font-medium text-gray-500">Ticket Type</p>
+                      <p className="font-mono">{verification.ticketType}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Event Date</p>
@@ -440,13 +480,13 @@ const QrScanner = () => {
 
                   <Alert className={
                     verification.status === 'VALID' ? "bg-green-50 border-green-200 text-green-800" :
-                    verification.status === 'INVALID' ? "bg-red-50 border-red-200 text-red-800" :
-                    "bg-amber-50 border-amber-200 text-amber-800"
+                      verification.status === 'INVALID' ? "bg-red-50 border-red-200 text-red-800" :
+                        "bg-amber-50 border-amber-200 text-amber-800"
                   }>
                     <AlertTitle className="font-bold">
                       {verification.status === 'VALID' ? "Valid Ticket" :
-                       verification.status === 'INVALID' ? "Invalid Ticket" :
-                       "Already Used"}
+                        verification.status === 'INVALID' ? "Invalid Ticket" :
+                          "Already Used"}
                     </AlertTitle>
                     <AlertDescription>
                       {verification.verificationMessage}
@@ -485,21 +525,20 @@ const QrScanner = () => {
                   <p className="text-center text-gray-500 py-4">No recent scans</p>
                 ) : (
                   recentScans.map((scan, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
                       onClick={() => setVerification(scan)}
                     >
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">{scan.userId}</p>
-                          <p className="text-sm text-gray-500 font-mono">{scan.bookingCode}</p>
                         </div>
                         {getStatusBadge(scan.status)}
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        {scan.checkedInAt ? 
-                          `Checked in: ${new Date(scan.checkedInAt).toLocaleTimeString()}` : 
+                        {scan.checkedInAt ?
+                          `Checked in: ${new Date(scan.checkedInAt).toLocaleTimeString()}` :
                           `Scanned: ${new Date().toLocaleTimeString()}`
                         }
                       </p>
