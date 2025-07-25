@@ -17,14 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Event {
   _id: string;
   title: string;
-  }
+}
 
 interface BookingVerification {
   bookingId: string;
   eventDate: string;
   userId: string;
   ticketType: string;
-  status?: 'VALID' | 'INVALID' | 'ALREADY_USED' | 'PENDING';
+  status?: 'VALID' | 'INVALID' | 'ALREADY_USED' | 'PENDING' | 'CHECKED_IN';
   checkedInAt?: string;
   verificationMessage?: string;
 }
@@ -39,6 +39,7 @@ const QrScanner = () => {
   const [recentScans, setRecentScans] = useState<BookingVerification[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [showAlreadyUsedAnimation, setShowAlreadyUsedAnimation] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,6 +60,15 @@ const QrScanner = () => {
 
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    if (showAlreadyUsedAnimation) {
+      const timer = setTimeout(() => {
+        setShowAlreadyUsedAnimation(false);
+      }, 2000); // Show for 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showAlreadyUsedAnimation]);
 
   // Function to handle QR code scanning from real camera
   const handleRealQrScan = (qrData: string) => {
@@ -155,7 +165,7 @@ const QrScanner = () => {
         const imageData = context.getImageData(0, 0, img.width, img.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
         setScanning(false);
-        
+
         if (code) {
           try {
             // Try parsing as JSON if possible
@@ -165,7 +175,7 @@ const QrScanner = () => {
             // Not JSON, that's OK
             console.log('QR code contains text data:', code.data);
           }
-          
+
           handleRealQrScan(code.data);
         } else {
           setError("No QR code found in the uploaded image.");
@@ -232,7 +242,7 @@ const QrScanner = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           bookingId: bookingData.bookingId,
           eventId: selectedEvent
         }),
@@ -248,8 +258,12 @@ const QrScanner = () => {
         ...bookingData,
         ...result, // Populate with response from backend
       };
-      
+
       setVerification(verifiedBooking);
+
+      if (verifiedBooking.status === 'ALREADY_USED') {
+        setShowAlreadyUsedAnimation(true);
+      }
 
       // Add to recent scans
       setRecentScans(prev => [verifiedBooking, ...prev].slice(0, 10));
@@ -275,6 +289,8 @@ const QrScanner = () => {
         return "Invalid booking. Entry not allowed.";
       case 'ALREADY_USED':
         return "This ticket has already been used for entry.";
+      case 'CHECKED_IN':
+        return "Entry successful. The user is now checked in.";
       default:
         return "Unknown status";
     }
@@ -300,6 +316,12 @@ const QrScanner = () => {
             <AlertCircle className="h-3 w-3 mr-1" /> Already Used
           </Badge>
         );
+      case 'CHECKED_IN':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            <CheckCircle className="h-3 w-3 mr-1" /> Checked In
+          </Badge>
+        );
       case 'PENDING':
       default:
         return (
@@ -311,56 +333,37 @@ const QrScanner = () => {
   };
 
   const handleAllowEntry = async () => {
-    if (!verification) return;
+    if (!verification || !verification.bookingId) return;
 
     try {
-      // Get API URL with fallback
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
-      // Make API call to scan QR code and record entry
-      const response = await axios.post(`${apiUrl}/api/qr/scan`, {
-        ticketId: verification.bookingId,  // Using bookingId as ticketId
-        userId: verification.userId        // Using userId from verification
-      }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-        }
+      const response = await axios.post(`${apiUrl}/api/bookings/check-in`, {
+        bookingId: verification.bookingId,
       });
-      
-      // Extract detailed information from response
-      const { ticketDetails, userDetails, eventDetails } = response.data;
-      
-      // Update verification status with the additional information
-      const updatedVerification: BookingVerification = {
-        ...verification,
-        status: 'ALREADY_USED',
-        checkedInAt: new Date().toISOString(),
-        userId: userDetails?.name || verification.userId,
-        ticketType: ticketDetails?.ticketType || verification.ticketType,
-        eventDate: eventDetails?.date || verification.eventDate,
-        verificationMessage: `Entry allowed and recorded successfully. ${ticketDetails?.remainingEntries > 0 ? `${ticketDetails.remainingEntries} entries remaining.` : ''}`
-      };
 
-      setVerification(updatedVerification);
+      const result = response.data;
 
-      // Update in recent scans
-      setRecentScans(prev =>
-        prev.map(scan =>
-          scan.bookingId === updatedVerification.bookingId ? updatedVerification : scan
-        )
-      );
+      if (result.status === 'CHECKED_IN') {
+        const updatedVerification: BookingVerification = {
+          ...verification,
+          status: 'CHECKED_IN',
+          checkedInAt: result.checkedInAt,
+          verificationMessage: 'Check-in successful.',
+        };
+        setVerification(updatedVerification);
 
+        // Update in recent scans
+        setRecentScans(prev =>
+          prev.map(scan =>
+            scan.bookingId === updatedVerification.bookingId ? updatedVerification : scan
+          )
+        );
+      } else {
+        throw new Error(result.message || 'Failed to check-in');
+      }
     } catch (err: any) {
       console.error("Error allowing entry:", err);
-
-      // Handle specific error codes from our QR scan endpoint
-      if (err.response?.data?.error === 'ALREADY_ENTERED') {
-        setError("This ticket has already been used. No multiple entries allowed.");
-      } else if (err.response?.data?.error === 'TICKET_EXHAUSTED') {
-        setError("This ticket has reached its maximum capacity. No more entries allowed.");
-      } else {
-        setError(err.response?.data?.message || "Failed to record entry. Please try again.");
-      }
+      setError(err.response?.data?.message || "Failed to record entry. Please try again.");
     }
   };
 
@@ -371,9 +374,19 @@ const QrScanner = () => {
 
   return (
     <div className="container mx-auto">
+      {/* Animation Overlay for Already Used Tickets */}
+      {showAlreadyUsedAnimation && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-in fade-in-0">
+          <div className="bg-white p-10 rounded-lg shadow-2xl flex flex-col items-center animate-in fade-in-0 zoom-in-95">
+            <AlertCircle className="h-28 w-28 text-amber-500" />
+            <p className="mt-5 text-4xl font-bold text-gray-800">Already Used</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Scanner Section */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-1">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -503,111 +516,40 @@ const QrScanner = () => {
               )}
             </CardContent>
           </Card>
+        </div>
 
-          {/* Verification Result */}
+          {/* Verification Result Section */}
+        <div className="md:col-span-2">
           {verification && (
-            <Card className="mt-6">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-bold">Verification Result</CardTitle>
-                {getStatusBadge(verification.status)}
+            <Card className={`border-2 ${verification.status === 'VALID' ? 'border-green-500' : verification.status === 'CHECKED_IN' ? 'border-blue-500' : 'border-red-500'}`}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Verification Result</span>
+                  {getStatusBadge(verification.status)}
+                </CardTitle>
+                <CardDescription>{getVerificationMessage(verification.status || 'PENDING')}</CardDescription>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Booking ID</p>
-                      <p className="font-mono">{verification.bookingId}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Ticket Type</p>
-                      <p className="font-mono">{verification.ticketType}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Event Date</p>
-                      <p>{new Date(verification.eventDate).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">User</p>
-                      <p>{verification.userId}</p>
-                    </div>
-                    {verification.checkedInAt && (
-                      <div className="col-span-2">
-                        <p className="text-sm font-medium text-gray-500">Checked In At</p>
-                        <p>{new Date(verification.checkedInAt).toLocaleString()}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <Alert className={
-                    verification.status === 'VALID' ? "bg-green-50 border-green-200 text-green-800" :
-                      verification.status === 'INVALID' ? "bg-red-50 border-red-200 text-red-800" :
-                        "bg-amber-50 border-amber-200 text-amber-800"
-                  }>
-                    <AlertTitle className="font-bold">
-                      {verification.status === 'VALID' ? "Valid Ticket" :
-                        verification.status === 'INVALID' ? "Invalid Ticket" :
-                          "Already Used"}
-                    </AlertTitle>
-                    <AlertDescription>
-                      {verification.verificationMessage}
-                    </AlertDescription>
-                  </Alert>
-                </div>
+              <CardContent className="space-y-2">
+                <div className="font-mono text-sm bg-gray-100 p-2 rounded">Booking ID: {verification.bookingId}</div>
+                <p><span className="font-semibold">User ID:</span> {verification.userId}</p>
+                <p><span className="font-semibold">Ticket:</span> {verification.ticketType}</p>
+                {verification.checkedInAt && (
+                  <p><span className="font-semibold">Checked In:</span> {new Date(verification.checkedInAt).toLocaleString()}</p>
+                )}
               </CardContent>
-              <CardFooter className="flex justify-between">
-                {verification.status === 'VALID' ? (
-                  <>
-                    <Button variant="outline" onClick={handleDenyEntry}>Deny Entry</Button>
-                    <Button onClick={handleAllowEntry}>Allow Entry</Button>
-                  </>
-                ) : (
-                  <Button variant="outline" className="ml-auto" onClick={() => setVerification(null)}>
-                    Close
+              <CardFooter className="flex justify-end space-x-2">
+                {verification.status === 'VALID' && (
+                  <Button onClick={handleAllowEntry} className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Allow Entry
                   </Button>
                 )}
+                <Button variant="outline" onClick={handleDenyEntry}>
+                  <XCircle className="mr-2 h-4 w-4" />
+                  {verification.status === 'VALID' ? 'Deny' : 'Clear'}
+                </Button>
               </CardFooter>
             </Card>
           )}
-        </div>
-
-        {/* Recent Scans Section */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Scans</CardTitle>
-              <CardDescription>
-                Last {recentScans.length} ticket verifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentScans.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">No recent scans</p>
-                ) : (
-                  recentScans.map((scan, index) => (
-                    <div
-                      key={index}
-                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setVerification(scan)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">{scan.userId}</p>
-                        </div>
-                        {getStatusBadge(scan.status)}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {scan.checkedInAt ?
-                          `Checked in: ${new Date(scan.checkedInAt).toLocaleTimeString()}` :
-                          `Scanned: ${new Date().toLocaleTimeString()}`
-                        }
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

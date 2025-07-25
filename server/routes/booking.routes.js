@@ -34,11 +34,6 @@ router.post("/verify-ticket", async (req, res) => {
       });
     }
 
-    // Mark as checked-in
-    booking.status = 'checked-in';
-    booking.checkedInAt = new Date();
-    await booking.save();
-
     res.status(200).json({
       message: 'Ticket verified successfully.',
       status: 'VALID',
@@ -46,7 +41,6 @@ router.post("/verify-ticket", async (req, res) => {
       userId: booking.user,
       ticketType: booking.ticketType,
       eventDate: booking.createdAt, // Or event start date if available
-      checkedInAt: booking.checkedInAt,
     });
 
   } catch (error) {
@@ -314,6 +308,44 @@ router.get("/:id", auth.protect, async (req, res) => {
   } catch (error) {
     console.error("Error fetching booking:", error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   POST /api/bookings/check-in
+// @desc    Mark a ticket as checked-in
+// @access  Private (Admin)
+router.post("/check-in", async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    if (booking.status === 'checked-in') {
+      return res.status(400).json({ message: 'This ticket has already been used.' });
+    }
+
+    // Mark as checked-in
+    booking.status = 'checked-in';
+    booking.checkedInAt = new Date();
+    await booking.save();
+
+    res.status(200).json({
+      message: 'Check-in successful.',
+      status: 'CHECKED_IN',
+      checkedInAt: booking.checkedInAt,
+    });
+
+  } catch (error) {
+    console.error('Error during check-in:', error);
+    res.status(500).json({ message: 'Server error during check-in' });
   }
 });
 
