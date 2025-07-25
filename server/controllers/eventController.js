@@ -220,7 +220,7 @@ const getPublicEvents = async (req, res) => {
         .lean(),
       Event.countDocuments(query)
     ]);
-
+    console.log(events);
     return ApiResponse.success(res, 'Events fetched successfully', {
       events,
       pagination: {
