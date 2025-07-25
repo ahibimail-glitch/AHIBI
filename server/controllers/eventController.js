@@ -220,7 +220,7 @@ const getPublicEvents = async (req, res) => {
         .lean(),
       Event.countDocuments(query)
     ]);
-    console.log(events);
+    // console.log(events);
     return ApiResponse.success(res, 'Events fetched successfully', {
       events,
       pagination: {
@@ -241,6 +241,16 @@ const getPublicEvents = async (req, res) => {
  * @route   GET /api/events/:id
  * @access  Public
  */
+const getActiveEvents = async (req, res) => {
+  try {
+    const events = await Event.find({ status: 'active' }).select('id title');
+    res.status(200).json(new ApiResponse(true, 'Active events fetched successfully', events));
+  } catch (error) {
+    console.error('Error fetching active events:', error);
+    res.status(500).json(new ApiResponse(false, 'Server error'));
+  }
+};
+
 const getPublicEventById = async (req, res) => {
   console.log(`Fetching event with ID: ${req.params.id}`);
   try {
@@ -277,5 +287,6 @@ module.exports = {
   getPublicEvents,
   getPublicEventById,
   approveEvent,
-  rejectEvent
+  rejectEvent,
+  getActiveEvents
 };

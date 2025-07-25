@@ -12,6 +12,12 @@ import { QrCode, Upload, Search, CheckCircle, XCircle, AlertCircle, Clock, Camer
 import axios from 'axios';
 import RealQrScanner from './RealQrScanner';
 import jsQR from 'jsqr';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface Event {
+  _id: string;
+  title: string;
+  }
 
 interface BookingVerification {
   bookingId: string;
@@ -30,8 +36,29 @@ const QrScanner = () => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [verification, setVerification] = useState<BookingVerification | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [recentScans, setRecentScans] = useState<BookingVerification[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/events`); // Endpoint to get active events
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        const data = await response.json();
+        setEvents(data.data.events);
+      } catch (err: any) {
+        setError('Could not load events. Please refresh the page.');
+        console.error("Error fetching events:", err);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   // Function to handle QR code scanning from real camera
   const handleRealQrScan = (qrData: string) => {
@@ -196,19 +223,32 @@ const QrScanner = () => {
       // Here we'll just use a placeholder as we don't have that API yet
 
       // Create a verified booking object based on the QR data
-      // In a full implementation, we would make an API call to get more ticket details
-      const verifiedBooking: BookingVerification = {
-        bookingId: bookingData.bookingId,
-        eventDate: new Date().toISOString(), // This would come from the ticket API
-        userId: bookingData.userId || 'unknown', // This would come from the ticket API
-        status: 'VALID', // Assuming valid unless we know otherwise
-        verificationMessage: "Ticket verified. Ready to scan entry.",
-        ticketType: bookingData.ticketType, // This would come from the ticket API
-      };
+      if (!selectedEvent) {
+        throw new Error("Please select an event before scanning.");
+      }
 
-      // Check for existing scans to determine if already used
-      // Note: In a production app, this would be another API call to check status
-      console.log(verifiedBooking);
+      const response = await fetch(`${apiUrl}/api/bookings/verify-ticket`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          bookingId: bookingData.bookingId,
+          eventId: selectedEvent
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Verification failed');
+      }
+
+      const verifiedBooking: BookingVerification = {
+        ...bookingData,
+        ...result, // Populate with response from backend
+      };
+      
       setVerification(verifiedBooking);
 
       // Add to recent scans
@@ -341,10 +381,30 @@ const QrScanner = () => {
                 QR Code Scanner
               </CardTitle>
               <CardDescription>
-                Scan event tickets to verify attendees
+                Select an event, then scan QR codes from tickets to verify entry.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <div>
+                <label htmlFor="event-select" className="block text-sm font-medium text-gray-700 mb-2">Select Event</label>
+                <Select onValueChange={setSelectedEvent} defaultValue={selectedEvent || ""}>
+                  <SelectTrigger id="event-select">
+                    <SelectValue placeholder="Choose an event..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.length > 0 ? (
+                      events.map(event => (
+                        <SelectItem key={event._id} value={event._id}>
+                          {event.title}
+                        </SelectItem>
+                      ))
+                    ) : null}
+                  </SelectContent>
+                </Select>
+                {events.length === 0 && (
+                  <div className="text-sm text-gray-500 px-2 py-1">No active events found</div>
+                )}
+              </div>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="scan">Camera Scan</TabsTrigger>

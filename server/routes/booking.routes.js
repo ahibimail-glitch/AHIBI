@@ -5,6 +5,56 @@ const Booking = require("../models/Booking");
 const Event = require("../models/Event");
 const User = require("../models/User");
 
+// @route   POST /api/bookings/verify-ticket
+// @desc    Verify a ticket for an event
+// @access  Private (Admin)
+router.post("/verify-ticket", async (req, res) => {
+  try {
+    const { bookingId, eventId } = req.body;
+   console.log(req.body)
+    if (!bookingId || !eventId) {
+      return res.status(400).json({ message: 'Booking ID and Event ID are required' });
+    }
+
+    const booking = await Booking.findById(bookingId);
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found', status: 'INVALID' });
+    }
+
+    if (booking.event.toString() !== eventId) {
+      return res.status(400).json({ message: 'This ticket is not for the selected event', status: 'INVALID' });
+    }
+
+    if (booking.status === 'checked-in') {
+      return res.status(200).json({
+        message: 'This ticket has already been used.',
+        status: 'ALREADY_USED',
+        checkedInAt: booking.checkedInAt,
+      });
+    }
+
+    // Mark as checked-in
+    booking.status = 'checked-in';
+    booking.checkedInAt = new Date();
+    await booking.save();
+
+    res.status(200).json({
+      message: 'Ticket verified successfully.',
+      status: 'VALID',
+      bookingId: booking._id,
+      userId: booking.user,
+      ticketType: booking.ticketType,
+      eventDate: booking.createdAt, // Or event start date if available
+      checkedInAt: booking.checkedInAt,
+    });
+
+  } catch (error) {
+    console.error('Error verifying ticket:', error);
+    res.status(500).json({ message: 'Server error during ticket verification' });
+  }
+});
+
 
 // @route   POST /api/bookings
 // @desc    Create a new booking

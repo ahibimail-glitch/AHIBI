@@ -13,6 +13,7 @@ const adminAuthRoutes = require('./routes/adminAuth.routes');
 // const venueRoutes = require('./routes/venue.routes');
 // const organizerRoutes = require('./routes/organizer.routes');
 const eventRoutes = require('./routes/event.routes');
+
 const uploadRoutes = require('./routes/upload.routes');
 // const ticketRoutes = require('./routes/ticket.routes');
 // const userRoutes = require('./routes/user.routes');
