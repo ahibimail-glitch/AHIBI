@@ -26,7 +26,11 @@ interface BookingVerification {
   ticketType: string;
   status?: 'VALID' | 'INVALID' | 'ALREADY_USED' | 'PENDING' | 'CHECKED_IN';
   checkedInAt?: string;
+  checkedOutAt?: string;
   verificationMessage?: string;
+  capacity?: number;
+  usedEntries?: number;
+  remainingEntries?: number;
 }
 
 const QrScanner = () => {
@@ -258,7 +262,7 @@ const QrScanner = () => {
         ...bookingData,
         ...result, // Populate with response from backend
       };
-
+      console.log(verifiedBooking);
       setVerification(verifiedBooking);
 
       if (verifiedBooking.status === 'ALREADY_USED') {
@@ -281,15 +285,28 @@ const QrScanner = () => {
     }
   };
 
-  const getVerificationMessage = (status: string): string => {
+  const getVerificationMessage = (verification: BookingVerification | null): string => {
+    if (!verification) return "Unknown status";
+    
+    const { status, capacity = 1, usedEntries = 0, remainingEntries = 0 } = verification;
+    
     switch (status) {
       case 'VALID':
+        if (capacity > 1) {
+          return `Booking is valid. Allow entry. Ticket capacity: ${capacity}, Used: ${usedEntries}, Remaining: ${remainingEntries}`;
+        }
         return "Booking is valid. Allow entry.";
       case 'INVALID':
         return "Invalid booking. Entry not allowed.";
       case 'ALREADY_USED':
-        return "This ticket has already been used for entry.";
+        if (capacity > 1) {
+          return `This ticket has reached its maximum capacity (${capacity}). You can check out the visitor.`;
+        }
+        return "This ticket has already been used for entry. You can check out the visitor.";
       case 'CHECKED_IN':
+        if (capacity > 1 && remainingEntries > 0) {
+          return `Entry successful. ${remainingEntries} entries remaining out of ${capacity}.`;
+        }
         return "Entry successful. The user is now checked in.";
       default:
         return "Unknown status";
@@ -370,6 +387,41 @@ const QrScanner = () => {
   const handleDenyEntry = () => {
     // Reset the verification
     setVerification(null);
+  };
+
+  const handleCheckout = async () => {
+    if (!verification || !verification.bookingId) return;
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await axios.post(`${apiUrl}/api/bookings/check-out`, {
+        bookingId: verification.bookingId,
+      });
+
+      const result = response.data;
+
+      if (result.status === 'VALID') {
+        const updatedVerification: BookingVerification = {
+          ...verification,
+          status: 'VALID',
+          checkedOutAt: result.checkedOutAt,
+          verificationMessage: 'Check-out successful. Ticket can be reused.',
+        };
+        setVerification(updatedVerification);
+
+        // Update in recent scans
+        setRecentScans(prev =>
+          prev.map(scan =>
+            scan.bookingId === updatedVerification.bookingId ? updatedVerification : scan
+          )
+        );
+      } else {
+        throw new Error(result.message || 'Failed to check-out');
+      }
+    } catch (err: any) {
+      console.error("Error checking out:", err);
+      setError(err.response?.data?.message || "Failed to record check-out. Please try again.");
+    }
   };
 
   return (
@@ -527,20 +579,43 @@ const QrScanner = () => {
                   <span>Verification Result</span>
                   {getStatusBadge(verification.status)}
                 </CardTitle>
-                <CardDescription>{getVerificationMessage(verification.status || 'PENDING')}</CardDescription>
+                <CardDescription>{getVerificationMessage(verification)}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="font-mono text-sm bg-gray-100 p-2 rounded">Booking ID: {verification.bookingId}</div>
                 <p><span className="font-semibold">User ID:</span> {verification.userId}</p>
                 <p><span className="font-semibold">Ticket:</span> {verification.ticketType}</p>
+                {verification.capacity && verification.capacity > 1 && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
+                    <p className="font-semibold">Ticket Capacity: {verification.capacity}</p>
+                    <div className="flex justify-between mt-1">
+                      <span>Used: {verification.usedEntries || 0}</span>
+                      <span>Remaining: {verification.remainingEntries || 0}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+                      <div 
+                        className={`h-2.5 rounded-full ${verification.remainingEntries === 0 ? 'bg-red-500' : 'bg-green-500'}`}
+                        style={{ width: `${((verification.usedEntries || 0) / (verification.capacity || 1)) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
                 {verification.checkedInAt && (
                   <p><span className="font-semibold">Checked In:</span> {new Date(verification.checkedInAt).toLocaleString()}</p>
+                )}
+                {verification.checkedOutAt && (
+                  <p><span className="font-semibold">Last Checked Out:</span> {new Date(verification.checkedOutAt).toLocaleString()}</p>
                 )}
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">
                 {verification.status === 'VALID' && (
                   <Button onClick={handleAllowEntry} className="bg-green-600 hover:bg-green-700">
                     <CheckCircle className="mr-2 h-4 w-4" /> Allow Entry
+                  </Button>
+                )}
+                {verification.status === 'ALREADY_USED' && (
+                  <Button onClick={handleCheckout} className="bg-blue-600 hover:bg-blue-700">
+                    <CheckCircle className="mr-2 h-4 w-4" /> Check Out
                   </Button>
                 )}
                 <Button variant="outline" onClick={handleDenyEntry}>
