@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,56 +22,19 @@ import {
   MapPin,
   Clock,
   Star,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import { EventsResponse, Event } from "@/types/event";
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-
-  const featuredEvents = [
-    {
-      id: 1,
-      title: "Summer Music Festival 2024",
-      price: "₹1,500",
-      date: "July 15, 2024",
-      venue: "Central Park Arena, Mumbai",
-      category: "Music",
-      type: "Festival",
-      setting: "Outdoor",
-      image: "/images/carausel2.jpg?height=300&width=500",
-      rating: 4.8,
-      attendees: 2500,
-    },
-    {
-      id: 2,
-      title: "Stand-Up Comedy Night",
-      price: "₹800",
-      date: "July 20, 2024",
-      venue: "Comedy Club Downtown, Delhi",
-      category: "Comedy",
-      type: "Indoor",
-      setting: "Entertainment",
-      image: "/images/carausel1.jpg?height=300&width=500",
-      rating: 4.6,
-      attendees: 150,
-    },
-    {
-      id: 3,
-      title: "Tech Conference 2024",
-      price: "₹2,500",
-      date: "July 25, 2024",
-      venue: "Convention Center, Bangalore",
-      category: "Technology",
-      type: "Conference",
-      setting: "Networking",
-      image: "/images/carausel3.jpg?height=300&width=500",
-      rating: 4.9,
-      attendees: 1000,
-    },
-  ];
+  const [featuredEvents, setFeaturedEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const stats = [
     { number: "15+", label: "Events Hosted" },
@@ -108,41 +71,73 @@ export default function HomePage() {
     },
   ];
 
-  // Auto-play functionality
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    const fetchEvents = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?isFeatured=true&limit=5`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch featured events');
+        }
+        const data: EventsResponse = await response.json();
+        setFeaturedEvents(data.data.events || []);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
+        console.error('Error fetching events:', errorMessage);
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % featuredEvents.length);
-    }, 5000);
+    fetchEvents();
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, featuredEvents.length]);
-
-  const nextSlide = () => {
+  const nextSlide = useCallback(() => {
+    if (featuredEvents.length === 0) return;
     setCurrentSlide((prev) => (prev + 1) % featuredEvents.length);
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
-  };
+  }, [featuredEvents.length]);
 
   const prevSlide = () => {
-    setCurrentSlide(
-      (prev) => (prev - 1 + featuredEvents.length) % featuredEvents.length
-    );
-    setIsAutoPlaying(false);
-    setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
+    if (featuredEvents.length === 0) return;
+    setCurrentSlide((prev) => (prev - 1 + featuredEvents.length) % featuredEvents.length);
   };
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
+  };
+
+  const handleNext = () => {
+    nextSlide();
     setIsAutoPlaying(false);
     setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
   };
 
+  const handlePrev = () => {
+    prevSlide();
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
+  };
+
+  const handleGoTo = (index: number) => {
+    goToSlide(index);
+    setIsAutoPlaying(false);
+    setTimeout(() => setIsAutoPlaying(true), 10000); // Resume auto-play after 10 seconds
+  };
+
+  useEffect(() => {
+    if (!isAutoPlaying || featuredEvents.length === 0) return;
+
+    const interval = setInterval(nextSlide, 5000);
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, featuredEvents.length, nextSlide]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className=" sticky top-0 z-50">
+      <header className="sticky top-0 z-50">
         <Navbar />
       </header>
 
@@ -154,9 +149,8 @@ export default function HomePage() {
           </h1>
 
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Discover top events, book artists, list venues, and manage every
-            detail<br/>
-             — all in one powerful platform.
+            Discover top events, book artists, list venues, and manage every detail<br />
+            — all in one powerful platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
@@ -186,112 +180,102 @@ export default function HomePage() {
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
           >
-            {/* Carousel Container */}
-            <div className="overflow-hidden rounded-lg">
-              <div
-                className="flex transition-transform duration-200 ease-in-out"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-              >
-                {featuredEvents.map((event) => (
-                  <div key={event.id} className="w-full flex-shrink-0">
-                    <Card className="relative mx-2 h-[500px] md:h-[600px] overflow-hidden rounded-lg">
-                      {/* Full Background Image */}
-                      <img
-                        src={event.image || "/images/carausel1.jpg"}
-                        alt={event.title}
-                        className="absolute inset-0 w-full h-full object-cover z-0"
-                      />
-
-                      {/* Top Badges */}
-                      <div className="absolute top-4 left-4 z-10">
-                        <Badge
-                          variant="secondary"
-                          className="bg-white/90 text-black"
-                        >
-                          {event.category}
-                        </Badge>
-                      </div>
-                      <div className="absolute top-4 right-4 z-10">
-                        <Badge
-                          variant="default"
-                          className="bg-primary text-white"
-                        >
-                          {event.price}
-                        </Badge>
-                      </div>
-
-                      {/* Blurred Overlay Details */}
-                      <div className="absolute bottom-0 left-0 right-0 z-10   text-white p-6 rounded-b-lg">
-                        <h3 className="text-2xl font-bold mb-2">
-                          {event.title}
-                        </h3>
-
-                        <div className="space-y-2 mb-4 text-sm text-gray-200">
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-2" />
-                            <span>{event.date}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            <span>{event.venue}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <Star className="h-4 w-4 mr-2 fill-yellow-400 text-yellow-400" />
-                            <span>
-                              {event.rating} • {event.attendees} attendees
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge variant="outline" className="text-white">
-                            {event.type}
-                          </Badge>
-                          <Badge variant="outline" className="text-white">
-                            {event.setting}
-                          </Badge>
-                        </div>
-
-                        <Button className="w-full" asChild>
-                          <Link href={`/events/${event.id}`}>Book Now</Link>
-                        </Button>
-                      </div>
-                    </Card>
-                  </div>
-                ))}
+            {isLoading ? (
+              <div className="flex justify-center items-center h-[500px]">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
               </div>
-            </div>
+            ) : error ? (
+              <div className="text-center text-red-500 h-[500px] flex items-center justify-center">
+                <p>{error}</p>
+              </div>
+            ) : featuredEvents.length === 0 ? (
+              <div className="text-center text-muted-foreground h-[500px] flex items-center justify-center">
+                <p>No featured events available at the moment.</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-lg">
+                  <div
+                    className="flex transition-transform duration-500 ease-in-out"
+                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                  >
+                    {featuredEvents.map((event) => (
+                      <div key={event._id} className="w-full flex-shrink-0">
+                        <Card className="relative mx-2 h-[500px] md:h-[600px] overflow-hidden rounded-lg">
+                          <img
+                            src={event.banner || "/images/placeholder.jpg"}
+                            alt={event.title}
+                            className="absolute inset-0 w-full h-full object-cover z-0"
+                          />
+                          <div className="absolute inset-0 bg-black/40 z-0" />
 
-            {/* Navigation Arrows */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
-              onClick={prevSlide}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
-              onClick={nextSlide}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+                          <div className="absolute top-4 left-4 z-10">
+                            <Badge variant="secondary" className="bg-white/90 text-black">
+                              {event.category}
+                            </Badge>
+                          </div>
+                          <div className="absolute top-4 right-4 z-10">
+                            <Badge variant="default" className="bg-primary text-white">
+                              {`Starts @ ₹${event.ticketTypes?.[0]?.price || 'N/A'}`}
+                            </Badge>
+                          </div>
 
-            {/* Dots Indicator */}
-            <div className="flex justify-center mt-6 space-x-2">
-              {featuredEvents.map((_, index) => (
-                <button
-                  key={index}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    index === currentSlide ? "bg-primary" : "bg-gray-300"
-                  }`}
-                  onClick={() => goToSlide(index)}
-                />
-              ))}
-            </div>
+                          <div className="absolute bottom-0 left-0 right-0 z-10 text-white p-6 rounded-b-lg">
+                            <h3 className="text-2xl font-bold mb-2">
+                              {event.title}
+                            </h3>
+                            <div className="space-y-2 mb-4 text-sm text-gray-200">
+                              <div className="flex items-center">
+                                <Clock className="h-4 w-4 mr-2" />
+                                <span>{new Date(event.startDate).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 mr-2" />
+                                <span>{event.location.address}, {event.location.city}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <Users className="h-4 w-4 mr-2" />
+                                <span>{event.attendees || 0} attendees</span>
+                              </div>
+                            </div>
+                            <Button className="w-full" asChild>
+                              <Link href={`/events/${event._id}`}>Book Now</Link>
+                            </Button>
+                          </div>
+                        </Card>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                  onClick={handlePrev}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                  onClick={handleNext}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+
+                <div className="flex justify-center mt-6 space-x-2">
+                  {featuredEvents.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-3 h-3 rounded-full transition-colors ${index === currentSlide ? "bg-primary" : "bg-gray-300"}`}
+                      onClick={() => handleGoTo(index)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="text-center mt-8">

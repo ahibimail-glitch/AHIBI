@@ -710,9 +710,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           {/* Availability indicator */}
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-xs mb-1.5">
-                              <span className="text-muted-foreground">
+                              {/* <span className="text-muted-foreground">
                                 {ticket.sold} of {ticket.quantity} tickets sold
-                              </span>
+                              </span> */}
                               <span className={`font-medium ${isSoldOut ? 'text-destructive' : isLimited ? 'text-amber-600' : 'text-primary'}`}>
                                 {isSoldOut ? 'Sold Out' : `${ticket.quantity - ticket.sold} remaining`}
                               </span>
