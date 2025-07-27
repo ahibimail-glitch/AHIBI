@@ -14,8 +14,10 @@ router.use(authorize('admin'));
 // Event management
 router.get('/events', eventController.getEvents);
 router.post('/events', validateEvent, eventController.createEvent);
+router.put('/events/:id', eventController.updateEvent);
 router.put('/events/:id/approve', eventController.approveEvent);
 router.put('/events/:id/reject', eventController.rejectEvent);
+router.delete('/events/:id', eventController.deleteEvent);
 
 // Dashboard statistics
 router.get('/dashboard', adminController.getDashboardStats);

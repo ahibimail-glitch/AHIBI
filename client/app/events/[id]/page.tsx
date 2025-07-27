@@ -173,6 +173,12 @@ interface BookingDetails {
   user: object;
 }
 
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const router = useRouter();
   const [event, setEvent] = useState<Event | null>(null);
@@ -207,14 +213,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isBooking, setIsBooking] = useState(false);
 
   const handleBooking = async () => {
-    console.log("Booking payload:", {
-      event,
-      user,
-      quantity,
-
-    });
-
-    // Validate required data
     if (!selectedTicket) {
       toast.error("Please select a ticket type");
       return;
@@ -227,26 +225,25 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       toast.error("Please select a valid quantity");
       return;
     }
+    if (!user) {
+        toast.error("You must be logged in to book.");
+        router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
+        return;
+    }
 
     setIsBooking(true);
+
     try {
-      // Get auth token
       const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Please log in to book tickets");
       }
 
-      // Validate event and ticket data
-      if (!event) {
-        throw new Error("Event information not available");
-      }
+      const totalAmount = selectedTicket.price * quantity;
 
-      if (!selectedTicket) {
-        throw new Error("Please select a ticket");
-      }
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/bookings`,
+      // 1. Create Order
+      const orderResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/create-order`,
         {
           method: "POST",
           headers: {
@@ -254,41 +251,83 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            event,
-            user,
-            quantity,
-            price: selectedTicket.price,
-            ticketType: selectedTicket.name,
+            amount: totalAmount,
+            currency: "INR",
+            receipt: `receipt_event_${event._id}`,
           }),
         }
       );
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || "Failed to book ticket");
+      const orderData = await orderResponse.json();
+      if (!orderResponse.ok) {
+        throw new Error(orderData.message || "Failed to create payment order");
       }
 
-      toast.success("Ticket booked successfully!");
-      console.log(responseData)
-      // Navigate to booking invoice with the booking ID from the response
-      if (responseData.booking) {
-        localStorage.setItem('lastBookingId', responseData.booking.id);
-        router.push(`/events/${event?._id}/bookings`);
-      } else {
-        console.error("No booking ID in response:", responseData);
-        toast.error(
-          "Error processing your booking. Please check your bookings."
-        );
-        router.push("/profile/bookings");
-      }
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Ahibi",
+        description: `Booking for ${event.title}`,
+        image: "/logo.png",
+        order_id: orderData.id,
+        handler: async function (response: RazorpayResponse) {
+          // 3. Verify Payment
+          const verificationResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                bookingDetails: {
+                  event: event,
+                  user: user,
+                  quantity: quantity,
+                  price: selectedTicket.price,
+                  ticketType: selectedTicket.name,
+                },
+              }),
+            }
+          );
+
+          const verificationData = await verificationResponse.json();
+
+          if (verificationResponse.ok && verificationData.success) {
+            toast.success("Booking confirmed!");
+            localStorage.setItem('lastBookingId', verificationData.booking._id);
+            router.push(`/events/${event._id}/bookings`);
+          } else {
+            toast.error(verificationData.message || "Payment verification failed");
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone,
+        },
+        notes: {
+          address: "Ahibi Corporate Office",
+        },
+        theme: {
+          color: "#3399cc",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
     } catch (error) {
       console.error("Booking error:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to book ticket";
       toast.error(errorMessage);
-
-      // If unauthorized, redirect to login
       if (
         errorMessage.includes("auth") ||
         errorMessage.includes("login") ||

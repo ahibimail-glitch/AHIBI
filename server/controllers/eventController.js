@@ -1,3 +1,4 @@
+const { check, validationResult } = require('express-validator');
 const Event = require('../models/Event');
 const ApiResponse = require('../utils/apiResponse');
 const { v4: uuidv4 } = require('uuid');
@@ -280,6 +281,138 @@ const getPublicEventById = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Update an event (Admin only)
+ * @route   PUT /api/admin/events/:id
+ * @access  Private (Admin only)
+ */
+const updateEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+    
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    // Run validation checks
+    const validations = [
+      check('title', 'Title is required').optional().not().isEmpty().trim(),
+      check('description', 'Description is required').optional().not().isEmpty(),
+      check('banner', 'Banner image URL is required').optional().not().isEmpty(),
+      check('category', 'Category is required').optional().not().isEmpty(),
+      check('startDate', 'Start date must be a valid ISO 8601 date').optional().isISO8601().toDate(),
+      check('endDate', 'End date must be a valid ISO 8601 date').optional().isISO8601().toDate(),
+      check('endDate').optional().custom((value, { req }) => {
+        const startDate = req.body.startDate ? new Date(req.body.startDate) : event.startDate;
+        if (new Date(value) <= startDate) {
+          throw new Error('End date must be after start date');
+        }
+        return true;
+      }),
+      check('location.address', 'Address is required').optional().not().isEmpty(),
+      check('location.city', 'City is required').optional().not().isEmpty(),
+      check('location.state', 'State is required').optional().not().isEmpty(),
+      check('location.country', 'Country is required').optional().not().isEmpty(),
+      check('location.pincode', 'Pincode is required').optional().not().isEmpty(),
+      check('ticketTypes', 'Ticket types must be an array').optional().isArray(),
+      check('ticketTypes.*.name', 'Ticket type name is required').optional().not().isEmpty(),
+      check('ticketTypes.*.price', 'Ticket price must be a number').optional().isNumeric(),
+      check('ticketTypes.*.quantity', 'Ticket quantity must be an integer').optional().isInt({ min: 0 }),
+    ];
+
+    await Promise.all(validations.map(validation => validation.run(req)));
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false,
+        errors: errors.array() 
+      });
+    }
+    
+    // Update event fields
+    const {
+      title,
+      description,
+      banner,
+      gallery,
+      category,
+      startDate,
+      endDate,
+      location,
+      ticketTypes,
+      convenience,
+      termsAndConditions,
+      faqs,
+      status,
+      isFeatured,
+      organizerInfo
+    } = req.body;
+
+    // Merge existing event data with new data
+    const fieldsToUpdate = { ...event.toObject(), ...req.body };
+
+    // Handle nested objects separately to ensure proper merging
+    if (req.body.location) {
+      fieldsToUpdate.location = {
+        ...event.location,
+        ...req.body.location,
+        coordinates: req.body.location.coordinates ? {
+          type: 'Point',
+          coordinates: [
+            parseFloat(req.body.location.coordinates.longitude) || event.location.coordinates.coordinates[0],
+            parseFloat(req.body.location.coordinates.latitude) || event.location.coordinates.coordinates[1]
+          ]
+        } : event.location.coordinates
+      };
+    }
+
+    if (req.body.convenience) {
+      fieldsToUpdate.convenience = {
+        ...event.convenience,
+        ...req.body.convenience
+      };
+    }
+
+    if (req.body.ticketTypes) {
+      fieldsToUpdate.ticketTypes = req.body.ticketTypes;
+    }
+
+    fieldsToUpdate.updatedAt = new Date();
+    fieldsToUpdate.updatedBy = req.user.id;
+
+    // Update the event
+    const updatedEvent = await Event.findByIdAndUpdate(
+      eventId,
+      { $set: fieldsToUpdate },
+      { new: true, runValidators: true }
+    );
+    
+    return ApiResponse.success(res, 'Event updated successfully', { event: updatedEvent });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    return ApiResponse.serverError(res, 'Error updating event', error);
+  }
+};
+
+const deleteEvent = async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    await Event.findByIdAndDelete(eventId);
+
+    return ApiResponse.success(res, 'Event deleted successfully');
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    return ApiResponse.serverError(res, 'Error deleting event', error);
+  }
+};
 
 module.exports = {
   createEvent,
@@ -288,5 +421,7 @@ module.exports = {
   getPublicEventById,
   approveEvent,
   rejectEvent,
-  getActiveEvents
+  getActiveEvents,
+  updateEvent,
+  deleteEvent
 };

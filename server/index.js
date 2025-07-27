@@ -22,6 +22,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const bookingRoutes = require('./routes/booking.routes');
 const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('./routes/support.routes');
 const qrRoutes = require('./routes/qr.routes');
+const paymentRoutes = require('./routes/payment.routes');
 
 
 
@@ -85,10 +86,10 @@ app.use('/api/admin', (req, res, next) => {
 // app.use('/api/organizers', organizerRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/qr', qrRoutes);
+app.use('/api/qrs', qrRoutes);
+app.use('/api/payments', paymentRoutes);
 // app.use('/api/tickets', ticketRoutes);
 // app.use('/api/users', userRoutes);
-// app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/support', supportRoutes);
