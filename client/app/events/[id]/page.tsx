@@ -225,10 +225,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       toast.error("Please select a valid quantity");
       return;
     }
-    if (!user) {
-        toast.error("You must be logged in to book.");
-        router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
-        return;
+    
+    // Check if user is logged in
+    const token = localStorage.getItem("token");
+    if (!token || !user) {
+      toast.error("You must be logged in to book tickets");
+      router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
+      return;
     }
 
     setIsBooking(true);
@@ -273,38 +276,60 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         image: "/logo.png",
         order_id: orderData.id,
         handler: async function (response: RazorpayResponse) {
-          // 3. Verify Payment
-          const verificationResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+          try {
+            console.log("Razorpay payment response received:", response);
+            
+            // Log request being sent to server
+            const requestBody = {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingDetails: {
+                event: event,
+                user: user,
+                quantity: quantity,
+                price: selectedTicket.price,
+                ticketType: selectedTicket.name,
               },
-              body: JSON.stringify({
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-                bookingDetails: {
-                  event: event,
-                  user: user,
-                  quantity: quantity,
-                  price: selectedTicket.price,
-                  ticketType: selectedTicket.name,
+            };
+            
+            console.log("Sending verification request to:", 
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`);
+            console.log("With request body:", requestBody);
+            
+            // 3. Verify Payment
+            const verificationResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
                 },
-              }),
+                body: JSON.stringify(requestBody),
+              }
+            );
+
+            // Log the response status
+            console.log("Verification API response status:", verificationResponse.status);
+            
+            const verificationData = await verificationResponse.json();
+            console.log("Verification API response data:", verificationData);
+
+            if (verificationResponse.ok && verificationData.success) {
+              toast.success("Booking confirmed!");
+              localStorage.setItem('lastBookingId', verificationData.booking._id);
+              
+              // Log the navigation
+              console.log(`Navigating to: /events/${event._id}/bookings`);
+              router.push(`/events/${event._id}/bookings`);
+            } else {
+              console.error("Payment verification failed:", verificationData);
+              toast.error(verificationData.message || "Payment verification failed");
             }
-          );
-
-          const verificationData = await verificationResponse.json();
-
-          if (verificationResponse.ok && verificationData.success) {
-            toast.success("Booking confirmed!");
-            localStorage.setItem('lastBookingId', verificationData.booking._id);
-            router.push(`/events/${event._id}/bookings`);
-          } else {
-            toast.error(verificationData.message || "Payment verification failed");
+          } catch (error) {
+            console.error("Error in payment handler:", error);
+            toast.error("An error occurred while processing your payment. Please contact support.");
           }
         },
         prefill: {
@@ -355,6 +380,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            // Authentication error - redirect to login
+            toast.error("Please log in to view event details");
+            router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
+            return;
+          }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -369,8 +400,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         }
       } catch (err) {
         console.error("Error fetching event:", err);
+        const errorMsg = err instanceof Error ? err.message : "Failed to load event";
+        
+        // Check if the error is token related
+        if (errorMsg.toLowerCase().includes("token") || 
+            errorMsg.toLowerCase().includes("auth") || 
+            errorMsg.toLowerCase().includes("login")) {
+          toast.error("Please log in to view event details");
+          router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
+          return;
+        }
+        
         if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load event");
+          setError(errorMsg);
         }
       } finally {
         if (isMounted) {
@@ -379,10 +421,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       }
     };
     const fetchProfile = async () => {
-      setLoading(true);
-      setError("");
       try {
         const token = localStorage.getItem("token");
+        
+        // If no token exists, don't show an error - just don't set the user
+        if (!token) {
+          console.log("No auth token found - user not logged in");
+          return;
+        }
+        
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`,
           {
@@ -393,15 +440,26 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           }
         );
         const data = await res.json();
+        
         if (!res.ok || !data.success) {
-          setError(data.message || "Failed to fetch profile");
+          // Don't show token errors on screen
+          if (data.message?.toLowerCase().includes("token") || 
+              data.message?.toLowerCase().includes("auth") || 
+              res.status === 401) {
+            console.log("Auth error in profile fetch:", data.message);
+            localStorage.removeItem("token"); // Clear invalid token
+            return; // Don't set error - this avoids showing auth errors on screen
+          }
+          console.log("Non-auth error in profile fetch:", data.message);
         } else {
           setUser(data.data.user);
         }
       } catch (e) {
-        setError("Network error. Please try again.");
+        console.error("Profile fetch error:", e);
+        // Don't set error for profile fetch issues - this prevents error display
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchProfile();
 

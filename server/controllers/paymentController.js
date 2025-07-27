@@ -3,10 +3,22 @@ const crypto = require('crypto');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Debug environment variables
+console.log('Environment variables for Razorpay:');
+console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
+console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
+
+// Initialize Razorpay with error handling
+let razorpay;
+try {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+  console.log('Razorpay initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize Razorpay:', error.message);
+}
 
 exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
@@ -35,26 +47,59 @@ exports.createOrder = async (req, res) => {
 
 exports.verifyPayment = async (req, res) => {
   try {
+    console.log('Payment verification request received:', req.body);
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body;
 
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error('Missing required payment parameters:', { 
+        has_order_id: !!razorpay_order_id, 
+        has_payment_id: !!razorpay_payment_id, 
+        has_signature: !!razorpay_signature 
+      });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Missing required payment parameters' 
+      });
+    }
+
+    if (!bookingDetails) {
+      console.error('Missing booking details in request');
+      return res.status(400).json({ 
+        success: false,
+        message: 'Missing booking details' 
+      });
+    }
+
+    console.log('Verifying payment signature with key secret:', !!process.env.RAZORPAY_KEY_SECRET);
     const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
     shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
     const digest = shasum.digest('hex');
 
+    console.log('Signature verification:', { 
+      generated: digest.slice(0, 10) + '...', 
+      received: razorpay_signature.slice(0, 10) + '...',
+      match: digest === razorpay_signature
+    });
+
     if (digest !== razorpay_signature) {
-      return res.status(400).json({ msg: 'Transaction not legit!' });
+      console.error('Invalid payment signature');
+      return res.status(400).json({ success: false, message: 'Transaction not legit!' });
     }
 
     // Payment is verified, now create the booking
     const { event, user, quantity, price, ticketType } = bookingDetails;
 
+    // Create a new booking with required total field (was previously using totalAmount which is not in schema)
     const newBooking = new Booking({
         event: event._id,
         user: user.id,
         ticketType: ticketType,
         quantity: quantity,
         price: price,
-        totalAmount: price * quantity,
+        total: price * quantity, // Changed from totalAmount to total to match schema
+        paymentStatus: 'completed', // Set payment status to completed since payment succeeded
+        status: 'confirmed', // Set booking status to confirmed
+        paymentId: razorpay_payment_id, // Store payment ID directly in the main document
         paymentDetails: {
             paymentId: razorpay_payment_id,
             orderId: razorpay_order_id,
