@@ -50,8 +50,7 @@ export default function BookingSuccessPage() {
             Booking Confirmed!
           </h1>
           <p className="text-gray-600 mb-8">
-            Your booking has been confirmed. You'll receive a confirmation email shortly.
-          </p>
+            Your booking has been confirmed.  </p>
 
           <div className="my-8">
             {bookingId && <ModernBookingTicket bookingId={bookingId} />}

@@ -53,6 +53,7 @@ interface UserProfile {
   bio: string;
   interests: string[];
   [key: string]: any; // Allow other properties
+  
 }
 
 export default function ProfilePage() {
@@ -99,6 +100,7 @@ export default function ProfilePage() {
           setError(data.message || "Failed to fetch profile");
         } else {
           setProfileData(data.data.user);
+          console.log(data.data.user);
         }
       } catch (e) {
         setError("Network error. Please try again.");
@@ -121,7 +123,9 @@ export default function ProfilePage() {
           setError(data.message || "Failed to fetch bookings");
         } else {
           // Make sure we're getting the correct data structure
-          console.log('Bookings data:', data);
+          // console.log('Bookings data:', data);
+          // console.log(data.bookings);
+          console.log(data.bookings[0]);
           setUserBookings(data.bookings || []);
         }
       } catch (e) {
@@ -230,7 +234,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <Avatar className="w-24 h-24">
                   <AvatarImage
-                    src={profileData.avatar || "/images/carausel1.jpg"}
+                    src={profileData.avatar || "/images/profile.png"}
                   />
                   <AvatarFallback>
                     {profileData.name
@@ -250,14 +254,14 @@ export default function ProfilePage() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-2xl font-bold">{profileData.name}</h2>
-                  <Button
+                  {/* <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditing(!isEditing)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     {isEditing ? "Cancel" : "Edit Profile"}
-                  </Button>
+                  </Button> */}
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center">
@@ -270,11 +274,11 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-1" />
-                    Member since 2024
+                    Member since 2025
                   </div>
                 </div>
                 <p className="text-muted-foreground mb-3">{profileData.bio}</p>
-                <div className="flex flex-wrap gap-2">
+                {/* <div className="flex flex-wrap gap-2">
                   {Array.isArray(profileData.interests) && profileData.interests.length > 0 ? (
                     profileData.interests.map((interest: string) => (
                       <Badge key={interest} variant="secondary">
@@ -284,24 +288,24 @@ export default function ProfilePage() {
                   ) : (
                     <span className="text-muted-foreground">No interests listed</span>
                   )}
-                </div>
+                </div> */}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="bookings" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
+            {/* <TabsTrigger value="overview">Overview</TabsTrigger> */}
             <TabsTrigger value="bookings">My Bookings</TabsTrigger>
-            <TabsTrigger value="saved">Saved Events</TabsTrigger>
+            {/* <TabsTrigger value="saved">Saved Events</TabsTrigger> */}
             <TabsTrigger value="personal">Personal Info</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
+            {/* <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
                   <Ticket className="h-8 w-8 mx-auto mb-2 text-primary" />
@@ -334,7 +338,7 @@ export default function ProfilePage() {
                   </p>
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Activity */}
@@ -350,7 +354,7 @@ export default function ProfilePage() {
                       className="flex items-center space-x-4 p-3 border rounded-lg"
                     >
                       <Image
-                        src={booking.event?.banner || "/images/carausel1.jpg"}
+                        src={booking.event?.banner || "/images/profile.png"}
                         alt={booking.event?.title || "Event"}
                         width={80}
                         height={60}
@@ -398,11 +402,11 @@ export default function ProfilePage() {
                       className="flex items-center space-x-4 p-3 border rounded-lg"
                     >
                       <Image
-                        src={event.image || "/images/carausel1.jpg"}
+                        src={event.image || "/images/profile.png"}
                         alt={event.title}
-                        width={150}
-                        height={100}
-                        className="w-12 h-9 rounded object-cover"
+                        width={50}
+                        height={50}
+                        className="w-12 h-9 rounded-full object-cover"
                       />
                       <div className="flex-1">
                         <h3 className="font-medium text-sm">{event.title}</h3>
@@ -454,8 +458,8 @@ export default function ProfilePage() {
                       >
                         <div className="flex items-center space-x-4">
                           <Image
-                            src={booking.event?.banner || "/images/carausel1.jpg"}
-                            alt={booking.event?.title || "Event"}
+                            src={booking.event?.banner || "/images/profile.png"}
+                            alt={booking.event?.title }
                             width={80}
                             height={60}
                             className="w-16 h-12 rounded object-cover"
@@ -484,9 +488,9 @@ export default function ProfilePage() {
                             <Button size="sm" variant="outline" onClick={() => handleViewTicket(booking._id)}>
                               View Ticket
                             </Button>
-                            {booking.paymentStatus === "completed" && (
+                            {/* {booking.paymentStatus === "completed" && (
                               <Button size="sm">Download QR</Button>
-                            )}
+                            )} */}
                           </div>
                         </div>
                       </div>
@@ -517,7 +521,7 @@ export default function ProfilePage() {
                       className="border rounded-lg overflow-hidden"
                     >
                       <Image
-                        src={event.image || "/images/carausel1.jpg"}
+                        src={event.image || "/images/profile.png"}
                         alt={event.title}
                         width={150}
                         height={100}
@@ -622,7 +626,7 @@ export default function ProfilePage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label htmlFor="city">City</Label>
                     <Select
                       value={profileData.city}
@@ -643,10 +647,10 @@ export default function ProfilePage() {
                         <SelectItem value="Hyderabad">Hyderabad</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="dob">Date of Birth</Label>
                     <Input
@@ -684,9 +688,9 @@ export default function ProfilePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
+                </div> */}
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea
                     id="bio"
@@ -720,7 +724,7 @@ export default function ProfilePage() {
                       </Badge>
                     ))}
                   </div>
-                </div>
+                </div> */}
 
                 {isEditing && (
                   <div className="flex space-x-2">

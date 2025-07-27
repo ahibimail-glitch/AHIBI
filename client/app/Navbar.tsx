@@ -149,11 +149,20 @@ export default function Navbar() {
                     <User className="h-5 w-5 mx-auto" />
                   </Button>
                 </Link>
-                <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium">
-                    Login
+                {isLoggedIn ? (
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full font-medium"
+                  >
+                    Logout
                   </button>
-                </Link>
+                ) : (
+                  <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium">
+                      Login
+                    </button>
+                  </Link>
+                )}
               </div>
             </div>
           )}

@@ -111,10 +111,22 @@ exports.verifyPayment = async (req, res) => {
 
     await newBooking.save();
 
-    // Update event ticket count
-    await Event.findByIdAndUpdate(event._id, {
-      $inc: { ticketsSold: quantity },
-    });
+    // Update event ticket count and ticket type sold
+    await Event.updateOne(
+      { _id: event._id, "ticketTypes.name": ticketType },
+      {
+        $inc: {
+          "ticketTypes.$.sold": quantity,
+          totalRevenue: price
+        }
+      }
+    );
+    
+    // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
+    const updatedEvent = await Event.findById(event._id);
+    if (updatedEvent) {
+      await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
+    }
 
     res.status(201).json({
       success: true,

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Clock, Users, MapPin, CreditCard, Download, QrCode, Share2, Star, Ticket, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { FileText, Calendar, Clock, Users, MapPin, CreditCard, Download as DownloadIcon, QrCode, Share2, Star, Ticket, XCircle } from 'lucide-react';
 
 interface UserProfile {
     name: string;
@@ -19,6 +19,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>("");
     const [user, setUser] = useState<UserProfile | null>(null);
+    const ticketRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const fetchBookingAndProfileData = async () => {
@@ -49,6 +50,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
 
                 const bookingData = await bookingRes.json();
                 setBooking(bookingData.data);
+                // console.log(bookingData.event.startTime);
+                console.log(bookingData.data.price)
 
                 // Fetch user profile (can be redundant if booking populates user, but good for consistency)
                 const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
@@ -97,9 +100,91 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
         }).format(amount);
     };
 
-    const handleDownload = () => {
-        // This function would ideally use a library like html2canvas and jspdf to generate a PDF
-        alert("Download functionality not implemented in this demo.");
+    const handleDownloadTicket = async () => {
+        if (!ticketRef.current) return;
+        
+        try {
+            // Dynamically import the required libraries
+            const html2canvas = (await import('html2canvas')).default;
+            const jsPDF = (await import('jspdf')).default;
+            
+            // Improved options for better capture
+            const options = {
+                scale: 2, // Higher scale for better quality
+                useCORS: true,
+                logging: true,
+                backgroundColor: '#ffffff',
+                allowTaint: true,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: document.documentElement.offsetWidth,
+                windowHeight: document.documentElement.offsetHeight,
+                // Ensure the full height is captured
+                height: ticketRef.current.scrollHeight,
+                width: ticketRef.current.scrollWidth,
+            };
+            
+            // Display loading indicator
+            alert("Generating PDF, please wait...");
+            
+            // @ts-ignore - html2canvas types might be outdated
+            const canvas = await html2canvas(ticketRef.current, options);
+            
+            const imgData = canvas.toDataURL('image/png', 1.0);
+            
+            // Create PDF with appropriate dimensions
+            // Use A4 for more space
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            // Calculate dimensions for the PDF
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
+            // Calculate the best fit while preserving aspect ratio
+            const imgWidth = pageWidth - 20; // 10mm margins on each side
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            // If image height is too large for the page, scale it down
+            const finalImgHeight = Math.min(imgHeight, pageHeight - 20);
+            const finalImgWidth = finalImgHeight * (canvas.width / canvas.height);
+            
+            // Center the image on the page
+            const xOffset = (pageWidth - finalImgWidth) / 2;
+            
+            // Add image to PDF with margins
+            pdf.addImage({
+                imageData: imgData,
+                x: xOffset, // Centered horizontally
+                y: 10, // Top margin
+                width: finalImgWidth,
+                height: finalImgHeight,
+                compression: 'FAST'
+            });
+            
+            // Add footer text
+            const footerText = `Ticket ID: ${booking?._id || 'N/A'}`;
+            const fontSize = 8;
+            const textWidth = pdf.getStringUnitWidth(footerText) * fontSize / pdf.internal.scaleFactor;
+            const textX = (pageWidth - textWidth) / 2;
+            const textY = pageHeight - 10; // 10mm from bottom
+            
+            pdf.setFontSize(fontSize);
+            pdf.text(footerText, textX, textY);
+            
+            // Generate a filename with event name and booking ID
+            const eventName = booking?.event?.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'ticket';
+            const fileName = `${eventName}_ticket_${booking?._id?.slice(-6) || Date.now()}.pdf`;
+            
+            // Save the PDF
+            pdf.save(fileName);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Failed to download ticket. Please try again.');
+        }
     };
 
     const handleShare = () => {
@@ -116,28 +201,9 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
     };
 
     // --- Loading and Error States ---
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-50">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p className="mt-4 text-lg font-semibold text-gray-700">Loading Your Booking...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-red-50">
-                <div className="text-center p-8 bg-white rounded-lg shadow-md">
-                    <XCircle className="w-16 h-16 text-red-500 mx-auto" />
-                    <p className="mt-4 text-lg font-semibold text-red-700">Error</p>
-                    <p className="text-gray-600">{error}</p>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return <div className="text-center py-8">Loading ticket details...</div>;
+    if (error) return <div className="text-center text-red-500 py-8">{error}</div>;
+    if (!booking) return <div className="text-center py-8">No booking details found.</div>;
 
     if (!booking) {
         return null; // Or a 'not found' state
@@ -188,7 +254,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
 
     return (
         <div className="max-w-sm mx-auto my-10 p-4">
-            <div id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div ref={ticketRef} id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
@@ -206,7 +272,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                         {/* <h1 className="text-white text-xl font-bold mb-2">{booking.court.name}</h1> */}
                         <div className="flex items-center text-white text-opacity-90 text-sm">
                             <MapPin className="w-4 h-4 mr-1" />
-                            {/* <span>{booking.court.location}</span> */}
+                            <span>{booking.event.location.address},{booking.event.location.city}</span>
                         </div>
                     </div>
                 </div>
@@ -218,22 +284,27 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                             <div className="text-center">
                                 <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                                 <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-                                <p className="text-sm font-bold text-gray-900">{formatDate(booking.startTime)}</p>
+                                <p className="text-sm font-bold text-gray-900">{formatDate(booking.event?.startDate || booking.event?.startTime || booking.startTime)}</p>
                             </div>
                             <div className="text-center">
                                 <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                                 <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
-                                <p className="text-sm font-bold text-gray-900">{formatTime(booking.startTime)} - {formatTime(booking.endTime)}</p>
+                                <p className="text-sm font-bold text-gray-900">
+                                    {formatTime(booking.event?.startDate || booking.event?.startTime || booking.startTime)} - 
+                                    {formatTime(booking.event?.endDate || booking.event?.endTime || booking.endTime || 
+                                        (() => {
+                                            const start = new Date(booking.event?.startDate || booking.event?.startTime || booking.startTime);
+                                            // Default to 2 hours after start time if end time is not available
+                                            start.setHours(start.getHours() + 2);
+                                            return start;
+                                        })()
+                                    )}
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-4 mb-6">
-                        <div className="flex justify-between items-center">
-                            <span className="text-gray-600 text-sm">Booking Code</span>
-                            <span className="font-mono text-sm font-bold text-blue-600">{booking.bookingCode}</span>
-                        </div>
-                    </div>
+                  
 
                     <div className="border-t-2 border-dashed border-gray-200 my-6 relative">
                         <div className="absolute left-0 top-0 w-6 h-6 bg-gray-100 rounded-full -ml-3 -mt-3"></div>
@@ -241,18 +312,17 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                     </div>
 
                     <div className="mb-6">
-                        <h3 className="text-sm font-semibold mb-3 text-gray-800">Customer Details</h3>
-                        <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
-                            <p className="font-medium text-gray-900">{booking.user?.name || user?.name}</p>
-                            <p className="text-gray-600">{booking.user?.email || user?.email}</p>
-                            <p className="text-gray-600">{booking.user?.phone || user?.phone}</p>
+                          <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                            <p className="font-medium text-blue-600">{booking.user?.name || user?.name}</p>
+                            <p className="text-blue-600">{booking.user?.email || user?.email}</p>
+                            <p className="text-blue-600">{booking.user?.phone || user?.phone}</p>
                         </div>
                     </div>
 
                     <div className="mb-6">
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-lg font-bold text-gray-900">Total Amount</span>
-                            <span className="text-2xl font-bold text-green-600">{formatCurrency(booking.totalAmount)}</span>
+                            <span className="text-2xl font-bold text-green-600">{formatCurrency(booking.price)}</span>
                         </div>
                         {booking.payment && (
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -294,13 +364,13 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                                 </div>
                                 
                                 {/* Backup text data for manual entry if QR fails */}
-                                <div className="mt-4 border-t pt-3 border-gray-200">
+                                {/* <div className="mt-4 border-t pt-3 border-gray-200">
                                     <p className="text-xs text-gray-500 mb-1">If QR code doesn't scan, show this:</p>
                                     <p className="font-mono text-sm font-bold">{booking.bookingCode}</p>
-                                </div>
+                                </div> */}
                                 
                                 {/* Debug info - only visible in development */}
-                                <div className="mt-3 text-xs text-gray-400 bg-gray-100 p-2 rounded max-w-[250px] overflow-hidden">
+                                {/* <div className="mt-3 text-xs text-gray-400 bg-gray-100 p-2 rounded max-w-[250px] overflow-hidden">
                                     <p className="truncate">{qrDebug}</p>
                                     <details className="mt-1">
                                         <summary className="cursor-pointer text-blue-500">View QR Details</summary>
@@ -317,7 +387,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                                             Open QR in new tab
                                         </a>
                                     </details>
-                                </div>
+                                </div> */}
                             </div>
                         ) : (
                             <div className="text-center p-4 border-2 border-dashed rounded-lg">
@@ -333,18 +403,18 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                 <div className="px-6 py-4 bg-gray-50 border-t">
                     <div className="flex gap-3">
                         <button
-                            onClick={handleDownload}
+                            onClick={handleDownloadTicket}
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center"
                         >
-                            <Download className="w-4 h-4 mr-2" />
+                            <DownloadIcon className="w-4 h-4 mr-2" />
                             Download Ticket
                         </button>
-                        <button
+                        {/* <button
                             onClick={handleShare}
                             className="bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center"
                         >
                             <Share2 className="w-4 h-4" />
-                        </button>
+                        </button> */}
                     </div>
                 </div>
             </div>
