@@ -31,6 +31,8 @@ const app = express();
 
 // Set up CORS with credentials support
 const allowedOrigins = [
+
+  'https://ahibi.in',
   'http://localhost:3000',
   'https://ahibi.vercel.app'
 ];
