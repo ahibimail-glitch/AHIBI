@@ -31,16 +31,8 @@ export default function HomePage() {
   // Background carousel state
   const [currentBgSlide, setCurrentBgSlide] = useState(0)
   const [isBgAutoPlaying, setIsBgAutoPlaying] = useState(true)
-
-  // Background images for the hero carousel
-  const backgroundImages = [
-    "/images/carausel1.jpg",
-    "/images/carausel2.jpg",
-    "/images/carausel3.jpg",
-    "/images/carausel2.jpg",
-    "/images/carausel1.jpg",
-    "/images/carausel2.jpg",
-  ]
+  const [backgroundImages, setBackgroundImages] = useState<string[]>([])
+  const [loadingHeroImages, setLoadingHeroImages] = useState(true)
 
   const stats = [
     { number: "15+", label: "Events Hosted" },
@@ -75,6 +67,45 @@ export default function HomePage() {
     },
   ]
 
+  // Fetch hero images from backend
+  useEffect(() => {
+    const fetchHeroImages = async () => {
+      setLoadingHeroImages(true)
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images?active=true`)
+        if (!response.ok) {
+          throw new Error("Failed to fetch hero images")
+        }
+        const data = await response.json()
+        
+        if (data.success && data.data && data.data.length > 0) {
+          // Extract image URLs from the response
+          const imageUrls = data.data.map((image: any) => image.url)
+          setBackgroundImages(imageUrls)
+        } else {
+          // Fallback to default images if no hero images found
+          setBackgroundImages([
+            "/images/carausel1.jpg",
+            "/images/carausel2.jpg",
+            "/images/carausel3.jpg",
+          ])
+        }
+      } catch (err) {
+        console.error("Error fetching hero images:", err)
+        // Fallback to default images on error
+        setBackgroundImages([
+          "/images/carausel1.jpg",
+          "/images/carausel2.jpg",
+          "/images/carausel3.jpg",
+        ])
+      } finally {
+        setLoadingHeroImages(false)
+      }
+    }
+
+    fetchHeroImages()
+  }, [])
+
   useEffect(() => {
     const fetchEvents = async () => {
       setIsLoading(true)
@@ -100,16 +131,17 @@ export default function HomePage() {
 
   // Background carousel logic
   const nextBgSlide = useCallback(() => {
+    if (backgroundImages.length === 0) return
     setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length)
   }, [backgroundImages.length])
 
   useEffect(() => {
-    if (!isBgAutoPlaying) return
+    if (!isBgAutoPlaying || backgroundImages.length === 0) return
 
     const interval = setInterval(nextBgSlide, 4000) // Change every 4 seconds
 
     return () => clearInterval(interval)
-  }, [isBgAutoPlaying, nextBgSlide])
+  }, [isBgAutoPlaying, nextBgSlide, backgroundImages.length])
 
   // Featured events carousel logic
   const nextSlide = useCallback(() => {
@@ -164,20 +196,28 @@ export default function HomePage() {
         {/* Background Image Carousel */}
         <div className="absolute inset-0 z-0">
           <div className="relative w-full h-full">
-            {backgroundImages.map((image, index) => (
-              <div
-                key={index}
-                className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                  index === currentBgSlide ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                <img
-                  src={image || "/placeholder.svg"}
-                  alt={`Background ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
+            {loadingHeroImages ? (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+                <div className="animate-pulse rounded-full h-32 w-32 bg-gradient-to-br from-primary/20 to-secondary/20" />
               </div>
-            ))}
+            ) : backgroundImages.length > 0 ? (
+              backgroundImages.map((image, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                    index === currentBgSlide ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <img
+                    src={image || "/placeholder.svg"}
+                    alt={`Background ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800" />
+            )}
           </div>
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/70" />

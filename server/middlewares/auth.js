@@ -88,3 +88,17 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+/**
+ * Middleware to restrict access to admin users only
+ */
+exports.adminOnly = (req, res, next) => {
+  // Check if user is an admin
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required'
+    });
+  }
+  next();
+};

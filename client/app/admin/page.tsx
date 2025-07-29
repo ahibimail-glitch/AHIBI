@@ -23,6 +23,7 @@ import {
   DollarSign,
   Ticket,
   QrCode,
+  ImageIcon,
 } from "lucide-react";
 
 // Import child components
@@ -38,6 +39,7 @@ import CreateEventForm from "./components/CreateEventForm";
 import Analytics from "./components/Analytics";
 import SettingsComponent from "./components/Settings";
 import ApprovedEvents from "./components/ApprovedEvents";
+import HeroImages from "./components/HeroImages";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -134,6 +136,8 @@ export default function AdminDashboard() {
         return <SettingsComponent />;
       case "system":
         return <System />;
+      case "hero-images":
+        return <HeroImages />;
       case "qr-scanner":
         router.push("/admin/scan");
         return null;
@@ -180,6 +184,7 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
           <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => setActiveView("create-event")} />
+          <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => setActiveView("hero-images")} />
           <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => setActiveView("analytics")} />
           <SidebarButton icon={Settings} label="Settings" active={activeView === "settings"} onClick={() => setActiveView("settings")} />
           <SidebarButton icon={Shield} label="System Health" active={activeView === "system"} onClick={() => setActiveView("system")} />

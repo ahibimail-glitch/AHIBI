@@ -350,27 +350,14 @@ export default function AuthPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-white">City *</Label>
-                <Select
+                <Input
+                  id="city"
+                  placeholder="Enter your city"
+                  className="bg-gray-800 border-gray-600 text-white"
                   value={signupData.city}
-                  onValueChange={(value) =>
-                    setSignupData({ ...signupData, city: value })
-                  }
+                  onChange={(e) => setSignupData({ ...signupData, city: e.target.value })}
                   required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mumbai">Mumbai</SelectItem>
-                    <SelectItem value="delhi">Delhi</SelectItem>
-                    <SelectItem value="bangalore">Bangalore</SelectItem>
-                    <SelectItem value="pune">Pune</SelectItem>
-                    <SelectItem value="chennai">Chennai</SelectItem>
-                    <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                    <SelectItem value="kolkata">Kolkata</SelectItem>
-                    <SelectItem value="ahmedabad">Ahmedabad</SelectItem>
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox

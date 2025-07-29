@@ -23,6 +23,7 @@ const bookingRoutes = require('./routes/booking.routes');
 const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('./routes/support.routes');
 const qrRoutes = require('./routes/qr.routes');
 const paymentRoutes = require('./routes/payment.routes');
+const heroImageRoutes = require('./routes/heroImageRoutes');
 
 
 
@@ -96,6 +97,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
+app.use('/api/hero-images', heroImageRoutes);
 
 // Root route
 app.get('/', (req, res) => {
