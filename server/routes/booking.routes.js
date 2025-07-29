@@ -181,7 +181,7 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
 // @route   GET /api/bookings/all
 // @desc    Get all bookings (admin only)
 // @access  Private (Admin only)
-router.get("/all", auth.protect, async (req, res) => {
+router.get("/all",  async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate('event', 'title startDate endDate')
