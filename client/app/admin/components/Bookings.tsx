@@ -50,18 +50,20 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     const fetchBookings = async () => {
       try {
         setIsLoading(true);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("admin_token");
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/bookings/all`, {
+        
+        const response = await fetch(`${apiUrl}/api/admin/bookings/all`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': token ? `Bearer ${token}` : "",
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
           credentials: 'include',
           mode: 'cors'
         });
+        
         
         if (!response.ok) {
           if (response.status === 403) {

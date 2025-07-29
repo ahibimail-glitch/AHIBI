@@ -4,7 +4,7 @@ const adminController = require('../controllers/adminController');
 const eventController = require('../controllers/eventController');
 const { protect, authorize } = require('../middlewares/auth');
 const { validateEvent } = require('../middlewares/validation');
-
+const Booking = require('../models/Booking');
 const router = express.Router();
 
 // Protect all admin routes
@@ -58,6 +58,23 @@ router.put('/users/:id/status', [
   check('status', 'Status is required').isIn(['active', 'blocked'])
 ], adminController.updateUserStatus);
 
+
+
+//Booking management routes
+
+router.get("/bookings/all",  async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate('event', 'title startDate endDate')
+      .populate('user', 'name email')
+      .sort({ bookedAt: -1 });
+    
+    res.json({ bookings });
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 // Settings routes
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);

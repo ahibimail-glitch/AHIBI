@@ -181,19 +181,7 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
 // @route   GET /api/bookings/all
 // @desc    Get all bookings (admin only)
 // @access  Private (Admin only)
-router.get("/all",  async (req, res) => {
-  try {
-    const bookings = await Booking.find()
-      .populate('event', 'title startDate endDate')
-      .populate('user', 'name email')
-      .sort({ bookedAt: -1 });
-    
-    res.json({ bookings });
-  } catch (error) {
-    console.log(error)
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
+
 
 // @route   POST /api/bookings/verify-qr
 // @desc    Verify a booking QR code
