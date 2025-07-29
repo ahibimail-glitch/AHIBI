@@ -50,12 +50,12 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     const fetchBookings = async () => {
       try {
         setIsLoading(true);
-        const token = localStorage.getItem('admin_token');
+        const token = localStorage.getItem('token');
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         const response = await fetch(`${apiUrl}/api/bookings/all`, {
           method: 'GET',
           headers: {
-            'Authorization': token ? `Bearer ${token}` : "",
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
