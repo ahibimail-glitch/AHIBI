@@ -98,11 +98,6 @@ export default function AdminDashboard() {
     { id: "usr_3", name: "Rohan Kumar", email: "rohan.kumar@example.com", mobile: "9876543212", createdOn: "2025-03-10" },
   ];
 
-  const allBookings = [
-    { id: "bk_1", event: "Tech Summit 2025", customer: "Aarav Sharma", date: "2025-07-01", amount: "₹2,000", status: "Confirmed" },
-    { id: "bk_2", event: "Annual Music Festival", customer: "Diya Patel", date: "2025-07-02", amount: "₹1,500", status: "Confirmed" },
-  ];
-
   const filteredUsers = allUsers.filter(
     (user) =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -127,7 +122,7 @@ export default function AdminDashboard() {
       case "users":
         return <UsersComponent searchQuery={searchQuery} setSearchQuery={setSearchQuery} users={filteredUsers} />;
       case "bookings":
-        return <Bookings bookings={allBookings} />;
+        return <Bookings />;
       case "create-event":
         return <CreateEventForm onSuccess={() => setActiveView("dashboard")} />;
       case "analytics":
