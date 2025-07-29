@@ -31,6 +31,7 @@ const CITIES = [
   "Kohima",
   "Shillong",
   "Silchar",
+  "Tezpur",
 ];
 
 const GENRES = ['Music',

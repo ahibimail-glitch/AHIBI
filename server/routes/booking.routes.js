@@ -171,14 +171,26 @@ router.post("/", auth.protect, async (req, res) => {
 // @access  Private
 router.get("/my-bookings", auth.protect, async (req, res) => {
   try {
-    console.log(req.user)
-
     const bookings = await Booking.find({ user: req.user._id }).sort({ bookedAt: -1 });
-
-
-    console.log(bookings)
     res.json({ bookings });
   } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   GET /api/bookings/all
+// @desc    Get all bookings (admin only)
+// @access  Private (Admin only)
+router.get("/all", auth.protect, async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate('event', 'title startDate endDate')
+      .populate('user', 'name email')
+      .sort({ bookedAt: -1 });
+    
+    res.json({ bookings });
+  } catch (error) {
+    console.log(error)
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
