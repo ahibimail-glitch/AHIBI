@@ -34,6 +34,7 @@ const app = express();
 const allowedOrigins = [
 
   'https://ahibi.in',
+  'http://ahibi.in',
   'http://localhost:3000',
   'https://ahibi.vercel.app'
 ];
