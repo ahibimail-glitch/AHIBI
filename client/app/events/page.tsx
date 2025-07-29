@@ -26,9 +26,23 @@ const CITIES = [
   "Pune",
   "Chennai",
   "Hyderabad",
+  "Dimapur",
+  "Guwahati",
+  "Kohima",
+  "Shillong",
+  "Silchar",
 ];
 
-const GENRES = ["Music", "Comedy", "Technology", "Food", "Art", "Dance"];
+const GENRES = ['Music',
+  'Comedy',
+  'Theatre',
+  'Dance',
+  'Food',
+  'Art',
+  'Sports',
+  'Business',
+  'Education',
+  'Other'];
 
 // Format date for display
 const formatDate = (dateString: string | Date): string => {
@@ -60,9 +74,10 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
 // Event card component
 interface EventCardProps {
   event: Event;
+  isPastEvent?: boolean;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event }) => (
+const EventCard: React.FC<EventCardProps> = ({ event, isPastEvent = false }) => (
   <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
     <div className="relative h-48">
       <Image
@@ -93,9 +108,15 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => (
           <span>•</span>
           <span>{formatTime(event.startDate)}</span>
         </div>
-        {/* <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
-          {event.attendees || 0} Going
-        </Badge> */}
+        {isPastEvent ? (
+          <Badge variant="outline" className="bg-gray-100 text-gray-800 whitespace-nowrap">
+            Past Event
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
+            {event.attendees || 0} Going
+          </Badge>
+        )}
       </div>
       <div className="mt-auto">
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
@@ -127,16 +148,17 @@ export default function EventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get current date in user's timezone
+  const currentDate = new Date();
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events`);
-        console.log(response);
         if (!response.ok) {
           throw new Error('Failed to fetch events');
         }
         const data: EventsResponse = await response.json();
-        console.log(data.data.events);
         setEvents(data.data.events || []);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
@@ -150,7 +172,8 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  const filteredEvents = events.filter((event) => {
+  // Filter events by search and filters
+  const filteredEvents = events.filter((event: Event) => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (event.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -163,8 +186,26 @@ export default function EventsPage() {
     return matchesSearch && matchesCity && matchesGenre;
   });
 
-  const featuredEvents = filteredEvents.filter((event) => event.isFeatured);
-  const regularEvents = filteredEvents.filter((event) => !event.isFeatured);
+  // Categorize events based on their dates
+  const upcomingEvents = filteredEvents.filter((event: Event) => {
+    const startDate = new Date(event.startDate);
+    return startDate > currentDate;
+  });
+
+  const currentEvents = filteredEvents.filter((event: Event) => {
+    const startDate = new Date(event.startDate);
+    const endDate = new Date(event.endDate);
+    return startDate <= currentDate && endDate >= currentDate;
+  });
+
+  const pastEvents = filteredEvents.filter((event: Event) => {
+    const endDate = new Date(event.endDate);
+    return endDate < currentDate;
+  });
+
+  // Featured events should be filtered from the original events array
+  const featuredEvents = events.filter((event: Event) => event.isFeatured);
+  const regularEvents = events.filter((event: Event) => !event.isFeatured);
 
   if (isLoading) {
     return (
@@ -234,31 +275,102 @@ export default function EventsPage() {
         {/* Events Section */}
         <section className="py-12">
           <div className="container mx-auto px-4">
+            {/* Search and Filter Section */}
+            <div className="mb-8">
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search events..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex-1">
+                  <Select
+                    value={selectedCity}
+                    onValueChange={setSelectedCity}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select City" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Cities</SelectItem>
+                      {CITIES.map((city) => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Select
+                    value={selectedGenre}
+                    onValueChange={setSelectedGenre}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {GENRES.map((genre) => (
+                        <SelectItem key={genre} value={genre}>{genre}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+            </div>
+
             {featuredEvents.length > 0 && (
               <div className="mb-12">
                 <h2 className="text-2xl font-bold mb-6">Featured Events</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {featuredEvents.map((event) => (
-                    <EventCard key={event._id} event={event} />
+                    <EventCard key={event._id} event={event} isPastEvent={false} />
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="mb-8 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">
-                {featuredEvents.length > 0 ? 'More Events' : 'All Events'}
-              </h2>
-              <p className="text-gray-600">{filteredEvents.length} events found</p>
-            </div>
-
-            {regularEvents.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {regularEvents.map((event) => (
-                  <EventCard key={event._id} event={event} />
-                ))}
+            {/* Current Events Section */}
+            {currentEvents.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold mb-6">Current Events</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {currentEvents.map((event: Event) => (
+                    <EventCard key={event._id} event={event} isPastEvent={false} />
+                  ))}
+                </div>
               </div>
-            ) : (
+            )}
+
+            {/* Upcoming Events Section */}
+            {upcomingEvents.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold mb-6">Upcoming Events</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {upcomingEvents.map((event: Event) => (
+                    <EventCard key={event._id} event={event} isPastEvent={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+
+            {/* Past Events Section */}
+            {pastEvents.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold mb-6">Past Events</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pastEvents.map((event: Event) => (
+                    <EventCard key={event._id} event={event} isPastEvent={true} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No Events Found Message */}
+            {!upcomingEvents.length && !currentEvents.length && !pastEvents.length && (
               <div className="text-center py-12">
                 <h3 className="text-xl font-medium text-gray-700 mb-2">No events found</h3>
                 <p className="text-gray-500 mb-6">Try adjusting your search or filters</p>

@@ -63,8 +63,8 @@ export default function Navbar() {
           <div className="hidden md:flex space-x-3">
             {isLoggedIn && (
               <Link href="/profile">
-                <Button variant="outline" className="rounded-full h-10 w-10 p-0">
-                  <User className="h-5 w-5 mx-auto" />
+                <Button variant="outline" className="rounded-full px-4 py-2">
+                  Dashboard
                 </Button>
               </Link>
             )}
@@ -144,9 +144,9 @@ export default function Navbar() {
                 >
                   <Button
                     variant="outline"
-                    className="rounded-full h-10 w-10 p-0"
+                    className="rounded-full px-4 py-2 text-black"
                   >
-                    <User className="h-5 w-5 mx-auto" />
+                    Dashboard
                   </Button>
                 </Link>
                 {isLoggedIn ? (
