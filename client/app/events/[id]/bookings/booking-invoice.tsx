@@ -272,7 +272,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                         {/* <h1 className="text-white text-xl font-bold mb-2">{booking.court.name}</h1> */}
                         <div className="flex items-center text-white text-opacity-90 text-sm">
                             <MapPin className="w-4 h-4 mr-1" />
-                            <span>{booking.event.location.address},{booking.event.location.city}</span>
+                            <span>{booking.event?.location?.address||"NA"},{booking.event?.location?.city||"NA"}</span>
                         </div>
                     </div>
                 </div>

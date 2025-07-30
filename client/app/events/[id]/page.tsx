@@ -15,6 +15,7 @@ import {
   Heart,
   Star,
   Ticket as TicketIcon,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -40,6 +41,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // App Components - Using dynamic imports to avoid SSR issues
 import Navbar from "@/app/Navbar";
@@ -190,6 +199,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [activeTab, setActiveTab] = useState("details");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [bookingDetails, setBookingDetails] = useState<any | null>(null);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   // Format date and time from ISO string
   const formatDateTime = (dateString: string) => {
@@ -225,7 +235,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       toast.error("Please select a valid quantity");
       return;
     }
-    
+
     // Check if user is logged in
     const token = localStorage.getItem("token");
     if (!token || !user) {
@@ -278,7 +288,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         handler: async function (response: RazorpayResponse) {
           try {
             console.log("Razorpay payment response received:", response);
-            
+
             // Log request being sent to server
             const requestBody = {
               razorpay_payment_id: response.razorpay_payment_id,
@@ -292,11 +302,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 ticketType: selectedTicket.name,
               },
             };
-            
-            console.log("Sending verification request to:", 
+
+            console.log("Sending verification request to:",
               `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`);
             console.log("With request body:", requestBody);
-            
+
             // 3. Verify Payment
             const verificationResponse = await fetch(
               `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
@@ -312,14 +322,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             // Log the response status
             console.log("Verification API response status:", verificationResponse.status);
-            
+
             const verificationData = await verificationResponse.json();
             console.log("Verification API response data:", verificationData);
 
             if (verificationResponse.ok && verificationData.success) {
               toast.success("Booking confirmed!");
               localStorage.setItem('lastBookingId', verificationData.booking._id);
-              
+
               // Log the navigation
               console.log(`Navigating to: /events/${verificationData.booking._id}/bookings`);
               router.push(`/events/${verificationData.booking._id}/bookings`);
@@ -401,16 +411,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       } catch (err) {
         console.error("Error fetching event:", err);
         const errorMsg = err instanceof Error ? err.message : "Failed to load event";
-        
+
         // Check if the error is token related
-        if (errorMsg.toLowerCase().includes("token") || 
-            errorMsg.toLowerCase().includes("auth") || 
-            errorMsg.toLowerCase().includes("login")) {
+        if (errorMsg.toLowerCase().includes("token") ||
+          errorMsg.toLowerCase().includes("auth") ||
+          errorMsg.toLowerCase().includes("login")) {
           toast.error("Please log in to view event details");
           router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
           return;
         }
-        
+
         if (isMounted) {
           setError(errorMsg);
         }
@@ -423,13 +433,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem("token");
-        
+
         // If no token exists, don't show an error - just don't set the user
         if (!token) {
           console.log("No auth token found - user not logged in");
           return;
         }
-        
+
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`,
           {
@@ -440,12 +450,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           }
         );
         const data = await res.json();
-        
+
         if (!res.ok || !data.success) {
           // Don't show token errors on screen
-          if (data.message?.toLowerCase().includes("token") || 
-              data.message?.toLowerCase().includes("auth") || 
-              res.status === 401) {
+          if (data.message?.toLowerCase().includes("token") ||
+            data.message?.toLowerCase().includes("auth") ||
+            res.status === 401) {
             console.log("Auth error in profile fetch:", data.message);
             localStorage.removeItem("token"); // Clear invalid token
             return; // Don't set error - this avoids showing auth errors on screen
@@ -639,6 +649,93 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   {event.ticketTypes?.reduce((acc, t) => acc + (t.quantity - t.sold), 0) || 0} tickets remaining
                 </Badge>
               </div>
+
+              {/* Terms and Conditions for Dr. T Ao Trophy */}
+              {event.title === "Dr. T Ao Trophy" && (
+                <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full mb-6 text-sm bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900"
+                      onClick={() => setTermsModalOpen(true)}
+                    >
+                      View Terms & Conditions
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg max-h-[90vh]">
+                    <div className="absolute right-4 top-4">
+                      {/* <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 rounded-full p-0" 
+                        onClick={() => document.querySelector('[data-state="open"] [role="dialog"] button[aria-label="Close"]')?.click()}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Close</span>
+                      </Button> */}
+                    </div>
+                    <DialogHeader className="pr-10">
+                      <DialogTitle className="text-xl">Terms and Conditions</DialogTitle>
+                      <DialogDescription>
+                        Please read the following terms and conditions carefully before booking.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="overflow-y-auto max-h-[60vh] pr-2 mt-4">
+                      <ul className="text-sm space-y-3 list-none">
+                       <li className="pb-2 border-b border-gray-100"><span className="font-medium">1.</span> By purchasing a ticket to the Dr. T Ao Trophy 2025, you agree to the following terms and conditions.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">2.</span> Tickets are for general admission and have no reserved seating. Entry is on a first-come, first-served basis.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">3.</span> Pre-booked tickets come with your own personalized QR codes. QR codes can be scanned only once and cannot be reused for re-entry. Once inside, exiting and re-entering the venue using the same ticket is not allowed.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">4.</span> Scalping or reselling tickets at a higher price is strictly prohibited. Violators will be penalised by the organizers.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">5.</span> Professional cameras and recording devices are not permitted. Full recording or live streaming of the match is prohibited.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">6.</span> Attendees must comply with security checks upon entry. Any disruptive behavior may result in ejection without a refund.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">7.</span> All ticket sales are final. No refunds or exchanges will be provided unless the event is cancelled or rescheduled.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">8.</span> Attendees assume all risks associated with attending the event. The Organizers are not responsible for any personal injury or loss.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">9.</span> Attendees must present a valid ticket from the authorized ticketing partners at the entrance.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">10.</span> Children of any age will require a ticket and must be accompanied by an adult.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">11.</span> Prohibited items include weapons, drugs, outside food and beverages, laser pointers, and any other items deemed dangerous or inappropriate.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">12.</span> The tournament will proceed rain or shine. In case of extreme weather, the Technical Committee will communicate any changes or cancellations through proper channels.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">13.</span> Attendees shall be liable to actions from the organizer for harassment, foul language, or abusive behavior.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">14.</span> First aid services will be available on-site. Attendees requiring medical attention should notify event staff immediately.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">15.</span> The venue will provide accommodations for attendees with disabilities, including designated seating areas and accessible restrooms.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">16.</span> Only authorized vendors are permitted to sell goods within the premises.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">17.</span> By attending, you consent to being photographed or recorded for promotional purposes by Dr. T Ao Trophy and its partners.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">18.</span> Any disputes regarding the league will be resolved by the organizers, and their decision will be final.</li>
+
+                        <li className="pb-2 border-b border-gray-100"><span className="font-medium">19.</span> Political messages, discriminatory placards, unauthorized displays, racists propaganda, and actions violating the tournament ethics or sportsmanship are strictly prohibited. Violators may be removed and face the penalties as per the rules.</li>
+                       
+                       <li className="pb-2"><span className="font-medium">20.</span> The Organizers reserve the right to modify these terms at any time.</li>
+                      </ul>
+                     
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button 
+                        variant="default" 
+                        className="bg-primary" 
+                        onClick={() => setTermsModalOpen(false)}
+                      >
+                        I Understand
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
 
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">

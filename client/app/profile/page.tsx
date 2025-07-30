@@ -295,11 +295,11 @@ export default function ProfilePage() {
         </Card>
 
         <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
             {/* <TabsTrigger value="overview">Overview</TabsTrigger> */}
-            <TabsTrigger value="bookings">My Bookings</TabsTrigger>
+            <TabsTrigger value="bookings" className="text-xs md:text-sm">My Bookings</TabsTrigger>
             {/* <TabsTrigger value="saved">Saved Events</TabsTrigger> */}
-            <TabsTrigger value="personal">Personal Info</TabsTrigger>
+            <TabsTrigger value="personal" className="text-xs md:text-sm">Personal Info</TabsTrigger>
             {/* <TabsTrigger value="preferences">Preferences</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger> */}
           </TabsList>
@@ -454,7 +454,7 @@ export default function ProfilePage() {
                     userBookings.map((booking) => (
                       <div
                         key={booking._id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
+                        className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border rounded-lg gap-4"
                       >
                         <div className="flex items-center space-x-4">
                           <Image
@@ -465,8 +465,8 @@ export default function ProfilePage() {
                             className="w-16 h-12 rounded object-cover"
                           />
                           <div>
-                            <h3 className="font-semibold">{booking.event?.title || "Event"}</h3>
-                            <p className="text-sm text-muted-foreground">
+                            <h3 className="font-semibold text-sm md:text-base">{booking.event?.title || "Event"}</h3>
+                            <p className="text-xs md:text-sm text-muted-foreground">
                               {new Date(booking.bookedAt).toLocaleDateString()}
                             </p>
                             <Badge
@@ -477,14 +477,15 @@ export default function ProfilePage() {
                                     ? "secondary"
                                     : "outline"
                               }
+                              className="mt-1 text-xs"
                             >
                               {booking.paymentStatus}
                             </Badge>
                           </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right mt-2 md:mt-0">
                           <p className="font-semibold">₹{booking.total}</p>
-                          <div className="flex space-x-2 mt-2">
+                          <div className="flex justify-end space-x-2 mt-2">
                             <Button size="sm" variant="outline" onClick={() => handleViewTicket(booking._id)}>
                               View Ticket
                             </Button>
@@ -566,7 +567,7 @@ export default function ProfilePage() {
                 <CardDescription>Manage your personal details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <Input
@@ -595,7 +596,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
                     <div className="relative">
