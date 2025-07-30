@@ -321,8 +321,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               localStorage.setItem('lastBookingId', verificationData.booking._id);
               
               // Log the navigation
-              console.log(`Navigating to: /events/${event._id}/bookings`);
-              router.push(`/events/${event._id}/bookings`);
+              console.log(`Navigating to: /events/${verificationData.booking._id}/bookings`);
+              router.push(`/events/${verificationData.booking._id}/bookings`);
             } else {
               console.error("Payment verification failed:", verificationData);
               toast.error(verificationData.message || "Payment verification failed");

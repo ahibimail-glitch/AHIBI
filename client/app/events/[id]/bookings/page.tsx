@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 // import BookingInvoiceCard from '@/app/events/[id]/bookings/booking-invoice';
@@ -12,18 +12,27 @@ import ModernBookingTicket from '@/app/events/[id]/bookings/booking-invoice';
 
 export default function BookingSuccessPage() {
   const router = useRouter();
+  const params = useParams();
   const [bookingId, setBookingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if user has a recent booking
-    const lastBookingId = localStorage.getItem('lastBookingId');
-    if (!lastBookingId) {
-      // Redirect to home if no recent booking
-      router.push('/');
-      return;
+    // Get event ID from URL params
+    const eventId = params?.id as string;
+    
+    // If we have an event ID from URL params, use it
+    if (eventId) {
+      setBookingId(eventId);
+    } else {
+      // Fallback to localStorage for backward compatibility
+      const lastBookingId = localStorage.getItem('lastBookingId');
+      if (!lastBookingId) {
+        // Redirect to home if no ID is available
+        router.push('/');
+        return;
+      }
+      setBookingId(lastBookingId);
     }
-    setBookingId(lastBookingId);
-  }, [router]);
+  }, [router, params]);
 
   if (!bookingId) {
     return (

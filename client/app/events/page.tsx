@@ -109,7 +109,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isPastEvent = false }) => 
           <span>•</span>
           <span>{formatTime(event.startDate)}</span>
         </div>
-        {isPastEvent ? (
+        {/* {isPastEvent ? (
           <Badge variant="outline" className="bg-gray-100 text-gray-800 whitespace-nowrap">
             Past Event
           </Badge>
@@ -117,7 +117,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isPastEvent = false }) => 
           <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
             {event.attendees || 0} Going
           </Badge>
-        )}
+        )} */}
       </div>
       <div className="mt-auto">
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
