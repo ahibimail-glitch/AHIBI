@@ -138,17 +138,19 @@ export default function Navbar() {
                 About
               </Link>
               <div className="flex items-center space-x-3 pt-2 border-t border-gray-700 mt-2">
-                <Link
-                  href="/profile"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <Button
-                    variant="outline"
-                    className="rounded-full px-4 py-2 text-black"
+                {isLoggedIn && (
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    Dashboard
-                  </Button>
-                </Link>
+                    <Button
+                      variant="outline"
+                      className="rounded-full px-4 py-2 text-black"
+                    >
+                      Dashboard
+                    </Button>
+                  </Link>
+                )}
                 {isLoggedIn ? (
                   <button
                     onClick={handleLogout}
