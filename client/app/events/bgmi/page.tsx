@@ -105,11 +105,19 @@ export default function BGMIRegistration() {
     if (!formData.preferredContactMode) errors.push("Preferred contact mode is required")
     if (!formData.email.trim()) errors.push("Email is required")
     
-    // Only validate substitutes that have either IGN or ID filled
+    // Only validate substitutes that have at least one field filled
     const partialSubs = formData.substitutes.filter(s => s.ign || s.id);
+    
+    // Check if any substitutes have only one field filled
     const invalidSubs = partialSubs.filter(s => !s.ign || !s.id);
     if (invalidSubs.length > 0) {
-      errors.push("All substitutes must have both IGN and ID")
+      errors.push("For each substitute, both IGN and ID must be provided")
+    }
+    
+    // Count valid substitutes (with both IGN and ID)
+    const validSubs = formData.substitutes.filter(s => s.ign && s.id);
+    if (validSubs.length > 3) {
+      errors.push("Maximum 3 substitutes are allowed")
     }
 
     return errors

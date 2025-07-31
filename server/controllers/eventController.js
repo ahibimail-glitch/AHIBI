@@ -461,12 +461,16 @@ const registerBGMI = async (req, res) => {
 
     // Create new BGMI registration
     const BGMI = require('../models/BGMI');
+    
+    // Filter out empty substitutes (where either ign or id is empty)
+    const validSubstitutes = substitutes.filter(sub => sub.ign && sub.id);
+    
     const bgmiRegistration = new BGMI({
       squadName,
       mainMembers,
       squadLeaderPhone,
       preferredContactMode,
-      substitutes: substitutes || [],
+      substitutes: validSubstitutes,
       mobileGamesInterested: mobileGamesInterested || [],
       pcConsoleGamesInterested: pcConsoleGamesInterested || [],
       email
