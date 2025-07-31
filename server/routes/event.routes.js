@@ -7,4 +7,7 @@ const router = express.Router();
 router.get('/', eventController.getPublicEvents);
 router.get('/:id', eventController.getPublicEventById);
 
+// BGMI Registration route
+router.post('/bgmi/register', eventController.registerBGMI);
+
 module.exports = router;

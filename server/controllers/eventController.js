@@ -151,7 +151,7 @@ const rejectEvent = async (req, res) => {
     const { reason } = req.body;
 
     if (!reason) {
-      return ApiResponse.badRequest(res, 'Rejection reason is required');
+      return ApiResponse.error(res, 'Rejection reason is required', {}, 400);
     }
 
     const event = await Event.findById(req.params.id);
@@ -414,14 +414,90 @@ const deleteEvent = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Register a BGMI squad
+ * @route   POST /api/events/bgmi/register
+ * @access  Public
+ */
+const registerBGMI = async (req, res) => {
+  try {
+    const {
+      squadName,
+      mainMembers,
+      squadLeaderPhone,
+      preferredContactMode,
+      substitutes,
+      mobileGamesInterested,
+      pcConsoleGamesInterested,
+      email
+    } = req.body;
+
+    // Validate required fields
+    if (!squadName || !mainMembers || !squadLeaderPhone || !preferredContactMode || !email) {
+      return ApiResponse.error(res, 'Missing required fields', {}, 400);
+    }
+
+    // Validate mainMembers (must have exactly 4)
+    if (!Array.isArray(mainMembers) || mainMembers.length !== 4) {
+      return ApiResponse.error(res, 'Exactly 4 main members are required', {}, 400);
+    }
+
+    // Validate each main member has ign and id
+    for (const member of mainMembers) {
+      if (!member.ign || !member.id) {
+        return ApiResponse.error(res, 'Each main member must have IGN and ID', {}, 400);
+      }
+    }
+
+    // Validate phone number format (10 digits)
+    if (!/^[0-9]{10}$/.test(squadLeaderPhone)) {
+      return ApiResponse.error(res, 'Phone number must be 10 digits', {}, 400);
+    }
+
+    // Validate substitutes (maximum 3)
+    if (substitutes && Array.isArray(substitutes) && substitutes.length > 3) {
+      return ApiResponse.error(res, 'Maximum 3 substitutes allowed', {}, 400);
+    }
+
+    // Create new BGMI registration
+    const BGMI = require('../models/BGMI');
+    const bgmiRegistration = new BGMI({
+      squadName,
+      mainMembers,
+      squadLeaderPhone,
+      preferredContactMode,
+      substitutes: substitutes || [],
+      mobileGamesInterested: mobileGamesInterested || [],
+      pcConsoleGamesInterested: pcConsoleGamesInterested || [],
+      email
+    });
+
+    // Save registration to database
+    await bgmiRegistration.save();
+
+    return ApiResponse.success(res, 'BGMI squad registered successfully', { registration: bgmiRegistration }, 201);
+  } catch (error) {
+    console.error('Error registering BGMI squad:', error);
+    
+    // Handle validation errors from Mongoose
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return ApiResponse.error(res, messages.join(', '), {}, 400);
+    }
+    
+    return ApiResponse.serverError(res, 'Error registering BGMI squad', error);
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
   getPublicEvents,
   getPublicEventById,
+  getActiveEvents,
   approveEvent,
   rejectEvent,
-  getActiveEvents,
   updateEvent,
-  deleteEvent
+  deleteEvent,
+  registerBGMI
 };
