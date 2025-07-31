@@ -145,7 +145,7 @@ export default function BGMIRegistration() {
 
     try {
       // Send data to backend API with direct URL to the backend server
-      const response = await fetch('http://localhost:5000/api/events/bgmi/register', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events/bgmi/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
