@@ -24,6 +24,7 @@ import {
   Ticket,
   QrCode,
   ImageIcon,
+  Plus,
 } from "lucide-react";
 
 // Import child components
@@ -136,6 +137,9 @@ export default function AdminDashboard() {
       case "qr-scanner":
         router.push("/admin/scan");
         return null;
+      case "manual-booking":
+        router.push("/admin/booking");
+        return null;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -160,6 +164,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => setActiveView("bookings")} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => setActiveView("users")} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
+          <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>

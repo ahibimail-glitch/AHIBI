@@ -104,7 +104,7 @@ router.post("/", auth.protect, async (req, res) => {
 
     // Fetch event and ticket
     console.log("Fetching event and ticket...");
-    const isEvent = await Event.findById(event._id);
+    const isEvent = await Event.findById(event);
     //console.log("Event:", event);
     if (!isEvent) {
       return res.status(404).json({ message: "Event not found" });
@@ -117,7 +117,7 @@ router.post("/", auth.protect, async (req, res) => {
 
     // Create booking
     const booking = new Booking({
-      event: event._id,
+      event: event,
       user: req.user._id,
       quantity,
       price: price,
@@ -132,7 +132,7 @@ router.post("/", auth.protect, async (req, res) => {
 
     // Update event tickets sold count and ticket type sold
     await Event.updateOne(
-      { _id: event._id, "ticketTypes.name": ticketType },
+      { _id: event, "ticketTypes.name": ticketType },
       {
         $inc: {
           "ticketTypes.$.sold": quantity,
@@ -142,7 +142,7 @@ router.post("/", auth.protect, async (req, res) => {
     );
     
     // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
-    const updatedEvent = await Event.findById(event._id);
+    const updatedEvent = await Event.findById(event);
     if (updatedEvent) {
       await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
     }
@@ -474,6 +474,74 @@ router.post("/check-out", async (req, res) => {
   } catch (error) {
     console.error('Error during check-out:', error);
     res.status(500).json({ message: 'Server error during check-out' });
+  }
+});
+
+// @route   POST /api/bookings/admin-manual-booking
+// @desc    Create a new booking manually by admin
+// @access  Private (Admin)
+router.post("/admin-manual-booking",  async (req, res) => {
+  try {
+    const { event, user, ticketType, quantity, price } = req.body;
+
+    // Validate input
+    if (!event || !user || !quantity || !ticketType || quantity < 1) {
+      return res.status(400).json({
+        message: "Please provide event, user, ticketType, and valid quantity",
+      });
+    }
+
+    // Verify the event exists
+    const isEvent = await Event.findById(event);
+    if (!isEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Verify the user exists
+    const isUser = await User.findById(user);
+    if (!isUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create booking
+    const booking = new Booking({
+      event: event,
+      user: user,  // Using provided user ID instead of req.user._id
+      quantity,
+      price: price,
+      total: price * quantity,
+      ticketType,
+      paymentMethod: "admin",
+      paymentStatus: "completed",
+      status: "confirmed"
+    });
+
+    await booking.save();
+
+    // Update event tickets sold count and ticket type sold
+    await Event.updateOne(
+      { _id: event, "ticketTypes.name": ticketType },
+      {
+        $inc: {
+          "ticketTypes.$.sold": quantity,
+        },
+      }
+    );
+    
+    // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
+    const updatedEvent = await Event.findById(event);
+    if (updatedEvent) {
+      await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
+    }
+
+    res.status(201).json({
+      message: "Booking created successfully",
+      booking,
+      id: booking._id,
+    });
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
