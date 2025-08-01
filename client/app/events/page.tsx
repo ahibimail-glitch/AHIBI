@@ -75,77 +75,80 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
 // Event card component
 interface EventCardProps {
   event: Event;
-  isPastEvent?: boolean;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, isPastEvent = false }) => (
-  <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-    <div className="relative h-48">
-      <Image
-        src={event.banner || "/placeholder.svg"}
-        alt={event.title}
-        fill
-        className="object-fill"
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        priority={false}
-      />
-      <div className="absolute top-2 right-2">
-        <Button size="icon" variant="ghost" className="rounded-full bg-white/90 hover:bg-white">
-          <Heart className="h-5 w-5 text-gray-700" />
-        </Button>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-        <Badge variant="secondary" className="mb-2">
-          {event.category}
-        </Badge>
-        <h3 className="text-xl font-bold text-white line-clamp-1">{event.title}</h3>
-      </div>
-    </div>
-    <CardContent className="p-4 flex-1 flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar className="h-4 w-4 flex-shrink-0" />
-          <span>{formatDate(event.startDate)}</span>
-          <span>•</span>
-          <span>{formatTime(event.startDate)}</span>
+const EventCard: React.FC<EventCardProps> = ({ event }) => {
+  const isPastEvent = new Date(event.endDate) < new Date();
+
+  return (
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+      <div className="relative h-48">
+        <Image
+          src={event.banner || "/placeholder.svg"}
+          alt={event.title}
+          fill
+          className="object-fill"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={false}
+        />
+        <div className="absolute top-2 right-2">
+          <Button size="icon" variant="ghost" className="rounded-full bg-white/90 hover:bg-white">
+            <Heart className="h-5 w-5 text-gray-700" />
+          </Button>
         </div>
-        {/* {isPastEvent ? (
-          <Badge variant="outline" className="bg-gray-100 text-gray-800 whitespace-nowrap">
-            Past Event
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+          <Badge variant="secondary" className="mb-2">
+            {event.category}
           </Badge>
-        ) : (
-          <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
-            {event.attendees || 0} Going
-          </Badge>
-        )} */}
-      </div>
-      <div className="mt-auto">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-          <MapPin className="h-4 w-4 flex-shrink-0 text-gray-500" />
-          <span className="line-clamp-1">
-            {event.location?.city}, {event.location?.address}
-          </span>
+          <h3 className="text-xl font-bold text-white line-clamp-1">{event.title}</h3>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium">
-            Starting from {getLowestPrice(event.ticketTypes)}
-          </span>
-          {isPastEvent ? (
-            <Button size="sm" disabled>
-              View Details
-            </Button>
+      </div>
+      <CardContent className="p-4 flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Calendar className="h-4 w-4 flex-shrink-0" />
+            <span>{formatDate(event.startDate)}</span>
+            <span>•</span>
+            <span>{formatTime(event.startDate)}</span>
+          </div>
+          {/* {isPastEvent ? (
+            <Badge variant="outline" className="bg-gray-100 text-gray-800 whitespace-nowrap">
+              Past Event
+            </Badge>
           ) : (
-            <Button asChild size="sm">
-              <Link href={event._id === "6888f3a7a71cf7d3b5b55bed" ? "/events/bgmi" : `/events/${event.slug || event._id}`}>
-                View Details
-              </Link>
-            </Button>
-          )}
+            <Badge variant="outline" className="bg-green-100 text-green-800 whitespace-nowrap">
+              {event.attendees || 0} Going
+            </Badge>
+          )} */}
         </div>
-      </div>
-    </CardContent>
-  </Card>
-);
+        <div className="mt-auto">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+            <MapPin className="h-4 w-4 flex-shrink-0 text-gray-500" />
+            <span className="line-clamp-1">
+              {event.location?.city}, {event.location?.address}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">
+              Starting from {getLowestPrice(event.ticketTypes)}
+            </span>
+            {isPastEvent ? (
+              <Button size="sm" disabled>
+                View Details
+              </Button>
+            ) : (
+              <Button asChild size="sm">
+                <Link href={event._id === "6888f3a7a71cf7d3b5b55bed" ? "/events/bgmi" : `/events/${event.slug || event._id}`}>
+                  View Details
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -333,7 +336,7 @@ export default function EventsPage() {
                 <h2 className="text-2xl font-bold mb-6">Featured Events</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {featuredEvents.map((event) => (
-                    <EventCard key={event._id} event={event} isPastEvent={false} />
+                    <EventCard key={event._id} event={event} />
                   ))}
                 </div>
               </div>
@@ -345,7 +348,7 @@ export default function EventsPage() {
                 <h2 className="text-2xl font-bold mb-6">Current Events</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {currentEvents.map((event: Event) => (
-                    <EventCard key={event._id} event={event} isPastEvent={false} />
+                    <EventCard key={event._id} event={event} />
                   ))}
                 </div>
               </div>
@@ -357,7 +360,7 @@ export default function EventsPage() {
                 <h2 className="text-2xl font-bold mb-6">Upcoming Events</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {upcomingEvents.map((event: Event) => (
-                    <EventCard key={event._id} event={event} isPastEvent={false} />
+                    <EventCard key={event._id} event={event} />
                   ))}
                 </div>
               </div>
@@ -370,7 +373,7 @@ export default function EventsPage() {
                 <h2 className="text-2xl font-bold mb-6">Past Events</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {pastEvents.map((event: Event) => (
-                    <EventCard key={event._id} event={event} isPastEvent={true} />
+                    <EventCard key={event._id} event={event} />
                   ))}
                 </div>
               </div>
