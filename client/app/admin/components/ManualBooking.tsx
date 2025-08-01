@@ -456,7 +456,7 @@ const ManualBooking = () => {
         
         <CardContent>
           {success ? (
-            <div className="max-w-[350px] mx-auto my-10" ref={ticketRef}>
+            <div className="max-w-md mx-auto my-10" ref={ticketRef}>
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertTitle className="text-green-800">Booking Successful</AlertTitle>
@@ -465,147 +465,150 @@ const ManualBooking = () => {
                 </AlertDescription>
               </Alert>
 
-              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                 {/* Gradient Header */}
-                <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
-                  <div className="absolute bottom-0 left-0 w-20 h-20 bg-white opacity-10 rounded-full -ml-10 -mb-10"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <Ticket className="w-6 h-6 text-white mr-2" />
-                        <span className="text-white font-bold text-lg">BOOKING CONFIRMED</span>
-                      </div>
-                      <div className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
-                        <span className="text-white text-xs font-semibold">PAID</span>
-                      </div>
+                <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-8 relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                    <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10"></div>
+
+                    {/* Centered Header Content */}
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                        <img src="/images/Logo.png" className='w-1/2 h-auto mb-3' alt="Logo" />
+                        <p className="text-white/90 text-sm font-medium">Booking Confirmed For</p>
+                        <h1 className="text-white text-2xl font-bold tracking-tight mt-1">{selectedEvent?.title || "Event Title"}</h1>
                     </div>
-                    <h1 className="text-white text-xl font-bold mb-2">
-                      {selectedEvent?.title}
-                    </h1>
-                    <div className="flex items-center text-white text-opacity-90 text-sm">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      <span>{selectedEvent?.location?.address || "NA"}, {selectedEvent?.location?.city || "NA"}</span>
-                    </div>
-                  </div>
                 </div>
+
 
                 {/* Ticket Body */}
                 <div className="px-6 py-6">
-                  {/* Date and Time Information */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center">
-                        <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-                        <p className="text-sm font-bold text-gray-900">
-                          {formatDate(selectedEvent?.startDate || new Date())}
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
-                        <p className="text-sm font-bold text-gray-900">
-                          {formatTime(selectedEvent?.startDate || new Date())}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                    {/* Ticket Type & Details Section */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
+                        {/* --- Ticket Category Section --- */}
+                        <div className="text-center mb-4">
+                            <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
+                            <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
+                                {formData.ticketType || "Season Pass"}
+                            </h2>
+                        </div>
 
-                  {/* QR Code for Venue Verification */}
-                  <div className="text-center mb-6">
-                    {qrValue && (
-                      <div className="flex flex-col items-center">
-                        <div className="border-4 border-blue-100 rounded-lg p-4 bg-white inline-block">
-                          <img 
-                            id="booking-qr-code"
-                            src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrValue)}&size=200x200&margin=10`}
-                            alt="Booking QR Code" 
-                            width={200} 
-                            height={200} 
-                            className="mx-auto"
-                            loading="eager"
-                            crossOrigin="anonymous"
-                            onError={(e) => {
-                              console.error('QR image failed to load');
-                              e.currentTarget.style.display = 'none';
-                              // Show fallback message if QR fails to load
-                              const fallbackElement = document.getElementById('qr-fallback');
-                              if (fallbackElement) {
-                                fallbackElement.style.display = 'block';
-                              }
-                            }}
-                          />
-                          {/* Fallback div for QR code errors */}
-                          <div 
-                            id="qr-fallback" 
-                            className="hidden p-4 bg-gray-100 w-[200px] h-[200px] flex items-center justify-center"
-                          >
+                        <div className="grid grid-cols-2 gap-4 border-t border-blue-200 pt-4">
                             <div className="text-center">
-                              <QrCode className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500">QR code unavailable</p>
+                                <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
+                                <p className="text-sm font-bold text-gray-900">{formatDate(selectedEvent?.startDate || new Date())}</p>
                             </div>
-                          </div>
+                            <div className="text-center">
+                                <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
+                                <p className="text-sm font-bold text-gray-900">
+                                    {formatTime(selectedEvent?.startDate || new Date())} - {
+                                        (() => {
+                                            const start = new Date(selectedEvent?.startDate || new Date());
+                                            start.setHours(start.getHours() + 2); // Default to 2 hours after start
+                                            return formatTime(start);
+                                        })()
+                                    }
+                                </p>
+                            </div>
                         </div>
-                        <div className="mt-3 space-y-1">
-                          <p className="text-sm font-medium text-blue-700">Venue Entry Pass</p>
-                          <p className="text-xs text-gray-500">Scan this QR code at the venue entrance</p>
-                          <p className="text-xs text-gray-400">{bookingResult?.booking?.id}</p>
+                    </div>
+
+                    {/* Dashed Separator */}
+                    <div className="border-t-2 border-dashed border-gray-200 my-6 relative">
+                        <div className="absolute left-0 top-0 w-6 h-6 bg-gray-50 rounded-full -ml-9 -mt-3"></div>
+                        <div className="absolute right-0 top-0 w-6 h-6 bg-gray-50 rounded-full -mr-9 -mt-3"></div>
+                    </div>
+
+                    {/* Total Amount & Payment Details */}
+                    <div className="mb-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-lg font-bold text-gray-900">Total Amount</span>
+                            <span className="text-2xl font-bold text-green-600">{formatCurrency(formData.total)}</span>
                         </div>
-                        
-                        {/* Backup text data for manual entry if QR fails */}
-                        {/* <div className="mt-4 border-t pt-3 border-gray-200">
-                          <p className="text-xs text-gray-500 mb-1">If QR code doesn't scan, show this:</p>
-                          <p className="font-mono text-sm font-bold">
-                            {bookingResult?.booking?.bookingCode || generateBookingCode()}
-                          </p>
+                        {/* <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                                    <span className="text-sm font-medium text-green-800">Payment Successful</span>
+                                </div>
+                                <span className="text-xs font-mono text-green-700">{paymentInfo.transactionId}</span>
+                            </div>
                         </div> */}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t-2 border-dashed border-gray-200 my-6 relative">
-                    <div className="absolute left-0 top-0 w-6 h-6 bg-gray-100 rounded-full -ml-3 -mt-3"></div>
-                    <div className="absolute right-0 top-0 w-6 h-6 bg-gray-100 rounded-full -mr-3 -mt-3"></div>
-                  </div>
-
-                  <div className="mb-6">
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
-                      <p className="font-medium text-blue-600">{users.find(u => u._id === formData.user)?.name || 'Customer'}</p>
-                      <p className="text-blue-600">{users.find(u => u._id === formData.user)?.email || ''}</p>
-                      <p className="text-blue-600">{users.find(u => u._id === formData.user)?.phone || ''}</p>
                     </div>
-                  </div>
 
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-lg font-bold text-gray-900">Total Amount</span>
-                      <span className="text-2xl font-bold text-green-600">{formatCurrency(formData.total)}</span>
+                    {/* QR Code Section */}
+                    <div className="text-center">
+                        {qrValue ? (
+                            <div className="flex flex-col items-center">
+                                <div className="border-4 border-blue-100 rounded-lg p-2 bg-white inline-block">
+                                    <img
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrValue)}&size=180x180&margin=10`}
+                                        alt="Booking QR Code"
+                                        width={180}
+                                        height={180}
+                                        className="mx-auto"
+                                        loading="eager"
+                                        crossOrigin="anonymous"
+                                        onError={(e) => {
+                                            console.error('QR image failed to load');
+                                            e.currentTarget.style.display = 'none';
+                                            // Show fallback message if QR fails to load
+                                            const fallbackElement = document.getElementById('qr-fallback');
+                                            if (fallbackElement) {
+                                                fallbackElement.style.display = 'block';
+                                            }
+                                        }}
+                                    />
+                                    {/* Fallback div for QR code errors */}
+                                    <div 
+                                        id="qr-fallback" 
+                                        className="hidden p-4 bg-gray-100 w-[180px] h-[180px] flex items-center justify-center"
+                                    >
+                                        <div className="text-center">
+                                            <QrCode className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                            <p className="text-sm text-gray-500">QR code unavailable</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-4 text-center">
+                                    <p className="text-sm font-medium text-blue-700">Scan at {selectedEvent?.location?.address || "Event Location"} for Entry</p>
+                                    {/* Improved Booking Code Display */}
+                                    <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
+                                        <p className="text-xs text-gray-500">Booking Id</p>
+                                        <p className="font-mono text-sm font-bold text-gray-800 tracking-wider">
+                                            {bookingResult?.booking?.id || bookingResult?.booking?._id || ""}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center p-4 border-2 border-dashed rounded-lg">
+                                <p className="text-sm text-gray-500">
+                                    QR code is being generated. Please wait...
+                                </p>
+                            </div>
+                        )}
                     </div>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
-                          <span className="text-sm font-medium text-green-800">Payment Successful</span>
-                        </div>
-                        <span className="text-xs font-mono text-green-700">{paymentInfo.transactionId}</span>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-green-100 flex justify-between items-center">
-                        <span className="text-xs text-green-700">Method: {paymentInfo.method}</span>
-                        <span className="text-xs font-semibold bg-green-100 px-2 py-1 rounded-full text-green-800">Admin Created</span>
-                      </div>
-                    </div>
-                  </div>
+                </div>
 
-                  <div className="flex justify-between items-center mt-8 space-x-4">
-                    <Button onClick={handleReset} variant="outline" className="flex-1">
-                      Book Another
-                    </Button>
-                    <Button onClick={downloadQRCode} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                      <DownloadIcon className="h-4 w-4 mr-2" />
-                      Download Ticket
-                    </Button>
-                  </div>
+                {/* Action Buttons Footer */}
+                <div className="px-6 py-4 bg-gray-50 border-t mt-6">
+                    <div className="flex gap-3">
+                        <button
+                            onClick={downloadQRCode}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center disabled:bg-blue-300"
+                        >
+                            <DownloadIcon className="w-4 h-4 mr-2" />
+                            Download Ticket
+                        </button>
+                        <button
+                            onClick={handleReset}
+                            className="flex-1 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center"
+                        >
+                            Book Another
+                        </button>
+                    </div>
                 </div>
               </div>
             </div>

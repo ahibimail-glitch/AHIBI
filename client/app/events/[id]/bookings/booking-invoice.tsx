@@ -253,137 +253,137 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
     }
 
     return (
-            <div className="max-w-md mx-auto my-10 p-4 font-sans">
-                <div ref={ticketRef} id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                    {/* Gradient Header */}
-                    <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                        <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10"></div>
-                        
-                        <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-4">
-                                {/* You can replace this with your actual logo component or img tag */}
-                                <div className="w-full h-6  rounded-lg flex items-center justify-center">
-                                   <img src="/images/Logo.png" className='w-1/2 h-auto' alt="Logo" />
-                                </div>
-                                {/* <div className="bg-white/20 px-3 py-1 rounded-full">
+        <div className="max-w-md mx-auto my-10 p-4 font-sans">
+            <div ref={ticketRef} id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                {/* Gradient Header */}
+                <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                    <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10"></div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            {/* You can replace this with your actual logo component or img tag */}
+                            <div className="w-full h-6  rounded-lg flex items-center justify-center">
+                                <img src="/images/Logo.png" className='w-1/2 h-auto' alt="Logo" />
+                            </div>
+                            {/* <div className="bg-white/20 px-3 py-1 rounded-full">
                                     <span className="text-white text-xs font-semibold tracking-wide">PAID</span>
                                 </div> */}
+                        </div>
+                        <p className="text-white/90 text-sm font-medium">Booking Confirmed For</p>
+                        <h1 className="text-white text-2xl font-bold tracking-tight mt-1">{booking.event?.title || "Event Title"}</h1>
+                    </div>
+                </div>
+
+                {/* Ticket Body */}
+                <div className="px-6 py-6">
+                    {/* Ticket Type & Details Section */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
+                        {/* --- THIS IS THE NEW TICKET CATEGORY SECTION --- */}
+                        <div className="text-center mb-4">
+                            <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
+                            <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
+                                {booking.ticketType?.name || "Season Pass"}
+                            </h2>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 border-t border-blue-200 pt-4">
+                            <div className="text-center">
+                                <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
+                                <p className="text-sm font-bold text-gray-900">{formatDate(booking.event?.startDate || booking.event?.startTime || booking.startTime)}</p>
                             </div>
-                            <p className="text-white/90 text-sm font-medium">Booking Confirmed For</p>
-                            <h1 className="text-white text-2xl font-bold tracking-tight mt-1">{booking.event?.title || "Event Title"}</h1>
+                            <div className="text-center">
+                                <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                                <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
+                                <p className="text-sm font-bold text-gray-900">
+                                    {formatTime(booking.event?.startDate || booking.event?.startTime || booking.startTime)} -
+                                    {formatTime(booking.event?.endDate || booking.event?.endTime || booking.endTime ||
+                                        (() => {
+                                            const start = new Date(booking.event?.startDate || booking.event?.startTime || booking.startTime);
+                                            start.setHours(start.getHours() + 2); // Default to 2 hours after start
+                                            return start;
+                                        })()
+                                    )}
+                                </p>
+                            </div>
                         </div>
                     </div>
-    
-                    {/* Ticket Body */}
-                    <div className="px-6 py-6">
-                        {/* Ticket Type & Details Section */}
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
-                            {/* --- THIS IS THE NEW TICKET CATEGORY SECTION --- */}
-                            <div className="text-center mb-4">
-                                <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
-                                <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                                    {booking.ticketType?.name || "Season Pass"}
-                                </h2>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4 border-t border-blue-200 pt-4">
-                                <div className="text-center">
-                                    <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
-                                    <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-                                    <p className="text-sm font-bold text-gray-900">{formatDate(booking.event?.startDate || booking.event?.startTime || booking.startTime)}</p>
-                                </div>
-                                <div className="text-center">
-                                    <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
-                                    <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
-                                    <p className="text-sm font-bold text-gray-900">
-                                        {formatTime(booking.event?.startDate || booking.event?.startTime || booking.startTime)} - 
-                                        {formatTime(booking.event?.endDate || booking.event?.endTime || booking.endTime ||
-                                            (() => {
-                                                const start = new Date(booking.event?.startDate || booking.event?.startTime || booking.startTime);
-                                                start.setHours(start.getHours() + 2); // Default to 2 hours after start
-                                                return start;
-                                            })()
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-    
-                        {/* Dashed Separator */}
-                        <div className="border-t-2 border-dashed border-gray-200 my-6 relative">
-                            <div className="absolute left-0 top-0 w-6 h-6 bg-gray-50 rounded-full -ml-9 -mt-3"></div>
-                            <div className="absolute right-0 top-0 w-6 h-6 bg-gray-50 rounded-full -mr-9 -mt-3"></div>
-                        </div>
-    
-                        {/* Total Amount & Payment Details */}
-                        <div className="mb-6">
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-lg font-bold text-gray-900">Total Amount</span>
-                                <span className="text-2xl font-bold text-green-600">{formatCurrency(booking.price)}</span>
-                            </div>
-                            {booking.payment && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center">
-                                            <CreditCard className="w-4 h-4 text-green-600 mr-2" />
-                                            <span className="text-sm font-medium text-green-800">Payment Successful</span>
-                                        </div>
-                                        <span className="text-xs font-mono text-green-700">{booking.payment.transactionId}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        {/* QR Code Section */}
-                        <div className="text-center">
-                            {qrUrl ? (
-                                <div className="flex flex-col items-center">
-                                    <div className="border-4 border-blue-100 rounded-lg p-2 bg-white inline-block">
-                                        <img
-                                            src={qrUrl}
-                                            alt="Booking QR Code"
-                                            width={180}
-                                            height={180}
-                                            className="mx-auto"
-                                        />
-                                    </div>
-                                    <div className="mt-4 text-center">
-                                        <p className="text-sm font-medium text-blue-700">Scan at {booking.event?.location?.address || "Event Location"} for Entry</p>
-                                        {/* Improved Booking Code Display */}
-                                        <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
-                                           <p className="text-xs text-gray-500">Booking Id</p>
-                                           <p className="font-mono text-sm font-bold text-gray-800 tracking-wider">
-                                              {booking._id}
-                                           </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-center p-4 border-2 border-dashed rounded-lg">
-                                    <p className="text-sm text-gray-500">
-                                        QR code is being generated. Please wait...
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+
+                    {/* Dashed Separator */}
+                    <div className="border-t-2 border-dashed border-gray-200 my-6 relative">
+                        <div className="absolute left-0 top-0 w-6 h-6 bg-gray-50 rounded-full -ml-9 -mt-3"></div>
+                        <div className="absolute right-0 top-0 w-6 h-6 bg-gray-50 rounded-full -mr-9 -mt-3"></div>
                     </div>
-    
-                    {/* Action Buttons Footer */}
-                    <div className="px-6 py-4 bg-gray-50 border-t mt-6">
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleDownloadTicket}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center disabled:bg-blue-300"
-                            >
-                                <DownloadIcon className="w-4 h-4 mr-2" />
-                                Download Ticket
-                            </button>
+
+                    {/* Total Amount & Payment Details */}
+                    <div className="mb-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <span className="text-lg font-bold text-gray-900">Total Amount</span>
+                            <span className="text-2xl font-bold text-green-600">{formatCurrency(booking.price)}</span>
                         </div>
+                        {booking.payment && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        <CreditCard className="w-4 h-4 text-green-600 mr-2" />
+                                        <span className="text-sm font-medium text-green-800">Payment Successful</span>
+                                    </div>
+                                    <span className="text-xs font-mono text-green-700">{booking.payment.transactionId}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* QR Code Section */}
+                    <div className="text-center">
+                        {qrUrl ? (
+                            <div className="flex flex-col items-center">
+                                <div className="border-4 border-blue-100 rounded-lg p-2 bg-white inline-block">
+                                    <img
+                                        src={qrUrl}
+                                        alt="Booking QR Code"
+                                        width={180}
+                                        height={180}
+                                        className="mx-auto"
+                                    />
+                                </div>
+                                <div className="mt-4 text-center">
+                                    <p className="text-sm font-medium text-blue-700">Scan at {booking.event?.location?.address || "Event Location"} for Entry</p>
+                                    {/* Improved Booking Code Display */}
+                                    <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
+                                        <p className="text-xs text-gray-500">Booking Id</p>
+                                        <p className="font-mono text-sm font-bold text-gray-800 tracking-wider">
+                                            {booking._id}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center p-4 border-2 border-dashed rounded-lg">
+                                <p className="text-sm text-gray-500">
+                                    QR code is being generated. Please wait...
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Action Buttons Footer */}
+                <div className="px-6 py-4 bg-gray-50 border-t mt-6">
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleDownloadTicket}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 flex items-center justify-center disabled:bg-blue-300"
+                        >
+                            <DownloadIcon className="w-4 h-4 mr-2" />
+                            Download Ticket
+                        </button>
                     </div>
                 </div>
             </div>
-        );
+        </div>
+    );
 };
 
 export default ModernBookingTicket;
