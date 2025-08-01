@@ -42,10 +42,7 @@ interface Booking {
   quantity: number;
   total: number;
   status: string;
-  ticketCategory?: {
-    name: string;
-    price: number;
-  };
+  ticketType?: string;
 }
 
 interface BookingsProps {
@@ -61,12 +58,12 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Filter states
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [nameFilter, setNameFilter] = useState<string>("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   
   // Unique lists for filters
   const [uniqueEvents, setUniqueEvents] = useState<string[]>([]);
-  const [uniqueCategories, setUniqueCategories] = useState<string[]>([]);
+  const [uniqueTicketTypes, setUniqueTicketTypes] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -95,7 +92,6 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         }
 
         const data = await response.json();
-        console.log(data);
         setBookings(data.bookings);
         setFilteredBookings(data.bookings);
         
@@ -109,14 +105,14 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         );
         setUniqueEvents(events);
         
-        const categories: string[] = Array.from(
+        const ticketTypes: string[] = Array.from(
           new Set(
             data.bookings
-              .map((booking: Booking) => booking.ticketCategory?.name)
-              .filter((name: string | undefined): name is string => Boolean(name))
+              .map((booking: Booking) => booking.ticketType)
+              .filter((type: string | undefined): type is string => Boolean(type))
           )
         );
-        setUniqueCategories(categories);
+        setUniqueTicketTypes(ticketTypes);
         
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load bookings';
@@ -133,7 +129,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Apply filters whenever filter values change
   useEffect(() => {
     applyFilters();
-  }, [eventFilter, nameFilter, categoryFilter, dateFilter, bookings]);
+  }, [eventFilter, nameFilter, ticketTypeFilter, dateFilter, bookings]);
   
   // Filter function
   const applyFilters = () => {
@@ -149,8 +145,8 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       );
     }
     
-    if (categoryFilter && categoryFilter !== "all") {
-      result = result.filter((booking: Booking) => booking.ticketCategory?.name === categoryFilter);
+    if (ticketTypeFilter && ticketTypeFilter !== "all") {
+      result = result.filter((booking: Booking) => booking.ticketType === ticketTypeFilter);
     }
     
     if (dateFilter) {
@@ -168,14 +164,14 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   const resetFilters = () => {
     setEventFilter("all");
     setNameFilter("");
-    setCategoryFilter("all");
+    setTicketTypeFilter("all");
     setDateFilter(undefined);
   };
   
   // Export to Excel function
   const exportToExcel = () => {
     // Prepare data for Excel export
-    const headers = ["Event", "Customer", "Email", "Booked Date", "Ticket Category", "Quantity", "Total Amount"];
+    const headers = ["Event", "Customer", "Email", "Booked Date", "Ticket Type", "Quantity", "Total Amount"];
     
     const data = [
       headers,
@@ -184,8 +180,8 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         booking.user?.name || "NA",
         booking.user?.email || "NA",
         new Date(booking.bookedAt).toLocaleDateString(),
-        booking.ticketCategory?.name || "NA",
-        booking.quantity,
+        booking.ticketType || "NA",
+        booking.quantity,   
         `₹${booking.total}`
       ])
     ];
@@ -199,7 +195,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       { wch: 20 }, // Customer
       { wch: 25 }, // Email
       { wch: 15 }, // Booked Date
-      { wch: 15 }, // Ticket Category
+      { wch: 15 }, // Ticket Type
       { wch: 10 }, // Quantity
       { wch: 15 }, // Total Amount
     ];
@@ -296,16 +292,16 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
           </div>
           
           <div>
-            <Label htmlFor="category-filter">Ticket Category</Label>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger id="category-filter">
-                <SelectValue placeholder="All Categories" />
+            <Label htmlFor="ticket-type-filter">Ticket Type</Label>
+            <Select value={ticketTypeFilter} onValueChange={setTicketTypeFilter}>
+              <SelectTrigger id="ticket-type-filter">
+                <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {uniqueCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
+                <SelectItem value="all">All Types</SelectItem>
+                {uniqueTicketTypes.map((ticketType) => (
+                  <SelectItem key={ticketType} value={ticketType}>
+                    {ticketType}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -341,7 +337,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         </div>
         
         {/* Active filters display */}
-        {(eventFilter !== "all" || nameFilter || categoryFilter !== "all" || dateFilter) && (
+        {(eventFilter !== "all" || nameFilter || ticketTypeFilter !== "all" || dateFilter) && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-gray-500">Active filters:</span>
             <div className="flex flex-wrap gap-2">
@@ -361,10 +357,10 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
                   </button>
                 </Badge>
               )}
-              {categoryFilter !== "all" && (
+              {ticketTypeFilter !== "all" && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  Category: {categoryFilter}
-                  <button onClick={() => setCategoryFilter("all")}>
+                  Ticket Type: {ticketTypeFilter}
+                  <button onClick={() => setTicketTypeFilter("all")}>
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
@@ -390,7 +386,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
               <TableHead>Event</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Booked Date</TableHead>
-              <TableHead>Ticket Category</TableHead>
+              <TableHead>Ticket Type</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Total Amount</TableHead>
             </TableRow>
@@ -401,7 +397,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
                 <TableCell>{booking.event?.title || "NA"}</TableCell>
                 <TableCell>{booking.user?.name || "NA"}</TableCell>
                 <TableCell>{new Date(booking.bookedAt).toLocaleDateString()}</TableCell>
-                <TableCell>{booking.ticketCategory?.name || "NA"}</TableCell>
+                <TableCell>{booking.ticketType || "NA"}</TableCell>
                 <TableCell>{booking.quantity}</TableCell>
                 <TableCell>₹{booking.total}</TableCell>
               </TableRow>
