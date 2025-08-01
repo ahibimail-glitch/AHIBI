@@ -23,9 +23,19 @@ router.post("/verify-ticket", async (req, res) => {
       return res.status(404).json({ message: 'Booking not found', status: 'INVALID' });
     }
 
-    if (booking.event.toString() !== eventId) {
-      return res.status(400).json({ message: 'This ticket is not for the selected event', status: 'INVALID' });
+    // Check if this is a season pass ticket
+    const isSeasonPass = booking.ticketType && 
+      (booking.ticketType.toLowerCase().includes('season') )
+
+    // If it's not a season pass, verify that the event matches
+    if (!isSeasonPass && booking.event.toString() !== eventId) {
+      return res.status(400).json({ 
+        message: 'This ticket is not for the selected event', 
+        status: 'INVALID' 
+      });
     }
+
+    // If we got here, the ticket is valid (either for this event or it's a season pass)
 
     // Get the event to check ticket capacity
     const event = await Event.findById(eventId);

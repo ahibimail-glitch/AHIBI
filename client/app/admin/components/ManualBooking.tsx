@@ -15,10 +15,10 @@ import axios from 'axios';
 import dynamic from 'next/dynamic';
 
 // Dynamically import QRCode component with no SSR
-const QRCode = dynamic(() => import('qrcode.react'), {
-  ssr: false,
-  loading: () => <div className="w-[200px] h-[200px] bg-gray-100 animate-pulse rounded-lg"></div>
-});
+// const QRCode = dynamic(() => import('qrcode.react').then(mod => mod.default), {
+//   ssr: false,
+//   loading: () => <div className="w-[200px] h-[200px] bg-gray-100 animate-pulse rounded-lg"></div>
+// });
 
 interface Event {
   _id: string;
@@ -245,8 +245,8 @@ const ManualBooking = () => {
         event: formData.event,
         user: formData.user,
         ticketType: formData.ticketType,
-        quantity: parseInt(formData.quantity),
-        price: parseFloat(formData.price),
+        quantity: formData.quantity,
+        price: formData.price,
         // Add fields that might be expected by a regular booking
         paymentMethod: "admin",
         paymentStatus: "completed",
@@ -499,14 +499,14 @@ const ManualBooking = () => {
                         <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                         <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
                         <p className="text-sm font-bold text-gray-900">
-                          {formatDate(selectedEvent?.startDate)}
+                          {formatDate(selectedEvent?.startDate || new Date())}
                         </p>
                       </div>
                       <div className="text-center">
                         <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                         <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
                         <p className="text-sm font-bold text-gray-900">
-                          {formatTime(selectedEvent?.startDate)}
+                          {formatTime(selectedEvent?.startDate || new Date())}
                         </p>
                       </div>
                     </div>

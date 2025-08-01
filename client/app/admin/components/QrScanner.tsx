@@ -285,32 +285,26 @@ const QrScanner = () => {
     }
   };
 
-  const getVerificationMessage = (verification: BookingVerification | null): string => {
-    if (!verification) return "Unknown status";
-    
-    const { status, capacity = 1, usedEntries = 0, remainingEntries = 0 } = verification;
-    
-    switch (status) {
-      case 'VALID':
-        if (capacity > 1) {
-          return `Booking is valid. Allow entry. Ticket capacity: ${capacity}, Used: ${usedEntries}, Remaining: ${remainingEntries}`;
-        }
-        return "Booking is valid. Allow entry.";
-      case 'INVALID':
-        return "Invalid booking. Entry not allowed.";
-      case 'ALREADY_USED':
-        if (capacity > 1) {
-          return `This ticket has reached its maximum capacity (${capacity}). You can check out the visitor.`;
-        }
-        return "This ticket has already been used for entry. You can check out the visitor.";
-      case 'CHECKED_IN':
-        if (capacity > 1 && remainingEntries > 0) {
-          return `Entry successful. ${remainingEntries} entries remaining out of ${capacity}.`;
-        }
-        return "Entry successful. The user is now checked in.";
-      default:
-        return "Unknown status";
+  // Helper function to get verification message
+  const getVerificationMessage = (verification: BookingVerification): string => {
+    if (verification.verificationMessage) {
+      return verification.verificationMessage;
     }
+
+    // Check if this is a season pass
+    if (isSeasonPass(verification.ticketType)) {
+      return verification.status === 'VALID' 
+        ? "Season pass verified! Valid for all events."
+        : verification.status === 'ALREADY_USED'
+          ? "Season pass already used at this event."
+          : "Season pass verification failed.";
+    }
+
+    return verification.status === 'VALID' 
+      ? "Ticket verified successfully!"
+      : verification.status === 'ALREADY_USED'
+        ? "This ticket has already been used."
+        : "Ticket verification failed.";
   };
 
   const getStatusBadge = (status?: string) => {
@@ -347,6 +341,12 @@ const QrScanner = () => {
           </Badge>
         );
     }
+  };
+
+  // Helper to check if ticket is a season pass
+  const isSeasonPass = (ticketType: string | undefined): boolean => {
+    if (!ticketType) return false;
+    return ticketType.toLowerCase().includes('season');
   };
 
   const handleAllowEntry = async () => {
