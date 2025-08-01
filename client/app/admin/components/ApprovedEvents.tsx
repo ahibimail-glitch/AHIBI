@@ -191,6 +191,14 @@ export default function ApprovedEvents() {
 
   const handleEventInputChange = (field: string, value: any) => {
     if (editingEvent) {
+      if (field === 'startDate' || field === 'endDate') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          setEditingEvent({ ...editingEvent, [field]: date.toISOString() });
+        }
+        return;
+      }
+
       const keys = field.split('.');
       if (keys.length > 1) {
         setEditingEvent(prev => {
@@ -497,4 +505,3 @@ export default function ApprovedEvents() {
     </>
   );
 }
-
