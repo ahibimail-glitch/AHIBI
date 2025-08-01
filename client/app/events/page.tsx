@@ -130,11 +130,17 @@ const EventCard: React.FC<EventCardProps> = ({ event, isPastEvent = false }) => 
           <span className="text-sm font-medium">
             Starting from {getLowestPrice(event.ticketTypes)}
           </span>
-          <Button asChild size="sm">
-            <Link href={event._id === "6888f3a7a71cf7d3b5b55bed" ? "/events/bgmi" : `/events/${event.slug || event._id}`}>
+          {isPastEvent ? (
+            <Button size="sm" disabled>
               View Details
-            </Link>
-          </Button>
+            </Button>
+          ) : (
+            <Button asChild size="sm">
+              <Link href={event._id === "6888f3a7a71cf7d3b5b55bed" ? "/events/bgmi" : `/events/${event.slug || event._id}`}>
+                View Details
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
     </CardContent>
