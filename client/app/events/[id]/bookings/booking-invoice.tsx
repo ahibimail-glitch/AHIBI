@@ -283,7 +283,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                         <div className="text-center mb-4">
                             <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
                             <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                                {booking.ticketType?.name || "Season Pass"}
+                                {booking.ticketType }
                             </h2>
                         </div>
 

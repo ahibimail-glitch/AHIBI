@@ -2,6 +2,10 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
+const User = require('../models/User');
+const smsService = require('../services/smsService');
+const QRCode = require('qrcode'); // Import QRCode library
+const emailService = require('../services/emailService');
 
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
@@ -126,6 +130,96 @@ exports.verifyPayment = async (req, res) => {
     const updatedEvent = await Event.findById(event._id);
     if (updatedEvent) {
       await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
+    }
+
+    // Send booking confirmation SMS and email
+    try {
+      console.log('[Payment] Starting ticket notification process');
+      
+      // Generate QR code for the ticket
+      const bookingData = JSON.stringify({
+        bookingId: newBooking._id,
+        eventId: event._id,
+        ticketType: ticketType,
+        quantity: quantity
+      });
+      
+      // Generate QR code as data URL
+      const qrCodeDataUrl = await QRCode.toDataURL(bookingData, {
+        errorCorrectionLevel: 'H',
+        margin: 2,
+        color: {
+          dark: '#4a154b',  // Dots color
+          light: '#ffffff'  // Background color
+        }
+      });
+      console.log('[Payment] QR code generated successfully');
+      
+      // Send ticket via SMS if phone number is available
+      if (user.phone) {
+        console.log('[Payment] Preparing to send SMS to:', user.phone);
+        
+        // Format date for SMS
+        const eventDate = updatedEvent.startDate ? 
+          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+          }) : 'TBA';
+        
+        // Prepare ticket details for SMS
+        const ticketDetails = {
+          bookingId: newBooking._id,
+          eventName: updatedEvent.title,
+          ticketType: ticketType,
+          eventDate: eventDate
+        };
+        
+        console.log('[Payment] Sending ticket details via SMS:', ticketDetails);
+        
+        // Send booking confirmation SMS
+        await smsService.sendBookingConfirmation(
+          user.phone, 
+          updatedEvent.title, 
+          newBooking._id.toString()
+        );
+        
+        // Also send detailed ticket SMS
+        try {
+          const smsResult = await smsService.sendTicket(user.phone, ticketDetails);
+          console.log('[Payment] SMS result:', smsResult);
+        } catch (smsError) {
+          console.error('[Payment] SMS sending error:', smsError);
+        }
+      } else {
+        console.log('[Payment] Cannot send SMS - no valid phone number found');
+      }
+      
+      // Send ticket via email with QR code if email is available
+      if (user.email) {
+        console.log('[Payment] Sending ticket via email to:', user.email);
+        try {
+          await emailService.sendTicketEmail(
+            user.email,
+            user.name || 'Customer',
+            {
+              eventName: updatedEvent.title,
+              eventDate: updatedEvent.startDate ? new Date(updatedEvent.startDate).toLocaleDateString() : 'TBA',
+              eventTime: updatedEvent.startDate ? new Date(updatedEvent.startDate).toLocaleTimeString() : 'TBA',
+              ticketType: ticketType,
+              quantity: quantity,
+              bookingId: newBooking._id,
+              qrCode: qrCodeDataUrl
+            }
+          );
+          console.log('[Payment] Ticket email sent successfully');
+        } catch (emailError) {
+          console.error('[Payment] Failed to send ticket email:', emailError);
+        }
+      }
+    } catch (notificationError) {
+      console.error('[Payment] Error sending booking notifications:', notificationError);
+      // Don't fail the request if notifications fail
     }
 
     res.status(201).json({

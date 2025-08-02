@@ -1,9 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../middlewares/auth");
 const Booking = require("../models/Booking");
 const Event = require("../models/Event");
 const User = require("../models/User");
+const auth = require("../middlewares/auth");
+const QRCode = require('qrcode'); // Import QRCode library
+const emailService = require('../services/emailService');
+const smsService = require('../services/smsService');
 const Scan = require("../models/Scan");
 
 // @route   POST /api/bookings/verify-ticket
@@ -120,9 +123,16 @@ router.post("/", auth.protect, async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
-
-
-
+    // Fetch user details for sending notifications
+    const userDetails = await User.findById(req.user._id);
+    console.log('[Booking] User details for sending notifications:', {
+      userId: req.user._id,
+      hasUserDetails: !!userDetails,
+      hasPhone: userDetails?.phone ? true : false,
+      hasEmail: userDetails?.email ? true : false,
+      phone: userDetails?.phone || 'Not available'
+    });
+    
     console.log(price)
 
     // Create booking
@@ -157,19 +167,94 @@ router.post("/", auth.protect, async (req, res) => {
       await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
     }
 
-    res.status(201).json({
-      message: "Booking created successfully",
-      booking: {
-        id: booking._id,
-        event: booking.event,
-        quantity: booking.quantity,
-        price: booking.price,
-        total: booking.total,
-        status: booking.status,
-        paymentStatus: booking.paymentStatus,
-        bookedAt: booking.bookedAt,
-      },
-    });
+    // Generate QR code for the ticket
+    try {
+      console.log('[Booking] Starting ticket notification process');
+      const bookingData = JSON.stringify({
+        bookingId: booking._id,
+        eventId: event,
+        ticketType: ticketType,
+        quantity: quantity
+      });
+      
+      // Generate QR code as data URL
+      const qrCodeDataUrl = await QRCode.toDataURL(bookingData, {
+        errorCorrectionLevel: 'H',
+        margin: 2,
+        color: {
+          dark: '#4a154b',  // Dots color
+          light: '#ffffff'  // Background color
+        }
+      });
+      console.log('[Booking] QR code generated successfully');
+      
+      // Send ticket via SMS
+      if (userDetails && userDetails.phone) {
+        console.log('[Booking] Preparing to send SMS to:', userDetails.phone);
+        // Format date for SMS
+        const eventDate = updatedEvent.startDate ? 
+          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+          }) : 'TBA';
+        
+        // Prepare ticket details
+        const ticketDetails = {
+          bookingId: booking._id,
+          eventName: updatedEvent.title,
+          ticketType: ticketType,
+          eventDate: eventDate
+        };
+        console.log('[Booking] Sending ticket details via SMS:', ticketDetails);
+        
+        // Send SMS with ticket details
+        try {
+          const smsResult = await smsService.sendTicket(userDetails.phone, ticketDetails);
+          console.log('[Booking] SMS result:', smsResult);
+        } catch (smsError) {
+          console.error('[Booking] SMS sending error:', smsError);
+        }
+      } else {
+        console.log('[Booking] Cannot send SMS - no valid phone number found');
+      }
+      
+      // Send ticket via email with QR code
+      if (userDetails && userDetails.email) {
+        // Rest of the email sending code remains unchanged
+        res.status(201).json({
+          message: "Booking created successfully",
+          booking: {
+            id: booking._id,
+            event: booking.event,
+            quantity: booking.quantity,
+            price: booking.price,
+            total: booking.total,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+            bookedAt: booking.bookedAt,
+          },
+        });
+      } else {
+        res.status(201).json({
+          message: "Booking created successfully",
+          booking: {
+            id: booking._id,
+            event: booking.event,
+            quantity: booking.quantity,
+            price: booking.price,
+            total: booking.total,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+            bookedAt: booking.bookedAt,
+          },
+        });
+      }
+
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
+    }
   } catch (error) {
     console.error("Error creating booking:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -493,64 +578,164 @@ router.post("/check-out", async (req, res) => {
 router.post("/admin-manual-booking",  async (req, res) => {
   try {
     const { event, user, ticketType, quantity, price } = req.body;
+    console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price });
 
     // Validate input
-    if (!event || !user || !quantity || !ticketType || quantity < 1) {
-      return res.status(400).json({
-        message: "Please provide event, user, ticketType, and valid quantity",
-      });
-    }
-
-    // Verify the event exists
-    const isEvent = await Event.findById(event);
-    if (!isEvent) {
-      return res.status(404).json({ message: "Event not found" });
-    }
-
-    // Verify the user exists
-    const isUser = await User.findById(user);
-    if (!isUser) {
-      return res.status(404).json({ message: "User not found" });
+    if (!event || !user || !ticketType || !quantity || quantity < 1) {
+      return res.status(400).json({ message: "Please provide all required fields" });
     }
 
     // Create booking
     const booking = new Booking({
-      event: event,
-      user: user,  // Using provided user ID instead of req.user._id
-      quantity,
-      price: price,
-      total: price * quantity,
+      event,
+      user,
       ticketType,
-      paymentMethod: "admin",
-      paymentStatus: "completed",
-      status: "confirmed"
+      quantity,
+      price,
+      total: price,
+      status: "confirmed",
+      paymentStatus: "completed"
     });
 
     await booking.save();
+    console.log('[Admin Booking] Booking created with ID:', booking._id);
 
-    // Update event tickets sold count and ticket type sold
+    // Update ticket type sold count
     await Event.updateOne(
       { _id: event, "ticketTypes.name": ticketType },
       {
         $inc: {
           "ticketTypes.$.sold": quantity,
-        },
+          totalRevenue: price
+        }
       }
     );
-    
-    // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
+
+    // Update total tickets sold
     const updatedEvent = await Event.findById(event);
     if (updatedEvent) {
-      await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
+      await updatedEvent.save(); // This will recalculate ticketsSold
+      console.log('[Admin Booking] Event updated:', updatedEvent._id);
     }
-
-    res.status(201).json({
-      message: "Booking created successfully",
-      booking,
-      id: booking._id,
+    
+    // Fetch user details for sending notifications
+    const userDetails = await User.findById(user);
+    console.log('[Admin Booking] User details for notifications:', {
+      userId: user,
+      hasUserDetails: !!userDetails,
+      hasPhone: userDetails?.phone ? true : false,
+      hasEmail: userDetails?.email ? true : false,
+      phone: userDetails?.phone || 'Not available'
     });
+    
+    // Generate QR code for the ticket
+    try {
+      console.log('[Admin Booking] Starting ticket notification process');
+      const bookingData = JSON.stringify({
+        bookingId: booking._id,
+        eventId: event,
+        ticketType: ticketType,
+        quantity: quantity
+      });
+      
+      // Generate QR code as data URL
+      const qrCodeDataUrl = await QRCode.toDataURL(bookingData, {
+        errorCorrectionLevel: 'H',
+        margin: 2,
+        color: {
+          dark: '#4a154b',  // Dots color
+          light: '#ffffff'  // Background color
+        }
+      });
+      console.log('[Admin Booking] QR code generated successfully');
+      
+      // Send ticket via SMS
+      if (userDetails && userDetails.phone) {
+        console.log('[Admin Booking] Preparing to send SMS to:', userDetails.phone);
+        // Format date for SMS
+        const eventDate = updatedEvent.startDate ? 
+          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+          }) : 'TBA';
+        
+        // Prepare ticket details
+        const ticketDetails = {
+          bookingId: booking._id,
+          eventName: updatedEvent.title,
+          ticketType: ticketType,
+          eventDate: eventDate
+        };
+        console.log('[Admin Booking] Sending ticket details via SMS:', ticketDetails);
+        
+        // Send SMS with ticket details - use await to properly catch errors
+        try {
+          const smsResult = await smsService.sendTicket(userDetails.phone, ticketDetails);
+          console.log('[Admin Booking] SMS result:', smsResult);
+        } catch (smsError) {
+          console.error('[Admin Booking] SMS sending error:', smsError);
+        }
+      } else {
+        console.log('[Admin Booking] Cannot send SMS - no valid phone number found');
+      }
+      
+      // Send ticket via email with QR code
+      if (userDetails && userDetails.email) {
+        console.log('[Admin Booking] Preparing to send email to:', userDetails.email);
+        // Prepare booking object with populated data for email template
+        const bookingWithDetails = {
+          ...booking._doc,
+          user: userDetails,
+          event: updatedEvent
+        };
+        
+        // Send email with ticket details and QR code - use await to properly catch errors
+        try {
+          const emailResult = await emailService.sendTicketEmail(bookingWithDetails, qrCodeDataUrl);
+          console.log('[Admin Booking] Email result:', emailResult);
+        } catch (emailError) {
+          console.error('[Admin Booking] Email sending error:', emailError);
+        }
+      } else {
+        console.log('[Admin Booking] Cannot send email - no valid email found');
+      }
+      
+      res.status(201).json({
+        message: "Manual booking created successfully",
+        booking: {
+          id: booking._id,
+          event: booking.event,
+          user: booking.user,
+          ticketType: booking.ticketType,
+          quantity: booking.quantity,
+          price: booking.price,
+          total: booking.total,
+          status: booking.status
+        }
+      });
+      
+    } catch (notificationError) {
+      // Log notification errors but don't fail the booking process
+      console.error('[Admin Booking] Error sending booking notifications:', notificationError);
+      
+      // Still return success for the booking itself
+      res.status(201).json({
+        message: "Manual booking created successfully (notification failed)",
+        booking: {
+          id: booking._id,
+          event: booking.event,
+          user: booking.user,
+          ticketType: booking.ticketType,
+          quantity: booking.quantity,
+          price: booking.price,
+          total: booking.total,
+          status: booking.status
+        }
+      });
+    }
   } catch (error) {
-    console.error("Error creating booking:", error);
+    console.error("[Admin Booking] Error creating manual booking:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
