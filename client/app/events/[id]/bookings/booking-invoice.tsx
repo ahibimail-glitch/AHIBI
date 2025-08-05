@@ -12,9 +12,11 @@ interface UserProfile {
 
 interface ModernBookingTicketProps {
     bookingId: string;
+    ticketIndex?: number;
+    totalTickets?: number;
 }
 
-const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) => {
+const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ticketIndex = 1, totalTickets = 1 }) => {
     const [booking, setBooking] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>("");
@@ -166,7 +168,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
             });
 
             // Add footer text
-            const footerText = `Ticket ID: ${booking?._id || 'N/A'}`;
+            const footerText = `Ticket ID: ${booking?._id || 'N/A'}_ticket_${booking?.ticketIndex || ticketIndex}`;
             const fontSize = 8;
             const textWidth = pdf.getStringUnitWidth(footerText) * fontSize / pdf.internal.scaleFactor;
             const textX = (pageWidth - textWidth) / 2;
@@ -177,7 +179,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
 
             // Generate a filename with event name and booking ID
             const eventName = booking?.event?.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'ticket';
-            const fileName = `${eventName}_ticket_${booking?._id?.slice(-6) || Date.now()}.pdf`;
+            const fileName = `${eventName}_ticket_${booking?.ticketIndex || ticketIndex}_of_${booking?.totalTickets || totalTickets}_${booking?._id?.slice(-6) || Date.now()}.pdf`;
 
             // Save the PDF
             pdf.save(fileName);
@@ -235,8 +237,12 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                 phone: booking.user?.phone || user?.phone,
                 event: booking.event?.title,
                 ticketType: booking.ticketType,
-                quantity: booking.quantity,
-                total: formatCurrency(booking.total)
+                ticketIndex: booking.ticketIndex || ticketIndex,
+                totalTickets: booking.totalTickets || totalTickets,
+                pricePerTicket: formatCurrency(booking.price),
+                total: formatCurrency(booking.total),
+                // Add a unique identifier for each ticket
+                ticketId: `${booking._id}_ticket_${booking.ticketIndex || ticketIndex}`
             };
             rawData = JSON.stringify(rawDataObject);
 
@@ -283,8 +289,15 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                         <div className="text-center mb-4">
                             <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
                             <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                                {booking.ticketType }
+                                {booking.ticketType}
                             </h2>
+                            {(booking.totalTickets || totalTickets) > 1 && (
+                                <div className="mt-2">
+                                    <p className="text-sm text-indigo-600 font-medium">
+                                        Ticket {booking.ticketIndex || ticketIndex} of {booking.totalTickets || totalTickets}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 border-t border-blue-200 pt-4">
@@ -319,7 +332,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                     {/* Total Amount & Payment Details */}
                     <div className="mb-6">
                         <div className="flex justify-between items-center mb-3">
-                            <span className="text-lg font-bold text-gray-900">Total Amount</span>
+                            <span className="text-lg font-bold text-gray-900">Ticket Price</span>
                             <span className="text-2xl font-bold text-green-600">{formatCurrency(booking.price)}</span>
                         </div>
                         {booking.payment && (
@@ -352,11 +365,16 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId }) 
                                     <p className="text-sm font-medium text-blue-700">Scan at {booking.event?.location?.address || "Event Location"} for Entry</p>
                                     {/* Improved Booking Code Display */}
                                     <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
-                                        <p className="text-xs text-gray-500">Booking Id</p>
+                                        <p className="text-xs text-gray-500">Ticket ID</p>
                                         <p className="font-mono text-sm font-bold text-gray-800 tracking-wider">
-                                            {booking._id}
+                                            {booking._id}_ticket_{booking.ticketIndex || ticketIndex}
                                         </p>
                                     </div>
+                                    {(booking.totalTickets || totalTickets) > 1 && (
+                                        <div className="mt-2 text-xs text-gray-500">
+                                            Ticket {booking.ticketIndex || ticketIndex} of {booking.totalTickets || totalTickets}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ) : (

@@ -193,8 +193,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [selectedTickets, setSelectedTickets] = useState<Map<string, { ticket: TicketType; quantity: number }>>(new Map());
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -224,16 +223,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isBooking, setIsBooking] = useState(false);
 
   const handleBooking = async () => {
-    if (!selectedTicket) {
-      toast.error("Please select a ticket type");
+    if (selectedTickets.size === 0) {
+      toast.error("Please select at least one ticket type");
       return;
     }
     if (!event || !event._id) {
       toast.error("Event information is missing");
-      return;
-    }
-    if (!quantity || quantity < 1) {
-      toast.error("Please select a valid quantity");
       return;
     }
 
@@ -253,7 +248,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         throw new Error("Please log in to book tickets");
       }
 
-      const totalAmount = selectedTicket.price * quantity;
+      const totalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => {
+        return sum + (item.ticket.price * item.quantity);
+      }, 0);
 
       // 1. Create Order
       const orderResponse = await fetch(
@@ -298,9 +295,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               bookingDetails: {
                 event: event,
                 user: user,
-                quantity: quantity,
-                price: selectedTicket.price,
-                ticketType: selectedTicket.name,
+                tickets: Array.from(selectedTickets.values()).map(item => ({
+                  ticketType: item.ticket.name,
+                  quantity: item.quantity,
+                  price: item.ticket.price,
+                })),
               },
             };
 
@@ -405,8 +404,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
         if (isMounted) {
           setEvent(data);
+          // Initialize selectedTickets with all ticket types
           if (data.ticketTypes && data.ticketTypes.length > 0) {
-            setSelectedTicket(data.ticketTypes[0]);
+            data.ticketTypes.forEach((ticket: TicketType) => {
+              setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: 1 }));
+            });
           }
         }
       } catch (err) {
@@ -644,13 +646,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <div className="space-y-8">
             {/* Tickets */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold">Tickets</h2>
-                <Badge variant="outline" className="px-3 py-1">
-                  {event.ticketTypes?.reduce((acc, t) => acc + (t.quantity - t.sold), 0) || 0} tickets remaining
-                </Badge>
-              </div>
-
               {/* Terms and Conditions and Prohibited Items buttons side by side on desktop, stacked on mobile */}
               {event.title.includes("Dr. T Ao Trophy") && (
                 <div className="flex flex-col md:flex-row gap-3 mb-6">
@@ -789,7 +784,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">
-                  {/* Group tickets by category/price */}
+                  {/* Ticket Selection Header */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Select Tickets</h3>
+                    <Badge variant="outline" className="px-3 py-1">
+                      {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} tickets remaining
+                    </Badge>
+                  </div>
+
+                  {/* Ticket Types */}
                   {event.ticketTypes.map((ticket) => {
                     // Calculate availability percentage
                     const availabilityPercentage = Math.max(
@@ -800,17 +803,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     // Determine status badge
                     const isSoldOut = ticket.quantity <= ticket.sold;
                     const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                    const selectedItem = selectedTickets.get(ticket._id);
+                    const quantity = selectedItem?.quantity || 0;
 
                     return (
                       <Card
                         key={ticket._id}
-                        className={`border ${selectedTicket?._id === ticket._id ? 'border-primary border-2' : 'border-border'} overflow-hidden transition-all duration-200 hover:shadow-md`}
+                        className={`border ${quantity > 0 ? 'border-primary border-2' : 'border-border'} overflow-hidden transition-all duration-200 hover:shadow-md`}
                       >
                         <CardHeader className="pb-2">
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-md ${isSoldOut ? 'bg-muted' : 'bg-primary/10'}`}>
-                                <TicketIcon className={`h-5 w-5 ${isSoldOut ? 'text-muted-foreground' : 'text-primary'}`} />
+                              <div className={`p-2 rounded-md ${isSoldOut ? 'bg-muted' : quantity > 0 ? 'bg-primary/10' : 'bg-muted/50'}`}>
+                                <TicketIcon className={`h-5 w-5 ${isSoldOut ? 'text-muted-foreground' : quantity > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
                               </div>
                               <div>
                                 <CardTitle className="text-lg">{ticket.name}</CardTitle>
@@ -822,6 +827,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 {isLimited && !isSoldOut && (
                                   <Badge variant="outline" className="mt-1 bg-amber-50 text-amber-600 border-amber-200">
                                     Limited Availability
+                                  </Badge>
+                                )}
+                                {quantity > 0 && (
+                                  <Badge variant="default" className="mt-1 bg-primary text-primary-foreground">
+                                    {quantity} selected
                                   </Badge>
                                 )}
                               </div>
@@ -857,9 +867,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           {/* Availability indicator */}
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-xs mb-1.5">
-                              {/* <span className="text-muted-foreground">
-                                {ticket.sold} of {ticket.quantity} tickets sold
-                              </span> */}
                               <span className={`font-medium ${isSoldOut ? 'text-destructive' : isLimited ? 'text-amber-600' : 'text-primary'}`}>
                                 {isSoldOut ? 'Sold Out' : `${ticket.quantity - ticket.sold} remaining`}
                               </span>
@@ -871,34 +878,113 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               ></div>
                             </div>
                           </div>
-                        </CardContent>
 
-                        <CardFooter className="pt-2 flex justify-end">
-                          <Button
-                            variant={selectedTicket?._id === ticket._id ? "default" : "outline"}
-                            onClick={() => {
-                              if (selectedTicket?._id === ticket._id) {
-                                handleBooking();
-                              } else {
-                                setSelectedTicket(ticket);
-                              }
-                            }}
-                            className={`${isSoldOut ? 'opacity-50' : ''}`}
-                            disabled={isSoldOut || isBooking}
-                            size="sm"
-                          >
-                            {isBooking
-                              ? "Processing..."
-                              : isSoldOut
-                                ? "Sold Out"
-                                : selectedTicket?._id === ticket._id
-                                  ? "Confirm Booking"
-                                  : "Book Now"}
-                          </Button>
-                        </CardFooter>
+                          {/* Quantity Selector */}
+                          {!isSoldOut && (
+                            <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium">Quantity</span>
+                                <span className="text-sm text-muted-foreground">
+                                  ₹{ticket.price} × {quantity} = ₹{ticket.price * quantity}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-center gap-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (quantity > 0) {
+                                      const newQuantity = quantity - 1;
+                                      if (newQuantity === 0) {
+                                        setSelectedTickets(prev => {
+                                          const newMap = new Map(prev);
+                                          newMap.delete(ticket._id);
+                                          return newMap;
+                                        });
+                                      } else {
+                                        setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                      }
+                                    }
+                                  }}
+                                  disabled={quantity <= 0}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <span className="text-lg font-semibold min-w-[2rem] text-center">
+                                  {quantity}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newQuantity = quantity + 1;
+                                    if (newQuantity <= ticket.quantity - ticket.sold) {
+                                      setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                    }
+                                  }}
+                                  disabled={quantity >= ticket.quantity - ticket.sold}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="text-xs text-muted-foreground text-center mt-2">
+                                Max {ticket.quantity - ticket.sold} tickets per booking
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
                       </Card>
                     );
                   })}
+
+                  {/* Booking Summary */}
+                  {selectedTickets.size > 0 && (
+                    <Card className="border-primary border-2">
+                      <CardHeader>
+                        <CardTitle className="text-lg">Booking Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {Array.from(selectedTickets.values()).map((item) => (
+                            <div key={item.ticket._id} className="flex justify-between items-center">
+                              <div>
+                                <span className="font-medium">{item.ticket.name}</span>
+                                <span className="text-sm text-muted-foreground ml-2">× {item.quantity}</span>
+                              </div>
+                              <span className="font-semibold">₹{item.ticket.price * item.quantity}</span>
+                            </div>
+                          ))}
+                          <div className="border-t pt-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold">Total</span>
+                              <span className="text-2xl font-bold text-primary">
+                                ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter>
+                        <Button
+                          className="w-full"
+                          onClick={handleBooking}
+                          disabled={isBooking}
+                          size="lg"
+                        >
+                          {isBooking ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            `Book ${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}`
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  )}
                 </div>
               ) : (
                 <div className="py-8 text-center">

@@ -417,6 +417,52 @@ router.post("/mark-entry", auth.protect, auth.authorize('admin'), async (req, re
   }
 });
 
+// @route   GET /api/bookings/related/:id
+// @desc    Get all related bookings for a parent booking
+// @access  Private
+router.get("/related/:id", auth.protect, async (req, res) => {
+  try {
+    const parentBooking = await Booking.findById(req.params.id);
+
+    if (!parentBooking) {
+      return res.status(404).json({ message: "Parent booking not found" });
+    }
+
+    // Ensure the user owns the booking or is an admin
+    if (parentBooking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Not authorized to view this booking" });
+    }
+
+    // Find all related bookings (same parent booking ID or this booking if it's the parent)
+    let relatedBookings;
+    if (parentBooking.parentBookingId) {
+      // This is a child booking, find all siblings and parent
+      relatedBookings = await Booking.find({
+        $or: [
+          { _id: parentBooking.parentBookingId },
+          { parentBookingId: parentBooking.parentBookingId }
+        ]
+      }).populate('event').populate('user', 'name email phone');
+    } else {
+      // This is a parent booking, find all children
+      relatedBookings = await Booking.find({
+        $or: [
+          { _id: parentBooking._id },
+          { parentBookingId: parentBooking._id }
+        ]
+      }).populate('event').populate('user', 'name email phone');
+    }
+
+    // Sort by ticketIndex
+    relatedBookings.sort((a, b) => (a.ticketIndex || 1) - (b.ticketIndex || 1));
+
+    res.json({ success: true, data: relatedBookings });
+  } catch (error) {
+    console.error("Error fetching related bookings:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // @route   GET /api/bookings/:id
 // @desc    Get a single booking by ID
 // @access  Private

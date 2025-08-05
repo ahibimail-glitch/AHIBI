@@ -85,7 +85,7 @@ const smsService = {
       // For debugging, let's try a simpler variables string and a different approach
       // Create a URL to the booking
       console.log(ticketDetails);
-      const variablesValues = `${ticketDetails.eventName}|${ticketDetails.ticketType}|${ticketDetails.bookingId}|`;
+      const variablesValues = `${ticketDetails.eventName}|${ticketDetails.ticketType}|${ticketDetails.bookingId}|${ticketDetails.quantity || 1}|`;
 
       console.log('[SMS Service] Preparing SMS with variables:', variablesValues);
 
@@ -125,9 +125,11 @@ const smsService = {
    * @param {String} phone - User's phone number
    * @param {String} eventName - Name of the event
    * @param {String} bookingId - Booking ID
+   * @param {String} ticketType - Type of ticket (optional)
+   * @param {Number} quantity - Number of tickets (optional)
    * @returns {Promise<Object>} - Response from Fast2SMS API
    */
-  sendBookingConfirmation: async (phone, eventName, bookingId) => {
+  sendBookingConfirmation: async (phone, eventName, bookingId, ticketType = 'Standard', quantity = 1) => {
     try {
       console.log(`[SMS Service] Sending booking confirmation SMS to ${phone}`);
 
@@ -146,7 +148,7 @@ const smsService = {
       const senderId = '600406';
 
       // Format the variables according to the provided DLT template
-      const variablesValues = `${eventName}|${ticketDetails.ticketType}|${ticketDetails.bookingId}|`;
+      const variablesValues = `${eventName}|${ticketType}|${bookingId}|${quantity}|`;
 
       console.log('[SMS Service] Sending booking confirmation with variables:', variablesValues);
 

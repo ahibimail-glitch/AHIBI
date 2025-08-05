@@ -53,6 +53,19 @@ const BookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+  // Ticket-specific fields for multiple ticket bookings
+  ticketIndex: {
+    type: Number,
+    default: 1
+  },
+  totalTickets: {
+    type: Number,
+    default: 1
+  },
+  parentBookingId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Booking'
+  },
   bookedAt: {
     type: Date,
     default: Date.now
