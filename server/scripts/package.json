@@ -1,0 +1,14 @@
+{
+  "name": "ahibi-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for AHIBI application",
+  "main": "exportMusicBookingUsers.js",
+  "scripts": {
+    "export-music-users": "node exportMusicBookingUsers.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.3.0",
+    "mongodb": "^4.13.0",
+    "dotenv": "^16.0.3"
+  }
+}
