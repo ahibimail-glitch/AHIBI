@@ -291,6 +291,17 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
                             <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
                                 {booking.ticketType}
                             </h2>
+                            <p className='text-sm text-[#00CED1] font-medium'>
+                                {(() => {
+                                    // Find the specific ticket type for this booking
+                                    const ticketType = booking.event?.ticketTypes?.find((t: any) => t.name === booking.ticketType);
+                                    if (ticketType?.benefits && ticketType.benefits.length > 0) {
+                                        // Display maximum 2 benefits
+                                        return ticketType.benefits.slice(0, 2).join('|| ');
+                                    }
+                                    return "";
+                                })()}
+                            </p>
                             {(booking.totalTickets || totalTickets) > 1 && (
                                 <div className="mt-2">
                                     <p className="text-sm text-indigo-600 font-medium">
