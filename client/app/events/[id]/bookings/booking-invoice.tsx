@@ -297,7 +297,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
                                     const ticketType = booking.event?.ticketTypes?.find((t: any) => t.name === booking.ticketType);
                                     if (ticketType?.benefits && ticketType.benefits.length > 0) {
                                         // Display maximum 2 benefits
-                                        return ticketType.benefits.slice(0, 2).join('|| ');
+                                        return ticketType.benefits.slice(0, 2).join(' || ');
                                     }
                                     return "";
                                 })()}
