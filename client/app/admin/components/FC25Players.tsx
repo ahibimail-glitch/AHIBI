@@ -117,7 +117,7 @@ export default function FC25Players() {
                   <th className="px-4 py-2 text-left">Gender</th>
                   <th className="px-4 py-2 text-left">Phone</th>
                   <th className="px-4 py-2 text-left">Controller</th>
-                  <th className="px-4 py-2 text-left">Status</th>
+                  {/* <th className="px-4 py-2 text-left">Status</th> */}
                   <th className="px-4 py-2 text-left">Registered</th>
                 </tr>
               </thead>
@@ -149,7 +149,7 @@ export default function FC25Players() {
                       <td className="px-4 py-2">{p.gender}</td>
                       <td className="px-4 py-2">{p.phone}</td>
                       <td className="px-4 py-2">{p.choice_of_controller}</td>
-                      <td className="px-4 py-2 capitalize">{p.registrationStatus || 'pending'}</td>
+                      {/* <td className="px-4 py-2 capitalize">{p.registrationStatus || 'pending'}</td> */}
                       <td className="px-4 py-2">{p.createdAt ? new Date(p.createdAt).toLocaleString() : '-'}</td>
                     </tr>
                   ))

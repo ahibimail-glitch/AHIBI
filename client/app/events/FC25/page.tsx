@@ -35,6 +35,7 @@ export default function FC25Registration() {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true)
   const [slots, setSlots] = useState<{ count: number; remaining: number; capacity: number; isOpen: boolean }>({ count: 0, remaining: 32, capacity: 32, isOpen: true })
   const [photoPreview, setPhotoPreview] = useState<string>("")
+  const [uploading, setUploading] = useState<boolean>(false)
 
   // Progress calculation
   useEffect(() => {
@@ -97,6 +98,7 @@ export default function FC25Registration() {
       }
 
       try {
+        setUploading(true)
         // Immediate local preview
         const localPreview = await createImagePreview(file)
         setPhotoPreview(localPreview)
@@ -130,6 +132,8 @@ export default function FC25Registration() {
           text: err?.message || 'Failed to upload photo',
           confirmButtonColor: "#f59e0b",
         })
+      } finally {
+        setUploading(false)
       }
     }
   }
@@ -527,15 +531,20 @@ export default function FC25Registration() {
                         onChange={handleFileUpload}
                         className="hidden"
                         id="photo-upload"
+                        disabled={uploading}
                         required
                       />
                       <label
                         htmlFor="photo-upload"
-                        className="flex items-center justify-center w-full p-6 border-2 border-dashed border-orange-400/50 rounded-lg bg-gray-900/40 hover:bg-gray-900/60 cursor-pointer transition-all group"
+                        className={`flex items-center justify-center w-full p-6 border-2 border-dashed border-orange-400/50 rounded-lg bg-gray-900/40 transition-all group ${uploading ? 'opacity-80 cursor-not-allowed' : 'hover:bg-gray-900/60 cursor-pointer'}`}
                       >
                         <div className="text-center">
-                          <Upload className="mx-auto h-8 w-8 text-orange-400 group-hover:text-orange-300 mb-2" />
-                          <span className="text-orange-200 font-medium">Click to upload photo</span>
+                          {uploading ? (
+                            <div className="mx-auto h-8 w-8 mb-2 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Upload className="mx-auto h-8 w-8 text-orange-400 group-hover:text-orange-300 mb-2" />
+                          )}
+                          <span className="text-orange-200 font-medium">{uploading ? 'Uploading...' : 'Click to upload photo'}</span>
                           <p className="text-xs text-gray-400 mt-1">Max 100MB • PNG, JPG, JPEG</p>
                         </div>
                       </label>
