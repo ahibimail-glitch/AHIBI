@@ -101,14 +101,16 @@ export default function FC25Registration() {
         const localPreview = await createImagePreview(file)
         setPhotoPreview(localPreview)
 
-        // Upload to Cloudinary via API route
+        // Upload to Cloudinary via backend API
         const result = await uploadFile(file)
-        const data = (result as any)?.data
-        const photoData = data?.photo as { url?: string; public_id?: string } | undefined
-        const url = photoData?.url
-        const publicId = photoData?.public_id
-
-        if (result.status === 'success' && url) {
+        if (
+          result.status === 'success' &&
+          result.data &&
+          result.data.photo &&
+          result.data.photo.url
+        ) {
+          const url = result.data.photo.url
+          const publicId = result.data.photo.public_id
           setFormData(prev => ({
             ...prev,
             photo: file,
@@ -125,7 +127,7 @@ export default function FC25Registration() {
         Swal.fire({
           icon: "error",
           title: "Upload failed",
-          text: err?.message || "Could not upload photo. Please try again.",
+          text: err?.message || 'Failed to upload photo',
           confirmButtonColor: "#f59e0b",
         })
       }
