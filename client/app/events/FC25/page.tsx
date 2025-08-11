@@ -103,11 +103,12 @@ export default function FC25Registration() {
 
         // Upload to Cloudinary via API route
         const result = await uploadFile(file)
-        const data = (result as any)?.data as { photo?: { url?: string; public_id?: string } } | undefined
-        const photoData = data?.photo
-        if (result.status === 'success' && photoData?.url) {
-          const url = photoData.url
-          const publicId = photoData.public_id
+        const data = (result as any)?.data
+        const photoData = data?.photo as { url?: string; public_id?: string } | undefined
+        const url = photoData?.url
+        const publicId = photoData?.public_id
+
+        if (result.status === 'success' && url) {
           setFormData(prev => ({
             ...prev,
             photo: file,
