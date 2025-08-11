@@ -41,6 +41,7 @@ import Analytics from "./components/Analytics";
 import SettingsComponent from "./components/Settings";
 import ApprovedEvents from "./components/ApprovedEvents";
 import HeroImages from "./components/HeroImages";
+import FC25Players from "./components/FC25Players";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -110,6 +111,8 @@ export default function AdminDashboard() {
     switch (activeView) {
       case "dashboard":
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
+      case "fc25-players":
+        return <FC25Players />;
       case "organizer-approvals":
         return <Organizers />;
       case "artist-approvals":
@@ -148,7 +151,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* --- Sidebar --- */}
-      <aside className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-10">
+      <aside className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-10 overflow-y-auto">
         <div className="flex items-center space-x-3 mb-6 px-2">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
             <Shield className="h-5 w-5 text-white" />
@@ -163,6 +166,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => setActiveView("bookings")} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => setActiveView("users")} />
+          <SidebarButton icon={ListOrdered} label="FC25 Players" active={activeView === "fc25-players"} onClick={() => setActiveView("fc25-players")} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
 

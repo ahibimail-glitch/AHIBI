@@ -19,6 +19,9 @@ router.put('/events/:id/approve', eventController.approveEvent);
 router.put('/events/:id/reject', eventController.rejectEvent);
 router.delete('/events/:id', eventController.deleteEvent);
 
+// FC25 participants
+router.get('/fc25/players', eventController.getFC25PlayersAdmin);
+
 // Dashboard statistics
 router.get('/dashboard', adminController.getDashboardStats);
 

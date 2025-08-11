@@ -290,7 +290,7 @@ const updateEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await Event.findById(eventId);
-    
+
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
     }
@@ -325,12 +325,12 @@ const updateEvent = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        errors: errors.array() 
+        errors: errors.array()
       });
     }
-    
+
     // Update event fields
     const {
       title,
@@ -388,7 +388,7 @@ const updateEvent = async (req, res) => {
       { $set: fieldsToUpdate },
       { new: true, runValidators: true }
     );
-    
+
     return ApiResponse.success(res, 'Event updated successfully', { event: updatedEvent });
   } catch (error) {
     console.error('Error updating event:', error);
@@ -415,81 +415,132 @@ const deleteEvent = async (req, res) => {
 };
 
 /**
- * @desc    Register a BGMI squad
- * @route   POST /api/events/bgmi/register
+ * @desc    Register a FC25 squad
+ * @route   POST /api/events/FC25/register
  * @access  Public
  */
-const registerBGMI = async (req, res) => {
+const registerFC25 = async (req, res) => {
   try {
     const {
-      squadName,
-      mainMembers,
-      squadLeaderPhone,
-      preferredContactMode,
-      substitutes,
-      mobileGamesInterested,
-      pcConsoleGamesInterested,
-      email
+      fullName,
+      gender,
+      phone,
+      choice_of_controller,
+      photo,
     } = req.body;
 
     // Validate required fields
-    if (!squadName || !mainMembers || !squadLeaderPhone || !preferredContactMode || !email) {
+    if (!fullName || !gender || !phone || !choice_of_controller || !photo) {
       return ApiResponse.error(res, 'Missing required fields', {}, 400);
     }
 
-    // Validate mainMembers (must have exactly 4)
-    if (!Array.isArray(mainMembers) || mainMembers.length !== 4) {
-      return ApiResponse.error(res, 'Exactly 4 main members are required', {}, 400);
-    }
-
-    // Validate each main member has ign and id
-    for (const member of mainMembers) {
-      if (!member.ign || !member.id) {
-        return ApiResponse.error(res, 'Each main member must have IGN and ID', {}, 400);
-      }
-    }
-
     // Validate phone number format (10 digits)
-    if (!/^[0-9]{10}$/.test(squadLeaderPhone)) {
+    if (!/^[0-9]{10}$/.test(phone)) {
       return ApiResponse.error(res, 'Phone number must be 10 digits', {}, 400);
     }
 
-    // Validate substitutes (maximum 3)
-    if (substitutes && Array.isArray(substitutes) && substitutes.length > 3) {
-      return ApiResponse.error(res, 'Maximum 3 substitutes allowed', {}, 400);
+    // Enforce max 32 registrations
+    const FC25Player = require('../models/FC25Player');
+    const currentCount = await FC25Player.countDocuments();
+    if (currentCount >= 32) {
+      return ApiResponse.error(res, 'Registration closed. All 32 slots are filled.', {}, 400);
     }
 
-    // Create new BGMI registration
-    const BGMI = require('../models/BGMI');
-    
-    // Filter out empty substitutes (where either ign or id is empty)
-    const validSubstitutes = substitutes.filter(sub => sub.ign && sub.id);
-    
-    const bgmiRegistration = new BGMI({
-      squadName,
-      mainMembers,
-      squadLeaderPhone,
-      preferredContactMode,
-      substitutes: validSubstitutes,
-      mobileGamesInterested: mobileGamesInterested || [],
-      pcConsoleGamesInterested: pcConsoleGamesInterested || [],
-      email
+    // Create new FC25 registration
+    const fc25Registration = new FC25Player({
+      fullName,
+      gender,
+      phone,
+      choice_of_controller,
+      photo,
     });
 
     // Save registration to database
-    await bgmiRegistration.save();
+    await fc25Registration.save();
 
-    return ApiResponse.success(res, 'BGMI squad registered successfully', { registration: bgmiRegistration }, 201);
+    return ApiResponse.success(res, 'FC25 player registered successfully', { registration: fc25Registration }, 201);
   } catch (error) {
-    console.error('Error registering BGMI squad:', error);
-    
+    console.error('Error registering FC25 player:', error);
+
+    // Handle duplicate phone error
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.phone) {
+      return ApiResponse.error(res, 'This phone number is already registered.', {}, 400);
+    }
+
     // Handle validation errors from Mongoose
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return ApiResponse.error(res, messages.join(', '), {}, 400);
     }
-    
-    return ApiResponse.serverError(res, 'Error registering BGMI squad', error);
+
+    return ApiResponse.serverError(res, 'Error registering FC25 player', error);
+  }
+};
+
+// Get FC25 registration slots/status
+// @route GET /api/events/FC25/slots
+// @access Public
+const getFC25Slots = async (req, res) => {
+  try {
+    const FC25Player = require('../models/FC25Player');
+    const count = await FC25Player.countDocuments();
+    const capacity = 32;
+    const remaining = Math.max(0, capacity - count);
+    const isOpen = count < capacity;
+    return ApiResponse.success(res, 'FC25 slots status', { count, remaining, capacity, isOpen });
+  } catch (error) {
+    console.error('Error fetching FC25 slots:', error);
+    return ApiResponse.serverError(res, 'Error fetching FC25 slots', error);
+  }
+};
+
+/**
+ * @desc    Admin: list FC25 registered players
+ * @route   GET /api/admin/fc25/players
+ * @access  Admin
+ */
+const getFC25PlayersAdmin = async (req, res) => {
+  try {
+    const FC25Player = require('../models/FC25Player');
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      sort = '-createdAt',
+    } = req.query;
+
+    const numericLimit = Math.min(parseInt(limit, 10) || 10, 100);
+    const numericPage = Math.max(parseInt(page, 10) || 1, 1);
+
+    const query = {};
+    if (search) {
+      const s = String(search).trim();
+      query.$or = [
+        { fullName: { $regex: s, $options: 'i' } },
+        { phone: { $regex: s } },
+        { choice_of_controller: { $regex: s, $options: 'i' } },
+      ];
+    }
+
+    const total = await FC25Player.countDocuments(query);
+    const players = await FC25Player.find(query)
+      .sort(sort)
+      .skip((numericPage - 1) * numericLimit)
+      .limit(numericLimit)
+      .lean();
+
+    return ApiResponse.success(res, 'FC25 players fetched', {
+      items: players,
+      pagination: {
+        page: numericPage,
+        limit: numericLimit,
+        total,
+        pages: Math.ceil(total / numericLimit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching FC25 players:', error);
+    return ApiResponse.serverError(res, 'Error fetching FC25 players', error);
   }
 };
 
@@ -503,5 +554,7 @@ module.exports = {
   rejectEvent,
   updateEvent,
   deleteEvent,
-  registerBGMI
+  registerFC25,
+  getFC25Slots,
+  getFC25PlayersAdmin
 };

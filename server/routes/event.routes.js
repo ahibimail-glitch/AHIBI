@@ -7,7 +7,8 @@ const router = express.Router();
 router.get('/', eventController.getPublicEvents);
 router.get('/:id', eventController.getPublicEventById);
 
-// BGMI Registration route
-router.post('/bgmi/register', eventController.registerBGMI);
+// FC25 Registration routes
+router.post('/FC25/register', eventController.registerFC25);
+router.get('/FC25/slots', eventController.getFC25Slots);
 
 module.exports = router;
