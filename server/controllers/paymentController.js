@@ -6,6 +6,7 @@ const User = require('../models/User');
 const smsService = require('../services/smsService');
 const QRCode = require('qrcode'); // Import QRCode library
 const emailService = require('../services/emailService');
+const PaymentTransaction = require('../models/PaymentTransaction');
 
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
@@ -88,6 +89,28 @@ exports.verifyPayment = async (req, res) => {
     if (digest !== razorpay_signature) {
       console.error('Invalid payment signature');
       return res.status(400).json({ success: false, message: 'Transaction not legit!' });
+    }
+
+    // Create or update a transaction record first
+    let tx = await PaymentTransaction.findOne({ orderId: razorpay_order_id, paymentId: razorpay_payment_id });
+    if (!tx) {
+      tx = new PaymentTransaction({
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id,
+        signature: razorpay_signature,
+        amount: Array.isArray(bookingDetails?.tickets) ? bookingDetails.tickets.reduce((s, t) => s + (t.price || 0) * (t.quantity || 0), 0) : undefined,
+        user: bookingDetails?.user?.id,
+        userSnapshot: {
+          id: bookingDetails?.user?.id,
+          name: bookingDetails?.user?.name,
+          email: bookingDetails?.user?.email,
+          phone: bookingDetails?.user?.phone,
+        },
+        event: bookingDetails?.event?._id,
+        bookingDetails,
+        status: 'processing',
+      });
+      await tx.save();
     }
 
     // Payment is verified, now create individual bookings for each ticket
@@ -237,6 +260,11 @@ exports.verifyPayment = async (req, res) => {
       // Don't fail the request if notifications fail
     }
 
+    // Mark transaction completed
+    tx.status = 'completed';
+    tx.bookingIds = bookingIds;
+    await tx.save();
+
     res.status(201).json({
       success: true,
       message: 'Bookings created successfully',
@@ -249,6 +277,34 @@ exports.verifyPayment = async (req, res) => {
 
   } catch (error) {
     console.error('Error verifying payment:', error);
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body || {};
+      if (razorpay_payment_id) {
+        await PaymentTransaction.findOneAndUpdate(
+          { orderId: razorpay_order_id, paymentId: razorpay_payment_id },
+          {
+            $set: {
+              signature: razorpay_signature,
+              bookingDetails: bookingDetails,
+              amount: Array.isArray(bookingDetails?.tickets) ? bookingDetails.tickets.reduce((s, t) => s + (t.price || 0) * (t.quantity || 0), 0) : undefined,
+              user: bookingDetails?.user?.id,
+              userSnapshot: bookingDetails?.user ? {
+                id: bookingDetails.user.id,
+                name: bookingDetails.user.name,
+                email: bookingDetails.user.email,
+                phone: bookingDetails.user.phone,
+              } : undefined,
+              event: bookingDetails?.event?._id,
+              status: 'paid_no_booking',
+              errorMessage: error.message,
+            }
+          },
+          { upsert: true }
+        );
+      }
+    } catch (txError) {
+      console.error('Error recording failed transaction state:', txError);
+    }
     res.status(500).send(error.message);
   }
 };

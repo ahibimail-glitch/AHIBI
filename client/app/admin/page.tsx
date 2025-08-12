@@ -42,6 +42,7 @@ import SettingsComponent from "./components/Settings";
 import ApprovedEvents from "./components/ApprovedEvents";
 import HeroImages from "./components/HeroImages";
 import FC25Players from "./components/FC25Players";
+import FailedPayments from "./components/FailedPayments";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -133,6 +134,8 @@ export default function AdminDashboard() {
         return <Analytics />;
       case "settings":
         return <SettingsComponent />;
+      case "failed-payments":
+        return <FailedPayments />;
       case "system":
         return <System />;
       case "hero-images":
@@ -169,6 +172,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={ListOrdered} label="FC25 Players" active={activeView === "fc25-players"} onClick={() => setActiveView("fc25-players")} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
+          <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>

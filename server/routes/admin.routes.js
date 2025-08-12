@@ -6,6 +6,7 @@ const { protect, authorize } = require('../middlewares/auth');
 const { validateEvent } = require('../middlewares/validation');
 const Booking = require('../models/Booking');
 const router = express.Router();
+const paymentTxController = require('../controllers/paymentTransactionController');
 
 // Protect all admin routes
 router.use(protect);
@@ -78,6 +79,10 @@ router.get("/bookings/all",  async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+// Payments: list and resolve paid but not booked
+router.get('/payments/paid-no-booking', paymentTxController.getPaidNoBooking);
+router.post('/payments/resolve/:id', paymentTxController.resolveTransaction);
 // Settings routes
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
