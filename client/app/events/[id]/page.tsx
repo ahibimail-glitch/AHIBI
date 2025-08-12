@@ -253,7 +253,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         return sum + (item.ticket.price * item.quantity);
       }, 0);
 
-      // 1. Create Order
+      // 1. Create Order (send bookingDetails so backend can recover via webhook if needed)
       const orderResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/create-order`,
         {
@@ -266,6 +266,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             amount: totalAmount,
             currency: "INR",
             receipt: `receipt_event_${event._id}`,
+            bookingDetails: {
+              event: event,
+              user: user,
+              tickets: Array.from(selectedTickets.values()).map(item => ({
+                ticketType: item.ticket.name,
+                quantity: item.quantity,
+                price: item.ticket.price,
+              })),
+            },
           }),
         }
       );

@@ -7,6 +7,7 @@ const smsService = require('../services/smsService');
 const QRCode = require('qrcode'); // Import QRCode library
 const emailService = require('../services/emailService');
 const PaymentTransaction = require('../models/PaymentTransaction');
+const PendingPaymentSession = require('../models/PendingPaymentSession');
 
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
@@ -29,18 +30,46 @@ exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
   console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Loaded' : 'Not Loaded');
   try {
-    const { amount, currency, receipt } = req.body;
+    const { amount, currency, receipt, bookingDetails } = req.body;
 
     const options = {
       amount: amount * 100, // amount in the smallest currency unit
       currency,
       receipt,
+      notes: {
+        userId: bookingDetails?.user?.id || '',
+        eventId: bookingDetails?.event?._id || '',
+        userName: bookingDetails?.user?.name || '',
+        userEmail: bookingDetails?.user?.email || '',
+        userPhone: bookingDetails?.user?.phone || '',
+        tickets: bookingDetails?.tickets ? JSON.stringify(bookingDetails.tickets) : '[]',
+      }
     };
 
     const order = await razorpay.orders.create(options);
 
     if (!order) {
       return res.status(500).send('Error creating Razorpay order');
+    }
+
+    // Store a pending session with booking details to recover later via webhook if needed
+    try {
+      await PendingPaymentSession.findOneAndUpdate(
+        { orderId: order.id },
+        {
+          $set: {
+            amount,
+            currency,
+            bookingDetails,
+            user: bookingDetails?.user?.id,
+            event: bookingDetails?.event?._id,
+            status: 'created'
+          }
+        },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error('Failed to persist pending payment session:', e);
     }
 
     res.status(200).json(order);
@@ -306,5 +335,84 @@ exports.verifyPayment = async (req, res) => {
       console.error('Error recording failed transaction state:', txError);
     }
     res.status(500).send(error.message);
+  }
+};
+
+// Razorpay webhook to catch payments where client verification failed
+exports.razorpayWebhook = async (req, res) => {
+  try {
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signature = req.headers['x-razorpay-signature'];
+    const body = req.body; // raw buffer because of express.raw
+
+    if (!secret) {
+      console.error('[Razorpay Webhook] Missing RAZORPAY_WEBHOOK_SECRET');
+      return res.status(500).send('Server webhook not configured');
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(body)
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      return res.status(400).send('Invalid signature');
+    }
+
+    let event;
+    try {
+      event = JSON.parse(body.toString('utf8'));
+    } catch (e) {
+      console.error('[Razorpay Webhook] Failed to parse JSON body');
+      return res.status(400).send('Bad request');
+    }
+    const eventType = event.event;
+    console.log('[Razorpay Webhook] Event received:', eventType);
+
+    if (eventType === 'payment.captured' || eventType === 'order.paid') {
+      const payment = event.payload.payment?.entity;
+      const order = event.payload.order?.entity;
+      const paymentId = payment?.id;
+      const orderId = payment?.order_id || order?.id;
+      console.log('[Razorpay Webhook] orderId:', orderId, 'paymentId:', paymentId);
+
+      // If we already have a completed tx, do nothing
+      const existing = await PaymentTransaction.findOne({ orderId, paymentId });
+      if (existing && (existing.status === 'completed' || existing.status === 'resolved')) {
+        return res.json({ status: 'ok' });
+      }
+
+      // Pull the pending session for booking details
+      const pending = await PendingPaymentSession.findOne({ orderId });
+      console.log('[Razorpay Webhook] Pending session found:', !!pending);
+
+      const upsertedTx = await PaymentTransaction.findOneAndUpdate(
+        { orderId, paymentId },
+        {
+          $setOnInsert: { createdAt: new Date() },
+          $set: {
+            amount: (payment?.amount || order?.amount || pending?.amount) ? Math.round((payment?.amount || order?.amount || pending?.amount) / 100) : undefined,
+            currency: payment?.currency || order?.currency || pending?.currency,
+            user: pending?.user,
+            event: pending?.event,
+            bookingDetails: pending?.bookingDetails,
+            status: 'paid_no_booking',
+          }
+        },
+        { upsert: true, new: true }
+      );
+      console.log('[Razorpay Webhook] Transaction upserted with status:', upsertedTx?.status);
+
+      // Mark pending as verified so we know the payment happened
+      if (pending) {
+        pending.status = 'verified';
+        await pending.save();
+      }
+    }
+
+    return res.json({ status: 'ok' });
+  } catch (err) {
+    console.error('Webhook error:', err);
+    return res.status(500).send('Server error');
   }
 };

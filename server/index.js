@@ -29,6 +29,7 @@ const heroImageRoutes = require('./routes/heroImageRoutes');
 
 // Create Express app
 const app = express();
+const paymentController = require('./controllers/paymentController');
 
 // Set up CORS with credentials support
 const allowedOrigins = [
@@ -63,6 +64,7 @@ app.use(cors(corsOptions));
 
 // Handle preflight requests
 app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
