@@ -51,7 +51,7 @@ exports.resolveTransaction = async (req, res) => {
 
     console.log('[Resolve Transaction] Transaction data:', JSON.stringify(tx, null, 2));
 
-    // Try to get booking details from multiple sources
+    // Extract user and event info from multiple sources
     let bookingDetails = tx.bookingDetails;
     let eventId = tx.event;
     let userInfo = tx.user;
@@ -118,13 +118,18 @@ exports.resolveTransaction = async (req, res) => {
 
     console.log('[Resolve Transaction] Using tickets:', JSON.stringify(tickets, null, 2));
 
-    const event = await Event.findById(eventId._id || eventId);
+    // Convert Buffer/ObjectId to proper string format for database queries
+    const eventIdStr = eventId.toString();
+    const userIdStr = userInfo.toString();
+    
+    console.log('[Resolve Transaction] Converted IDs - eventIdStr:', eventIdStr, 'userIdStr:', userIdStr);
+
+    const event = await Event.findById(eventIdStr);
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
-    const userId = userInfo.id || userInfo._id || tx.user;
-    const user = await User.findById(userId);
+    const user = await User.findById(userIdStr);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
