@@ -65,6 +65,17 @@ app.use(cors(corsOptions));
 // Handle preflight requests
 app.options('*', cors(corsOptions));
 
+// Mount Razorpay webhook BEFORE json parser to preserve raw body for signature verification
+app.post('/api/payments/webhook/razorpay', express.raw({ type: '*/*' }), (req, res, next) => {
+  // Store the raw body for the webhook controller
+  req.rawBody = req.body;
+  next();
+}, (req, res) => {
+  // Import the controller dynamically to avoid circular dependencies
+  const paymentController = require('./controllers/paymentController');
+  paymentController.razorpayWebhook(req, res);
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));

@@ -343,7 +343,7 @@ exports.razorpayWebhook = async (req, res) => {
   try {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     const signature = req.headers['x-razorpay-signature'];
-    const body = req.body; // raw buffer because of express.raw
+    const body = req.rawBody || req.body; // Use rawBody if available, fallback to body
 
     if (!secret) {
       console.error('[Razorpay Webhook] Missing RAZORPAY_WEBHOOK_SECRET');
@@ -356,6 +356,7 @@ exports.razorpayWebhook = async (req, res) => {
       .digest('hex');
 
     if (expectedSignature !== signature) {
+      console.error('[Razorpay Webhook] Invalid signature. Expected:', expectedSignature, 'Received:', signature);
       return res.status(400).send('Invalid signature');
     }
 
