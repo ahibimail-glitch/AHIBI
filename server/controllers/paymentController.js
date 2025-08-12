@@ -386,6 +386,35 @@ exports.razorpayWebhook = async (req, res) => {
       // Pull the pending session for booking details
       const pending = await PendingPaymentSession.findOne({ orderId });
       console.log('[Razorpay Webhook] Pending session found:', !!pending);
+      console.log('[Razorpay Webhook] Pending session data:', JSON.stringify(pending, null, 2));
+
+      // Extract user and event info from pending session or order notes
+      let userInfo = null;
+      let eventInfo = null;
+      let bookingDetails = null;
+
+      if (pending) {
+        userInfo = pending.user;
+        eventInfo = pending.event;
+        bookingDetails = pending.bookingDetails;
+      } else {
+        // Fallback: try to extract from order notes if pending session is missing
+        try {
+          const orderDetails = await razorpay.orders.fetch(orderId);
+          if (orderDetails.notes) {
+            console.log('[Razorpay Webhook] Order notes found:', orderDetails.notes);
+            // Parse user and event info from notes
+            if (orderDetails.notes.userId) {
+              userInfo = orderDetails.notes.userId;
+            }
+            if (orderDetails.notes.eventId) {
+              eventInfo = orderDetails.notes.eventId;
+            }
+          }
+        } catch (orderError) {
+          console.error('[Razorpay Webhook] Failed to fetch order details:', orderError);
+        }
+      }
 
       const upsertedTx = await PaymentTransaction.findOneAndUpdate(
         { orderId, paymentId },
@@ -394,9 +423,9 @@ exports.razorpayWebhook = async (req, res) => {
           $set: {
             amount: (payment?.amount || order?.amount || pending?.amount) ? Math.round((payment?.amount || order?.amount || pending?.amount) / 100) : undefined,
             currency: payment?.currency || order?.currency || pending?.currency,
-            user: pending?.user,
-            event: pending?.event,
-            bookingDetails: pending?.bookingDetails,
+            user: userInfo,
+            event: eventInfo,
+            bookingDetails: bookingDetails,
             status: 'paid_no_booking',
           }
         },

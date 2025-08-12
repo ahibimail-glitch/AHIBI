@@ -8,9 +8,27 @@ exports.getPaidNoBooking = async (req, res) => {
   try {
     const items = await PaymentTransaction.find({ status: 'paid_no_booking' })
       .populate('user', 'name email phone')
-      .populate('event', 'title startDate');
+      .populate('event', 'title startDate')
+      .sort({ createdAt: -1 });
 
-    res.json({ success: true, data: { items } });
+    // Process items to ensure we have user and event info
+    const processedItems = items.map(item => {
+      const processed = item.toObject();
+      
+      // If user population failed, try to get from userSnapshot or notes
+      if (!processed.user && processed.userSnapshot) {
+        processed.user = processed.userSnapshot;
+      }
+      
+      // If event population failed, try to get from notes or other sources
+      if (!processed.event && processed.bookingDetails?.event) {
+        processed.event = processed.bookingDetails.event;
+      }
+      
+      return processed;
+    });
+
+    res.json({ success: true, data: { items: processedItems } });
   } catch (error) {
     console.error('[Admin Payments] Error listing paid-no-booking:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });

@@ -116,6 +116,10 @@ export default function FailedPayments() {
                 )}
                 {items.map((item) => {
                   const u = item.user || item.userSnapshot || {};
+                  const eventTitle = item.event?.title || 
+                                   item.bookingDetails?.event?.title || 
+                                   (item.bookingDetails?.event ? 'Event ID: ' + item.bookingDetails.event._id : '-');
+                  
                   return (
                     <TableRow key={item._id}>
                       <TableCell className="font-mono text-xs">{item.paymentId || "-"}</TableCell>
@@ -130,7 +134,7 @@ export default function FailedPayments() {
                           <span className="text-xs text-gray-500">{u.phone || ""}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{item.event?.title || "-"}</TableCell>
+                      <TableCell>{eventTitle}</TableCell>
                       <TableCell>{new Date(item.createdAt).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{item.status.replace(/_/g, " ")}</Badge>
