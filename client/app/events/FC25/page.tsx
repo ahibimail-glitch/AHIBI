@@ -376,7 +376,7 @@ export default function FC25Registration() {
                   </p>
 
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-orange-200">
-                    <span className="font-semibold">📅 August 13th, 2025</span>
+                    <span className="font-semibold">📅 September 13th, 2025</span>
                     <span className="hidden sm:inline">•</span>
                     <span className="font-medium">📞 Contact: +917629857375</span>
                   </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -200,6 +200,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [bookingDetails, setBookingDetails] = useState<any | null>(null);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [prohibitedItemsModalOpen, setProhibitedItemsModalOpen] = useState(false);
+  const summaryRef = useRef<HTMLDivElement | null>(null);
 
   // Format date and time from ISO string
   const formatDateTime = (dateString: string) => {
@@ -404,12 +405,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
         if (isMounted) {
           setEvent(data);
-          // Initialize selectedTickets with all ticket types
-          if (data.ticketTypes && data.ticketTypes.length > 0) {
-            data.ticketTypes.forEach((ticket: TicketType) => {
-              setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: 1 }));
-            });
-          }
+          // Do not preselect tickets. User will choose quantities manually.
         }
       } catch (err) {
         console.error("Error fetching event:", err);
@@ -921,6 +917,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     const newQuantity = quantity + 1;
                                     if (newQuantity <= ticket.quantity - ticket.sold) {
                                       setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                      if (newQuantity === 1) {
+                                        setTimeout(() => {
+                                          summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }, 0);
+                                      }
                                     }
                                   }}
                                   disabled={quantity >= ticket.quantity - ticket.sold}
@@ -941,49 +942,51 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
                   {/* Booking Summary */}
                   {selectedTickets.size > 0 && (
-                    <Card className="border-primary border-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Booking Summary</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {Array.from(selectedTickets.values()).map((item) => (
-                            <div key={item.ticket._id} className="flex justify-between items-center">
-                              <div>
-                                <span className="font-medium">{item.ticket.name}</span>
-                                <span className="text-sm text-muted-foreground ml-2">× {item.quantity}</span>
+                    <div ref={summaryRef}>
+                      <Card className="border-primary border-2">
+                        <CardHeader>
+                          <CardTitle className="text-lg">Booking Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {Array.from(selectedTickets.values()).map((item) => (
+                              <div key={item.ticket._id} className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-medium">{item.ticket.name}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">× {item.quantity}</span>
+                                </div>
+                                <span className="font-semibold">₹{item.ticket.price * item.quantity}</span>
                               </div>
-                              <span className="font-semibold">₹{item.ticket.price * item.quantity}</span>
-                            </div>
-                          ))}
-                          <div className="border-t pt-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-lg font-bold">Total</span>
-                              <span className="text-2xl font-bold text-primary">
-                                ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0)}
-                              </span>
+                            ))}
+                            <div className="border-t pt-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-lg font-bold">Total</span>
+                                <span className="text-2xl font-bold text-primary">
+                                  ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0)}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button
-                          className="w-full"
-                          onClick={handleBooking}
-                          disabled={isBooking}
-                          size="lg"
-                        >
-                          {isBooking ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            `Book ${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}`
-                          )}
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                        </CardContent>
+                        <CardFooter>
+                          <Button
+                            className="w-full"
+                            onClick={handleBooking}
+                            disabled={isBooking}
+                            size="lg"
+                          >
+                            {isBooking ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              `Book ${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}`
+                            )}
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    </div>
                   )}
                 </div>
               ) : (
