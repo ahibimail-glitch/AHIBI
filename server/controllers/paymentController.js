@@ -28,7 +28,7 @@ try {
 
 exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
-  console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? 'Loaded' : 'Not Loaded');
+  console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
   try {
     const { amount, currency, receipt, bookingDetails } = req.body;
 
@@ -54,6 +54,9 @@ exports.createOrder = async (req, res) => {
 
     // Store a pending session with booking details to recover later via webhook if needed
     try {
+      console.log('[Create Order] Storing pending session for orderId:', order.id);
+      console.log('[Create Order] Booking details:', JSON.stringify(bookingDetails, null, 2));
+      
       await PendingPaymentSession.findOneAndUpdate(
         { orderId: order.id },
         {
@@ -68,6 +71,13 @@ exports.createOrder = async (req, res) => {
         },
         { upsert: true }
       );
+      
+      console.log('[Create Order] Pending session stored successfully');
+      
+      // Test: Check if the session was actually stored
+      const testSession = await PendingPaymentSession.findOne({ orderId: order.id });
+      console.log('[Create Order] Test query result:', !!testSession, 'Session data:', JSON.stringify(testSession, null, 2));
+      
     } catch (e) {
       console.error('Failed to persist pending payment session:', e);
     }
@@ -397,10 +407,13 @@ exports.razorpayWebhook = async (req, res) => {
         userInfo = pending.user;
         eventInfo = pending.event;
         bookingDetails = pending.bookingDetails;
+        console.log('[Razorpay Webhook] Using pending session data - user:', userInfo, 'event:', eventInfo);
       } else {
+        console.log('[Razorpay Webhook] No pending session found for orderId:', orderId);
         // Fallback: try to extract from order notes if pending session is missing
         try {
           const orderDetails = await razorpay.orders.fetch(orderId);
+          console.log('[Razorpay Webhook] Order details from Razorpay:', JSON.stringify(orderDetails, null, 2));
           if (orderDetails.notes) {
             console.log('[Razorpay Webhook] Order notes found:', orderDetails.notes);
             // Parse user and event info from notes
@@ -415,6 +428,8 @@ exports.razorpayWebhook = async (req, res) => {
           console.error('[Razorpay Webhook] Failed to fetch order details:', orderError);
         }
       }
+
+      console.log('[Razorpay Webhook] Final userInfo:', userInfo, 'eventInfo:', eventInfo, 'bookingDetails:', !!bookingDetails);
 
       const upsertedTx = await PaymentTransaction.findOneAndUpdate(
         { orderId, paymentId },
