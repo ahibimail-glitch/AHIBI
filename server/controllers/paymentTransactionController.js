@@ -2,6 +2,7 @@ const PaymentTransaction = require('../models/PaymentTransaction');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const PendingPaymentSession = require('../models/PendingPaymentSession'); // Added this import
 
 // List transactions that are paid but no booking exists
 exports.getPaidNoBooking = async (req, res) => {
@@ -48,12 +49,74 @@ exports.resolveTransaction = async (req, res) => {
       return res.status(400).json({ success: false, message: `Transaction status is '${tx.status}', not resolvable` });
     }
 
-    const bookingDetails = tx.bookingDetails || {};
-    const { event: eventId, user: userInfo, tickets = [] } = bookingDetails;
+    console.log('[Resolve Transaction] Transaction data:', JSON.stringify(tx, null, 2));
 
-    if (!eventId || !userInfo || !Array.isArray(tickets) || tickets.length === 0) {
-      return res.status(400).json({ success: false, message: 'Incomplete booking details in transaction' });
+    // Try to get booking details from multiple sources
+    let bookingDetails = tx.bookingDetails;
+    let eventId = tx.event;
+    let userInfo = tx.user;
+
+    // If bookingDetails is missing, try to get from pending session
+    if (!bookingDetails || !eventId || !userInfo) {
+      console.log('[Resolve Transaction] Missing data, checking pending session...');
+      const pending = await PendingPaymentSession.findOne({ orderId: tx.orderId });
+      if (pending) {
+        console.log('[Resolve Transaction] Found pending session:', JSON.stringify(pending, null, 2));
+        bookingDetails = pending.bookingDetails || bookingDetails;
+        eventId = pending.event || eventId;
+        userInfo = pending.user || userInfo;
+      }
     }
+
+    // If still missing, try to get from Razorpay order notes
+    if (!eventId || !userInfo) {
+      console.log('[Resolve Transaction] Still missing data, checking Razorpay order...');
+      try {
+        const Razorpay = require('razorpay');
+        const razorpay = new Razorpay({
+          key_id: process.env.RAZORPAY_KEY_ID,
+          key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+        
+        const orderDetails = await razorpay.orders.fetch(tx.orderId);
+        console.log('[Resolve Transaction] Razorpay order details:', JSON.stringify(orderDetails, null, 2));
+        
+        if (orderDetails.notes) {
+          if (orderDetails.notes.eventId && !eventId) {
+            eventId = orderDetails.notes.eventId;
+          }
+          if (orderDetails.notes.userId && !userInfo) {
+            userInfo = orderDetails.notes.userId;
+          }
+        }
+      } catch (orderError) {
+        console.error('[Resolve Transaction] Failed to fetch Razorpay order:', orderError);
+      }
+    }
+
+    console.log('[Resolve Transaction] Final data - eventId:', eventId, 'userInfo:', userInfo, 'bookingDetails:', !!bookingDetails);
+
+    if (!eventId || !userInfo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cannot resolve transaction: missing event or user information. Please check the pending session data.' 
+      });
+    }
+
+    // Extract tickets from bookingDetails or create default
+    let tickets = [];
+    if (bookingDetails && Array.isArray(bookingDetails.tickets)) {
+      tickets = bookingDetails.tickets;
+    } else {
+      // Create a default ticket based on the transaction amount
+      tickets = [{
+        ticketType: 'General',
+        quantity: 1,
+        price: tx.amount || 0
+      }];
+    }
+
+    console.log('[Resolve Transaction] Using tickets:', JSON.stringify(tickets, null, 2));
 
     const event = await Event.findById(eventId._id || eventId);
     if (!event) {

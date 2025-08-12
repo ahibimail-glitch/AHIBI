@@ -61,6 +61,8 @@ export default function FailedPayments() {
   const handleResolve = async (id: string) => {
     setResolvingId(id);
     try {
+      console.log('[FailedPayments] Attempting to resolve transaction:', id);
+      
       const res = await fetch(`${apiUrl}/api/admin/payments/resolve/${id}`, {
         method: "POST",
         headers: {
@@ -69,13 +71,22 @@ export default function FailedPayments() {
         },
         credentials: "include",
       });
+      
+      console.log('[FailedPayments] Response status:', res.status);
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        console.error('[FailedPayments] Error response:', err);
         throw new Error(err.message || "Failed to resolve transaction");
       }
+      
+      const result = await res.json();
+      console.log('[FailedPayments] Success response:', result);
+      
       toast.success("Booking confirmed successfully");
       setItems((prev) => prev.filter((x) => x._id !== id));
     } catch (e: any) {
+      console.error('[FailedPayments] Error in handleResolve:', e);
       toast.error(e.message || "Failed to resolve");
     } finally {
       setResolvingId(null);
