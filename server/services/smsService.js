@@ -13,9 +13,9 @@ const smsService = {
   sendOtp: async (phone, otp) => {
     try {
       // Fast2SMS DLT API (GET request)
-      const apiKey = "9b5m8NwFGIBuanxhWrRveM1Z0H4KtzJQLOC3lpESojf6AciTdymskyLJPF1pRDr0YacEIvO8HnU3AjNQ";
-      const templateId = '184006'; // fallback to your DLT template
-      const senderId = 'MELITA';
+      const apiKey = process.env.FAST2SMS_API_KEY;
+      const templateId = process.env.FAST2SMS_OTP_TEMPLATE_ID || '194850'; // Use environment variable or fallback
+      const senderId = process.env.FAST2SMS_SENDER_ID || 'AHIBII';
       const validityMinutes = '30';
 
       const params = {
@@ -64,15 +64,14 @@ const smsService = {
         throw new Error('Phone number and ticket details are required');
       }
 
-      const apiKey = '218M5WzNhd5IJbyb9ONbQ4z86ft3nwYOVLsaT66VKBwZTplehvSjOcN3Lz64';
+      const apiKey = process.env.FAST2SMS_API_KEY;
       if (!apiKey) {
         console.error('[SMS Service] Missing FAST2SMS_API_KEY environment variable');
         throw new Error('Fast2SMS API key not configured');
       }
 
-      // Check if there's a specific ticket template ID in your Fast2SMS account
-      // If not, you may need to create one or use a different route
-      const ticketTemplateId = '191089';
+      // Use a dedicated template ID for tickets from environment variables
+      const ticketTemplateId = '194836'; // Different template ID for tickets
       const senderId = '600406';
 
       console.log('[SMS Service] SMS configuration:', {
@@ -82,17 +81,14 @@ const smsService = {
       });
 
       // Format the variables according to your DLT template
-      // For debugging, let's try a simpler variables string and a different approach
-      // Create a URL to the booking
       console.log(ticketDetails);
-      const variablesValues = `${ticketDetails.eventName}|${ticketDetails.ticketType}|${ticketDetails.bookingId}|${ticketDetails.quantity || 1}|`;
+      const variablesValues = `${ticketDetails.eventName}|${ticketDetails.ticketType}|${ticketDetails.bookingId}`;
 
       console.log('[SMS Service] Preparing SMS with variables:', variablesValues);
 
-      // Use the regular route instead of DLT route for testing if DLT is the issue
       const params = {
         authorization: apiKey,
-        route: 'dlt', // You may try 'q' (Quick SMS) if DLT is having issues
+        route: 'dlt',
         sender_id: senderId,
         message: ticketTemplateId,
         variables_values: variablesValues,
@@ -143,12 +139,12 @@ const smsService = {
       }
 
       // Using the specific parameters provided for booking confirmations
-      const apiKey = '218M5WzNhd5IJbyb9ONbQ4z86ft3nwYOVLsaT66VKBwZTplehvSjOcN3Lz64';
-      const templateId = '191089'; // Specific template ID for booking confirmations
+      const apiKey = process.env.FAST2SMS_API_KEY;
+      const templateId = '194836'; // Different template ID for booking confirmations
       const senderId = '600406';
 
       // Format the variables according to the provided DLT template
-      const variablesValues = `${eventName}|${ticketType}|${bookingId}|${quantity}|`;
+      const variablesValues = `${eventName}|${ticketType}|${bookingId}`;
 
       console.log('[SMS Service] Sending booking confirmation with variables:', variablesValues);
 
