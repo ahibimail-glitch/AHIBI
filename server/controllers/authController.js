@@ -83,6 +83,156 @@ exports.sendOtp = async (req, res) => {
 };
 
 /**
+ * @desc    Login with password (new method)
+ * @route   POST /api/auth/login
+ * @access  Public
+ */
+exports.loginWithPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, password } = req.body;
+
+  try {
+    // First check if user exists
+    const user = await User.findOne({ phone }).select('+passwordHash');
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number not registered. Please sign up first.'
+      });
+    }
+
+    // Check if user has password-based authentication
+    if (!user.hasPasswordAuth()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password not set for this account. Please use OTP verification.',
+        requiresOtp: true,
+        phone: phone
+      });
+    }
+    
+
+    // Verify password
+    const isPasswordValid = await user.matchPasswordHash(password);
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid password'
+      });
+    }
+
+    // Check if user is blocked
+    if (user.status === 'blocked') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Your account has been blocked. Please contact support.' 
+      });
+    }
+
+    // Check if user requires approval
+    if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
+      return res.status(202).json({
+        success: true,
+        message: 'Your account is pending approval',
+        data: { pending: true, role: user.role }
+      });
+    }
+
+    // Generate JWT token
+    const token = user.getSignedJwtToken();
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        token,
+        user: {
+          id: user._id,
+          phone: user.phone,
+          name: user.name || '',
+          email: user.email || '',
+          role: user.role,
+          status: user.status,
+          profilePic: user.profilePic
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Password login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Setup password for user (after OTP verification)
+ * @route   POST /api/auth/setup-password
+ * @access  Private
+ */
+exports.setupPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    // Find user by ID
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user already has a password
+    if (user.hasPasswordAuth()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is already set for this account'
+      });
+    }
+
+    // Set the password
+    await user.setPassword(password);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password set successfully',
+      data: {
+        user: {
+          id: user._id,
+          phone: user.phone,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          profilePic: user.profilePic
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Setup password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
  * @desc    Verify OTP and login user
  * @route   POST /api/auth/verify-otp
  * @access  Public
@@ -134,6 +284,10 @@ exports.verifyOtp = async (req, res) => {
         });
       }
     }
+
+    // Check if user needs password setup
+    const needsPasswordSetup = !user.hasPasswordAuth();
+
     // Generate JWT token
     const token = user.getSignedJwtToken();
     res.status(200).json({
@@ -141,6 +295,7 @@ exports.verifyOtp = async (req, res) => {
       message: 'OTP verified successfully',
       data: {
         token,
+        needsPasswordSetup,
         user: {
           id: user._id,
           phone: user.phone,
@@ -251,6 +406,168 @@ exports.getProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Check if user exists and has password
+ * @route   POST /api/auth/check-user
+ * @access  Public
+ */
+exports.checkUserExists = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone } = req.body;
+
+  try {
+    // Check if user exists
+    const user = await User.findOne({ phone }).select('+passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Phone number not registered. Please sign up first.'
+      });
+    }
+
+    // Check if user has password-based authentication
+    const hasPassword = user.hasPasswordAuth();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        exists: true,
+        hasPassword,
+        phone: user.phone
+      }
+    });
+  } catch (error) {
+    console.error('Check user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Send OTP for password reset
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+exports.forgotPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone } = req.body;
+
+  try {
+    // Check if user exists
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Phone number not registered. Please sign up first.'
+      });
+    }
+
+    // Generate OTP for password reset
+    const otp = await user.setOtp();
+
+    // Send OTP via SMS service
+    const smsResponse = await smsService.sendOtp(phone, otp);
+
+    if (!smsResponse.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP',
+        error: smsResponse.message
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully for password reset',
+      data: {
+        phone,
+        otpSent: true
+      }
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Reset password with OTP verification
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+exports.resetPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, otp, newPassword } = req.body;
+
+  try {
+    // Find user by phone number
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify OTP
+    const isValidOtp = await user.verifyOtp(otp);
+    if (!isValidOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP'
+      });
+    }
+
+    // Set the new password
+    await user.setPassword(newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully',
+      data: {
+        user: {
+          id: user._id,
+          phone: user.phone,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          profilePic: user.profilePic
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',

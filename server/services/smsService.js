@@ -13,9 +13,9 @@ const smsService = {
   sendOtp: async (phone, otp) => {
     try {
       // Fast2SMS DLT API (GET request)
-      const apiKey = "9b5m8NwFGIBuanxhWrRveM1Z0H4KtzJQLOC3lpESojf6AciTdymskyLJPF1pRDr0YacEIvO8HnU3AjNQ";
-      const templateId = '184006'; // fallback to your DLT template
-      const senderId = 'MELITA';
+      const apiKey = "218M5WzNhd5IJbyb9ONbQ4z86ft3nwYOVLsaT66VKBwZTplehvSjOcN3Lz64";
+      const templateId = '194850'; // fallback to your DLT template
+      const senderId = 'AHIBII';
       const validityMinutes = '30';
 
       const params = {

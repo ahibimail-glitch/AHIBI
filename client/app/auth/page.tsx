@@ -29,14 +29,19 @@ import {
   Building,
   Music,
   Calendar,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
+import { PasswordSetupModal } from "@/components/ui/password-setup-modal";
+import { PasswordResetModal } from "@/components/ui/password-reset-modal";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup" | "otp-login">("login");
   const [step, setStep] = useState<"details" | "otp">("details");
   const [loginData, setLoginData] = useState({
-    loginId: ""
+    loginId: "",
+    password: ""
   });
   const [signupData, setSignupData] = useState({
     name: "",
@@ -48,8 +53,13 @@ export default function AuthPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordSetupModal, setShowPasswordSetupModal] = useState(false);
+  const [currentToken, setCurrentToken] = useState("");
+  const [loginStep, setLoginStep] = useState<"phone" | "password" | "otp">("phone");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +108,197 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
+      
+      // For signup, always show password setup modal
+      if (mode === 'signup') {
+        setCurrentToken(data.data.token);
+        setShowPasswordSetupModal(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Check if user needs password setup (for login)
+      if (data.data.needsPasswordSetup) {
+        setCurrentToken(data.data.token);
+        setShowPasswordSetupModal(true);
+        setLoading(false);
+        return;
+      }
+      
+      localStorage.setItem("token", data.data.token);
+      window.location.href = "/";
+    } catch (err) {
+      setError("Network error. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  const handlePasswordSetup = async (password: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/setup-password`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ password })
+      });
+      
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to set password");
+      }
+      
+      // Password set successfully, redirect to home
+      localStorage.setItem("token", currentToken);
+      setShowPasswordSetupModal(false);
+      window.location.href = "/";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set password");
+      throw err; // Re-throw to let the modal handle the error
+    }
+  };
+
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccessMessage(""); // Clear any previous messages
+    
+    console.log('Phone submission:', { 
+      phone: loginData.loginId, 
+      phoneLength: loginData.loginId.length,
+      phoneType: typeof loginData.loginId 
+    });
+    
+    // Trim the phone number to remove any whitespace
+    const trimmedPhone = loginData.loginId.trim();
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          phone: trimmedPhone
+        })
+      });
+      
+      const data = await res.json();
+      console.log('Check user response:', { status: res.status, data });
+      
+      if (!res.ok) {
+        if (res.status === 404) {
+          setError("Phone number not registered. Please sign up first.");
+        } else {
+          setError(data.message || "Something went wrong");
+        }
+        setLoading(false);
+        return;
+      }
+      
+      if (data.data.hasPassword) {
+        // User has password, proceed to password step
+        setLoginStep("password");
+      } else {
+        // User exists but no password, switch to OTP login
+        setLoginStep("otp");
+        // Send OTP for this user
+        await sendOtpForLogin(loginData.loginId);
+      }
+      setLoading(false);
+    } catch (err) {
+      setError("Network error. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const sendOtpForLogin = async (phone: string) => {
+    setSendingOtp(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, mode: 'login' })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || "Failed to send OTP");
+        return;
+      }
+      setError(""); // Clear any previous errors
+      setSuccessMessage("OTP sent successfully! Check your phone.");
+    } catch (err) {
+      setError("Failed to send OTP");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    
+    // Client-side validation
+    if (!loginData.password || loginData.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      setLoading(false);
+      return;
+    }
+    
+    if (!loginData.loginId || !/^\d{10}$/.test(loginData.loginId)) {
+      setError("Please enter a valid 10-digit phone number");
+      setLoading(false);
+      return;
+    }
+    
+    // Additional phone validation - remove any non-digit characters and check length
+    const cleanPhone = loginData.loginId.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      setError("Please enter exactly 10 digits for the phone number");
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Sending login request:', { 
+      phone: loginData.loginId, 
+      password: loginData.password,
+      passwordLength: loginData.password.length 
+    });
+    
+    // Trim the phone number to remove any whitespace
+    const trimmedPhone = loginData.loginId.trim();
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          phone: trimmedPhone, 
+          password: loginData.password 
+        })
+      });
+      
+      const data = await res.json();
+      console.log('Login response:', { status: res.status, data });
+      
+      if (!res.ok || !data.success) {
+        if (data.requiresOtp) {
+          // User exists but no password, switch to OTP login
+          setLoginStep("otp");
+          // Send OTP for this user
+          await sendOtpForLogin(loginData.loginId);
+        } else if (data.message && data.message.includes('Password not set')) {
+          // User somehow got to password step without password, switch to OTP
+          setLoginStep("otp");
+          await sendOtpForLogin(loginData.loginId);
+        } else {
+          setError(data.message || "Invalid credentials");
+        }
+        setLoading(false);
+        return;
+      }
+      
       localStorage.setItem("token", data.data.token);
       window.location.href = "/";
     } catch (err) {
@@ -151,12 +352,28 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
+      
+      // Check if user needs password setup
+      if (data.data.needsPasswordSetup) {
+        setCurrentToken(data.data.token);
+        setShowPasswordSetupModal(true);
+        setLoading(false);
+        return;
+      }
+      
       localStorage.setItem("token", data.data.token);
       window.location.href = "/";
     } catch (err) {
       setError("Network error. Please try again.");
     }
     setLoading(false);
+  };
+
+  const resetLoginFlow = () => {
+    setLoginStep("phone");
+    setLoginData({ loginId: "", password: "" });
+    setError("");
+    setSuccessMessage("");
   };
 
   return (
@@ -172,17 +389,21 @@ export default function AuthPage() {
           </div>
 
           <CardTitle className="text-white">
-            {mode === "login" && "Welcome Back"}
+            {mode === "login" && loginStep === "phone" && "Welcome Back"}
+            {mode === "login" && loginStep === "password" && "Enter Your Password"}
+            {mode === "login" && loginStep === "otp" && "Verify OTP"}
             {mode === "otp-login" && step === "details" && "Login with OTP"}
             {mode === "otp-login" && step === "otp" && "Verify OTP"}
             {mode === "signup" && step === "details" && "Create Your Account"}
             {mode === "signup" && step === "otp" && "Verify Your Phone"}
           </CardTitle>
           <CardDescription className="text-white/80">
-            {mode === "login" && "Enter your credentials to continue"}
+            {mode === "login" && loginStep === "phone" && "Enter your phone number to continue"}
+            {mode === "login" && loginStep === "password" && "Enter your password to login"}
+            {mode === "login" && loginStep === "otp" && "We've sent a 6-digit code to your phone"}
             {mode === "otp-login" &&
               step === "details" &&
-              "Enter your email or phone to receive OTP"}
+              "Enter your phone number to receive OTP"}
             {mode === "otp-login" &&
               step === "otp" &&
               `We've sent a 6-digit code to ${loginData.loginId}`}
@@ -195,6 +416,18 @@ export default function AuthPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="text-red-400 text-sm bg-red-900/20 border border-red-700 rounded-md p-3 mb-4">
+              {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="text-green-400 text-sm bg-green-900/20 border border-green-700 rounded-md p-3 mb-4">
+              {successMessage}
+            </div>
+          )}
+
           {/* Mode Toggle - Only show on initial step */}
           {(mode === "login" ||
             mode === "otp-login" ||
@@ -208,6 +441,7 @@ export default function AuthPage() {
                   onClick={() => {
                     setMode("login");
                     setStep("details");
+                    resetLoginFlow();
                   }}
                 >
                   Login
@@ -227,40 +461,121 @@ export default function AuthPage() {
               </div>
             )}
 
-          {mode === "login" && (
-  <>
-    <form onSubmit={handleOtpLoginSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="loginId" className="text-white">Phone Number</Label>
-        <Input
-          id="loginId"
-          type="text"
-          placeholder="Enter your phone number"
-          value={loginData.loginId}
-          onChange={(e) =>
-            setLoginData({ ...loginData, loginId: e.target.value })
-          }
-          required
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Sending OTP..." : "Send OTP"}
-      </Button>
-    </form>
-    {/* <p className="text-center mt-2">
-      <button
-        type="button"
-        className="underline text-blue-400"
-        onClick={() => {
-          setMode("otp-login");
-          setStep("details");
-        }}
-      >
-        Login with OTP
-      </button>
-    </p> */}
-  </>
-)}
+          {mode === "login" && loginStep === "phone" && (
+            <>
+              <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="loginId" className="text-white">Phone Number</Label>
+                  <Input
+                    id="loginId"
+                    type="text"
+                    placeholder="Enter your phone number"
+                    value={loginData.loginId}
+                    onChange={(e) =>
+                      setLoginData({ ...loginData, loginId: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Checking..." : "Continue"}
+                </Button>
+              </form>
+            </>
+          )}
+
+          {mode === "login" && loginStep === "password" && (
+            <>
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-white">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={loginData.password}
+                      onChange={(e) =>
+                        setLoginData({ ...loginData, password: e.target.value })
+                      }
+                      className="pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Logging in..." : "Login"}
+                </Button>
+                <div className="text-center space-y-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetLoginFlow}
+                    type="button"
+                    className="text-white"
+                  >
+                    ← Use Different Number
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordResetModal(true)}
+                    className="text-sm text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+
+          {mode === "login" && loginStep === "otp" && (
+            <>
+              <form onSubmit={handleOtpLoginVerify} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="loginOtp" className="text-white">Enter OTP</Label>
+                  <Input
+                    id="loginOtp"
+                    type="text"
+                    placeholder="6-digit code"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    maxLength={6}
+                    className="text-center text-lg tracking-widest"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </Button>
+                <div className="text-center space-y-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetLoginFlow}
+                    type="button"
+                    className="text-white"
+                  >
+                    ← Use Different Number
+                  </Button>
+                  <p className="text-xs ">
+                    {sendingOtp ? "Sending OTP..." : "Didn't receive code?"}{" "}
+                    {!sendingOtp && (
+                      <button type="button" className="underline">
+                        Resend OTP
+                      </button>
+                    )}
+                  </p>
+                </div>
+              </form>
+            </>
+          )}
 
           {mode === "otp-login" && step === "otp" && (
             <form onSubmit={handleOtpLoginVerify} className="space-y-4">
@@ -353,7 +668,7 @@ export default function AuthPage() {
                 <Input
                   id="city"
                   placeholder="Enter your city"
-                  className="bg-gray-800 border-gray-600 text-white"
+                 
                   value={signupData.city}
                   onChange={(e) => setSignupData({ ...signupData, city: e.target.value })}
                   required
@@ -435,19 +750,33 @@ export default function AuthPage() {
             </form>
           )}
 
-
-
           {/* Security Badge - Only show on login and initial signup */}
           {(mode === "login" ||
             mode === "otp-login" ||
             (mode === "signup" && step === "details")) && (
               <div className="mt-6 flex items-center justify-center text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 mr-1" />
-                Secured with OTP verification
+                {mode === "login" && loginStep === "password" ? "Secured with password authentication" : "Secured with OTP verification"}
               </div>
             )}
         </CardContent>
       </Card>
+
+      {/* Password Setup Modal */}
+      <PasswordSetupModal
+        isOpen={showPasswordSetupModal}
+        onClose={() => setShowPasswordSetupModal(false)}
+        onSubmit={handlePasswordSetup}
+        loading={loading}
+        isSignup={mode === "signup"}
+      />
+
+      {/* Password Reset Modal */}
+      <PasswordResetModal
+        isOpen={showPasswordResetModal}
+        onClose={() => setShowPasswordResetModal(false)}
+        phone={loginData.loginId}
+      />
     </div>
   );
 }

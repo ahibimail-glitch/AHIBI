@@ -24,6 +24,22 @@ const otpValidation = [
     .matches(/^\d{6}$/)
 ];
 
+const passwordValidation = [
+  check('phone', 'Please provide a valid 10-digit phone number')
+    .notEmpty()
+    .isLength({ min: 10, max: 10 })
+    .matches(/^\d{10}$/),
+  check('password', 'Password must be at least 6 characters long')
+    .notEmpty()
+    .isLength({ min: 6 })
+];
+
+const passwordSetupValidation = [
+  check('password', 'Password must be at least 6 characters long')
+    .notEmpty()
+    .isLength({ min: 6 })
+];
+
 const profileValidation = [
   check('name', 'Name is required').optional(),
   check('email', 'Please include a valid email').optional().isEmail()
@@ -32,6 +48,15 @@ const profileValidation = [
 // Public routes
 router.post('/send-otp', phoneValidation, authController.sendOtp);
 router.post('/verify-otp', otpValidation, authController.verifyOtp);
+router.post('/login', passwordValidation, authController.loginWithPassword);
+router.post('/check-user', phoneValidation, authController.checkUserExists);
+router.post('/forgot-password', phoneValidation, authController.forgotPassword);
+router.post('/reset-password', otpValidation.concat([
+  check('newPassword', 'Password must be at least 6 characters long')
+    .notEmpty()
+    .isLength({ min: 6 })
+]), authController.resetPassword);
+router.post('/setup-password', protect, passwordSetupValidation, authController.setupPassword);
 
 // Protected routes
 router.get('/profile', protect, authController.getProfile);

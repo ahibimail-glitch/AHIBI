@@ -36,6 +36,13 @@ const UserSchema = new mongoose.Schema({
     minlength: 6,
     select: false // Don't return password by default
   },
+  // New field for password-based authentication
+  passwordHash: {
+    type: String,
+    required: false,
+    default: null,
+    select: false // Don't return passwordHash by default
+  },
   
   profilePic: {
     type: String,
@@ -125,9 +132,27 @@ UserSchema.pre('save', async function(next) {
   next();
 });
 
-// Compare entered password to hashed password
+// Compare entered password to hashed password (for backward compatibility)
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Compare entered password to hashed passwordHash (new method)
+UserSchema.methods.matchPasswordHash = async function(enteredPassword) {
+  if (!this.passwordHash) return false;
+  return await bcrypt.compare(enteredPassword, this.passwordHash);
+};
+
+// Check if user has password-based authentication
+UserSchema.methods.hasPasswordAuth = function() {
+  return this.passwordHash && this.passwordHash !== null && this.passwordHash !== '';
+};
+
+// Set password hash (for new password-based auth)
+UserSchema.methods.setPassword = async function(plainPassword) {
+  const salt = await bcrypt.genSalt(10);
+  this.passwordHash = await bcrypt.hash(plainPassword, salt);
+  await this.save();
 };
 
 module.exports = mongoose.model('User', UserSchema);
