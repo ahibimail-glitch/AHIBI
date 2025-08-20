@@ -68,11 +68,75 @@ router.put('/users/:id/status', [
 
 router.get("/bookings/all",  async (req, res) => {
   try {
-    const bookings = await Booking.find()
-      .populate('event', 'title startDate endDate')
-      .populate('user', 'name email')
-      .sort({ bookedAt: -1 });
-    
+    const bookings = await Booking.aggregate([
+      { $sort: { bookedAt: -1 } },
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'event',
+          foreignField: '_id',
+          as: 'eventDoc'
+        }
+      },
+      { $unwind: { path: '$eventDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userDoc'
+        }
+      },
+      { $unwind: { path: '$userDoc', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          bookedAt: 1,
+          ticketType: 1,
+          quantity: 1,
+          total: 1,
+          status: 1,
+          // keep ids for potential future use
+          eventId: '$event',
+          userId: '$user',
+          // user display fields
+          user: {
+            name: '$userDoc.name',
+            email: '$userDoc.email'
+          },
+          // flat title for consistent filtering on the client
+          eventTitle: {
+            $ifNull: [
+              { $ifNull: ['$eventDoc.title', '$eventSnapshot.title'] },
+              'Deleted Event'
+            ]
+          },
+          // event display fields with snapshot fallback and final placeholder
+          event: {
+            title: {
+              $ifNull: [
+                { $ifNull: ['$eventDoc.title', '$eventSnapshot.title'] },
+                'Deleted Event'
+              ]
+            },
+            startDate: {
+              $ifNull: [
+                { $ifNull: ['$eventDoc.startDate', '$eventSnapshot.startDate'] },
+                null
+              ]
+            },
+            endDate: {
+              $ifNull: [
+                { $ifNull: ['$eventDoc.endDate', '$eventSnapshot.endDate'] },
+                null
+              ]
+            }
+          },
+          eventSnapshot: 1
+        }
+      }
+    ]);
+
     res.json({ bookings });
   } catch (error) {
     console.log(error)

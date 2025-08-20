@@ -2,6 +2,7 @@ const { check, validationResult } = require('express-validator');
 const Event = require('../models/Event');
 const ApiResponse = require('../utils/apiResponse');
 const { v4: uuidv4 } = require('uuid');
+const Booking = require('../models/Booking');
 
 /**
  * @desc    Create a new event (Admin only)
@@ -404,6 +405,26 @@ const deleteEvent = async (req, res) => {
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
     }
+
+    // Before deleting, snapshot event details into all related bookings that lack a snapshot
+    await Booking.updateMany(
+      { event: event._id, $or: [ { eventSnapshot: { $exists: false } }, { eventSnapshot: null } ] },
+      {
+        $set: {
+          eventSnapshot: {
+            _id: event._id,
+            title: event.title,
+            banner: event.banner,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            location: {
+              address: event.location?.address,
+              city: event.location?.city,
+            }
+          }
+        }
+      }
+    );
 
     await Event.findByIdAndDelete(eventId);
 

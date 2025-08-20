@@ -135,9 +135,20 @@ router.post("/", auth.protect, async (req, res) => {
     
     console.log(price)
 
-    // Create booking
+    // Create booking with snapshot of event details
     const booking = new Booking({
       event: event,
+      eventSnapshot: {
+        _id: isEvent._id,
+        title: isEvent.title,
+        banner: isEvent.banner,
+        startDate: isEvent.startDate,
+        endDate: isEvent.endDate,
+        location: {
+          address: isEvent.location?.address,
+          city: isEvent.location?.city
+        }
+      },
       user: req.user._id,
       quantity,
       price: price,
@@ -266,8 +277,17 @@ router.post("/", auth.protect, async (req, res) => {
 // @access  Private
 router.get("/my-bookings", auth.protect, async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id }).sort({ bookedAt: -1 });
-    res.json({ bookings });
+    const bookings = await Booking.find({ user: req.user._id })
+      .sort({ bookedAt: -1 })
+      .populate('event', 'title banner startDate')
+      .lean();
+
+    const normalized = bookings.map(b => ({
+      ...b,
+      event: b.event || b.eventSnapshot || b.event // keep original if present
+    }));
+
+    res.json({ bookings: normalized });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -293,8 +313,9 @@ router.post("/verify-qr", async (req, res) => {
 
     // Find the booking
     const booking = await Booking.findById(bookingId)
-      .populate('event')
-      .populate('user', 'name email phone');
+      .populate('event', 'title banner startDate endDate location')
+      .populate('user', 'name email phone')
+      .lean();
 
     if (!booking) {
       return res.status(404).json({ 
@@ -303,6 +324,9 @@ router.post("/verify-qr", async (req, res) => {
       });
     }
 
+    // Fallback to snapshot if event was deleted
+    const eventData = booking.event || booking.eventSnapshot || null;
+
     // Check if the booking has been used for entry already
     if (booking.entryVerified) {
       return res.status(200).json({
@@ -310,7 +334,7 @@ router.post("/verify-qr", async (req, res) => {
         message: "This ticket has already been used for entry",
         booking: {
           id: booking._id,
-          event: booking.event,
+          event: eventData,
           user: booking.user,
           quantity: booking.quantity,
           ticketType: booking.ticketType,
@@ -328,7 +352,7 @@ router.post("/verify-qr", async (req, res) => {
         message: `Booking status is ${booking.status}, not confirmed`,
         booking: {
           id: booking._id,
-          event: booking.event,
+          event: eventData,
           user: booking.user,
           quantity: booking.quantity,
           ticketType: booking.ticketType,
@@ -338,7 +362,7 @@ router.post("/verify-qr", async (req, res) => {
     }
 
     // Check if the event date is valid (not in the past)
-    const eventDate = new Date(booking.event.startDate);
+    const eventDate = eventData?.startDate ? new Date(eventData.startDate) : new Date(booking.bookedAt || Date.now());
     const now = new Date();
     
     // Allow entry on the day of the event
@@ -348,7 +372,7 @@ router.post("/verify-qr", async (req, res) => {
         message: "This ticket is for a future event",
         booking: {
           id: booking._id,
-          event: booking.event,
+          event: eventData,
           user: booking.user,
           quantity: booking.quantity,
           ticketType: booking.ticketType,
@@ -364,7 +388,7 @@ router.post("/verify-qr", async (req, res) => {
       message: "Booking is valid",
       booking: {
         id: booking._id,
-        event: booking.event,
+        event: eventData,
         user: booking.user,
         quantity: booking.quantity,
         ticketType: booking.ticketType,
@@ -442,7 +466,7 @@ router.get("/related/:id", auth.protect, async (req, res) => {
           { _id: parentBooking.parentBookingId },
           { parentBookingId: parentBooking.parentBookingId }
         ]
-      }).populate('event').populate('user', 'name email phone');
+      }).populate('event', 'title banner startDate').populate('user', 'name email phone').lean();
     } else {
       // This is a parent booking, find all children
       relatedBookings = await Booking.find({
@@ -450,13 +474,19 @@ router.get("/related/:id", auth.protect, async (req, res) => {
           { _id: parentBooking._id },
           { parentBookingId: parentBooking._id }
         ]
-      }).populate('event').populate('user', 'name email phone');
+      }).populate('event', 'title banner startDate').populate('user', 'name email phone').lean();
     }
 
     // Sort by ticketIndex
     relatedBookings.sort((a, b) => (a.ticketIndex || 1) - (b.ticketIndex || 1));
 
-    res.json({ success: true, data: relatedBookings });
+    // Fallback to snapshot if event was deleted
+    const normalized = relatedBookings.map(b => ({
+      ...b,
+      event: b.event || b.eventSnapshot || b.event
+    }));
+
+    res.json({ success: true, data: normalized });
   } catch (error) {
     console.error("Error fetching related bookings:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -469,19 +499,27 @@ router.get("/related/:id", auth.protect, async (req, res) => {
 router.get("/:id", auth.protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate('event')
-      .populate('user', 'name email phone');
+      .populate('event', 'title banner startDate endDate location')
+      .populate('user', 'name email phone')
+      .lean();
 
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
 
     // Ensure the user owns the booking or is an admin
-    if (booking.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    const bookingUserId = (booking.user && booking.user._id) ? booking.user._id.toString() : booking.user.toString();
+    if (bookingUserId !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: "Not authorized to view this booking" });
     }
 
-    res.json({ success: true, data: booking });
+    // Fallback to snapshot if event was deleted
+    const normalized = {
+      ...booking,
+      event: booking.event || booking.eventSnapshot || booking.event
+    };
+
+    res.json({ success: true, data: normalized });
   } catch (error) {
     console.error("Error fetching booking:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -631,9 +669,25 @@ router.post("/admin-manual-booking",  async (req, res) => {
       return res.status(400).json({ message: "Please provide all required fields" });
     }
 
+    const eventDoc = await Event.findById(event);
+    if (!eventDoc) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
     // Create booking
     const booking = new Booking({
       event,
+      eventSnapshot: {
+        _id: eventDoc._id,
+        title: eventDoc.title,
+        banner: eventDoc.banner,
+        startDate: eventDoc.startDate,
+        endDate: eventDoc.endDate,
+        location: {
+          address: eventDoc.location?.address,
+          city: eventDoc.location?.city
+        }
+      },
       user,
       ticketType,
       quantity,

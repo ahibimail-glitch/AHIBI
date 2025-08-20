@@ -6,6 +6,29 @@ const BookingSchema = new mongoose.Schema({
     ref: 'Event',
     required: true
   },
+  // Snapshot of event details at the time of booking to preserve info if the event is later deleted/changed
+  eventSnapshot: {
+    _id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Event'
+    },
+    title: {
+      type: String
+    },
+    banner: {
+      type: String
+    },
+    startDate: {
+      type: Date
+    },
+    endDate: {
+      type: Date
+    },
+    location: {
+      address: { type: String },
+      city: { type: String }
+    }
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

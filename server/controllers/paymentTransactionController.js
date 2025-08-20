@@ -146,6 +146,17 @@ exports.resolveTransaction = async (req, res) => {
       for (let i = 0; i < quantity; i++) {
         const booking = new Booking({
           event: event._id,
+          eventSnapshot: {
+            _id: event._id,
+            title: event.title,
+            banner: event.banner,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            location: {
+              address: event.location?.address,
+              city: event.location?.city,
+            }
+          },
           user: user._id,
           ticketType,
           quantity: 1,

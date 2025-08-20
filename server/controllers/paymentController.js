@@ -170,6 +170,17 @@ exports.verifyPayment = async (req, res) => {
             // Create a new booking for each individual ticket
             const newBooking = new Booking({
                 event: event._id,
+                eventSnapshot: {
+                  _id: event._id,
+                  title: event.title,
+                  banner: event.banner,
+                  startDate: event.startDate,
+                  endDate: event.endDate,
+                  location: {
+                    address: event.location?.address,
+                    city: event.location?.city,
+                  }
+                },
                 user: user.id,
                 ticketType: ticketType,
                 quantity: 1, // Each booking is for 1 ticket

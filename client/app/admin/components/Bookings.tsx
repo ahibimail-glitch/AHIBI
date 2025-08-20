@@ -29,10 +29,16 @@ import * as XLSX from 'xlsx';
 
 interface Booking {
   _id: string;
+  eventTitle?: string;
   event: {
     title: string;
     startDate: string;
     endDate: string;
+  };
+  eventSnapshot?: {
+    title?: string;
+    startDate?: string;
+    endDate?: string;
   };
   user: {
     name: string;
@@ -99,7 +105,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         const events: string[] = Array.from(
           new Set(
             data.bookings
-              .map((booking: Booking) => booking.event?.title)
+              .map((booking: Booking) => booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title)
               .filter((title: string | undefined): title is string => Boolean(title))
           )
         );
@@ -136,7 +142,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     let result = [...bookings];
     
     if (eventFilter && eventFilter !== "all") {
-      result = result.filter((booking: Booking) => booking.event?.title === eventFilter);
+      result = result.filter((booking: Booking) => (booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title) === eventFilter);
     }
     
     if (nameFilter) {
@@ -176,7 +182,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     const data = [
       headers,
       ...filteredBookings.map((booking: Booking) => [
-        booking.event?.title || "NA",
+        booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title || "NA",
         booking.user?.name || "NA",
         booking.user?.email || "NA",
         new Date(booking.bookedAt).toLocaleDateString(),
@@ -394,7 +400,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
           <TableBody>
             {filteredBookings.map((booking: Booking) => (
               <TableRow key={booking._id}>
-                <TableCell>{booking.event?.title || "NA"}</TableCell>
+                <TableCell>{booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title || "NA"}</TableCell>
                 <TableCell>{booking.user?.name || "NA"}</TableCell>
                 <TableCell>{new Date(booking.bookedAt).toLocaleDateString()}</TableCell>
                 <TableCell>{booking.ticketType || "NA"}</TableCell>
