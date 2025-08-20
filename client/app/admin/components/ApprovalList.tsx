@@ -34,12 +34,33 @@ interface Event {
   };
 }
 
+interface Organizer {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+  organizer?: {
+    companyName: string;
+    description: string;
+    contactInfo: {
+      email: string;
+    };
+    address: {
+      city: string;
+      state: string;
+    };
+    approvalStatus: string;
+  };
+}
+
 interface ApprovalListProps {
   type: "Organizer" | "Artist" | "Venue" | "Event";
 }
 
 export default function ApprovalList({ type }: ApprovalListProps) {
   const [events, setEvents] = useState<Event[]>([]);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -48,6 +69,8 @@ export default function ApprovalList({ type }: ApprovalListProps) {
   useEffect(() => {
     if (type === 'Event') {
       fetchPendingEvents();
+    } else if (type === 'Organizer') {
+      fetchPendingOrganizers();
     }
   }, [type]);
 
@@ -77,6 +100,37 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     } catch (err) {
       console.error('Error fetching pending events:', err);
       setError('Failed to load pending events. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPendingOrganizers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals?type=organizers`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending organizers');
+      }
+
+      const data = await response.json();
+      setOrganizers(data.data?.organizers || []);
+    } catch (err) {
+      console.error('Error fetching pending organizers:', err);
+      setError('Failed to load pending organizers. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -170,7 +224,99 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     }
   };
 
-  if (type !== 'Event') {
+  const handleOrganizerApprove = async (organizerId: string) => {
+    try {
+      setProcessingId(organizerId);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals/organizer/${organizerId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve organizer');
+      }
+
+      // Refresh the list
+      await fetchPendingOrganizers();
+      toast({
+        title: "Success",
+        description: "Organizer approved successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error approving organizer:', err);
+      toast({
+        title: "Error",
+        description: "Failed to approve organizer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleOrganizerReject = async (organizerId: string) => {
+    if (!confirm('Are you sure you want to reject this organizer?')) return;
+    
+    try {
+      setProcessingId(organizerId);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const reason = prompt('Please enter the reason for rejection:');
+      if (!reason) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals/organizer/${organizerId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          status: 'rejected',
+          rejectionReason: reason 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject organizer');
+      }
+
+      // Refresh the list
+      await fetchPendingOrganizers();
+      toast({
+        title: "Success",
+        description: "Organizer rejected successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error rejecting organizer:', err);
+      toast({
+        title: "Error",
+        description: "Failed to reject organizer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (type !== 'Event' && type !== 'Organizer') {
     return (
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader>
@@ -209,14 +355,15 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center">
-          {type} Approvals ({events.length})
+          {type} Approvals ({type === 'Event' ? events.length : organizers.length})
         </CardTitle>
         <CardDescription>
           Review and approve new {type.toLowerCase()} submissions.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {events.length > 0 ? (
+        {type === 'Event' ? (
+          events.length > 0 ? (
           events.map((event) => (
             <div
               key={event._id}
@@ -268,9 +415,74 @@ export default function ApprovalList({ type }: ApprovalListProps) {
         ) : (
           <div className="text-center py-8">
             <p className="text-gray-500">
-              No pending {type.toLowerCase()} approvals at the moment.
+                No pending event approvals at the moment.
+              </p>
+            </div>
+          )
+        ) : (
+          // Organizer approvals
+          organizers.length > 0 ? (
+            organizers.map((organizer) => (
+              <div
+                key={organizer._id}
+                className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 shadow-sm"
+              >
+                <div className="flex-1">
+                  <h3 className="font-medium">{organizer.name}</h3>
+                  <p className="text-sm text-gray-500">{organizer.email}</p>
+                  <p className="text-sm text-gray-500">{organizer.phone}</p>
+                  {organizer.organizer && (
+                    <>
+                      <p className="text-sm text-gray-600 font-medium">{organizer.organizer.companyName}</p>
+                      <p className="text-sm text-gray-500">{organizer.organizer.address.city}, {organizer.organizer.address.state}</p>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    Submitted on {new Date(organizer.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button size="sm" variant="outline">
+                    <Eye className="h-4 w-4 mr-1" /> View
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-green-600 border-green-200 hover:bg-green-50"
+                    onClick={() => handleOrganizerApprove(organizer._id)}
+                    disabled={!!processingId}
+                  >
+                    {processingId === organizer._id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Approve
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => handleOrganizerReject(organizer._id)}
+                    disabled={!!processingId}
+                  >
+                    {processingId === organizer._id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No pending organizer approvals at the moment.
             </p>
           </div>
+          )
         )}
       </CardContent>
     </Card>

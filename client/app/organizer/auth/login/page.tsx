@@ -12,21 +12,131 @@ import { Ticket, Calendar, Mail, Shield } from "lucide-react"
 import Link from "next/link"
 
 export default function OrganizerLoginPage() {
-  const [step, setStep] = useState<"login" | "otp-verify">("login")
+  const [step, setStep] = useState<"login" | "otp-verify" | "pending" | "rejected">("login")
   const [loginData, setLoginData] = useState({
-    loginId: "",
+    phone: "",
+    password: "",
     otp: "",
     rememberMe: false,
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleOtpRequest = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("otp-verify")
+    setLoading(true)
+    setError("")
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/organizer/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          password: loginData.password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 202) {
+        // Pending approval
+        setStep("pending")
+      } else if (response.status === 403) {
+        // Rejected
+        setStep("rejected")
+      } else if (response.ok) {
+        // Success - store token and redirect
+        localStorage.setItem('organizer_token', data.data.token);
+        localStorage.setItem('organizer_user', JSON.stringify(data.data.user));
+        window.location.href = "/organizer/dashboard"
+      } else {
+        setError(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleOtpVerify = (e: React.FormEvent) => {
+  const handleOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault()
-    window.location.href = "/organizer/dashboard"
+    setLoading(true)
+    setError("")
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/organizer/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          mode: 'login'
+        }),
+      });
+
+      if (response.ok) {
+        setStep("otp-verify")
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error('OTP request error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/organizer/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          otp: loginData.otp,
+          mode: 'login'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 202) {
+        // Pending approval
+        setStep("pending")
+      } else if (response.status === 403) {
+        // Rejected
+        setStep("rejected")
+      } else if (response.ok) {
+        // Success - store token and redirect
+        localStorage.setItem('organizer_token', data.data.token);
+        localStorage.setItem('organizer_user', JSON.stringify(data.data.user));
+        window.location.href = "/organizer/dashboard"
+      } else {
+        setError(data.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -45,33 +155,60 @@ export default function OrganizerLoginPage() {
             />
           </div>
           </div>
-          <CardTitle className="text-white text-xl">{step === "login" ? "Organizer Login" : "Verify OTP"}</CardTitle>
+          <CardTitle className="text-white text-xl">
+            {step === "login" && "Organizer Login"}
+            {step === "otp-verify" && "Verify OTP"}
+            {step === "pending" && "Account Pending"}
+            {step === "rejected" && "Account Rejected"}
+          </CardTitle>
           <CardDescription className="text-gray-300">
-            {step === "login"
-              ? "Access your event organizer dashboard"
-              : `We've sent a 6-digit code to ${loginData.loginId}`}
+            {step === "login" && "Access your event organizer dashboard"}
+            {step === "otp-verify" && `We've sent a 6-digit code to ${loginData.phone}`}
+            {step === "pending" && "Your account is pending admin approval"}
+            {step === "rejected" && "Your account has been rejected"}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {step === "login" && (
-            <form onSubmit={handleOtpRequest} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+              
               <div className="space-y-2">
-                <Label htmlFor="loginId" className="text-gray-200">
-                  Email or Phone Number
+                <Label htmlFor="phone" className="text-gray-200">
+                  Phone Number
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    id="loginId"
-                    type="text"
-                    placeholder="Enter email or phone"
-                    value={loginData.loginId}
-                    onChange={(e) => setLoginData({ ...loginData, loginId: e.target.value })}
+                    id="phone"
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={loginData.phone}
+                    onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
                     className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-200">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                  className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                  required
+                />
               </div>
 
               <div className="flex items-center space-x-2">
@@ -88,15 +225,32 @@ export default function OrganizerLoginPage() {
 
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
               >
-                Send OTP
+                {loading ? "Logging in..." : "Login"}
               </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleOtpRequest}
+                  className="text-purple-400 hover:underline text-sm"
+                >
+                  Login with OTP instead
+                </button>
+              </div>
             </form>
           )}
 
           {step === "otp-verify" && (
             <form onSubmit={handleOtpVerify} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="otp" className="text-gray-200">
                   Enter OTP
@@ -114,9 +268,10 @@ export default function OrganizerLoginPage() {
               </div>
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
               >
-                Verify & Login
+                {loading ? "Verifying..." : "Verify & Login"}
               </Button>
               <div className="text-center space-y-2">
                 <Button
@@ -136,6 +291,51 @@ export default function OrganizerLoginPage() {
                 </p>
               </div>
             </form>
+          )}
+
+          {step === "pending" && (
+            <div className="space-y-6 text-center">
+              <div className="space-y-2">
+                <div className="w-16 h-16 bg-yellow-500/20 border border-yellow-500/30 rounded-full flex items-center justify-center mx-auto">
+                  <Shield className="h-8 w-8 text-yellow-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Account Pending Approval</h3>
+                <p className="text-gray-300">
+                  Your organizer account is currently under review by our admin team. 
+                  You will be notified once your account is approved.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => setStep("login")}
+                variant="outline"
+                className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Back to Login
+              </Button>
+            </div>
+          )}
+
+          {step === "rejected" && (
+            <div className="space-y-6 text-center">
+              <div className="space-y-2">
+                <div className="w-16 h-16 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto">
+                  <Shield className="h-8 w-8 text-red-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Account Rejected</h3>
+                <p className="text-gray-300">
+                  Your organizer account has been rejected. Please contact support for more information.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => setStep("login")}
+                variant="outline"
+                className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Back to Login
+              </Button>
+            </div>
           )}
 
           <div className="text-center space-y-2">

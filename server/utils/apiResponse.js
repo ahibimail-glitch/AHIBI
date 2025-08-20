@@ -33,6 +33,16 @@ class ApiResponse {
   }
 
   /**
+   * Bad request response (400)
+   * @param {Object} res - Express response object
+   * @param {String} message - Error message
+   * @param {Object} error - Error details
+   */
+  static badRequest(res, message = 'Bad request', error = {}) {
+    return this.error(res, message, error, 400);
+  }
+
+  /**
    * Not found response
    * @param {Object} res - Express response object
    * @param {String} message - Not found message
@@ -68,6 +78,16 @@ class ApiResponse {
   static serverError(res, message = 'Internal server error', error = {}) {
     console.error('Server Error:', error);
     return this.error(res, message, error, 500);
+  }
+
+  /**
+   * Accepted response (202)
+   * @param {Object} res - Express response object
+   * @param {String} message - Success message
+   * @param {Object} data - Response data
+   */
+  static accepted(res, message = 'Accepted', data = {}) {
+    return this.success(res, message, data, 202);
   }
 }
 

@@ -24,19 +24,101 @@ export default function OrganizerSignupPage() {
     agreeToTerms: false,
   })
   const [otp, setOtp] = useState("")
+  const [error, setError] = useState("")
 
-  const handleDetailsSubmit = (e: React.FormEvent) => {
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("otp")
+    setError("")
+    
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/organizer/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: signupData.phone,
+          mode: 'signup'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to send OTP');
+      }
+
+      setStep("otp")
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      setError(error.message || 'Failed to send OTP. Please try again.');
+    }
   }
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("complete")
+    setError("")
+    
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/organizer/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: signupData.phone,
+          otp: otp,
+          mode: 'signup'
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Invalid OTP');
+      }
+
+      // After OTP verification, create the organizer account
+      const signupResponse = await fetch(`${apiUrl}/api/organizer/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: signupData.name,
+          email: signupData.email,
+          phone: signupData.phone,
+          password: 'tempPassword123', // You might want to add a password field to the form
+          city: signupData.city,
+          companyName: signupData.organization,
+          description: `${signupData.organizationType} organization`,
+          address: {
+            street: 'Main Street',
+            city: signupData.city,
+            state: 'State',
+            pincode: '123456'
+          },
+          contactInfo: {
+            email: signupData.email,
+            alternatePhone: signupData.phone
+          }
+        }),
+      });
+
+      if (!signupResponse.ok) {
+        const errorData = await signupResponse.json();
+        throw new Error(errorData.message || 'Failed to create account');
+      }
+
+      setStep("complete")
+    } catch (error: any) {
+      console.error('Error during signup:', error);
+      setError(error.message || 'Failed to complete signup. Please try again.');
+    }
   }
 
   const handleComplete = () => {
-    window.location.href = "/organizer"
+    window.location.href = "/organizer/auth/login"
   }
 
   return (
@@ -70,6 +152,11 @@ export default function OrganizerSignupPage() {
         <CardContent className="space-y-6">
           {step === "details" && (
             <form onSubmit={handleDetailsSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-gray-200">
                   Full Name *
@@ -119,9 +206,14 @@ export default function OrganizerSignupPage() {
                     type="tel"
                     placeholder="Enter mobile number"
                     value={signupData.phone}
-                    onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                    onChange={(e) => {
+                      // Only allow 10 digits
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setSignupData({ ...signupData, phone: value });
+                    }}
                     className="rounded-l-none bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
                     required
+                    maxLength={10}
                   />
                 </div>
               </div>
@@ -220,6 +312,11 @@ export default function OrganizerSignupPage() {
 
           {step === "otp" && (
             <form onSubmit={handleOtpSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="otp" className="text-gray-200">
                   Enter OTP

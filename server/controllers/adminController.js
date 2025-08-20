@@ -274,6 +274,10 @@ exports.getPendingApprovals = async (req, res) => {
       const [organizers, artists, venues, events] = await Promise.all([
         User.find({ role: 'organizer', status: 'pending' })
           .select('_id name email phone createdAt')
+          .populate({
+            path: 'organizer',
+            select: 'companyName description contactInfo address approvalStatus'
+          })
           .sort({ createdAt: -1 })
           .limit(5),
         User.find({ role: 'artist', status: 'pending' })
@@ -332,15 +336,32 @@ exports.processOrganizerApproval = async (req, res) => {
       return ApiResponse.notFound(res, 'Pending organizer not found');
     }
     
+    // Find the organizer profile
+    const organizer = await Organizer.findOne({ user: user._id });
+    
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer profile not found');
+    }
+    
     // Update user status
     user.status = status === 'approved' ? 'active' : 'rejected';
     
-    // Handle rejection
-    if (status === 'rejected' && rejectionReason) {
-      // TODO: Send notification to user about rejection with reason
+    // Update organizer approval status
+    organizer.approvalStatus = status;
+    
+    if (status === 'approved') {
+      organizer.approvalDate = new Date();
+      organizer.approvedBy = req.user.id;
+    } else if (status === 'rejected') {
+      organizer.rejectionDate = new Date();
+      organizer.rejectedBy = req.user.id;
+      organizer.rejectionReason = rejectionReason;
     }
     
-    await user.save();
+    // Save both user and organizer
+    await Promise.all([user.save(), organizer.save()]);
+    
+    // TODO: Send notification to organizer about approval/rejection
     
     return ApiResponse.success(res, `Organizer has been ${status}`, {
       organizer: {
@@ -348,7 +369,9 @@ exports.processOrganizerApproval = async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        status: user.status
+        status: user.status,
+        companyName: organizer.companyName,
+        approvalStatus: organizer.approvalStatus
       }
     });
   } catch (error) {

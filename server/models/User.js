@@ -52,6 +52,16 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'City is required']
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'artist', 'venue', 'organizer'],
+    default: 'user'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'pending', 'blocked', 'rejected'],
+    default: 'active'
+  },
   otp: {
     code: { type: String, default: null },
     expiresAt: { type: Date, default: null }
@@ -136,6 +146,29 @@ UserSchema.pre('save', async function(next) {
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+// Check if user has password-based authentication
+UserSchema.methods.hasPasswordAuth = function() {
+  return !!this.passwordHash;
+};
+
+// Compare entered password to hashed password
+UserSchema.methods.matchPasswordHash = async function(enteredPassword) {
+  if (!this.passwordHash) return false;
+  return await bcrypt.compare(enteredPassword, this.passwordHash);
+};
+
+// Virtual populate for organizer profile
+UserSchema.virtual('organizer', {
+  ref: 'Organizer',
+  localField: '_id',
+  foreignField: 'user',
+  justOne: true
+});
+
+// Ensure virtual fields are serialized
+UserSchema.set('toJSON', { virtuals: true });
+UserSchema.set('toObject', { virtuals: true });
 
 // Compare entered password to hashed passwordHash (new method)
 UserSchema.methods.matchPasswordHash = async function(enteredPassword) {

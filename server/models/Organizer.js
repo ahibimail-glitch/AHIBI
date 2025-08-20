@@ -53,6 +53,29 @@ const OrganizerSchema = new mongoose.Schema({
       match: [/^\d{6}$/, 'Please enter a valid 6-digit pincode']
     }
   },
+  // Approval status fields
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  approvalDate: {
+    type: Date
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin'
+  },
+  rejectionReason: {
+    type: String
+  },
+  rejectionDate: {
+    type: Date
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin'
+  },
   documents: {
     gst: {
       number: {
