@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 // UI Components
 import {
@@ -568,16 +569,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Hero Image */}
-            <div className="relative w-full h-96 rounded-lg overflow-hidden mb-8">
+            <AspectRatio ratio={16 / 9} className="rounded-lg overflow-hidden mb-8">
               <Image
                 src={event.banner || "/placeholder.svg"}
                 alt={event.title}
                 fill
-                className="object-fill"
+                className="object-contain"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                 priority
               />
-            </div>
+            </AspectRatio>
 
             {/* Event Info */}
             <div>

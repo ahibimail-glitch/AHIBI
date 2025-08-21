@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, MapPin, Search, Heart, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
@@ -82,12 +83,12 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="relative h-48">
+      <AspectRatio ratio={16 / 9} className="relative">
         <Image
           src={event.banner || "/placeholder.svg"}
           alt={event.title}
           fill
-          className="object-fill"
+          className="object-contain"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           priority={false}
         />
@@ -102,7 +103,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
           </Badge>
           <h3 className="text-xl font-bold text-white line-clamp-1">{event.title}</h3>
         </div>
-      </div>
+      </AspectRatio>
       <CardContent className="p-4 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-600">
