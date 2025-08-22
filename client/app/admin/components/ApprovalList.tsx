@@ -84,7 +84,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/admin/events?status=pending`, {
+      const response = await fetch(`${apiUrl}/api/admin/events/pending`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -146,12 +146,15 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/admin/events/${eventId}/approve`, {
+      const response = await fetch(`${apiUrl}/api/admin/approvals/event/${eventId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          status: 'approved'
+        }),
       });
 
       if (!response.ok) {
@@ -192,13 +195,16 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       if (!reason) return;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/admin/events/${eventId}/reject`, {
+      const response = await fetch(`${apiUrl}/api/admin/approvals/event/${eventId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({
+          status: 'rejected',
+          rejectionReason: reason
+        }),
       });
 
       if (!response.ok) {

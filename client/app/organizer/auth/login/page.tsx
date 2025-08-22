@@ -196,7 +196,7 @@ export default function OrganizerLoginPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="password" className="text-gray-200">
                   Password
                 </Label>
@@ -209,7 +209,7 @@ export default function OrganizerLoginPage() {
                   className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
                   required
                 />
-              </div>
+              </div> */}
 
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -223,22 +223,22 @@ export default function OrganizerLoginPage() {
                 </Label>
               </div>
 
-              <Button
+              {/* <Button
                 type="submit"
                 disabled={loading}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
               >
                 {loading ? "Logging in..." : "Login"}
-              </Button>
+              </Button> */}
 
               <div className="text-center">
-                <button
+                <Button
                   type="button"
                   onClick={handleOtpRequest}
-                  className="text-purple-400 hover:underline text-sm"
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
                 >
-                  Login with OTP instead
-                </button>
+                  Login with OTP 
+                </Button>
               </div>
             </form>
           )}

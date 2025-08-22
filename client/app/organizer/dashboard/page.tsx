@@ -1,10 +1,37 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Calendar, Users, Ticket, DollarSign, LogOut } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  LayoutDashboard,
+  Calendar,
+  Users,
+  Ticket,
+  DollarSign,
+  Settings,
+  Activity,
+  PlusCircle,
+  BarChart3,
+  LogOut,
+  Building2,
+  Music,
+  QrCode,
+  Eye,
+  Bell,
+  CheckCircle,
+  Clock,
+} from "lucide-react"
+
+// Import child components
+import Dashboard from "../components/Dashboard"
+import Events from "../components/Events"
+import Bookings from "../components/Bookings"
+import CreateEventForm from "../components/CreateEventForm"
+import Analytics from "../components/Analytics"
+import SettingsComponent from "../components/Settings"
 
 interface OrganizerUser {
   id: string
@@ -15,10 +42,31 @@ interface OrganizerUser {
   status: string
 }
 
+// --- Helper component for sidebar buttons ---
+interface SidebarButtonProps {
+  icon: React.ElementType
+  label: string
+  active: boolean
+  onClick?: () => void
+}
+
+const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonProps) => (
+  <Button
+    variant={active ? "secondary" : "ghost"}
+    className="w-full justify-start"
+    {...props}
+  >
+    <Icon className="mr-2 h-4 w-4" />
+    {label}
+  </Button>
+)
+
+// --- Main Organizer Dashboard Component ---
 export default function OrganizerDashboard() {
+  const router = useRouter()
   const [user, setUser] = useState<OrganizerUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [activeView, setActiveView] = useState("dashboard")
 
   useEffect(() => {
     const token = localStorage.getItem('organizer_token')
@@ -46,11 +94,42 @@ export default function OrganizerDashboard() {
     router.push('/organizer/auth/login')
   }
 
+  // --- Mock Data (replace with API calls) ---
+  const stats = [
+    { title: "Total Events", value: "12", icon: Calendar, change: "+8.2%", color: "text-blue-600" },
+    { title: "Active Events", value: "3", icon: Activity, change: "+12.5%", color: "text-green-600" },
+    { title: "Total Revenue", value: "₹2,00,000", icon: DollarSign, change: "+15.3%", color: "text-purple-600" },
+    { title: "Tickets Sold", value: "1,247", icon: Ticket, change: "+18.9%", color: "text-orange-600" },
+  ]
+
+  const renderContent = () => {
+    switch (activeView) {
+      case "dashboard":
+        return <Dashboard stats={stats} setActiveView={setActiveView} />
+      case "events":
+        return <Events />
+      case "approved-events":
+        return <Events filterStatus="approved" />
+      case "pending-events":
+        return <Events filterStatus="pending" />
+      case "bookings":
+        return <Bookings />
+      case "create-event":
+        return <CreateEventForm onSuccess={() => setActiveView("dashboard")} />
+      case "analytics":
+        return <Analytics />
+      case "settings":
+        return <SettingsComponent />
+      default:
+        return <Dashboard stats={stats} setActiveView={setActiveView} />
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 via-white-900 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -62,163 +141,127 @@ export default function OrganizerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-white-900 to-white">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <img
-                src="/images/Logo.png"
-                alt="Ahibi logo"
-                className="h-8 w-auto object-contain"
-              />
-              <h1 className="text-xl font-semibold text-gray-900">Organizer Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, {user.name}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLogout}
-                className="flex items-center space-x-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </Button>
-            </div>
+    <div className="flex min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400">
+      {/* --- Sidebar --- */}
+      <aside className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-10 overflow-y-auto">
+        <div className="flex items-center space-x-3 mb-6 px-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-pink-600 to-purple-600 rounded-xl flex items-center justify-center">
+            <Building2 className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Ahibi Organizer</h2>
+            <p className="text-xs text-gray-600">Event Management</p>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">
-                No events created yet
-              </p>
-            </CardContent>
-          </Card>
+        <nav className="flex flex-col space-y-2">
+          <SidebarButton 
+            icon={LayoutDashboard} 
+            label="Dashboard" 
+            active={activeView === "dashboard"} 
+            onClick={() => setActiveView("dashboard")} 
+          />
+          {/* <SidebarButton 
+            icon={Calendar} 
+            label="My Events" 
+            active={activeView === "events"} 
+            onClick={() => setActiveView("events")} 
+          /> */}
+          <SidebarButton 
+            icon={CheckCircle} 
+            label="Approved Events" 
+            active={activeView === "approved-events"} 
+            onClick={() => setActiveView("approved-events")} 
+          />
+          <SidebarButton 
+            icon={Clock} 
+            label="Pending Events" 
+            active={activeView === "pending-events"} 
+            onClick={() => setActiveView("pending-events")} 
+          />
+          <SidebarButton 
+            icon={Ticket} 
+            label="Bookings" 
+            active={activeView === "bookings"} 
+            onClick={() => setActiveView("bookings")} 
+          />
+          <SidebarButton 
+            icon={PlusCircle} 
+            label="Create Event" 
+            active={activeView === "create-event"} 
+            onClick={() => setActiveView("create-event")} 
+          />
 
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tickets Sold</CardTitle>
-              <Ticket className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">
-                No tickets sold yet
-              </p>
-            </CardContent>
-          </Card>
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Analytics</h3>
+          </div>
+          <SidebarButton 
+            icon={BarChart3} 
+            label="Analytics" 
+            active={activeView === "analytics"} 
+            onClick={() => setActiveView("analytics")} 
+          />
 
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0</div>
-              <p className="text-xs text-muted-foreground">
-                No revenue generated yet
-              </p>
-            </CardContent>
-          </Card>
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Account</h3>
+          </div>
+          <SidebarButton 
+            icon={Settings} 
+            label="Settings" 
+            active={activeView === "settings"} 
+            onClick={() => setActiveView("settings")} 
+          />
+        </nav>
 
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Attendees</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">
-                No attendees yet
-              </p>
+        <div className="mt-auto">
+          <Card className="bg-pink-50 border-pink-200">
+            <CardContent className="pt-6">
+              <h4 className="font-bold text-pink-800">Need Help?</h4>
+              <p className="text-xs text-pink-700 mt-1">Check our documentation or contact support.</p>
+              <Button size="sm" className="w-full mt-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90">
+                Get Support
+              </Button>
             </CardContent>
           </Card>
         </div>
+      </aside>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Get started with organizing events
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity">
-                Create New Event
-              </Button>
-              <Button variant="outline" className="w-full">
-                View My Events
-              </Button>
-              <Button variant="outline" className="w-full">
-                Manage Profile
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle>Account Status</CardTitle>
-              <CardDescription>
-                Your account information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Name:</span>
-                  <span className="text-sm font-medium">{user.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Email:</span>
-                  <span className="text-sm font-medium">{user.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Phone:</span>
-                  <span className="text-sm font-medium">{user.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Status:</span>
-                  <span className="text-sm font-medium text-green-600">Active</span>
-                </div>
+      {/* --- Main Content --- */}
+      <main className="flex-1 ml-64 bg-gradient-to-br from-pink-50 to-purple-50">
+        {/* <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 capitalize">
+                  {activeView.replace(/-/g, " ")}
+                </h1>
+                <p className="text-sm text-gray-600">Welcome back, {user.name}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Your latest activities and updates
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No recent activity</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Start by creating your first event
-              </p>
+              <div className="flex items-center space-x-4">
+                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                  <Activity className="h-3 w-3 mr-1" /> Account Active
+                </Badge>
+                <Button variant="outline" size="icon">
+                  <Bell className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </header> */}
+
+        <div className="p-8">
+          {renderContent()}
+        </div>
+      </main>
     </div>
   )
 }

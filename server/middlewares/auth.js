@@ -32,16 +32,44 @@ exports.protect = async (req, res, next) => {
 
       // Determine which model to use based on the route
       const isAdminRoute = req.originalUrl.startsWith('/api/admin');
-      const Model = isAdminRoute ? Admin : User;
+      const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       
-      // Find user/admin in database
-      const user = await Model.findById(decoded.id);
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: `${isAdminRoute ? 'Admin' : 'User'} not found`
-        });
+      let Model, user;
+      
+      if (isAdminRoute) {
+        Model = Admin;
+        user = await Model.findById(decoded.id);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: 'Admin not found'
+          });
+        }
+      } else if (isOrganizerRoute) {
+        Model = User;
+        user = await Model.findById(decoded.id);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
+        // Check if user is an organizer
+        if (user.role !== 'organizer') {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied. Organizer role required.'
+          });
+        }
+      } else {
+        Model = User;
+        user = await Model.findById(decoded.id);
+        if (!user) {
+          return res.status(404).json({
+            success: false,
+            message: 'User not found'
+          });
+        }
       }
 
       // Attach user/admin to request

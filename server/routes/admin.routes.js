@@ -14,6 +14,7 @@ router.use(authorize('admin'));
 
 // Event management
 router.get('/events', eventController.getEvents);
+router.get('/events/pending', adminController.getPendingEvents);
 router.post('/events', validateEvent, eventController.createEvent);
 router.put('/events/:id', eventController.updateEvent);
 router.put('/events/:id/approve', eventController.approveEvent);

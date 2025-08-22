@@ -37,6 +37,11 @@ const EventSchema = new mongoose.Schema({
     required: [true, 'Event title is required'],
     trim: true
   },
+  slug: {
+    type: String,
+    unique: true,
+    required: true
+  },
   description: {
     type: String,
     required: [true, 'Event description is required']
@@ -54,6 +59,20 @@ const EventSchema = new mongoose.Schema({
     }
   }],
   organizer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  organizerInfo: {
+    id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    name: {
+      type: String
+    }
+  },
+  createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -83,6 +102,20 @@ const EventSchema = new mongoose.Schema({
     type: String
   }],
   ticketTypes: [TicketTypeSchema],
+  termsAndConditions: {
+    type: String,
+    default: ''
+  },
+  faqs: [{
+    question: {
+      type: String,
+      required: true
+    },
+    answer: {
+      type: String,
+      required: true
+    }
+  }],
   totalTickets: {
     type: Number,
     default: 0
@@ -100,12 +133,28 @@ const EventSchema = new mongoose.Schema({
     enum: ['draft', 'pending', 'approved', 'rejected', 'cancelled', 'completed'],
     default: 'pending'
   },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin'
+  },
+  approvedAt: {
+    type: Date
+  },
   rejectionReason: {
     type: String
   },
   isPublic: {
     type: Boolean,
     default: true
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
   },
   isSponsored: {
     type: Boolean,

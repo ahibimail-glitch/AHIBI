@@ -565,6 +565,221 @@ const getFC25PlayersAdmin = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Create a new event (Organizer only)
+ * @route   POST /api/organizer/events
+ * @access  Private (Organizer only)
+ */
+const createOrganizerEvent = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return ApiResponse.error(res, 'Validation error', { errors: errors.array() }, 400);
+    }
+
+    const {
+      title,
+      description,
+      banner,
+      gallery = [],
+      category,
+      startDate,
+      endDate,
+      location,
+      ticketTypes = [],
+      termsAndConditions = '',
+      faqs = [],
+      convenience = {}
+    } = req.body;
+
+    // Create event slug from title
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
+
+    // Prepare location data with proper GeoJSON format
+    const locationData = {
+      ...location,
+      coordinates: {
+        type: 'Point',
+        coordinates: [
+          parseFloat(location?.coordinates?.[0]) || 0,
+          parseFloat(location?.coordinates?.[1]) || 0
+        ]
+      }
+    };
+
+    // Create event
+    const event = new Event({
+      title,
+      slug,
+      description,
+      banner,
+      gallery,
+      category,
+      startDate,
+      endDate,
+      organizer: req.user.id,
+      location: locationData,
+      ticketTypes: ticketTypes.map(ticket => ({
+        ...ticket,
+        sold: 0,
+        benefits: ticket.benefits || []
+      })),
+      termsAndConditions,
+      faqs,
+      status: 'pending', // Organizer events start as pending
+      isFeatured: false,
+      createdBy: req.user.id,
+      organizerInfo: {
+        id: req.user.id,
+        name: req.user.name
+      },
+      approvalStatus: 'pending',
+      convenience: convenience || {}
+    });
+
+    await event.save();
+
+    return ApiResponse.success(res, 'Event created successfully and pending approval', { event }, 201);
+  } catch (error) {
+    console.error('Error creating organizer event:', error);
+    return ApiResponse.serverError(res, 'Error creating event', error);
+  }
+};
+
+/**
+ * @desc    Get organizer's events
+ * @route   GET /api/organizer/events
+ * @access  Private (Organizer only)
+ */
+const getOrganizerEvents = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    
+    const query = { organizer: req.user.id };
+    if (status) {
+      query.status = status;
+    }
+
+    const numericLimit = Math.min(parseInt(limit, 10) || 10, 100);
+    const numericPage = Math.max(parseInt(page, 10) || 1, 1);
+
+    const total = await Event.countDocuments(query);
+    const events = await Event.find(query)
+      .sort({ createdAt: -1 })
+      .skip((numericPage - 1) * numericLimit)
+      .limit(numericLimit)
+      .lean();
+
+    return ApiResponse.success(res, 'Organizer events fetched', {
+      events,
+      pagination: {
+        page: numericPage,
+        limit: numericLimit,
+        total,
+        pages: Math.ceil(total / numericLimit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching organizer events:', error);
+    return ApiResponse.serverError(res, 'Error fetching events', error);
+  }
+};
+
+/**
+ * @desc    Get organizer's specific event
+ * @route   GET /api/organizer/events/:id
+ * @access  Private (Organizer only)
+ */
+const getOrganizerEventById = async (req, res) => {
+  try {
+    const event = await Event.findOne({
+      _id: req.params.id,
+      organizer: req.user.id
+    }).lean();
+
+    if (!event) {
+      return ApiResponse.error(res, 'Event not found', {}, 404);
+    }
+
+    return ApiResponse.success(res, 'Event fetched successfully', { event });
+  } catch (error) {
+    console.error('Error fetching organizer event:', error);
+    return ApiResponse.serverError(res, 'Error fetching event', error);
+  }
+};
+
+/**
+ * @desc    Update organizer's event
+ * @route   PUT /api/organizer/events/:id
+ * @access  Private (Organizer only)
+ */
+const updateOrganizerEvent = async (req, res) => {
+  try {
+    const event = await Event.findOne({
+      _id: req.params.id,
+      organizer: req.user.id
+    });
+
+    if (!event) {
+      return ApiResponse.error(res, 'Event not found', {}, 404);
+    }
+
+    // Only allow updates if event is pending or rejected
+    if (event.status === 'active' || event.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot update active or completed events', {}, 400);
+    }
+
+    const updateData = req.body;
+    
+    // If significant changes are made, reset approval status
+    if (updateData.title || updateData.description || updateData.category || updateData.location) {
+      updateData.status = 'pending';
+      updateData.approvalStatus = 'pending';
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    return ApiResponse.success(res, 'Event updated successfully', { event: updatedEvent });
+  } catch (error) {
+    console.error('Error updating organizer event:', error);
+    return ApiResponse.serverError(res, 'Error updating event', error);
+  }
+};
+
+/**
+ * @desc    Delete organizer's event
+ * @route   DELETE /api/organizer/events/:id
+ * @access  Private (Organizer only)
+ */
+const deleteOrganizerEvent = async (req, res) => {
+  try {
+    const event = await Event.findOne({
+      _id: req.params.id,
+      organizer: req.user.id
+    });
+
+    if (!event) {
+      return ApiResponse.error(res, 'Event not found', {}, 404);
+    }
+
+    // Only allow deletion if event is pending or rejected
+    if (event.status === 'active' || event.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot delete active or completed events', {}, 400);
+    }
+
+    await Event.findByIdAndDelete(req.params.id);
+
+    return ApiResponse.success(res, 'Event deleted successfully');
+  } catch (error) {
+    console.error('Error deleting organizer event:', error);
+    return ApiResponse.serverError(res, 'Error deleting event', error);
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -577,5 +792,10 @@ module.exports = {
   deleteEvent,
   registerFC25,
   getFC25Slots,
-  getFC25PlayersAdmin
+  getFC25PlayersAdmin,
+  createOrganizerEvent,
+  getOrganizerEvents,
+  getOrganizerEventById,
+  updateOrganizerEvent,
+  deleteOrganizerEvent
 };

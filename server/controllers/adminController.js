@@ -489,35 +489,105 @@ exports.processEventApproval = async (req, res) => {
       return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
     }
     
-    // Find the event
-    const event = await Event.findOne({ _id: id, status: 'pending' });
+    // Find the event with organizer info
+    const event = await Event.findOne({ _id: id, status: 'pending' })
+      .populate('organizer', 'name email phone');
     
     if (!event) {
       return ApiResponse.notFound(res, 'Pending event not found');
     }
     
-    // Update event status
+    // Update event status and approval status
     event.status = status;
+    event.approvalStatus = status;
+    
+    // Handle approval
+    if (status === 'approved') {
+      event.approvedBy = req.user.id;
+      event.approvedAt = new Date();
+      event.rejectionReason = undefined; // Clear any previous rejection reason
+    }
     
     // Handle rejection
     if (status === 'rejected') {
       event.rejectionReason = rejectionReason;
-      // TODO: Send notification to organizer about rejection with reason
+      event.approvedBy = undefined;
+      event.approvedAt = undefined;
     }
     
     await event.save();
     
-    return ApiResponse.success(res, `Event has been ${status}`, {
+    // TODO: Send notification to organizer about approval/rejection
+    // This could be implemented with a notification service
+    
+    return ApiResponse.success(res, `Event "${event.title}" has been ${status}`, {
       event: {
         id: event._id,
         title: event.title,
         status: event.status,
-        rejectionReason: event.rejectionReason
+        approvalStatus: event.approvalStatus,
+        rejectionReason: event.rejectionReason,
+        approvedBy: event.approvedBy,
+        approvedAt: event.approvedAt,
+        organizer: event.organizer
       }
     });
   } catch (error) {
     console.error('Process event approval error:', error);
     return ApiResponse.serverError(res, 'Error processing event approval', error);
+  }
+};
+
+/**
+ * @desc    Get pending events for admin review
+ * @route   GET /api/admin/events/pending
+ * @access  Private (Admin only)
+ */
+exports.getPendingEvents = async (req, res) => {
+  try {
+    const { limit = 10, page = 1, search } = req.query;
+    
+    // Calculate pagination
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    
+    // Build search query
+    const searchQuery = search ? {
+      $or: [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+    
+    // Get pending events with organizer details
+    const pendingEvents = await Event.find({
+      status: 'pending',
+      ...searchQuery
+    })
+    .populate('organizer', 'name email phone')
+    .select('_id title description banner category startDate endDate location ticketTypes createdAt')
+    .skip(skip)
+    .limit(parseInt(limit, 10))
+    .sort({ createdAt: -1 });
+    
+    // Get total count
+    const total = await Event.countDocuments({
+      status: 'pending',
+      ...searchQuery
+    });
+    
+    return ApiResponse.success(res, 'Pending events retrieved successfully', {
+      events: pendingEvents,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    console.error('Get pending events error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving pending events', error);
   }
 };
 
