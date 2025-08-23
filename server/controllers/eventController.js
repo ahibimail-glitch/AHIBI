@@ -32,15 +32,42 @@ const createEvent = async (req, res) => {
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
 
     // Prepare location data with proper GeoJSON format
+    // Handle coordinates - support both old format (latitude/longitude) and new format (GeoJSON)
+    let coordinates = { type: 'Point', coordinates: [0, 0] };
+    
+    if (location?.coordinates) {
+      if (location.coordinates.coordinates && Array.isArray(location.coordinates.coordinates)) {
+        // New GeoJSON format
+        coordinates = {
+          type: 'Point',
+          coordinates: [
+            parseFloat(location.coordinates.coordinates[0]) || 0,
+            parseFloat(location.coordinates.coordinates[1]) || 0
+          ]
+        };
+      } else if (location.coordinates.latitude && location.coordinates.longitude) {
+        // Old format with latitude/longitude
+        coordinates = {
+          type: 'Point',
+          coordinates: [
+            parseFloat(location.coordinates.longitude) || 0,
+            parseFloat(location.coordinates.latitude) || 0
+          ]
+        };
+      }
+    }
+
+    // Ensure coordinates are properly structured
+    if (!coordinates.coordinates || !Array.isArray(coordinates.coordinates)) {
+      coordinates = {
+        type: 'Point',
+        coordinates: [0, 0] // Default coordinates
+      };
+    }
+
     const locationData = {
       ...location,
-      coordinates: {
-        type: 'Point',
-        coordinates: [
-          parseFloat(location?.coordinates?.longitude) || 0,
-          parseFloat(location?.coordinates?.latitude) || 0
-        ]
-      }
+      coordinates
     };
 
     // Create event
@@ -239,6 +266,61 @@ const getPublicEvents = async (req, res) => {
 };
 
 /**
+ * @desc    Debug endpoint to check event status (temporary)
+ * @route   GET /api/events/debug/:id
+ * @access  Public
+ */
+const debugEventById = async (req, res) => {
+  console.log(`Debug: Fetching event with ID: ${req.params.id}`);
+  
+  try {
+    let event = null;
+    
+    // Try to find by ObjectId if valid
+    if (req.params.id && require('mongoose').Types.ObjectId.isValid(req.params.id)) {
+      event = await Event.findById(req.params.id).lean();
+    }
+    
+    // If not found, try by slug
+    if (!event) {
+      event = await Event.findOne({ slug: req.params.id }).lean();
+    }
+    
+    // If still not found, try by any matching field
+    if (!event) {
+      event = await Event.findOne({
+        $or: [
+          { _id: req.params.id },
+          { slug: req.params.id },
+          { title: { $regex: req.params.id, $options: 'i' } }
+        ]
+      }).lean();
+    }
+    
+    if (!event) {
+      // Let's see what events exist
+      const allEvents = await Event.find({}).select('_id title status slug').limit(10).lean();
+      return ApiResponse.notFound(res, 'Event not found in database', {
+        searchedFor: req.params.id,
+        availableEvents: allEvents
+      });
+    }
+    
+    return ApiResponse.success(res, 'Event found', {
+      _id: event._id,
+      title: event.title,
+      status: event.status,
+      approvalStatus: event.approvalStatus,
+      organizer: event.organizer,
+      slug: event.slug
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    return ApiResponse.serverError(res, 'Debug error', error);
+  }
+};
+
+/**
  * @desc    Get a single event by ID (Public)
  * @route   GET /api/events/:id
  * @access  Public
@@ -246,39 +328,84 @@ const getPublicEvents = async (req, res) => {
 const getActiveEvents = async (req, res) => {
   try {
     const events = await Event.find({ status: 'active' }).select('id title');
-    res.status(200).json(new ApiResponse(true, 'Active events fetched successfully', events));
+    return ApiResponse.success(res, 'Active events fetched successfully', events);
   } catch (error) {
     console.error('Error fetching active events:', error);
-    res.status(500).json(new ApiResponse(false, 'Server error'));
+    return ApiResponse.serverError(res, 'Server error');
   }
 };
 
 const getPublicEventById = async (req, res) => {
   console.log(`Fetching event with ID: ${req.params.id}`);
+  
   try {
-    const event = await Event.findOne({
-      _id: req.params.id,
-      status: 'approved' // Only return approved events
-    })
-      .populate('organizer', 'name email avatar')
-      .select('-__v -createdAt -updatedAt');
+    let event = null;
+    
+    // First, try to find by ObjectId if it's valid
+    if (req.params.id && require('mongoose').Types.ObjectId.isValid(req.params.id)) {
+      console.log(`Searching for event with ObjectId: ${req.params.id} in database...`);
+      event = await Event.findOne({
+        _id: req.params.id
+      })
+        .populate('organizer', 'name email avatar')
+        .select('-__v -createdAt -updatedAt');
+    }
+    
+    // If not found by ObjectId, try to find by slug
+    if (!event && req.params.id) {
+      console.log(`Event not found by ObjectId, trying to find by slug: ${req.params.id}`);
+      event = await Event.findOne({
+        slug: req.params.id
+      })
+        .populate('organizer', 'name email avatar')
+        .select('-__v -createdAt -updatedAt');
+    }
+    
+    // If still not found, try to find by any field that might match
+    if (!event && req.params.id) {
+      console.log(`Event not found by slug, trying to find by any matching field: ${req.params.id}`);
+      event = await Event.findOne({
+        $or: [
+          { _id: req.params.id },
+          { slug: req.params.id },
+          { title: { $regex: req.params.id, $options: 'i' } }
+        ]
+      })
+        .populate('organizer', 'name email avatar')
+        .select('-__v -createdAt -updatedAt');
+    }
 
     if (!event) {
-      return res.status(404).json(
-        new ApiResponse(false, 'Event not found or not approved', null, 404)
-      );
+      console.log(`Event with ID ${req.params.id} not found`);
+      return ApiResponse.notFound(res, 'Event not found');
     }
-    // console.log('Event retrieved successfully:', event);
 
-    // Increment view count
-    //event.views = (event.views || 0) + 1;
-    await event.save();
+    // Check if the event is approved
+    if (event.status !== 'approved') {
+      console.log(`Event with ID ${req.params.id} has status: ${event.status}`);
+      
+      // Provide more specific error messages based on status
+      let errorMessage = 'Event is not available';
+      if (event.status === 'pending') {
+        errorMessage = 'This event is pending approval and not yet available for public viewing';
+      } else if (event.status === 'rejected') {
+        errorMessage = 'This event has been rejected and is not available for public viewing';
+      } else if (event.status === 'draft') {
+        errorMessage = 'This event is still in draft mode and not available for public viewing';
+      } else if (event.status === 'cancelled') {
+        errorMessage = 'This event has been cancelled';
+      } else if (event.status === 'completed') {
+        errorMessage = 'This event has already been completed';
+      }
+      
+      return ApiResponse.forbidden(res, errorMessage);
+    }
+
+    console.log('Event retrieved successfully:', event._id);
     return res.status(200).json(event);
   } catch (error) {
     console.error('Error fetching event:', error);
-    return res.status(500).json(
-      new ApiResponse(false, 'Server error while fetching event', null, 500, error.message)
-    );
+    return ApiResponse.serverError(res, 'Server error while fetching event', error);
   }
 };
 
@@ -359,13 +486,30 @@ const updateEvent = async (req, res) => {
       fieldsToUpdate.location = {
         ...event.location,
         ...req.body.location,
-        coordinates: req.body.location.coordinates ? {
-          type: 'Point',
-          coordinates: [
-            parseFloat(req.body.location.coordinates.longitude) || event.location.coordinates.coordinates[0],
-            parseFloat(req.body.location.coordinates.latitude) || event.location.coordinates.coordinates[1]
-          ]
-        } : event.location.coordinates
+        coordinates: req.body.location.coordinates ? (() => {
+          // Handle coordinates - support both old format (latitude/longitude) and new format (GeoJSON)
+          if (req.body.location.coordinates.coordinates && Array.isArray(req.body.location.coordinates.coordinates)) {
+            // New GeoJSON format
+            return {
+              type: 'Point',
+              coordinates: [
+                parseFloat(req.body.location.coordinates.coordinates[0]) || event.location.coordinates.coordinates[0],
+                parseFloat(req.body.location.coordinates.coordinates[1]) || event.location.coordinates.coordinates[1]
+              ]
+            };
+          } else if (req.body.location.coordinates.latitude && req.body.location.coordinates.longitude) {
+            // Old format with latitude/longitude
+            return {
+              type: 'Point',
+              coordinates: [
+                parseFloat(req.body.location.coordinates.longitude) || event.location.coordinates.coordinates[0],
+                parseFloat(req.body.location.coordinates.latitude) || event.location.coordinates.coordinates[1]
+              ]
+            };
+          } else {
+            return event.location.coordinates;
+          }
+        })() : event.location.coordinates
       };
     }
 
@@ -382,6 +526,16 @@ const updateEvent = async (req, res) => {
 
     fieldsToUpdate.updatedAt = new Date();
     fieldsToUpdate.updatedBy = req.user.id;
+
+    // Fix coordinates if they are incomplete in the update data
+    if (fieldsToUpdate.location && fieldsToUpdate.location.coordinates) {
+      if (!fieldsToUpdate.location.coordinates.coordinates || !Array.isArray(fieldsToUpdate.location.coordinates.coordinates)) {
+        fieldsToUpdate.location.coordinates = {
+          type: 'Point',
+          coordinates: [0, 0] // Default coordinates
+        };
+      }
+    }
 
     // Update the event
     const updatedEvent = await Event.findByIdAndUpdate(
@@ -724,17 +878,19 @@ const updateOrganizerEvent = async (req, res) => {
       return ApiResponse.error(res, 'Event not found', {}, 404);
     }
 
-    // Only allow updates if event is pending or rejected
-    if (event.status === 'active' || event.status === 'completed') {
-      return ApiResponse.error(res, 'Cannot update active or completed events', {}, 400);
+    // Allow updates for all events except completed ones
+    if (event.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot update completed events', {}, 400);
     }
 
     const updateData = req.body;
     
-    // If significant changes are made, reset approval status
-    if (updateData.title || updateData.description || updateData.category || updateData.location) {
-      updateData.status = 'pending';
-      updateData.approvalStatus = 'pending';
+    // If significant changes are made to approved events, reset approval status
+    if (event.status === 'approved' || event.status === 'active') {
+      if (updateData.title || updateData.description || updateData.category || updateData.location || updateData.startDate || updateData.endDate) {
+        updateData.status = 'pending';
+        updateData.approvalStatus = 'pending';
+      }
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(
@@ -766,9 +922,9 @@ const deleteOrganizerEvent = async (req, res) => {
       return ApiResponse.error(res, 'Event not found', {}, 404);
     }
 
-    // Only allow deletion if event is pending or rejected
-    if (event.status === 'active' || event.status === 'completed') {
-      return ApiResponse.error(res, 'Cannot delete active or completed events', {}, 400);
+    // Allow deletion for all events except completed ones
+    if (event.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot delete completed events', {}, 400);
     }
 
     await Event.findByIdAndDelete(req.params.id);
@@ -785,6 +941,7 @@ module.exports = {
   getEvents,
   getPublicEvents,
   getPublicEventById,
+  debugEventById,
   getActiveEvents,
   approveEvent,
   rejectEvent,

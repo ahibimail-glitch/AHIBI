@@ -293,6 +293,45 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/bookings/organizer-bookings
+// @desc    Get all bookings for events created by the logged-in organizer
+// @access  Private (Organizer only)
+router.get("/organizer-bookings", auth.protect, async (req, res) => {
+  try {
+    // Check if user is an organizer
+    if (req.user.role !== 'organizer') {
+      return res.status(403).json({ 
+        message: "Access denied. Organizer role required." 
+      });
+    }
+
+    // First get all events created by this organizer
+    const organizerEvents = await Event.find({ organizer: req.user._id }).select('_id');
+    const eventIds = organizerEvents.map(event => event._id);
+
+    if (eventIds.length === 0) {
+      return res.json({ bookings: [] });
+    }
+
+    // Get all bookings for these events
+    const bookings = await Booking.find({ event: { $in: eventIds } })
+      .sort({ bookedAt: -1 })
+      .populate('event', 'title banner startDate organizer')
+      .populate('user', 'name email phone')
+      .lean();
+
+    const normalized = bookings.map(b => ({
+      ...b,
+      event: b.event || b.eventSnapshot || b.event // keep original if present
+    }));
+
+    res.json({ bookings: normalized });
+  } catch (error) {
+    console.error('Error fetching organizer bookings:', error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // @route   GET /api/bookings/all
 // @desc    Get all bookings (admin only)
 // @access  Private (Admin only)

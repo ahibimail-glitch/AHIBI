@@ -6,6 +6,9 @@ const router = express.Router();
 // Public routes
 router.get('/', eventController.getPublicEvents);
 
+// Debug route (temporary)
+router.get('/debug/:id', eventController.debugEventById);
+
 // FC25 Registration routes (place BEFORE generic :id route)
 router.post('/FC25/register', eventController.registerFC25);
 router.get('/FC25/slots', eventController.getFC25Slots);

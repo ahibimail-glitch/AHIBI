@@ -318,11 +318,13 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         state: eventData.state || "Maharashtra",
         country: eventData.country || "India",
         pincode: eventData.pincode || "400001",
-        type: 'Point',
-        coordinates: [
-          parseFloat("72.8777"),
-          parseFloat("19.0760")
-        ]
+        coordinates: {
+          type: 'Point',
+          coordinates: [
+            parseFloat("72.8777"),
+            parseFloat("19.0760")
+          ]
+        }
       },
       ticketTypes: ticketTypes.map(ticket => ({
         name: ticket.name,

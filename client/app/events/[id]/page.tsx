@@ -16,6 +16,7 @@ import {
   Star,
   Ticket as TicketIcon,
   X,
+  XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -407,6 +408,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
             return;
           }
+          if (response.status === 404) {
+            throw new Error("Event not found. It may have been removed or is not available.");
+          }
+          if (response.status === 403) {
+            throw new Error("This event is not available for public viewing.");
+          }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -432,6 +439,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
         if (isMounted) {
           setError(errorMsg);
+          // If it's a 404 or 403 error, redirect to events page after a delay
+          if (errorMsg.includes("not found") || errorMsg.includes("not available")) {
+            setTimeout(() => {
+              router.push("/events");
+            }, 3000);
+          }
         }
       } finally {
         if (isMounted) {
@@ -499,14 +512,27 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   if (error || !event) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h2 className="text-2xl font-bold mb-2">Error Loading Event</h2>
-        <p className="text-muted-foreground mb-4">
-          {error || "Invalid event data received"}
-        </p>
-        <Button onClick={() => router.back()} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
-        </Button>
+      <div className="min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Event Not Available</h2>
+            <p className="text-gray-600 mb-6">{error || "Invalid event data received"}</p>
+            <div className="space-y-3">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Try Again
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/events')} className="w-full">
+                Browse All Events
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/')} className="w-full">
+                Go to Homepage
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

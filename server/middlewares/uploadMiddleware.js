@@ -29,14 +29,10 @@ const upload = multer({
 const handleMulterErrors = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     // A Multer error occurred when uploading
-    return res.status(400).json(
-      new ApiResponse(false, `Upload error: ${err.message}`, null, 400)
-    );
+    return ApiResponse.badRequest(res, `Upload error: ${err.message}`);
   } else if (err) {
     // An unknown error occurred
-    return res.status(500).json(
-      new ApiResponse(false, `Server error: ${err.message}`, null, 500)
-    );
+    return ApiResponse.serverError(res, `Server error: ${err.message}`);
   }
   // No errors, proceed to next middleware
   next();

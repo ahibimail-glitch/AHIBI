@@ -497,6 +497,16 @@ exports.processEventApproval = async (req, res) => {
       return ApiResponse.notFound(res, 'Pending event not found');
     }
     
+    // Fix coordinates if they are incomplete
+    if (event.location && event.location.coordinates) {
+      if (!event.location.coordinates.coordinates || !Array.isArray(event.location.coordinates.coordinates)) {
+        event.location.coordinates = {
+          type: 'Point',
+          coordinates: [0, 0] // Default coordinates
+        };
+      }
+    }
+    
     // Update event status and approval status
     event.status = status;
     event.approvalStatus = status;

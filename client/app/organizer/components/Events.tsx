@@ -24,7 +24,10 @@ import {
   Plus,
   Search,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import EditEventForm from "./EditEventForm";
 
 interface Event {
   _id: string;
@@ -63,6 +66,9 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch events from API
   useEffect(() => {
@@ -117,6 +123,63 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
   };
 
   const filteredEvents = getFilteredEvents();
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingEventId(eventId);
+      const token = localStorage.getItem("organizer_token");
+      if (!token) {
+        window.location.href = "/organizer/auth/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/organizer/events/${eventId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete event');
+      }
+
+      // Remove the event from the list
+      setEvents(events.filter(event => event._id !== eventId));
+      
+      toast({
+        title: "Success",
+        description: "Event deleted successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete event",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingEventId(null);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setEditingEventId(null);
+    fetchEvents(); // Refresh the events list
+    toast({
+      title: "Success",
+      description: "Event updated successfully!",
+      variant: "default",
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -185,6 +248,17 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
     );
   }
 
+  // If editing an event, show the edit form
+  if (editingEventId) {
+    return (
+      <EditEventForm
+        eventId={editingEventId}
+        onSuccess={handleEditSuccess}
+        onCancel={() => setEditingEventId(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -193,7 +267,6 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
           <h2 className="text-2xl font-bold text-gray-900">{getPageTitle()}</h2>
           <p className="text-gray-600">{getPageDescription()}</p>
         </div>
-    
       </div>
 
       {/* Search and Filters */}
@@ -285,13 +358,36 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                       <Button size="sm" variant="outline">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setEditingEventId(event._id)}
+                        disabled={event.status === "completed"}
+                        title={event.status === "completed" ? "Cannot edit completed events" : "Edit event"}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteEvent(event._id)}
+                        disabled={event.status === "completed" || deletingEventId === event._id}
+                        title={event.status === "completed" ? "Cannot delete completed events" : "Delete event"}
+                      >
+                        {deletingEventId === event._id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
+                    {event.status === "completed" && (
+                      <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>Completed events cannot be modified</span>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

@@ -139,7 +139,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
               </Button>
             ) : (
               <Button asChild size="sm">
-                <Link href={event._id === "6899cb7215438afd622a7646" ? "/events/FC25" : `/events/${event.slug || event._id}`}>
+                <Link href={event._id === "6899cb7215438afd622a7646" ? "/events/FC25" : `/events/${event._id}`}>
                   View Details
                 </Link>
               </Button>

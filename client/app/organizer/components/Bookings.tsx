@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,54 +24,78 @@ import {
   Eye,
   CheckCircle,
   XCircle,
+  Loader2,
 } from "lucide-react";
+
+interface Booking {
+  _id: string;
+  event: {
+    _id: string;
+    title: string;
+    banner?: string;
+    startDate: string;
+  };
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  quantity: number;
+  price: number;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  ticketType: string;
+  bookedAt: string;
+  checkedInAt?: string;
+}
 
 export default function Bookings() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const bookings = [
-    {
-      id: "1",
-      eventName: "Summer Music Festival",
-      customerName: "Rahul Sharma",
-      customerEmail: "rahul.sharma@example.com",
-      customerPhone: "9876543210",
-      tickets: 2,
-      totalAmount: "₹1,000",
-      status: "confirmed",
-      bookingDate: "2025-01-15",
-      eventDate: "2025-06-15",
-    },
-    {
-      id: "2",
-      eventName: "Rock Concert Night",
-      customerName: "Priya Patel",
-      customerEmail: "priya.patel@example.com",
-      customerPhone: "9876543211",
-      tickets: 1,
-      totalAmount: "₹500",
-      status: "pending",
-      bookingDate: "2025-01-16",
-      eventDate: "2025-05-20",
-    },
-    {
-      id: "3",
-      eventName: "Jazz Evening",
-      customerName: "Amit Kumar",
-      customerEmail: "amit.kumar@example.com",
-      customerPhone: "9876543212",
-      tickets: 3,
-      totalAmount: "₹1,500",
-      status: "cancelled",
-      bookingDate: "2025-01-17",
-      eventDate: "2025-07-10",
-    },
-  ];
+  // Fetch bookings data
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const token = localStorage.getItem('organizer_token');
+        if (!token) {
+          setError('No authentication token found');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/bookings/organizer-bookings', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch bookings');
+        }
+
+        const data = await response.json();
+        setBookings(data.bookings || []);
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch bookings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
 
   const filteredBookings = bookings.filter((booking) =>
-    booking.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    booking.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    booking.eventName.toLowerCase().includes(searchQuery.toLowerCase())
+    booking.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    booking.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    booking.event.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -82,6 +106,8 @@ export default function Bookings() {
         return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
       case "cancelled":
         return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+      case "checked-in":
+        return <Badge className="bg-blue-100 text-blue-800">Checked In</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -95,10 +121,68 @@ export default function Bookings() {
         return <Calendar className="h-4 w-4 text-yellow-600" />;
       case "cancelled":
         return <XCircle className="h-4 w-4 text-red-600" />;
+      case "checked-in":
+        return <CheckCircle className="h-4 w-4 text-blue-600" />;
       default:
         return <Calendar className="h-4 w-4 text-gray-400" />;
     }
   };
+
+  // Calculate stats
+  const totalBookings = bookings.length;
+  const confirmedBookings = bookings.filter(b => b.status === "confirmed").length;
+  const pendingBookings = bookings.filter(b => b.status === "pending").length;
+  const totalRevenue = bookings.reduce((sum, b) => sum + b.total, 0);
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Event Bookings</h2>
+            <p className="text-gray-600">Manage and track all bookings for your events</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-pink-600" />
+            <p className="text-gray-600">Loading bookings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Event Bookings</h2>
+            <p className="text-gray-600">Manage and track all bookings for your events</p>
+          </div>
+        </div>
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <XCircle className="h-8 w-8 mx-auto mb-4 text-red-600" />
+              <p className="text-red-800 font-medium">Error loading bookings</p>
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -143,7 +227,7 @@ export default function Bookings() {
               <Ticket className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium">Total Bookings</p>
-                <p className="text-2xl font-bold">{bookings.length}</p>
+                <p className="text-2xl font-bold">{totalBookings}</p>
               </div>
             </div>
           </CardContent>
@@ -155,9 +239,7 @@ export default function Bookings() {
               <CheckCircle className="h-5 w-5 text-green-600" />
               <div>
                 <p className="text-sm font-medium">Confirmed</p>
-                <p className="text-2xl font-bold">
-                  {bookings.filter(b => b.status === "confirmed").length}
-                </p>
+                <p className="text-2xl font-bold">{confirmedBookings}</p>
               </div>
             </div>
           </CardContent>
@@ -169,9 +251,7 @@ export default function Bookings() {
               <Calendar className="h-5 w-5 text-yellow-600" />
               <div>
                 <p className="text-sm font-medium">Pending</p>
-                <p className="text-2xl font-bold">
-                  {bookings.filter(b => b.status === "pending").length}
-                </p>
+                <p className="text-2xl font-bold">{pendingBookings}</p>
               </div>
             </div>
           </CardContent>
@@ -183,7 +263,7 @@ export default function Bookings() {
               <DollarSign className="h-5 w-5 text-purple-600" />
               <div>
                 <p className="text-sm font-medium">Total Revenue</p>
-                <p className="text-2xl font-bold">₹3,000</p>
+                <p className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -204,7 +284,8 @@ export default function Bookings() {
               <TableRow>
                 <TableHead>Customer</TableHead>
                 <TableHead>Event</TableHead>
-                <TableHead>Tickets</TableHead>
+                <TableHead>Ticket Type</TableHead>
+                <TableHead>Quantity</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dates</TableHead>
@@ -213,27 +294,32 @@ export default function Bookings() {
             </TableHeader>
             <TableBody>
               {filteredBookings.map((booking) => (
-                <TableRow key={booking.id}>
+                <TableRow key={booking._id}>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{booking.customerName}</div>
-                      <div className="text-sm text-gray-500">{booking.customerEmail}</div>
-                      <div className="text-sm text-gray-500">{booking.customerPhone}</div>
+                      <div className="font-medium">{booking.user.name}</div>
+                      <div className="text-sm text-gray-500">{booking.user.email}</div>
+                      <div className="text-sm text-gray-500">{booking.user.phone}</div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">{booking.eventName}</div>
+                    <div className="font-medium">{booking.event.title}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm font-medium text-gray-700">
+                      {booking.ticketType}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <Ticket className="h-4 w-4 text-gray-400" />
-                      <span>{booking.tickets}</span>
+                      <span>{booking.quantity}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
                       <DollarSign className="h-4 w-4 text-gray-400" />
-                      <span className="font-medium">{booking.totalAmount}</span>
+                      <span className="font-medium">₹{booking.total.toLocaleString()}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -244,8 +330,8 @@ export default function Bookings() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div>Booked: {booking.bookingDate}</div>
-                      <div className="text-gray-500">Event: {booking.eventDate}</div>
+                      <div>Booked: {formatDate(booking.bookedAt)}</div>
+                      <div className="text-gray-500">Event: {formatDate(booking.event.startDate)}</div>
                     </div>
                   </TableCell>
                   <TableCell>
