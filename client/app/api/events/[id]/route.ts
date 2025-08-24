@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const url = new URL(`${backendUrl}/api/events/${params.id}`);
 

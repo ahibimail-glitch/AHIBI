@@ -189,7 +189,10 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
       
       // Upload the file
       const uploadedUrl = await uploadFile(file);
-      setEventData(prev => ({ ...prev, image: uploadedUrl }));
+      setEventData(prev => ({ 
+        ...prev, 
+        image: uploadedUrl.status === 'success' && uploadedUrl.data?.photo?.url ? uploadedUrl.data.photo.url : prev.image 
+      }));
       
     } catch (err) {
       console.error('Error uploading image:', err);
