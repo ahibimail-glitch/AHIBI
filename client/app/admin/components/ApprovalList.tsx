@@ -54,6 +54,20 @@ interface Organizer {
   };
 }
 
+interface Artist {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+  artist?: {
+    bio: string;
+    type: string;
+    experience: string;
+    approvalStatus: string;
+  };
+}
+
 interface ApprovalListProps {
   type: "Organizer" | "Artist" | "Venue" | "Event";
 }
@@ -61,6 +75,7 @@ interface ApprovalListProps {
 export default function ApprovalList({ type }: ApprovalListProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -71,6 +86,8 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       fetchPendingEvents();
     } else if (type === 'Organizer') {
       fetchPendingOrganizers();
+    } else if (type === 'Artist') {
+      fetchPendingArtists();
     }
   }, [type]);
 
@@ -131,6 +148,37 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     } catch (err) {
       console.error('Error fetching pending organizers:', err);
       setError('Failed to load pending organizers. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPendingArtists = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals?type=artists`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending artists');
+      }
+
+      const data = await response.json();
+      setArtists(data.data?.artists || []);
+    } catch (err) {
+      console.error('Error fetching pending artists:', err);
+      setError('Failed to load pending artists. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -322,7 +370,99 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     }
   };
 
-  if (type !== 'Event' && type !== 'Organizer') {
+  const handleArtistApprove = async (artistId: string) => {
+    try {
+      setProcessingId(artistId);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals/artist/${artistId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve artist');
+      }
+
+      // Refresh the list
+      await fetchPendingArtists();
+      toast({
+        title: "Success",
+        description: "Artist approved successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error approving artist:', err);
+      toast({
+        title: "Error",
+        description: "Failed to approve artist. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleArtistReject = async (artistId: string) => {
+    if (!confirm('Are you sure you want to reject this artist?')) return;
+    
+    try {
+      setProcessingId(artistId);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const reason = prompt('Please enter the reason for rejection:');
+      if (!reason) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals/artist/${artistId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          status: 'rejected',
+          rejectionReason: reason 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject artist');
+      }
+
+      // Refresh the list
+      await fetchPendingArtists();
+      toast({
+        title: "Success",
+        description: "Artist rejected successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error rejecting artist:', err);
+      toast({
+        title: "Error",
+        description: "Failed to reject artist. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (type !== 'Event' && type !== 'Organizer' && type !== 'Artist') {
     return (
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader>
@@ -361,7 +501,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center">
-          {type} Approvals ({type === 'Event' ? events.length : organizers.length})
+          {type} Approvals ({type === 'Event' ? events.length : type === 'Organizer' ? organizers.length : artists.length})
         </CardTitle>
         <CardDescription>
           Review and approve new {type.toLowerCase()} submissions.
@@ -425,8 +565,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
               </p>
             </div>
           )
-        ) : (
-          // Organizer approvals
+        ) : type === 'Organizer' ? (
           organizers.length > 0 ? (
             organizers.map((organizer) => (
               <div
@@ -486,6 +625,70 @@ export default function ApprovalList({ type }: ApprovalListProps) {
             <div className="text-center py-8">
               <p className="text-gray-500">
                 No pending organizer approvals at the moment.
+            </p>
+          </div>
+          )
+        ) : (
+          // Artist approvals
+          artists.length > 0 ? (
+            artists.map((artist) => (
+              <div
+                key={artist._id}
+                className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 shadow-sm"
+              >
+                <div className="flex-1">
+                  <h3 className="font-medium">{artist.name}</h3>
+                  <p className="text-sm text-gray-500">{artist.email}</p>
+                  <p className="text-sm text-gray-500">{artist.phone}</p>
+                  {artist.artist && (
+                    <>
+                      <p className="text-sm text-gray-600 font-medium">{artist.artist.bio}</p>
+                      <p className="text-sm text-gray-500">{artist.artist.type}</p>
+                    </>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    Submitted on {new Date(artist.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button size="sm" variant="outline">
+                    <Eye className="h-4 w-4 mr-1" /> View
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-green-600 border-green-200 hover:bg-green-50"
+                    onClick={() => handleArtistApprove(artist._id)}
+                    disabled={!!processingId}
+                  >
+                    {processingId === artist._id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Approve
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => handleArtistReject(artist._id)}
+                    disabled={!!processingId}
+                  >
+                    {processingId === artist._id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No pending artist approvals at the moment.
             </p>
           </div>
           )

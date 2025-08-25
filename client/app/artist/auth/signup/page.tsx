@@ -3,17 +3,22 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Ticket, Music, User, Mail, Phone, Shield } from "lucide-react"
+import { Ticket, Music, User, Mail, Phone, Shield, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ArtistSignupPage() {
+  const router = useRouter()
   const [step, setStep] = useState<"details" | "otp" | "complete">("details")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [signupData, setSignupData] = useState({
     name: "",
     email: "",
@@ -25,18 +30,138 @@ export default function ArtistSignupPage() {
   })
   const [otp, setOtp] = useState("")
 
-  const handleDetailsSubmit = (e: React.FormEvent) => {
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("otp")
+    setLoading(true)
+    setError(null)
+
+    try {
+      // First, send OTP to the phone number
+      const otpResponse = await fetch('/api/artist/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: signupData.phone,
+          mode: 'signup' // Specify that this is for signup
+        }),
+      })
+
+      const otpData = await otpResponse.json()
+
+      if (!otpResponse.ok) {
+        throw new Error(otpData.message || 'Failed to send OTP')
+      }
+
+      setStep("otp")
+    } catch (error) {
+      console.error('Error sending OTP:', error)
+      setError(error instanceof Error ? error.message : 'Failed to send OTP. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("complete")
+    setLoading(true)
+    setError(null)
+
+    try {
+      // First verify the OTP
+      const verifyResponse = await fetch('/api/artist/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: signupData.phone,
+          otp: otp,
+          mode: 'signup'
+        }),
+      })
+
+      const verifyData = await verifyResponse.json()
+
+      if (!verifyResponse.ok) {
+        throw new Error(verifyData.message || 'Failed to verify OTP')
+      }
+
+      // Then register the artist
+      const signupResponse = await fetch('/api/artist/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: signupData.name,
+          email: signupData.email,
+          phone: signupData.phone,
+          city: signupData.city,
+          specialization: signupData.specialization,
+          experience: signupData.experience,
+        }),
+      })
+
+      const signupResponseData = await signupResponse.json()
+
+      if (!signupResponse.ok) {
+        throw new Error(signupResponseData.message || 'Failed to create artist account')
+      }
+
+      // Save token and user data to localStorage if provided in response
+      if (signupResponseData.data?.token) {
+        localStorage.setItem('artist_token', signupResponseData.data.token)
+      }
+      
+      if (signupResponseData.data?.user) {
+        localStorage.setItem('artist_user', JSON.stringify(signupResponseData.data.user))
+      }
+
+      setStep("complete")
+    } catch (error) {
+      console.error('Error during signup:', error)
+      setError(error instanceof Error ? error.message : 'Failed to complete signup. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/artist/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: signupData.phone,
+          mode: 'signup'
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend OTP')
+      }
+
+      // Show success message
+      alert('OTP has been resent successfully')
+    } catch (error) {
+      console.error('Error resending OTP:', error)
+      setError(error instanceof Error ? error.message : 'Failed to resend OTP. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleComplete = () => {
-    window.location.href = "/artist"
+    router.push('/artist/dashboard')
   }
 
   return (
@@ -44,16 +169,13 @@ export default function ArtistSignupPage() {
       <Card className="w-full max-w-md bg-gray-900/95 border-gray-700 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
           <div className="flex items-center justify-center mb-4">
-            {/* <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center">
-              <Music className="h-6 w-6 text-white" />
-            </div> */}
-           <div className="flex items-center justify-center space-x-2">
-            <img
-              src="/images/Logo.png"
-              alt="Ahibi logo"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
+            <div className="flex items-center justify-center space-x-2">
+              <img
+                src="/images/Logo.png"
+                alt="Ahibi logo"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
           </div>
           <CardTitle className="text-white text-xl">
             {step === "details" && "Create Artist Account"}
@@ -68,6 +190,14 @@ export default function ArtistSignupPage() {
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           {step === "details" && (
             <form onSubmit={handleDetailsSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -224,6 +354,7 @@ export default function ArtistSignupPage() {
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:opacity-90 transition-opacity"
                 disabled={
+                  loading ||
                   !signupData.agreeToTerms ||
                   !signupData.name ||
                   !signupData.email ||
@@ -233,7 +364,14 @@ export default function ArtistSignupPage() {
                   !signupData.experience
                 }
               >
-                Continue to Verification
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  "Continue to Verification"
+                )}
               </Button>
             </form>
           )}
@@ -258,8 +396,16 @@ export default function ArtistSignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:opacity-90 transition-opacity"
+                disabled={loading}
               >
-                Verify Phone Number
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify Phone Number"
+                )}
               </Button>
               <div className="text-center space-y-2">
                 <Button
@@ -268,12 +414,18 @@ export default function ArtistSignupPage() {
                   onClick={() => setStep("details")}
                   type="button"
                   className="text-gray-300 hover:text-white"
+                  disabled={loading}
                 >
                   ← Back to Details
                 </Button>
                 <p className="text-xs text-gray-400">
                   Didn't receive code?{" "}
-                  <button type="button" className="underline text-green-400">
+                  <button 
+                    type="button" 
+                    className="underline text-green-400"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                  >
                     Resend OTP
                   </button>
                 </p>
@@ -289,6 +441,7 @@ export default function ArtistSignupPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white">Account Created Successfully!</h3>
                 <p className="text-gray-300">Welcome to Ahibi 3.0, {signupData.name}! Your artist profile is ready.</p>
+                <p className="text-amber-400 text-sm">Your account is pending admin approval. You'll be notified once approved.</p>
               </div>
 
               <div className="p-4 bg-gray-800/50 rounded-lg text-left border border-gray-600">
@@ -319,7 +472,7 @@ export default function ArtistSignupPage() {
                 onClick={handleComplete}
                 className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:opacity-90 transition-opacity"
               >
-                Start Your Artist Journey
+                Go to Dashboard
               </Button>
             </div>
           )}

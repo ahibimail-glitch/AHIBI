@@ -3,30 +3,127 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Ticket, Music, Mail, Shield } from "lucide-react"
+import { Ticket, Music, Mail, Shield, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ArtistLoginPage() {
+  const router = useRouter()
   const [step, setStep] = useState<"login" | "otp-verify">("login")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [loginData, setLoginData] = useState({
-    loginId: "",
+    phone: "",
     otp: "",
     rememberMe: false,
   })
 
-  const handleOtpRequest = (e: React.FormEvent) => {
+  const handleOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("otp-verify")
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/artist/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          mode: 'login' // Specify that this is for login
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send OTP')
+      }
+
+      setStep("otp-verify")
+    } catch (error) {
+      console.error('Error sending OTP:', error)
+      setError(error instanceof Error ? error.message : 'Failed to send OTP. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleOtpVerify = (e: React.FormEvent) => {
+  const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    window.location.href = "/artist/dashboard"
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/artist/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          otp: loginData.otp,
+          mode: 'login'
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to verify OTP')
+      }
+
+      // Save token and user data to localStorage
+      localStorage.setItem('artist_token', data.data.token)
+      localStorage.setItem('artist_user', JSON.stringify(data.data.user))
+
+      // Redirect to dashboard
+      router.push('/artist/dashboard')
+    } catch (error) {
+      console.error('Error verifying OTP:', error)
+      setError(error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/artist/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          mode: 'login'
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend OTP')
+      }
+
+      // Show success message (could be implemented with a toast notification)
+      alert('OTP has been resent successfully')
+    } catch (error) {
+      console.error('Error resending OTP:', error)
+      setError(error instanceof Error ? error.message : 'Failed to resend OTP. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,38 +131,43 @@ export default function ArtistLoginPage() {
       <Card className="w-full max-w-md bg-gray-900/95 border-gray-700 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
           <div className="flex items-center justify-center mb-4">
-            {/* <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center">
-              <Music className="h-6 w-6 text-white" />
-            </div> */}
-           <div className="flex items-center justify-center space-x-2">
-            <img
-              src="/images/Logo.png"
-              alt="Ahibi logo"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
+            <div className="flex items-center justify-center space-x-2">
+              <img
+                src="/images/Logo.png"
+                alt="Ahibi logo"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
           </div>
           <CardTitle className="text-white text-xl">{step === "login" ? "Artist Login" : "Verify OTP"}</CardTitle>
           <CardDescription className="text-gray-300">
-            {step === "login" ? "Access your artist dashboard" : `We've sent a 6-digit code to ${loginData.loginId}`}
+            {step === "login" ? "Access your artist dashboard" : `We've sent a 6-digit code to ${loginData.phone}`}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           {step === "login" && (
             <form onSubmit={handleOtpRequest} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="loginId" className="text-gray-200">
-                  Email or Phone Number
+                <Label htmlFor="phone" className="text-gray-200">
+                  Phone Number
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    id="loginId"
+                    id="phone"
                     type="text"
-                    placeholder="Enter email or phone"
-                    value={loginData.loginId}
-                    onChange={(e) => setLoginData({ ...loginData, loginId: e.target.value })}
+                    placeholder="Enter your phone number"
+                    value={loginData.phone}
+                    onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
                     className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-green-500"
                     required
                   />
@@ -87,8 +189,16 @@ export default function ArtistLoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:opacity-90 transition-opacity"
+                disabled={loading}
               >
-                Send OTP
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  "Send OTP"
+                )}
               </Button>
             </form>
           )}
@@ -113,8 +223,16 @@ export default function ArtistLoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-green-800 hover:opacity-90 transition-opacity"
+                disabled={loading}
               >
-                Verify & Login
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify & Login"
+                )}
               </Button>
               <div className="text-center space-y-2">
                 <Button
@@ -123,12 +241,18 @@ export default function ArtistLoginPage() {
                   onClick={() => setStep("login")}
                   type="button"
                   className="text-gray-300 hover:text-white"
+                  disabled={loading}
                 >
                   ← Back to Login
                 </Button>
                 <p className="text-xs text-gray-400">
                   Didn't receive code?{" "}
-                  <button type="button" className="underline text-green-400">
+                  <button 
+                    type="button" 
+                    className="underline text-green-400"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                  >
                     Resend OTP
                   </button>
                 </p>

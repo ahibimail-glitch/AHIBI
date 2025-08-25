@@ -134,9 +134,9 @@ UserSchema.methods.verifyOtp = async function(otp) {
   return isMatch;
 };
 
-// Hash password before saving (only if modified)
+// Hash password before saving (only if modified and exists)
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();

@@ -6,25 +6,33 @@ const ArtistSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  bio: {
+  approvalStatus: {
     type: String,
-    required: [true, 'Bio is required']
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  rejectionReason: {
+    type: String
+  },
+  bio: {
+    type: String
   },
   genres: [{
-    type: String,
-    required: [true, 'At least one genre is required']
+    type: String
   }],
   languages: [{
     type: String
   }],
   type: {
     type: String,
-    required: [true, 'Artist type is required'],
-    enum: ['Band', 'Solo', 'DJ', 'Orchestra', 'Comedian', 'Dancer', 'Other']
+    enum: ['musician', 'singer', 'dj', 'comedian', 'dancer', 'performer', 'band', 'magician', 'speaker', 'other', 'Band', 'Solo', 'DJ', 'Orchestra', 'Comedian', 'Dancer', 'Other']
+  },
+  experience: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'experienced', 'expert']
   },
   basePrice: {
-    type: Number,
-    required: [true, 'Base price is required']
+    type: Number
   },
   customPricing: {
     hourlyRate: {

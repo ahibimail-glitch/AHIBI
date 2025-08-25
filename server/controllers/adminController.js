@@ -402,15 +402,32 @@ exports.processArtistApproval = async (req, res) => {
       return ApiResponse.notFound(res, 'Pending artist not found');
     }
     
+    // Find the artist profile
+    const artist = await Artist.findOne({ user: user._id });
+    
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist profile not found');
+    }
+    
     // Update user status
     user.status = status === 'approved' ? 'active' : 'rejected';
     
-    // Handle rejection
-    if (status === 'rejected' && rejectionReason) {
-      // TODO: Send notification to user about rejection with reason
+    // Update artist approval status
+    artist.approvalStatus = status;
+    
+    if (status === 'approved') {
+      artist.approvalDate = new Date();
+      artist.approvedBy = req.user.id;
+    } else if (status === 'rejected') {
+      artist.rejectionDate = new Date();
+      artist.rejectedBy = req.user.id;
+      artist.rejectionReason = rejectionReason;
     }
     
-    await user.save();
+    // Save both user and artist
+    await Promise.all([user.save(), artist.save()]);
+    
+    // TODO: Send notification to artist about approval/rejection
     
     return ApiResponse.success(res, `Artist has been ${status}`, {
       artist: {
@@ -418,7 +435,9 @@ exports.processArtistApproval = async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        status: user.status
+        status: user.status,
+        type: artist.type,
+        approvalStatus: artist.approvalStatus
       }
     });
   } catch (error) {

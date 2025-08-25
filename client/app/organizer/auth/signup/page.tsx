@@ -93,10 +93,10 @@ export default function OrganizerSignupPage() {
           companyName: signupData.organization,
           description: `${signupData.organizationType} organization`,
           address: {
-            street: 'Main Street',
+            street: '',
             city: signupData.city,
-            state: 'State',
-            pincode: '123456'
+            state: '',
+            pincode: ''
           },
           contactInfo: {
             email: signupData.email,

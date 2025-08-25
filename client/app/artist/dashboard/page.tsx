@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -25,27 +26,113 @@ import {
   Edit,
   Camera,
   Play,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+interface ArtistUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+}
+
+interface ArtistProfile {
+  _id: string;
+  user: string;
+  type: string;
+  bio: string;
+  genres: string[];
+  languages: string[];
+  basePrice: number;
+  location: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  profileImage?: string;
+  coverImage?: string;
+  socialLinks?: {
+    instagram?: string;
+    youtube?: string;
+    [key: string]: string | undefined;
+  };
+  rating?: number;
+  totalBookings?: number;
+}
 
 export default function ArtistDashboard() {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<ArtistUser | null>(null);
+  const [profile, setProfile] = useState<ArtistProfile | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const artistData = {
-    name: "DJ Rhythm",
-    bio: "Professional DJ with 10+ years of experience in electronic music and live performances.",
-    genre: ["Electronic", "House", "Techno"],
-    languages: ["Hindi", "English"],
-    basePrice: "₹25,000",
-    location: "Mumbai, India",
-    rating: 4.8,
-    totalBookings: 156,
-    avatar: "/images/carausel1.jpg?height=100&width=100",
-    coverImage: "/images/carausel1.jpg?height=300&width=800",
+  // Fetch artist profile from backend
+  useEffect(() => {
+    const token = localStorage.getItem('artist_token');
+    const userData = localStorage.getItem('artist_user');
+    
+    if (!token || !userData) {
+      router.push('/artist/auth/login');
+      return;
+    }
+
+    // Parse user data from localStorage
+    try {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      
+      // Fetch artist profile
+      fetchArtistProfile(token);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      setError('Error loading user data. Please login again.');
+      setLoading(false);
+    }
+  }, [router]);
+
+  const fetchArtistProfile = async (token: string) => {
+    try {
+      const response = await fetch('/api/artist/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch artist profile');
+      }
+
+      const data = await response.json();
+      setProfile(data.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching artist profile:', error);
+      setError('Error loading profile data');
+      setLoading(false);
+    }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('artist_token');
+    localStorage.removeItem('artist_user');
+    router.push('/artist/auth/login');
+  };
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsEditing(false);
+    
+    // Implementation for profile update would go here
+    // This would make a PUT request to /api/artist/profile
+  };
+
+  // Mock data for bookings and events (would be replaced with API calls)
   const bookingRequests = [
     {
       id: 1,
@@ -109,6 +196,98 @@ export default function ArtistDashboard() {
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button 
+              className="w-full mt-4" 
+              onClick={() => router.push('/artist/auth/login')}
+            >
+              Back to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle approval status
+  if (user && profile && profile.approvalStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Account Pending Approval</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Pending Approval</AlertTitle>
+              <AlertDescription>
+                Your artist account is currently under review by our admin team. 
+                You'll receive a notification once your account is approved.
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+              <Button onClick={() => window.location.reload()}>
+                Check Status
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle rejection status
+  if (user && profile && profile.approvalStatus === 'rejected') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Account Rejected</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Application Rejected</AlertTitle>
+              <AlertDescription>
+                {profile.rejectionReason || 'Your artist account application has been rejected. Please contact support for more information.'}
+              </AlertDescription>
+            </Alert>
+            <Button className="w-full" onClick={handleLogout}>
+              Logout
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -122,6 +301,9 @@ export default function ArtistDashboard() {
           <Button variant="outline" size="sm">
             View Public Profile
           </Button>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
       </div>
 
@@ -130,7 +312,7 @@ export default function ArtistDashboard() {
         <Card className="mb-6">
           <div className="relative">
             <Image
-              src={artistData.coverImage || "/images/carausel1.jpg"}
+              src={profile?.coverImage || "/images/carausel1.jpg"}
               alt="Cover"
               width={800}
               height={300}
@@ -150,9 +332,9 @@ export default function ArtistDashboard() {
               <div className="relative">
                 <Avatar className="w-24 h-24">
                   <AvatarImage
-                    src={artistData.avatar || "/images/carausel1.jpg"}
+                    src={profile?.profileImage || "/images/carausel1.jpg"}
                   />
-                  <AvatarFallback>DJ</AvatarFallback>
+                  <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
                 <Button
                   size="sm"
@@ -164,7 +346,7 @@ export default function ArtistDashboard() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-2xl font-bold">{artistData.name}</h2>
+                  <h2 className="text-2xl font-bold">{user?.name}</h2>
                   <Button
                     variant="outline"
                     size="sm"
@@ -175,27 +357,29 @@ export default function ArtistDashboard() {
                   </Button>
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 mr-1 text-yellow-500" />
-                    {artistData.rating} ({artistData.totalBookings} bookings)
-                  </div>
+                  {profile?.rating && (
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 mr-1 text-yellow-500" />
+                      {profile.rating} ({profile.totalBookings || 0} bookings)
+                    </div>
+                  )}
                   <div className="flex items-center">
                     <MapPin className="h-4 w-4 mr-1" />
-                    {artistData.location}
+                    {profile?.location || 'Location not set'}
                   </div>
                   <div className="flex items-center">
                     <DollarSign className="h-4 w-4 mr-1" />
-                    Starting from {artistData.basePrice}
+                    Starting from ₹{profile?.basePrice || 'Not set'}
                   </div>
                 </div>
-                <p className="text-muted-foreground mb-3">{artistData.bio}</p>
+                <p className="text-muted-foreground mb-3">{profile?.bio || 'No bio available'}</p>
                 <div className="flex flex-wrap gap-2">
-                  {artistData.genre.map((g) => (
+                  {profile?.genres?.map((g) => (
                     <Badge key={g} variant="secondary">
                       {g}
                     </Badge>
                   ))}
-                  {artistData.languages.map((l) => (
+                  {profile?.languages?.map((l) => (
                     <Badge key={l} variant="outline">
                       {l}
                     </Badge>
@@ -226,40 +410,46 @@ export default function ArtistDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {bookingRequests.map((request) => (
-                    <div key={request.id} className="p-4 border rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{request.event}</h3>
-                        <Badge variant="outline">{request.offer}</Badge>
+                  {bookingRequests.length > 0 ? (
+                    bookingRequests.map((request) => (
+                      <div key={request.id} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold">{request.event}</h3>
+                          <Badge variant="outline">{request.offer}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          by {request.organizer}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          {request.date}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          <MapPin className="h-4 w-4 inline mr-1" />
+                          {request.venue}
+                        </p>
+                        <div className="flex space-x-2">
+                          <Button size="sm" className="flex-1">
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 bg-transparent"
+                          >
+                            Counter Offer
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            Decline
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        by {request.organizer}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        <Calendar className="h-4 w-4 inline mr-1" />
-                        {request.date}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        <MapPin className="h-4 w-4 inline mr-1" />
-                        {request.venue}
-                      </p>
-                      <div className="flex space-x-2">
-                        <Button size="sm" className="flex-1">
-                          Accept
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 bg-transparent"
-                        >
-                          Counter Offer
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          Decline
-                        </Button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No booking requests yet
                     </div>
-                  ))}
+                  )}
                 </CardContent>
               </Card>
 
@@ -270,27 +460,33 @@ export default function ArtistDashboard() {
                   <CardDescription>Your confirmed performances</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {upcomingEvents.map((event) => (
-                    <div key={event.id} className="p-4 border rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{event.event}</h3>
-                        <Badge className="bg-green-100 text-green-800">
-                          {event.status}
-                        </Badge>
+                  {upcomingEvents.length > 0 ? (
+                    upcomingEvents.map((event) => (
+                      <div key={event.id} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold">{event.event}</h3>
+                          <Badge className="bg-green-100 text-green-800">
+                            {event.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          {event.date}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          <MapPin className="h-4 w-4 inline mr-1" />
+                          {event.venue}
+                        </p>
+                        <p className="text-sm font-medium text-green-600">
+                          Payment: {event.payment}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        <Calendar className="h-4 w-4 inline mr-1" />
-                        {event.date}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        <MapPin className="h-4 w-4 inline mr-1" />
-                        {event.venue}
-                      </p>
-                      <p className="text-sm font-medium text-green-600">
-                        Payment: {event.payment}
-                      </p>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No upcoming events
                     </div>
-                  ))}
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -400,44 +596,46 @@ export default function ArtistDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Artist Name</Label>
-                    <Input id="name" defaultValue={artistData.name} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <Input id="location" defaultValue={artistData.location} />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea id="bio" defaultValue={artistData.bio} rows={4} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="basePrice">Base Price</Label>
-                    <Input id="basePrice" defaultValue={artistData.basePrice} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" placeholder="+91 9876543210" />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <Label>Social Links</Label>
+                <form onSubmit={handleProfileUpdate}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Instagram className="h-4 w-4" />
-                      <Input placeholder="Instagram URL" />
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Artist Name</Label>
+                      <Input id="name" defaultValue={user?.name} />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Youtube className="h-4 w-4" />
-                      <Input placeholder="YouTube URL" />
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input id="location" defaultValue={profile?.location} />
                     </div>
                   </div>
-                </div>
-                <Button>Save Changes</Button>
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea id="bio" defaultValue={profile?.bio} rows={4} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="basePrice">Base Price</Label>
+                      <Input id="basePrice" defaultValue={profile?.basePrice?.toString()} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input id="phone" defaultValue={user?.phone} />
+                    </div>
+                  </div>
+                  <div className="space-y-4 mt-4">
+                    <Label>Social Links</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Instagram className="h-4 w-4" />
+                        <Input placeholder="Instagram URL" defaultValue={profile?.socialLinks?.instagram} />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Youtube className="h-4 w-4" />
+                        <Input placeholder="YouTube URL" defaultValue={profile?.socialLinks?.youtube} />
+                      </div>
+                    </div>
+                  </div>
+                  <Button type="submit" className="mt-6">Save Changes</Button>
+                </form>
               </CardContent>
             </Card>
           </TabsContent>
