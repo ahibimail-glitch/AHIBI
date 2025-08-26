@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -64,29 +65,28 @@ const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonPro
 // --- Main Organizer Dashboard Component ---
 export default function OrganizerDashboard() {
   const router = useRouter()
+  const { isAuthenticated, loading: authLoading } = useAuth({
+    tokenName: 'organizer_token',
+    redirectPath: '/organizer/auth/login',
+  });
   const [user, setUser] = useState<OrganizerUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeView, setActiveView] = useState("dashboard")
 
   useEffect(() => {
-    const token = localStorage.getItem('organizer_token')
-    const userData = localStorage.getItem('organizer_user')
-
-    if (!token || !userData) {
-      router.push('/organizer/auth/login')
-      return
-    }
-
-    try {
-      const user = JSON.parse(userData)
-      setUser(user)
-    } catch (error) {
-      console.error('Error parsing user data:', error)
-      router.push('/organizer/auth/login')
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
+    if (isAuthenticated) {
+      const userData = localStorage.getItem('organizer_user');
+      if (userData) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          handleLogout(); // Log out if user data is corrupted
+        }
+      }
+    } 
+    setLoading(authLoading);
+  }, [isAuthenticated, authLoading]);
 
   const handleLogout = () => {
     localStorage.removeItem('organizer_token')
@@ -136,8 +136,8 @@ export default function OrganizerDashboard() {
     )
   }
 
-  if (!user) {
-    return null
+  if (!isAuthenticated || !user) {
+    return null // The useAuth hook will handle the redirect.
   }
 
   return (
