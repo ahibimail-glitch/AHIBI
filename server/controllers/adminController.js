@@ -31,14 +31,12 @@ exports.getDashboardStats = async (req, res) => {
     });
 
     // Get pending approvals counts
-    const pendingOrganizers = await User.countDocuments({ 
-      role: 'organizer', 
-      status: 'pending' 
+    const pendingOrganizers = await Organizer.countDocuments({ 
+      approvalStatus: 'pending' 
     });
     
-    const pendingArtists = await User.countDocuments({ 
-      role: 'artist', 
-      status: 'pending' 
+    const pendingArtists = await Artist.countDocuments({ 
+      approvalStatus: 'pending' 
     });
     
     const pendingVenues = await User.countDocuments({ 
@@ -180,19 +178,17 @@ exports.getPendingApprovals = async (req, res) => {
     if (type) {
       switch (type) {
         case 'organizers':
-          const pendingOrganizers = await User.find({
-            role: 'organizer',
-            status: 'pending',
+          const pendingOrganizers = await Organizer.find({
+            approvalStatus: 'pending',
             ...searchQuery
           })
-          .select('_id name email phone createdAt')
+          .select('_id name email phone createdAt companyName')
           .skip(skip)
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
-          total = await User.countDocuments({
-            role: 'organizer',
-            status: 'pending',
+          total = await Organizer.countDocuments({
+            approvalStatus: 'pending',
             ...searchQuery
           });
           
@@ -200,9 +196,8 @@ exports.getPendingApprovals = async (req, res) => {
           break;
           
         case 'artists':
-          const pendingArtists = await User.find({
-            role: 'artist',
-            status: 'pending',
+          const pendingArtists = await Artist.find({
+            approvalStatus: 'pending',
             ...searchQuery
           })
           .select('_id name email phone createdAt')
@@ -210,9 +205,8 @@ exports.getPendingApprovals = async (req, res) => {
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
-          total = await User.countDocuments({
-            role: 'artist',
-            status: 'pending',
+          total = await Artist.countDocuments({
+            approvalStatus: 'pending',
             ...searchQuery
           });
           
@@ -272,15 +266,11 @@ exports.getPendingApprovals = async (req, res) => {
     } else {
       // If no type is provided, get all pending approvals
       const [organizers, artists, venues, events] = await Promise.all([
-        User.find({ role: 'organizer', status: 'pending' })
-          .select('_id name email phone createdAt')
-          .populate({
-            path: 'organizer',
-            select: 'companyName description contactInfo address approvalStatus'
-          })
+        Organizer.find({ approvalStatus: 'pending' })
+          .select('_id name email phone createdAt companyName')
           .sort({ createdAt: -1 })
           .limit(5),
-        User.find({ role: 'artist', status: 'pending' })
+        Artist.find({ approvalStatus: 'pending' })
           .select('_id name email phone createdAt')
           .sort({ createdAt: -1 })
           .limit(5),
@@ -329,26 +319,17 @@ exports.processOrganizerApproval = async (req, res) => {
       return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
     }
     
-    // Find the user
-    const user = await User.findOne({ _id: id, role: 'organizer', status: 'pending' });
-    
-    if (!user) {
-      return ApiResponse.notFound(res, 'Pending organizer not found');
-    }
-    
-    // Find the organizer profile
-    const organizer = await Organizer.findOne({ user: user._id });
+    // Find the organizer
+    const organizer = await Organizer.findOne({ _id: id, approvalStatus: 'pending' });
     
     if (!organizer) {
-      return ApiResponse.notFound(res, 'Organizer profile not found');
+      return ApiResponse.notFound(res, 'Pending organizer not found or already processed');
     }
-    
-    // Update user status
-    user.status = status === 'approved' ? 'active' : 'rejected';
     
     // Update organizer approval status
     organizer.approvalStatus = status;
-    
+    organizer.status = status === 'approved' ? 'active' : 'rejected';
+
     if (status === 'approved') {
       organizer.approvalDate = new Date();
       organizer.approvedBy = req.user.id;
@@ -358,19 +339,18 @@ exports.processOrganizerApproval = async (req, res) => {
       organizer.rejectionReason = rejectionReason;
     }
     
-    // Save both user and organizer
-    await Promise.all([user.save(), organizer.save()]);
+    // Save organizer
+    await organizer.save();
     
     // TODO: Send notification to organizer about approval/rejection
     
     return ApiResponse.success(res, `Organizer has been ${status}`, {
       organizer: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        status: user.status,
-        companyName: organizer.companyName,
+        id: organizer._id,
+        name: organizer.name,
+        email: organizer.email,
+        phone: organizer.phone,
+        status: organizer.status,
         approvalStatus: organizer.approvalStatus
       }
     });
@@ -389,54 +369,44 @@ exports.processArtistApproval = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, rejectionReason } = req.body;
-    
-    // Validate status
+
     if (!['approved', 'rejected'].includes(status)) {
       return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
     }
-    
-    // Find the user
-    const user = await User.findOne({ _id: id, role: 'artist', status: 'pending' });
-    
-    if (!user) {
-      return ApiResponse.notFound(res, 'Pending artist not found');
-    }
-    
-    // Find the artist profile
-    const artist = await Artist.findOne({ user: user._id });
-    
+
+    const artist = await Artist.findOne({ _id: id, approvalStatus: 'pending' });
+
     if (!artist) {
-      return ApiResponse.notFound(res, 'Artist profile not found');
+      return ApiResponse.notFound(res, 'Pending artist not found or already processed');
     }
-    
-    // Update user status
-    user.status = status === 'approved' ? 'active' : 'rejected';
-    
-    // Update artist approval status
+
     artist.approvalStatus = status;
-    
+    artist.status = status === 'approved' ? 'active' : 'rejected';
+
     if (status === 'approved') {
       artist.approvalDate = new Date();
-      artist.approvedBy = req.user.id;
+      artist.approvedBy = req.user.id; // Assuming admin user is available in req.user
+      artist.rejectionReason = undefined;
     } else if (status === 'rejected') {
+      if (!rejectionReason) {
+        return ApiResponse.badRequest(res, 'Rejection reason is required when rejecting an artist.');
+      }
       artist.rejectionDate = new Date();
       artist.rejectedBy = req.user.id;
       artist.rejectionReason = rejectionReason;
     }
-    
-    // Save both user and artist
-    await Promise.all([user.save(), artist.save()]);
-    
+
+    await artist.save();
+
     // TODO: Send notification to artist about approval/rejection
-    
+
     return ApiResponse.success(res, `Artist has been ${status}`, {
       artist: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        status: user.status,
-        type: artist.type,
+        id: artist._id,
+        name: artist.name,
+        email: artist.email,
+        phone: artist.phone,
+        status: artist.status,
         approvalStatus: artist.approvalStatus
       }
     });

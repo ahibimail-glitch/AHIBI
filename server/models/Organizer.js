@@ -1,10 +1,25 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const OrganizerSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true
+  },
+  email: {
+    type: String,
+    required: [true, 'Email is required'],
+    unique: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
+  },
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    unique: true,
+    trim: true,
+    match: [/^\d{10}$/, 'Please add a valid 10 digit phone number']
   },
   companyName: {
     type: String,
@@ -226,6 +241,19 @@ const OrganizerSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  otp: {
+    code: { type: String, default: null },
+    expiresAt: { type: Date, default: null }
+  },
+  profilePic: {
+    type: String,
+    default: ''
+  },
+  status: {
+    type: String,
+    enum: ['active', 'pending', 'blocked', 'rejected'],
+    default: 'pending'
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -235,6 +263,41 @@ const OrganizerSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Generate JWT token
+OrganizerSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign(
+    { id: this._id, role: 'organizer' }, // Hardcoded role
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE }
+  );
+};
+
+// Set OTP
+OrganizerSchema.methods.setOtp = async function() {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const salt = await bcrypt.genSalt(10);
+  const hashedOtp = await bcrypt.hash(otp, salt);
+  this.otp = {
+    code: hashedOtp,
+    expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+  };
+  await this.save({ validateBeforeSave: false });
+  return otp;
+};
+
+// Verify OTP
+OrganizerSchema.methods.verifyOtp = async function(otp) {
+  if (!this.otp.code || Date.now() > this.otp.expiresAt) {
+    return false;
+  }
+  const isMatch = await bcrypt.compare(otp, this.otp.code);
+  if (isMatch) {
+    this.otp = { code: null, expiresAt: null };
+    await this.save({ validateBeforeSave: false });
+  }
+  return isMatch;
+};
 
 // Update the updatedAt timestamp before saving
 OrganizerSchema.pre('save', function(next) {

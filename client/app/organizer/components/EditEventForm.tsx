@@ -132,6 +132,8 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
       const data = await response.json();
       const event: Event = data.data.event;
 
+      console.log("Fetched event data:", event); // Log the event object
+
       // Populate form with existing data
       setEventData({
         title: event.title,
@@ -141,8 +143,8 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
         state: event.location.state,
         country: event.location.country,
         pincode: event.location.pincode,
-        startDate: new Date(event.startDate).toISOString().split('T')[0],
-        endDate: new Date(event.endDate).toISOString().split('T')[0],
+        startDate: new Date(new Date(event.startDate).getTime() - new Date(event.startDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+        endDate: new Date(new Date(event.endDate).getTime() - new Date(event.endDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
         category: event.category,
         image: event.banner,
       });
@@ -517,21 +519,25 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
               </div>
               <div>
                 <Label htmlFor="state">State *</Label>
-                <Input
+                <input
                   id="state"
+                  type="text"
                   value={eventData.state}
                   onChange={(e) => setEventData({ ...eventData, state: e.target.value })}
                   placeholder="State"
                   required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
               <div>
                 <Label htmlFor="pincode">Pincode</Label>
-                <Input
+                <input
                   id="pincode"
+                  type="text"
                   value={eventData.pincode}
                   onChange={(e) => setEventData({ ...eventData, pincode: e.target.value })}
                   placeholder="Pincode"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
             </div>
@@ -698,75 +704,6 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
             >
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Ticket Type
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Terms and Conditions */}
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle>Terms and Conditions</CardTitle>
-            <CardDescription>Set the terms for your event</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={termsAndConditions}
-              onChange={(e) => setTermsAndConditions(e.target.value)}
-              placeholder="Enter terms and conditions..."
-              rows={4}
-            />
-          </CardContent>
-        </Card>
-
-        {/* FAQs */}
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle>Frequently Asked Questions</CardTitle>
-            <CardDescription>Add common questions and answers</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div key={index} className="border rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">FAQ {index + 1}</h4>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeFaq(index)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div>
-                  <Label>Question</Label>
-                  <Input
-                    value={faq.question}
-                    onChange={(e) => updateFaq(index, 'question', e.target.value)}
-                    placeholder="Enter question"
-                  />
-                </div>
-                <div>
-                  <Label>Answer</Label>
-                  <Textarea
-                    value={faq.answer}
-                    onChange={(e) => updateFaq(index, 'answer', e.target.value)}
-                    placeholder="Enter answer"
-                    rows={3}
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addFaq}
-              className="w-full"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add FAQ
             </Button>
           </CardContent>
         </Card>

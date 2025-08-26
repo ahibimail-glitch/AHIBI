@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Admin = require('../models/Admin');
+const Artist = require('../models/Artist');
+const Organizer = require('../models/Organizer');
 
 /**
  * Middleware to protect routes requiring authentication
@@ -30,58 +32,46 @@ exports.protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Determine which model to use based on the route
+      // Determine which model to use based on the route or token
       const isAdminRoute = req.originalUrl.startsWith('/api/admin');
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
+      const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       
-      let Model, user;
+      let user;
       
-      if (isAdminRoute) {
-        Model = Admin;
-        user = await Model.findById(decoded.id);
+      if (isAdminRoute || decoded.role === 'admin') {
+        user = await Admin.findById(decoded.id);
         if (!user) {
-          return res.status(404).json({
-            success: false,
-            message: 'Admin not found'
-          });
+          return res.status(404).json({ success: false, message: 'Admin not found' });
         }
-      } else if (isOrganizerRoute) {
-        Model = User;
-        user = await Model.findById(decoded.id);
+      } else if (isOrganizerRoute || decoded.role === 'organizer') {
+        user = await Organizer.findById(decoded.id);
         if (!user) {
-          return res.status(404).json({
-            success: false,
-            message: 'User not found'
-          });
+          return res.status(404).json({ success: false, message: 'Organizer not found' });
         }
-        // Check if user is an organizer
-        if (user.role !== 'organizer') {
-          return res.status(403).json({
-            success: false,
-            message: 'Access denied. Organizer role required.'
-          });
+      } else if (isArtistRoute || decoded.role === 'artist') {
+        user = await Artist.findById(decoded.id);
+        if (!user) {
+          return res.status(404).json({ success: false, message: 'Artist not found' });
         }
       } else {
-        Model = User;
-        user = await Model.findById(decoded.id);
+        user = await User.findById(decoded.id);
         if (!user) {
-          return res.status(404).json({
-            success: false,
-            message: 'User not found'
-          });
+          return res.status(404).json({ success: false, message: 'User not found' });
         }
       }
 
-      // Attach user/admin to request
+      // Attach user to request and add role from token for authorization
       req.user = user;
+      req.user.role = decoded.role; // Add role from token for authorize middleware
 
       // Check if user is active
-      // if (req.user.status !== 'active') {
-      //   return res.status(403).json({
-      //     success: false,
-      //     message: 'Your account is not active'
-      //   });
-      // }
+      if (req.user.status === 'blocked') {
+        return res.status(403).json({
+          success: false,
+          message: 'Your account is blocked'
+        });
+      }
 
       next();
     } catch (error) {

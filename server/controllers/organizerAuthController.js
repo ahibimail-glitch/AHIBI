@@ -1,183 +1,92 @@
-const User = require('../models/User');
 const Organizer = require('../models/Organizer');
 const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
+const tempOtpStore = require('../utils/tempOtpStore'); 
 
 /**
- * @desc    Organizer signup
- * @route   POST /api/organizer/auth/signup
+ * @desc    Verify OTP for organizer
+ * @route   POST /api/organizer/auth/verify-otp
  * @access  Public
  */
-exports.organizerSignup = async (req, res) => {
+exports.verifyOrganizerOtp = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const {
-    name,
-    email,
-    phone,
-    password,
-    city,
-    companyName,
-    description,
-    address,
-    contactInfo
-  } = req.body;
+  const { phone, otp, mode } = req.body;
 
   try {
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ phone }, { email }] 
-    });
-
-    if (existingUser) {
-      return ApiResponse.badRequest(res, 'User with this phone or email already exists');
-    }
-
-    // Create user account
-    const user = await User.create({
-      name,
-      email,
-      phone,
-      password,
-      city: city || (address && address.city) || undefined,
-      role: 'organizer',
-      status: 'pending' // Set to pending until approved by admin
-    });
-
-    // Create organizer profile
-    const organizer = await Organizer.create({
-      user: user._id,
-      companyName,
-      description,
-      address,
-      contactInfo,
-      approvalStatus: 'pending'
-    });
-
-    // Send OTP for verification
-    const otp = await user.setOtp();
-    const smsResponse = await smsService.sendOtp(phone, otp);
-
-    if (!smsResponse.success) {
-      return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
-    }
-
-    return ApiResponse.success(res, 'Organizer account created successfully. Pending admin approval.', {
-      organizer: {
-        id: organizer._id,
-        companyName: organizer.companyName,
-        approvalStatus: organizer.approvalStatus
-      },
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        status: user.status
+    if (mode === 'login') {
+      // For login, verify OTP from organizer document
+      const organizer = await Organizer.findOne({ phone });
+      
+      if (!organizer) {
+        return ApiResponse.badRequest(res, 'Organizer not found');
       }
-    });
+
+      const isOtpValid = await organizer.verifyOtp(otp);
+      if (!isOtpValid) {
+        return ApiResponse.badRequest(res, 'Invalid or expired OTP');
+      }
+
+      // Check approval status
+      if (organizer.approvalStatus === 'pending') {
+        return ApiResponse.accepted(res, 'Your organizer account is pending approval', {
+          pending: true,
+          approvalStatus: organizer.approvalStatus
+        });
+      }
+
+      if (organizer.approvalStatus === 'rejected') {
+        return ApiResponse.forbidden(res, 'Your organizer account has been rejected', {
+          rejected: true,
+          reason: organizer.rejectionReason
+        });
+      }
+
+      // Generate JWT token
+      const token = organizer.getSignedJwtToken();
+
+      // Respond with token and user data
+      return ApiResponse.success(res, 'OTP verified successfully. Login successful.', {
+        token,
+        user: {
+          _id: organizer._id,
+          name: organizer.name,
+          email: organizer.email,
+          phone: organizer.phone,
+          role: 'organizer',
+          status: organizer.status
+        }
+      });
+
+    } else {
+      // For signup, verify OTP from temp store
+      const stored = tempOtpStore.get(phone);
+      if (!stored || stored.otp !== otp) {
+        return ApiResponse.badRequest(res, 'Invalid or expired OTP');
+      }
+
+      // Clear OTP and data from temp store
+      tempOtpStore.delete(phone);
+
+      // Create organizer account from stored data
+      const organizer = await Organizer.create(stored.data);
+
+      return ApiResponse.success(res, 'Organizer account created successfully. Pending admin approval.', {
+        organizer: {
+          id: organizer._id,
+          companyName: organizer.companyName,
+          approvalStatus: organizer.approvalStatus
+        }
+      });
+    }
 
   } catch (error) {
-    console.error('Organizer signup error:', error);
-    return ApiResponse.serverError(res, 'Error creating organizer account', error);
-  }
-};
-
-/**
- * @desc    Organizer login
- * @route   POST /api/organizer/auth/login
- * @access  Public
- */
-exports.organizerLogin = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, password } = req.body;
-
-  try {
-    // Find user by phone
-    const user = await User.findOne({ phone }).select('+passwordHash');
-
-    if (!user) {
-      return ApiResponse.badRequest(res, 'Phone number not registered. Please sign up first.');
-    }
-
-    // Check if user is an organizer
-    if (user.role !== 'organizer') {
-      return ApiResponse.badRequest(res, 'This account is not registered as an organizer.');
-    }
-
-    // Check if user has password-based authentication
-    if (!user.hasPasswordAuth()) {
-      return ApiResponse.badRequest(res, 'Password not set for this account. Please use OTP verification.', {
-        requiresOtp: true,
-        phone: phone
-      });
-    }
-
-    // Verify password
-    const isPasswordValid = await user.matchPasswordHash(password);
-    if (!isPasswordValid) {
-      return ApiResponse.badRequest(res, 'Invalid password');
-    }
-
-    // Check if user is blocked
-    if (user.status === 'blocked') {
-      return ApiResponse.forbidden(res, 'Your account has been blocked. Please contact support.');
-    }
-
-    // Check if organizer is approved
-    const organizer = await Organizer.findOne({ user: user._id });
-    if (!organizer) {
-      return ApiResponse.notFound(res, 'Organizer profile not found');
-    }
-
-    if (organizer.approvalStatus === 'pending') {
-      return ApiResponse.accepted(res, 'Your organizer account is pending approval', {
-        pending: true,
-        role: user.role,
-        approvalStatus: organizer.approvalStatus
-      });
-    }
-
-    if (organizer.approvalStatus === 'rejected') {
-      return ApiResponse.forbidden(res, 'Your organizer account has been rejected', {
-        rejected: true,
-        reason: organizer.rejectionReason
-      });
-    }
-
-    // Generate JWT token
-    const token = user.getSignedJwtToken();
-
-    return ApiResponse.success(res, 'Login successful', {
-      token,
-      user: {
-        id: user._id,
-        phone: user.phone,
-        name: user.name || '',
-        email: user.email || '',
-        role: user.role,
-        status: user.status,
-        profilePic: user.profilePic
-      },
-      organizer: {
-        id: organizer._id,
-        companyName: organizer.companyName,
-        approvalStatus: organizer.approvalStatus
-      }
-    });
-
-  } catch (error) {
-    console.error('Organizer login error:', error);
-    return ApiResponse.serverError(res, 'Error during login', error);
+    console.error('Verify Organizer OTP Error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
   }
 };
 
@@ -195,149 +104,64 @@ exports.sendOrganizerOtp = async (req, res) => {
   const { phone, mode } = req.body;
 
   try {
-    // Check if user exists
-    let user = await User.findOne({ phone });
-
-    // OTP logic for signup or login
-    if ((mode === 'signup' || !mode) && user) {
-      return ApiResponse.badRequest(res, 'Number is already registered');
-    }
-    if (mode === 'login' && !user) {
-      return ApiResponse.badRequest(res, 'Number is not registered');
-    }
-
-    // For login, check if user is an organizer
-    if (mode === 'login' && user && user.role !== 'organizer') {
-      return ApiResponse.badRequest(res, 'This account is not registered as an organizer');
-    }
-
-    // Generate OTP
-    let otp;
-    if (mode === 'login' && user) {
-      otp = await user.setOtp();
-    } else {
-      // For signup, use in-memory temp store
-      otp = Math.floor(100000 + Math.random() * 900000).toString();
-      if (!global.tempOtps) global.tempOtps = {};
-      global.tempOtps[phone] = {
-        code: otp,
-        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-      };
-    }
-
-    // Send OTP via SMS service
-    const smsResponse = await smsService.sendOtp(phone, otp);
-
-    if (!smsResponse.success) {
-      return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
-    }
-
-    return ApiResponse.success(res, 'OTP sent successfully', {
-      phone,
-      otpSent: true
-    });
-
-  } catch (error) {
-    console.error('Send organizer OTP error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
-  }
-};
-
-/**
- * @desc    Verify OTP for organizer
- * @route   POST /api/organizer/auth/verify-otp
- * @access  Public
- */
-exports.verifyOrganizerOtp = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, otp, mode } = req.body;
-
-  try {
+    // For login, check if organizer exists and is approved
     if (mode === 'login') {
-      // For login, verify OTP from user document
-      const user = await User.findOne({ phone });
-      
-      if (!user) {
-        return ApiResponse.badRequest(res, 'User not found');
-      }
-
-      if (user.role !== 'organizer') {
-        return ApiResponse.badRequest(res, 'This account is not registered as an organizer');
-      }
-
-      const isOtpValid = await user.verifyOtp(otp);
-      if (!isOtpValid) {
-        return ApiResponse.badRequest(res, 'Invalid or expired OTP');
-      }
-
-      // Check approval status
-      const organizer = await Organizer.findOne({ user: user._id });
+      const organizer = await Organizer.findOne({ phone });
       if (!organizer) {
-        return ApiResponse.notFound(res, 'Organizer profile not found');
+        return ApiResponse.notFound(res, 'Organizer not found. Please sign up first.');
       }
 
       if (organizer.approvalStatus === 'pending') {
-        return ApiResponse.accepted(res, 'Your organizer account is pending approval', {
-          pending: true,
-          role: user.role,
-          approvalStatus: organizer.approvalStatus
-        });
+        return ApiResponse.forbidden(res, 'Your account is pending approval from the admin.');
       }
 
       if (organizer.approvalStatus === 'rejected') {
-        return ApiResponse.forbidden(res, 'Your organizer account has been rejected', {
-          rejected: true,
-          reason: organizer.rejectionReason
-        });
+        return ApiResponse.forbidden(res, 'Your account has been rejected. Please contact support.');
       }
 
-      // Generate JWT token
-      const token = user.getSignedJwtToken();
+      // Generate OTP
+      let otp = await organizer.setOtp();
+      // Send OTP via SMS service
+      const smsResponse = await smsService.sendOtp(phone, otp);
 
-      return ApiResponse.success(res, 'Login successful', {
-        token,
-        user: {
-          id: user._id,
-          phone: user.phone,
-          name: user.name || '',
-          email: user.email || '',
-          role: user.role,
-          status: user.status,
-          profilePic: user.profilePic
-        },
-        organizer: {
-          id: organizer._id,
-          companyName: organizer.companyName,
-          approvalStatus: organizer.approvalStatus
-        }
-      });
-
-    } else {
-      // For signup, verify OTP from temp store
-      if (!global.tempOtps || !global.tempOtps[phone]) {
-        return ApiResponse.badRequest(res, 'OTP not found or expired');
+      if (!smsResponse.success) {
+        return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
       }
 
-      const storedOtp = global.tempOtps[phone];
-      if (storedOtp.code !== otp || Date.now() > storedOtp.expiresAt) {
-        return ApiResponse.badRequest(res, 'Invalid or expired OTP');
-      }
-
-      // Clear OTP from temp store
-      delete global.tempOtps[phone];
-
-      return ApiResponse.success(res, 'OTP verified successfully', {
+      return ApiResponse.success(res, 'OTP sent successfully', {
         phone,
-        verified: true
+        otpSent: true
+      });
+    }
+
+    // For signup, check if organizer already exists
+    if (mode === 'signup' || !mode) {
+      let organizer = await Organizer.findOne({ phone });
+
+      if (organizer) {
+        return ApiResponse.badRequest(res, 'Number is already registered');
+      }
+
+      // Generate OTP
+      let otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Store OTP and the full request body for use in verification step
+      tempOtpStore.set(phone, { otp, data: req.body });
+
+      // Send OTP via SMS service
+      const smsResponse = await smsService.sendOtp(phone, otp);
+
+      if (!smsResponse.success) {
+        return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
+      }
+
+      return ApiResponse.success(res, 'OTP sent successfully', {
+        phone,
+        otpSent: true
       });
     }
 
   } catch (error) {
-    console.error('Verify organizer OTP error:', error);
+    console.error('Send organizer OTP error:', error);
     return ApiResponse.serverError(res, 'Server error', error);
   }
 };
@@ -349,8 +173,7 @@ exports.verifyOrganizerOtp = async (req, res) => {
  */
 exports.getOrganizerProfile = async (req, res) => {
   try {
-    const organizer = await Organizer.findOne({ user: req.user.id })
-      .populate('user', 'name email phone profilePic');
+    const organizer = await Organizer.findById(req.user.id);
 
     if (!organizer) {
       return ApiResponse.notFound(res, 'Organizer profile not found');
@@ -378,7 +201,7 @@ exports.updateOrganizerProfile = async (req, res) => {
   }
 
   try {
-    const organizer = await Organizer.findOne({ user: req.user.id });
+    const organizer = await Organizer.findById(req.user.id);
 
     if (!organizer) {
       return ApiResponse.notFound(res, 'Organizer profile not found');

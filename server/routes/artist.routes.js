@@ -25,11 +25,6 @@ router.post('/auth/verify-otp', [
   check('mode', 'Mode must be either login or signup').isIn(['login', 'signup'])
 ], artistAuthController.verifyArtistOtp);
 
-router.post('/auth/login', [
-  check('phone', 'Please include a valid phone number').isMobilePhone('any'),
-  check('password', 'Password is required').exists()
-], artistAuthController.artistLogin);
-
 // Protected routes - artist only
 router.get('/profile', protect, authorize('artist'), artistAuthController.getArtistProfile);
 router.put('/profile', [

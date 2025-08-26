@@ -7,28 +7,19 @@ const { protect } = require('../middlewares/auth');
 const router = express.Router();
 
 // Public routes
-router.post('/auth/signup', [
-  check('name', 'Name is required').notEmpty(),
-  check('email', 'Please include a valid email').isEmail(),
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('password', 'Password must be 6 or more characters').isLength({ min: 6 }),
-  check('companyName', 'Company name is required').notEmpty(),
-  check('description', 'Description is required').notEmpty(),
-  check('address.street', 'Street address is required').notEmpty(),
-  check('address.city', 'City is required').notEmpty(),
-  check('address.state', 'State is required').notEmpty(),
-  check('address.pincode', 'Valid pincode is required').matches(/^\d{6}$/),
-  check('contactInfo.email', 'Contact email is required').isEmail()
-], organizerAuthController.organizerSignup);
-
-router.post('/auth/login', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('password', 'Password is required').notEmpty()
-], organizerAuthController.organizerLogin);
-
 router.post('/auth/send-otp', [
   check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('mode', 'Mode must be signup or login').isIn(['signup', 'login'])
+  check('mode', 'Mode must be signup or login').isIn(['signup', 'login']),
+  // Conditional validation for signup
+  check('name', 'Name is required').if(check('mode').equals('signup')).notEmpty(),
+  check('email', 'Please include a valid email').if(check('mode').equals('signup')).isEmail(),
+  check('companyName', 'Company name is required').if(check('mode').equals('signup')).notEmpty(),
+  check('description', 'Description is required').if(check('mode').equals('signup')).notEmpty(),
+  check('address.street', 'Street address is required').if(check('mode').equals('signup')).notEmpty(),
+  check('address.city', 'City is required').if(check('mode').equals('signup')).notEmpty(),
+  check('address.state', 'State is required').if(check('mode').equals('signup')).notEmpty(),
+  check('address.pincode', 'Valid pincode is required').if(check('mode').equals('signup')).matches(/^\d{6}$/),
+  check('contactInfo.email', 'Contact email is required').if(check('mode').equals('signup')).isEmail()
 ], organizerAuthController.sendOrganizerOtp);
 
 router.post('/auth/verify-otp', [

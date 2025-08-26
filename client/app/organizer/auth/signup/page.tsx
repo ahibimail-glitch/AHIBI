@@ -18,9 +18,17 @@ export default function OrganizerSignupPage() {
     name: "",
     email: "",
     phone: "",
-    city: "",
-    organization: "",
-    organizationType: "",
+    companyName: "",
+    description: "",
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      pincode: "",
+    },
+    contactInfo: {
+      email: "",
+    },
     agreeToTerms: false,
   })
   const [otp, setOtp] = useState("")
@@ -38,14 +46,20 @@ export default function OrganizerSignupPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: signupData.phone,
+          ...signupData,
+          contactInfo: { email: signupData.email }, // ensure contactInfo email is set
           mode: 'signup'
         }),
       });
 
+      const responseData = await response.json();
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to send OTP');
+        // Handle validation errors from express-validator
+        if (responseData.errors) {
+          const errorMsg = responseData.errors.map((err: any) => err.msg).join(', ');
+          throw new Error(errorMsg);
+        }
+        throw new Error(responseData.message || 'Failed to send OTP');
       }
 
       setStep("otp")
@@ -73,41 +87,9 @@ export default function OrganizerSignupPage() {
         }),
       });
 
+      const responseData = await response.json();
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Invalid OTP');
-      }
-
-      // After OTP verification, create the organizer account
-      const signupResponse = await fetch(`${apiUrl}/api/organizer/auth/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: signupData.name,
-          email: signupData.email,
-          phone: signupData.phone,
-          password: 'tempPassword123', // You might want to add a password field to the form
-          city: signupData.city,
-          companyName: signupData.organization,
-          description: `${signupData.organizationType} organization`,
-          address: {
-            street: '',
-            city: signupData.city,
-            state: '',
-            pincode: ''
-          },
-          contactInfo: {
-            email: signupData.email,
-            alternatePhone: signupData.phone
-          }
-        }),
-      });
-
-      if (!signupResponse.ok) {
-        const errorData = await signupResponse.json();
-        throw new Error(errorData.message || 'Failed to create account');
+        throw new Error(responseData.message || 'Invalid OTP');
       }
 
       setStep("complete")
@@ -219,20 +201,6 @@ export default function OrganizerSignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="city" className="text-gray-200">
-                  City *
-                </Label>
-                <Input
-                  id="city"
-                  placeholder="Enter your city"
-                  className="bg-gray-800 border-gray-600 text-white"
-                  value={signupData.city}
-                  onChange={(e) => setSignupData({ ...signupData, city: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="organization" className="text-gray-200">
                   Organization/Company *
                 </Label>
@@ -241,8 +209,8 @@ export default function OrganizerSignupPage() {
                   <Input
                     id="organization"
                     placeholder="Enter organization name"
-                    value={signupData.organization}
-                    onChange={(e) => setSignupData({ ...signupData, organization: e.target.value })}
+                    value={signupData.companyName}
+                    onChange={(e) => setSignupData({ ...signupData, companyName: e.target.value })}
                     className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
                     required
                   />
@@ -250,27 +218,75 @@ export default function OrganizerSignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="organizationType" className="text-gray-200">
-                  Organization Type *
+                <Label htmlFor="description" className="text-gray-200">
+                  Description *
                 </Label>
-                <Select
-                  value={signupData.organizationType}
-                  onValueChange={(value) => setSignupData({ ...signupData, organizationType: value })}
+                <Input
+                  id="description"
+                  placeholder="A brief description of your organization"
+                  className="bg-gray-800 border-gray-600 text-white"
+                  value={signupData.description}
+                  onChange={(e) => setSignupData({ ...signupData, description: e.target.value })}
                   required
-                >
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select organization type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    <SelectItem value="event-company">Event Management Company</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
-                    <SelectItem value="non-profit">Non-Profit Organization</SelectItem>
-                    <SelectItem value="educational">Educational Institution</SelectItem>
-                    <SelectItem value="government">Government Agency</SelectItem>
-                    <SelectItem value="individual">Individual/Freelancer</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="street" className="text-gray-200">
+                    Street Address *
+                  </Label>
+                  <Input
+                    id="street"
+                    placeholder="Street"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.street}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, street: e.target.value } })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-gray-200">
+                    City *
+                  </Label>
+                  <Input
+                    id="city"
+                    placeholder="City"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.city}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, city: e.target.value } })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-gray-200">
+                    State *
+                  </Label>
+                  <Input
+                    id="state"
+                    placeholder="State"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.state}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, state: e.target.value } })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pincode" className="text-gray-200">
+                    Pincode *
+                  </Label>
+                  <Input
+                    id="pincode"
+                    placeholder="Pincode"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.pincode}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, pincode: e.target.value } })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -295,15 +311,7 @@ export default function OrganizerSignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
-                disabled={
-                  !signupData.agreeToTerms ||
-                  !signupData.name ||
-                  !signupData.email ||
-                  !signupData.phone ||
-                  !signupData.city ||
-                  !signupData.organization ||
-                  !signupData.organizationType
-                }
+                disabled={!signupData.agreeToTerms}
               >
                 Continue to Verification
               </Button>
@@ -361,12 +369,12 @@ export default function OrganizerSignupPage() {
           {step === "complete" && (
             <div className="space-y-6 text-center">
               <div className="space-y-2">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full flex items-center justify-center mx-auto">
+                <div className="w-16 h-16 bg-gradient-to-br from-yellow-600 to-yellow-800 rounded-full flex items-center justify-center mx-auto">
                   <Shield className="h-8 w-8 text-white" />
                 </div>
                 <h3 className="text-lg font-semibold text-white">Account Created Successfully!</h3>
                 <p className="text-gray-300">
-                  Welcome to Ahibi 3.0, {signupData.name}! Your organizer account is ready.
+                  Welcome to Ahibi 3.0, {signupData.name}! Your organizer account is pending approval from the admin.
                 </p>
               </div>
 
@@ -383,23 +391,23 @@ export default function OrganizerSignupPage() {
                     <strong>Phone:</strong> +91 {signupData.phone}
                   </p>
                   <p>
-                    <strong>City:</strong> {signupData.city}
+                    <strong>City:</strong> {signupData.address.city}
                   </p>
                   <p>
-                    <strong>Organization:</strong> {signupData.organization}
+                    <strong>Organization:</strong> {signupData.companyName}
                   </p>
                   <p>
-                    <strong>Type:</strong> {signupData.organizationType}
+                    <strong>Type:</strong> {signupData.description}
                   </p>
                 </div>
               </div>
-
+{/* 
               <Button
                 onClick={handleComplete}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
               >
                 Start Organizing Events
-              </Button>
+              </Button> */}
             </div>
           )}
 
