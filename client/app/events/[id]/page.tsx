@@ -17,6 +17,14 @@ import {
   Ticket as TicketIcon,
   X,
   XCircle,
+  Crown,
+  Sparkles,
+  MapIcon,
+  Users,
+  Shield,
+  CheckCircle2,
+  Timer,
+  Zap,
 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -55,6 +63,7 @@ import {
 // App Components - Using dynamic imports to avoid SSR issues
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
+
 // Event Card Component (simplified for related events)
 const EventCard = ({
   event,
@@ -504,30 +513,50 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-xl opacity-50"></div>
+            <Loader2 className="h-12 w-12 animate-spin text-white relative z-10" />
+          </div>
+          <div className="text-center">
+            <p className="text-xl font-semibold text-white mb-2">Loading Premium Experience</p>
+            <p className="text-slate-300">Preparing something extraordinary...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <XCircle className="h-8 w-8 text-red-600" />
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+              <XCircle className="h-8 w-8 text-red-400" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Event Not Available</h2>
-            <p className="text-gray-600 mb-6">{error || "Invalid event data received"}</p>
+            <h2 className="text-2xl font-bold text-white mb-2">Experience Unavailable</h2>
+            <p className="text-slate-300 mb-6">{error || "Invalid event data received"}</p>
             <div className="space-y-3">
-              <Button onClick={() => window.location.reload()} className="w-full">
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-full"
+              >
                 Try Again
               </Button>
-              <Button variant="outline" onClick={() => router.push('/events')} className="w-full">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/events')}
+                className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+              >
                 Browse All Events
               </Button>
-              <Button variant="outline" onClick={() => router.push('/')} className="w-full">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/')}
+                className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+              >
                 Go to Homepage
               </Button>
             </div>
@@ -552,158 +581,214 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const timeRange = formatTimeRange(event.startDate, event.endDate);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <Navbar />
-       {/* Ticket Information Banner */}
-              <div className="bg-amber-50 border-l-4 border-amber-500 p-4 my-4 mx-auto container">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-amber-800">
-                      <span className="font-medium">Payment done but ticket missing?</span> No worries—your ticket will appear within a few hours in your Dashboard. If not, contact us via WhatsApp or Email.
-                    </p>
-                  </div>
-                </div>
+
+      {/* Premium Information Banner */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20"></div>
+        <div className="container mx-auto p-4 relative z-10">
+          <div className="bg-amber-500/10 backdrop-blur-xl border-l-4 border-amber-400 rounded-2xl p-6 border border-amber-400/30">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 bg-amber-400/20 rounded-full p-2">
+                <Shield className="h-6 w-6 text-amber-400" />
               </div>
-      <div className="container mx-auto px-4 py-8 flex-1">
-        {/* <div className="flex justify-between items-center mb-6">
-          <Button variant="ghost" onClick={() => window.history.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Events
-          </Button>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFavorite(!isFavorite)}
-              className={isFavorite ? 'bg-accent' : ''}
-            >
-              <Heart className={`h-4 w-4 mr-2 ${isFavorite ? 'fill-current' : ''}`} />
-              {isFavorite ? 'Saved' : 'Save'}
-            </Button>
+              <div>
+                <p className="text-amber-100 font-semibold mb-2">Premium Support Guarantee</p>
+                <p className="text-amber-200/90 text-sm leading-relaxed">
+                  Payment completed but ticket missing? Your premium experience ticket will appear in your Dashboard within hours. Need immediate assistance? Contact our concierge via WhatsApp or Email.
+                </p>
+              </div>
+            </div>
           </div>
-        </div> */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-12 flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Hero Image */}
-            <AspectRatio ratio={16 / 9} className="rounded-lg overflow-hidden mb-8">
-              <Image
-                src={event.banner || "/placeholder.svg"}
-                alt={event.title}
-                fill
-                className="object-contain"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                priority
-              />
-            </AspectRatio>
-
-            {/* Event Info */}
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight mb-4">
-                {event.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-6">
-                <div className="flex items-center">
-                  <CalendarIcon className="h-5 w-5 mr-2" />
-                  <span>
-                    {startDateTime.date}
-                    {endDateTime && (
-                      <>
-                        <span className="mx-2">-</span>
-                        <span>{endDateTime.date}</span>
-                      </>
-                    )}
-                  </span>
+          <div className="lg:col-span-2 space-y-12">
+            {/* Premium Hero Image */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+              <AspectRatio ratio={16 / 9} className="relative rounded-2xl overflow-hidden">
+                <Image
+                  src={event.banner || "/placeholder.svg"}
+                  alt={event.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                <div className="absolute top-6 left-6">
+                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 px-4 py-2 text-sm font-bold tracking-wide shadow-lg">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    PREMIUM EVENT
+                  </Badge>
                 </div>
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2" />
-                  <span>{timeRange}</span>
+                <div className="absolute top-6 right-6 flex gap-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30"
+                    onClick={() => setIsFavorite(!isFavorite)}
+                  >
+                    <Heart className={`h-5 w-5 text-white ${isFavorite ? 'fill-current text-pink-400' : ''}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30"
+                  >
+                    <Share2 className="h-5 w-5 text-white" />
+                  </Button>
+                </div>
+              </AspectRatio>
+            </div>
+
+            {/* Premium Event Info */}
+            <div className="space-y-8">
+              <div>
+                <h1 className="text-6xl font-black tracking-tighter mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent leading-tight">
+                  {event.title}
+                </h1>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-purple-500/20 rounded-full p-3">
+                        <CalendarIcon className="h-6 w-6 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-sm font-medium">DATE</p>
+                        <p className="text-white font-semibold text-lg">
+                          {startDateTime.date}
+                          {endDateTime && (
+                            <>
+                              <span className="mx-2 text-slate-400">→</span>
+                              <span>{endDateTime.date}</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-pink-500/20 rounded-full p-3">
+                        <Clock className="h-6 w-6 text-pink-400" />
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-sm font-medium">TIME</p>
+                        <p className="text-white font-semibold text-lg">{timeRange}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent flex-1"></div>
+                  <Badge variant="outline" className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-400/30 text-purple-200 px-4 py-2">
+                    {event.category}
+                  </Badge>
+                  <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent flex-1"></div>
                 </div>
               </div>
-            </div>
 
-            {/* Event Description */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold">About This Event</h2>
-              <p className="text-muted-foreground whitespace-pre-line">
-                {event.description}
-              </p>
-            </div>
-
-            {/* Event Location */}
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold">Location</h2>
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-muted rounded-full">
-                  <MapPin className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-medium">{event.location.address}</h3>
-                  <p className="text-muted-foreground">
-                    {[
-                      event.location.city,
-                      event.location.state,
-                      event.location.country,
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
+              {/* Premium Description */}
+              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  About This Experience
+                </h2>
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-slate-200 text-lg leading-relaxed whitespace-pre-line">
+                    {event.description}
                   </p>
-                  {event.location.coordinates && (
-                    <Button variant="link" className="p-0 h-auto mt-2" asChild>
-                      <a
-                        href={`https://www.google.com/maps?q=${encodeURIComponent(
-                          event.location.address
-                        )}+${encodeURIComponent(event.location.city)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View on map
-                      </a>
-                    </Button>
-                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Event Tags */}
-            {event.tags && event.tags.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-semibold">Tags</h2>
-                <div className="flex flex-wrap gap-2">
-                  {event.tags.map((tag: string) => (
-                    <Badge key={tag} variant="secondary" className="text-sm">
-                      {tag}
-                    </Badge>
-                  ))}
+              {/* Premium Location */}
+              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                  Venue Details
+                </h2>
+                <div className="flex items-start gap-6">
+                  <div className="bg-blue-500/20 rounded-2xl p-4">
+                    <MapPin className="h-8 w-8 text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-xl text-white mb-2">{event.location.address}</h3>
+                    <p className="text-slate-300 text-lg mb-4">
+                      {[
+                        event.location.city,
+                        event.location.state,
+                        event.location.country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                    {event.location.coordinates && (
+                      <Button
+                        variant="outline"
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full px-6"
+                        asChild
+                      >
+                        <a
+                          href={`https://www.google.com/maps?q=${encodeURIComponent(
+                            event.location.address
+                          )}+${encodeURIComponent(event.location.city)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <MapIcon className="h-4 w-4 mr-2" />
+                          View on Map
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Premium Tags */}
+              {event.tags && event.tags.length > 0 && (
+                <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+                  <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                    Experience Tags
+                  </h2>
+                  <div className="flex flex-wrap gap-3">
+                    {event.tags.map((tag: string) => (
+                      <Badge
+                        key={tag}
+                        className="bg-gradient-to-r from-slate-700 to-slate-600 text-white border-slate-500 px-4 py-2 text-sm font-medium hover:from-slate-600 hover:to-slate-500 transition-all duration-300"
+                      >
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Premium Sidebar */}
           <div className="space-y-8">
-            {/* Tickets */}
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              {/* Terms and Conditions and Prohibited Items buttons side by side on desktop, stacked on mobile */}
+            {/* Premium Tickets Section */}
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
+              {/* Terms and Conditions for specific events */}
               {event.title.includes("Dr. T Ao Trophy") && (
-                <div className="flex flex-col md:flex-row gap-3 mb-6">
+                <div className="flex flex-col gap-4 mb-8">
                   <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
                     <DialogTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full text-sm bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100 hover:text-yellow-900"
+                        className="w-full bg-amber-500/10 border-amber-400/30 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 rounded-2xl py-3"
                         onClick={() => setTermsModalOpen(true)}
                       >
-                        View Terms & Conditions
+                        <Shield className="h-4 w-4 mr-2" />
+                        Terms & Conditions
+
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-lg max-h-[90vh]">
@@ -726,7 +811,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       </DialogHeader>
                       <div className="overflow-y-auto max-h-[60vh] pr-2 mt-4">
                         <ul className="text-sm space-y-3 list-none">
-                         <li className="pb-2 border-b border-gray-100"><span className="font-medium">1.</span> By purchasing a ticket to the Dr. T Ao Trophy 2025, you agree to the following terms and conditions.</li>
+                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">1.</span> By purchasing a ticket to the Dr. T Ao Trophy 2025, you agree to the following terms and conditions.</li>
 
                           <li className="pb-2 border-b border-gray-100"><span className="font-medium">2.</span> Tickets are for general admission and have no reserved seating. Entry is on a first-come, first-served basis.</li>
 
@@ -757,21 +842,21 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <li className="pb-2 border-b border-gray-100"><span className="font-medium">15.</span> The venue will provide accommodations for attendees with disabilities, including designated seating areas and accessible restrooms.</li>
 
                           <li className="pb-2 border-b border-gray-100"><span className="font-medium">16.</span> Only authorized vendors are permitted to sell goods within the premises.</li>
-                          
+
                           <li className="pb-2 border-b border-gray-100"><span className="font-medium">17.</span> By attending, you consent to being photographed or recorded for promotional purposes by Dr. T Ao Trophy and its partners.</li>
 
                           <li className="pb-2 border-b border-gray-100"><span className="font-medium">18.</span> Any disputes regarding the league will be resolved by the organizers, and their decision will be final.</li>
 
                           <li className="pb-2 border-b border-gray-100"><span className="font-medium">19.</span> Political messages, discriminatory placards, unauthorized displays, racists propaganda, and actions violating the tournament ethics or sportsmanship are strictly prohibited. Violators may be removed and face the penalties as per the rules.</li>
-                         
-                         <li className="pb-2"><span className="font-medium">20.</span> The Organizers reserve the right to modify these terms at any time.</li>
+
+                          <li className="pb-2"><span className="font-medium">20.</span> The Organizers reserve the right to modify these terms at any time.</li>
                         </ul>
-                       
+
                       </div>
                       <div className="mt-4 flex justify-end">
-                        <Button 
-                          variant="default" 
-                          className="bg-primary" 
+                        <Button
+                          variant="default"
+                          className="bg-primary"
                           onClick={() => setTermsModalOpen(false)}
                         >
                           I Understand
