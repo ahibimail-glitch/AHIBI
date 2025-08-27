@@ -520,7 +520,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <Loader2 className="h-12 w-12 animate-spin text-white relative z-10" />
           </div>
           <div className="text-center">
-            <p className="text-xl font-semibold text-white mb-2">Loading Premium Experience</p>
+            <p className="text-xl font-semibold text-white mb-2">Loading Event</p>
             <p className="text-slate-300">Preparing something extraordinary...</p>
           </div>
         </div>
@@ -536,7 +536,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
               <XCircle className="h-8 w-8 text-red-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Experience Unavailable</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Event Unavailable</h2>
             <p className="text-slate-300 mb-6">{error || "Invalid event data received"}</p>
             <div className="space-y-3">
               <Button
@@ -594,10 +594,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <Shield className="h-6 w-6 text-amber-400" />
               </div>
               <div>
-                <p className="text-amber-100 font-semibold mb-2">Premium Support Guarantee</p>
+                <p className="text-amber-100 font-semibold mb-2">Payment done but ticket missing?</p>
                 <p className="text-amber-200/90 text-sm leading-relaxed">
-                  Payment completed but ticket missing? Your premium experience ticket will appear in your Dashboard within hours. Need immediate assistance? Contact our concierge via WhatsApp or Email.
-                </p>
+                  No worries—your ticket will appear within a few hours in your Dashboard. If not, contact us via WhatsApp or Email.   </p>
               </div>
             </div>
           </div>
@@ -621,12 +620,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                <div className="absolute top-6 left-6">
-                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 px-4 py-2 text-sm font-bold tracking-wide shadow-lg">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    PREMIUM EVENT
-                  </Badge>
-                </div>
+                
                 <div className="absolute top-6 right-6 flex gap-3">
                   <Button
                     variant="ghost"
@@ -700,7 +694,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               {/* Premium Description */}
               <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
                 <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  About This Experience
+                  About This Event
                 </h2>
                 <div className="prose prose-invert max-w-none">
                   <p className="text-slate-200 text-lg leading-relaxed whitespace-pre-line">
@@ -755,7 +749,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               {event.tags && event.tags.length > 0 && (
                 <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
                   <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-                    Experience Tags
+                    Events Tags
                   </h2>
                   <div className="flex flex-wrap gap-3">
                     {event.tags.map((tag: string) => (
@@ -776,150 +770,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <div className="space-y-8">
             {/* Premium Tickets Section */}
             <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
-              {/* Terms and Conditions for specific events */}
-              {event.title.includes("Dr. T Ao Trophy") && (
-                <div className="flex flex-col gap-4 mb-8">
-                  <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full bg-amber-500/10 border-amber-400/30 text-amber-300 hover:bg-amber-500/20 hover:text-amber-200 rounded-2xl py-3"
-                        onClick={() => setTermsModalOpen(true)}
-                      >
-                        <Shield className="h-4 w-4 mr-2" />
-                        Terms & Conditions
 
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-lg max-h-[90vh]">
-                      <div className="absolute right-4 top-4">
-                        {/* <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 rounded-full p-0" 
-                          onClick={() => document.querySelector('[data-state="open"] [role="dialog"] button[aria-label="Close"]')?.click()}
-                        >
-                          <X className="h-4 w-4" />
-                          <span className="sr-only">Close</span>
-                        </Button> */}
-                      </div>
-                      <DialogHeader className="pr-10">
-                        <DialogTitle className="text-xl">Terms and Conditions</DialogTitle>
-                        <DialogDescription>
-                          Please read the following terms and conditions carefully before booking.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="overflow-y-auto max-h-[60vh] pr-2 mt-4">
-                        <ul className="text-sm space-y-3 list-none">
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">1.</span> By purchasing a ticket to the Dr. T Ao Trophy 2025, you agree to the following terms and conditions.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">2.</span> Tickets are for general admission and have no reserved seating. Entry is on a first-come, first-served basis.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">3.</span> Pre-booked tickets come with your own personalized QR codes. QR codes can be scanned only once and cannot be reused for re-entry. Once inside, exiting and re-entering the venue using the same ticket is not allowed.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">4.</span> Scalping or reselling tickets at a higher price is strictly prohibited. Violators will be penalised by the organizers.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">5.</span> Professional cameras and recording devices are not permitted. Full recording or live streaming of the match is prohibited.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">6.</span> Attendees must comply with security checks upon entry. Any disruptive behavior may result in ejection without a refund.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">7.</span> All ticket sales are final. No refunds or exchanges will be provided unless the event is cancelled or rescheduled.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">8.</span> Attendees assume all risks associated with attending the event. The Organizers are not responsible for any personal injury or loss.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">9.</span> Attendees must present a valid ticket from the authorized ticketing partners at the entrance.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">10.</span> Children of any age will require a ticket and must be accompanied by an adult.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">11.</span> Prohibited items include weapons, drugs, outside food and beverages, laser pointers, and any other items deemed dangerous or inappropriate.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">12.</span> The tournament will proceed rain or shine. In case of extreme weather, the Technical Committee will communicate any changes or cancellations through proper channels.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">13.</span> Attendees shall be liable to actions from the organizer for harassment, foul language, or abusive behavior.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">14.</span> First aid services will be available on-site. Attendees requiring medical attention should notify event staff immediately.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">15.</span> The venue will provide accommodations for attendees with disabilities, including designated seating areas and accessible restrooms.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">16.</span> Only authorized vendors are permitted to sell goods within the premises.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">17.</span> By attending, you consent to being photographed or recorded for promotional purposes by Dr. T Ao Trophy and its partners.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">18.</span> Any disputes regarding the league will be resolved by the organizers, and their decision will be final.</li>
-
-                          <li className="pb-2 border-b border-gray-100"><span className="font-medium">19.</span> Political messages, discriminatory placards, unauthorized displays, racists propaganda, and actions violating the tournament ethics or sportsmanship are strictly prohibited. Violators may be removed and face the penalties as per the rules.</li>
-
-                          <li className="pb-2"><span className="font-medium">20.</span> The Organizers reserve the right to modify these terms at any time.</li>
-                        </ul>
-
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button
-                          variant="default"
-                          className="bg-primary"
-                          onClick={() => setTermsModalOpen(false)}
-                        >
-                          I Understand
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Dialog open={prohibitedItemsModalOpen} onOpenChange={setProhibitedItemsModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full text-sm bg-red-50 border-red-200 text-red-800 hover:bg-red-100 hover:text-red-900"
-                        onClick={() => setProhibitedItemsModalOpen(true)}
-                      >
-                        View Prohibited Items
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-lg max-h-[90vh]">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl">Prohibited Items</DialogTitle>
-                        <DialogDescription>
-                          The following items are not allowed at the Dr. T Ao Trophy 2025 event.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="overflow-y-auto max-h-[60vh] pr-2 mt-4">
-                        <ul className="text-sm space-y-2 list-disc pl-5">
-                          <li>No bottles (glass or plastic)</li>
-                          <li>No coins or metal objects</li>
-                          <li>No tobacco products or smoking devices</li>
-                          <li>No fireworks or pyrotechnics</li>
-                          <li>No sharp objects or weapons</li>
-                          <li>No flammable liquids or aerosols</li>
-                          <li>No laser pointers</li>
-                          <li>No outside food or beverages</li>
-                          <li>No illegal substances</li>
-                          <li>No large bags or backpacks</li>
-                          <li>No professional cameras or recording equipment</li>
-                          <li>No drones or remote-controlled devices</li>
-                          <li>No banners or flags with offensive content</li>
-                          <li>No animals (except service animals)</li>
-                        </ul>
-                      </div>
-                      <div className="mt-4 flex justify-end">
-                        <Button
-                          variant="default"
-                          className="bg-primary"
-                          onClick={() => setProhibitedItemsModalOpen(false)}
-                        >
-                          I Understand
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              )}
 
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">
                   {/* Ticket Selection Header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Select Tickets</h3>
-                    <Badge variant="outline" className="px-3 py-1">
+                    <h3 className="text-lg text-white font-semibold">Select Tickets</h3>
+                    <Badge variant="outline" className="px-3 py-1 text-white bg-white/10 backdrop-blur-xl">
                       {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} tickets remaining
                     </Badge>
                   </div>
@@ -941,7 +799,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     return (
                       <Card
                         key={ticket._id}
-                        className={`border ${quantity > 0 ? 'border-primary border-2' : 'border-border'} overflow-hidden transition-all duration-200 hover:shadow-md`}
+                        className={`border ${quantity > 0 ? 'border-primary border-2' : 'border-border'} bg-background rounded-3xl overflow-hidden transition-all duration-200 hover:shadow-md`}
                       >
                         <CardHeader className="pb-2">
                           <div className="flex justify-between items-start">
