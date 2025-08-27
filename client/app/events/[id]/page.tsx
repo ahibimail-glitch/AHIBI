@@ -609,17 +609,17 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <div className="lg:col-span-2 space-y-12">
             {/* Premium Hero Image */}
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+              <div className="absolute  rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
               <AspectRatio ratio={16 / 9} className="relative rounded-2xl overflow-hidden">
                 <Image
                   src={event.banner || "/placeholder.svg"}
                   alt={event.title}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                {/* <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div> */}
                 
                 <div className="absolute top-6 right-6 flex gap-3">
                   <Button

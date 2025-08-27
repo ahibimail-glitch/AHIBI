@@ -99,15 +99,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
         onMouseLeave={() => setIsHovered(false)}
       >
         <div className="relative">
-          <AspectRatio ratio={16 / 9} className="relative overflow-hidden rounded-t-2xl">
-            <Image
-              src={event.banner || "/placeholder.svg"}
-              alt={event.title}
-              fill
-              className={`object-cover transition-transform duration-700 ${isHovered ? 'scale-110' : 'scale-100'}`}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              priority={false}
-            />
+        <AspectRatio ratio={16 / 9} className="relative">
+        <Image
+          src={event.banner || "/placeholder.svg"}
+          alt={event.title}
+          fill
+          className="object-contain"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={false}
+        />
             
             {/* Premium overlay gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60"></div>
