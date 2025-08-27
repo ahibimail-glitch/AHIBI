@@ -104,7 +104,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
               src={event.banner || "/placeholder.svg"}
               alt={event.title}
               fill
-              className={`object-fill transition-transform duration-700 ${isHovered ? 'scale-110' : 'scale-100'}`}
+              className={`object-cover transition-transform duration-700 ${isHovered ? 'scale-110' : 'scale-100'}`}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={false}
             />
