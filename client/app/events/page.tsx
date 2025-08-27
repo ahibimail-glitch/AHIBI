@@ -361,7 +361,7 @@ export default function EventsPage() {
                 </Badge>
               </div> */}
               
-              <h1 className="text-7xl md:text-8xl font-black mb-8 tracking-tighter">
+              <h1 className="text-5xl md:text-8xl font-black mb-8 tracking-tighter">
                 <span className="bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
                   Discover
                 </span>
