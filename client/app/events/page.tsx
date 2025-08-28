@@ -197,7 +197,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   >
                     <Link href={event._id === "6899cb7215438afd622a7646" ? "/events/FC25" : `/events/${event._id}`}>
-                      Experience Now
+                      View Details
                     </Link>
                   </Button>
                 )}
@@ -285,8 +285,8 @@ export default function EventsPage() {
             <Loader2 className="h-12 w-12 animate-spin text-white relative z-10" />
           </div>
           <div className="text-center">
-            <p className="text-xl font-semibold text-white mb-2">Curating Premium Experiences</p>
-            <p className="text-slate-300">Please wait while we prepare something extraordinary...</p>
+            <p className="text-xl font-semibold text-white mb-2">Loading Events</p>
+            <p className="text-slate-300">Please wait...</p>
           </div>
         </div>
       </div>
@@ -376,15 +376,16 @@ export default function EventsPage() {
               </h1>
               
               <p className="text-2xl md:text-3xl text-slate-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-                Curated experiences that transcend the ordinary. 
+                Curated events that transcend the ordinary. 
+                <br/>
                 <span className="text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text"> Connect with world-class talent.</span>
               </p>
 
-              <div className="flex items-center justify-center gap-4 mb-8">
+              {/* <div className="flex items-center justify-center gap-4 mb-8">
                 <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent w-24"></div>
                 <Sparkles className="h-8 w-8 text-purple-400" />
                 <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent w-24"></div>
-              </div>
+              </div> */}
             </div>
           </div>
         </section>
@@ -485,10 +486,10 @@ export default function EventsPage() {
                 <div className="text-center mb-12">
                   <h2 className="text-4xl font-bold mb-4">
                     <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                      Future Experiences
+                      Future Events
                     </span>
                   </h2>
-                  <p className="text-slate-300 text-lg">Anticipate the extraordinary</p>
+                  {/* <p className="text-slate-300 text-lg">Anticipate the extraordinary</p> */}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {upcomingEvents.map((event, index) => (
@@ -503,11 +504,11 @@ export default function EventsPage() {
               <div className="mb-20">
                 <div className="text-center mb-12">
                   <h2 className="text-4xl font-bold mb-4">
-                    <span className="bg-gradient-to-r from-slate-400 to-slate-300 bg-clip-text text-transparent">
-                      Legacy Collection
+                    <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                      Past Events
                     </span>
                   </h2>
-                  <p className="text-slate-400 text-lg">Cherished memories</p>
+                  {/* <p className="text-slate-400 text-lg">Cherished memories</p> */}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {pastEvents.map((event, index) => (

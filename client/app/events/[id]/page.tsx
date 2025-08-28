@@ -25,6 +25,8 @@ import {
   CheckCircle2,
   Timer,
   Zap,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -521,7 +523,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
           <div className="text-center">
             <p className="text-xl font-semibold text-white mb-2">Loading Event</p>
-            <p className="text-slate-300">Preparing something extraordinary...</p>
+            <p className="text-slate-300">Please wait...</p>
           </div>
         </div>
       </div>
@@ -620,24 +622,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   priority
                 />
                 {/* <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div> */}
+
                 
-                <div className="absolute top-6 right-6 flex gap-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30"
-                    onClick={() => setIsFavorite(!isFavorite)}
-                  >
-                    <Heart className={`h-5 w-5 text-white ${isFavorite ? 'fill-current text-pink-400' : ''}`} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 border border-white/30"
-                  >
-                    <Share2 className="h-5 w-5 text-white" />
-                  </Button>
-                </div>
               </AspectRatio>
             </div>
 
@@ -704,7 +690,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </div>
 
               {/* Premium Location */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+              {/* <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
                 <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   Venue Details
                 </h2>
@@ -743,7 +729,58 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     )}
                   </div>
                 </div>
+              </div> */}
+              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Location & Venue
+                </h2>
+
+                <div className="flex items-center gap-5 p-6 rounded-2xl bg-gradient-to-r from-purple-50/5 to-pink-50/5 border border-white/10 shadow-inner">
+                  {/* Icon */}
+                  <div className="p-3 bg-gradient-to-br from-green-100 to-teal-100 rounded-2xl shadow-md">
+                    <MapPin className="h-7 w-7 text-green-700" />
+                  </div>
+
+                  {/* Address details */}
+                  <div className="flex-1">
+                    <p className="text-xl font-semibold text-white">
+                      {event.location.address || "Town Hall"}
+                    </p>
+                    <p className="text-gray-300 text-sm">
+                      {[
+                        event.location.city,
+                        event.location.state,
+                        event.location.country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+
+                    {/* Google Maps Button */}
+                    {event.location.coordinates && (
+                      <div className="mt-4">
+                        <Button
+                          variant="outline"
+                          className="px-4 py-2 text-sm font-medium rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all duration-200"
+                          asChild
+                        >
+                          <a
+                            href={`https://www.google.com/maps?q=${encodeURIComponent(
+                              event.location.address
+                            )}+${encodeURIComponent(event.location.city)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View on Google Maps
+                          </a>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+
 
               {/* Premium Tags */}
               {event.tags && event.tags.length > 0 && (
@@ -774,15 +811,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">
-                  {/* Ticket Selection Header */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg text-white font-semibold">Select Tickets</h3>
-                    <Badge variant="outline" className="px-3 py-1 text-white bg-white/10 backdrop-blur-xl">
-                      {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} tickets remaining
+                  {/* Enhanced Ticket Selection Header */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Select Tickets</h3>
+                      <p className="text-sm text-gray-600">Choose your preferred ticket type</p>
+                    </div>
+                    <Badge variant="outline" className="px-4 py-2 bg-white border-2">
+                      <Users className="h-4 w-4 mr-1" />
+                      {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
                     </Badge>
                   </div>
 
-                  {/* Ticket Types */}
+                  {/* Enhanced Ticket Types */}
                   {event.ticketTypes.map((ticket) => {
                     // Calculate availability percentage
                     const availabilityPercentage = Math.max(
@@ -799,86 +840,139 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     return (
                       <Card
                         key={ticket._id}
-                        className={`border ${quantity > 0 ? 'border-primary border-2' : 'border-border'} bg-background rounded-3xl overflow-hidden transition-all duration-200 hover:shadow-md`}
+                        className={`border-2 transition-all duration-300 hover:shadow-xl ${quantity > 0
+                            ? 'border-primary shadow-lg ring-4 ring-primary/10'
+                            : isSoldOut
+                              ? 'border-gray-200 bg-gray-50'
+                              : 'border-gray-200 hover:border-primary/50'
+                          } overflow-hidden`}
                       >
                         <CardHeader className="pb-2">
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-md ${isSoldOut ? 'bg-muted' : quantity > 0 ? 'bg-primary/10' : 'bg-muted/50'}`}>
-                                <TicketIcon className={`h-5 w-5 ${isSoldOut ? 'text-muted-foreground' : quantity > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <div className={`p-3 rounded-lg transition-colors ${isSoldOut
+                                  ? 'bg-gray-100'
+                                  : quantity > 0
+                                    ? 'bg-gradient-to-r from-primary/10 to-primary/20'
+                                    : 'bg-gray-50 hover:bg-primary/10'
+                                }`}>
+                                <TicketIcon className={`h-6 w-6 ${isSoldOut
+                                    ? 'text-gray-400'
+                                    : quantity > 0
+                                      ? 'text-primary'
+                                      : 'text-gray-600'
+                                  }`} />
                               </div>
                               <div>
-                                <CardTitle className="text-lg">{ticket.name}</CardTitle>
-                                {isSoldOut && (
-                                  <Badge variant="outline" className="mt-1 bg-muted text-muted-foreground">
-                                    Sold Out
-                                  </Badge>
-                                )}
-                                {isLimited && !isSoldOut && (
-                                  <Badge variant="outline" className="mt-1 bg-amber-50 text-amber-600 border-amber-200">
-                                    Limited Availability
-                                  </Badge>
-                                )}
-                                {quantity > 0 && (
-                                  <Badge variant="default" className="mt-1 bg-primary text-primary-foreground">
-                                    {quantity} selected
-                                  </Badge>
-                                )}
+                                <CardTitle className="text-xl">{ticket.name}</CardTitle>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {isSoldOut && (
+                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">
+                                      Sold Out
+                                    </Badge>
+                                  )}
+                                  {isLimited && !isSoldOut && (
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 animate-pulse">
+                                      Limited Availability
+                                    </Badge>
+                                  )}
+                                  {quantity > 0 && (
+                                    <Badge className="bg-primary text-primary-foreground animate-in">
+                                      {quantity} selected
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <span className="text-xl font-semibold">₹{ticket.price}</span>
+                              <span className="text-3xl font-bold text-primary">₹{ticket.price}</span>
+                              <p className="text-sm text-gray-500">per ticket</p>
                             </div>
                           </div>
                         </CardHeader>
 
                         <CardContent>
-                          <p className="text-sm text-muted-foreground mb-3">
+                          <p className="text-gray-600 mb-4 leading-relaxed">
                             {ticket.description}
-                            <br />
-                            <Badge variant="outline" className="mt-1 bg-green-50 text-green-600 border-green-200">{ticket.capacity} person allowed</Badge>
                           </p>
 
-                          {/* Benefits list */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                              <Users className="h-3 w-3 mr-1" />
+                              {ticket.capacity} person capacity
+                            </Badge>
+                          </div>
+
+                          {/* Enhanced Benefits list */}
                           {ticket.benefits && ticket.benefits.length > 0 && (
-                            <div className="bg-muted/30 rounded-md p-3 mb-3">
-                              <p className="text-xs font-medium mb-2">INCLUDES:</p>
-                              <ul className="space-y-1.5 text-sm">
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-4 border border-blue-100">
+                              <p className="text-sm font-bold mb-3 text-blue-800 flex items-center">
+                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                WHAT'S INCLUDED:
+                              </p>
+                              <ul className="space-y-2">
                                 {ticket.benefits.map((benefit: string, i: number) => (
-                                  <li key={i} className="flex items-center gap-2">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0"></div>
-                                    <span className="text-muted-foreground">{benefit}</span>
+                                  <li key={i} className="flex items-center gap-3 text-sm">
+                                    <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex-shrink-0"></div>
+                                    <span className="text-gray-700 font-medium">{benefit}</span>
                                   </li>
                                 ))}
                               </ul>
                             </div>
                           )}
 
-                          {/* Availability indicator */}
-                          <div className="mt-3">
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                              <span className={`font-medium ${isSoldOut ? 'text-destructive' : isLimited ? 'text-amber-600' : 'text-primary'}`}>
-                                {isSoldOut ? 'Sold Out' : `${ticket.quantity - ticket.sold} remaining`}
+                          {/* Enhanced Availability indicator */}
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between text-sm mb-2">
+                              <span className={`font-bold flex items-center gap-1 ${isSoldOut
+                                  ? 'text-red-600'
+                                  : isLimited
+                                    ? 'text-amber-600'
+                                    : 'text-green-600'
+                                }`}>
+                                {isSoldOut ? (
+                                  <>
+                                    <XCircle className="h-4 w-4" />
+                                    Sold Out
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    {ticket.quantity - ticket.sold} remaining
+                                  </>
+                                )}
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                {ticket.sold} / {ticket.quantity} sold
                               </span>
                             </div>
-                            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
                               <div
-                                className={`h-full ${isSoldOut ? 'bg-destructive' : isLimited ? 'bg-amber-500' : 'bg-primary'}`}
+                                className={`h-full transition-all duration-500 ${isSoldOut
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600'
+                                    : isLimited
+                                      ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                                      : 'bg-gradient-to-r from-green-500 to-blue-500'
+                                  }`}
                                 style={{ width: `${100 - availabilityPercentage}%` }}
                               ></div>
                             </div>
                           </div>
 
                           {/* Quantity Selector */}
+                          {/* Enhanced Quantity Selector */}
                           {!isSoldOut && (
-                            <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium">Quantity</span>
-                                <span className="text-sm text-muted-foreground">
-                                  ₹{ticket.price} × {quantity} = ₹{ticket.price * quantity}
-                                </span>
+                            <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="font-bold text-gray-800">Quantity</span>
+                                <div className="text-right">
+                                  <span className="text-sm text-gray-600">Total: </span>
+                                  <span className="text-lg font-bold text-primary">
+                                    ₹{(ticket.price * quantity).toLocaleString()}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center justify-center gap-3">
+                              <div className="flex items-center justify-center gap-4">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -897,13 +991,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     }
                                   }}
                                   disabled={quantity <= 0}
-                                  className="h-8 w-8 p-0"
+                                  className="h-10 w-10 p-0 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
                                 >
-                                  <Minus className="h-4 w-4" />
+                                  <Minus className="h-5 w-5" />
                                 </Button>
-                                <span className="text-lg font-semibold min-w-[2rem] text-center">
-                                  {quantity}
-                                </span>
+                                <div className="px-6 py-2 bg-white rounded-lg border-2 border-primary/20 min-w-[4rem] text-center">
+                                  <span className="text-2xl font-bold text-primary">
+                                    {quantity}
+                                  </span>
+                                </div>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -914,18 +1010,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       if (newQuantity === 1) {
                                         setTimeout(() => {
                                           summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }, 0);
+                                        }, 100);
                                       }
                                     }
                                   }}
                                   disabled={quantity >= ticket.quantity - ticket.sold}
-                                  className="h-8 w-8 p-0"
+                                  className="h-10 w-10 p-0 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition-colors"
                                 >
-                                  <Plus className="h-4 w-4" />
+                                  <Plus className="h-5 w-5" />
                                 </Button>
                               </div>
-                              <div className="text-xs text-muted-foreground text-center mt-2">
-                                Max {ticket.quantity - ticket.sold} tickets per booking
+                              <div className="text-xs text-gray-500 text-center mt-3 flex items-center justify-center gap-1">
+                                <Info className="h-3 w-3" />
+                                Maximum {ticket.quantity - ticket.sold} tickets per booking
                               </div>
                             </div>
                           )}
@@ -936,46 +1033,70 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
                   {/* Booking Summary */}
                   {selectedTickets.size > 0 && (
-                    <div ref={summaryRef}>
-                      <Card className="border-primary border-2">
-                        <CardHeader>
-                          <CardTitle className="text-lg">Booking Summary</CardTitle>
+                    <div ref={summaryRef} className="animate-in slide-in-from-bottom-4">
+                      <Card className="border-2 border-primary shadow-xl bg-gradient-to-r from-blue-50 to-purple-50">
+                        <CardHeader className="bg-gradient-to-r from-primary to-primary/90 text-white">
+                          <CardTitle className="text-2xl flex items-center">
+                            <TicketIcon className="h-6 w-6 mr-2" />
+                            Booking Summary
+                          </CardTitle>
+                          <CardDescription className="text-primary-foreground/80">
+                            Review your ticket selection
+                          </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
                             {Array.from(selectedTickets.values()).map((item) => (
-                              <div key={item.ticket._id} className="flex justify-between items-center">
-                                <div>
-                                  <span className="font-medium">{item.ticket.name}</span>
-                                  <span className="text-sm text-muted-foreground ml-2">× {item.quantity}</span>
+                              <div key={item.ticket._id} className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-primary/10 rounded-lg">
+                                    <TicketIcon className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div>
+                                    <span className="font-bold text-gray-900">{item.ticket.name}</span>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                      <span>Quantity: {item.quantity}</span>
+                                      <span>•</span>
+                                      <span>₹{item.ticket.price} each</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <span className="font-semibold">₹{item.ticket.price * item.quantity}</span>
+                                <span className="text-xl font-bold text-primary">
+                                  ₹{(item.ticket.price * item.quantity).toLocaleString()}
+                                </span>
                               </div>
                             ))}
-                            <div className="border-t pt-3">
-                              <div className="flex justify-between items-center">
-                                <span className="text-lg font-bold">Total</span>
-                                <span className="text-2xl font-bold text-primary">
-                                  ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0)}
+                            <div className="border-t-2 border-dashed border-gray-300 pt-4">
+                              <div className="flex justify-between items-center p-4 bg-gradient-to-r from-primary/5 to-purple/5 rounded-lg">
+                                <div>
+                                  <span className="text-2xl font-bold text-gray-900">Grand Total</span>
+                                  <p className="text-sm text-gray-600">
+                                    {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
+                                  </p>
+                                </div>
+                                <span className="text-4xl font-bold text-primary">
+                                  ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
                                 </span>
                               </div>
                             </div>
                           </div>
                         </CardContent>
-                        <CardFooter>
+                        <CardFooter className="p-6 pt-0">
                           <Button
-                            className="w-full"
+                            className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
                             onClick={handleBooking}
                             disabled={isBooking}
-                            size="lg"
                           >
                             {isBooking ? (
                               <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Processing...
+                                <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                                Processing Payment...
                               </>
                             ) : (
-                              `Book ${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket${Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}`
+                              <>
+                                <TicketIcon className="mr-3 h-5 w-5" />
+                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket{Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
+                              </>
                             )}
                           </Button>
                         </CardFooter>
