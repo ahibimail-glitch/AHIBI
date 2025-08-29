@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Admin = require('../models/Admin');
 const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
+const Venue = require('../models/Venue');
 
 /**
  * Middleware to protect routes requiring authentication
@@ -36,23 +37,30 @@ exports.protect = async (req, res, next) => {
       const isAdminRoute = req.originalUrl.startsWith('/api/admin');
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
+      const isVenueRoute = req.originalUrl.startsWith('/api/venue');
       
       let user;
       
-      if (isAdminRoute || decoded.role === 'admin') {
+      if (isAdminRoute || decoded.type === 'admin') {
         user = await Admin.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Admin not found' });
         }
-      } else if (isOrganizerRoute || decoded.role === 'organizer') {
+        user.role = 'admin'; // Manually set role for admin users
+      } else if (isOrganizerRoute || decoded.type === 'organizer') {
         user = await Organizer.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Organizer not found' });
         }
-      } else if (isArtistRoute || decoded.role === 'artist') {
+      } else if (isArtistRoute || decoded.type === 'artist') {
         user = await Artist.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Artist not found' });
+        }
+      } else if (isVenueRoute || decoded.type === 'venue') {
+        user = await Venue.findById(decoded.id);
+        if (!user) {
+          return res.status(404).json({ success: false, message: 'Venue not found' });
         }
       } else {
         user = await User.findById(decoded.id);
@@ -61,9 +69,8 @@ exports.protect = async (req, res, next) => {
         }
       }
 
-      // Attach user to request and add role from token for authorization
+      // Attach user to request
       req.user = user;
-      req.user.role = decoded.role; // Add role from token for authorize middleware
 
       // Check if user is active
       if (req.user.status === 'blocked') {

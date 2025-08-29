@@ -39,9 +39,8 @@ exports.getDashboardStats = async (req, res) => {
       approvalStatus: 'pending' 
     });
     
-    const pendingVenues = await User.countDocuments({ 
-      role: 'venue', 
-      status: 'pending' 
+    const pendingVenues = await Venue.countDocuments({ 
+      approvalStatus: 'pending' 
     });
     
     const pendingEvents = await Event.countDocuments({ 
@@ -214,9 +213,8 @@ exports.getPendingApprovals = async (req, res) => {
           break;
           
         case 'venues':
-          const pendingVenues = await User.find({
-            role: 'venue',
-            status: 'pending',
+          const pendingVenues = await Venue.find({
+            approvalStatus: 'pending',
             ...searchQuery
           })
           .select('_id name email phone createdAt')
@@ -224,9 +222,8 @@ exports.getPendingApprovals = async (req, res) => {
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
-          total = await User.countDocuments({
-            role: 'venue',
-            status: 'pending',
+          total = await Venue.countDocuments({
+            approvalStatus: 'pending',
             ...searchQuery
           });
           
@@ -274,7 +271,7 @@ exports.getPendingApprovals = async (req, res) => {
           .select('_id name email phone createdAt')
           .sort({ createdAt: -1 })
           .limit(5),
-        User.find({ role: 'venue', status: 'pending' })
+        Venue.find({ approvalStatus: 'pending' })
           .select('_id name email phone createdAt')
           .sort({ createdAt: -1 })
           .limit(5),
@@ -758,5 +755,65 @@ exports.updateSettings = async (req, res) => {
   } catch (error) {
     console.error('Update settings error:', error);
     return ApiResponse.serverError(res, 'Error updating settings', error);
+  }
+};
+
+/**
+ * @desc    Approve a venue
+ * @route   PUT /api/admin/venues/:id/approve
+ * @access  Private (Admin only)
+ */
+exports.approveVenue = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.params.id);
+
+    if (!venue) {
+      return ApiResponse.notFound(res, "Venue not found");
+    }
+
+    venue.approvalStatus = 'approved';
+    await venue.save();
+
+    // Also update the user status if there's an associated user
+    if (venue.user) {
+      await User.findByIdAndUpdate(venue.user, { approvalStatus: 'approved' });
+    }
+
+    return ApiResponse.success(res, "Venue approved successfully", venue);
+  } catch (error) {
+    return ApiResponse.serverError(res, "Error approving venue", error.message);
+  }
+};
+
+/**
+ * @desc    Reject a venue
+ * @route   PUT /api/admin/venues/:id/reject
+ * @access  Private (Admin only)
+ */
+exports.rejectVenue = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    if (!rejectionReason) {
+      return ApiResponse.badRequest(res, "Rejection reason is required");
+    }
+
+    const venue = await Venue.findById(req.params.id);
+
+    if (!venue) {
+      return ApiResponse.notFound(res, "Venue not found");
+    }
+
+    venue.approvalStatus = 'rejected';
+    venue.rejectionReason = rejectionReason;
+    await venue.save();
+
+    // Also update the user status
+    if (venue.user) {
+      await User.findByIdAndUpdate(venue.user, { approvalStatus: 'rejected' });
+    }
+
+    return ApiResponse.success(res, "Venue rejected successfully", venue);
+  } catch (error) {
+    return ApiResponse.serverError(res, "Error rejecting venue", error.message);
   }
 };

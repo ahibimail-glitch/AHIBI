@@ -23,6 +23,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Ticket, Building, User, Mail, Phone, Shield } from "lucide-react";
 import Link from "next/link";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function VenueSignupPage() {
   const [step, setStep] = useState<"details" | "otp" | "complete">("details");
@@ -30,37 +31,107 @@ export default function VenueSignupPage() {
     name: "",
     email: "",
     phone: "",
-    city: "",
     venueName: "",
     venueType: "",
     capacity: "",
+    description: "",
     agreeToTerms: false,
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      pincode: "",
+    },
+    contactInfo: {
+      email: "",
+    },
+    pricing: {
+      basePrice: "",
+    },
   });
   const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleDetailsSubmit = (e: React.FormEvent) => {
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("otp");
+    setLoading(true);
+    setError("");
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...signupData,
+          contactInfo: { email: signupData.email, phone: signupData.phone },
+          mode: 'signup'
+        }),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        if (responseData.errors) {
+          const errorMsg = responseData.errors.map((err: any) => err.msg).join(', ');
+          throw new Error(errorMsg);
+        }
+        throw new Error(responseData.message || 'Failed to send OTP');
+      }
+
+      setStep("otp");
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      setError(error.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("complete");
+    setLoading(true);
+    setError("");
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: signupData.phone,
+          otp: otp,
+          mode: 'signup'
+        }),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Invalid OTP');
+      }
+
+      setStep("complete");
+    } catch (error: any) {
+      console.error('Error during signup:', error);
+      setError(error.message || 'Failed to complete signup. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleComplete = () => {
-    window.location.href = "/venue";
+    window.location.href = "/venue/auth/login";
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-white-900 to-white flex items-center justify-center p-4">
-      {" "}
       <Card className="w-full max-w-md bg-gray-900/95 border-gray-700 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
           <div className="flex items-center justify-center mb-4">
-            {/* <div className="w-12 h-12 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center">
-              <Building className="h-6 w-6 text-white" />
-            </div> */}
             <div className="flex items-center justify-center space-x-2">
               <img
                 src="/images/Logo.png"
@@ -78,13 +149,18 @@ export default function VenueSignupPage() {
             {step === "details" && "List your venue and start hosting events"}
             {step === "otp" &&
               `We've sent a 6-digit code to ${signupData.phone}`}
-            {step === "complete" && "Your venue listing is ready"}
+            {step === "complete" && "Your venue account is pending approval."}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {step === "details" && (
             <form onSubmit={handleDetailsSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-gray-200">
                   Your Full Name *
@@ -138,42 +214,73 @@ export default function VenueSignupPage() {
                     type="tel"
                     placeholder="Enter mobile number"
                     value={signupData.phone}
-                    onChange={(e) =>
-                      setSignupData({ ...signupData, phone: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setSignupData({ ...signupData, phone: value });
+                    }}
                     className="rounded-l-none bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
+                    required
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="street" className="text-gray-200">
+                    Street Address *
+                  </Label>
+                  <Input
+                    id="street"
+                    placeholder="Street"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.street}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, street: e.target.value } })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-gray-200">
+                    City *
+                  </Label>
+                  <Input
+                    id="city"
+                    placeholder="City"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.city}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, city: e.target.value } })}
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-gray-200">
-                  City *
-                </Label>
-                <Select
-                  value={signupData.city}
-                  onValueChange={(value) =>
-                    setSignupData({ ...signupData, city: value })
-                  }
-                  required
-                >
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select your city" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    <SelectItem value="mumbai">Mumbai</SelectItem>
-                    <SelectItem value="delhi">Delhi</SelectItem>
-                    <SelectItem value="bangalore">Bangalore</SelectItem>
-                    <SelectItem value="pune">Pune</SelectItem>
-                    <SelectItem value="chennai">Chennai</SelectItem>
-                    <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                    <SelectItem value="kolkata">Kolkata</SelectItem>
-                    <SelectItem value="ahmedabad">Ahmedabad</SelectItem>
-                    <SelectItem value="dimapur">Dimapur</SelectItem>
-                    <SelectItem value="kohima">Kohima</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="state" className="text-gray-200">
+                    State *
+                  </Label>
+                  <Input
+                    id="state"
+                    placeholder="State"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.state}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, state: e.target.value } })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pincode" className="text-gray-200">
+                    Pincode *
+                  </Label>
+                  <Input
+                    id="pincode"
+                    placeholder="Pincode"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.address.pincode}
+                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, pincode: e.target.value } })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -196,6 +303,20 @@ export default function VenueSignupPage() {
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-gray-200">
+                  Venue Description *
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="Tell us about your venue..."
+                  className="bg-gray-800 border-gray-600 text-white min-h-[100px]"
+                  value={signupData.description}
+                  onChange={(e) => setSignupData({ ...signupData, description: e.target.value })}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -231,21 +352,35 @@ export default function VenueSignupPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="capacity" className="text-gray-200">
-                  Maximum Capacity *
-                </Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  placeholder="Enter maximum capacity"
-                  value={signupData.capacity}
-                  onChange={(e) =>
-                    setSignupData({ ...signupData, capacity: e.target.value })
-                  }
-                  className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="capacity" className="text-gray-200">
+                    Capacity (Guests) *
+                  </Label>
+                  <Input
+                    id="capacity"
+                    type="number"
+                    placeholder="e.g., 150"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.capacity}
+                    onChange={(e) => setSignupData({ ...signupData, capacity: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="basePrice" className="text-gray-200">
+                    Base Price (₹) *
+                  </Label>
+                  <Input
+                    id="basePrice"
+                    type="number"
+                    placeholder="e.g., 50000"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    value={signupData.pricing.basePrice}
+                    onChange={(e) => setSignupData({ ...signupData, pricing: { ...signupData.pricing, basePrice: e.target.value } })}
+                    required
+                  />
+                </div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -275,24 +410,20 @@ export default function VenueSignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:opacity-90 transition-opacity"
-                disabled={
-                  !signupData.agreeToTerms ||
-                  !signupData.name ||
-                  !signupData.email ||
-                  !signupData.phone ||
-                  !signupData.city ||
-                  !signupData.venueName ||
-                  !signupData.venueType ||
-                  !signupData.capacity
-                }
+                disabled={loading || !signupData.agreeToTerms}
               >
-                Continue to Verification
+                {loading ? 'Sending OTP...' : 'Continue to Verification'}
               </Button>
             </form>
           )}
 
           {step === "otp" && (
             <form onSubmit={handleOtpSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="otp" className="text-gray-200">
                   Enter OTP
@@ -310,9 +441,10 @@ export default function VenueSignupPage() {
               </div>
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:opacity-90 transition-opacity"
               >
-                Verify Phone Number
+                {loading ? 'Verifying...' : 'Verify Phone Number'}
               </Button>
               <div className="text-center space-y-2">
                 <Button
@@ -326,7 +458,7 @@ export default function VenueSignupPage() {
                 </Button>
                 <p className="text-xs text-gray-400">
                   Didn't receive code?{" "}
-                  <button type="button" className="underline text-orange-400">
+                  <button type="button" onClick={handleDetailsSubmit} className="underline text-orange-400">
                     Resend OTP
                   </button>
                 </p>
@@ -344,8 +476,7 @@ export default function VenueSignupPage() {
                   Account Created Successfully!
                 </h3>
                 <p className="text-gray-300">
-                  Welcome to Ahibi 3.0, {signupData.name}! Your venue listing is
-                  ready.
+                  Welcome to Ahibi 3.0, {signupData.name}! Your venue account is now pending approval from the admin.
                 </p>
               </div>
 
@@ -364,16 +495,22 @@ export default function VenueSignupPage() {
                     <strong>Phone:</strong> +91 {signupData.phone}
                   </p>
                   <p>
-                    <strong>City:</strong> {signupData.city}
+                    <strong>City:</strong> {signupData.address.city}
                   </p>
                   <p>
                     <strong>Venue:</strong> {signupData.venueName}
+                  </p>
+                  <p>
+                    <strong>Description:</strong> {signupData.description}
                   </p>
                   <p>
                     <strong>Type:</strong> {signupData.venueType}
                   </p>
                   <p>
                     <strong>Capacity:</strong> {signupData.capacity} guests
+                  </p>
+                  <p>
+                    <strong>Base Price:</strong> ₹{signupData.pricing.basePrice}
                   </p>
                 </div>
               </div>
@@ -382,7 +519,7 @@ export default function VenueSignupPage() {
                 onClick={handleComplete}
                 className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:opacity-90 transition-opacity"
               >
-                Start Managing Your Venue
+                Proceed to Login
               </Button>
             </div>
           )}

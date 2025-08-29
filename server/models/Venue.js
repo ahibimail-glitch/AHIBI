@@ -1,16 +1,36 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const VenueSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
   name: {
     type: String,
     required: [true, 'Venue name is required'],
     trim: true
   },
+  email: {
+    type: String,
+    required: [true, 'Please add an email'],
+    unique: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
+  },
+  phone: {
+    type: String,
+    required: [true, 'Please add a phone number'],
+    unique: true,
+    match: [/^\d{10}$/, 'Please enter a valid 10-digit phone number']
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  rejectionReason: {
+    type: String
+  },
+  otp: String,
+  otpExpires: Date,
   description: {
     type: String,
     required: [true, 'Description is required']
@@ -232,6 +252,47 @@ VenueSchema.methods.calculateAverageRating = async function() {
     average: (totalRating / this.reviews.length).toFixed(1),
     count: this.reviews.length
   };
+};
+
+// Generate and hash OTP
+VenueSchema.methods.setOtp = async function() {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Store hashed OTP
+  this.otp = await bcrypt.hash(otp, 10);
+  this.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+  await this.save();
+
+  return otp; // Return unhashed OTP to be sent via SMS
+};
+
+// Verify OTP
+VenueSchema.methods.verifyOtp = async function(enteredOtp) {
+  if (!this.otp || !this.otpExpires) {
+    return false;
+  }
+
+  if (this.otpExpires < Date.now()) {
+    return false; // OTP expired
+  }
+
+  const isMatch = await bcrypt.compare(enteredOtp, this.otp);
+  if (isMatch) {
+    // Clear OTP fields after successful verification
+    this.otp = undefined;
+    this.otpExpires = undefined;
+    await this.save();
+  }
+
+  return isMatch;
+};
+
+// Sign JWT and return
+VenueSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign({ id: this._id, type: 'venue' }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE
+  });
 };
 
 module.exports = mongoose.model('Venue', VenueSchema);

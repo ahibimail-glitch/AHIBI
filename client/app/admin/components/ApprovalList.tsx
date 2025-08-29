@@ -68,6 +68,14 @@ interface Artist {
   };
 }
 
+interface Venue {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+}
+
 interface ApprovalListProps {
   type: "Organizer" | "Artist" | "Venue" | "Event";
 }
@@ -76,6 +84,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -88,6 +97,8 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       fetchPendingOrganizers();
     } else if (type === 'Artist') {
       fetchPendingArtists();
+    } else if (type === 'Venue') {
+      fetchPendingVenues();
     }
   }, [type]);
 
@@ -179,6 +190,37 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     } catch (err) {
       console.error('Error fetching pending artists:', err);
       setError('Failed to load pending artists. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPendingVenues = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/approvals?type=venues`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending venues');
+      }
+
+      const data = await response.json();
+      setVenues(data.data?.venues || []);
+    } catch (err) {
+      console.error('Error fetching pending venues:', err);
+      setError('Failed to load pending venues. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -462,7 +504,96 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     }
   };
 
-  if (type !== 'Event' && type !== 'Organizer' && type !== 'Artist') {
+  const handleVenueApprove = async (venueId: string) => {
+    try {
+      setProcessingId(venueId);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/venues/${venueId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve venue');
+      }
+
+      await fetchPendingVenues();
+      toast({
+        title: "Success",
+        description: "Venue approved successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error approving venue:', err);
+      toast({
+        title: "Error",
+        description: "Failed to approve venue. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleVenueReject = async (venueId: string) => {
+    if (!confirm('Are you sure you want to reject this venue?')) return;
+
+    try {
+      setProcessingId(venueId);
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+
+      const reason = prompt('Please enter the reason for rejection:');
+      if (!reason) {
+        setProcessingId(null);
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/venues/${venueId}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rejectionReason: reason }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject venue');
+      }
+
+      await fetchPendingVenues();
+      toast({
+        title: "Success",
+        description: "Venue rejected successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      console.error('Error rejecting venue:', err);
+      toast({
+        title: "Error",
+        description: "Failed to reject venue. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (type !== 'Event' && type !== 'Organizer' && type !== 'Artist' && type !== 'Venue') {
     return (
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader>
@@ -501,7 +632,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
       <CardHeader>
         <CardTitle className="flex items-center">
-          {type} Approvals ({type === 'Event' ? events.length : type === 'Organizer' ? organizers.length : artists.length})
+          {type} Approvals ({type === 'Event' ? events.length : type === 'Organizer' ? organizers.length : type === 'Artist' ? artists.length : venues.length})
         </CardTitle>
         <CardDescription>
           Review and approve new {type.toLowerCase()} submissions.
@@ -628,8 +759,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
             </p>
           </div>
           )
-        ) : (
-          // Artist approvals
+        ) : type === 'Artist' ? (
           artists.length > 0 ? (
             artists.map((artist) => (
               <div
@@ -691,6 +821,63 @@ export default function ApprovalList({ type }: ApprovalListProps) {
                 No pending artist approvals at the moment.
             </p>
           </div>
+          )
+        ) : (
+          venues.length > 0 ? (
+            venues.map((venue) => (
+              <div
+                key={venue._id}
+                className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 shadow-sm"
+              >
+                <div className="flex-1">
+                  <h3 className="font-medium">{venue.name}</h3>
+                  <p className="text-sm text-gray-500">{venue.email}</p>
+                  <p className="text-sm text-gray-500">{venue.phone}</p>
+                  <p className="text-xs text-gray-400">
+                    Submitted on {new Date(venue.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <Button size="sm" variant="outline">
+                    <Eye className="h-4 w-4 mr-1" /> View
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-green-600 border-green-200 hover:bg-green-50"
+                    onClick={() => handleVenueApprove(venue._id)}
+                    disabled={!!processingId}
+                  >
+                    {processingId === venue._id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Approve
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => handleVenueReject(venue._id)}
+                    disabled={!!processingId}
+                  >
+                    {processingId === venue._id ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No pending venue approvals at the moment.
+              </p>
+            </div>
           )
         )}
       </CardContent>

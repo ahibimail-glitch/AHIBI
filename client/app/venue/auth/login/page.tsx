@@ -8,25 +8,90 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Ticket, Building, Mail, Shield } from "lucide-react"
+import { Ticket, Building, Mail, Shield, Phone } from "lucide-react"
 import Link from "next/link"
+import { useVenueAuth } from "@/hooks/useVenueAuth"
 
 export default function VenueLoginPage() {
-  const [step, setStep] = useState<"login" | "otp-verify">("login")
+  const [step, setStep] = useState<"login" | "otp-verify" | "pending" | "rejected">("login")
   const [loginData, setLoginData] = useState({
-    loginId: "",
+    phone: "",
     otp: "",
     rememberMe: false,
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const { login } = useVenueAuth()
 
-  const handleOtpRequest = (e: React.FormEvent) => {
+  const handleOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStep("otp-verify")
+    setLoading(true)
+    setError("")
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          mode: 'login'
+        }),
+      });
+
+      if (response.ok) {
+        setStep("otp-verify")
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      console.error('OTP request error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleOtpVerify = (e: React.FormEvent) => {
+  const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault()
-    window.location.href = "/venue/dashboard"
+    setLoading(true)
+    setError("")
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: loginData.phone,
+          otp: loginData.otp,
+          mode: 'login'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 202) {
+        setStep("pending")
+      } else if (response.status === 403) {
+        setStep("rejected")
+      } else if (response.ok) {
+        login(data.data.token, data.data.user)
+        window.location.href = "/venue/dashboard"
+      } else {
+        setError(data.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,9 +99,6 @@ export default function VenueLoginPage() {
       <Card className="w-full max-w-md bg-gray-900/95 border-gray-700 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
           <div className="flex items-center justify-center mb-4">
-            {/* <div className="w-12 h-12 bg-gradient-to-br from-orange-600 to-orange-800 rounded-full flex items-center justify-center">
-              <Building className="h-6 w-6 text-white" />
-            </div> */}
            <div className="flex items-center justify-center space-x-2">
             <img
               src="/images/Logo.png"
@@ -45,29 +107,40 @@ export default function VenueLoginPage() {
             />
           </div>
           </div>
-          <CardTitle className="text-white text-xl">{step === "login" ? "Venue Owner Login" : "Verify OTP"}</CardTitle>
+          <CardTitle className="text-white text-xl">
+            {step === "login" && "Venue Owner Login"}
+            {step === "otp-verify" && "Verify OTP"}
+            {step === "pending" && "Account Pending"}
+            {step === "rejected" && "Account Rejected"}
+          </CardTitle>
           <CardDescription className="text-gray-300">
-            {step === "login"
-              ? "Access your venue management dashboard"
-              : `We've sent a 6-digit code to ${loginData.loginId}`}
+            {step === "login" && "Access your venue management dashboard"}
+            {step === "otp-verify" && `We've sent a 6-digit code to ${loginData.phone}`}
+            {step === "pending" && "Your account is pending admin approval"}
+            {step === "rejected" && "Your account has been rejected"}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {step === "login" && (
             <form onSubmit={handleOtpRequest} className="space-y-4">
+               {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="loginId" className="text-gray-200">
-                  Email or Phone Number
+                <Label htmlFor="phone" className="text-gray-200">
+                  Phone Number
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
-                    id="loginId"
-                    type="text"
-                    placeholder="Enter email or phone"
-                    value={loginData.loginId}
-                    onChange={(e) => setLoginData({ ...loginData, loginId: e.target.value })}
+                    id="phone"
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={loginData.phone}
+                    onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
                     className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
                     required
                   />
@@ -88,15 +161,21 @@ export default function VenueLoginPage() {
 
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:opacity-90 transition-opacity"
               >
-                Send OTP
+                {loading ? "Sending OTP..." : "Send OTP"}
               </Button>
             </form>
           )}
 
           {step === "otp-verify" && (
             <form onSubmit={handleOtpVerify} className="space-y-4">
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="otp" className="text-gray-200">
                   Enter OTP
@@ -114,9 +193,10 @@ export default function VenueLoginPage() {
               </div>
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:opacity-90 transition-opacity"
               >
-                Verify & Login
+                {loading ? "Verifying..." : "Verify & Login"}
               </Button>
               <div className="text-center space-y-2">
                 <Button
@@ -136,6 +216,51 @@ export default function VenueLoginPage() {
                 </p>
               </div>
             </form>
+          )}
+
+          {step === "pending" && (
+            <div className="space-y-6 text-center">
+              <div className="space-y-2">
+                <div className="w-16 h-16 bg-yellow-500/20 border border-yellow-500/30 rounded-full flex items-center justify-center mx-auto">
+                  <Shield className="h-8 w-8 text-yellow-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Account Pending Approval</h3>
+                <p className="text-gray-300">
+                  Your venue account is currently under review by our admin team. 
+                  You will be notified once your account is approved.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => setStep("login")}
+                variant="outline"
+                className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Back to Login
+              </Button>
+            </div>
+          )}
+
+          {step === "rejected" && (
+            <div className="space-y-6 text-center">
+              <div className="space-y-2">
+                <div className="w-16 h-16 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto">
+                  <Shield className="h-8 w-8 text-red-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">Account Rejected</h3>
+                <p className="text-gray-300">
+                  Your venue account has been rejected. Please contact support for more information.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => setStep("login")}
+                variant="outline"
+                className="w-full border-gray-600 text-gray-300 hover:bg-gray-800"
+              >
+                Back to Login
+              </Button>
+            </div>
           )}
 
           <div className="text-center space-y-2">

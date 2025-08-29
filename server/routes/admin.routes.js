@@ -152,4 +152,8 @@ router.post('/payments/resolve/:id', paymentTxController.resolveTransaction);
 router.get('/settings', adminController.getSettings);
 router.put('/settings', adminController.updateSettings);
 
+// Venue approval routes
+router.put('/venues/:id/approve', adminController.approveVenue);
+router.put('/venues/:id/reject', adminController.rejectVenue);
+
 module.exports = router;
