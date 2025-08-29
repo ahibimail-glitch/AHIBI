@@ -40,6 +40,11 @@ import {
   Save,
   Eye,
   EyeOff,
+  Download,
+  ExternalLink,
+  CheckCircle,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -52,8 +57,7 @@ interface UserProfile {
   phone: string;
   bio: string;
   interests: string[];
-  [key: string]: any; // Allow other properties
-  
+  [key: string]: any;
 }
 
 export default function ProfilePage() {
@@ -63,7 +67,7 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // Define booking interface based on server model
+
   interface Booking {
     _id: string;
     event: {
@@ -107,6 +111,7 @@ export default function ProfilePage() {
       }
       setLoading(false);
     };
+
     const fetchUserBookings = async () => {
       setLoading(true);
       setError("");
@@ -122,9 +127,6 @@ export default function ProfilePage() {
         if (!res.ok) {
           setError(data.message || "Failed to fetch bookings");
         } else {
-          // Make sure we're getting the correct data structure
-          // console.log('Bookings data:', data);
-          // console.log(data.bookings);
           console.log(data.bookings[0]);
           setUserBookings(data.bookings || []);
         }
@@ -133,6 +135,7 @@ export default function ProfilePage() {
       }
       setLoading(false);
     };
+
     fetchProfile();
     fetchUserBookings();
   }, []);
@@ -152,8 +155,6 @@ export default function ProfilePage() {
     showInterests: true,
     allowMessages: true,
   });
-
-
 
   const savedEvents = [
     {
@@ -180,7 +181,6 @@ export default function ProfilePage() {
   ];
 
   const handleSaveProfile = () => {
-    // Save profile data
     setIsEditing(false);
   };
 
@@ -195,9 +195,34 @@ export default function ProfilePage() {
       return { ...prevProfile, interests: newInterests };
     });
   };
+
   const handleViewTicket = (id: string) => {
     router.push(`/events/${id}/bookings`);
   }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+      case "paid":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "pending":
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+      case "paid":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "pending":
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      default:
+        return "bg-red-50 text-red-700 border-red-200";
+    }
+  };
 
   const availableInterests = [
     "Music",
@@ -215,290 +240,277 @@ export default function ProfilePage() {
     "Gaming",
   ];
 
-  if (loading) return <div className="flex justify-center items-center h-64">Loading...</div>;
-  if (error) return <div className="text-red-500 text-center py-8">{error}</div>;
-  if (!profileData) return <div className="text-center py-8">No profile data found.</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+          <Navbar />
+        </header>
+        <div className="flex justify-center items-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+          <Navbar />
+        </header>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 text-lg">{error}</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profileData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+          <Navbar />
+        </header>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-gray-600 text-lg">No profile data found.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-
-      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50 shadow-sm">
         <Navbar />
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Profile Header */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-              <div className="relative">
-                <Avatar className="w-24 h-24">
-                  <AvatarImage
-                    src={profileData.avatar || "/images/profile.png"}
-                  />
-                  <AvatarFallback>
-                    {profileData.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Enhanced Profile Header */}
+        <Card className="mb-8 shadow-lg border-0 bg-gradient-to-r from-white via-white to-blue-50/30">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8">
+              {/* Avatar Section */}
+              <div className="relative group">
+                <div className="relative">
+                  <Avatar className="w-28 h-28 lg:w-32 lg:h-32 border-4 border-white shadow-xl ring-4 ring-blue-50">
+                    <AvatarImage
+                      src={profileData.avatar || "/images/profile.png"}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                      {profileData.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="absolute -bottom-1 -right-1 h-10 w-10 rounded-full p-0 shadow-lg border-2 border-white hover:scale-105 transition-transform"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-2xl font-bold">{profileData.name}</h2>
-                  {/* <Button
+
+              {/* Profile Info */}
+              <div className="flex-1 w-full lg:w-auto">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+                  <div>
+                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+                      {profileData.name}
+                    </h1>
+                    <div className="flex items-center text-sm text-gray-600 mb-2">
+                      <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
+                      Verified Member
+                    </div>
+                  </div>
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsEditing(!isEditing)}
+                    className="self-start sm:self-auto bg-white hover:bg-gray-50 border-gray-200"
                   >
-                    <Edit className="h-4 w-4 mr-1" />
+                    <Edit className="h-4 w-4 mr-2" />
                     {isEditing ? "Cancel" : "Edit Profile"}
-                  </Button> */}
+                  </Button>
                 </div>
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center">
-                    <Mail className="h-4 w-4 mr-1" />
-                    {profileData.email}
+
+                {/* Contact Info Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                    <Mail className="h-4 w-4 mr-2 text-blue-500" />
+                    <span className="truncate">{profileData.email}</span>
                   </div>
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {profileData.city}
+                  <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                    <MapPin className="h-4 w-4 mr-2 text-red-500" />
+                    <span>{profileData.city || "Location not set"}</span>
                   </div>
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Member since 2025
+                  <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+                    <Calendar className="h-4 w-4 mr-2 text-green-500" />
+                    <span>Member since 2025</span>
                   </div>
                 </div>
-                <p className="text-muted-foreground mb-3">{profileData.bio}</p>
-                {/* <div className="flex flex-wrap gap-2">
-                  {Array.isArray(profileData.interests) && profileData.interests.length > 0 ? (
-                    profileData.interests.map((interest: string) => (
-                      <Badge key={interest} variant="secondary">
-                        {interest}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-muted-foreground">No interests listed</span>
-                  )}
-                </div> */}
+
+                {/* Bio */}
+                {profileData.bio && (
+                  <p className="text-gray-700 leading-relaxed mb-4 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-lg p-4">
+                    {profileData.bio}
+                  </p>
+                )}
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{userBookings.length}</div>
+                    <div className="text-xs text-gray-500">Total Bookings</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {userBookings.filter(b => b.paymentStatus === "completed").length}
+                    </div>
+                    <div className="text-xs text-gray-500">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      ₹{userBookings.reduce((sum, booking) => sum + booking.total, 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500">Total Spent</div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
-            {/* <TabsTrigger value="overview">Overview</TabsTrigger> */}
-            <TabsTrigger value="bookings" className="text-xs md:text-sm">My Bookings</TabsTrigger>
-            {/* <TabsTrigger value="saved">Saved Events</TabsTrigger> */}
-            <TabsTrigger value="personal" className="text-xs md:text-sm">Personal Info</TabsTrigger>
-            {/* <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger> */}
-          </TabsList>
+        {/* Enhanced Tabs */}
+        <Tabs defaultValue="bookings" className="space-y-8">
+          <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-2 h-14 bg-gray-50/50">
+              <TabsTrigger 
+                value="bookings" 
+                className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                <Ticket className="h-4 w-4 mr-2" />
+                My Bookings
+              </TabsTrigger>
+              <TabsTrigger 
+                value="personal" 
+                className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Personal Info
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="overview" className="space-y-6">
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Ticket className="h-8 w-8 mx-auto mb-2 text-primary" />
-                  <p className="text-2xl font-bold">12</p>
-                  <p className="text-sm text-muted-foreground">
-                    Events Attended
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Heart className="h-8 w-8 mx-auto mb-2 text-red-500" />
-                  <p className="text-2xl font-bold">8</p>
-                  <p className="text-sm text-muted-foreground">Saved Events</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <CreditCard className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                  <p className="text-2xl font-bold">₹18,500</p>
-                  <p className="text-sm text-muted-foreground">Total Spent</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Calendar className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-                  <p className="text-2xl font-bold">3</p>
-                  <p className="text-sm text-muted-foreground">
-                    Upcoming Events
-                  </p>
-                </CardContent>
-              </Card>
-            </div> */}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Bookings</CardTitle>
-                  <CardDescription>Your latest event bookings</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {userBookings?.map((booking) => (
-                    <div
-                      key={booking._id}
-                      className="flex items-center space-x-4 p-3 border rounded-lg"
-                    >
-                      <Image
-                        src={booking.event?.banner || "/images/profile.png"}
-                        alt={booking.event?.title || "Event"}
-                        width={80}
-                        height={60}
-                        className="w-12 h-9 rounded object-cover"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">{booking.event?.title || "Event"}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(booking.bookedAt).toLocaleDateString()}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <Badge
-                            variant={booking.paymentStatus === "paid" ? "outline" : "secondary"}
-                            className="text-xs"
-                          >
-                            {booking.paymentStatus || "pending"}
-                          </Badge>
-                          <span className="text-sm font-medium">
-                            {booking.total}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    className="w-full bg-transparent"
-                    asChild
-                  >
-                    <Link href="/bookings">View All Bookings</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Recommendations */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recommended for You</CardTitle>
-                  <CardDescription>Based on your interests</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {savedEvents.slice(0, 3).map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-center space-x-4 p-3 border rounded-lg"
-                    >
-                      <Image
-                        src={event.image || "/images/profile.png"}
-                        alt={event.title}
-                        width={50}
-                        height={50}
-                        className="w-12 h-9 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">{event.title}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {event.date}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-sm font-medium text-primary">
-                            {event.price}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 text-xs bg-transparent"
-                          >
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    className="w-full bg-transparent"
-                    asChild
-                  >
-                    <Link href="/events">Discover More Events</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Bookings</CardTitle>
-                <CardDescription>
-                  All your event bookings and tickets
-                </CardDescription>
+          <TabsContent value="bookings" className="space-y-6">
+            <Card className="shadow-lg border-0">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-gray-900">My Bookings</CardTitle>
+                    <CardDescription className="text-gray-600">
+                      All your event bookings and tickets
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {userBookings.length} bookings
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="space-y-4">
                   {userBookings && userBookings.length > 0 ? (
-                    userBookings.map((booking) => (
+                    userBookings.map((booking, index) => (
                       <div
                         key={booking._id}
-                        className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border rounded-lg gap-4"
+                        className="group relative bg-gradient-to-r from-white to-gray-50/50 border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
                       >
-                        <div className="flex items-center space-x-4">
-                          <Image
-                            src={booking.event?.banner || "/images/profile.png"}
-                            alt={booking.event?.title }
-                            width={80}
-                            height={60}
-                            className="w-16 h-12 rounded object-cover"
-                          />
-                          <div>
-                            <h3 className="font-semibold text-sm md:text-base">{booking.event?.title || "Event"}</h3>
-                            <p className="text-xs md:text-sm text-muted-foreground">
-                              {new Date(booking.bookedAt).toLocaleDateString()}
-                            </p>
-                            <Badge
-                              variant={
-                                booking.paymentStatus === "completed"
-                                  ? "default"
-                                  : booking.paymentStatus === "pending"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                              className="mt-1 text-xs"
-                            >
-                              {booking.paymentStatus}
-                            </Badge>
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                          <div className="flex items-start space-x-4">
+                            <div className="relative">
+                              <Image
+                                src={booking.event?.banner || "/images/profile.png"}
+                                alt={booking.event?.title || "Event"}
+                                width={120}
+                                height={80}
+                                className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg object-cover shadow-sm ring-2 ring-white"
+                              />
+                              <div className="absolute -top-2 -left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                #{index + 1}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                                {booking.event?.title || "Event"}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {new Date(booking.bookedAt).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                                <div className="flex items-center">
+                                  <Ticket className="h-4 w-4 mr-1" />
+                                  {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {getStatusIcon(booking.paymentStatus)}
+                                <Badge
+                                  className={`${getStatusColor(booking.paymentStatus)} border font-medium px-3 py-1`}
+                                >
+                                  {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                                </Badge>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-right mt-2 md:mt-0">
-                          <p className="font-semibold">₹{booking.total}</p>
-                          <div className="flex justify-end space-x-2 mt-2">
-                            <Button size="sm" variant="outline" onClick={() => handleViewTicket(booking._id)}>
-                              View Ticket
-                            </Button>
-                            {/* {booking.paymentStatus === "completed" && (
-                              <Button size="sm">Download QR</Button>
-                            )} */}
+                          
+                          <div className="text-right lg:ml-6">
+                            <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.total.toLocaleString()}</p>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => handleViewTicket(booking._id)}
+                                className="hover:bg-blue-50 hover:border-blue-300"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View Ticket
+                              </Button>
+                              {booking.paymentStatus === "completed" && (
+                                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No bookings found
+                    <div className="text-center py-12">
+                      <Ticket className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+                      <p className="text-gray-500 mb-6">You haven't booked any events yet</p>
+                      <Button asChild>
+                        <Link href="/events">Explore Events</Link>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -506,236 +518,127 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="saved">
-            <Card>
-              <CardHeader>
-                <CardTitle>Saved Events</CardTitle>
-                <CardDescription>
-                  Events you've bookmarked for later
+          <TabsContent value="personal" className="space-y-6">
+            <Card className="shadow-lg border-0">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+                <CardTitle className="text-xl font-bold text-gray-900">Personal Information</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Manage your personal details and preferences
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="border rounded-lg overflow-hidden"
-                    >
-                      <Image
-                        src={event.image || "/images/profile.png"}
-                        alt={event.title}
-                        width={150}
-                        height={100}
-                        className="w-full h-24 object-cover"
-                      />
-                      <div className="p-3">
-                        <h3 className="font-medium text-sm mb-1">
-                          {event.title}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {event.date}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-primary">
-                            {event.price}
-                          </span>
-                          <div className="flex space-x-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-6 text-xs bg-transparent"
-                            >
-                              <Heart className="h-3 w-3" />
-                            </Button>
-                            <Button size="sm" className="h-6 text-xs">
-                              Book
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="personal">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Manage your personal details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      value={profileData.name}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, name: e.target.value })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          email: e.target.value,
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <div className="relative">
+              <CardContent className="p-6 space-y-8">
+                {/* Contact Information */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Contact Information</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-medium text-gray-700">Full Name</Label>
                       <Input
-                        id="phone"
-                        type={showPhone ? "text" : "password"}
-                        value={profileData.phone}
+                        id="name"
+                        value={profileData.name}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, name: e.target.value })
+                        }
+                        disabled={!isEditing}
+                        className="bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profileData.email}
                         onChange={(e) =>
                           setProfileData({
                             ...profileData,
-                            phone: e.target.value,
+                            email: e.target.value,
                           })
                         }
                         disabled={!isEditing}
+                        className="bg-gray-50 border-gray-200 focus:bg-white transition-colors"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPhone(!showPhone)}
-                      >
-                        {showPhone ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
                     </div>
                   </div>
-                  {/* <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Select
-                      value={profileData.city}
-                      onValueChange={(value) =>
-                        setProfileData({ ...profileData, city: value })
-                      }
-                      disabled={!isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Mumbai">Mumbai</SelectItem>
-                        <SelectItem value="Delhi">Delhi</SelectItem>
-                        <SelectItem value="Bangalore">Bangalore</SelectItem>
-                        <SelectItem value="Pune">Pune</SelectItem>
-                        <SelectItem value="Chennai">Chennai</SelectItem>
-                        <SelectItem value="Hyderabad">Hyderabad</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div> */}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number</Label>
+                      <div className="relative">
+                        <Input
+                          id="phone"
+                          type={showPhone ? "text" : "password"}
+                          value={profileData.phone}
+                          onChange={(e) =>
+                            setProfileData({
+                              ...profileData,
+                              phone: e.target.value,
+                            })
+                          }
+                          disabled={!isEditing}
+                          className="bg-gray-50 border-gray-200 focus:bg-white transition-colors pr-12"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                          onClick={() => setShowPhone(!showPhone)}
+                        >
+                          {showPhone ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
+                      <Input
+                        id="city"
+                        value={profileData.city || ""}
+                        onChange={(e) =>
+                          setProfileData({ ...profileData, city: e.target.value })
+                        }
+                        disabled={!isEditing}
+                        placeholder="Enter your city"
+                        className="bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Bio Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">About You</h3>
                   <div className="space-y-2">
-                    <Label htmlFor="dob">Date of Birth</Label>
-                    <Input
-                      id="dob"
-                      type="date"
-                      value={profileData.dateOfBirth}
+                    <Label htmlFor="bio" className="text-sm font-medium text-gray-700">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      value={profileData.bio || ""}
                       onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          dateOfBirth: e.target.value,
-                        })
+                        setProfileData({ ...profileData, bio: e.target.value })
                       }
                       disabled={!isEditing}
+                      rows={4}
+                      placeholder="Tell us about yourself..."
+                      className="bg-gray-50 border-gray-200 focus:bg-white transition-colors resize-none"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select
-                      value={profileData.gender}
-                      onValueChange={(value) =>
-                        setProfileData({ ...profileData, gender: value })
-                      }
-                      disabled={!isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                        <SelectItem value="prefer-not-to-say">
-                          Prefer not to say
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div> */}
-
-                {/* <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={profileData.bio}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, bio: e.target.value })
-                    }
-                    disabled={!isEditing}
-                    rows={3}
-                  />
                 </div>
 
-                <div className="space-y-3">
-                  <Label>Interests</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {availableInterests.map((interest) => (
-                      <Badge
-                        key={interest}
-                        variant={
-                          Array.isArray(profileData.interests) && profileData.interests.includes(interest)
-                            ? "default"
-                            : "outline"
-                        }
-                        className={`cursor-pointer ${!isEditing ? "pointer-events-none" : ""
-                          }`}
-                        onClick={() =>
-                          isEditing && handleInterestToggle(interest)
-                        }
-                      >
-                        {interest}
-                      </Badge>
-                    ))}
-                  </div>
-                </div> */}
-
+                {/* Action Buttons */}
                 {isEditing && (
-                  <div className="flex space-x-2">
-                    <Button onClick={handleSaveProfile}>
-                      <Save className="h-4 w-4 mr-1" />
+                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+                    <Button onClick={handleSaveProfile} className="flex-1 sm:flex-none">
+                      <Save className="h-4 w-4 mr-2" />
                       Save Changes
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setIsEditing(false)}
+                      className="flex-1 sm:flex-none"
                     >
                       Cancel
                     </Button>
@@ -744,298 +647,9 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="preferences">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
-                  Choose how you want to be notified
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="email-notifications">
-                        Email Notifications
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive updates via email
-                      </p>
-                    </div>
-                    <Switch
-                      id="email-notifications"
-                      checked={preferences.emailNotifications}
-                      onCheckedChange={(checked) =>
-                        setPreferences({
-                          ...preferences,
-                          emailNotifications: checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="sms-notifications">
-                        SMS Notifications
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive updates via SMS
-                      </p>
-                    </div>
-                    <Switch
-                      id="sms-notifications"
-                      checked={preferences.smsNotifications}
-                      onCheckedChange={(checked) =>
-                        setPreferences({
-                          ...preferences,
-                          smsNotifications: checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="push-notifications">
-                        Push Notifications
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive browser notifications
-                      </p>
-                    </div>
-                    <Switch
-                      id="push-notifications"
-                      checked={preferences.pushNotifications}
-                      onCheckedChange={(checked) =>
-                        setPreferences({
-                          ...preferences,
-                          pushNotifications: checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="event-recommendations">
-                        Event Recommendations
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Get personalized event suggestions
-                      </p>
-                    </div>
-                    <Switch
-                      id="event-recommendations"
-                      checked={preferences.eventRecommendations}
-                      onCheckedChange={(checked) =>
-                        setPreferences({
-                          ...preferences,
-                          eventRecommendations: checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="promotional-emails">
-                        Promotional Emails
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive offers and promotions
-                      </p>
-                    </div>
-                    <Switch
-                      id="promotional-emails"
-                      checked={preferences.promotionalEmails}
-                      onCheckedChange={(checked) =>
-                        setPreferences({
-                          ...preferences,
-                          promotionalEmails: checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="weekly-digest">Weekly Digest</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Weekly summary of events
-                      </p>
-                    </div>
-                    <Switch
-                      id="weekly-digest"
-                      checked={preferences.weeklyDigest}
-                      onCheckedChange={(checked) =>
-                        setPreferences({
-                          ...preferences,
-                          weeklyDigest: checked,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>
-                  Control your privacy and visibility
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="profile-visibility">Profile Visibility</Label>
-                  <Select
-                    value={privacy.profileVisibility}
-                    onValueChange={(value) =>
-                      setPrivacy({ ...privacy, profileVisibility: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="public">Public</SelectItem>
-                      <SelectItem value="friends">Friends Only</SelectItem>
-                      <SelectItem value="private">Private</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="show-attended">Show Attended Events</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Display events you've attended
-                    </p>
-                  </div>
-                  <Switch
-                    id="show-attended"
-                    checked={privacy.showAttendedEvents}
-                    onCheckedChange={(checked) =>
-                      setPrivacy({ ...privacy, showAttendedEvents: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="show-interests">Show Interests</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Display your interests publicly
-                    </p>
-                  </div>
-                  <Switch
-                    id="show-interests"
-                    checked={privacy.showInterests}
-                    onCheckedChange={(checked) =>
-                      setPrivacy({ ...privacy, showInterests: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="allow-messages">Allow Messages</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Let others send you messages
-                    </p>
-                  </div>
-                  <Switch
-                    id="allow-messages"
-                    checked={privacy.allowMessages}
-                    onCheckedChange={(checked) =>
-                      setPrivacy({ ...privacy, allowMessages: checked })
-                    }
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Manage your account security</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Shield className="h-5 w-5 text-green-500" />
-                      <div>
-                        <p className="font-medium">Phone Number Verified</p>
-                        <p className="text-sm text-muted-foreground">
-                          Your phone number is verified
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">Verified</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Mail className="h-5 w-5 text-green-500" />
-                      <div>
-                        <p className="font-medium">Email Verified</p>
-                        <p className="text-sm text-muted-foreground">
-                          Your email is verified
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary">Verified</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-5 w-5 text-orange-500" />
-                      <div>
-                        <p className="font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-muted-foreground">
-                          Add extra security to your account
-                        </p>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      Enable
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Account Actions</h3>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start bg-transparent"
-                    >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Change Phone Number
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start bg-transparent"
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Change Email Address
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start bg-transparent"
-                    >
-                      Download My Data
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="w-full justify-start"
-                    >
-                      Delete Account
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
+      
       <Footer />
     </div>
   );

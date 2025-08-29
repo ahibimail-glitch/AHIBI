@@ -55,3 +55,7 @@
 {"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-22 21:14:56"}
 {"level":"info","message":"Photo uploaded successfully: ahibi/riwdqrdxtiimuwc3xo4o by user anonymous","service":"ahibi-association","timestamp":"2025-08-22 21:15:36"}
 {"level":"info","message":"Photo uploaded successfully: ahibi/qcaogkna7hcozdgvvldt by user anonymous","service":"ahibi-association","timestamp":"2025-08-27 00:10:32"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-28 16:26:29"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-28 16:26:51"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-28 16:26:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xrwwnoem4tffgnfrsafp by user anonymous","service":"ahibi-association","timestamp":"2025-08-28 16:28:50"}
