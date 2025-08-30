@@ -56,7 +56,7 @@ exports.createOrder = async (req, res) => {
     try {
       console.log('[Create Order] Storing pending session for orderId:', order.id);
       console.log('[Create Order] Booking details:', JSON.stringify(bookingDetails, null, 2));
-      
+
       await PendingPaymentSession.findOneAndUpdate(
         { orderId: order.id },
         {
@@ -71,13 +71,13 @@ exports.createOrder = async (req, res) => {
         },
         { upsert: true }
       );
-      
+
       console.log('[Create Order] Pending session stored successfully');
-      
+
       // Test: Check if the session was actually stored
       const testSession = await PendingPaymentSession.findOne({ orderId: order.id });
       console.log('[Create Order] Test query result:', !!testSession, 'Session data:', JSON.stringify(testSession, null, 2));
-      
+
     } catch (e) {
       console.error('Failed to persist pending payment session:', e);
     }
@@ -95,22 +95,22 @@ exports.verifyPayment = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      console.error('Missing required payment parameters:', { 
-        has_order_id: !!razorpay_order_id, 
-        has_payment_id: !!razorpay_payment_id, 
-        has_signature: !!razorpay_signature 
+      console.error('Missing required payment parameters:', {
+        has_order_id: !!razorpay_order_id,
+        has_payment_id: !!razorpay_payment_id,
+        has_signature: !!razorpay_signature
       });
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Missing required payment parameters' 
+        message: 'Missing required payment parameters'
       });
     }
 
     if (!bookingDetails) {
       console.error('Missing booking details in request');
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Missing booking details' 
+        message: 'Missing booking details'
       });
     }
 
@@ -119,8 +119,8 @@ exports.verifyPayment = async (req, res) => {
     shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
     const digest = shasum.digest('hex');
 
-    console.log('Signature verification:', { 
-      generated: digest.slice(0, 10) + '...', 
+    console.log('Signature verification:', {
+      generated: digest.slice(0, 10) + '...',
       received: razorpay_signature.slice(0, 10) + '...',
       match: digest === razorpay_signature
     });
@@ -163,95 +163,106 @@ exports.verifyPayment = async (req, res) => {
 
     // Process each ticket type
     for (const ticketInfo of tickets) {
-        const { ticketType, quantity, price } = ticketInfo;
-        
-        // Create individual bookings for each ticket of this type
-        for (let i = 0; i < quantity; i++) {
-            // Create a new booking for each individual ticket
-            const newBooking = new Booking({
-                event: event._id,
-                eventSnapshot: {
-                  _id: event._id,
-                  title: event.title,
-                  banner: event.banner,
-                  startDate: event.startDate,
-                  endDate: event.endDate,
-                  location: {
-                    address: event.location?.address,
-                    city: event.location?.city,
-                  }
-                },
-                user: user.id,
-                ticketType: ticketType,
-                quantity: 1, // Each booking is for 1 ticket
-                price: price,
-                total: price, // Total is same as price for individual ticket
-                paymentStatus: 'completed',
-                status: 'confirmed',
-                paymentId: razorpay_payment_id,
-                paymentDetails: {
-                    paymentId: razorpay_payment_id,
-                    orderId: razorpay_order_id,
-                    signature: razorpay_signature,
-                    paymentGateway: 'Razorpay',
-                    status: 'Paid'
-                },
-                // Add ticket-specific information
-                ticketIndex: currentTicketIndex,
-                totalTickets: tickets.reduce((sum, t) => sum + t.quantity, 0),
-                parentBookingId: null // Will be set to the first booking ID
-            });
+      const { ticketType, quantity, price } = ticketInfo;
 
-            await newBooking.save();
-            bookings.push(newBooking);
-            bookingIds.push(newBooking._id);
-            currentTicketIndex++;
-            totalTickets++;
-        }
-
-        // Update event ticket count and ticket type sold
-        await Event.updateOne(
-            { _id: event._id, "ticketTypes.name": ticketType },
-            {
-                $inc: {
-                    "ticketTypes.$.sold": quantity,
-                    totalRevenue: price * quantity
-                }
+      // Create individual bookings for each ticket of this type
+      for (let i = 0; i < quantity; i++) {
+        // Create a new booking for each individual ticket
+        const newBooking = new Booking({
+          event: event._id,
+          eventSnapshot: {
+            _id: event._id,
+            title: event.title,
+            banner: event.banner,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            location: {
+              address: event.location?.address,
+              city: event.location?.city,
             }
-        );
+          },
+          user: user.id,
+          ticketType: ticketType,
+          quantity: 1, // Each booking is for 1 ticket
+          price: price,
+          total: price, // Total is same as price for individual ticket
+          paymentStatus: 'completed',
+          status: 'confirmed',
+          paymentId: razorpay_payment_id,
+          paymentDetails: {
+            paymentId: razorpay_payment_id,
+            orderId: razorpay_order_id,
+            signature: razorpay_signature,
+            paymentGateway: 'Razorpay',
+            status: 'Paid'
+          },
+          // Add ticket-specific information
+          ticketIndex: currentTicketIndex,
+          totalTickets: tickets.reduce((sum, t) => sum + t.quantity, 0),
+          parentBookingId: null // Will be set to the first booking ID
+        });
+
+        await newBooking.save();
+        bookings.push(newBooking);
+        bookingIds.push(newBooking._id);
+        currentTicketIndex++;
+        totalTickets++;
+      }
+
+      // Update event ticket count and ticket type sold
+      await Event.updateOne(
+        { _id: event._id, "ticketTypes.name": ticketType },
+        {
+          $inc: {
+            "ticketTypes.$.sold": quantity,
+            totalRevenue: price * quantity
+          }
+        }
+      );
     }
 
     // Set the parent booking ID to the first booking for all tickets
     if (bookings.length > 0) {
-        const parentBookingId = bookings[0]._id;
-        for (let i = 1; i < bookings.length; i++) {
-            bookings[i].parentBookingId = parentBookingId;
-            await bookings[i].save();
-        }
+      const parentBookingId = bookings[0]._id;
+      for (let i = 1; i < bookings.length; i++) {
+        bookings[i].parentBookingId = parentBookingId;
+        await bookings[i].save();
+      }
     }
-    
+
     // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
-    const updatedEvent = await Event.findById(event._id);
+    const updatedEvent = await Event.findById(event._id).populate('createdBy').populate('organizer');
     if (updatedEvent) {
+      // Check if required fields exist before saving to avoid validation errors
+      if (updatedEvent.createdBy && updatedEvent.slug) {
         await updatedEvent.save(); // This will recalculate ticketsSold based on ticketTypes.sold
+      } else {
+        // Manually recalculate ticketsSold if we can't save due to missing required fields
+        const totalSold = updatedEvent.ticketTypes.reduce((sum, ticket) => sum + ticket.sold, 0);
+        await Event.updateOne(
+          { _id: event._id },
+          { $set: { ticketsSold: totalSold } }
+        );
+        console.log('Updated ticketsSold manually due to missing required fields');
+      }
     }
 
     // Send booking confirmation SMS and email
     try {
       console.log('[Payment] Starting ticket notification process');
-      
+
       // Send ticket via SMS if phone number is available
       if (user.phone) {
         console.log('[Payment] Preparing to send SMS to:', user.phone);
-        
+
         // Format date for SMS
-        const eventDate = updatedEvent.startDate ? 
-          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { 
-            day: 'numeric', 
-            month: 'short', 
-            year: 'numeric' 
+        const eventDate = updatedEvent.startDate ?
+          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
           }) : 'TBA';
-        
+
         // Prepare ticket details for SMS
         const ticketDetails = {
           bookingId: bookings[0]._id, // Use first booking ID for SMS
@@ -260,18 +271,18 @@ exports.verifyPayment = async (req, res) => {
           quantity: totalTickets,
           eventDate: eventDate
         };
-        
+
         console.log('[Payment] Sending ticket details via SMS:', ticketDetails);
-        
+
         // Send booking confirmation SMS
         await smsService.sendBookingConfirmation(
-          user.phone, 
-          updatedEvent.title, 
+          user.phone,
+          updatedEvent.title,
           bookings[0]._id.toString(),
           ticketDetails.ticketType,
           totalTickets
         );
-        
+
         // Also send detailed ticket SMS
         try {
           const smsResult = await smsService.sendTicket(user.phone, ticketDetails);
@@ -282,7 +293,7 @@ exports.verifyPayment = async (req, res) => {
       } else {
         console.log('[Payment] Cannot send SMS - no valid phone number found');
       }
-      
+
       // Send ticket via email with QR code if email is available
       if (user.email) {
         console.log('[Payment] Sending ticket via email to:', user.email);

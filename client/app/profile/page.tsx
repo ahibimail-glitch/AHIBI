@@ -492,12 +492,12 @@ export default function ProfilePage() {
                                 <ExternalLink className="h-4 w-4 mr-1" />
                                 View Ticket
                               </Button>
-                              {booking.paymentStatus === "completed" && (
+                              {/* {booking.paymentStatus === "completed" && (
                                 <Button size="sm" className="bg-green-600 hover:bg-green-700">
                                   <Download className="h-4 w-4 mr-1" />
                                   Download
                                 </Button>
-                              )}
+                              )} */}
                             </div>
                           </div>
                         </div>
