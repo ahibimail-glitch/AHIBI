@@ -3,6 +3,12 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const PendingPaymentSession = require('../models/PendingPaymentSession'); // Added this import
+const slugify = require('slugify');
+
+// Helper to generate slug
+const generateSlug = (title) => {
+  return slugify(title, { lower: true, strict: true });
+};
 
 // List transactions that are paid but no booking exists
 exports.getPaidNoBooking = async (req, res) => {
@@ -191,7 +197,28 @@ exports.resolveTransaction = async (req, res) => {
 
     // Trigger event recalc
     const updatedEvent = await Event.findById(event._id);
-    if (updatedEvent) await updatedEvent.save();
+    if (updatedEvent) {
+      // Ensure slug and createdBy exist to prevent validation errors on older documents
+      if (!updatedEvent.slug) {
+        updatedEvent.slug = generateSlug(updatedEvent.title);
+      }
+      if (!updatedEvent.createdBy) {
+        // Assuming the event has an organizer field populated
+        if (updatedEvent.organizer) {
+          updatedEvent.createdBy = updatedEvent.organizer;
+        } else {
+          // As a fallback, find the organizer if not populated
+          const eventWithOrganizer = await Event.findById(updatedEvent._id).populate('organizer');
+          if (eventWithOrganizer && eventWithOrganizer.organizer) {
+            updatedEvent.createdBy = eventWithOrganizer.organizer._id;
+          } else {
+            // If no organizer, this will likely fail validation, but we log it.
+            console.error(`[Resolve Transaction] Cannot set createdBy for event ${updatedEvent._id}: organizer not found.`);
+          }
+        }
+      }
+      await updatedEvent.save();
+    }
 
     // Mark transaction resolved
     tx.status = 'resolved';
@@ -204,5 +231,3 @@ exports.resolveTransaction = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
-
-
