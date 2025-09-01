@@ -277,18 +277,61 @@ router.post("/", auth.protect, async (req, res) => {
 // @access  Private
 router.get("/my-bookings", auth.protect, async (req, res) => {
   try {
+    // Get regular event bookings
     const bookings = await Booking.find({ user: req.user._id })
       .sort({ bookedAt: -1 })
       .populate('event', 'title banner startDate')
       .lean();
 
-    const normalized = bookings.map(b => ({
+    const normalizedBookings = bookings.map(b => ({
       ...b,
-      event: b.event || b.eventSnapshot || b.event // keep original if present
+      event: b.event || b.eventSnapshot || b.event,
+      bookingType: 'event'
     }));
 
-    res.json({ bookings: normalized });
+    // Get Annie Musical bookings
+    const AnnieBooking = require("../models/AnnieBooking");
+    const AnnieSeat = require("../models/AnnieSeat");
+    
+    const annieBookings = await AnnieBooking.find({ userId: req.user._id })
+      .populate('seats', 'row number price')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Format Annie Musical bookings to match regular booking structure
+    const formattedAnnieBookings = annieBookings.map(booking => {
+      const seatDetails = booking.seats.map(seat => `${seat.row}${seat.number}`).join(', ');
+      
+      return {
+        _id: booking._id,
+        event: {
+          _id: 'annie-musical',
+          title: 'Annie Musical',
+          banner: '/images/annie-musical-banner.jpg', // Default banner for Annie Musical
+          startDate: '2025-12-25' // Default date or you can make this dynamic
+        },
+        ticketType: `Seats: ${seatDetails}`,
+        quantity: booking.seats.length,
+        price: booking.totalPrice / booking.seats.length, // Price per seat
+        total: booking.totalPrice,
+        status: booking.status,
+        paymentStatus: booking.status === 'confirmed' ? 'completed' : booking.status,
+        bookedAt: booking.createdAt,
+        bookingType: 'annie-musical',
+        seats: booking.seats.map(seat => ({
+          id: `${seat.row}${seat.number}`,
+          price: seat.price
+        }))
+      };
+    });
+
+    // Combine both types of bookings and sort by date
+    const allBookings = [...normalizedBookings, ...formattedAnnieBookings]
+      .sort((a, b) => new Date(b.bookedAt) - new Date(a.bookedAt));
+
+    res.json({ bookings: allBookings });
   } catch (error) {
+    console.error('Error fetching user bookings:', error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });

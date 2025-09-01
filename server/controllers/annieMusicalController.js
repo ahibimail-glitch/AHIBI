@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const AnnieSeat = require("../models/AnnieSeat");
 const AnnieBooking = require("../models/AnnieBooking");
+const User = require("../models/User");
 const mongoose = require('mongoose'); // mongoose is required for sessions
 
 const SEATING_CHART = {
@@ -205,9 +206,110 @@ const getRevenue = asyncHandler(async (req, res) => {
   // Implementation to follow
 });
 
+// @desc    Get all Annie Musical bookings for admin
+// @route   GET /api/annie-musical/admin/bookings
+// @access  Private/Admin
+const getAdminBookings = asyncHandler(async (req, res) => {
+  try {
+    const bookings = await AnnieBooking.find()
+      .populate('userId', 'name email phone')
+      .populate('seats', 'row number price')
+      .sort({ createdAt: -1 });
+
+    const formattedBookings = bookings.map(booking => {
+      const seatDetails = booking.seats.map(seat => ({
+        id: `${seat.row}${seat.number}`,
+        price: seat.price,
+        category: seat.row >= 'D' ? 'Premium' : 'Standard'
+      }));
+
+      return {
+        _id: booking._id,
+        user: {
+          name: booking.userId?.name || 'Unknown',
+          email: booking.userId?.email || 'Unknown',
+          phone: booking.userId?.phone || 'N/A'
+        },
+        seats: seatDetails,
+        totalAmount: booking.totalPrice,
+        paymentStatus: booking.status === 'confirmed' ? 'completed' : booking.status,
+        paymentId: booking.razorpayPaymentId,
+        transactionId: booking.razorpayOrderId,
+        bookedAt: booking.createdAt,
+        status: booking.status
+      };
+    });
+
+    res.json({
+      success: true,
+      bookings: formattedBookings,
+      total: formattedBookings.length
+    });
+  } catch (error) {
+    console.error('Error fetching admin bookings:', error);
+    res.status(500);
+    throw new Error('Failed to fetch bookings');
+  }
+});
+
+// @desc    Get single Annie Musical booking details
+// @route   GET /api/annie-musical/booking/:id
+// @access  Private
+const getBookingDetails = asyncHandler(async (req, res) => {
+  try {
+    const booking = await AnnieBooking.findById(req.params.id)
+      .populate('userId', 'name email phone')
+      .populate('seats', 'row number price');
+
+    if (!booking) {
+      res.status(404);
+      throw new Error('Booking not found');
+    }
+
+    // Check if user owns this booking or is admin
+    if (booking.userId._id.toString() !== req.user.id && req.user.role !== 'admin') {
+      res.status(403);
+      throw new Error('Not authorized to view this booking');
+    }
+
+    const seatDetails = booking.seats.map(seat => ({
+      id: `${seat.row}${seat.number}`,
+      price: seat.price,
+      category: seat.row >= 'D' ? 'Premium' : 'Standard'
+    }));
+
+    const formattedBooking = {
+      _id: booking._id,
+      user: {
+        name: booking.userId?.name || 'Unknown',
+        email: booking.userId?.email || 'Unknown',
+        phone: booking.userId?.phone || 'N/A'
+      },
+      seats: seatDetails,
+      totalAmount: booking.totalPrice,
+      paymentStatus: booking.status === 'confirmed' ? 'completed' : booking.status,
+      paymentId: booking.razorpayPaymentId,
+      transactionId: booking.razorpayOrderId,
+      bookedAt: booking.createdAt,
+      status: booking.status
+    };
+
+    res.json({
+      success: true,
+      booking: formattedBooking
+    });
+  } catch (error) {
+    console.error('Error fetching booking details:', error);
+    res.status(500);
+    throw new Error('Failed to fetch booking details');
+  }
+});
+
 module.exports = {
   getSeats,
   createBooking,
   confirmBooking,
   getRevenue,
+  getAdminBookings,
+  getBookingDetails,
 };

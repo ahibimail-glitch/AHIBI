@@ -82,6 +82,7 @@ export default function ProfilePage() {
     status: string;
     paymentStatus: string;
     bookedAt: string;
+    bookingType: string;
   }
 
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
@@ -196,8 +197,14 @@ export default function ProfilePage() {
     });
   };
 
-  const handleViewTicket = (id: string) => {
-    router.push(`/events/${id}/bookings`);
+  const handleViewTicket = (booking: any) => {
+    if (booking.bookingType === 'annie-musical') {
+      // For Annie Musical bookings, redirect to booking detail page
+      router.push(`/annie-musical/bookings/${booking._id}`);
+    } else {
+      // For regular event bookings, use the existing route
+      router.push(`/events/${booking._id}/bookings`);
+    }
   }
 
   const getStatusIcon = (status: string) => {
@@ -486,7 +493,7 @@ export default function ProfilePage() {
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                onClick={() => handleViewTicket(booking._id)}
+                                onClick={() => handleViewTicket(booking)}
                                 className="hover:bg-blue-50 hover:border-blue-300"
                               >
                                 <ExternalLink className="h-4 w-4 mr-1" />

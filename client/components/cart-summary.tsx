@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { useSeatsStore } from "@/store/seats-store"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
+import InvoiceGenerator from "./invoice-generator"
 
 declare global {
   interface Window {
@@ -15,6 +16,8 @@ export default function CartSummary() {
   const { seats, selectedIds, setBooked } = useSeatsStore()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [showInvoice, setShowInvoice] = useState(false)
+  const [invoiceData, setInvoiceData] = useState<any>(null)
   const { toast } = useToast()
   const { user } = useAuth() // Get user from auth hook
 
@@ -101,7 +104,34 @@ export default function CartSummary() {
 
             const { updatedBooking } = await verificationResp.json()
             setBooked(updatedBooking.seats)
-            toast({ title: "Payment Successful!", description: "Your seats are confirmed." })
+            
+            // Generate invoice data
+            const invoiceInfo = {
+              bookingId: updatedBooking._id,
+              eventTitle: "Annie Musical",
+              eventDate: "2024-12-25", // You should get this from the event data
+              eventTime: "19:30", // You should get this from the event data
+              eventLocation: "Mumbai Theatre, Mumbai",
+              seats: selectedSeats.map(seat => ({
+                id: seat.id,
+                price: seat.price,
+                category: seat.category || "General"
+              })),
+              totalAmount: total,
+              paymentId: response.razorpay_payment_id,
+              transactionId: response.razorpay_order_id,
+              customerName: user.name,
+              customerEmail: user.email,
+              customerPhone: user.phone,
+              bookingDate: new Date().toISOString(),
+              ticketType: "Annie Musical Ticket",
+              benefits: ["Entry to Annie Musical", "Reserved Seating", "Digital Ticket"]
+            }
+            
+            setInvoiceData(invoiceInfo)
+            setShowInvoice(true)
+            
+            toast({ title: "Payment Successful!", description: "Your seats are confirmed. Invoice generated!" })
           } catch (error: any) {
             console.error("Payment verification error:", error)
             toast({ title: "Error", description: error.message, variant: "destructive" })
@@ -131,6 +161,30 @@ export default function CartSummary() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (showInvoice && invoiceData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-4 border-b flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Invoice Generated</h2>
+            <button
+              onClick={() => setShowInvoice(false)}
+              className="text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+          <InvoiceGenerator 
+            invoiceData={invoiceData}
+            onDownload={() => {
+              toast({ title: "Invoice Downloaded", description: "Your invoice has been saved successfully!" })
+            }}
+          />
+        </div>
+      </div>
+    )
   }
 
   return (

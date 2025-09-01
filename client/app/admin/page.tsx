@@ -43,6 +43,7 @@ import ApprovedEvents from "./components/ApprovedEvents";
 import HeroImages from "./components/HeroImages";
 import FC25Players from "./components/FC25Players";
 import FailedPayments from "./components/FailedPayments";
+import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -146,6 +147,8 @@ export default function AdminDashboard() {
       case "manual-booking":
         router.push("/admin/booking");
         return null;
+      case "annie-musical-bookings":
+        return <AnnieMusicalBookings />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -173,6 +176,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
+          <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
