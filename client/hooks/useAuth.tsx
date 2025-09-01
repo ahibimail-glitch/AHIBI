@@ -3,29 +3,60 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface AuthProps {
-  tokenName: string;
-  redirectPath: string;
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  // Add other user properties as needed
 }
 
-export const useAuth = ({ tokenName, redirectPath }: AuthProps) => {
+export const useAuth = () => {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for token in localStorage only on the client side
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem(tokenName);
+    const fetchUser = async () => {
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
 
-      if (!token) {
-        router.replace(redirectPath);
-      } else {
-        setIsAuthenticated(true);
+        if (!token) {
+          setIsAuthenticated(false);
+          setUser(null);
+          setLoading(false);
+          // Optionally redirect here if needed, e.g., router.replace('/login');
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/auth/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (!res.ok) {
+            throw new Error('Failed to fetch user profile');
+          }
+
+          const userData = await res.json();
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error(error);
+          localStorage.removeItem('token'); // Invalid token, remove it
+          setIsAuthenticated(false);
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    }
-  }, [router, tokenName, redirectPath]);
+    };
 
-  return { isAuthenticated, loading };
+    fetchUser();
+  }, [router]);
+
+  return { user, isAuthenticated, loading };
 };

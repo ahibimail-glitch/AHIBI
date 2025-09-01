@@ -24,6 +24,7 @@ const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('
 const qrRoutes = require('./routes/qr.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const heroImageRoutes = require('./routes/heroImageRoutes');
+const annieMusicalRoutes = require('./routes/annieMusicalRoutes');
 
 
 
@@ -112,6 +113,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/hero-images', heroImageRoutes);
+app.use('/api/annie-musical', annieMusicalRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -138,6 +140,10 @@ const connectDB = async () => {
 // Initialize server
 const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
+  // Start the booking cleanup service
+  const bookingCleanupService = require('./services/bookingCleanupService');
+  bookingCleanupService.start();
+  
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

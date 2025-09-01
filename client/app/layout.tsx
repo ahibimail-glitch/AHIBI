@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import Script from "next/script"
 import "./globals.css"
 import FloatingWhatsapp from "@/components/ui/FloatingWhatsapp"
 import { VenueAuthProvider } from "@/hooks/useVenueAuth"
@@ -26,7 +27,7 @@ export default function RootLayout({
           <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}>
             <FloatingWhatsapp />
           </div>
-          <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+          <Script id="razorpay-checkout-js" src="https://checkout.razorpay.com/v1/checkout.js" />
         </VenueAuthProvider>
       </body>
     </html>
