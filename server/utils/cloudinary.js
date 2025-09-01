@@ -1,5 +1,28 @@
 const cloudinary = require('cloudinary').v2;
 
+// Validate environment variables
+const requiredEnvVars = {
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET
+};
+
+// Check for missing environment variables
+const missingVars = Object.entries(requiredEnvVars)
+    .filter(([key, value]) => !value)
+    .map(([key]) => key);
+
+if (missingVars.length > 0) {
+    console.error('❌ Missing Cloudinary environment variables:', missingVars);
+    console.error('Please set the following environment variables in your .env file:');
+    missingVars.forEach(varName => {
+        console.error(`  ${varName}=your_${varName.toLowerCase()}_here`);
+    });
+} else {
+    console.log('✅ Cloudinary environment variables found');
+    console.log('Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME);
+}
+
 // Configure Cloudinary
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

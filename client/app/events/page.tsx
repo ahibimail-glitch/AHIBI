@@ -196,7 +196,11 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                     size="sm"
                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   >
-                    <Link href={event._id === "6899cb7215438afd622a7646" ? "/events/FC25" : `/events/${event._id}`}>
+                    <Link href={
+                      event._id === "6899cb7215438afd622a7646" ? "/events/FC25" : 
+                      event._id === "68b5f2796b1a22252a0530c2" ? "/annie-musical" :
+                      `/events/${event._id}`
+                    }>
                       View Details
                     </Link>
                   </Button>
