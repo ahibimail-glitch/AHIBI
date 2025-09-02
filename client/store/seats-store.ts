@@ -50,9 +50,12 @@ export const useSeatsStore = create<SeatsState>((set, get) => ({
   },
   toggleSeat: (id) => {
     const seat = get().seats[id];
-    if (!seat || seat.status === "booked") return; // Can't select booked seats
-
+    if (!seat) return;
     const isSelected = get().selectedIds.includes(id);
+    // Block selecting seats that are not available (booked or locked by others),
+    // but allow deselecting if the current user already selected it.
+    if (seat.status !== "available" && !isSelected) return;
+
     const selectedIds = isSelected
       ? get().selectedIds.filter((sid) => sid !== id)
       : [...get().selectedIds, id];

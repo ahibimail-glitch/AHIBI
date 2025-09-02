@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getSeats, createBooking, confirmBooking, getRevenue, getAdminBookings, getBookingDetails } = require("../controllers/annieMusicalController");
+const { getSeats, createBooking, confirmBooking, getRevenue, getAdminBookings, getBookingDetails, adminConfirmBooking, handleWebhook, getUserBookings } = require("../controllers/annieMusicalController");
 const { protect } = require("../middleware/authMiddleware"); // Assuming a standard auth middleware
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
@@ -65,6 +65,11 @@ const protectAdminRoute = async (req, res, next) => {
 // @access  Public
 router.get("/seats", getSeats);
 
+// @desc    Handle Razorpay webhook for payment confirmation
+// @route   POST /api/annie-musical/webhook
+// @access  Public (verified via webhook signature)
+router.post("/webhook", handleWebhook);
+
 // @desc    Create a new booking (lock seats)
 // @route   POST /api/annie-musical/book
 // @access  Private
@@ -85,9 +90,19 @@ router.get("/revenue", protectAdminRoute, getRevenue);
 // @access  Private/Admin
 router.get("/admin/bookings", protectAdminRoute, getAdminBookings);
 
+// @desc    Confirm a pending booking by admin
+// @route   POST /api/annie-musical/admin/confirm/:id
+// @access  Private/Admin
+router.post("/admin/confirm/:id", protectAdminRoute, adminConfirmBooking);
+
 // @desc    Get single Annie Musical booking details
 // @route   GET /api/annie-musical/booking/:id
 // @access  Private
 router.get("/booking/:id", protect, getBookingDetails);
+
+// @desc    Get user's confirmed Annie Musical bookings
+// @route   GET /api/annie-musical/my-bookings
+// @access  Private
+router.get("/my-bookings", protect, getUserBookings);
 
 module.exports = router;

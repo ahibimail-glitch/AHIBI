@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { useSeatsStore, type Seat } from "@/store/seats-store"
+import { useToast } from "@/hooks/use-toast"
 
 function Legend() {
   // Note: This could be made dynamic if pricing tiers are complex
@@ -20,6 +21,10 @@ function Legend() {
         <span>Rows D-N - ₹500</span>
       </div>
       <div className="flex items-center gap-2">
+        <span className="h-4 w-4 rounded bg-yellow-400" aria-hidden />
+        <span>In progress (held)</span>
+      </div>
+      <div className="flex items-center gap-2">
         <span className="h-4 w-4 rounded bg-gray-300" aria-hidden />
         <span>Booked</span>
       </div>
@@ -32,7 +37,8 @@ function Legend() {
 }
 
 export default function SeatingChart() {
-  const { seats, toggleSeat } = useSeatsStore()
+  const { seats, toggleSeat, selectedIds } = useSeatsStore()
+  const { toast } = useToast()
 
   const rows = useMemo(() => {
     const grouped: Record<string, { left: Seat[]; right: Seat[] }> = {}
@@ -87,16 +93,31 @@ export default function SeatingChart() {
               <div className="w-8 shrink-0 text-sm font-semibold text-slate-700">{rowId}</div>
               {left.map((seat) => {
                 const { id, status, number } = seat
-                const isSelected = status === "selected"
+                const isSelected = status === "selected" && selectedIds.includes(id)
                 const isBooked = status === "booked"
-                const baseClasses = isBooked ? "bg-gray-300 text-gray-500 cursor-not-allowed" : getSeatColor(seat.price);
+                const isLocked = status === "selected" && !selectedIds.includes(id)
+                const baseClasses = isBooked
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : isLocked
+                  ? "bg-yellow-400 text-white cursor-not-allowed"
+                  : getSeatColor(seat.price);
                 const ringClasses = isSelected ? "ring-2 ring-offset-2 ring-sky-400" : ""
 
                 return (
                   <button
                     key={id}
-                    onClick={() => toggleSeat(id)}
-                    disabled={isBooked}
+                    onClick={() => {
+                      if (isBooked) {
+                        toast({ title: "Seat unavailable", description: `Seat ${rowId}${number} is already booked.`, variant: "destructive" })
+                        return
+                      }
+                      if (isLocked) {
+                        toast({ title: "Seat in progress", description: `Seat ${rowId}${number} is currently being booked. Please try again soon.`, variant: "destructive" })
+                        return
+                      }
+                      toggleSeat(id)
+                    }}
+                    disabled={isBooked || isLocked}
                     className={`w-6 h-6 rounded text-[10px] font-medium flex items-center justify-center transition ${baseClasses} ${ringClasses}`}
                     aria-label={`Seat ${rowId}${number}`}
                   >
@@ -110,16 +131,31 @@ export default function SeatingChart() {
             <div className="flex flex-1 gap-2 justify-start items-center">
               {right.map((seat) => {
                 const { id, status, number } = seat
-                const isSelected = status === "selected"
+                const isSelected = status === "selected" && selectedIds.includes(id)
                 const isBooked = status === "booked"
-                const baseClasses = isBooked ? "bg-gray-300 text-gray-500 cursor-not-allowed" : getSeatColor(seat.price);
+                const isLocked = status === "selected" && !selectedIds.includes(id)
+                const baseClasses = isBooked
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : isLocked
+                  ? "bg-yellow-400 text-white cursor-not-allowed"
+                  : getSeatColor(seat.price);
                 const ringClasses = isSelected ? "ring-2 ring-offset-2 ring-sky-400" : ""
 
                 return (
                   <button
                     key={id}
-                    onClick={() => toggleSeat(id)}
-                    disabled={isBooked}
+                    onClick={() => {
+                      if (isBooked) {
+                        toast({ title: "Seat unavailable", description: `Seat ${rowId}${number} is already booked.`, variant: "destructive" })
+                        return
+                      }
+                      if (isLocked) {
+                        toast({ title: "Seat in progress", description: `Seat ${rowId}${number} is currently being booked. Please try again soon.`, variant: "destructive" })
+                        return
+                      }
+                      toggleSeat(id)
+                    }}
+                    disabled={isBooked || isLocked}
                     className={`w-6 h-6 rounded text-[10px] font-medium flex items-center justify-center transition ${baseClasses} ${ringClasses}`}
                     aria-label={`Seat ${rowId}${number}`}
                   >

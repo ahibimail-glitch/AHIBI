@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import * as XLSX from 'xlsx';
+import { useToast } from "@/hooks/use-toast";
 
 interface AnnieBooking {
   _id: string;
@@ -52,101 +53,99 @@ export default function AnnieMusicalBookings() {
   const [filteredBookings, setFilteredBookings] = useState<AnnieBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const { toast } = useToast();
+
   // Filter states
   const [nameFilter, setNameFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [seatFilter, setSeatFilter] = useState<string>("");
-  
+
   // Stats
   const [stats, setStats] = useState({
     totalBookings: 0,
     totalRevenue: 0,
     totalSeats: 0,
-    confirmedBookings: 0
   });
 
-  useEffect(() => {
-    const fetchAnnieBookings = async () => {
-      try {
-        setIsLoading(true);
-        const token = localStorage.getItem("admin_token");
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        
-        const response = await fetch(`${apiUrl}/api/annie-musical/admin/bookings`, {
-          method: 'GET',
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : "",
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          credentials: 'include',
-          mode: 'cors'
-        });
-        
-        if (!response.ok) {
-          if (response.status === 403) {
-            throw new Error('Access Denied: You do not have permission to view Annie Musical bookings.');
-          }
-          throw new Error('Failed to fetch Annie Musical bookings');
+  const fetchAnnieBookings = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem("admin_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+      const response = await fetch(`${apiUrl}/api/annie-musical/admin/bookings`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : "",
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        credentials: 'include',
+        mode: 'cors'
+      });
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Access Denied: You do not have permission to view Annie Musical bookings.');
         }
-
-        const data = await response.json();
-        setBookings(data.bookings || []);
-        setFilteredBookings(data.bookings || []);
-        
-        // Calculate stats
-        const totalBookings = data.bookings?.length || 0;
-        const totalRevenue = data.bookings?.reduce((sum: number, booking: AnnieBooking) => sum + booking.totalAmount, 0) || 0;
-        const totalSeats = data.bookings?.reduce((sum: number, booking: AnnieBooking) => sum + booking.seats.length, 0) || 0;
-        const confirmedBookings = data.bookings?.filter((booking: AnnieBooking) => booking.paymentStatus === 'completed').length || 0;
-        
-        setStats({
-          totalBookings,
-          totalRevenue,
-          totalSeats,
-          confirmedBookings
-        });
-        
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load Annie Musical bookings';
-        console.error('Error fetching Annie Musical bookings:', errorMessage);
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
+        throw new Error('Failed to fetch Annie Musical bookings');
       }
-    };
 
-    fetchAnnieBookings();
+      const data = await response.json();
+      setBookings(data.bookings || []);
+      setFilteredBookings(data.bookings || []);
+
+      // Calculate stats
+      const totalBookings = data.bookings?.length || 0;
+      const totalRevenue = data.bookings?.reduce((sum: number, booking: AnnieBooking) => sum + booking.totalAmount, 0) || 0;
+      const totalSeats = data.bookings?.reduce((sum: number, booking: AnnieBooking) => sum + booking.seats.length, 0) || 0;
+
+      setStats({
+        totalBookings,
+        totalRevenue,
+        totalSeats,
+      });
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load Annie Musical bookings';
+      console.error('Error fetching Annie Musical bookings:', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
-  
+
+  useEffect(() => {
+    fetchAnnieBookings();
+  }, [fetchAnnieBookings]);
+
   // Apply filters whenever filter values change
   useEffect(() => {
     applyFilters();
   }, [nameFilter, statusFilter, dateFilter, seatFilter, bookings]);
-  
+
   // Filter function
   const applyFilters = () => {
     let result = [...bookings];
-    
+
     if (nameFilter) {
       result = result.filter((booking: AnnieBooking) => 
         booking.user?.name?.toLowerCase().includes(nameFilter.toLowerCase()) ||
         booking.user?.email?.toLowerCase().includes(nameFilter.toLowerCase())
       );
     }
-    
+
     if (statusFilter && statusFilter !== "all") {
       result = result.filter((booking: AnnieBooking) => booking.paymentStatus === statusFilter);
     }
-    
+
     if (seatFilter) {
       result = result.filter((booking: AnnieBooking) => 
         booking.seats.some(seat => seat.id.toLowerCase().includes(seatFilter.toLowerCase()))
       );
     }
-    
+
     if (dateFilter) {
       result = result.filter((booking: AnnieBooking) => {
         const bookedDate = new Date(booking.bookedAt).toDateString();
@@ -154,10 +153,10 @@ export default function AnnieMusicalBookings() {
         return bookedDate === filterDate;
       });
     }
-    
+
     setFilteredBookings(result);
   };
-  
+
   // Reset all filters
   const resetFilters = () => {
     setNameFilter("");
@@ -165,11 +164,11 @@ export default function AnnieMusicalBookings() {
     setSeatFilter("");
     setDateFilter(undefined);
   };
-  
+
   // Export to Excel function
   const exportToExcel = () => {
     const headers = ["Customer Name", "Email", "Phone", "Seats", "Total Amount", "Payment Status", "Transaction ID", "Booked Date"];
-    
+
     const data = [
       headers,
       ...filteredBookings.map((booking: AnnieBooking) => [
@@ -183,9 +182,9 @@ export default function AnnieMusicalBookings() {
         new Date(booking.bookedAt).toLocaleDateString()
       ])
     ];
-    
+
     const ws = XLSX.utils.aoa_to_sheet(data);
-    
+
     const wscols = [
       { wch: 20 }, // Customer Name
       { wch: 25 }, // Email
@@ -197,10 +196,10 @@ export default function AnnieMusicalBookings() {
       { wch: 15 }, // Booked Date
     ];
     ws['!cols'] = wscols;
-    
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Annie Musical Bookings");
-    
+
     const fileName = `annie-musical-bookings-${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
@@ -209,12 +208,8 @@ export default function AnnieMusicalBookings() {
     switch (status) {
       case 'completed':
         return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>;
     }
   };
 
@@ -238,7 +233,7 @@ export default function AnnieMusicalBookings() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -274,18 +269,6 @@ export default function AnnieMusicalBookings() {
             </div>
           </CardContent>
         </Card>
-        
-        <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-orange-100">Confirmed</p>
-                <p className="text-3xl font-bold">{stats.confirmedBookings}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-orange-200" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Main Bookings Table */}
@@ -294,9 +277,9 @@ export default function AnnieMusicalBookings() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Music className="h-5 w-5" />
-              Annie Musical Bookings
+              Annie Musical Confirmed Bookings
             </CardTitle>
-            <CardDescription>Total: {filteredBookings.length} bookings</CardDescription>
+            <CardDescription>Total: {filteredBookings.length} confirmed bookings</CardDescription>
           </div>
           <Button onClick={exportToExcel} className="flex items-center gap-2">
             <Download className="h-4 w-4" />
@@ -336,8 +319,6 @@ export default function AnnieMusicalBookings() {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="completed">Confirmed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -484,7 +465,7 @@ export default function AnnieMusicalBookings() {
           
           {filteredBookings.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No Annie Musical bookings match your filters.</p>
+              <p className="text-gray-500">No confirmed Annie Musical bookings match your filters.</p>
               <Button variant="outline" onClick={resetFilters} className="mt-2">
                 Clear all filters
               </Button>

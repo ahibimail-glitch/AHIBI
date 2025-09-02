@@ -25,10 +25,11 @@ export default function Page() {
       <main className="mx-auto max-w-6xl p-4 md:p-6 bg-gradient-to-b from-slate-50 to-white rounded-2xl">
         <header className="mb-6">
           <h1 className="text-2xl md:text-3xl font-semibold text-balance bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-            Book Your Seats for Annie
+            Book Your Seats for Annie Musical
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Select your seats and proceed to payment. Seats are held for 10 minutes.
+            Select your seats and proceed to payment. 
+            {/* Seats are held for 10 minutes. */}
           </p>
         </header>
 

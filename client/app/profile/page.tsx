@@ -129,7 +129,11 @@ export default function ProfilePage() {
           setError(data.message || "Failed to fetch bookings");
         } else {
           console.log(data.bookings[0]);
-          setUserBookings(data.bookings || []);
+          // Filter out pending bookings - only show completed/paid bookings
+          const completedBookings = (data.bookings || []).filter((booking: Booking) => 
+            booking.paymentStatus === 'completed' || booking.paymentStatus === 'paid'
+          );
+          setUserBookings(completedBookings);
         }
       } catch (e) {
         setError("Network error. Please try again.");

@@ -83,7 +83,7 @@ const createBooking = asyncHandler(async (req, res) => {
     }
 
     const totalPrice = seats.reduce((acc, seat) => acc + seat.price, 0);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+    const expiresAt = new Date(Date.now() + 2* 60 * 1000); // 2 minutes from now
 
     // Lock the seats
     await AnnieSeat.updateMany(
@@ -132,17 +132,94 @@ const createBooking = asyncHandler(async (req, res) => {
 // @route   POST /api/annie-musical/confirm
 // @access  Private
 const confirmBooking = asyncHandler(async (req, res) => {
-  const {
-    razorpay_order_id,
-    razorpay_payment_id,
-    razorpay_signature,
-    bookingId,
-  } = req.body;
+  // This endpoint is now deprecated - use webhook confirmation instead
+  res.status(400).json({
+    success: false,
+    message: "Payment confirmation is now handled via webhooks. Please wait for payment processing."
+  });
+});
 
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !bookingId) {
+// @desc    Handle Razorpay webhook for payment confirmation
+// @route   POST /api/annie-musical/webhook
+// @access  Public (but verified via webhook signature)
+const handleWebhook = asyncHandler(async (req, res) => {
+  const webhookSignature = req.headers['x-razorpay-signature'];
+  const webhookBody = JSON.stringify(req.body);
+
+  if (!webhookSignature) {
     res.status(400);
-    throw new Error("Payment verification details are required");
+    throw new Error("Missing webhook signature");
   }
+
+  // Verify webhook signature
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
+    .update(webhookBody)
+    .digest('hex');
+
+  if (webhookSignature !== expectedSignature) {
+    res.status(400);
+    throw new Error("Invalid webhook signature");
+  }
+
+  const { event, payload } = req.body;
+
+  // Handle payment.captured event
+  if (event === 'payment.captured') {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const payment = payload.payment.entity;
+      const orderId = payment.order_id;
+      const paymentId = payment.id;
+
+      // Find booking by razorpayOrderId
+      const booking = await AnnieBooking.findOne({ razorpayOrderId: orderId }).session(session);
+
+      if (!booking) {
+        console.error(`Booking not found for order ID: ${orderId}`);
+        await session.commitTransaction();
+        return res.status(200).json({ status: 'ok' });
+      }
+
+      if (booking.status === 'confirmed') {
+        console.log(`Booking ${booking._id} already confirmed`);
+        await session.commitTransaction();
+        return res.status(200).json({ status: 'ok' });
+      }
+
+      // Update booking status and payment details
+      booking.status = 'confirmed';
+      booking.razorpayPaymentId = paymentId;
+      await booking.save({ session });
+
+      // Update seats to booked
+      await AnnieSeat.updateMany(
+        { _id: { $in: booking.seats } },
+        { $set: { status: 'booked' } },
+        { session }
+      );
+
+      await session.commitTransaction();
+      console.log(`Booking ${booking._id} confirmed via webhook`);
+
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('Webhook processing error:', error);
+    } finally {
+      session.endSession();
+    }
+  }
+
+  res.status(200).json({ status: 'ok' });
+});
+
+// @desc    Confirm a booking by admin (without payment verification)
+// @route   POST /api/annie-musical/admin/confirm/:id
+// @access  Private/Admin
+const adminConfirmBooking = asyncHandler(async (req, res) => {
+  const bookingId = req.params.id;
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -151,28 +228,25 @@ const confirmBooking = asyncHandler(async (req, res) => {
     const booking = await AnnieBooking.findById(bookingId).session(session);
 
     if (!booking) {
-      throw new Error("Booking not found");
+      res.status(404);
+      throw new Error('Booking not found');
     }
 
     if (booking.status === 'confirmed') {
-      res.status(200).json({ message: "Booking already confirmed.", updatedBooking: booking });
-      return;
+      await session.commitTransaction();
+      return res.status(200).json({
+        message: 'Booking already confirmed.',
+        updatedBooking: booking,
+      });
     }
 
-    // Verify Razorpay signature
-    const generated_signature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(razorpay_order_id + "|" + razorpay_payment_id)
-      .digest('hex');
-
-    if (generated_signature !== razorpay_signature) {
-      throw new Error("Invalid payment signature. Booking cancelled.");
+    if (booking.status !== 'pending') {
+      res.status(400);
+      throw new Error(`Only pending bookings can be confirmed by admin. Current status: ${booking.status}`);
     }
 
     // Update booking and seats
     booking.status = 'confirmed';
-    booking.razorpayPaymentId = razorpay_payment_id;
-    booking.razorpaySignature = razorpay_signature;
     await booking.save({ session });
 
     await AnnieSeat.updateMany(
@@ -184,16 +258,14 @@ const confirmBooking = asyncHandler(async (req, res) => {
     await session.commitTransaction();
 
     res.status(200).json({
-      message: "Booking confirmed successfully!",
+      message: 'Booking confirmed by admin successfully!',
       updatedBooking: booking,
     });
   } catch (error) {
     await session.abortTransaction();
-    // If something fails, we should consider reverting seat status
-    // For now, we just log the error
-    console.error("Confirmation Error:", error);
+    console.error('Admin Confirmation Error:', error);
     res.status(400);
-    throw new Error(error.message || "Failed to confirm booking");
+    throw new Error(error.message || 'Failed to confirm booking by admin');
   } finally {
     session.endSession();
   }
@@ -211,7 +283,7 @@ const getRevenue = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getAdminBookings = asyncHandler(async (req, res) => {
   try {
-    const bookings = await AnnieBooking.find()
+    const bookings = await AnnieBooking.find({ status: 'confirmed' })
       .populate('userId', 'name email phone')
       .populate('seats', 'row number price')
       .sort({ createdAt: -1 });
@@ -305,6 +377,48 @@ const getBookingDetails = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get user's confirmed Annie Musical bookings
+// @route   GET /api/annie-musical/my-bookings
+// @access  Private
+const getUserBookings = asyncHandler(async (req, res) => {
+  try {
+    const bookings = await AnnieBooking.find({ 
+      userId: req.user.id, 
+      status: 'confirmed' 
+    })
+      .populate('seats', 'row number price')
+      .sort({ createdAt: -1 });
+
+    const formattedBookings = bookings.map(booking => {
+      const seatDetails = booking.seats.map(seat => ({
+        id: `${seat.row}${seat.number}`,
+        price: seat.price,
+        category: seat.row >= 'D' ? 'Premium' : 'Standard'
+      }));
+
+      return {
+        _id: booking._id,
+        seats: seatDetails,
+        totalAmount: booking.totalPrice,
+        paymentId: booking.razorpayPaymentId,
+        transactionId: booking.razorpayOrderId,
+        bookedAt: booking.createdAt,
+        status: booking.status
+      };
+    });
+
+    res.json({
+      success: true,
+      bookings: formattedBookings,
+      total: formattedBookings.length
+    });
+  } catch (error) {
+    console.error('Error fetching user bookings:', error);
+    res.status(500);
+    throw new Error('Failed to fetch user bookings');
+  }
+});
+
 module.exports = {
   getSeats,
   createBooking,
@@ -312,4 +426,7 @@ module.exports = {
   getRevenue,
   getAdminBookings,
   getBookingDetails,
+  adminConfirmBooking,
+  handleWebhook,
+  getUserBookings,
 };
