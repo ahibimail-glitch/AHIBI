@@ -40,42 +40,72 @@ export default function AnnieMusicalBookingDetail() {
   const [booking, setBooking] = useState<AnnieBookingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [pollingActive, setPollingActive] = useState(false);
   const ticketRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const fetchBookingDetail = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("token");
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        
-        const response = await fetch(`${apiUrl}/api/annie-musical/booking/${params.id}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : "",
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch booking details');
-        }
-
-        const data = await response.json();
-        setBooking(data.booking);
-        
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load booking details';
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
+  const fetchBookingDetail = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${apiUrl}/api/annie-musical/booking/${params.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : "",
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch booking details');
       }
-    };
 
+      const data = await response.json();
+      setBooking(data.booking);
+      
+      // If booking status is confirmed, stop polling
+      if (data.booking.status === 'confirmed') {
+        setPollingActive(false);
+      }
+      
+      return data.booking;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load booking details';
+      setError(errorMessage);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (params.id) {
-      fetchBookingDetail();
+      fetchBookingDetail().then(bookingData => {
+        // Start polling if booking is pending
+        if (bookingData && bookingData.status === 'pending') {
+          setPollingActive(true);
+        }
+      });
     }
   }, [params.id]);
+
+  // Set up polling for pending bookings
+  useEffect(() => {
+    let pollingInterval: NodeJS.Timeout;
+    
+    if (pollingActive) {
+      pollingInterval = setInterval(() => {
+        fetchBookingDetail();
+      }, 30000); // Poll every 30 seconds
+    }
+    
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingActive]);
 
   const formatDate = (date: string | number | Date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -267,6 +297,24 @@ export default function AnnieMusicalBookingDetail() {
             Back to Profile
           </Button>
         </div>
+
+        {/* Pending Booking Banner */}
+        {booking && booking.status === 'pending' && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">Payment Processing</h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>Your payment is being processed through Razorpay's secure system. This page will automatically update when your booking is confirmed.</p>
+                  <p className="mt-1">This typically takes 5-10 minutes. You don't need to refresh the page.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Invoice Card - Matching the existing invoice generator design */}
         <div className="max-w-md mx-auto my-10 p-4 font-sans">

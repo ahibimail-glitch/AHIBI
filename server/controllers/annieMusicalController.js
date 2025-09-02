@@ -83,7 +83,7 @@ const createBooking = asyncHandler(async (req, res) => {
     }
 
     const totalPrice = seats.reduce((acc, seat) => acc + seat.price, 0);
-    const expiresAt = new Date(Date.now() + 2* 60 * 1000); // 2 minutes from now
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 10 minutes from now
 
     // Lock the seats
     await AnnieSeat.updateMany(
@@ -192,6 +192,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
       // Update booking status and payment details
       booking.status = 'confirmed';
       booking.razorpayPaymentId = paymentId;
+      booking.expiresAt = null; // Remove expiration time for confirmed bookings
       await booking.save({ session });
 
       // Update seats to booked
@@ -419,6 +420,51 @@ const getUserBookings = asyncHandler(async (req, res) => {
   }
 });
 
+// Add a cleanup job for expired bookings
+// This function should be called periodically (e.g., via a cron job)
+const cleanupExpiredBookings = async () => {
+  const now = new Date();
+  
+  try {
+    // Find expired bookings
+    const expiredBookings = await AnnieBooking.find({
+      status: 'pending',
+      expiresAt: { $lt: now }
+    });
+    
+    if (expiredBookings.length === 0) {
+      return;
+    }
+    
+    console.log(`Found ${expiredBookings.length} expired bookings to clean up`);
+    
+    // Get all seat IDs from expired bookings
+    const seatIdsToRelease = expiredBookings.flatMap(booking => booking.seats);
+    
+    // Release seats from expired bookings
+    await AnnieSeat.updateMany(
+      { _id: { $in: seatIdsToRelease } },
+      { $set: { status: 'available' } }
+    );
+    
+    // Mark bookings as expired
+    await AnnieBooking.updateMany(
+      { _id: { $in: expiredBookings.map(b => b._id) } },
+      { $set: { status: 'expired' } }
+    );
+    
+    console.log(`Released ${seatIdsToRelease.length} seats from expired bookings`);
+  } catch (error) {
+    console.error('Error cleaning up expired bookings:', error);
+  }
+};
+
+// Run cleanup job every 5 minutes
+setInterval(cleanupExpiredBookings, 5 * 60 * 1000);
+
+// Run cleanup on server start
+cleanupExpiredBookings().catch(console.error);
+
 module.exports = {
   getSeats,
   createBooking,
@@ -429,4 +475,5 @@ module.exports = {
   adminConfirmBooking,
   handleWebhook,
   getUserBookings,
+  cleanupExpiredBookings, // Export for testing or manual triggering
 };

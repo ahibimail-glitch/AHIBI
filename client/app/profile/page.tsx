@@ -129,11 +129,14 @@ export default function ProfilePage() {
           setError(data.message || "Failed to fetch bookings");
         } else {
           console.log(data.bookings[0]);
-          // Filter out pending bookings - only show completed/paid bookings
-          const completedBookings = (data.bookings || []).filter((booking: Booking) => 
-            booking.paymentStatus === 'completed' || booking.paymentStatus === 'paid'
+          // Show all bookings, including pending Annie Musical bookings
+          // For regular event bookings, still filter out pending ones
+          const filteredBookings = (data.bookings || []).filter((booking: Booking) => 
+            booking.paymentStatus === 'completed' || 
+            booking.paymentStatus === 'paid' ||
+            (booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending')
           );
-          setUserBookings(completedBookings);
+          setUserBookings(filteredBookings);
         }
       } catch (e) {
         setError("Network error. Please try again.");
@@ -388,7 +391,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {userBookings.filter(b => b.paymentStatus === "completed").length}
+                      {userBookings.filter(b => b.paymentStatus === "completed" || b.paymentStatus === "paid").length}
                     </div>
                     <div className="text-xs text-gray-500">Completed</div>
                   </div>
@@ -487,6 +490,12 @@ export default function ProfilePage() {
                                 >
                                   {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
                                 </Badge>
+                                {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' && (
+                                  <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium px-3 py-1">
+                                    <Clock className="h-3 w-3 mr-1 inline animate-pulse" />
+                                    Payment Processing
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -501,7 +510,9 @@ export default function ProfilePage() {
                                 className="hover:bg-blue-50 hover:border-blue-300"
                               >
                                 <ExternalLink className="h-4 w-4 mr-1" />
-                                View Ticket
+                                {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' 
+                                  ? 'Check Status' 
+                                  : 'View Ticket'}
                               </Button>
                               {/* {booking.paymentStatus === "completed" && (
                                 <Button size="sm" className="bg-green-600 hover:bg-green-700">

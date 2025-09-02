@@ -13,7 +13,7 @@ declare global {
 }
 
 export default function CartSummary() {
-  const { seats, selectedIds, setBooked } = useSeatsStore()
+  const { seats, selectedIds, setBooked, clearSelection, fetchSeats } = useSeatsStore()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [showInvoice, setShowInvoice] = useState(false)
@@ -79,63 +79,47 @@ export default function CartSummary() {
         description: "Annie Musical Ticket Booking",
         order_id: razorpayOrder.id,
         handler: async function (response: any) {
-          // 3. Verify payment and confirm booking
-          try {
-            console.log("Verifying payment")
-
-            const verificationResp = await fetch("/api/annie-musical/confirm", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                bookingId: booking._id,
-              }),
-            })
-
-            if (!verificationResp.ok) {
-              const errorData = await verificationResp.json()
-              throw new Error(errorData.message || "Payment verification failed.")
-            }
-
-            const { updatedBooking } = await verificationResp.json()
-            setBooked(updatedBooking.seats)
-            
-            // Generate invoice data
-            const invoiceInfo = {
-              bookingId: updatedBooking._id,
-              eventTitle: "Annie Musical",
-              eventDate: "2024-12-25", // You should get this from the event data
-              eventTime: "19:30", // You should get this from the event data
-              eventLocation: "Mumbai Theatre, Mumbai",
-              seats: selectedSeats.map(seat => ({
-                id: seat.id,
-                price: seat.price,
-                category: seat.category || "General"
-              })),
-              totalAmount: total,
-              paymentId: response.razorpay_payment_id,
-              transactionId: response.razorpay_order_id,
-              customerName: user.name,
-              customerEmail: user.email,
-              customerPhone: user.phone,
-              bookingDate: new Date().toISOString(),
-              ticketType: "Annie Musical Ticket",
-              benefits: ["Entry to Annie Musical", "Reserved Seating", "Digital Ticket"]
-            }
-            
-            setInvoiceData(invoiceInfo)
-            setShowInvoice(true)
-            
-            toast({ title: "Payment Successful!", description: "Your seats are confirmed. Invoice generated!" })
-          } catch (error: any) {
-            console.error("Payment verification error:", error)
-            toast({ title: "Error", description: error.message, variant: "destructive" })
+          // Payment completed - generate invoice immediately
+          console.log("Payment completed:", response.razorpay_payment_id)
+          
+          // Generate invoice data immediately after payment
+          const invoiceInfo = {
+            bookingId: booking._id,
+            eventTitle: "Annie Musical",
+            eventDate: "2024-12-25", // You should get this from the event data
+            eventTime: "19:30", // You should get this from the event data
+            eventLocation: "Mumbai Theatre, Mumbai",
+            seats: selectedSeats.map(seat => ({
+              id: seat.id,
+              price: seat.price,
+              category: seat.category || "General"
+            })),
+            totalAmount: total,
+            paymentId: response.razorpay_payment_id,
+            transactionId: response.razorpay_order_id,
+            customerName: user.name,
+            customerEmail: user.email,
+            customerPhone: user.phone,
+            bookingDate: new Date().toISOString(),
+            ticketType: "Annie Musical Ticket",
+            benefits: ["Entry to Annie Musical", "Reserved Seating", "Digital Ticket"],
+            status: "Payment Completed - Confirmation Pending"
           }
+          
+          setInvoiceData(invoiceInfo)
+          setShowInvoice(true)
+          
+          toast({ 
+            title: "Payment Successful!", 
+            description: "Your booking is being processed. Seats are reserved and will be confirmed via webhook (usually within 5 minutes)." 
+          })
+          
+          // Mark seats as booked in the UI to prevent other users from selecting them
+          setBooked(selectedSeats.map(s => s.id))
+          
+          // Clear selected seats and refresh available seats after payment
+          clearSelection()
+          fetchSeats()
         },
         prefill: {
           name: user.name,
@@ -168,7 +152,7 @@ export default function CartSummary() {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-4 border-b flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Invoice Generated</h2>
+            <h2 className="text-xl font-semibold">Booking Confirmation</h2>
             <button
               onClick={() => setShowInvoice(false)}
               className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -176,10 +160,17 @@ export default function CartSummary() {
               ×
             </button>
           </div>
+          <div className="p-4 bg-yellow-50 border-b">
+            <p className="text-sm text-yellow-800">
+              <strong>Note:</strong> Your payment has been processed successfully. 
+              Final booking confirmation will happen via Razorpay webhook. Your tickets will appear in your dashboard once payment is verified.
+              This typically takes 5-10 minutes.
+            </p>
+          </div>
           <InvoiceGenerator 
             invoiceData={invoiceData}
             onDownload={() => {
-              toast({ title: "Invoice Downloaded", description: "Your invoice has been saved successfully!" })
+              toast({ title: "Invoice Downloaded", description: "Your booking receipt has been saved successfully!" })
             }}
           />
         </div>
