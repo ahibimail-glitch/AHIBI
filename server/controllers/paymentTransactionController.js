@@ -60,15 +60,31 @@ exports.resolveTransaction = async (req, res) => {
 
     console.log('[Resolve Transaction] Transaction data:', JSON.stringify(tx, null, 2));
 
-    // Check if this is an Annie Musical booking
-    const isAnnieMusical = tx.notes && (
-      tx.notes.includes('Annie Musical') || 
-      tx.notes.includes('annie-musical') || 
-      tx.notes.toLowerCase().includes('annie')
+    // Check if this is an Annie Musical booking - improved detection
+    const isAnnieMusical = (
+      (tx.notes && (
+        tx.notes.includes('Annie Musical') || 
+        tx.notes.includes('annie-musical') || 
+        tx.notes.toLowerCase().includes('annie')
+      )) ||
+      (tx.description && tx.description.toLowerCase().includes('annie')) ||
+      // Check if there's an existing Annie Musical booking with this order ID
+      await AnnieBooking.findOne({ razorpayOrderId: tx.orderId })
     );
+
+    console.log('[Resolve Transaction] Annie Musical detection result:', isAnnieMusical);
+    console.log('[Resolve Transaction] Transaction notes:', tx.notes);
+    console.log('[Resolve Transaction] Transaction description:', tx.description);
 
     // If this is an Annie Musical booking, handle it differently
     if (isAnnieMusical) {
+      return await resolveAnnieMusicalTransaction(tx, req, res);
+    }
+
+    // For non-Annie Musical transactions, try to resolve anyway if we can find the booking
+    const existingAnnieBooking = await AnnieBooking.findOne({ razorpayOrderId: tx.orderId });
+    if (existingAnnieBooking) {
+      console.log('[Resolve Transaction] Found Annie Musical booking despite detection failure, processing as Annie Musical');
       return await resolveAnnieMusicalTransaction(tx, req, res);
     }
 
