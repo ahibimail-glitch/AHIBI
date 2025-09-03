@@ -92,7 +92,7 @@ export default function CartSummary() {
             seats: selectedSeats.map(seat => ({
               id: seat.id,
               price: seat.price,
-              category: seat.category || "General"
+              category: "General" // Use a default value directly
             })),
             totalAmount: total,
             paymentId: response.razorpay_payment_id,
