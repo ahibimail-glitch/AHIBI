@@ -2,8 +2,11 @@ const PaymentTransaction = require('../models/PaymentTransaction');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
-const PendingPaymentSession = require('../models/PendingPaymentSession'); // Added this import
+const PendingPaymentSession = require('../models/PendingPaymentSession'); 
+const AnnieBooking = require('../models/AnnieBooking'); 
+const AnnieSeat = require('../models/AnnieSeat'); 
 const slugify = require('slugify');
+const mongoose = require('mongoose'); 
 
 // Helper to generate slug
 const generateSlug = (title) => {
@@ -56,6 +59,18 @@ exports.resolveTransaction = async (req, res) => {
     }
 
     console.log('[Resolve Transaction] Transaction data:', JSON.stringify(tx, null, 2));
+
+    // Check if this is an Annie Musical booking
+    const isAnnieMusical = tx.notes && (
+      tx.notes.includes('Annie Musical') || 
+      tx.notes.includes('annie-musical') || 
+      tx.notes.toLowerCase().includes('annie')
+    );
+
+    // If this is an Annie Musical booking, handle it differently
+    if (isAnnieMusical) {
+      return await resolveAnnieMusicalTransaction(tx, req, res);
+    }
 
     // Extract user and event info from multiple sources
     let bookingDetails = tx.bookingDetails;
@@ -228,6 +243,97 @@ exports.resolveTransaction = async (req, res) => {
     res.json({ success: true, message: 'Transaction resolved and bookings confirmed', data: { bookingIds } });
   } catch (error) {
     console.error('[Admin Payments] Error resolving transaction:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// Helper function to resolve Annie Musical transactions
+const resolveAnnieMusicalTransaction = async (tx, req, res) => {
+  try {
+    console.log('[Resolve Transaction] Processing Annie Musical transaction');
+    
+    // Try to find an existing pending booking with this order ID
+    const pendingBooking = await AnnieBooking.findOne({ 
+      razorpayOrderId: tx.orderId,
+      status: 'pending'
+    });
+    
+    if (!pendingBooking) {
+      console.log('[Resolve Transaction] No pending Annie Musical booking found for order ID:', tx.orderId);
+      
+      // Try to find a user associated with this transaction
+      let userId = tx.user;
+      if (!userId && tx.userSnapshot && tx.userSnapshot._id) {
+        userId = tx.userSnapshot._id;
+      }
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot resolve Annie Musical transaction: no pending booking found and no user information available.'
+        });
+      }
+      
+      // Create a new booking if we have user info but no existing booking
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot resolve Annie Musical transaction: user not found.'
+        });
+      }
+      
+      // We can't create a booking without seat information
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot resolve Annie Musical transaction: no pending booking found with these seats.'
+      });
+    }
+    
+    // We found a pending booking, let's confirm it
+    console.log(`[Resolve Transaction] Found pending Annie Musical booking: ${pendingBooking._id}`);
+    
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+      // Update booking status
+      pendingBooking.status = 'confirmed';
+      pendingBooking.razorpayPaymentId = tx.paymentId;
+      pendingBooking.expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years in future
+      await pendingBooking.save({ session });
+      
+      // Update seats to booked status
+      const updateResult = await AnnieSeat.updateMany(
+        { _id: { $in: pendingBooking.seats } },
+        { $set: { status: 'booked' } },
+        { session }
+      );
+      
+      console.log(`[Resolve Transaction] Updated ${updateResult.modifiedCount} seats to 'booked' status`);
+      
+      // Mark transaction as resolved
+      tx.status = 'resolved';
+      tx.bookingIds = [pendingBooking._id];
+      await tx.save({ session });
+      
+      await session.commitTransaction();
+      console.log(`[Resolve Transaction] Annie Musical booking ${pendingBooking._id} confirmed successfully`);
+      
+      res.json({
+        success: true,
+        message: 'Annie Musical transaction resolved and booking confirmed',
+        data: { bookingId: pendingBooking._id }
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('[Resolve Transaction] Error confirming Annie Musical booking:', error);
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  } catch (error) {
+    console.error('[Admin Payments] Error resolving Annie Musical transaction:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
