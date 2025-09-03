@@ -614,12 +614,17 @@ exports.getUsers = async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     
-    // Get users
-    const users = await User.find(filter)
+    // Get users - if limit is 1000 or higher, return all users (no limit)
+    let query = User.find(filter)
       .select('-otp -passwordResetToken -passwordResetExpires')
-      .skip(skip)
-      .limit(parseInt(limit, 10))
       .sort({ createdAt: -1 });
+      
+    // Apply pagination only if limit is less than 1000
+    if (parseInt(limit, 10) < 1000) {
+      query = query.skip(skip).limit(parseInt(limit, 10));
+    }
+    
+    const users = await query;
     
     // Get total count
     const total = await User.countDocuments(filter);
@@ -629,8 +634,8 @@ exports.getUsers = async (req, res) => {
       pagination: {
         total,
         page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-        pages: Math.ceil(total / parseInt(limit, 10))
+        limit: parseInt(limit, 10) < 1000 ? parseInt(limit, 10) : total,
+        pages: parseInt(limit, 10) < 1000 ? Math.ceil(total / parseInt(limit, 10)) : 1
       }
     });
   } catch (error) {

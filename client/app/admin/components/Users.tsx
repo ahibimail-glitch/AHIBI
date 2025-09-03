@@ -47,7 +47,7 @@ export default function Users({ searchQuery, setSearchQuery }: UsersProps) {
         const token = localStorage.getItem("admin_token");
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         
-        const res = await fetch(`${apiUrl}/api/admin/users`, {
+        const res = await fetch(`${apiUrl}/api/admin/users?limit=1000`, {
           method: 'GET',
           headers: {
             'Authorization': token ? `Bearer ${token}` : "",
@@ -163,4 +163,3 @@ export default function Users({ searchQuery, setSearchQuery }: UsersProps) {
     </Card>
   );
 }
-
