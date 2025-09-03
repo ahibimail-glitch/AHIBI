@@ -18,16 +18,50 @@ export default function CartSummary() {
   const [message, setMessage] = useState<string | null>(null)
   const [showInvoice, setShowInvoice] = useState(false)
   const [invoiceData, setInvoiceData] = useState<any>(null)
+  const [paymentProcessed, setPaymentProcessed] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth() // Get user from auth hook
 
   const selectedSeats = useMemo(() => selectedIds.map((id) => seats[id]).filter(Boolean), [selectedIds, seats])
   const total = useMemo(() => selectedSeats.reduce((sum, s) => sum + s.price, 0), [selectedSeats])
 
+  // Function to check booking status after payment
+  const checkBookingStatus = async (bookingId: string, attempts = 0) => {
+    if (attempts > 10) return; // Max 10 attempts (50 seconds)
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      const resp = await fetch(`/api/annie-musical/booking/${bookingId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.booking && data.booking.status === 'confirmed') {
+          toast({ 
+            title: "Booking Confirmed!", 
+            description: "Your payment has been verified and seats are confirmed.",
+          });
+          return;
+        }
+      }
+      
+      // Try again after 5 seconds
+      setTimeout(() => checkBookingStatus(bookingId, attempts + 1), 5000);
+    } catch (error) {
+      console.error("Error checking booking status:", error);
+    }
+  };
+
   const handlePay = async () => {
     if (selectedSeats.length === 0 || loading) return
     setLoading(true)
     setMessage(null)
+    setPaymentProcessed(false)
 
     console.log("handlePay called")
 
@@ -79,47 +113,85 @@ export default function CartSummary() {
         description: "Annie Musical Ticket Booking",
         order_id: razorpayOrder.id,
         handler: async function (response: any) {
-          // Payment completed - generate invoice immediately
-          console.log("Payment completed:", response.razorpay_payment_id)
-          
-          // Generate invoice data immediately after payment
-          const invoiceInfo = {
-            bookingId: booking._id,
-            eventTitle: "Annie Musical",
-            eventDate: "2024-12-25", // You should get this from the event data
-            eventTime: "19:30", // You should get this from the event data
-            eventLocation: "Mumbai Theatre, Mumbai",
-            seats: selectedSeats.map(seat => ({
-              id: seat.id,
-              price: seat.price,
-              category: "General" // Use a default value directly
-            })),
-            totalAmount: total,
-            paymentId: response.razorpay_payment_id,
-            transactionId: response.razorpay_order_id,
-            customerName: user.name,
-            customerEmail: user.email,
-            customerPhone: user.phone,
-            bookingDate: new Date().toISOString(),
-            ticketType: "Annie Musical Ticket",
-            benefits: ["Entry to Annie Musical", "Reserved Seating", "Digital Ticket"],
-            status: "Payment Completed - Confirmation Pending"
+          try {
+            console.log("Payment completed:", response.razorpay_payment_id)
+            setPaymentProcessed(true)
+            
+            // Directly confirm the booking on the server
+            const confirmResp = await fetch("/api/annie-musical/confirm", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                bookingId: booking._id,
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id,
+                signature: response.razorpay_signature
+              }),
+            })
+            
+            if (!confirmResp.ok) {
+              const errorData = await confirmResp.json()
+              console.error("Booking confirmation failed:", errorData)
+              toast({ 
+                title: "Payment Processed", 
+                description: "Your payment was successful, but we couldn't confirm your booking. Please contact support.",
+                variant: "destructive"
+              })
+              return
+            }
+            
+            const confirmData = await confirmResp.json()
+            console.log("Booking confirmed:", confirmData)
+            
+            // Generate invoice data after confirmation
+            const invoiceInfo = {
+              bookingId: booking._id,
+              eventTitle: "Annie Musical",
+              eventDate: "2024-12-25", // You should get this from the event data
+              eventTime: "19:30", // You should get this from the event data
+              eventLocation: "Mumbai Theatre, Mumbai",
+              seats: selectedSeats.map(seat => ({
+                id: seat.id,
+                price: seat.price,
+                category: "General" // Use a default value directly
+              })),
+              totalAmount: total,
+              paymentId: response.razorpay_payment_id,
+              transactionId: response.razorpay_order_id,
+              customerName: user.name,
+              customerEmail: user.email,
+              customerPhone: user.phone,
+              bookingDate: new Date().toISOString(),
+              ticketType: "Annie Musical Ticket",
+              benefits: ["Entry to Annie Musical", "Reserved Seating", "Digital Ticket"],
+              status: "Confirmed"
+            }
+            
+            setInvoiceData(invoiceInfo)
+            setShowInvoice(true)
+            
+            toast({ 
+              title: "Booking Confirmed!", 
+              description: "Your payment was successful and your seats are confirmed." 
+            })
+            
+            // Mark seats as booked in the UI
+            setBooked(selectedSeats.map(s => s.id))
+            
+            // Clear selected seats and refresh available seats
+            clearSelection()
+            fetchSeats()
+          } catch (error) {
+            console.error("Error confirming booking:", error)
+            toast({ 
+              title: "Error", 
+              description: "There was an error confirming your booking. Please contact support.",
+              variant: "destructive"
+            })
           }
-          
-          setInvoiceData(invoiceInfo)
-          setShowInvoice(true)
-          
-          toast({ 
-            title: "Payment Successful!", 
-            description: "Your booking is being processed. Seats are reserved and will be confirmed via webhook (usually within 5 minutes)." 
-          })
-          
-          // Mark seats as booked in the UI to prevent other users from selecting them
-          setBooked(selectedSeats.map(s => s.id))
-          
-          // Clear selected seats and refresh available seats after payment
-          clearSelection()
-          fetchSeats()
         },
         prefill: {
           name: user.name,
@@ -132,6 +204,13 @@ export default function CartSummary() {
         theme: {
           color: "#3399cc",
         },
+        // Handle payment failure
+        modal: {
+          ondismiss: function() {
+            setLoading(false)
+            console.log("Payment modal dismissed")
+          }
+        }
       }
 
       console.log("Opening Razorpay Checkout")

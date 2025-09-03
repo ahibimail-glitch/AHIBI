@@ -183,7 +183,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
             <div className="flex items-center justify-between mb-4">
               {/* You can replace this with your actual logo component or img tag */}
               <div className="w-full h-6  rounded-lg flex items-center justify-center">
-                <img src="/images/Logo.png" className='w-1/2 h-auto' alt="Logo" />
+                <img src="/images/Logo.png" className='w-1/2 h-12' alt="Logo" />
               </div>
             </div>
             <p className="text-white/90 text-sm font-medium">Invoice For</p>

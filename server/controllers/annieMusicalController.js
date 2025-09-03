@@ -132,11 +132,83 @@ const createBooking = asyncHandler(async (req, res) => {
 // @route   POST /api/annie-musical/confirm
 // @access  Private
 const confirmBooking = asyncHandler(async (req, res) => {
-  // This endpoint is now deprecated - use webhook confirmation instead
-  res.status(400).json({
-    success: false,
-    message: "Payment confirmation is now handled via webhooks. Please wait for payment processing."
-  });
+  const { bookingId, paymentId, orderId, signature } = req.body;
+  
+  if (!bookingId || !paymentId || !orderId) {
+    res.status(400);
+    throw new Error("Missing required payment details");
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // Find the booking
+    const booking = await AnnieBooking.findById(bookingId).session(session);
+    
+    if (!booking) {
+      res.status(404);
+      throw new Error("Booking not found");
+    }
+
+    // Verify this is the correct order
+    if (booking.razorpayOrderId !== orderId) {
+      res.status(400);
+      throw new Error("Order ID mismatch");
+    }
+
+    // Check if booking is already confirmed
+    if (booking.status === 'confirmed') {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(200).json({
+        success: true,
+        message: "Booking already confirmed",
+        booking
+      });
+    }
+
+    console.log(`Direct confirmation for booking ${bookingId} with payment ${paymentId}`);
+
+    // Update booking status
+    booking.status = 'confirmed';
+    booking.razorpayPaymentId = paymentId;
+    booking.razorpaySignature = signature;
+    // Set expiresAt to a far future date instead of null to satisfy validation
+    booking.expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years in the future
+    await booking.save({ session });
+
+    // Update seats to booked status
+    const updateResult = await AnnieSeat.updateMany(
+      { _id: { $in: booking.seats } },
+      { $set: { status: 'booked' } },
+      { session }
+    );
+
+    console.log(`Updated ${updateResult.modifiedCount} seats to 'booked' status`);
+
+    await session.commitTransaction();
+    console.log(`Booking ${bookingId} confirmed successfully via direct confirmation`);
+
+    // Return the updated booking
+    const populatedBooking = await AnnieBooking.findById(bookingId)
+      .populate('userId', 'name email phone')
+      .populate('seats', 'row number price');
+
+    res.status(200).json({
+      success: true,
+      message: "Booking confirmed successfully",
+      booking: populatedBooking
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Booking confirmation error:', error);
+    res.status(500);
+    throw new Error(error.message || "Failed to confirm booking");
+  } finally {
+    session.endSession();
+  }
 });
 
 // @desc    Handle Razorpay webhook for payment confirmation
@@ -147,6 +219,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
   const webhookBody = JSON.stringify(req.body);
 
   if (!webhookSignature) {
+    console.error('Webhook error: Missing signature');
     res.status(400);
     throw new Error("Missing webhook signature");
   }
@@ -158,14 +231,16 @@ const handleWebhook = asyncHandler(async (req, res) => {
     .digest('hex');
 
   if (webhookSignature !== expectedSignature) {
+    console.error('Webhook error: Invalid signature');
     res.status(400);
     throw new Error("Invalid webhook signature");
   }
 
   const { event, payload } = req.body;
+  console.log(`Webhook received: ${event}`, JSON.stringify(payload).substring(0, 200) + '...');
 
   // Handle payment.captured event
-  if (event === 'payment.captured') {
+  if (event === 'payment.captured' || event === 'payment.authorized') {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -174,43 +249,55 @@ const handleWebhook = asyncHandler(async (req, res) => {
       const orderId = payment.order_id;
       const paymentId = payment.id;
 
+      console.log(`Processing payment event for order: ${orderId}, payment: ${paymentId}`);
+
       // Find booking by razorpayOrderId
       const booking = await AnnieBooking.findOne({ razorpayOrderId: orderId }).session(session);
 
       if (!booking) {
         console.error(`Booking not found for order ID: ${orderId}`);
-        await session.commitTransaction();
-        return res.status(200).json({ status: 'ok' });
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(200).json({ status: 'ok', message: 'No booking found for this order' });
       }
 
       if (booking.status === 'confirmed') {
         console.log(`Booking ${booking._id} already confirmed`);
-        await session.commitTransaction();
-        return res.status(200).json({ status: 'ok' });
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(200).json({ status: 'ok', message: 'Booking already confirmed' });
       }
+
+      console.log(`Confirming booking ${booking._id} with payment ${paymentId}`);
 
       // Update booking status and payment details
       booking.status = 'confirmed';
       booking.razorpayPaymentId = paymentId;
-      booking.expiresAt = null; // Remove expiration time for confirmed bookings
+      booking.expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years in the future
       await booking.save({ session });
 
       // Update seats to booked
-      await AnnieSeat.updateMany(
+      const updateResult = await AnnieSeat.updateMany(
         { _id: { $in: booking.seats } },
         { $set: { status: 'booked' } },
         { session }
       );
+      
+      console.log(`Updated ${updateResult.modifiedCount} seats to 'booked' status`);
 
       await session.commitTransaction();
-      console.log(`Booking ${booking._id} confirmed via webhook`);
+      console.log(`Booking ${booking._id} confirmed via webhook successfully`);
+      session.endSession();
 
     } catch (error) {
       await session.abortTransaction();
-      console.error('Webhook processing error:', error);
-    } finally {
       session.endSession();
+      console.error('Webhook processing error:', error);
+      // Don't throw here, just log the error and return 200 to Razorpay
+      return res.status(200).json({ status: 'error', message: error.message });
     }
+  } else {
+    console.log(`Received non-payment webhook event: ${event}, no action taken`);
   }
 
   res.status(200).json({ status: 'ok' });
@@ -248,6 +335,7 @@ const adminConfirmBooking = asyncHandler(async (req, res) => {
 
     // Update booking and seats
     booking.status = 'confirmed';
+    booking.expiresAt = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000); // 10 years in the future
     await booking.save({ session });
 
     await AnnieSeat.updateMany(
@@ -426,13 +514,14 @@ const cleanupExpiredBookings = async () => {
   const now = new Date();
   
   try {
-    // Find expired bookings
+    // Find expired bookings - ONLY pending ones with expiration time in the past
     const expiredBookings = await AnnieBooking.find({
       status: 'pending',
       expiresAt: { $lt: now }
     });
     
     if (expiredBookings.length === 0) {
+      console.log('No expired bookings to clean up');
       return;
     }
     
@@ -441,9 +530,14 @@ const cleanupExpiredBookings = async () => {
     // Get all seat IDs from expired bookings
     const seatIdsToRelease = expiredBookings.flatMap(booking => booking.seats);
     
-    // Release seats from expired bookings
-    await AnnieSeat.updateMany(
-      { _id: { $in: seatIdsToRelease } },
+    // Only release seats that are currently in 'selected' status
+    // This prevents releasing seats that might have been manually set to 'booked'
+    // or are in the process of being confirmed by the webhook
+    const updateResult = await AnnieSeat.updateMany(
+      { 
+        _id: { $in: seatIdsToRelease },
+        status: 'selected' // Only update seats that are still in selected status
+      },
       { $set: { status: 'available' } }
     );
     
@@ -453,7 +547,7 @@ const cleanupExpiredBookings = async () => {
       { $set: { status: 'expired' } }
     );
     
-    console.log(`Released ${seatIdsToRelease.length} seats from expired bookings`);
+    console.log(`Released ${updateResult.modifiedCount} seats from ${expiredBookings.length} expired bookings`);
   } catch (error) {
     console.error('Error cleaning up expired bookings:', error);
   }
