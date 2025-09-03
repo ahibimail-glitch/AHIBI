@@ -11,22 +11,33 @@ interface User {
   // Add other user properties as needed
 }
 
-export const useAuth = () => {
+interface UseAuthOptions {
+  tokenName?: string;
+  redirectPath?: string;
+}
+
+export const useAuth = (options?: UseAuthOptions) => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Default options
+  const tokenName = options?.tokenName || 'token';
+  const redirectPath = options?.redirectPath || '/login';
 
   useEffect(() => {
     const fetchUser = async () => {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem(tokenName);
 
         if (!token) {
           setIsAuthenticated(false);
           setUser(null);
           setLoading(false);
-          // Optionally redirect here if needed, e.g., router.replace('/login');
+          if (redirectPath) {
+            router.replace(redirectPath);
+          }
           return;
         }
 
@@ -46,9 +57,12 @@ export const useAuth = () => {
           setIsAuthenticated(true);
         } catch (error) {
           console.error(error);
-          localStorage.removeItem('token'); // Invalid token, remove it
+          localStorage.removeItem(tokenName); // Invalid token, remove it
           setIsAuthenticated(false);
           setUser(null);
+          if (redirectPath) {
+            router.replace(redirectPath);
+          }
         } finally {
           setLoading(false);
         }
@@ -56,7 +70,7 @@ export const useAuth = () => {
     };
 
     fetchUser();
-  }, [router]);
+  }, [router, tokenName, redirectPath]);
 
   return { user, isAuthenticated, loading };
 };
