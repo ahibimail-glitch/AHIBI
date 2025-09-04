@@ -10,5 +10,9 @@ module.exports = {
         destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`
       }
     ]
-  }
+  },
+  // Remove console statements in production builds (keep error and warn)
+  compiler: {
+    removeConsole: { exclude: ['error', 'warn'] },
+  },
 }
