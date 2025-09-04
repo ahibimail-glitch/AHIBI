@@ -503,23 +503,16 @@ export default function ProfilePage() {
                           <div className="text-right lg:ml-6">
                             <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.total.toLocaleString()}</p>
                             <div className="flex flex-col sm:flex-row gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => handleViewTicket(booking)}
-                                className="hover:bg-blue-50 hover:border-blue-300"
+                              {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed' && (      
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleViewTicket(booking)}
+                                  className="hover:bg-blue-50 hover:border-blue-300"
                               >
-                                <ExternalLink className="h-4 w-4 mr-1" />
-                                {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' 
-                                  ? 'Check Status' 
-                                  : 'View Ticket'}
+                                View Ticket
                               </Button>
-                              {/* {booking.paymentStatus === "completed" && (
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                  <Download className="h-4 w-4 mr-1" />
-                                  Download
-                                </Button>
-                              )} */}
+                            )}
                             </div>
                           </div>
                         </div>
