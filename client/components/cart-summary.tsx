@@ -228,67 +228,180 @@ export default function CartSummary() {
 
   if (showInvoice && invoiceData) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Booking Confirmation</h2>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+        <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl">
+          <div className="p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">Booking Confirmation</h2>
             <button
               onClick={() => setShowInvoice(false)}
-              className="text-gray-500 hover:text-gray-700 text-2xl"
+              className="text-slate-400 hover:text-slate-600 text-2xl sm:text-3xl font-light transition-colors"
             >
               ×
             </button>
           </div>
-          <div className="p-4 bg-yellow-50 border-b">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> Your payment has been processed successfully. 
-              Final booking confirmation will happen via Razorpay webhook. Your tickets will appear in your dashboard once payment is verified.
-              This typically takes 5-10 minutes.
-            </p>
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">!</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-amber-800 mb-1">Payment Processed Successfully</h3>
+                <p className="text-sm text-amber-700">
+                  Final booking confirmation will happen via Razorpay webhook. Your tickets will appear in your dashboard once payment is verified.
+                  This typically takes 5-10 minutes.
+                </p>
+              </div>
+            </div>
           </div>
-          <InvoiceGenerator 
-            invoiceData={invoiceData}
-            onDownload={() => {
-              toast({ title: "Invoice Downloaded", description: "Your booking receipt has been saved successfully!" })
-            }}
-          />
+          <div className="overflow-y-auto">
+            <InvoiceGenerator 
+              invoiceData={invoiceData}
+              onDownload={() => {
+                toast({ title: "Invoice Downloaded", description: "Your booking receipt has been saved successfully!" })
+              }}
+            />
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <aside className="w-full ml-32 lg:w-80 lg:sticky lg:top-6 rounded-xl border bg-gradient-to-b from-white to-slate-50 text-card-foreground p-4 shadow-sm">
-      <h2 className="text-lg font-semibold mb-2 text-pretty">Your Selection</h2>
-      {selectedSeats.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No seats selected.</p>
-      ) : (
-        <ul className="text-sm mb-3 max-h-40 overflow-auto pr-1 space-y-1">
-          {selectedSeats.map((s) => (
-            <li key={s.id} className="flex items-center justify-between">
-              <span className="font-mono">{s.id}</span>
-              <span>₹{s.price.toLocaleString("en-IN")}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="flex items-center justify-between border-t pt-2 mt-2">
-        <span className="text-sm font-medium">Total</span>
-        <span className="text-base font-semibold">₹{total.toLocaleString("en-IN")}</span>
+    <div className="w-full">
+      {/* Mobile Cart - Sticky at top on mobile */}
+      <div className="xl:hidden mb-6">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800">Your Selection</h2>
+            {selectedSeats.length > 0 && (
+              <div className="bg-sky-100 text-sky-700 px-3 py-1 rounded-full text-sm font-medium">
+                {selectedSeats.length} seat{selectedSeats.length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          
+          {selectedSeats.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">🎭</span>
+              </div>
+              <p className="text-slate-500 font-medium">No seats selected</p>
+              <p className="text-sm text-slate-400 mt-1">Choose your preferred seats from the chart below</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2 mb-4 max-h-32 overflow-y-auto">
+                {selectedSeats.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-bold text-slate-700 bg-white px-2 py-1 rounded">{s.id}</span>
+                      <span className="text-sm text-slate-600">Row {s.row}</span>
+                    </div>
+                    <span className="font-semibold text-slate-800">₹{s.price.toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="border-t border-slate-200 pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-lg font-bold text-slate-800">Total Amount</span>
+                  <span className="text-2xl font-bold text-slate-900">₹{total.toLocaleString("en-IN")}</span>
+                </div>
+                
+                <button
+                  onClick={handlePay}
+                  disabled={selectedSeats.length === 0 || loading}
+                  className="w-full py-3 sm:py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-emerald-500 hover:to-emerald-400 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    "Proceed to Pay"
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+          
+          {message && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700" role="status">{message}</p>
+            </div>
+          )}
+        </div>
       </div>
-      <button
-        onClick={handlePay}
-        disabled={selectedSeats.length === 0 || loading}
-        className="mt-3 w-full rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-500 text-white py-2.5 disabled:opacity-60 disabled:cursor-not-allowed hover:from-emerald-500 hover:to-emerald-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-600"
-        aria-label="Proceed to Pay"
-      >
-        {loading ? "Processing..." : "Proceed to Pay"}
-      </button>
-      {message && (
-        <p className="mt-2 text-sm" role="status">
-          {message}
-        </p>
-      )}
-    </aside>
+
+      {/* Desktop Cart - Sidebar */}
+      <aside className="hidden xl:block w-full sticky top-6">
+        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl border border-slate-200 shadow-lg p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-slate-800">Your Selection</h2>
+            {selectedSeats.length > 0 && (
+              <div className="bg-sky-100 text-sky-700 px-2 py-1 rounded-full text-xs font-medium">
+                {selectedSeats.length} seat{selectedSeats.length !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          
+          {selectedSeats.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">🎭</span>
+              </div>
+              <p className="text-slate-500 font-medium">No seats selected</p>
+              <p className="text-xs text-slate-400 mt-1">Choose your preferred seats from the seating chart</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
+                {selectedSeats.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">{s.id}</span>
+                      <div>
+                        <div className="text-sm font-medium text-slate-700">Row {s.row}, Seat {s.number}</div>
+                        <div className="text-xs text-slate-500">Annie Musical</div>
+                      </div>
+                    </div>
+                    <span className="font-bold text-slate-800">₹{s.price.toLocaleString("en-IN")}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="border-t border-slate-200 pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-lg font-bold text-slate-800">Total Amount</span>
+                  <span className="text-2xl font-bold text-slate-900">₹{total.toLocaleString("en-IN")}</span>
+                </div>
+                
+                <button
+                  onClick={handlePay}
+                  disabled={selectedSeats.length === 0 || loading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-emerald-500 hover:to-emerald-400 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Processing Payment...
+                    </div>
+                  ) : (
+                    "Proceed to Pay"
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+          
+          {message && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700" role="status">{message}</p>
+            </div>
+          )}
+        </div>
+      </aside>
+    </div>
   )
 }
