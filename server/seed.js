@@ -38,20 +38,11 @@ const seedSeats = async () => {
 
     const seatsToCreate = [];
     for (const config of seatConfig) {
-      // Create seats for the left side
-      for (let i = 1; i <= config.count; i++) {
+      // Create all seats for each row sequentially
+      for (let i = 1; i <= config.count * 2; i++) {
         seatsToCreate.push({
           row: config.row,
           number: i,
-          price: config.price,
-          status: 'available',
-        });
-      }
-      // Create seats for the right side (starting number after left side)
-      for (let i = 1; i <= config.count; i++) {
-        seatsToCreate.push({
-          row: config.row,
-          number: i + 100, // Start right-side numbering from 101
           price: config.price,
           status: 'available',
         });

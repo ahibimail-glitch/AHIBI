@@ -24,7 +24,7 @@ export const useAuth = (options?: UseAuthOptions) => {
   
   // Default options
   const tokenName = options?.tokenName || 'token';
-  const redirectPath = options?.redirectPath || '/login';
+  const redirectPath = options?.redirectPath || '/auth';
 
   useEffect(() => {
     const fetchUser = async () => {
