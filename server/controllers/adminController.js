@@ -149,7 +149,7 @@ exports.getDashboardStats = async (req, res) => {
 };
 
 /**
- * @desc    Get pending approvals (organizers, artists, venues, events)
+ * @desc    Get all approvals (both pending and approved organizers, artists, venues, events)
  * @route   GET /api/admin/approvals
  * @access  Private (Admin only)
  */
@@ -177,57 +177,88 @@ exports.getPendingApprovals = async (req, res) => {
     if (type) {
       switch (type) {
         case 'organizers':
-          const pendingOrganizers = await Organizer.find({
-            approvalStatus: 'pending',
+          const allOrganizers = await Organizer.find({
+            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
             ...searchQuery
           })
-          .select('_id name email phone createdAt companyName')
+          .select('_id name email phone createdAt companyName approvalStatus bio description address contactInfo')
           .skip(skip)
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
           total = await Organizer.countDocuments({
-            approvalStatus: 'pending',
+            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
             ...searchQuery
           });
           
-          results = { organizers: pendingOrganizers };
+          // Transform organizers to match frontend interface
+          const transformedOrganizers = allOrganizers.map(org => ({
+            _id: org._id,
+            name: org.name,
+            email: org.email,
+            phone: org.phone,
+            createdAt: org.createdAt,
+            organizer: {
+              companyName: org.companyName,
+              description: org.description,
+              contactInfo: org.contactInfo || { email: org.email },
+              address: org.address || { city: '', state: '' },
+              approvalStatus: org.approvalStatus
+            }
+          }));
+          
+          results = { organizers: transformedOrganizers };
           break;
           
         case 'artists':
-          const pendingArtists = await Artist.find({
-            approvalStatus: 'pending',
+          const allArtists = await Artist.find({
+            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
             ...searchQuery
           })
-          .select('_id name email phone createdAt')
+          .select('_id name email phone createdAt approvalStatus bio type experience')
           .skip(skip)
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
           total = await Artist.countDocuments({
-            approvalStatus: 'pending',
+            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
             ...searchQuery
           });
           
-          results = { artists: pendingArtists };
+          // Transform artists to match frontend interface
+          const transformedArtists = allArtists.map(artist => ({
+            _id: artist._id,
+            name: artist.name,
+            email: artist.email,
+            phone: artist.phone,
+            createdAt: artist.createdAt,
+            artist: {
+              bio: artist.bio,
+              type: artist.type,
+              experience: artist.experience,
+              approvalStatus: artist.approvalStatus
+            }
+          }));
+          
+          results = { artists: transformedArtists };
           break;
           
         case 'venues':
-          const pendingVenues = await Venue.find({
-            approvalStatus: 'pending',
+          const allVenues = await Venue.find({
+            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
             ...searchQuery
           })
-          .select('_id name email phone createdAt')
+          .select('_id name email phone createdAt approvalStatus')
           .skip(skip)
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
           total = await Venue.countDocuments({
-            approvalStatus: 'pending',
+            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
             ...searchQuery
           });
           
-          results = { venues: pendingVenues };
+          results = { venues: allVenues };
           break;
           
         case 'events':
@@ -239,44 +270,44 @@ exports.getPendingApprovals = async (req, res) => {
             ]
           } : {};
           
-          const pendingEvents = await Event.find({
-            status: 'pending',
+          const allEvents = await Event.find({
+            status: { $in: ['pending', 'approved', 'rejected'] },
             ...eventSearchQuery
           })
-          .select('_id title organizer startDate endDate createdAt')
+          .select('_id title organizer startDate endDate createdAt status')
           .populate('organizer', 'name email phone')
           .skip(skip)
           .limit(parseInt(limit, 10))
           .sort({ createdAt: -1 });
           
           total = await Event.countDocuments({
-            status: 'pending',
+            status: { $in: ['pending', 'approved', 'rejected'] },
             ...eventSearchQuery
           });
           
-          results = { events: pendingEvents };
+          results = { events: allEvents };
           break;
           
         default:
           return ApiResponse.error(res, 'Invalid approval type', { validTypes: ['organizers', 'artists', 'venues', 'events'] });
       }
     } else {
-      // If no type is provided, get all pending approvals
+      // If no type is provided, get all approvals (pending and approved)
       const [organizers, artists, venues, events] = await Promise.all([
-        Organizer.find({ approvalStatus: 'pending' })
-          .select('_id name email phone createdAt companyName')
+        Organizer.find({ approvalStatus: { $in: ['pending', 'approved', 'rejected'] } })
+          .select('_id name email phone createdAt companyName approvalStatus')
           .sort({ createdAt: -1 })
           .limit(5),
-        Artist.find({ approvalStatus: 'pending' })
-          .select('_id name email phone createdAt')
+        Artist.find({ approvalStatus: { $in: ['pending', 'approved', 'rejected'] } })
+          .select('_id name email phone createdAt approvalStatus')
           .sort({ createdAt: -1 })
           .limit(5),
-        Venue.find({ approvalStatus: 'pending' })
-          .select('_id name email phone createdAt')
+        Venue.find({ approvalStatus: { $in: ['pending', 'approved', 'rejected'] } })
+          .select('_id name email phone createdAt approvalStatus')
           .sort({ createdAt: -1 })
           .limit(5),
-        Event.find({ status: 'pending' })
-          .select('_id title organizer startDate endDate createdAt')
+        Event.find({ status: { $in: ['pending', 'approved', 'rejected'] } })
+          .select('_id title organizer startDate endDate createdAt status')
           .populate('organizer', 'name email phone')
           .sort({ createdAt: -1 })
           .limit(5)
@@ -286,7 +317,7 @@ exports.getPendingApprovals = async (req, res) => {
       total = organizers.length + artists.length + venues.length + events.length;
     }
     
-    return ApiResponse.success(res, 'Pending approvals retrieved successfully', {
+    return ApiResponse.success(res, 'All approvals retrieved successfully', {
       ...results,
       pagination: {
         total,
@@ -296,8 +327,8 @@ exports.getPendingApprovals = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get pending approvals error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving pending approvals', error);
+    console.error('Get all approvals error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving all approvals', error);
   }
 };
 
