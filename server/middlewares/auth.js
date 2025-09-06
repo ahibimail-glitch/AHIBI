@@ -33,7 +33,7 @@ exports.protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Determine which model to use based on the route or token
+      // Determine which model to use based on the route or token role
       const isAdminRoute = req.originalUrl.startsWith('/api/admin');
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
@@ -41,27 +41,30 @@ exports.protect = async (req, res, next) => {
       
       let user;
       
-      if (isAdminRoute || decoded.type === 'admin') {
+      if (isAdminRoute || decoded.role === 'admin') {
         user = await Admin.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Admin not found' });
         }
         user.role = 'admin'; // Manually set role for admin users
-      } else if (isOrganizerRoute || decoded.type === 'organizer') {
+      } else if (isOrganizerRoute || decoded.role === 'organizer') {
         user = await Organizer.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Organizer not found' });
         }
-      } else if (isArtistRoute || decoded.type === 'artist') {
+        user.role = 'organizer'; // Set role for organizer users
+      } else if (isArtistRoute || decoded.role === 'artist') {
         user = await Artist.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Artist not found' });
         }
-      } else if (isVenueRoute || decoded.type === 'venue') {
+        user.role = 'artist'; // Set role for artist users
+      } else if (isVenueRoute || decoded.role === 'venue') {
         user = await Venue.findById(decoded.id);
         if (!user) {
           return res.status(404).json({ success: false, message: 'Venue not found' });
         }
+        user.role = 'venue'; // Set role for venue users
       } else {
         user = await User.findById(decoded.id);
         if (!user) {

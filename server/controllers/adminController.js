@@ -148,177 +148,45 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
+// Decoupled Organizer Management Functions
+
 /**
- * @desc    Get all approvals (both pending and approved organizers, artists, venues, events)
- * @route   GET /api/admin/approvals
+ * @desc    Get all organizers with detailed information
+ * @route   GET /api/admin/organizers
  * @access  Private (Admin only)
  */
-exports.getPendingApprovals = async (req, res) => {
+exports.getAllOrganizers = async (req, res) => {
   try {
-    // Get query parameters for filtering
-    const { type, limit = 10, page = 1, search } = req.query;
-    
-    // Calculate pagination
+    const { status, limit = 50, page = 1, search } = req.query;
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     
-    let results = {};
-    let total = 0;
+    let query = {};
     
-    // Search query for user-based approvals
-    const searchQuery = search ? {
-      $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ]
-    } : {};
-    
-    // Filter by type if provided
-    if (type) {
-      switch (type) {
-        case 'organizers':
-          const allOrganizers = await Organizer.find({
-            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
-            ...searchQuery
-          })
-          .select('_id name email phone createdAt companyName approvalStatus bio description address contactInfo')
-          .skip(skip)
-          .limit(parseInt(limit, 10))
-          .sort({ createdAt: -1 });
-          
-          total = await Organizer.countDocuments({
-            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
-            ...searchQuery
-          });
-          
-          // Transform organizers to match frontend interface
-          const transformedOrganizers = allOrganizers.map(org => ({
-            _id: org._id,
-            name: org.name,
-            email: org.email,
-            phone: org.phone,
-            createdAt: org.createdAt,
-            organizer: {
-              companyName: org.companyName,
-              description: org.description,
-              contactInfo: org.contactInfo || { email: org.email },
-              address: org.address || { city: '', state: '' },
-              approvalStatus: org.approvalStatus
-            }
-          }));
-          
-          results = { organizers: transformedOrganizers };
-          break;
-          
-        case 'artists':
-          const allArtists = await Artist.find({
-            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
-            ...searchQuery
-          })
-          .select('_id name email phone createdAt approvalStatus bio type experience')
-          .skip(skip)
-          .limit(parseInt(limit, 10))
-          .sort({ createdAt: -1 });
-          
-          total = await Artist.countDocuments({
-            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
-            ...searchQuery
-          });
-          
-          // Transform artists to match frontend interface
-          const transformedArtists = allArtists.map(artist => ({
-            _id: artist._id,
-            name: artist.name,
-            email: artist.email,
-            phone: artist.phone,
-            createdAt: artist.createdAt,
-            artist: {
-              bio: artist.bio,
-              type: artist.type,
-              experience: artist.experience,
-              approvalStatus: artist.approvalStatus
-            }
-          }));
-          
-          results = { artists: transformedArtists };
-          break;
-          
-        case 'venues':
-          const allVenues = await Venue.find({
-            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
-            ...searchQuery
-          })
-          .select('_id name email phone createdAt approvalStatus')
-          .skip(skip)
-          .limit(parseInt(limit, 10))
-          .sort({ createdAt: -1 });
-          
-          total = await Venue.countDocuments({
-            approvalStatus: { $in: ['pending', 'approved', 'rejected'] },
-            ...searchQuery
-          });
-          
-          results = { venues: allVenues };
-          break;
-          
-        case 'events':
-          // For events, we search in event title and description
-          const eventSearchQuery = search ? {
-            $or: [
-              { title: { $regex: search, $options: 'i' } },
-              { description: { $regex: search, $options: 'i' } }
-            ]
-          } : {};
-          
-          const allEvents = await Event.find({
-            status: { $in: ['pending', 'approved', 'rejected'] },
-            ...eventSearchQuery
-          })
-          .select('_id title organizer startDate endDate createdAt status')
-          .populate('organizer', 'name email phone')
-          .skip(skip)
-          .limit(parseInt(limit, 10))
-          .sort({ createdAt: -1 });
-          
-          total = await Event.countDocuments({
-            status: { $in: ['pending', 'approved', 'rejected'] },
-            ...eventSearchQuery
-          });
-          
-          results = { events: allEvents };
-          break;
-          
-        default:
-          return ApiResponse.error(res, 'Invalid approval type', { validTypes: ['organizers', 'artists', 'venues', 'events'] });
-      }
-    } else {
-      // If no type is provided, get all approvals (pending and approved)
-      const [organizers, artists, venues, events] = await Promise.all([
-        Organizer.find({ approvalStatus: { $in: ['pending', 'approved', 'rejected'] } })
-          .select('_id name email phone createdAt companyName approvalStatus')
-          .sort({ createdAt: -1 })
-          .limit(5),
-        Artist.find({ approvalStatus: { $in: ['pending', 'approved', 'rejected'] } })
-          .select('_id name email phone createdAt approvalStatus')
-          .sort({ createdAt: -1 })
-          .limit(5),
-        Venue.find({ approvalStatus: { $in: ['pending', 'approved', 'rejected'] } })
-          .select('_id name email phone createdAt approvalStatus')
-          .sort({ createdAt: -1 })
-          .limit(5),
-        Event.find({ status: { $in: ['pending', 'approved', 'rejected'] } })
-          .select('_id title organizer startDate endDate createdAt status')
-          .populate('organizer', 'name email phone')
-          .sort({ createdAt: -1 })
-          .limit(5)
-      ]);
-      
-      results = { organizers, artists, venues, events };
-      total = organizers.length + artists.length + venues.length + events.length;
+    // Filter by approval status if provided
+    if (status) {
+      query.approvalStatus = status;
     }
     
-    return ApiResponse.success(res, 'All approvals retrieved successfully', {
-      ...results,
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { companyName: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const organizers = await Organizer.find(query)
+      .select('_id name email phone companyName approvalStatus createdAt bio description address contactInfo website socialMedia experience')
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .sort({ createdAt: -1 });
+    
+    const total = await Organizer.countDocuments(query);
+    
+    return ApiResponse.success(res, 'Organizers retrieved successfully', {
+      organizers,
       pagination: {
         total,
         page: parseInt(page, 10),
@@ -327,241 +195,420 @@ exports.getPendingApprovals = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get all approvals error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving all approvals', error);
+    console.error('Get organizers error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving organizers', error);
   }
 };
 
 /**
- * @desc    Approve/reject organizer
- * @route   PUT /api/admin/approvals/organizer/:id
+ * @desc    Get organizer by ID with full details
+ * @route   GET /api/admin/organizers/:id
  * @access  Private (Admin only)
  */
-exports.processOrganizerApproval = async (req, res) => {
+exports.getOrganizerById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, rejectionReason } = req.body;
-    
-    // Validate status
-    if (!['approved', 'rejected'].includes(status)) {
-      return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
-    }
-    
-    // Find the organizer
-    const organizer = await Organizer.findOne({ _id: id, approvalStatus: 'pending' });
+    const organizer = await Organizer.findById(req.params.id)
+      .select('_id name email phone companyName approvalStatus createdAt updatedAt bio description address contactInfo website socialMedia experience rejectionReason');
     
     if (!organizer) {
-      return ApiResponse.notFound(res, 'Pending organizer not found or already processed');
+      return ApiResponse.notFound(res, 'Organizer not found');
     }
     
-    // Update organizer approval status
-    organizer.approvalStatus = status;
-    organizer.status = status === 'approved' ? 'active' : 'rejected';
-
-    if (status === 'approved') {
-      organizer.approvalDate = new Date();
-      organizer.approvedBy = req.user.id;
-    } else if (status === 'rejected') {
-      organizer.rejectionDate = new Date();
-      organizer.rejectedBy = req.user.id;
-      organizer.rejectionReason = rejectionReason;
-    }
-    
-    // Save organizer
-    await organizer.save();
-    
-    // TODO: Send notification to organizer about approval/rejection
-    
-    return ApiResponse.success(res, `Organizer has been ${status}`, {
-      organizer: {
-        id: organizer._id,
-        name: organizer.name,
-        email: organizer.email,
-        phone: organizer.phone,
-        status: organizer.status,
-        approvalStatus: organizer.approvalStatus
-      }
-    });
+    return ApiResponse.success(res, 'Organizer details retrieved successfully', { organizer });
   } catch (error) {
-    console.error('Process organizer approval error:', error);
-    return ApiResponse.serverError(res, 'Error processing organizer approval', error);
+    console.error('Get organizer by ID error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving organizer details', error);
   }
 };
 
 /**
- * @desc    Approve/reject artist
- * @route   PUT /api/admin/approvals/artist/:id
+ * @desc    Approve organizer
+ * @route   PUT /api/admin/organizers/:id/approve
  * @access  Private (Admin only)
  */
-exports.processArtistApproval = async (req, res) => {
+exports.approveOrganizer = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, rejectionReason } = req.body;
-
-    if (!['approved', 'rejected'].includes(status)) {
-      return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
+    const organizer = await Organizer.findByIdAndUpdate(
+      req.params.id,
+      { 
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: req.user._id
+      },
+      { new: true }
+    );
+    
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer not found');
     }
+    
+    return ApiResponse.success(res, 'Organizer approved successfully', { organizer });
+  } catch (error) {
+    console.error('Approve organizer error:', error);
+    return ApiResponse.serverError(res, 'Error approving organizer', error);
+  }
+};
 
-    const artist = await Artist.findOne({ _id: id, approvalStatus: 'pending' });
+/**
+ * @desc    Reject organizer
+ * @route   PUT /api/admin/organizers/:id/reject
+ * @access  Private (Admin only)
+ */
+exports.rejectOrganizer = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    
+    const organizer = await Organizer.findByIdAndUpdate(
+      req.params.id,
+      { 
+        approvalStatus: 'rejected',
+        rejectionReason,
+        rejectedAt: new Date(),
+        rejectedBy: req.user._id
+      },
+      { new: true }
+    );
+    
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer not found');
+    }
+    
+    return ApiResponse.success(res, 'Organizer rejected successfully', { organizer });
+  } catch (error) {
+    console.error('Reject organizer error:', error);
+    return ApiResponse.serverError(res, 'Error rejecting organizer', error);
+  }
+};
 
+// Decoupled Artist Management Functions
+
+/**
+ * @desc    Get all artists with detailed information
+ * @route   GET /api/admin/artists
+ * @access  Private (Admin only)
+ */
+exports.getAllArtists = async (req, res) => {
+  try {
+    const { status, limit = 50, page = 1, search } = req.query;
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    
+    let query = {};
+    
+    if (status) {
+      query.approvalStatus = status;
+    }
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { artistType: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const artists = await Artist.find(query)
+      .select('_id name email phone artistType approvalStatus createdAt bio experience portfolio socialMedia website')
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .sort({ createdAt: -1 });
+    
+    const total = await Artist.countDocuments(query);
+    
+    return ApiResponse.success(res, 'Artists retrieved successfully', {
+      artists,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    console.error('Get artists error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving artists', error);
+  }
+};
+
+/**
+ * @desc    Get artist by ID with full details
+ * @route   GET /api/admin/artists/:id
+ * @access  Private (Admin only)
+ */
+exports.getArtistById = async (req, res) => {
+  try {
+    const artist = await Artist.findById(req.params.id)
+      .select('_id name email phone artistType approvalStatus createdAt updatedAt bio experience portfolio socialMedia website rejectionReason');
+    
     if (!artist) {
-      return ApiResponse.notFound(res, 'Pending artist not found or already processed');
+      return ApiResponse.notFound(res, 'Artist not found');
     }
-
-    artist.approvalStatus = status;
-    artist.status = status === 'approved' ? 'active' : 'rejected';
-
-    if (status === 'approved') {
-      artist.approvalDate = new Date();
-      artist.approvedBy = req.user.id; // Assuming admin user is available in req.user
-      artist.rejectionReason = undefined;
-    } else if (status === 'rejected') {
-      if (!rejectionReason) {
-        return ApiResponse.badRequest(res, 'Rejection reason is required when rejecting an artist.');
-      }
-      artist.rejectionDate = new Date();
-      artist.rejectedBy = req.user.id;
-      artist.rejectionReason = rejectionReason;
-    }
-
-    await artist.save();
-
-    // TODO: Send notification to artist about approval/rejection
-
-    return ApiResponse.success(res, `Artist has been ${status}`, {
-      artist: {
-        id: artist._id,
-        name: artist.name,
-        email: artist.email,
-        phone: artist.phone,
-        status: artist.status,
-        approvalStatus: artist.approvalStatus
-      }
-    });
+    
+    return ApiResponse.success(res, 'Artist details retrieved successfully', { artist });
   } catch (error) {
-    console.error('Process artist approval error:', error);
-    return ApiResponse.serverError(res, 'Error processing artist approval', error);
+    console.error('Get artist by ID error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving artist details', error);
   }
 };
 
 /**
- * @desc    Approve/reject venue
- * @route   PUT /api/admin/approvals/venue/:id
+ * @desc    Approve artist
+ * @route   PUT /api/admin/artists/:id/approve
  * @access  Private (Admin only)
  */
-exports.processVenueApproval = async (req, res) => {
+exports.approveArtist = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, rejectionReason } = req.body;
+    const artist = await Artist.findByIdAndUpdate(
+      req.params.id,
+      { 
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: req.user._id
+      },
+      { new: true }
+    );
     
-    // Validate status
-    if (!['approved', 'rejected'].includes(status)) {
-      return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found');
     }
     
-    // Find the user
-    const user = await User.findOne({ _id: id, role: 'venue', status: 'pending' });
-    
-    if (!user) {
-      return ApiResponse.notFound(res, 'Pending venue not found');
-    }
-    
-    // Update user status
-    user.status = status === 'approved' ? 'active' : 'rejected';
-    
-    // Handle rejection
-    if (status === 'rejected' && rejectionReason) {
-      // TODO: Send notification to user about rejection with reason
-    }
-    
-    await user.save();
-    
-    return ApiResponse.success(res, `Venue has been ${status}`, {
-      venue: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        status: user.status
-      }
-    });
+    return ApiResponse.success(res, 'Artist approved successfully', { artist });
   } catch (error) {
-    console.error('Process venue approval error:', error);
-    return ApiResponse.serverError(res, 'Error processing venue approval', error);
+    console.error('Approve artist error:', error);
+    return ApiResponse.serverError(res, 'Error approving artist', error);
   }
 };
 
 /**
- * @desc    Approve/reject event
- * @route   PUT /api/admin/approvals/event/:id
+ * @desc    Reject artist
+ * @route   PUT /api/admin/artists/:id/reject
  * @access  Private (Admin only)
  */
-exports.processEventApproval = async (req, res) => {
+exports.rejectArtist = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, rejectionReason } = req.body;
+    const { rejectionReason } = req.body;
     
-    // Validate status
-    if (!['approved', 'rejected'].includes(status)) {
-      return ApiResponse.error(res, 'Invalid status value', { validStatus: ['approved', 'rejected'] });
+    const artist = await Artist.findByIdAndUpdate(
+      req.params.id,
+      { 
+        approvalStatus: 'rejected',
+        rejectionReason,
+        rejectedAt: new Date(),
+        rejectedBy: req.user._id
+      },
+      { new: true }
+    );
+    
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found');
     }
     
-    // Find the event with organizer info
-    const event = await Event.findOne({ _id: id, status: 'pending' })
-      .populate('organizer', 'name email phone');
+    return ApiResponse.success(res, 'Artist rejected successfully', { artist });
+  } catch (error) {
+    console.error('Reject artist error:', error);
+    return ApiResponse.serverError(res, 'Error rejecting artist', error);
+  }
+};
+
+// Decoupled Venue Management Functions
+
+/**
+ * @desc    Get all venues with detailed information
+ * @route   GET /api/admin/venues
+ * @access  Private (Admin only)
+ */
+exports.getAllVenues = async (req, res) => {
+  try {
+    const { status, limit = 50, page = 1, search } = req.query;
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    
+    let query = {};
+    
+    if (status) {
+      query.approvalStatus = status;
+    }
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { 'address.city': { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const venues = await Venue.find(query)
+      .select('_id name email phone approvalStatus createdAt description address capacity amenities contactInfo website')
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .sort({ createdAt: -1 });
+    
+    const total = await Venue.countDocuments(query);
+    
+    return ApiResponse.success(res, 'Venues retrieved successfully', {
+      venues,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    console.error('Get venues error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving venues', error);
+  }
+};
+
+/**
+ * @desc    Get venue by ID with full details
+ * @route   GET /api/admin/venues/:id
+ * @access  Private (Admin only)
+ */
+exports.getVenueById = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.params.id)
+      .select('_id name email phone approvalStatus createdAt updatedAt description address capacity amenities contactInfo website images rejectionReason');
+    
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    
+    return ApiResponse.success(res, 'Venue details retrieved successfully', { venue });
+  } catch (error) {
+    console.error('Get venue by ID error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving venue details', error);
+  }
+};
+
+/**
+ * @desc    Get all events with detailed information
+ * @route   GET /api/admin/events/all
+ * @access  Private (Admin only)
+ */
+exports.getAllEvents = async (req, res) => {
+  try {
+    const { status, limit = 50, page = 1, search } = req.query;
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    
+    let query = {};
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const events = await Event.find(query)
+      .populate('organizer', 'name email companyName')
+      .populate('venue', 'name address')
+      .select('_id title description category startDate endDate status createdAt location ticketTypes maxAttendees')
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .sort({ createdAt: -1 });
+    
+    const total = await Event.countDocuments(query);
+    
+    return ApiResponse.success(res, 'Events retrieved successfully', {
+      events,
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        pages: Math.ceil(total / parseInt(limit, 10))
+      }
+    });
+  } catch (error) {
+    console.error('Get events error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving events', error);
+  }
+};
+
+/**
+ * @desc    Get event by ID with full details
+ * @route   GET /api/admin/events/:id/details
+ * @access  Private (Admin only)
+ */
+exports.getEventById = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id)
+      .populate('organizer', 'name email phone companyName')
+      .populate('venue', 'name address contactInfo')
+      .select('_id title description category startDate endDate status createdAt updatedAt location ticketTypes maxAttendees images rejectionReason');
     
     if (!event) {
-      return ApiResponse.notFound(res, 'Pending event not found');
+      return ApiResponse.notFound(res, 'Event not found');
     }
     
-    // Fix coordinates if they are incomplete
-    if (event.location && event.location.coordinates) {
-      if (!event.location.coordinates.coordinates || !Array.isArray(event.location.coordinates.coordinates)) {
-        event.location.coordinates = {
-          type: 'Point',
-          coordinates: [0, 0] // Default coordinates
-        };
-      }
-    }
-    
-    // Update event status and approval status
-    event.status = status;
-    event.approvalStatus = status;
-    
-    // Handle approval
-    if (status === 'approved') {
-      event.approvedBy = req.user.id;
-      event.approvedAt = new Date();
-      event.rejectionReason = undefined; // Clear any previous rejection reason
-    }
-    
-    // Handle rejection
-    if (status === 'rejected') {
-      event.rejectionReason = rejectionReason;
-      event.approvedBy = undefined;
-      event.approvedAt = undefined;
-    }
-    
-    await event.save();
-    
-    // TODO: Send notification to organizer about approval/rejection
-    // This could be implemented with a notification service
-    
-    return ApiResponse.success(res, `Event "${event.title}" has been ${status}`, {
-      event: {
-        id: event._id,
-        title: event.title,
-        status: event.status,
-        approvalStatus: event.approvalStatus,
-        rejectionReason: event.rejectionReason,
-        approvedBy: event.approvedBy,
-        approvedAt: event.approvedAt,
-        organizer: event.organizer
-      }
-    });
+    return ApiResponse.success(res, 'Event details retrieved successfully', { event });
   } catch (error) {
-    console.error('Process event approval error:', error);
-    return ApiResponse.serverError(res, 'Error processing event approval', error);
+    console.error('Get event by ID error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving event details', error);
+  }
+};
+
+/**
+ * @desc    Approve event
+ * @route   PUT /api/admin/events/:id/approve
+ * @access  Private (Admin only)
+ */
+exports.approveEvent = async (req, res) => {
+  try {
+    const event = await Event.findByIdAndUpdate(
+      req.params.id,
+      { 
+        status: 'approved',
+        approvedAt: new Date(),
+        approvedBy: req.user._id
+      },
+      { new: true }
+    );
+    
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+    
+    return ApiResponse.success(res, 'Event approved successfully', { event });
+  } catch (error) {
+    console.error('Approve event error:', error);
+    return ApiResponse.serverError(res, 'Error approving event', error);
+  }
+};
+
+/**
+ * @desc    Reject event
+ * @route   PUT /api/admin/events/:id/reject
+ * @access  Private (Admin only)
+ */
+exports.rejectEvent = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    
+    const event = await Event.findByIdAndUpdate(
+      req.params.id,
+      { 
+        status: 'rejected',
+        rejectionReason,
+        rejectedAt: new Date(),
+        rejectedBy: req.user._id
+      },
+      { new: true }
+    );
+    
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+    
+    return ApiResponse.success(res, 'Event rejected successfully', { event });
+  } catch (error) {
+    console.error('Reject event error:', error);
+    return ApiResponse.serverError(res, 'Error rejecting event', error);
   }
 };
 
@@ -573,48 +620,87 @@ exports.processEventApproval = async (req, res) => {
 exports.getPendingEvents = async (req, res) => {
   try {
     const { limit = 10, page = 1, search } = req.query;
-    
-    // Calculate pagination
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    
-    // Build search query
-    const searchQuery = search ? {
-      $or: [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { category: { $regex: search, $options: 'i' } }
-      ]
-    } : {};
-    
-    // Get pending events with organizer details
-    const pendingEvents = await Event.find({
-      status: 'pending',
-      ...searchQuery
-    })
-    .populate('organizer', 'name email phone')
-    .select('_id title description banner category startDate endDate location ticketTypes createdAt')
-    .skip(skip)
-    .limit(parseInt(limit, 10))
-    .sort({ createdAt: -1 });
-    
-    // Get total count
-    const total = await Event.countDocuments({
-      status: 'pending',
-      ...searchQuery
-    });
-    
+
+    const searchQuery = search
+      ? {
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+            { category: { $regex: search, $options: 'i' } },
+          ],
+        }
+      : {};
+
+    const [events, total] = await Promise.all([
+      Event.find({ status: 'pending', ...searchQuery })
+        .populate('organizer', 'name email phone')
+        .select(
+          '_id title description category startDate endDate status createdAt organizer'
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit, 10)),
+      Event.countDocuments({ status: 'pending', ...searchQuery }),
+    ]);
+
     return ApiResponse.success(res, 'Pending events retrieved successfully', {
-      events: pendingEvents,
+      events,
       pagination: {
         total,
         page: parseInt(page, 10),
         limit: parseInt(limit, 10),
-        pages: Math.ceil(total / parseInt(limit, 10))
-      }
+        pages: Math.ceil(total / parseInt(limit, 10)),
+      },
     });
   } catch (error) {
     console.error('Get pending events error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving pending events', error);
+    return ApiResponse.serverError(
+      res,
+      'Error retrieving pending events',
+      error
+    );
+  }
+};
+
+/**
+ * @desc    Get all approvals (legacy - for backward compatibility)
+ * @route   GET /api/admin/approvals
+ * @access  Private (Admin only)
+ */
+exports.getPendingApprovals = async (req, res) => {
+  try {
+    const organizers = await Organizer.find({})
+      .select('_id name email phone companyName approvalStatus createdAt')
+      .sort({ createdAt: -1 });
+    
+    const artists = await Artist.find({})
+      .select('_id name email phone approvalStatus createdAt')
+      .sort({ createdAt: -1 });
+    
+    const venues = await Venue.find({})
+      .select('_id name email phone approvalStatus createdAt')
+      .sort({ createdAt: -1 });
+    
+    const events = await Event.find({})
+      .select('_id title status createdAt')
+      .sort({ createdAt: -1 });
+    
+    return ApiResponse.success(res, 'All approvals retrieved successfully', {
+      organizers,
+      artists,
+      venues,
+      events,
+      pagination: {
+        total: organizers.length + artists.length + venues.length + events.length,
+        page: 1,
+        limit: 1000,
+        pages: 1
+      }
+    });
+  } catch (error) {
+    console.error('Get approvals error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving approvals', error);
   }
 };
 

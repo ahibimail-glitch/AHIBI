@@ -27,35 +27,42 @@ router.get('/fc25/players', eventController.getFC25PlayersAdmin);
 // Dashboard statistics
 router.get('/dashboard', adminController.getDashboardStats);
 
-// Pending approvals routes
+// Decoupled approval routes for each entity type
+
+// Organizer routes
+router.get('/organizers', adminController.getAllOrganizers);
+router.get('/organizers/:id', adminController.getOrganizerById);
+router.put('/organizers/:id/approve', adminController.approveOrganizer);
+router.put('/organizers/:id/reject', [
+  check('rejectionReason', 'Rejection reason is required').notEmpty()
+], adminController.rejectOrganizer);
+
+// Artist routes  
+router.get('/artists', adminController.getAllArtists);
+router.get('/artists/:id', adminController.getArtistById);
+router.put('/artists/:id/approve', adminController.approveArtist);
+router.put('/artists/:id/reject', [
+  check('rejectionReason', 'Rejection reason is required').notEmpty()
+], adminController.rejectArtist);
+
+// Venue routes
+router.get('/venues', adminController.getAllVenues);
+router.get('/venues/:id', adminController.getVenueById);
+router.put('/venues/:id/approve', adminController.approveVenue);
+router.put('/venues/:id/reject', [
+  check('rejectionReason', 'Rejection reason is required').notEmpty()
+], adminController.rejectVenue);
+
+// Event routes
+router.get('/events/all', adminController.getAllEvents);
+router.get('/events/:id/details', adminController.getEventById);
+router.put('/events/:id/approve', adminController.approveEvent);
+router.put('/events/:id/reject', [
+  check('rejectionReason', 'Rejection reason is required').notEmpty()
+], adminController.rejectEvent);
+
+// Legacy combined approvals route (for backward compatibility)
 router.get('/approvals', adminController.getPendingApprovals);
-router.put('/approvals/organizer/:id', [
-  check('status', 'Status is required').isIn(['approved', 'rejected']),
-  check('rejectionReason', 'Rejection reason is required when status is rejected')
-    .if((value, { req }) => req.body.status === 'rejected')
-    .notEmpty()
-], adminController.processOrganizerApproval);
-
-router.put('/approvals/artist/:id', [
-  check('status', 'Status is required').isIn(['approved', 'rejected']),
-  check('rejectionReason', 'Rejection reason is required when status is rejected')
-    .if((value, { req }) => req.body.status === 'rejected')
-    .notEmpty()
-], adminController.processArtistApproval);
-
-router.put('/approvals/venue/:id', [
-  check('status', 'Status is required').isIn(['approved', 'rejected']),
-  check('rejectionReason', 'Rejection reason is required when status is rejected')
-    .if((value, { req }) => req.body.status === 'rejected')
-    .notEmpty()
-], adminController.processVenueApproval);
-
-router.put('/approvals/event/:id', [
-  check('status', 'Status is required').isIn(['approved', 'rejected']),
-  check('rejectionReason', 'Rejection reason is required when status is rejected')
-    .if((value, { req }) => req.body.status === 'rejected')
-    .notEmpty()
-], adminController.processEventApproval);
 
 // User management routes
 router.get('/users', adminController.getUsers);
