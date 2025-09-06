@@ -221,12 +221,12 @@ export default function EventApprovalList() {
               </p>
               <p className="text-sm text-gray-500 flex items-center">
                 <Clock className="h-3 w-3 mr-1" />
-                {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+                {event.startDate ? new Date(event.startDate).toLocaleDateString() : 'No start date'} - {event.endDate ? new Date(event.endDate).toLocaleDateString() : 'No end date'}
               </p>
               {event.organizer && (
                 <p className="text-sm text-gray-500 flex items-center">
                   <Mail className="h-3 w-3 mr-1" />
-                  {event.organizer.name} ({event.organizer.email})
+                  {event.organizer.name || 'Unknown'} ({event.organizer.email || 'No email'})
                 </p>
               )}
               <div className="flex items-center space-x-2 mt-2">
@@ -295,8 +295,8 @@ export default function EventApprovalList() {
                     Event Dates
                   </label>
                   <p className="text-sm text-gray-600 mt-1">
-                    Start: {new Date(event.startDate).toLocaleString()}<br/>
-                    End: {new Date(event.endDate).toLocaleString()}
+                    Start: {event.startDate ? new Date(event.startDate).toLocaleString() : 'Not specified'}<br/>
+                    End: {event.endDate ? new Date(event.endDate).toLocaleString() : 'Not specified'}
                   </p>
                 </div>
                 
@@ -307,7 +307,9 @@ export default function EventApprovalList() {
                   </label>
                   <p className="text-sm text-gray-600 mt-1">
                     {event.location ? 
-                      `${event.location.address || ''}, ${event.location.city || ''}, ${event.location.state || ''}, ${event.location.country || ''}`.replace(/^,\s*|,\s*$/g, '') || 'Not provided'
+                      [event.location.address, event.location.city, event.location.state, event.location.country]
+                        .filter(Boolean)
+                        .join(', ') || 'Not provided'
                       : 'Not provided'
                     }
                   </p>
