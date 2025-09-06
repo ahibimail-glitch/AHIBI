@@ -4,6 +4,7 @@ const { check } = require('express-validator');
 const artistAuthController = require('../controllers/artistAuthController');
 const artistBookingController = require('../controllers/artistBookingController');
 const artistProfileController = require('../controllers/artistProfileController');
+const artistAvailabilityController = require('../controllers/artistAvailabilityController');
 const { protect, authorize } = require('../middlewares/auth');
 
 // Public routes
@@ -79,5 +80,26 @@ router.delete('/accolades/:accoladeId', protect, authorize('artist'), artistProf
 
 // Social links management
 router.put('/social-links', protect, authorize('artist'), artistProfileController.updateSocialLinks);
+
+// Availability management routes
+router.get('/availability', protect, authorize('artist'), artistAvailabilityController.getArtistAvailability);
+router.post('/availability', [
+  protect,
+  authorize('artist'),
+  check('date', 'Date is required').isISO8601(),
+  check('timeSlots', 'Time slots are required').isArray({ min: 1 })
+], artistAvailabilityController.setArtistAvailability);
+router.put('/availability/:id', protect, authorize('artist'), artistAvailabilityController.updateArtistAvailability);
+router.delete('/availability/:id', protect, authorize('artist'), artistAvailabilityController.deleteArtistAvailability);
+router.post('/availability/bulk', [
+  protect,
+  authorize('artist'),
+  check('dates', 'Dates array is required').isArray({ min: 1 }),
+  check('timeSlots', 'Time slots are required').isArray({ min: 1 })
+], artistAvailabilityController.bulkSetAvailability);
+router.get('/calendar-overview', protect, authorize('artist'), artistAvailabilityController.getCalendarOverview);
+
+// Public availability routes (for organizers to view)
+router.get('/:artistId/availability/:date', artistAvailabilityController.getAvailableSlots);
 
 module.exports = router;

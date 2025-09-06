@@ -33,6 +33,8 @@ import Bookings from "../components/Bookings"
 import CreateEventForm from "../components/CreateEventForm"
 import Analytics from "../components/Analytics"
 import SettingsComponent from "../components/Settings"
+import ArtistBookingCalendar from "@/components/organizer/ArtistBookingCalendar"
+import BookingManagement from "@/components/organizer/BookingManagement"
 
 interface OrganizerUser {
   id: string
@@ -114,6 +116,10 @@ export default function OrganizerDashboard() {
         return <Events filterStatus="pending" />
       case "bookings":
         return <Bookings />
+      case "artist-booking":
+        return <ArtistBookingCalendar />
+      case "booking-management":
+        return <BookingManagement />
       case "create-event":
         return <CreateEventForm onSuccess={() => setActiveView("dashboard")} />
       case "analytics":
@@ -184,6 +190,18 @@ export default function OrganizerDashboard() {
             label="Bookings" 
             active={activeView === "bookings"} 
             onClick={() => setActiveView("bookings")} 
+          />
+          <SidebarButton 
+            icon={Music} 
+            label="Book Artists" 
+            active={activeView === "artist-booking"} 
+            onClick={() => setActiveView("artist-booking")} 
+          />
+          <SidebarButton 
+            icon={Calendar} 
+            label="Manage Bookings" 
+            active={activeView === "booking-management"} 
+            onClick={() => setActiveView("booking-management")} 
           />
           <SidebarButton 
             icon={PlusCircle} 

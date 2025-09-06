@@ -2,7 +2,8 @@ const express = require('express');
 const { check } = require('express-validator');
 const organizerAuthController = require('../controllers/organizerAuthController');
 const eventController = require('../controllers/eventController');
-const { protect } = require('../middlewares/auth');
+const organizerBookingController = require('../controllers/organizerBookingController');
+const { protect, authorize } = require('../middlewares/auth');
 
 const router = express.Router();
 
@@ -53,5 +54,40 @@ router.get('/events', protect, eventController.getOrganizerEvents);
 router.get('/events/:id', protect, eventController.getOrganizerEventById);
 router.put('/events/:id', protect, eventController.updateOrganizerEvent);
 router.delete('/events/:id', protect, eventController.deleteOrganizerEvent);
+
+// Artist booking routes for organizers
+router.get('/artists/search', protect, authorize('organizer'), organizerBookingController.searchArtistsWithAvailability);
+router.get('/artists/:artistId/calendar', protect, authorize('organizer'), organizerBookingController.getArtistCalendar);
+router.post('/bookings', [
+  protect,
+  authorize('organizer'),
+  check('artistId', 'Artist ID is required').isMongoId(),
+  check('event.name', 'Event name is required').notEmpty(),
+  check('event.date', 'Event date is required').isISO8601(),
+  check('event.startTime', 'Start time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  check('event.endTime', 'End time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  check('event.venue.name', 'Venue name is required').notEmpty(),
+  check('event.venue.address', 'Venue address is required').notEmpty(),
+  check('event.eventType', 'Event type is required').notEmpty(),
+  check('requestedAmount', 'Requested amount is required').isNumeric()
+], organizerBookingController.createBookingRequest);
+router.get('/bookings', protect, authorize('organizer'), organizerBookingController.getOrganizerBookings);
+router.get('/bookings/:id', protect, authorize('organizer'), organizerBookingController.getBookingDetails);
+router.put('/bookings/:id/accept-counter-offer', protect, authorize('organizer'), organizerBookingController.acceptCounterOffer);
+router.put('/bookings/:id/reject-counter-offer', [
+  protect,
+  authorize('organizer'),
+  check('reason', 'Reason is required').optional().notEmpty()
+], organizerBookingController.rejectCounterOffer);
+router.put('/bookings/:id/cancel', [
+  protect,
+  authorize('organizer'),
+  check('reason', 'Reason is required').optional().notEmpty()
+], organizerBookingController.cancelBooking);
+router.post('/bookings/:id/message', [
+  protect,
+  authorize('organizer'),
+  check('message', 'Message is required').notEmpty()
+], organizerBookingController.addBookingMessage);
 
 module.exports = router;

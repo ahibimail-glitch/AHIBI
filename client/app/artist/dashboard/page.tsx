@@ -37,6 +37,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import GalleryManager from "@/components/artist/GalleryManager";
 import AccoladesManager from "@/components/artist/AccoladesManager";
 import TermsManager from "@/components/artist/TermsManager";
+import AvailabilityCalendar from "@/components/artist/AvailabilityCalendar";
 
 interface ArtistUser {
   _id: string;
@@ -581,21 +582,12 @@ export default function ArtistDashboard() {
           </TabsContent>
 
           <TabsContent value="calendar">
-            <Card>
-              <CardHeader>
-                <CardTitle>Availability Calendar</CardTitle>
-                <CardDescription>
-                  Manage your availability for bookings
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-96 border rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">
-                    Interactive calendar component would be implemented here
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <AvailabilityCalendar 
+              onUpdate={() => {
+                const token = localStorage.getItem('artist_token');
+                if (token) fetchArtistProfile(token);
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="gallery">
