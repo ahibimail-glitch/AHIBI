@@ -62,6 +62,8 @@ interface Venue {
   approvalStatus: string;
 }
 
+type ApprovalItem = Event | Organizer | Artist | Venue;
+
 interface ApprovalListProps {
   type: "Organizer" | "Artist" | "Venue" | "Event";
 }
@@ -135,7 +137,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       const token = localStorage.getItem('admin_token');
       
       const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/approve/${itemType}/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/${itemType}s/${id}/approve`,
         {},
         {
           headers: {
@@ -174,7 +176,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       const token = localStorage.getItem('admin_token');
       
       const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/reject/${itemType}/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/admin/${itemType}s/${id}/reject`,
         { rejectionReason: reason },
         {
           headers: {
@@ -226,9 +228,9 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     );
   }
 
-  const renderBasicRow = (item: any, itemType: string) => {
+  const renderBasicRow = (item: ApprovalItem, itemType: string) => {
     const isExpanded = expandedItems.has(item._id);
-    const status = itemType === 'Event' ? item.status : item.approvalStatus;
+    const status = 'status' in item ? item.status : item.approvalStatus;
 
     return (
       <div key={item._id} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -323,7 +325,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
     );
   };
 
-  const renderSection = (items: any[], sectionTitle: string, itemType: string) => {
+  const renderSection = (items: ApprovalItem[], sectionTitle: string, itemType: string) => {
     if (items.length === 0) return null;
     return (
       <div className="mb-6">
@@ -348,9 +350,9 @@ export default function ApprovalList({ type }: ApprovalListProps) {
       default:        return <p>Invalid type</p>;
     }
 
-    const pendingItems = data.filter(item => (itemType === 'Event' ? item.status : item.approvalStatus) === 'pending');
-    const approvedItems = data.filter(item => (itemType === 'Event' ? item.status : item.approvalStatus) === 'approved');
-    const rejectedItems = data.filter(item => (itemType === 'Event' ? item.status : item.approvalStatus) === 'rejected');
+    const pendingItems = data.filter(item => ('status' in item ? item.status : item.approvalStatus) === 'pending');
+    const approvedItems = data.filter(item => ('status' in item ? item.status : item.approvalStatus) === 'approved');
+    const rejectedItems = data.filter(item => ('status' in item ? item.status : item.approvalStatus) === 'rejected');
 
     if (data.length === 0) {
       return (

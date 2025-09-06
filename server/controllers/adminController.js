@@ -506,9 +506,8 @@ exports.getAllEvents = async (req, res) => {
     }
     
     const events = await Event.find(query)
-      .populate('organizer', 'name email companyName')
-      .populate('venue', 'name address')
-      .select('_id title description category startDate endDate status createdAt location ticketTypes maxAttendees')
+      .populate('organizer', 'name email phone companyName')
+      .populate('venue', 'name address contactInfo')
       .skip(skip)
       .limit(parseInt(limit, 10))
       .sort({ createdAt: -1 });

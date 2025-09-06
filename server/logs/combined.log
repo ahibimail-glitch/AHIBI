@@ -63,3 +63,14 @@
 {"level":"error","message":"Photo upload failed: Upload failed: cloud_name is disabled","service":"ahibi-association","timestamp":"2025-09-02 00:47:29"}
 {"level":"info","message":"Photo uploaded successfully: ahibi/iu59j4zm5c5qpmlspedq by user anonymous","service":"ahibi-association","timestamp":"2025-09-02 00:50:51"}
 {"level":"info","message":"Photo uploaded successfully: ahibi/ef5xalwncogtgin2qgz4 by user anonymous","service":"ahibi-association","timestamp":"2025-09-02 00:51:19"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/vhhoygs9pjlxk9slkirk by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 22:48:03"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 22:55:12"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 22:55:29"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/m6g8tmsgihwlncbjv0oh by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 22:56:40"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:03:27"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:04:28"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:04:48"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:06:37"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:07:23"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/b3vpjaaq3rngygp7kbxb by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 23:07:38"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/x3unaf0w9rhni9njzwoc by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 23:10:14"}
