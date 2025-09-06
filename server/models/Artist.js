@@ -84,6 +84,14 @@ const ArtistSchema = new mongoose.Schema({
       },
       caption: {
         type: String
+      },
+      isProfileImage: {
+        type: Boolean,
+        default: false
+      },
+      isCoverImage: {
+        type: Boolean,
+        default: false
       }
     }],
     videos: [{
@@ -95,8 +103,63 @@ const ArtistSchema = new mongoose.Schema({
       },
       caption: {
         type: String
+      },
+      platform: {
+        type: String,
+        enum: ['youtube', 'vimeo', 'instagram', 'other']
       }
     }]
+  },
+  accolades: [{
+    title: {
+      type: String,
+      required: true
+    },
+    description: {
+      type: String
+    },
+    year: {
+      type: Number
+    },
+    organization: {
+      type: String
+    },
+    certificate: {
+      type: String // URL to certificate image
+    }
+  }],
+  termsAndConditions: {
+    content: {
+      type: String,
+      default: `
+1. Payment Terms: 50% advance payment required to confirm booking, remaining 50% to be paid before the event.
+2. Cancellation Policy: 
+   - 30+ days before event: Full refund minus 10% processing fee
+   - 15-29 days before event: 50% refund
+   - Less than 15 days: No refund
+3. Performance Requirements: Adequate sound system and stage setup to be provided by organizer.
+4. Travel & Accommodation: For outstation events, travel and accommodation costs to be borne by organizer.
+5. Force Majeure: Artist not liable for cancellations due to natural disasters, illness, or government restrictions.
+6. Content: Artist reserves the right to perform original content and covers as per repertoire.
+      `.trim()
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  cancellationPolicy: {
+    advanceNotice: {
+      type: Number,
+      default: 48 // hours
+    },
+    refundPolicy: {
+      type: String,
+      default: 'Refund as per terms and conditions'
+    },
+    emergencyContact: {
+      type: String
+    }
   },
   socialLinks: {
     instagram: {

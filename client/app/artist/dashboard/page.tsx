@@ -27,11 +27,16 @@ import {
   Camera,
   Play,
   AlertCircle,
+  Award,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import GalleryManager from "@/components/artist/GalleryManager";
+import AccoladesManager from "@/components/artist/AccoladesManager";
+import TermsManager from "@/components/artist/TermsManager";
 
 interface ArtistUser {
   _id: string;
@@ -60,8 +65,32 @@ interface ArtistProfile {
     youtube?: string;
     [key: string]: string | undefined;
   };
-  rating?: number;
+  rating?: {
+    average: number;
+    count: number;
+  };
   totalBookings?: number;
+}
+
+interface BookingRequest {
+  _id: string;
+  event: {
+    name: string;
+    date: string;
+    venue: {
+      name: string;
+      address: string;
+    };
+  };
+  organizer: {
+    name: string;
+    email: string;
+  };
+  booking: {
+    requestedAmount: number;
+    status: string;
+  };
+  createdAt: string;
 }
 
 export default function ArtistDashboard() {
@@ -89,6 +118,8 @@ export default function ArtistDashboard() {
       
       // Fetch artist profile
       fetchArtistProfile(token);
+      // Fetch bookings
+      fetchBookings();
     } catch (error) {
       console.error('Error parsing user data:', error);
       setError('Error loading user data. Please login again.');
@@ -109,7 +140,7 @@ export default function ArtistDashboard() {
       }
 
       const data = await response.json();
-      setProfile(data.data);
+      setProfile(data.data.artist);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching artist profile:', error);
@@ -132,27 +163,64 @@ export default function ArtistDashboard() {
     // This would make a PUT request to /api/artist/profile
   };
 
-  // Mock data for bookings and events (would be replaced with API calls)
-  const bookingRequests = [
-    {
-      id: 1,
-      event: "Wedding Reception",
-      organizer: "Sharma Family",
-      date: "July 25, 2024",
-      venue: "Grand Ballroom, Mumbai",
-      offer: "₹30,000",
-      status: "pending",
-    },
-    {
-      id: 2,
-      event: "Corporate Party",
-      organizer: "Tech Corp",
-      date: "August 5, 2024",
-      venue: "Hotel Taj, Delhi",
-      offer: "₹45,000",
-      status: "pending",
-    },
-  ];
+  // State for bookings
+  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  // Fetch booking requests
+  const fetchBookings = async () => {
+    try {
+      setLoadingBookings(true);
+      const token = localStorage.getItem('artist_token');
+      const response = await fetch('/api/artist/bookings?status=pending', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBookingRequests(data.data.bookings || []);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  // Handle booking actions
+  const handleBookingAction = async (bookingId: string, action: 'accept' | 'decline', counterOffer?: { amount: number, message: string }) => {
+    try {
+      const token = localStorage.getItem('artist_token');
+      let endpoint = `/api/artist/bookings/${bookingId}/${action}`;
+      let body = {};
+
+      if (action === 'decline') {
+        const reason = prompt('Please provide a reason for declining:');
+        if (!reason) return;
+        body = { reason };
+      } else if (counterOffer) {
+        endpoint = `/api/artist/bookings/${bookingId}/counter-offer`;
+        body = counterOffer;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (response.ok) {
+        fetchBookings(); // Refresh bookings
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing booking:`, error);
+    }
+  };
 
   const upcomingEvents = [
     {
@@ -357,10 +425,10 @@ export default function ArtistDashboard() {
                   </Button>
                 </div>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                  {profile?.rating && (
+                  {profile?.rating && typeof profile.rating === 'object' && 'average' in profile.rating && profile.rating.average > 0 && (
                     <div className="flex items-center">
                       <Star className="h-4 w-4 mr-1 text-yellow-500" />
-                      {profile.rating} ({profile.totalBookings || 0} bookings)
+                      {profile.rating.average.toFixed(1)} ({profile.rating.count || 0} reviews)
                     </div>
                   )}
                   <div className="flex items-center">
@@ -391,16 +459,18 @@ export default function ArtistDashboard() {
         </Card>
 
         <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="accolades">Accolades</TabsTrigger>
+            <TabsTrigger value="terms">Terms</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
               {/* Booking Requests */}
               <Card>
                 <CardHeader>
@@ -412,34 +482,52 @@ export default function ArtistDashboard() {
                 <CardContent className="space-y-4">
                   {bookingRequests.length > 0 ? (
                     bookingRequests.map((request) => (
-                      <div key={request.id} className="p-4 border rounded-lg">
+                      <div key={request._id} className="p-4 border rounded-lg">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold">{request.event}</h3>
-                          <Badge variant="outline">{request.offer}</Badge>
+                          <h3 className="font-semibold">{request.event.name}</h3>
+                          <Badge variant="outline">₹{request.booking.requestedAmount}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">
-                          by {request.organizer}
+                          by {request.organizer.name}
                         </p>
                         <p className="text-sm text-muted-foreground mb-1">
                           <Calendar className="h-4 w-4 inline mr-1" />
-                          {request.date}
+                          {new Date(request.event.date).toLocaleDateString()}
                         </p>
                         <p className="text-sm text-muted-foreground mb-3">
                           <MapPin className="h-4 w-4 inline mr-1" />
-                          {request.venue}
+                          {request.event.venue.name}
                         </p>
                         <div className="flex space-x-2">
-                          <Button size="sm" className="flex-1">
+                          <Button 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => handleBookingAction(request._id, 'accept')}
+                          >
                             Accept
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             className="flex-1 bg-transparent"
+                            onClick={() => {
+                              const amount = prompt('Enter counter offer amount:');
+                              const message = prompt('Add a message (optional):');
+                              if (amount) {
+                                handleBookingAction(request._id, 'accept', {
+                                  amount: parseInt(amount),
+                                  message: message || ''
+                                });
+                              }
+                            }}
                           >
                             Counter Offer
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleBookingAction(request._id, 'decline')}
+                          >
                             Decline
                           </Button>
                         </div>
@@ -454,7 +542,7 @@ export default function ArtistDashboard() {
               </Card>
 
               {/* Upcoming Events */}
-              <Card>
+              {/* <Card>
                 <CardHeader>
                   <CardTitle>Upcoming Events</CardTitle>
                   <CardDescription>Your confirmed performances</CardDescription>
@@ -488,7 +576,7 @@ export default function ArtistDashboard() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
+              </Card> */}
             </div>
           </TabsContent>
 
@@ -511,43 +599,37 @@ export default function ArtistDashboard() {
           </TabsContent>
 
           <TabsContent value="gallery">
-            <Card>
-              <CardHeader>
-                <CardTitle>Media Gallery</CardTitle>
-                <CardDescription>
-                  Showcase your work with photos and videos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {gallery.map((item, index) => (
-                    <div key={index} className="relative group">
-                      <Image
-                        src={item.src || "/images/carausel1.jpg"}
-                        alt={item.title}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                      {item.type === "video" && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <Play className="h-12 w-12 text-white bg-black/50 rounded-full p-3" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-end">
-                        <p className="text-white p-3 text-sm">{item.title}</p>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="h-48 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center">
-                    <Button variant="outline">
-                      <Camera className="h-4 w-4 mr-2" />
-                      Add Media
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <GalleryManager 
+              photos={profile?.gallery?.photos || []}
+              videos={profile?.gallery?.videos || []}
+              onUpdate={() => {
+                const token = localStorage.getItem('artist_token');
+                if (token) fetchArtistProfile(token);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="accolades">
+            <AccoladesManager 
+              accolades={profile?.accolades || []}
+              onUpdate={() => {
+                const token = localStorage.getItem('artist_token');
+                if (token) fetchArtistProfile(token);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="terms" className="space-y-6">
+            {profile && (
+              <TermsManager 
+                terms={profile.termsAndConditions || { content: '', lastUpdated: new Date().toISOString() }}
+                cancellationPolicy={profile.cancellationPolicy || { advanceNotice: 24, refundPolicy: '', emergencyContact: '' }}
+                onUpdate={() => {
+                  const token = localStorage.getItem('artist_token');
+                  if (token) fetchArtistProfile(token);
+                }}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="earnings">

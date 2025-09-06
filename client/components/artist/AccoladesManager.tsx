@@ -1,0 +1,327 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Award, Plus, Edit, Trash2, Calendar, Building } from "lucide-react";
+
+interface Accolade {
+  _id: string;
+  title: string;
+  description: string;
+  year: number;
+  organization: string;
+  certificate?: string;
+}
+
+interface AccoladesManagerProps {
+  accolades: Accolade[];
+  onUpdate: () => void;
+}
+
+export default function AccoladesManager({ accolades, onUpdate }: AccoladesManagerProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    year: new Date().getFullYear(),
+    organization: '',
+    certificate: ''
+  });
+
+  const resetForm = () => {
+    setForm({
+      title: '',
+      description: '',
+      year: new Date().getFullYear(),
+      organization: '',
+      certificate: ''
+    });
+  };
+
+  const handleAdd = async () => {
+    try {
+      const token = localStorage.getItem('artist_token');
+      const response = await fetch('/api/artist/accolades', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(form)
+      });
+
+      if (response.ok) {
+        resetForm();
+        setIsAdding(false);
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error adding accolade:', error);
+    }
+  };
+
+  const handleEdit = async (accoladeId: string) => {
+    try {
+      const token = localStorage.getItem('artist_token');
+      const response = await fetch(`/api/artist/accolades/${accoladeId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(form)
+      });
+
+      if (response.ok) {
+        resetForm();
+        setEditingId(null);
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error updating accolade:', error);
+    }
+  };
+
+  const handleRemove = async (accoladeId: string) => {
+    if (!confirm('Are you sure you want to remove this accolade?')) return;
+
+    try {
+      const token = localStorage.getItem('artist_token');
+      const response = await fetch(`/api/artist/accolades/${accoladeId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error removing accolade:', error);
+    }
+  };
+
+  const startEdit = (accolade: Accolade) => {
+    setForm({
+      title: accolade.title,
+      description: accolade.description,
+      year: accolade.year,
+      organization: accolade.organization,
+      certificate: accolade.certificate || ''
+    });
+    setEditingId(accolade._id);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center">
+            <Award className="h-5 w-5 mr-2" />
+            Accolades & Awards ({accolades.length})
+          </CardTitle>
+          <Dialog open={isAdding} onOpenChange={setIsAdding}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Accolade
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Accolade</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Award or recognition title"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Brief description of the accolade..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="year">Year</Label>
+                    <Input
+                      id="year"
+                      type="number"
+                      value={form.year}
+                      onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="organization">Organization</Label>
+                    <Input
+                      id="organization"
+                      value={form.organization}
+                      onChange={(e) => setForm({ ...form, organization: e.target.value })}
+                      placeholder="Awarding organization"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="certificate">Certificate URL (optional)</Label>
+                  <Input
+                    id="certificate"
+                    value={form.certificate}
+                    onChange={(e) => setForm({ ...form, certificate: e.target.value })}
+                    placeholder="https://example.com/certificate.jpg"
+                  />
+                </div>
+                <Button onClick={handleAdd} className="w-full">
+                  Add Accolade
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {accolades.length > 0 ? (
+            accolades.map((accolade) => (
+              <div key={accolade._id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg flex items-center">
+                      <Award className="h-5 w-5 mr-2 text-yellow-500" />
+                      {accolade.title}
+                    </h3>
+                    {accolade.description && (
+                      <p className="text-muted-foreground mt-1">{accolade.description}</p>
+                    )}
+                    <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {accolade.year}
+                      </span>
+                      {accolade.organization && (
+                        <span className="flex items-center">
+                          <Building className="h-4 w-4 mr-1" />
+                          {accolade.organization}
+                        </span>
+                      )}
+                    </div>
+                    {accolade.certificate && (
+                      <div className="mt-2">
+                        <a
+                          href={accolade.certificate}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm"
+                        >
+                          View Certificate
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => startEdit(accolade)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRemove(accolade._id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Award className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No accolades added yet</p>
+              <p className="text-sm">Add your awards and recognitions to showcase your achievements</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingId} onOpenChange={() => setEditingId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Accolade</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-title">Title *</Label>
+              <Input
+                id="edit-title"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="Award or recognition title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Brief description of the accolade..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-year">Year</Label>
+                <Input
+                  id="edit-year"
+                  type="number"
+                  value={form.year}
+                  onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-organization">Organization</Label>
+                <Input
+                  id="edit-organization"
+                  value={form.organization}
+                  onChange={(e) => setForm({ ...form, organization: e.target.value })}
+                  placeholder="Awarding organization"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-certificate">Certificate URL (optional)</Label>
+              <Input
+                id="edit-certificate"
+                value={form.certificate}
+                onChange={(e) => setForm({ ...form, certificate: e.target.value })}
+                placeholder="https://example.com/certificate.jpg"
+              />
+            </div>
+            <Button onClick={() => editingId && handleEdit(editingId)} className="w-full">
+              Update Accolade
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
