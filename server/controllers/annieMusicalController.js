@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const AnnieSeat = require("../models/AnnieSeat");
 const AnnieBooking = require("../models/AnnieBooking");
+const Scan = require("../models/Scan");
 const User = require("../models/User");
 const mongoose = require('mongoose'); // mongoose is required for sessions
 
@@ -559,6 +560,241 @@ setInterval(cleanupExpiredBookings, 5 * 60 * 1000);
 // Run cleanup on server start
 cleanupExpiredBookings().catch(console.error);
 
+// @desc    Verify Annie Musical ticket for QR scanner
+// @route   POST /api/annie-musical/verify-ticket
+// @access  Private (Admin)
+const verifyAnnieTicket = asyncHandler(async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    // First check in AnnieBooking collection
+    let booking = await AnnieBooking.findById(bookingId)
+      .populate('userId', 'name email phone')
+      .populate('seats', 'row number price');
+
+    if (!booking) {
+      // Also check in main Booking collection for Annie Musical bookings
+      booking = await Booking.findById(bookingId).populate('user', 'name email phone');
+      
+      if (!booking) {
+        return res.status(404).json({ 
+          message: 'Annie Musical booking not found', 
+          status: 'INVALID' 
+        });
+      }
+
+      // Handle main Booking collection Annie Musical tickets
+      if (booking.event && booking.event.toString() === '000000000000000000000001') {
+        // This is an Annie Musical booking in main collection
+        const scanCount = await Scan.countDocuments({ ticket: bookingId });
+        
+        if (scanCount >= 1) {
+          return res.status(200).json({
+            message: 'This Annie Musical ticket has already been used.',
+            status: 'ALREADY_USED',
+            bookingId: booking._id,
+            userId: booking.user._id,
+            userName: booking.user.name,
+            userEmail: booking.user.email,
+            userPhone: booking.user.phone,
+            seats: [{ id: 'General', price: booking.price, category: 'Standard' }],
+            totalAmount: booking.total,
+            checkedInAt: booking.checkedInAt,
+            paymentId: booking.paymentId,
+            transactionId: booking.transactionId,
+            bookedAt: booking.bookedAt
+          });
+        }
+
+        return res.status(200).json({
+          message: 'Annie Musical ticket verified successfully.',
+          status: 'VALID',
+          bookingId: booking._id,
+          userId: booking.user._id,
+          userName: booking.user.name,
+          userEmail: booking.user.email,
+          userPhone: booking.user.phone,
+          seats: [{ id: 'General', price: booking.price, category: 'Standard' }],
+          totalAmount: booking.total,
+          paymentId: booking.paymentId,
+          transactionId: booking.transactionId,
+          bookedAt: booking.bookedAt
+        });
+      }
+    }
+
+    // Handle AnnieBooking collection
+    if (booking.status !== 'confirmed') {
+      return res.status(400).json({
+        message: `Annie Musical booking status is ${booking.status}, not confirmed`,
+        status: 'INVALID'
+      });
+    }
+
+    // Check if already used (using booking ID as ticket reference)
+    const scanCount = await Scan.countDocuments({ ticket: bookingId });
+    
+    if (scanCount >= 1) {
+      return res.status(200).json({
+        message: 'This Annie Musical ticket has already been used.',
+        status: 'ALREADY_USED',
+        bookingId: booking._id,
+        userId: booking.userId._id,
+        userName: booking.userId.name,
+        userEmail: booking.userId.email,
+        userPhone: booking.userId.phone,
+        seats: booking.seats.map(seat => ({
+          id: `${seat.row}${seat.number}`,
+          price: seat.price,
+          category: seat.row >= 'D' ? 'Premium' : 'Standard'
+        })),
+        totalAmount: booking.totalPrice,
+        checkedInAt: booking.checkedInAt,
+        paymentId: booking.razorpayPaymentId,
+        transactionId: booking.razorpayOrderId,
+        bookedAt: booking.createdAt
+      });
+    }
+
+    // Ticket is valid
+    res.status(200).json({
+      message: 'Annie Musical ticket verified successfully.',
+      status: 'VALID',
+      bookingId: booking._id,
+      userId: booking.userId._id,
+      userName: booking.userId.name,
+      userEmail: booking.userId.email,
+      userPhone: booking.userId.phone,
+      seats: booking.seats.map(seat => ({
+        id: `${seat.row}${seat.number}`,
+        price: seat.price,
+        category: seat.row >= 'D' ? 'Premium' : 'Standard'
+      })),
+      totalAmount: booking.totalPrice,
+      paymentId: booking.razorpayPaymentId,
+      transactionId: booking.razorpayOrderId,
+      bookedAt: booking.createdAt
+    });
+
+  } catch (error) {
+    console.error('Error verifying Annie Musical ticket:', error);
+    res.status(500).json({ message: 'Server error during Annie Musical ticket verification' });
+  }
+});
+
+// @desc    Check-in Annie Musical ticket
+// @route   POST /api/annie-musical/check-in
+// @access  Private (Admin)
+const checkInAnnieTicket = asyncHandler(async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    // Check both collections
+    let booking = await AnnieBooking.findById(bookingId);
+    let isMainBooking = false;
+
+    if (!booking) {
+      booking = await Booking.findById(bookingId);
+      isMainBooking = true;
+      
+      if (!booking) {
+        return res.status(404).json({ message: 'Annie Musical booking not found' });
+      }
+    }
+
+    // Check if already scanned
+    const existingScan = await Scan.findOne({ ticket: bookingId });
+    if (existingScan) {
+      return res.status(400).json({ 
+        message: 'This Annie Musical ticket has already been used for entry.',
+        error: 'TICKET_ALREADY_USED'
+      });
+    }
+
+    // Create scan record
+    const newScan = new Scan({
+      ticket: bookingId,
+      event: isMainBooking ? booking.event : '000000000000000000000001', // Annie Musical event ID
+      user: isMainBooking ? booking.user : booking.userId,
+    });
+    await newScan.save();
+
+    // Update booking status
+    if (isMainBooking) {
+      booking.status = 'checked-in';
+      booking.checkedInAt = new Date();
+    } else {
+      booking.checkedInAt = new Date();
+    }
+    await booking.save();
+
+    res.status(200).json({
+      message: 'Annie Musical check-in successful.',
+      status: 'CHECKED_IN',
+      checkedInAt: booking.checkedInAt
+    });
+
+  } catch (error) {
+    console.error('Error during Annie Musical check-in:', error);
+    res.status(500).json({ message: 'Server error during Annie Musical check-in' });
+  }
+});
+
+// @desc    Check-out Annie Musical ticket
+// @route   POST /api/annie-musical/check-out
+// @access  Private (Admin)
+const checkOutAnnieTicket = asyncHandler(async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return res.status(400).json({ message: 'Booking ID is required' });
+    }
+
+    // Find and delete the scan record
+    const scan = await Scan.findOneAndDelete({ ticket: bookingId });
+    
+    if (!scan) {
+      return res.status(400).json({ message: 'No scan record found for this Annie Musical ticket.' });
+    }
+
+    // Update booking status
+    let booking = await AnnieBooking.findById(bookingId);
+    let isMainBooking = false;
+
+    if (!booking) {
+      booking = await Booking.findById(bookingId);
+      isMainBooking = true;
+    }
+
+    if (booking) {
+      if (isMainBooking) {
+        booking.status = 'confirmed';
+      }
+      booking.checkedOutAt = new Date();
+      await booking.save();
+    }
+
+    res.status(200).json({
+      message: 'Annie Musical check-out successful. Ticket can be reused.',
+      status: 'VALID',
+      checkedOutAt: booking?.checkedOutAt
+    });
+
+  } catch (error) {
+    console.error('Error during Annie Musical check-out:', error);
+    res.status(500).json({ message: 'Server error during Annie Musical check-out' });
+  }
+});
+
 module.exports = {
   getSeats,
   createBooking,
@@ -570,4 +806,7 @@ module.exports = {
   handleWebhook,
   getUserBookings,
   cleanupExpiredBookings, // Export for testing or manual triggering
+  verifyAnnieTicket,
+  checkInAnnieTicket,
+  checkOutAnnieTicket,
 };

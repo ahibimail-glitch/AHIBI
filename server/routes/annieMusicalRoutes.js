@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getSeats, createBooking, confirmBooking, getRevenue, getAdminBookings, getBookingDetails, adminConfirmBooking, handleWebhook, getUserBookings } = require("../controllers/annieMusicalController");
+const { getSeats, createBooking, confirmBooking, getRevenue, getAdminBookings, getBookingDetails, adminConfirmBooking, handleWebhook, getUserBookings, verifyAnnieTicket, checkInAnnieTicket, checkOutAnnieTicket } = require("../controllers/annieMusicalController");
 const { protect } = require("../middleware/authMiddleware"); // Assuming a standard auth middleware
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
@@ -104,5 +104,20 @@ router.get("/booking/:id", protect, getBookingDetails);
 // @route   GET /api/annie-musical/my-bookings
 // @access  Private
 router.get("/my-bookings", protect, getUserBookings);
+
+// @desc    Verify Annie Musical ticket for QR scanner
+// @route   POST /api/annie-musical/verify-ticket
+// @access  Private/Admin
+router.post("/verify-ticket", protectAdminRoute, verifyAnnieTicket);
+
+// @desc    Check-in Annie Musical ticket
+// @route   POST /api/annie-musical/check-in
+// @access  Private/Admin
+router.post("/check-in", protectAdminRoute, checkInAnnieTicket);
+
+// @desc    Check-out Annie Musical ticket
+// @route   POST /api/annie-musical/check-out
+// @access  Private/Admin
+router.post("/check-out", protectAdminRoute, checkOutAnnieTicket);
 
 module.exports = router;

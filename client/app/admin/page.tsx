@@ -44,6 +44,7 @@ import HeroImages from "./components/HeroImages";
 import FC25Players from "./components/FC25Players";
 import FailedPayments from "./components/FailedPayments";
 import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
+import AnnieMusicalQrScanner from "./components/AnnieMusicalQrScanner";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -149,10 +150,41 @@ export default function AdminDashboard() {
         return null;
       case "annie-musical-bookings":
         return <AnnieMusicalBookings />;
+      case "annie-musical-qr":
+        return <AnnieMusicalQrScanner />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
   };
+  
+  // Special full-width layout without sidebar for Annie Musical QR view
+  if (activeView === "annie-musical-qr") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+          <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
+              </div>
+              <div className="flex items-center space-x-3 md:space-x-4">
+                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                  <Activity className="h-3 w-3 mr-1" /> System Healthy
+                </Badge>
+                <Button variant="outline" size="icon"><Bell className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 bg-gradient-to-br from-gray-50 to-blue-50">
+          <div className="p-4 md:p-8">
+            <AnnieMusicalQrScanner />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -177,6 +209,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
           <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
+          <SidebarButton icon={Music} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
