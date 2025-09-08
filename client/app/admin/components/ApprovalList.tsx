@@ -237,8 +237,8 @@ export default function ApprovalList({ type }: ApprovalListProps) {
         <div className="flex items-center justify-between p-4 bg-white hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpanded(item._id)}>
           <div className="flex-1 flex items-center space-x-4">
             <div className="flex-1">
-              <h3 className="font-medium text-gray-900">{item.name || item.title}</h3>
-              <p className="text-sm text-gray-500">{item.email}</p>
+              <h3 className="font-medium text-gray-900">{('title' in item ? item.title : ('name' in item ? item.name : 'Unknown'))}</h3>
+              <p className="text-sm text-gray-500">{'organizerInfo' in item ? (item.organizerInfo?.email ?? 'No email') : ('email' in item ? (item.email ?? 'No email') : 'No email')}</p>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`text-xs font-medium py-1 px-2 rounded ${status === 'pending' ? 'bg-yellow-100 text-yellow-600' : status === 'approved' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                   {status?.charAt(0).toUpperCase() + status?.slice(1)}
@@ -289,35 +289,35 @@ export default function ApprovalList({ type }: ApprovalListProps) {
         {isExpanded && (
           <div className="px-4 pb-4 bg-gray-50 border-t border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {itemType === 'Event' && (
+              {itemType === 'Event' && (() => { const e = item as Event; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Description</label><p className="text-sm text-gray-600 mt-1">{item.description}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Category</label><p className="text-sm text-gray-600 mt-1">{item.category}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Start Date</label><p className="text-sm text-gray-600 mt-1">{new Date(item.startDate).toLocaleString()}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">End Date</label><p className="text-sm text-gray-600 mt-1">{new Date(item.endDate).toLocaleString()}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Location</label><p className="text-sm text-gray-600 mt-1">{`${item.location?.address}, ${item.location?.city}, ${item.location?.country}`}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Organizer</label><p className="text-sm text-gray-600 mt-1">{`${item.organizerInfo?.name} (${item.organizerInfo?.email})`}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Description</label><p className="text-sm text-gray-600 mt-1">{e.description}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Category</label><p className="text-sm text-gray-600 mt-1">{e.category}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Start Date</label><p className="text-sm text-gray-600 mt-1">{new Date(e.startDate).toLocaleString()}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">End Date</label><p className="text-sm text-gray-600 mt-1">{new Date(e.endDate).toLocaleString()}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Location</label><p className="text-sm text-gray-600 mt-1">{`${e.location?.address || 'Unknown'}, ${e.location?.city || 'Unknown'}, ${e.location?.country || 'Unknown'}`}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Organizer</label><p className="text-sm text-gray-600 mt-1">{`${e.organizerInfo?.name || 'Unknown'} (${e.organizerInfo?.email || 'No email'})`}</p></div>
                 </>
-              )}
-              {itemType === 'Organizer' && (
+              )})()}
+              {itemType === 'Organizer' && (() => { const o = item as Organizer; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{item.phone}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Company Name</label><p className="text-sm text-gray-600 mt-1">{item.companyName}</p></div>
-                  <div className="md:col-span-2"><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{item.email}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{o.phone}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Company Name</label><p className="text-sm text-gray-600 mt-1">{o.companyName}</p></div>
+                  <div className="md:col-span-2"><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{o.email}</p></div>
                 </>
-              )}
-              {itemType === 'Artist' && (
+              )})()}
+              {itemType === 'Artist' && (() => { const a = item as Artist; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{item.phone}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{item.email}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{a.phone}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{a.email}</p></div>
                 </>
-              )}
-              {itemType === 'Venue' && (
+              )})()}
+              {itemType === 'Venue' && (() => { const v = item as Venue; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{item.phone}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{item.email}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{v.phone}</p></div>
+                  <div><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{v.email}</p></div>
                 </>
-              )}
+              )})()}
             </div>
           </div>
         )}

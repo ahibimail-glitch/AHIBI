@@ -48,6 +48,32 @@ interface ArtistUser {
   status: string;
 }
 
+// Local types to match GalleryManager and AccoladesManager expectations
+interface Photo {
+  _id: string;
+  url: string;
+  caption: string;
+  isProfileImage: boolean;
+  isCoverImage: boolean;
+}
+
+interface Video {
+  _id: string;
+  url: string;
+  thumbnail: string;
+  caption: string;
+  platform: string;
+}
+
+interface Accolade {
+  _id: string;
+  title: string;
+  description: string;
+  year: number;
+  organization: string;
+  certificate?: string;
+}
+
 interface ArtistProfile {
   _id: string;
   user: string;
@@ -71,6 +97,21 @@ interface ArtistProfile {
     count: number;
   };
   totalBookings?: number;
+  // Optional extended fields used by dashboard tabs
+  gallery?: {
+    photos: Photo[];
+    videos: Video[];
+  };
+  accolades?: Accolade[];
+  termsAndConditions?: {
+    content: string;
+    lastUpdated: string; // ISO date string
+  };
+  cancellationPolicy?: {
+    advanceNotice: number;
+    refundPolicy: string;
+    emergencyContact: string;
+  };
 }
 
 interface BookingRequest {
