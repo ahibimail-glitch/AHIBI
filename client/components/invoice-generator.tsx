@@ -183,11 +183,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
             <div className="flex items-center justify-between mb-4">
               {/* You can replace this with your actual logo component or img tag */}
               <div className="w-full h-6  rounded-lg flex items-center justify-center">
-                <img src="/images/Logo.png" className='w-1/2 h-12' alt="Logo" />
+                <img src="/images/Logo.png" className='w-1/2 h-14' alt="Logo" />
               </div>
             </div>
-            <p className="text-white/90 text-sm font-medium">Invoice For</p>
-            <h1 className="text-white text-2xl font-bold tracking-tight mt-1">{invoiceData.eventTitle || "Event Title"}</h1>
+            <p className="text-white/90 text-sm font-medium pt-2">Booking Confirmed for</p>
+            <h1 className="text-white text-2xl font-bold tracking-tight">Annie Musical Night</h1>
           </div>
         </div>
 
@@ -199,13 +199,13 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
             <div className="text-center mb-4">
               <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
               <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                {invoiceData.ticketType}
+                {invoiceData.seats[0].price==1500?'VIP PLATINUM':invoiceData.seats[0].price==1200?'GOLD PREMIUM':invoiceData.seats[0].price==500?'SILVER STANDARD':'GENERAL'}
               </h2>
-              <p className='text-sm text-[#00CED1] font-medium'>
+              {/* <p className='text-sm text-[#00CED1] font-medium'>
                 {invoiceData.benefits && invoiceData.benefits.length > 0 && 
                   invoiceData.benefits.slice(0, 2).join(' || ')
                 }
-              </p>
+              </p> */}
               <div className="mt-2">
                 <p className="text-sm text-indigo-600 font-medium">
                   {invoiceData.seats.length} Seat{invoiceData.seats.length > 1 ? 's' : ''} Booked
@@ -222,7 +222,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
               <div className="text-center">
                 <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
-                <p className="text-sm font-bold text-gray-900">{formatTime(invoiceData.eventTime)}</p>
+                <p className="text-sm font-bold text-gray-900">5:30 PM</p>
               </div>
             </div>
           </div>
@@ -240,9 +240,6 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
                       </div>
                       <div>
                         <span className="font-mono text-gray-800 font-semibold text-base">Seat {seat.id}</span>
-                        {seat.category && (
-                          <p className="text-xs text-gray-500 mt-1">{seat.category}</p>
-                        )}
                       </div>
                     </div>
                     <div className="text-right">
@@ -297,14 +294,14 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
                   />
                 </div>
                 <div className="mt-4 text-center">
-                  <p className="text-sm font-medium text-blue-700">Scan for Invoice Verification</p>
+                  <p className="text-sm font-medium text-blue-700">Scan at Dimapur Hall Town</p>
                   {/* Improved Invoice ID Display */}
-                  <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
+                  {/* <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
                     <p className="text-xs text-gray-500">Invoice ID</p>
                     <p className="font-mono text-sm font-bold text-gray-800 tracking-wider">
                       {invoiceData.bookingId}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ) : (

@@ -32,6 +32,7 @@ interface AnnieBookingDetail {
   transactionId?: string;
   bookedAt: string;
   status: string;
+  benefits?: string[];
 }
 
 export default function AnnieMusicalBookingDetail() {
@@ -325,16 +326,16 @@ export default function AnnieMusicalBookingDetail() {
               <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10"></div>
 
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  {/* You can replace this with your actual logo component or img tag */}
-                  <div className="w-full h-6  rounded-lg flex items-center justify-center">
-                    <img src="/images/Logo.png" className='w-1/2 h-auto' alt="Logo" />
-                  </div>
-                </div>
-                <p className="text-white/90 text-sm font-medium">Invoice For</p>
-                <h1 className="text-white text-2xl font-bold tracking-tight mt-1">Annie Musical</h1>
+            <div className="flex items-center justify-between mb-4">
+              {/* You can replace this with your actual logo component or img tag */}
+              <div className="w-full h-6  rounded-lg flex items-center justify-center">
+                <img src="/images/Logo.png" className='w-1/2 h-14' alt="Logo" />
               </div>
             </div>
+            <p className="text-white/90 text-sm font-medium pt-2">Booking Confirmed for</p>
+            <h1 className="text-white text-2xl font-bold tracking-tight">Annie Musical Night</h1>
+          </div>
+        </div>
 
             {/* Ticket Body */}
             <div className="px-6 py-6">
@@ -342,30 +343,32 @@ export default function AnnieMusicalBookingDetail() {
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
                 {/* --- THIS IS THE NEW TICKET CATEGORY SECTION --- */}
                 <div className="text-center mb-4">
-                  <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
-                  <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                    Annie Musical Ticket
-                  </h2>
-                  <p className='text-sm text-[#00CED1] font-medium'>
-                    Broadway Style Musical || Premium Experience
-                  </p>
-                  <div className="mt-2">
-                    <p className="text-sm text-indigo-600 font-medium">
-                      {booking.seats.length} Seat{booking.seats.length > 1 ? 's' : ''} Booked
-                    </p>
-                  </div>
-                </div>
+              <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
+              <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
+                {booking.seats[0].price==1500?'VIP PLATINUM':booking.seats[0].price==1200?'GOLD PREMIUM':booking.seats[0].price==500?'SILVER STANDARD':'GENERAL'}
+              </h2>
+              <p className='text-sm text-[#00CED1] font-medium'>
+                {booking.benefits?.length && booking.benefits?.length > 0 && 
+                  booking.benefits?.slice(0, 2).join(' || ')
+                }
+              </p>
+              <div className="mt-2">
+                <p className="text-sm text-indigo-600 font-medium">
+                  {booking.seats.length} Seat{booking.seats.length > 1 ? 's' : ''} Booked
+                </p>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t border-blue-200 pt-4">
-                  <div className="text-center">
-                    <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
-                    <p className="text-sm font-bold text-gray-900">December 25, 2025</p>
+            <div className="grid grid-cols-2 gap-4 border-t border-blue-200 pt-4">
+              <div className="text-center">
+                <Calendar className="w-5 h-5 text-blue-600 mx-auto mb-2" />
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Date</p>
+                    <p className="text-sm font-bold text-gray-900">Sat, October 18, 2025</p>
                   </div>
                   <div className="text-center">
                     <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
-                    <p className="text-sm font-bold text-gray-900">7:00 PM</p>
+                    <p className="text-sm font-bold text-gray-900">5:30 PM</p>
                   </div>
                 </div>
               </div>
@@ -383,9 +386,7 @@ export default function AnnieMusicalBookingDetail() {
                           </div>
                           <div>
                             <span className="font-mono text-gray-800 font-semibold text-base">Seat {seat.id}</span>
-                            {seat.category && (
-                              <p className="text-xs text-gray-500 mt-1">{seat.category}</p>
-                            )}
+                         
                           </div>
                         </div>
                         <div className="text-right">
@@ -442,14 +443,14 @@ export default function AnnieMusicalBookingDetail() {
                       />
                     </div>
                     <div className="mt-4 text-center">
-                      <p className="text-sm font-medium text-blue-700">Scan for Invoice Verification</p>
+                      <p className="text-sm font-medium text-blue-700">Scan at Dimapur Hall Town</p>
                       {/* Improved Invoice ID Display */}
-                      <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
+                      {/* <div className="mt-3 bg-gray-100 px-3 py-1.5 rounded-md inline-block">
                         <p className="text-xs text-gray-500">Invoice ID</p>
                         <p className="font-mono text-sm font-bold text-gray-800 tracking-wider">
                           {booking._id}
                         </p>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 ) : (

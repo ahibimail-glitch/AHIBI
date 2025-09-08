@@ -150,8 +150,8 @@ export default function CartSummary() {
             const invoiceInfo = {
               bookingId: booking._id,
               eventTitle: "Annie Musical",
-              eventDate: "2024-12-25", // You should get this from the event data
-              eventTime: "19:30", // You should get this from the event data
+              eventDate: "2025-10-18", // You should get this from the event data
+              eventTime: "17:30", // You should get this from the event data
               eventLocation: "Mumbai Theatre, Mumbai",
               seats: selectedSeats.map(seat => ({
                 id: seat.id,
@@ -168,9 +168,11 @@ export default function CartSummary() {
               ticketType: "Annie Musical Ticket",
               benefits: ["Entry to Annie Musical", "Reserved Seating", "Digital Ticket"],
               status: "Confirmed"
-            }
+            } 
+
             
             setInvoiceData(invoiceInfo)
+            console.log(invoiceInfo)
             setShowInvoice(true)
             
             toast({ 
@@ -229,8 +231,8 @@ export default function CartSummary() {
   if (showInvoice && invoiceData) {
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-        <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl">
-          <div className="p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+        <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl flex flex-col">
+          <div className="p-4 sm:p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white sticky top-0 z-10">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-800">Booking Confirmation</h2>
             <button
               onClick={() => setShowInvoice(false)}
@@ -239,21 +241,18 @@ export default function CartSummary() {
               ×
             </button>
           </div>
-          <div className="p-4 sm:p-6 bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-amber-200">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">!</span>
-              </div>
-              <div>
-                <h3 className="font-semibold text-amber-800 mb-1">Payment Processed Successfully</h3>
-                <p className="text-sm text-amber-700">
-                  Final booking confirmation will happen via Razorpay webhook. Your tickets will appear in your dashboard once payment is verified.
-                  This typically takes 5-10 minutes.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="overflow-y-auto">
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+  <div className="flex items-start gap-3">
+    <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+      <span className="text-white text-sm font-bold">✓</span>
+    </div>
+    <div>
+      <h3 className="font-semibold text-green-800 mb-1">Payment Processed Successfully</h3>
+    </div>
+  </div>
+</div>
+
+          <div className="flex-1 overflow-y-auto">
             <InvoiceGenerator 
               invoiceData={invoiceData}
               onDownload={() => {
