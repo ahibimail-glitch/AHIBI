@@ -581,6 +581,427 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const timeRange = formatTimeRange(event.startDate, event.endDate);
+  const isSpecial = params.id === "68bc6cdf40915f05c90380d4";
+
+  // Customized UI for a specific event ID while preserving booking logic
+  if (isSpecial) {
+    return (
+    <>
+        <Navbar />
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-black via-red-950 to-black relative overflow-hidden">
+        {/* Urban Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-10 left-10 text-red-500 text-9xl font-black transform -rotate-12">♪</div>
+          <div className="absolute top-32 right-20 text-red-400 text-6xl font-black transform rotate-45">🎤</div>
+          <div className="absolute bottom-20 left-1/4 text-red-600 text-7xl font-black transform -rotate-45">🎵</div>
+          <div className="absolute bottom-40 right-10 text-orange-500 text-8xl font-black transform rotate-12">♫</div>
+        </div>
+        
+        <div className="w-full relative z-10">
+          {/* Premium Hip Hop Hero Section */}
+          <div className="relative overflow-hidden">
+            {/* Graffiti-style background elements */}
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 via-black/60 to-orange-600/20 z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/50 z-20" />
+            
+            <AspectRatio ratio={16 / 9} className="relative">
+              <Image
+                src={event.banner || "/placeholder.svg"}
+                alt={event.title}
+                fill
+                priority
+                className="object-cover filter brightness-110 contrast-125"
+              />
+            </AspectRatio>
+            
+            {/* Urban overlay elements */}
+            <div className="absolute top-0 left-0 w-full h-full z-30">
+              <div className="absolute top-4 left-4 w-16 h-16 border-4 border-orange-500 rounded-full animate-pulse" />
+              <div className="absolute top-8 right-8 w-12 h-12 bg-orange-500/30 backdrop-blur rounded-lg rotate-45" />
+              <div className="absolute bottom-4 left-8 w-20 h-1 bg-gradient-to-r from-orange-500 to-transparent" />
+            </div>
+            
+            <div className="absolute inset-0 z-40 flex items-end">
+              <div className="container mx-auto px-4 pb-12">
+                <div className="max-w-5xl">
+                  {/* Festival Badge */}
+                  <div className="mb-6">
+                    <div className="inline-flex items-center gap-3 bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 rounded-full shadow-2xl">
+                      <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                      <span className="text-black font-black text-sm uppercase tracking-wider">Hip Hop & R&B Festival</span>
+                      <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                    </div>
+                  </div>
+                  
+                  {/* Main Title with Urban Typography */}
+                  <h1 className="text-5xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-orange-200 to-orange-400 drop-shadow-2xl leading-tight tracking-tight mb-4 transform hover:scale-105 transition-transform duration-300">
+                    {event.title}
+                  </h1>
+                  
+                  {/* Subtitle with street style */}
+                  <div className="text-xl md:text-2xl font-bold text-orange-300 mb-6 tracking-wide">
+                    🔥 WHERE BEATS MEET THE STREETS 🔥
+                  </div>
+                  
+                  {/* Event Details with Urban Cards */}
+                  <div className="flex flex-wrap gap-4 text-white/90">
+                    <div className="bg-black/60 backdrop-blur-xl border-2 border-orange-500/50 rounded-2xl px-6 py-4 shadow-2xl hover:border-orange-400 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <CalendarIcon className="h-6 w-6 text-orange-400" />
+                        <div>
+                          <div className="text-orange-300 text-xs font-bold uppercase">Date</div>
+                          <div className="text-white font-bold">{startDateTime.date}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-black/60 backdrop-blur-xl border-2 border-orange-500/50 rounded-2xl px-6 py-4 shadow-2xl hover:border-orange-400 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-6 w-6 text-orange-400" />
+                        <div>
+                          <div className="text-orange-300 text-xs font-bold uppercase">Time</div>
+                          <div className="text-white font-bold">{timeRange}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {event.category && (
+                      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl px-6 py-4 shadow-2xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+                            <span className="text-orange-600 text-xs font-black">♪</span>
+                          </div>
+                          <div>
+                            <div className="text-orange-100 text-xs font-bold uppercase">Genre</div>
+                            <div className="text-white font-black">{event.category}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Premium Hip Hop Content Section */}
+          <div className="container mx-auto px-4 py-16 grid grid-cols-1 lg:grid-cols-3 gap-12 flex-1">
+            {/* Left - Details with Urban Style */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* About Section with Graffiti Style */}
+              <div className="relative rounded-3xl border-2 border-orange-500/30 bg-gradient-to-br from-black/80 via-orange-950/20 to-black/80 backdrop-blur-xl p-8 shadow-2xl overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-orange-600/10 rounded-full blur-2xl" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                      <span className="text-white text-xl font-black">🎤</span>
+                    </div>
+                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 uppercase tracking-wide">About the Festival</h2>
+                  </div>
+                  <p className="text-orange-100 leading-relaxed text-lg whitespace-pre-line font-medium">
+                    {event.description}
+                  </p>
+                  
+                  {/* Hip Hop Elements */}
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <div className="bg-orange-500/20 border border-orange-400/50 rounded-full px-4 py-2 text-orange-300 text-sm font-bold">
+                      🎵 Live Performances
+                    </div>
+                    <div className="bg-orange-500/20 border border-orange-400/50 rounded-full px-4 py-2 text-orange-300 text-sm font-bold">
+                      🔥 Street Food
+                    </div>
+                    <div className="bg-orange-500/20 border border-orange-400/50 rounded-full px-4 py-2 text-orange-300 text-sm font-bold">
+                      💫 Urban Culture
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location with Street Style */}
+              <div className="relative rounded-3xl border-2 border-orange-500/30 bg-gradient-to-br from-black/80 via-orange-950/20 to-black/80 backdrop-blur-xl p-8 shadow-2xl overflow-hidden">
+                <div className="absolute top-0 left-0 w-28 h-28 bg-orange-400/10 rounded-full blur-2xl" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                      <MapPin className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 uppercase tracking-wide">The Venue</h2>
+                  </div>
+                  
+                  <div className="bg-black/40 rounded-2xl p-6 border border-orange-500/20">
+                    <div className="flex items-start gap-6">
+                      <div className="p-4 rounded-2xl bg-gradient-to-br from-orange-500/30 to-orange-600/30 backdrop-blur">
+                        <MapPin className="h-8 w-8 text-orange-300" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-bold text-xl mb-2">
+                          {event.location.address || "Premium Venue - Details Coming Soon"}
+                        </p>
+                        <p className="text-orange-200 text-lg">
+                          {[event.location.city, event.location.state, event.location.country].filter(Boolean).join(", ")}
+                        </p>
+                        <div className="mt-4 inline-flex items-center gap-2 bg-orange-500/20 rounded-full px-4 py-2 text-orange-300 text-sm font-bold">
+                          📍 Premium Location with Full Facilities
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tags with Hip Hop Style */}
+              {event.tags?.length ? (
+                <div className="relative rounded-3xl border-2 border-orange-500/30 bg-gradient-to-br from-black/80 via-orange-950/20 to-black/80 backdrop-blur-xl p-8 shadow-2xl overflow-hidden">
+                  <div className="absolute bottom-0 right-0 w-36 h-36 bg-orange-500/10 rounded-full blur-3xl" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-white text-xl font-black">#</span>
+                      </div>
+                      <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 uppercase tracking-wide">Festival Vibes</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {event.tags.map((t) => (
+                        <div key={t} className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-2 border-orange-400/50">
+                          #{t.toUpperCase()}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Premium Hip Hop Tickets Section */}
+            <div className="space-y-8">
+              {/* VIP Ticket Section with Urban Design */}
+              <div className="relative rounded-3xl border-3 border-orange-500/50 bg-gradient-to-br from-black/90 via-orange-950/30 to-black/90 backdrop-blur-xl p-8 shadow-2xl overflow-hidden">
+                {/* Background Elements */}
+                <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-600/10 rounded-full blur-2xl" />
+                
+                <div className="relative z-10">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-xl">
+                        <TicketIcon className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 uppercase tracking-wide">Get Your Pass</h3>
+                        <p className="text-orange-300 text-sm font-bold">🔥 Limited Spots Available</p>
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl px-4 py-2 shadow-lg">
+                      <div className="text-white font-black text-sm">
+                        {event.ticketTypes?.reduce((acc, t) => acc + (t.quantity - t.sold), 0) || 0} LEFT
+                      </div>
+                    </div>
+                  </div>
+
+                  {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                    <div className="space-y-6">
+                      {event.ticketTypes.map((ticket) => {
+                        const availability = Math.max(0, ticket.quantity - ticket.sold);
+                        const isSoldOut = availability <= 0;
+                        const selectedItem = selectedTickets.get(ticket._id);
+                        const quantity = selectedItem?.quantity || 0;
+                        return (
+                          <div key={ticket._id} className={`relative rounded-2xl border-2 border-orange-500/30 bg-gradient-to-r from-black/60 to-orange-950/20 backdrop-blur p-6 shadow-xl transition-all duration-300 hover:border-orange-400/60 hover:shadow-2xl ${isSoldOut ? "opacity-50" : ""} ${quantity > 0 ? "border-orange-400 bg-gradient-to-r from-orange-500/10 to-orange-600/10" : ""}`}>
+                            {/* Ticket Design Elements */}
+                            <div className="absolute top-2 right-2 w-6 h-6 bg-orange-500/20 rounded-full" />
+                            <div className="absolute bottom-2 left-2 w-4 h-4 bg-orange-600/20 rounded-full" />
+                            
+                            <div className="flex items-start justify-between gap-6">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                                    <span className="text-white text-lg font-black">🎫</span>
+                                  </div>
+                                  <div>
+                                    <p className="text-xl font-black text-white uppercase tracking-wide">{ticket.name}</p>
+                                    <p className="text-orange-300 text-sm font-bold">{ticket.description}</p>
+                                  </div>
+                                </div>
+                                
+                                {/* Availability Bar */}
+                                <div className="mb-4">
+                                  <div className="flex items-center justify-between text-xs mb-2">
+                                    <span className="text-orange-300 font-bold">AVAILABILITY</span>
+                                    <span className="text-white font-bold">{availability} / {ticket.quantity}</span>
+                                  </div>
+                                  <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                                      style={{ width: `${(availability / ticket.quantity) * 100}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right">
+                                <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 mb-4">
+                                  ₹{ticket.price.toLocaleString()}
+                                </div>
+                                
+                                {/* Quantity Controls */}
+                                <div className="flex items-center justify-end gap-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={quantity <= 0}
+                                    className="w-10 h-10 p-0 rounded-xl border-2 border-orange-500/50 bg-black/40 text-orange-300 hover:bg-orange-500/20 hover:border-orange-400 transition-all"
+                                    onClick={() => {
+                                      if (quantity > 0) {
+                                        const newQuantity = quantity - 1;
+                                        if (newQuantity === 0) {
+                                          setSelectedTickets((prev) => {
+                                            const m = new Map(prev);
+                                            m.delete(ticket._id);
+                                            return m;
+                                          });
+                                        } else {
+                                          setSelectedTickets((prev) => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                  </Button>
+                                  
+                                  <div className="w-12 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                                    <span className="text-white font-black text-lg">{quantity}</span>
+                                  </div>
+                                  
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isSoldOut || quantity >= availability}
+                                    className="w-10 h-10 p-0 rounded-xl border-2 border-orange-500/50 bg-black/40 text-orange-300 hover:bg-orange-500/20 hover:border-orange-400 transition-all"
+                                    onClick={() => {
+                                      const newQuantity = quantity + 1;
+                                      if (newQuantity <= availability) {
+                                        setSelectedTickets((prev) => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                      }
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Checkout Section */}
+                      {selectedTickets.size > 0 && (
+                        <div className="relative rounded-3xl border-3 border-orange-400/60 bg-gradient-to-br from-orange-500/20 via-black/80 to-orange-600/20 backdrop-blur-xl p-8 shadow-2xl overflow-hidden">
+                          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-3xl" />
+                          <div className="relative z-10">
+                            <div className="flex items-center justify-between mb-6">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                  <span className="text-white text-xl font-black">💳</span>
+                                </div>
+                                <div>
+                                  <div className="text-2xl font-black text-white uppercase tracking-wide">Total</div>
+                                  <div className="text-orange-300 text-sm font-bold">
+                                    {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket{Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""} Selected
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200">
+                                  ₹{Array.from(selectedTickets.values()).reduce((s, i) => s + i.ticket.price * i.quantity, 0).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <Button 
+                              className="w-full h-16 text-xl font-black bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 uppercase tracking-wide" 
+                              onClick={handleBooking} 
+                              disabled={isBooking}
+                            >
+                              {isBooking ? (
+                                <>
+                                  <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                                  Processing Payment...
+                                </>
+                              ) : (
+                                <>
+                                  🎫 Secure Your Spot Now
+                                </>
+                              )}
+                            </Button>
+                            
+                            <div className="mt-4 text-center text-orange-300 text-sm font-bold">
+                              🔒 Secure Payment • Instant Confirmation
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-orange-300 text-xl font-bold">🎫 Tickets Coming Soon</div>
+                      <div className="text-orange-400 text-sm mt-2">Stay tuned for ticket release!</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Premium Organizer Section */}
+              {event.organizer && (
+                <div className="relative rounded-3xl border-2 border-orange-500/30 bg-gradient-to-br from-black/80 via-orange-950/20 to-black/80 backdrop-blur-xl p-8 shadow-2xl overflow-hidden">
+                  <div className="absolute top-0 right-0 w-28 h-28 bg-orange-500/10 rounded-full blur-2xl" />
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <Crown className="h-6 w-6 text-white" />
+                      </div>
+                      <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 uppercase tracking-wide">Event Organizer</h2>
+                    </div>
+                    
+                    <div className="bg-black/40 rounded-2xl p-6 border border-orange-500/20">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-16 w-16 border-3 border-orange-500/50 shadow-xl">
+                          {event.organizer.avatar ? (
+                            <AvatarImage src={event.organizer.avatar} alt={event.organizer.name} />
+                          ) : (
+                            <AvatarFallback className="bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black text-xl">
+                              {event.organizer.name.charAt(0)}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="text-xl font-black text-white mb-1">{event.organizer.name}</div>
+                          {event.organizer.rating && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 bg-orange-500/20 rounded-full px-3 py-1">
+                                <Star className="h-4 w-4 text-orange-400 fill-current" />
+                                <span className="text-orange-300 font-bold text-sm">{event.organizer.rating.toFixed(1)}</span>
+                              </div>
+                            </div>
+                          )}
+                          <div className="mt-2 text-orange-300 text-sm font-bold">
+                            🎪 Premium Event Producer
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      
+      </div>
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">

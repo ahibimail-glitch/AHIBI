@@ -170,12 +170,14 @@ export default function SeatingChart() {
 
   // Split seats into left and right sections for aisle
   const createRowWithAisle = useCallback((seats: Seat[]) => {
-    const totalSeats = seats.length
+    // Reverse the order within each row so seats fill in reverse order
+    const reversed = [...seats].reverse()
+    const totalSeats = reversed.length
     const leftCount = Math.floor(totalSeats / 2)
-    
+
     return {
-      left: seats.slice(0, leftCount),
-      right: seats.slice(leftCount)
+      left: reversed.slice(0, leftCount),
+      right: reversed.slice(leftCount)
     }
   }, [])
 
