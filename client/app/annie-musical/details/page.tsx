@@ -82,92 +82,46 @@ const AnnieMusicalTickets = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-            {/* Hero Section with Cover Image */}
-            <div className="relative overflow-hidden">
-                {/* Background Image */}
-                <div className="absolute inset-0">
-                    <div
-                        className="w-full h-full bg-cover bg-center bg-no-repeat"
-                        style={{
-                            backgroundImage: `url('https://images.unsplash.com/photo-1507924538820-ede94a04019d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')`,
-                        }}
-                    ></div>
-                    {/* Dark overlay */}
-                    <div className="absolute inset-0 bg-black/70"></div>
-                    {/* Accent gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 via-transparent to-purple-500/20"></div>
-                </div>
+        <div className="min-h-screen ">
+            <Navbar />
 
-                {/* Navbar */}
-                <Navbar />
-
-                {/* Hero Content */}
-                <div className="relative px-4 py-24 sm:px-6 lg:px-8 flex items-center justify-center">
-                    <div className="text-center max-w-5xl mx-auto">
-                        {/* Main Title */}
-                        <h1 className="text-5xl sm:text-7xl lg:text-8xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-500 mb-6 drop-shadow-2xl">
-                            Annie
-                        </h1>
-                        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white mb-8 drop-shadow-lg">
-                            The Musical Broadway Experience
-                        </h2>
-
-                        {/* Subtitle */}
-                        <p className="text-lg sm:text-xl lg:text-2xl text-gray-200 mb-14 max-w-3xl mx-auto leading-relaxed">
-                            Step into tomorrow with Annie and experience the magic of Broadway like
-                            never before. Premium seating, world-class performances, and
-                            unforgettable memories await.
-                        </p>
-
-                        {/* Event Stats */}
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-white/90">
-                            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 shadow-md">
-                                <Users className="w-6 h-6 text-amber-400" />
-                                <span className="text-lg font-semibold">374 Premium Seats</span>
-                            </div>
-                            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 shadow-md">
-                                <Gift className="w-6 h-6 text-amber-400" />
-                                <span className="text-lg font-semibold">₹500 – ₹1,500</span>
-                            </div>
-                            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 shadow-md">
-                                <Star className="w-6 h-6 text-amber-400" />
-                                <span className="text-lg font-semibold">Broadway Quality</span>
-                            </div>
-                        </div>
-                    </div>
+            {/* Hero Section - Clean Poster Style */}
+            <div className="relative py-16">
+                <div className="container mx-auto px-4">
+                    {/* Main Poster Content */}
+                    <img
+                        src="/images/annie-musical.jpg"
+                        alt="Annie Musical Poster"
+                        className="w-full md:w-3/4 lg:w-1/2 mx-auto rounded-2xl shadow-lg"
+                    />
                 </div>
             </div>
 
-
-
             {/* Ticket Cards Section */}
-            <div className="relative px-4 py-16 sm:px-6 lg:px-8">
-                {/* Background Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent"></div>
-
+            <div className="relative px-4 py-16 sm:px-6 lg:px-8 bg-white">
                 <div className="relative max-w-7xl mx-auto">
                     {/* Section Header */}
                     <div className="text-center mb-16">
-                        <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+                        <h2 className="text-4xl sm:text-5xl font-bold text-orange-600 mb-4">
                             Choose Your Experience
                         </h2>
-                        <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                             Select from our carefully curated seating options, each designed to
                             provide a unique and memorable Broadway experience
                         </p>
-                    </div>{/* Call-to-Action Button */}
-                    <div className="flex justify-center mt-12 mb-20">
+                    </div>
+
+                    {/* Call-to-Action Button */}
+                    <div className="flex justify-center mb-16">
                         <Button
                             asChild
-                            className="px-14 py-6 text-2xl font-extrabold text-white rounded-full shadow-2xl 
-               bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600
-               transition-all duration-500 ease-in-out
-               hover:scale-110 hover:shadow-[0_0_30px_rgba(236,72,153,0.8)] 
-               hover:from-pink-600 hover:via-rose-600 hover:to-purple-700
-               active:scale-100 active:shadow-md"
+                            className="px-12 py-4 text-xl font-bold text-white rounded-full shadow-lg 
+                                     bg-gradient-to-r from-red-500 to-red-600
+                                     transition-all duration-300 ease-in-out
+                                     hover:scale-105 hover:shadow-xl 
+                                     hover:from-red-600 hover:to-red-700"
                         >
-                            <Link href="/annie-musical">✨ Confirm Your Seats Now! ✨</Link>
+                            <Link href="/annie-musical">Confirm Your seats Now</Link>
                         </Button>
                     </div>
 
@@ -247,29 +201,29 @@ const AnnieMusicalTickets = () => {
             </div>
 
             {/* Premium Benefits Section */}
-            <div className="px-4 py-16 sm:px-6 lg:px-8 bg-gradient-to-r from-black/40 via-purple-900/30 to-black/40 backdrop-blur-sm">
+            <div className="px-4 py-16 sm:px-6 lg:px-8">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
-                        <h2 className="text-4xl font-bold text-white mb-4">Premium Experience Included</h2>
-                        <p className="text-xl text-gray-300">Every ticket includes carefully crafted amenities for your comfort</p>
+                        <h2 className="text-4xl font-bold text-gray-800 mb-4">Premium Experience Included</h2>
+                        <p className="text-xl text-gray-600">Every ticket includes carefully crafted amenities for your comfort</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-gradient-to-r from-amber-500/10 to-orange-600/10 backdrop-blur-xl rounded-3xl p-8 border border-amber-400/30">
-                            <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-amber-400 to-orange-600 rounded-full mb-6 mx-auto shadow-xl">
+                        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+                            <div className="flex items-center justify-center w-16 h-16 bg-red-500 rounded-full mb-6 mx-auto">
                                 <Coffee className="w-8 h-8 text-white" />
                             </div>
-                            <h3 className="text-2xl font-semibold text-white mb-4 text-center">Premium Refreshments</h3>
-                            <p className="text-gray-300 text-center text-lg leading-relaxed">
+                            <h3 className="text-2xl font-semibold text-gray-800 mb-4 text-center">Premium Refreshments</h3>
+                            <p className="text-gray-600 text-center text-lg leading-relaxed">
                                 VIP & Gold ticket holders enjoy complimentary premium beverages and gourmet snacks
                                 throughout the performance
                             </p>
                         </div>
-                        <div className="bg-gradient-to-r from-cyan-500/10 to-teal-600/10 backdrop-blur-xl rounded-3xl p-8 border border-cyan-400/30">
-                            <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-cyan-400 to-teal-600 rounded-full mb-6 mx-auto shadow-xl">
+                        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+                            <div className="flex items-center justify-center w-16 h-16 bg-red-500 rounded-full mb-6 mx-auto">
                                 <Droplets className="w-8 h-8 text-white" />
                             </div>
-                            <h3 className="text-2xl font-semibold text-white mb-4 text-center">Unlimited Hydration</h3>
-                            <p className="text-gray-300 text-center text-lg leading-relaxed">
+                            <h3 className="text-2xl font-semibold text-gray-800 mb-4 text-center">Unlimited Hydration</h3>
+                            <p className="text-gray-600 text-center text-lg leading-relaxed">
                                 All guests enjoy unlimited premium water service throughout the entire event
                                 for optimal comfort
                             </p>
@@ -278,43 +232,6 @@ const AnnieMusicalTickets = () => {
                 </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-12 sm:px-6 lg:px-8 bg-black/60 backdrop-blur-sm border-t border-white/10">
-                <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-amber-400 to-orange-600 rounded-full mb-4">
-                            <span className="text-2xl font-bold text-white">A</span>
-                        </div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Get in Touch</h3>
-                        <p className="text-gray-300 text-lg">Ready to experience Annie? Contact us for bookings and inquiries</p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-white">
-                        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-4 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                            <span className="text-2xl">📧</span>
-                            <div>
-                                <div className="font-semibold">Email</div>
-                                <div className="text-gray-300">connect@ahibi.in</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-4 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                            <span className="text-2xl">📞</span>
-                            <div>
-                                <div className="font-semibold">Phone</div>
-                                <div className="text-gray-300">7005727288</div>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-4 rounded-2xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                            <span className="text-2xl">🌐</span>
-                            <div>
-                                <div className="font-semibold">Website</div>
-                                <div className="text-gray-300">www.ahibi.in</div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
             <Footer />
         </div>
     );
