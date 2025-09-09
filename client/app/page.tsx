@@ -127,7 +127,15 @@ export default function HomePage() {
           throw new Error("Failed to fetch featured events")
         }
         const data: EventsResponse = await response.json()
-        setFeaturedEvents(data.data.events || [])
+        
+        // Filter out past events (events where endDate has passed)
+        const currentDate = new Date()
+        const upcomingEvents = (data.data.events || []).filter(event => {
+          const eventEndDate = new Date(event.endDate || event.startDate)
+          return eventEndDate >= currentDate
+        })
+        
+        setFeaturedEvents(upcomingEvents)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to load events"
         console.error("Error fetching events:", errorMessage)
@@ -202,10 +210,10 @@ export default function HomePage() {
 
 
       {/* Hero Section with Background Carousel */}
-      <Navbar />
-      <section className="relative py-10 md:py-16 overflow-hidden min-h-[90vh] flex items-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-800">
+      <section className="relative py-10 md:py-16 overflow-hidden min-h-[100vh] flex items-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-800">
         {/* Background Image Carousel */}
-        <div className="absolute top-0 left-0 right-0 z-10">
+        <div className="absolute top-0 left-0 right-0 z-20">
+      <Navbar />
         </div>
         <div className="absolute inset-0 z-0">
           <div className="relative w-full h-full">
@@ -311,134 +319,139 @@ export default function HomePage() {
       </section>
 
       {/* Featured Events Carousel - Enhanced */}
-      <section className="py-16 md:py-24 bg-gradient-to-b from-slate-800/50 to-purple-900/30">
-        <div className="container mx-auto px-4">
-          {/* Section Heading */}
-          <div className="text-center mb-10 md:mb-16">
-            <div className="inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-purple-500/20 text-purple-300 font-medium mb-3 md:mb-4 text-sm md:text-base border border-purple-500/30">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Featured Events
-            </div>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
-              Discover What's Happening
-            </h2>
-            <p className="text-base md:text-xl text-purple-100 max-w-xl md:max-w-2xl mx-auto px-2">
-              From intimate concerts to grand festivals, find events that match your vibe and create memories that last a lifetime.
-            </p>
-          </div>
+      <section className="py-8 sm:py-12 md:py-16 lg:py-24 bg-gradient-to-b from-slate-800/50 to-purple-900/30">
+  <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+    {/* Section Heading */}
+    <div className="text-center mb-6 sm:mb-8 md:mb-12 lg:mb-16">
+      <div className="inline-flex items-center px-2.5 sm:px-3 md:px-4 py-1 sm:py-1.5 md:py-2 rounded-full bg-purple-500/20 text-purple-300 font-medium mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm md:text-base border border-purple-500/30">
+        <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+        Featured Events
+      </div>
+      <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4 md:mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent leading-tight">
+        Discover What's Happening
+      </h2>
+      <p className="text-sm sm:text-base md:text-lg lg:text-xl text-purple-100 max-w-sm sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-2 sm:px-0 leading-relaxed">
+        From intimate concerts to grand festivals, find events that match your vibe and create memories that last a lifetime.
+      </p>
+    </div>
 
-          {/* Carousel */}
-          <div
-            className="relative max-w-full md:max-w-6xl mx-auto"
-            onMouseEnter={() => setIsAutoPlaying(false)}
-            onMouseLeave={() => setIsAutoPlaying(true)}
-          >
-            {isLoading ? (
-              <div className="flex justify-center items-center h-[300px] md:h-[600px]">
-                <Loader2 className="h-10 w-10 md:h-16 md:w-16 animate-spin text-purple-400" />
-              </div>
-            ) : error ? (
-              <div className="h-[300px] md:h-[600px] flex items-center justify-center text-red-400">
-                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6 md:p-8 backdrop-blur-sm">
-                  <p className="text-base md:text-lg font-medium">{error}</p>
-                </div>
-              </div>
-            ) : featuredEvents.length === 0 ? (
-              <div className="h-[300px] md:h-[600px] flex items-center justify-center text-purple-200">
-                <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-6 md:p-8 backdrop-blur-sm">
-                  <p className="text-base md:text-lg">No featured events available at the moment.</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-hidden rounded-xl md:rounded-2xl shadow-xl md:shadow-2xl">
-                  <div
-                    className="flex transition-transform duration-700 ease-out"
-                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                  >
-                    {featuredEvents.map((event, index) => (
-                      <div key={event._id} className="w-full flex-shrink-0">
-                        <Card className="relative mx-2 md:mx-4 overflow-hidden rounded-xl md:rounded-2xl border-0 shadow-xl md:shadow-2xl group bg-slate-800/50 backdrop-blur-sm border border-purple-500/20">
-                          <AspectRatio ratio={16 / 9} className="relative">
-                            <Image
-                              src={event.banner || "/placeholder.svg?height=600&width=800&query=event%20venue"}
-                              alt={event.title}
-                              fill
-                              className="object-contain group-hover:scale-105 transition-transform duration-700"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                              priority={index === 0}
-                            />
-
-                            {/* Overlay */}
-                            {/* <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-purple-900/40 to-transparent" />
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-900/40 via-transparent to-pink-900/30" /> */}
-
-                            {/* Content */}
-                            <div className="absolute bottom-0 left-0 right-0 text-white p-4 md:p-8 space-y-3 md:space-y-4">
-                              <h3 className="text-xl md:text-3xl font-bold mb-2 md:mb-4 group-hover:text-purple-300 transition-colors duration-300 line-clamp-2">
-                                {event.title}
-                              </h3>
-
-                              <div className="flex flex-col md:flex-row gap-2 md:gap-3 text-sm md:text-base text-purple-100 mb-4 md:mb-6">
-                                <div className="flex items-center space-x-2 md:space-x-3">
-                                  <Clock className="h-4 w-4" />
-                                  <span className="font-medium">{new Date(event.startDate).toLocaleDateString()}</span>
-                                </div>
-                                <div className="flex items-center space-x-2 md:space-x-3">
-                                  <MapPin className="h-4 w-4" />
-                                  <span className="font-medium truncate">{event.location.address}, {event.location.city}</span>
-                                </div>
-                              </div>
-
-                              <Button
-                                className="w-full md:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold transform hover:scale-105 transition-all duration-300 shadow-lg md:shadow-xl text-sm md:text-base"
-                                asChild
-                                size="lg"
-                              >
-                                <Link href={`/events`} className="flex items-center justify-center">
-                                  Book Now
-                                  <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-                                </Link>
-                              </Button>
-                            </div>
-                          </AspectRatio>
-                        </Card>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Indicators */}
-                <div className="flex justify-center mt-6 md:mt-8 space-x-2 md:space-x-3">
-                  {featuredEvents.map((_, index) => (
-                    <button
-                      key={index}
-                      className={`h-2 md:h-3 rounded-full transition-all duration-300 ${index === currentSlide ? "bg-purple-400 w-6 md:w-12 shadow-md" : "bg-purple-300/50 hover:bg-purple-300/70 w-2 md:w-3"
-                        }`}
-                      onClick={() => handleGoTo(index)}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* View All Button */}
-          <div className="text-center mt-8 md:mt-12">
-            <Button
-              variant="outline"
-              asChild
-              size="lg"
-              className="border-purple-500/30 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-300 backdrop-blur-sm"
-            >
-              <Link href="/events">
-                View All Events
-                <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-              </Link>
-            </Button>
+    {/* Carousel */}
+    <div
+      className="relative w-full max-w-xs sm:max-w-sm md:max-w-4xl lg:max-w-6xl mx-auto"
+      onMouseEnter={() => setIsAutoPlaying(false)}
+      onMouseLeave={() => setIsAutoPlaying(true)}
+    >
+      {isLoading ? (
+        <div className="flex justify-center items-center h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[600px]">
+          <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-16 lg:w-16 animate-spin text-purple-400" />
+        </div>
+      ) : error ? (
+        <div className="h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[600px] flex items-center justify-center text-red-400 px-4">
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 sm:p-6 md:p-8 backdrop-blur-sm max-w-full">
+            <p className="text-sm sm:text-base md:text-lg font-medium text-center">{error}</p>
           </div>
         </div>
-      </section>
+      ) : featuredEvents.length === 0 ? (
+        <div className="h-48 sm:h-64 md:h-80 lg:h-96 xl:h-[600px] flex items-center justify-center text-purple-200 px-4">
+          <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 sm:p-6 md:p-8 backdrop-blur-sm max-w-full">
+            <p className="text-sm sm:text-base md:text-lg text-center">No featured events available at the moment.</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-lg sm:rounded-xl md:rounded-2xl shadow-lg sm:shadow-xl md:shadow-2xl">
+            <div
+              className="flex transition-transform duration-700 ease-out"
+              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            >
+              {featuredEvents.map((event, index) => (
+                <div key={event._id} className="w-full flex-shrink-0">
+                  <Card className="relative mx-1 sm:mx-2 md:mx-4 overflow-hidden rounded-lg sm:rounded-xl md:rounded-2xl border-0 shadow-lg sm:shadow-xl md:shadow-2xl group bg-slate-800/50 backdrop-blur-sm border border-purple-500/20">
+                    <AspectRatio ratio={16 / 9} className="relative">
+                      <Image
+                        src={event.banner || "/placeholder.svg?height=600&width=800&query=event%20venue"}
+                        alt={event.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 90vw, (max-width: 1024px) 80vw, 1200px"
+                        priority={index === 0}
+                      />
+
+                      {/* Enhanced Mobile Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/60 sm:via-slate-900/50 md:via-purple-900/40 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 sm:from-purple-900/40 via-transparent to-pink-900/40 sm:to-pink-900/30" />
+
+                      {/* Content */}
+                      <div className="absolute bottom-0 left-0 right-0 text-white p-2 sm:p-4 md:p-6 lg:p-8 space-y-1 sm:space-y-2 md:space-y-3">
+                        <h3 className="text-sm sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold mb-1 sm:mb-2 md:mb-4 group-hover:text-purple-300 transition-colors duration-300 line-clamp-1 leading-tight truncate">
+                          {event.title}
+                        </h3>
+
+                        {/* Mobile: Single horizontal line with date and location */}
+                        <div className="flex items-center justify-between text-xs sm:text-sm md:text-base text-purple-100 mb-1 sm:mb-2 md:mb-4 lg:mb-6 gap-2">
+                          <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 min-w-0 flex-1">
+                            <Clock className="h-2.5 w-2.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span className="font-medium text-xs sm:text-sm truncate">{new Date(event.startDate).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 min-w-0 flex-1">
+                            <MapPin className="h-2.5 w-2.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                            <span className="font-medium text-xs sm:text-sm truncate">{event.location.city}</span>
+                          </div>
+                        </div>
+
+                        <Button
+                          className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-md sm:shadow-lg md:shadow-xl text-xs sm:text-sm md:text-base py-1.5 sm:py-2 md:py-3 px-3 sm:px-6 md:px-8"
+                          asChild
+                          size="sm"
+                        >
+                          <Link href={`/events`} className="flex items-center justify-center">
+                            <span className="text-xs sm:text-sm md:text-base">Book Now</span>
+                            <ArrowRight className="ml-1 sm:ml-2 h-2.5 w-2.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </AspectRatio>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Enhanced Mobile Indicators */}
+          <div className="flex justify-center mt-4 sm:mt-6 md:mt-8 space-x-1.5 sm:space-x-2 md:space-x-3">
+            {featuredEvents.map((_, index) => (
+              <button
+                key={index}
+                className={`h-1.5 sm:h-2 md:h-3 rounded-full transition-all duration-300 ${
+                  index === currentSlide 
+                    ? "bg-purple-400 w-4 sm:w-6 md:w-8 lg:w-12 shadow-sm sm:shadow-md" 
+                    : "bg-purple-300/50 hover:bg-purple-300/70 active:bg-purple-300 w-1.5 sm:w-2 md:w-3"
+                }`}
+                onClick={() => handleGoTo(index)}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+
+    {/* View All Button */}
+    <div className="text-center mt-6 sm:mt-8 md:mt-10 lg:mt-12">
+      <Button
+        variant="outline"
+        asChild
+        size="default"
+        className="border-purple-500/30 text-purple-600 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-300 backdrop-blur-sm text-sm sm:text-base md:text-lg px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3"
+      >
+        <Link href="/events" className="flex items-center">
+          View All Events
+          <ArrowRight className="ml-1.5 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+        </Link>
+      </Button>
+    </div>
+  </div>
+</section>
 
       {/* Enhanced Stats Section */}
       <section className="py-20 md:py-24 bg-gradient-to-r from-purple-900/20 via-slate-800/30 to-purple-900/20">
