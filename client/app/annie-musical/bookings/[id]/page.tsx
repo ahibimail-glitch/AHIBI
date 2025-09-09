@@ -345,7 +345,7 @@ export default function AnnieMusicalBookingDetail() {
                 <div className="text-center mb-4">
               <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
               <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                {booking.seats[0].price==1500?'VIP PLATINUM':booking.seats[0].price==1200?'GOLD PREMIUM':booking.seats[0].price==500?'SILVER STANDARD':'GENERAL'}
+                {booking.seats[0].price==1500?'VIP PLATINUM':booking.seats[0].price==1000?'GOLD PREMIUM':booking.seats[0].price==500?'SILVER STANDARD':'GENERAL'}
               </h2>
               <p className='text-sm text-[#00CED1] font-medium'>
                 {booking.benefits?.length && booking.benefits?.length > 0 && 

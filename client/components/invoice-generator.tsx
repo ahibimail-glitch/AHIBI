@@ -199,7 +199,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ invoiceData, onDown
             <div className="text-center mb-4">
               <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider">Ticket Type</p>
               <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
-                {invoiceData.seats[0].price==1500?'VIP PLATINUM':invoiceData.seats[0].price==1200?'GOLD PREMIUM':invoiceData.seats[0].price==500?'SILVER STANDARD':'GENERAL'}
+                {invoiceData.seats[0].price==1500?'VIP PLATINUM':invoiceData.seats[0].price==1000?'GOLD PREMIUM':invoiceData.seats[0].price==500?'SILVER STANDARD':'GENERAL'}
               </h2>
               {/* <p className='text-sm text-[#00CED1] font-medium'>
                 {invoiceData.benefits && invoiceData.benefits.length > 0 && 

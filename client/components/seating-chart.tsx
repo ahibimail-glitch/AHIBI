@@ -57,7 +57,7 @@ const SeatButton = ({
 
   const getSeatColor = useCallback((price: number) => {
     if (price === 1500) return "bg-red-500 hover:bg-red-400 active:bg-red-600 text-white"
-    if (price === 1200) return "bg-cyan-500 hover:bg-cyan-400 active:bg-cyan-600 text-white"
+    if (price === 1000) return "bg-cyan-500 hover:bg-cyan-400 active:bg-cyan-600 text-white"
     return "bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white"
   }, [])
 

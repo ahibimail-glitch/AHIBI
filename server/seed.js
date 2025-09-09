@@ -11,9 +11,9 @@ const seatConfig = [
   // Premium Tier
   { row: 'X', count: 11, price: 1500 },
   // Mid Tier
-  { row: 'A', count: 12, price: 1200 },
-  { row: 'B', count: 13, price: 1200 },
-  { row: 'C', count: 13, price: 1200 },
+  { row: 'A', count: 12, price: 1000 },
+  { row: 'B', count: 13, price: 1000  },
+  { row: 'C', count: 13, price: 1000 },
   // Economy Tier
   { row: 'D', count: 13, price: 500 },
   { row: 'E', count: 13, price: 500 },
