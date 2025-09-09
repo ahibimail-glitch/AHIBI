@@ -340,8 +340,14 @@ export default function FC25Registration() {
       })
     }
   }
+  return (
+    <div className="flex text-3xl font-bold font-[Poppins] justify-center items-center h-screen">
+      Registration Closed
+    </div>
+  )
 
   return (
+
         <div
           className="min-h-screen bg-gradient-to-br from-orange-900 via-amber-900 to-yellow-900 font-sans text-white"
           style={{
