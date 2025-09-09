@@ -198,7 +198,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                   >
                     <Link href={
                       event._id === "6899cb7215438afd622a7646" ? "/events/FC25" : 
-                      event._id === "68bec4dced0ea5c9eb428c" ? "/annie-musical/details" :
+                      event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
                       `/events/${event._id}`
                     }>
                       View Details

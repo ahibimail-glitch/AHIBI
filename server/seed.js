@@ -9,7 +9,7 @@ require('dotenv').config();
 // The seat configuration based on the provided image
 const seatConfig = [
   // Premium Tier
-  { row: 'X', count: 11, price: 1 },
+  { row: 'X', count: 11, price: 1500 },
   // Mid Tier
   { row: 'A', count: 12, price: 1200 },
   { row: 'B', count: 13, price: 1200 },
@@ -25,7 +25,7 @@ const seatConfig = [
   { row: 'K', count: 11, price: 500 },
   { row: 'L', count: 11, price: 500 },
   { row: 'M', count: 11, price: 500 },
-  { row: 'N', count: 14, price: 1 },
+  { row: 'N', count: 14, price: 500 },
 ];
 
 const seedSeats = async () => {
