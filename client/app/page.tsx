@@ -202,10 +202,10 @@ export default function HomePage() {
 
 
       {/* Hero Section with Background Carousel */}
-      <section className="relative py-20 md:py-32 overflow-hidden min-h-[90vh] flex items-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-800">
+      <Navbar />
+      <section className="relative py-10 md:py-16 overflow-hidden min-h-[90vh] flex items-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-800">
         {/* Background Image Carousel */}
         <div className="absolute top-0 left-0 right-0 z-10">
-          <Navbar />
         </div>
         <div className="absolute inset-0 z-0">
           <div className="relative w-full h-full">
