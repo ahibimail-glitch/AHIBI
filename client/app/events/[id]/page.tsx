@@ -585,122 +585,161 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const isSpecial = params.id === "68bc6cdf40915f05c90380d4";
 
   // Customized UI for a specific event ID while preserving booking logic
+
   if (isSpecial) {
     return (
       <>
-        {/* <Navbar /> */}
+        <div className="fixed top-0 left-0 right-0 z-50">
+          {/* <div className="p-4 bg-black/90 backdrop-blur-sm text-white text-lg font-semibold cursor-pointer" onClick={() => router.back()}>
+          Go Back
+        </div> */}
+          <div
+            className="absolute inset-0 z-25"
+            style={{
+              backgroundImage: "linear-gradient(rgba(239, 68, 68, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(239, 68, 68, 0.1) 1px, transparent 1px)",
+              backgroundSize: "20px 20px",
+            }}
+          />
+        </div>
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-black via-red-950 to-black relative overflow-hidden">
-          {/* <div className="absolute top-0.0 z-50 w-full">
-            <Navbar />
-          </div> */}
+
+          <div className="absolute inset-0 opacity-10">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `
+                  radial-gradient(circle at 25% 25%, rgba(239, 68, 68, 0.3) 0%, transparent 50%),
+                  radial-gradient(circle at 75% 75%, rgba(220, 38, 38, 0.2) 0%, transparent 50%),
+                  linear-gradient(45deg, rgba(239, 68, 68, 0.1) 25%, transparent 25%),
+                  linear-gradient(-45deg, rgba(220, 38, 38, 0.1) 25%, transparent 25%)
+                `,
+                backgroundSize: "200px 200px, 300px 300px, 50px 50px, 50px 50px",
+                animation: "float 20s ease-in-out infinite",
+              }}
+            />
+          </div>
+
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-20"></div>
+            <div className="absolute top-3/4 right-1/3 w-1 h-1 bg-red-400 rounded-full animate-pulse opacity-30"></div>
+            <div className="absolute top-1/2 left-3/4 w-3 h-3 bg-red-600 rounded-full animate-bounce opacity-15"></div>
+            <div className="absolute bottom-1/4 left-1/2 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-25"></div>
+          </div>
 
           <div className="w-full relative z-10">
+            <div className="relative overflow-hidden rounded my-4 sm:my-6 md:my-8 mx-2 sm:mx-4 md:mx-8">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 via-black/60 to-red-600/20 z-10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/50 z-20" />
 
-            <div className="relative overflow-hidden shadow-2xl rounded-none sm:rounded-lg md:rounded-xl lg:rounded-2xl">
-              <img src={event.banner} alt={event.title} className="w-full  object-cover" />
-              {/* Decorative Elements (Unchanged) */}
-              <div className="absolute top-0 left-0 z-30 h-full w-full">
-                <div className="absolute left-2 top-2 h-8 w-8 animate-pulse rounded-full border-2 border-red-500 sm:left-3 sm:top-3 sm:h-10 sm:w-10 md:left-4 md:top-4 md:h-12 md:w-12 sm:border-3" />
-                <div className="absolute right-3 top-3 h-6 w-6 rotate-45 rounded-lg bg-red-500/30 backdrop-blur sm:right-4 sm:top-4 sm:h-7 sm:w-7 md:right-6 md:top-6 md:h-8 md:w-8" />
-                <div className="absolute bottom-2 left-3 h-0.5 w-12 bg-gradient-to-r from-red-500 to-transparent sm:bottom-3 sm:left-4 sm:h-1 sm:w-14 md:bottom-3 md:left-6 md:w-16" />
-              </div>
 
-              {/* Content Overlay */}
+              <AspectRatio ratio={16 / 9} className="relative">
+                <img
+                  src={event.banner || "/placeholder.svg"}
+                  alt={event.title}
+                  className="object-cover filter brightness-110 contrast-125"
+                />
+              </AspectRatio>
+
               <div className="absolute inset-0 z-40 flex items-end">
-                <div className="w-full px-3 pb-4 sm:px-4 sm:pb-6 md:px-6 md:pb-8 lg:px-8">
-                  <div className="max-w-full sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl">
+                <div className="container mx-auto px-3 md:px-4 pb-4 md:pb-6 pt-20 md:pt-24">
+                  <div className="max-w-4xl mx-auto text-center">
 
 
-                    {/* Main Title */}
-                    <h1 className="mb-1.5 transform text-2xl font-black leading-tight tracking-tight text-transparent transition-transform duration-300 hover:scale-105 drop-shadow-2xl bg-clip-text bg-gradient-to-r from-white via-red-200 to-red-400 sm:mb-2 sm:text-4xl sm:leading-tight md:mb-3 md:text-4xl md:leading-tight lg:text-4xl xl:text-5xl 2xl:text-6xl">
+                    <h1 className="text-xl sm:text-4xl md:text-4xl lg:text-4xl font-hiphop font-normal text-transparent bg-clip-text bg-gradient-to-r from-white via-red-200 to-red-400 drop-shadow-2xl leading-tight tracking-wide mb-2 md:mb-3 transform hover:scale-105 hover:rotate-1 transition-all duration-500 cursor-pointer">
                       {event.title}
                     </h1>
+                    {/* <div className="mb-2 md:mb-3">
+                      <div className="inline-flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-red-500 to-red-600 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full shadow-2xl hover:shadow-red-500/25 hover:scale-105 transition-all duration-300 cursor-pointer">
+                        <span className="text-white font-hiphop font-normal text-xs md:text-sm uppercase tracking-wider">
+                          {event.category}
+                        </span>
+                      </div>
+                    </div> */}
+
+
 
 
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Date Card */}
-            <div className="mt-4 ml-4">
-              <div className="flex flex-col flex-wrap gap-2 text-white/90 sm:flex-row md:gap-3">
-
-                <div className="min-w-0 flex-shrink rounded-lg border-2 border-red-500/50 bg-black/60 px-2.5 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-red-400 hover:bg-black/70 sm:px-3 md:rounded-xl md:px-4 md:py-3">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <Calendar className="h-3.5 w-3.5 flex-shrink-0 text-red-400 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold uppercase tracking-wide text-red-300">Date</div>
-                      <div className="truncate text-xs font-bold text-white sm:text-sm">{startDateTime.date}</div>
+            <div className="mx-3 my-6 px-4 flex flex-col sm:flex-row sm:flex-wrap gap-1.5 md:gap-2 text-white/90 mx-auto">
+              <div className="bg-black/60 backdrop-blur-xl border-2 border-red-500/50 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 shadow-2xl hover:border-red-400 hover:bg-red-500/10 hover:scale-105 hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <CalendarIcon className="h-3 w-3 md:h-4 md:w-4 text-red-400" />
+                  <div>
+                    <div className="text-red-300 text-xs font-hiphop font-normal uppercase">Date</div>
+                    <div className="text-white font-hiphop font-normal text-xs md:text-sm">
+                      {startDateTime.date}
                     </div>
                   </div>
                 </div>
-
-                {/* Time Card */}
-                <div className="min-w-0 flex-shrink rounded-lg border-2 border-red-500/50 bg-black/60 px-2.5 py-2 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-red-400 hover:bg-black/70 sm:px-3 md:rounded-xl md:px-4 md:py-3">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <Clock className="h-3.5 w-3.5 flex-shrink-0 text-red-400 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold uppercase tracking-wide text-red-300">Time</div>
-                      <div className="truncate text-xs font-bold text-white sm:text-sm">{timeRange}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Genre Card */}
-                {event.category && (
-                  <div className="min-w-0 flex-shrink rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-2.5 py-2 shadow-2xl transition-all duration-300 hover:from-red-600 hover:to-red-700 sm:px-3 md:rounded-xl md:px-4 md:py-3">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <div className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full bg-white sm:h-4 sm:w-4 md:h-5 md:w-5">
-                        <span className="text-xs font-black text-red-600">♪</span>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold uppercase tracking-wide text-red-100">Genre</div>
-                        <div className="truncate text-xs font-black text-white sm:text-sm">{event.category}</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              <div className="bg-black/60 backdrop-blur-xl border-2 border-red-500/50 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 shadow-2xl hover:border-red-400 hover:bg-red-500/10 hover:scale-105 hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Clock className="h-3 w-3 md:h-4 md:w-4 text-red-400" />
+                  <div>
+                    <div className="text-red-300 text-xs font-hiphop font-normal uppercase">Time</div>
+                    <div className="text-white font-hiphop font-normal text-xs md:text-sm">{timeRange}</div>
+                  </div>
+                </div>
+              </div>
+
+              {event.category && (
+                <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 shadow-2xl hover:from-red-600 hover:to-red-700 hover:scale-105 hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <div className="w-3 h-3 md:w-4 md:h-4 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-red-600 text-xs font-black">♪</span>
+                    </div>
+                    <div>
+                      <div className="text-red-100 text-xs font-hiphop font-normal uppercase">Genre</div>
+                      <div className="text-white font-hiphop font-normal text-xs md:text-sm">
+                        {event.category}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="container mx-auto px-4 py-6 md:py-10 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 flex-1">
-              <div className="lg:col-span-2 space-y-4 md:space-y-6">
-                <div className="relative rounded-xl md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-4 md:p-6 shadow-2xl overflow-hidden">
-                  <div className="absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-red-500/10 rounded-full blur-3xl" />
-                  <div className="absolute bottom-0 left-0 w-12 h-12 md:w-16 md:h-16 bg-red-600/10 rounded-full blur-2xl" />
+            <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6 flex-1">
+              <div className="lg:col-span-2 space-y-3 md:space-y-4">
+                <div className="relative rounded-lg md:rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-3 md:p-4 shadow-2xl overflow-hidden hover:border-red-400/50 hover:shadow-red-500/10 hover:scale-[1.02] transition-all duration-300 group">
+                  <div className="absolute top-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-500/20 transition-all duration-300" />
+                  <div className="absolute bottom-0 left-0 w-12 h-12 md:w-16 md:h-16 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-all duration-300" />
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
-                        <span className="text-white text-base md:text-lg font-black">🎤</span>
+                    <div className="flex items-center gap-2 mb-2 md:mb-3">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <span className="text-white text-sm md:text-base font-black">🎤</span>
                       </div>
-                      <h2 className="text-lg md:text-xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-200 uppercase tracking-wide">
+                      <h2 className="text-base md:text-lg font-hiphop font-normal text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-200 uppercase tracking-wide">
                         About the Festival
                       </h2>
                     </div>
-                    <p className="text-red-100 leading-relaxed text-sm md:text-base whitespace-pre-line font-medium">
+                    <p className="text-red-100 leading-relaxed text-xs md:text-sm whitespace-pre-line font-medium">
                       {event.description}
                     </p>
 
-                    <div className="mt-4 md:mt-6 flex flex-wrap gap-2">
-                      <div className="bg-red-500/20 border border-red-400/50 rounded-full px-3 py-1 text-red-300 text-xs font-display font-bold">
+                    <div className="mt-3 md:mt-4 flex flex-wrap gap-1.5 md:gap-2">
+                      <div className="bg-red-500/20 border border-red-400/50 rounded-full px-2.5 py-1 text-red-300 text-xs font-hiphop font-normal hover:bg-red-500/30 hover:border-red-400 hover:scale-105 transition-all duration-300 cursor-pointer">
                         🎵 Live Performances
                       </div>
-                      <div className="bg-red-500/20 border border-red-400/50 rounded-full px-3 py-1 text-red-300 text-xs font-display font-bold">
+                      <div className="bg-red-500/20 border border-red-400/50 rounded-full px-2.5 py-1 text-red-300 text-xs font-hiphop font-normal hover:bg-red-500/30 hover:border-red-400 hover:scale-105 transition-all duration-300 cursor-pointer">
                         🔥 Street Food
                       </div>
-                      <div className="bg-red-500/20 border border-red-400/50 rounded-full px-3 py-1 text-red-300 text-xs font-display font-bold">
+                      <div className="bg-red-500/20 border border-red-400/50 rounded-full px-2.5 py-1 text-red-300 text-xs font-hiphop font-normal hover:bg-red-500/30 hover:border-red-400 hover:scale-105 transition-all duration-300 cursor-pointer">
                         💫 Urban Culture
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="relative rounded-xl md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-4 md:p-6 shadow-2xl overflow-hidden">
-                  <div className="absolute top-0 left-0 w-24 h-24 md:w-28 md:h-28 bg-red-400/10 rounded-full blur-2xl" />
+                <div className="relative rounded-lg md:rounded-xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-3 md:p-4 shadow-2xl overflow-hidden hover:border-red-400/50 hover:shadow-red-500/10 hover:scale-[1.02] transition-all duration-300 group">
+                  <div className="absolute top-0 left-0 w-24 h-24 md:w-28 md:h-28 bg-red-400/10 rounded-full blur-2xl group-hover:bg-red-400/20 transition-all duration-300" />
                   <div className="relative z-10">
                     <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                      <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
                         <MapPin className="h-4 w-4 md:h-5 md:w-5 text-white" />
                       </div>
                       <h2 className="text-lg md:text-xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-200 uppercase tracking-wide">
@@ -708,9 +747,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       </h2>
                     </div>
 
-                    <div className="bg-black/40 rounded-xl md:rounded-2xl p-4 md:p-6 border border-red-500/20">
+                    <div className="bg-black/40 rounded-lg md:rounded-2xl p-4 md:p-6 border border-red-500/20 group-hover:border-red-400/40 transition-all duration-300">
                       <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6">
-                        <div className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-red-500/30 to-red-600/30 backdrop-blur">
+                        <div className="p-3 md:p-4 rounded-lg md:rounded-2xl bg-gradient-to-br from-red-500/30 to-red-600/30 backdrop-blur group-hover:scale-110 transition-transform duration-300">
                           <MapPin className="h-6 w-6 md:h-8 md:w-8 text-red-300" />
                         </div>
                         <div className="flex-1">
@@ -722,7 +761,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               .filter(Boolean)
                               .join(", ")}
                           </p>
-                          <div className="mt-3 md:mt-4 inline-flex items-center gap-2 bg-red-500/20 rounded-full px-3 md:px-4 py-1.5 md:py-2 text-red-300 text-xs md:text-sm font-bold">
+                          <div className="mt-3 md:mt-4 inline-flex items-center gap-2 bg-red-500/20 rounded-full px-3 md:px-4 py-1.5 md:py-2 text-red-300 text-xs md:text-sm font-bold hover:bg-red-500/30 hover:scale-105 transition-all duration-300 cursor-pointer">
                             📍 Premium Location with Full Facilities
                           </div>
                         </div>
@@ -732,11 +771,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
 
                 {event.tags?.length ? (
-                  <div className="relative rounded-xl md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-4 md:p-6 shadow-2xl overflow-hidden">
-                    <div className="absolute bottom-0 right-0 w-28 h-28 md:w-36 md:h-36 bg-red-500/10 rounded-full blur-3xl" />
+                  <div className="relative rounded-lg md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-3 md:p-4 shadow-2xl overflow-hidden hover:border-red-400/50 hover:shadow-red-500/10 hover:scale-[1.02] transition-all duration-300 group">
+                    <div className="absolute bottom-0 right-0 w-28 h-28 md:w-36 md:h-36 bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-500/20 transition-all duration-300" />
                     <div className="relative z-10">
                       <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300">
                           <span className="text-white text-lg md:text-xl font-black">#</span>
                         </div>
                         <h2 className="text-lg md:text-xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-200 uppercase tracking-wide">
@@ -747,7 +786,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         {event.tags.map((t) => (
                           <div
                             key={t}
-                            className="bg-gradient-to-r from-red-500 to-red-600 text-white font-display font-black px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-2 border-red-400/50 text-sm md:text-base"
+                            className="bg-gradient-to-r from-red-500 to-red-600 text-white font-display font-black px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl shadow-lg hover:shadow-xl hover:from-red-600 hover:to-red-700 transform hover:scale-110 hover:-rotate-1 transition-all duration-300 border-2 border-red-400/50 text-sm md:text-base cursor-pointer"
                           >
                             #{t.toUpperCase()}
                           </div>
@@ -759,26 +798,26 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </div>
 
               <div className="space-y-6 md:space-y-8">
-                <div className="relative rounded-2xl md:rounded-3xl border-3 border-red-500/50 bg-gradient-to-br from-black/90 via-red-950/30 to-black/90 backdrop-blur-xl p-4 md:p-6 shadow-2xl overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-red-500/10 rounded-full blur-3xl" />
-                  <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-red-600/10 rounded-full blur-2xl" />
+                <div className="relative rounded-2xl md:rounded-3xl border-3 border-red-500/50 bg-gradient-to-br from-black/90 via-red-950/30 to-black/90 backdrop-blur-xl p-4 md:p-6 shadow-2xl overflow-hidden hover:border-red-400/60 hover:shadow-red-500/20 hover:scale-[1.02] transition-all duration-300 group">
+                  <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 bg-red-500/10 rounded-full blur-3xl group-hover:bg-red-500/20 transition-all duration-300" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-red-600/10 rounded-full blur-2xl group-hover:bg-red-600/20 transition-all duration-300" />
 
                   <div className="relative z-10">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
                       <div className="flex items-center gap-3 md:gap-4">
-                        <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-xl">
+                        <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                           <TicketIcon className="h-6 w-6 md:h-8 md:w-8 text-white" />
                         </div>
                         <div>
                           <h3 className="text-xl md:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-200 uppercase tracking-wide">
                             Get Your Pass
                           </h3>
-                          <p className="text-red-300 text-xs md:text-sm font-display font-bold">
+                          <p className="text-red-300 text-xs md:text-sm font-display font-bold animate-pulse">
                             🔥 Limited Spots Available
                           </p>
                         </div>
                       </div>
-                      <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl px-3 md:px-4 py-1.5 md:py-2 shadow-lg">
+                      <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl px-3 md:px-4 py-1.5 md:py-2 shadow-lg hover:from-red-600 hover:to-red-700 hover:scale-105 transition-all duration-300 cursor-pointer">
                         <div className="text-white font-display font-black text-xs md:text-sm">
                           {event.ticketTypes?.reduce((acc, t) => acc + (t.quantity - t.sold), 0) || 0} LEFT
                         </div>
@@ -795,10 +834,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           return (
                             <div
                               key={ticket._id}
-                              className={`relative rounded-xl md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-r from-black/60 to-red-950/20 backdrop-blur p-4 md:p-6 shadow-xl transition-all duration-300 hover:border-red-400/60 hover:shadow-2xl ${isSoldOut ? "opacity-50" : ""} ${quantity > 0 ? "border-red-400 bg-gradient-to-r from-red-500/10 to-red-600/10" : ""}`}
+                              className={`relative rounded-lg md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-r from-black/60 to-red-950/20 backdrop-blur p-3 md:p-4 shadow-xl transition-all duration-300 hover:border-red-400/60 hover:shadow-2xl hover:scale-[1.02] hover:-translate-y-1 group/ticket ${isSoldOut ? "opacity-50" : ""} ${quantity > 0 ? "border-red-400 bg-gradient-to-r from-red-500/10 to-red-600/10" : ""}`}
                             >
-                              <div className="absolute top-2 right-2 w-4 h-4 md:w-6 md:h-6 bg-red-500/20 rounded-full" />
-                              <div className="absolute bottom-2 left-2 w-3 h-3 md:w-4 md:h-4 bg-red-600/20 rounded-full" />
+                              <div className="absolute top-2 right-2 w-4 h-4 md:w-6 md:h-6 bg-red-500/20 rounded-full group-hover/ticket:bg-red-500/40 transition-all duration-300" />
+                              <div className="absolute bottom-2 left-2 w-3 h-3 md:w-4 md:h-4 bg-red-600/20 rounded-full group-hover/ticket:bg-red-600/40 transition-all duration-300" />
 
                               <div className="flex flex-col sm:flex-row items-start justify-between gap-4 md:gap-6">
                                 <div className="flex-1 w-full sm:w-auto">
@@ -842,7 +881,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       variant="outline"
                                       size="sm"
                                       disabled={quantity <= 0}
-                                      className="w-8 h-8 md:w-10 md:h-10 p-0 rounded-lg md:rounded-xl border-2 border-red-500/50 bg-black/40 text-red-300 hover:bg-red-500/20 hover:border-red-400 transition-all"
+                                      className="w-8 h-8 md:w-10 md:h-10 p-0 rounded-lg md:rounded-xl border-2 border-red-500/50 bg-black/40 text-red-300 hover:bg-red-500/20 hover:border-red-400 hover:scale-110 transition-all duration-300"
                                       onClick={() => {
                                         if (quantity > 0) {
                                           const newQuantity = quantity - 1
@@ -863,7 +902,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       <Minus className="h-3 w-3 md:h-4 md:w-4" />
                                     </Button>
 
-                                    <div className="w-10 h-8 md:w-12 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                                    <div className="w-10 h-8 md:w-12 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-300">
                                       <span className="text-white font-display font-black text-base md:text-lg">
                                         {quantity}
                                       </span>
@@ -873,7 +912,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       variant="outline"
                                       size="sm"
                                       disabled={isSoldOut || quantity >= availability}
-                                      className="w-8 h-8 md:w-10 md:h-10 p-0 rounded-lg md:rounded-xl border-2 border-red-500/50 bg-black/40 text-red-300 hover:bg-red-500/20 hover:border-red-400 transition-all"
+                                      className="w-8 h-8 md:w-10 md:h-10 p-0 rounded-lg md:rounded-xl border-2 border-red-500/50 bg-black/40 text-red-300 hover:bg-red-500/20 hover:border-red-400 hover:scale-110 transition-all duration-300"
                                       onClick={() => {
                                         const newQuantity = quantity + 1
                                         if (newQuantity <= availability) {
@@ -893,12 +932,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         })}
 
                         {selectedTickets.size > 0 && (
-                          <div className="relative rounded-2xl md:rounded-3xl border-3 border-red-400/60 bg-gradient-to-br from-red-500/20 via-black/80 to-red-600/20 backdrop-blur-xl p-6 md:p-8 shadow-2xl overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-2xl md:rounded-3xl" />
+                          <div className="relative rounded-2xl md:rounded-3xl border-3 border-red-400/60 bg-gradient-to-br from-red-500/20 via-black/80 to-red-600/20 backdrop-blur-xl p-6 md:p-8 shadow-2xl overflow-hidden hover:border-red-300/80 hover:shadow-red-500/30 hover:scale-[1.02] transition-all duration-300 group/checkout">
+                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-red-500/10 to-red-600/10 rounded-2xl md:rounded-3xl group-hover/checkout:from-red-500/20 group-hover/checkout:to-red-600/20 transition-all duration-300" />
                             <div className="relative z-10">
                               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
                                 <div className="flex items-center gap-3 md:gap-4">
-                                  <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg">
+                                  <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg group-hover/checkout:scale-110 group-hover/checkout:rotate-12 transition-all duration-300">
                                     <span className="text-white text-lg md:text-xl font-black">💳</span>
                                   </div>
                                   <div>
@@ -932,7 +971,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </div>
 
                               <Button
-                                className="w-full h-14 md:h-16 text-lg md:text-xl font-display font-black bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl md:rounded-2xl shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 uppercase tracking-wide"
+                                className="w-full h-14 md:h-16 text-lg md:text-xl font-display font-black bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl md:rounded-2xl shadow-2xl hover:shadow-red-500/50 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 uppercase tracking-wide"
                                 onClick={handleBooking}
                                 disabled={isBooking}
                               >
@@ -965,11 +1004,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
 
                 {event.organizer && (
-                  <div className="relative rounded-xl md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-4 md:p-6 shadow-2xl overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 md:w-28 md:h-28 bg-red-500/10 rounded-full blur-2xl" />
+                  <div className="relative rounded-lg md:rounded-2xl border-2 border-red-500/30 bg-gradient-to-br from-black/80 via-red-950/20 to-black/80 backdrop-blur-xl p-3 md:p-4 shadow-2xl overflow-hidden hover:border-red-400/50 hover:shadow-red-500/10 hover:scale-[1.02] transition-all duration-300 group/organizer">
+                    <div className="absolute top-0 right-0 w-24 h-24 md:w-28 md:h-28 bg-red-500/10 rounded-full blur-2xl group-hover/organizer:bg-red-500/20 transition-all duration-300" />
                     <div className="relative z-10">
                       <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-red-500 to-red-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg group-hover/organizer:scale-110 group-hover/organizer:rotate-12 transition-all duration-300">
                           <Crown className="h-4 w-4 md:h-5 md:w-5 text-white" />
                         </div>
                         <h2 className="text-lg md:text-xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-200 uppercase tracking-wide">
@@ -977,9 +1016,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         </h2>
                       </div>
 
-                      <div className="bg-black/40 rounded-xl md:rounded-2xl p-4 md:p-6 border border-red-500/20">
+                      <div className="bg-black/40 rounded-lg md:rounded-2xl p-4 md:p-6 border border-red-500/20 group-hover/organizer:border-red-400/40 transition-all duration-300">
                         <div className="flex items-center gap-3 md:gap-4">
-                          <Avatar className="h-12 w-12 md:h-16 md:w-16 border-3 border-red-500/50 shadow-xl">
+                          <Avatar className="h-12 w-12 md:h-16 md:w-16 border-3 border-red-500/50 shadow-xl group-hover/organizer:scale-110 group-hover/organizer:border-red-400 transition-all duration-300">
                             {event.organizer.avatar ? (
                               <AvatarImage
                                 src={event.organizer.avatar || "/placeholder.svg"}
@@ -997,7 +1036,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             </div>
                             {event.organizer.rating && (
                               <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 bg-red-500/20 rounded-full px-2 md:px-3 py-1">
+                                <div className="flex items-center gap-1 bg-red-500/20 rounded-full px-2 md:px-3 py-1 hover:bg-red-500/30 hover:scale-105 transition-all duration-300 cursor-pointer">
                                   <Star className="h-3 w-3 md:h-4 md:w-4 text-red-400 fill-current" />
                                   <span className="text-red-300 font-display font-bold text-xs md:text-sm">
                                     {event.organizer.rating.toFixed(1)}
@@ -1018,6 +1057,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
           </div>
         </div>
+
+        <style jsx>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-10px) rotate(1deg); }
+            50% { transform: translateY(-5px) rotate(-1deg); }
+            75% { transform: translateY(-15px) rotate(0.5deg); }
+          }
+        `}</style>
       </>
     )
   }

@@ -22,10 +22,8 @@ const AnnieMusicalTickets = () => {
             textColor: 'text-amber-900',
             benefits: [
                 'Front row - Ultimate stage experience',
-                'Complimentary premium beverages & snacks',
-                'Unlimited refreshments throughout show',
-                'VIP lounge access during intermission',
-                'Exclusive Annie merchandise gift'
+                'Complimentary premium beverages '
+               
             ],
             icon: <Crown className="w-7 h-7" />,
             popular: true,
@@ -45,9 +43,7 @@ const AnnieMusicalTickets = () => {
             benefits: [
                 'Premium seating with excellent view',
                 'Complimentary soft beverages (Coke/Pepsi)',
-                'Unlimited water & light refreshments',
-                'Priority entry to venue',
-                'Digital program & cast photos'
+                'Unlimited water '
             ],
             icon: <Award className="w-7 h-7" />,
             popular: false,
