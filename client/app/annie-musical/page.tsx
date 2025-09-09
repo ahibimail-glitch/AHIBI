@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import SeatingChart from "@/components/seating-chart"
 import CartSummary from "@/components/cart-summary"
 import { useSeatsStore } from "@/store/seats-store"
@@ -10,7 +10,10 @@ import Navbar from "../Navbar"
 export default function Page() {
   const fetchSeats = useSeatsStore((state) => state.fetchSeats)
   const seats = useSeatsStore((state) => state.seats)
+  const selectedIds = useSeatsStore((state) => state.selectedIds)
   const [loading, setLoading] = useState(true)
+  const cartSummaryRef = useRef<HTMLDivElement>(null)
+  const [prevSelectedSeatsCount, setPrevSelectedSeatsCount] = useState(0)
 
   useEffect(() => {
     const init = async () => {
@@ -20,6 +23,17 @@ export default function Page() {
     }
     init()
   }, [fetchSeats])
+
+  // Scroll to cart summary when a seat is selected
+  useEffect(() => {
+    if (selectedIds.length > prevSelectedSeatsCount && cartSummaryRef.current) {
+      cartSummaryRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      })
+    }
+    setPrevSelectedSeatsCount(selectedIds.length)
+  }, [selectedIds.length, prevSelectedSeatsCount])
 
   return (
     <ThemeProvider attribute="class">
@@ -42,12 +56,12 @@ export default function Page() {
               <p className="text-sm text-slate-500 mt-1">Please wait while we fetch the latest seat availability</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-4 lg:gap-6 items-start">
-              <div className="order-2 xl:order-1">
-                <SeatingChart />
-              </div>
-              <div className="order-1 xl:order-2">
+            <div className="flex flex-col gap-4 lg:gap-6">
+              <div ref={cartSummaryRef}>
                 <CartSummary />
+              </div>
+              <div>
+                <SeatingChart />
               </div>
             </div>
           )}
