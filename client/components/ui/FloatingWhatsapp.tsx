@@ -1,4 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 // Constants for the WhatsApp button
 const WHATSAPP_NUMBER = '7005727288'; // Your WhatsApp number
@@ -9,6 +12,13 @@ const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${MESSAGE}`;
  * A floating WhatsApp button component that expands on hover to show text.
  */
 export const FloatingWhatsAppButton = () => {
+  const pathname = usePathname();
+  
+  // Don't show the WhatsApp button on Annie Musical page
+  if (pathname === '/annie-musical') {
+    return null;
+  }
+  
   return (
     <a
       href={WHATSAPP_LINK}
