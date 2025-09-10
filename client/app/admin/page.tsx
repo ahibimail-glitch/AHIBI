@@ -46,6 +46,7 @@ import FailedPayments from "./components/FailedPayments";
 import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
 import AnnieMusicalQrScanner from "./components/AnnieMusicalQrScanner";
 import AnnieManualBooking from "./components/AnnieManualBooking";
+import AnnieFailedBookings from "./components/AnnieFailedBookings";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -155,6 +156,8 @@ export default function AdminDashboard() {
         return <AnnieMusicalQrScanner />;
       case "annie-manual-booking":
         return <AnnieManualBooking />;
+      case "annie-failed-bookings":
+        return <AnnieFailedBookings />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -211,9 +214,13 @@ export default function AdminDashboard() {
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Annie</h3>
+          </div>
           <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
           <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => setActiveView("annie-manual-booking")} />
-          <SidebarButton icon={Music} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
+          <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => setActiveView("annie-failed-bookings")} />
+          <SidebarButton icon={QrCode} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>

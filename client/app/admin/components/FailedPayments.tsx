@@ -17,7 +17,7 @@ type TxItem = {
   createdAt: string;
   user?: { name?: string; email?: string; phone?: string } | null;
   userSnapshot?: { name?: string; email?: string; phone?: string } | null;
-  event?: { title?: string } | null;
+  event?: { title?: string; startDate?: string } | null;
   bookingDetails?: any;
 };
 
@@ -141,11 +141,20 @@ export default function FailedPayments() {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">{u.name || "Unknown"}</span>
-                          <span className="text-xs text-gray-500">{u.email || ""}</span>
-                          <span className="text-xs text-gray-500">{u.phone || ""}</span>
+                          <span className="text-xs text-gray-500">{u.email || "No email"}</span>
+                          <span className="text-xs text-gray-500">{u.phone || "No phone"}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{eventTitle}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{eventTitle}</span>
+                          {item.event?.startDate && (
+                            <span className="text-xs text-gray-500">
+                              {new Date(item.event.startDate).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{new Date(item.createdAt).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{item.status.replace(/_/g, " ")}</Badge>

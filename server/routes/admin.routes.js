@@ -154,6 +154,7 @@ router.get("/bookings/all",  async (req, res) => {
 
 // Payments: list and resolve paid but not booked
 router.get('/payments/paid-no-booking', paymentTxController.getPaidNoBooking);
+router.get('/payments/annie-failed-bookings', paymentTxController.getAnnieFailedBookings);
 router.post('/payments/resolve/:id', paymentTxController.resolveTransaction);
 // Settings routes
 router.get('/settings', adminController.getSettings);

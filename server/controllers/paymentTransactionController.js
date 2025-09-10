@@ -13,7 +13,7 @@ const generateSlug = (title) => {
   return slugify(title, { lower: true, strict: true });
 };
 
-// List transactions that are paid but no booking exists
+// List transactions that are paid but no booking exists (excluding Annie Musical)
 exports.getPaidNoBooking = async (req, res) => {
   try {
     const items = await PaymentTransaction.find({ status: 'paid_no_booking' })
@@ -21,8 +21,21 @@ exports.getPaidNoBooking = async (req, res) => {
       .populate('event', 'title startDate')
       .sort({ createdAt: -1 });
 
+    // Filter out Annie Musical transactions
+    const filteredItems = items.filter(item => {
+      const isAnnieMusical = (
+        (item.notes && (
+          item.notes.includes('Annie Musical') || 
+          item.notes.includes('annie-musical') || 
+          item.notes.toLowerCase().includes('annie')
+        )) ||
+        (item.description && item.description.toLowerCase().includes('annie'))
+      );
+      return !isAnnieMusical;
+    });
+
     // Process items to ensure we have user and event info
-    const processedItems = items.map(item => {
+    const processedItems = filteredItems.map(item => {
       const processed = item.toObject();
       
       // If user population failed, try to get from userSnapshot or notes
@@ -41,6 +54,45 @@ exports.getPaidNoBooking = async (req, res) => {
     res.json({ success: true, data: { items: processedItems } });
   } catch (error) {
     console.error('[Admin Payments] Error listing paid-no-booking:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// List Annie Musical transactions that are paid but no booking exists
+exports.getAnnieFailedBookings = async (req, res) => {
+  try {
+    const items = await PaymentTransaction.find({ status: 'paid_no_booking' })
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    // Filter only Annie Musical transactions
+    const annieItems = items.filter(item => {
+      const isAnnieMusical = (
+        (item.notes && (
+          item.notes.includes('Annie Musical') || 
+          item.notes.includes('annie-musical') || 
+          item.notes.toLowerCase().includes('annie')
+        )) ||
+        (item.description && item.description.toLowerCase().includes('annie'))
+      );
+      return isAnnieMusical;
+    });
+
+    // Process items to ensure we have user info
+    const processedItems = annieItems.map(item => {
+      const processed = item.toObject();
+      
+      // If user population failed, try to get from userSnapshot
+      if (!processed.user && processed.userSnapshot) {
+        processed.user = processed.userSnapshot;
+      }
+      
+      return processed;
+    });
+
+    res.json({ success: true, data: { items: processedItems } });
+  } catch (error) {
+    console.error('[Admin Payments] Error listing Annie Musical failed bookings:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
