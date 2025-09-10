@@ -86,9 +86,9 @@ const AnnieMusicalTickets = () => {
                 <div className="container mx-auto px-4">
                     {/* Main Poster Content */}
                     <img
-                        src="/images/annie-musical.jpg"
+                        src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1757489743/ahibi/x5mts9n8tzvauhbe88bf.jpg"
                         alt="Annie Musical Poster"
-                        className="w-full md:w-3/4 lg:w-1/2 mx-auto rounded-2xl shadow-lg"
+                        className="w-full md:w-3/4  mx-auto rounded-xl shadow-lg"
                     />
                 </div>
             </div>

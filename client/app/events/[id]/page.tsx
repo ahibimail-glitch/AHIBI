@@ -591,7 +591,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       <>
         <div className="fixed top-0 left-0 right-0 z-50">
           <Navbar />
-        </div>
+        </div>z
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-black via-red-950 to-black relative overflow-hidden">
           <div
             className="absolute inset-0 z-10"
