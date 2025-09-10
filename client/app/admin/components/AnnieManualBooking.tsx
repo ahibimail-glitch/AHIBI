@@ -60,10 +60,6 @@ interface BookingResult {
   status: string;
 }
 
-const SEATING_CHART = {
-  rows: 5,
-  cols: 10,
-};
 
 export default function AnnieManualBooking() {
   const [step, setStep] = useState<"customer" | "seats" | "confirm" | "success">("customer");
@@ -234,16 +230,16 @@ Thank you for your booking!
 
   const getSeatDisplay = (seat: Seat) => {
     const isSelected = selectedSeats.includes(seat._id);
-    let className = "w-8 h-8 m-1 rounded text-xs font-medium cursor-pointer transition-all duration-200 flex items-center justify-center ";
+    let className = "w-7 h-7 m-0.5 rounded text-xs font-bold cursor-pointer transition-all duration-200 flex items-center justify-center border ";
     
     if (seat.status === "booked") {
-      className += "bg-red-500 text-white cursor-not-allowed";
+      className += "bg-gray-400 text-gray-600 cursor-not-allowed border-gray-300";
     } else if (seat.status === "selected") {
-      className += "bg-yellow-500 text-white cursor-not-allowed";
+      className += "bg-yellow-500 text-white cursor-not-allowed border-yellow-600";
     } else if (isSelected) {
-      className += "bg-blue-600 text-white shadow-lg scale-110";
+      className += "bg-red-500 text-white shadow-lg border-red-600";
     } else {
-      className += "bg-green-500 text-white hover:bg-green-600 hover:scale-105";
+      className += "bg-green-500 text-white hover:bg-green-600 border-green-600";
     }
 
     return (
@@ -258,7 +254,20 @@ Thank you for your booking!
     );
   };
 
+  // Split seats into left and right sections for aisle (from SeatingChart logic)
+  const createRowWithAisle = (seats: Seat[]) => {
+    const reversed = [...seats].reverse();
+    const totalSeats = reversed.length;
+    const leftCount = Math.floor(totalSeats / 2);
+
+    return {
+      left: reversed.slice(0, leftCount),
+      right: reversed.slice(leftCount)
+    };
+  };
+
   const renderSeatingChart = () => {
+    // Organize seats by rows (dynamic approach from SeatingChart)
     const seatsByRow: { [key: string]: Seat[] } = {};
     seats.forEach(seat => {
       if (!seatsByRow[seat.row]) {
@@ -267,41 +276,77 @@ Thank you for your booking!
       seatsByRow[seat.row].push(seat);
     });
 
+    // Sort seats within each row by number
+    Object.keys(seatsByRow).forEach(rowId => {
+      seatsByRow[rowId].sort((a, b) => a.number - b.number);
+    });
+
+    // Sort rows with X at bottom, others reverse alphabetically (from SeatingChart)
+    const rows = Object.entries(seatsByRow).sort(([rowA], [rowB]) => {
+      if (rowA === 'X') return 1;
+      if (rowB === 'X') return -1;
+      return rowB.localeCompare(rowA);
+    });
+
     return (
-      <div className="space-y-4">
-        <div className="text-center">
-          <div className="bg-gray-800 text-white py-2 px-8 rounded-lg inline-block mb-4">
-            🎭 STAGE 🎭
+      <div className="bg-white p-6 rounded-lg">
+        {/* Theater seating chart */}
+        <div className="space-y-1">
+          {rows.map(([rowId, rowSeats]) => {
+            const { left, right } = createRowWithAisle(rowSeats);
+            const rowPrice = rowSeats[0]?.price; // Get price from actual seat data
+            
+            return (
+              <div key={rowId} className="flex items-center justify-center">
+                {/* Row label with price */}
+                <div className="w-12 flex flex-col items-center justify-center mr-4 text-xs">
+                  <div className="font-bold text-gray-800">{rowId}</div>
+                  <div className="text-gray-600">₹{rowPrice}</div>
+                </div>
+                
+                {/* Left section seats */}
+                <div className="flex gap-0.5 mr-8">
+                  {left.map(seat => getSeatDisplay(seat))}
+                </div>
+                
+                {/* Center Aisle */}
+                <div className="w-6 flex justify-center">
+                  <div className="w-0.5 h-7 bg-gradient-to-b from-slate-300 to-slate-400 opacity-60 rounded-full" />
+                </div>
+                
+                {/* Right section seats */}
+                <div className="flex gap-0.5">
+                  {right.map(seat => getSeatDisplay(seat))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Stage */}
+        <div className="text-center mt-8 mb-6">
+          <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400 text-black px-12 py-2.5 font-bold text-sm rounded-lg shadow-lg border-2 border-yellow-500">
+            🎭 SCREEN / STAGE
           </div>
         </div>
-        
-        {Object.keys(seatsByRow).sort().map(row => (
-          <div key={row} className="flex items-center justify-center space-x-2">
-            <div className="w-8 text-center font-bold text-gray-700">{row}</div>
-            <div className="flex">
-              {seatsByRow[row]
-                .sort((a, b) => a.number - b.number)
-                .map(seat => getSeatDisplay(seat))}
-            </div>
-          </div>
-        ))}
 
-        <div className="flex justify-center space-x-6 mt-6">
+        {/* Legend */}
+        <div className="flex justify-center space-x-6 mt-6 text-sm">
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-500 rounded"></div>
-            <span className="text-sm">Available</span>
+            <div className="w-4 h-4 bg-green-500 rounded border border-green-600"></div>
+            <span>Available</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-600 rounded"></div>
-            <span className="text-sm">Selected</span>
+            <div className="w-4 h-4 bg-red-500 rounded border border-red-600"></div>
+            <span>Selected</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-            <span className="text-sm">Reserved</span>
+            <div className="w-4 h-4 bg-yellow-500 rounded border border-yellow-600"></div>
+            <span>Reserved</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-red-500 rounded"></div>
-            <span className="text-sm">Booked</span>
+            <div className="w-4 h-4 bg-gray-400 rounded border border-gray-300"></div>
+            <span>Booked</span>
           </div>
         </div>
       </div>
@@ -587,7 +632,8 @@ Thank you for your booking!
             <div className="flex justify-center space-x-4">
               <Button onClick={generateInvoice} variant="outline" className="bg-green-600 hover:bg-green-700 text-white">
                 {/* <FileText className="mr-2 h-4 w-4" /> */}
-                INVOICE WILL BE AVAILABLE IN THE USER DASHBOARD
+                INVOICE WILL BE AVAILABLE IN
+                 THE USER DASHBOARD
               </Button>
               <Button 
                 onClick={() => {
