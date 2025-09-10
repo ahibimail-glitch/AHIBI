@@ -455,15 +455,15 @@ export default function ProfilePage() {
                           <div className="flex items-start space-x-4">
                             <div className="relative">
                               <Image
-                                src={booking.event?.banner || "/images/profile.png"}
+                                src={booking.event?.banner || "/placeholder.jpg"}
                                 alt={booking.event?.title || "Event"}
                                 width={120}
                                 height={80}
                                 className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg object-cover shadow-sm ring-2 ring-white"
                               />
-                              <div className="absolute -top-2 -left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                              {/* <div className="absolute -top-2 -left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
                                 #{index + 1}
-                              </div>
+                              </div> */}
                             </div>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
@@ -503,7 +503,7 @@ export default function ProfilePage() {
                           <div className="text-right lg:ml-6">
                             <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.total.toLocaleString()}</p>
                             <div className="flex flex-col sm:flex-row gap-2">
-                              {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed' && (      
+                              {(booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed')||(booking.bookingType !== 'ahibi-fest' && booking.paymentStatus === 'completed') ? (      
                                 <Button 
                                   size="sm" 
                                   variant="outline" 
@@ -512,7 +512,7 @@ export default function ProfilePage() {
                               >
                                 View Ticket
                               </Button>
-                            )}
+                            ):null}
                             </div>
                           </div>
                         </div>
