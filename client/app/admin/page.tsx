@@ -219,7 +219,7 @@ export default function AdminDashboard() {
           </div>
           <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
           <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => setActiveView("annie-manual-booking")} />
-          <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => setActiveView("annie-failed-bookings")} />
+          {/* <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => setActiveView("annie-failed-bookings")} /> */}
           <SidebarButton icon={QrCode} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
 
           <div className="pt-4 pb-2 px-2">
