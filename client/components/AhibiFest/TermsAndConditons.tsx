@@ -7,7 +7,7 @@ export default function TermsAndConditions() {
   return (
     <div className="mx-6 sm:mx-12 my-10">
       <div
-        className="flex-1 min-w-[200px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-xl px-4 py-3 shadow-lg 
+        className="flex-1 min-w-[200px] bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 rounded-xl px-4 py-3 shadow-lg 
          cursor-pointer text-white"
         onClick={() => setOpen(!open)}
       >

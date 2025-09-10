@@ -7,7 +7,7 @@ export default function FAQCard() {
   return (
     <div className="mx-6 sm:mx-12 my-10">
       <div
-        className="flex-1 min-w-[200px] bg-gradient-to-r from-pink-400 via-red-400 to-orange-500 rounded-xl px-4 py-3 shadow-lg 
+        className="flex-1 min-w-[200px] bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500 rounded-xl px-4 py-3 shadow-lg 
          cursor-pointer text-white"
         onClick={() => setOpen(!open)}
       >

@@ -238,6 +238,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const [isBooking, setIsBooking] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const handleBooking = async () => {
     if (selectedTickets.size === 0) {
@@ -311,6 +312,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         order_id: orderData.id,
         handler: async function (response: RazorpayResponse) {
           try {
+            // Show processing state immediately after payment
+            setIsProcessingPayment(true);
             console.log("Razorpay payment response received:", response);
 
             // Log request being sent to server
@@ -362,10 +365,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             } else {
               console.error("Payment verification failed:", verificationData);
               toast.error(verificationData.message || "Payment verification failed");
+              setIsProcessingPayment(false);
             }
           } catch (error) {
             console.error("Error in payment handler:", error);
             toast.error("An error occurred while processing your payment. Please contact support.");
+            setIsProcessingPayment(false);
           }
         },
         prefill: {
@@ -620,6 +625,30 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             {/* Sections */}
             <div className="mx-4 sm:mx-8 md:mx-16 lg:mx-24 space-y-8 md:space-y-10 mb-16">
 
+
+              {/* Failed Booking */}
+              <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 
+                border border-orange-300/40 rounded-2xl shadow-lg 
+                hover:shadow-orange-400/40 transition-all duration-500 overflow-hidden">
+                <div className="p-2 sm:p-4 flex items-start gap-3">
+
+                  {/* Icon Circle */}
+
+
+                  {/* Text */}
+                  <div>
+                    <p className="text-orange-800 font-semibold text-base mb-1">
+                      Failed Booking?
+                    </p>
+                    <p className="text-orange-700 text-xs md:text-sm leading-relaxed">
+                      No worries — your ticket will appear within a few hours in your Dashboard.
+                      If not, contact us via <span className="font-medium text-orange-600">WhatsApp</span> or <span className="font-medium text-orange-600">Email</span>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+
               {/* Info Badges */}
               <div className=" mx-4 px-4 sm:px-8 md:px-12 my-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-gray-800">
 
@@ -658,7 +687,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <div className="bg-gradient-to-br from-orange-100 via-white to-teal-100 border border-orange-200 rounded-2xl shadow-xl hover:shadow-orange-300/40 transition-all duration-500">
                 <div className="p-6 sm:p-8">
                   <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-4">
-                    About 
+                    About
                   </h2>
                   <p className="text-gray-700 leading-relaxed">
                     On Friday, October 24, we are launching Nagaland's Biggest Music Event.
@@ -679,7 +708,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
                 {/* Venue & Map */}
                 <div className="p-6 sm:p-8 pt-0">
-                <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-4">
+                  <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-4">
                     Venue
                   </h2>
 
@@ -695,7 +724,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     ></iframe>
                   </div>
 
-               
+
                 </div>
               </div>
 
@@ -936,7 +965,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       {/* Booking Summary */}
                       {selectedTickets.size > 0 && (
                         <div ref={summaryRef} className="animate-in slide-in-from-bottom-4">
-                          <Card className="border-2 border-orange-500 shadow-xl bg-gradient-to-r from-orange-50 to-pink-50">
+                          <Card className="border-2 rounded border-orange-500 shadow-xl bg-gradient-to-r from-orange-50 to-pink-50">
                             <CardHeader className="bg-gradient-to-r from-orange-500 to-pink-500 text-white">
                               <CardTitle className="text-2xl flex items-center">
                                 <TicketIcon className="h-6 w-6 mr-2" />
@@ -1023,6 +1052,51 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <FAQPage />
             </div>
             <Footer />
+            {/* Payment Processing Overlay */}
+            {isProcessingPayment && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+                  <div className="mb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      Generating Your Ticket
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Your payment was successful! We're now generating your ticket and invoice.
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-amber-800">
+                          Please do not leave or refresh this page
+                        </p>
+                        <p className="text-sm text-amber-700 mt-1">
+                          This process may take a few moments. You'll be redirected automatically once complete.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                    <span>Processing...</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </>
@@ -1597,6 +1671,52 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         </div>
       </div>
       <Footer />
+
+      {/* Payment Processing Overlay */}
+      {isProcessingPayment && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div className="mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-white animate-spin" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Generating Your Ticket
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Your payment was successful! We're now generating your ticket and invoice.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-amber-800">
+                    Please do not leave or refresh this page
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    This process may take a few moments. You'll be redirected automatically once complete.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+              <span>Processing...</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

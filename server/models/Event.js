@@ -180,6 +180,16 @@ const EventSchema = new mongoose.Schema({
         return !this.venue && !this.isVirtual;
       }
     },
+    state: {
+      type: String
+    },
+    country: {
+      type: String,
+      default: 'India'
+    },
+    pincode: {
+      type: String
+    },
     coordinates: {
       type: {
         type: String,

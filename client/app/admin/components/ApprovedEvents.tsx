@@ -82,12 +82,14 @@ interface Event {
   banner?: string;
   ticketTypes: TicketType[];
   organizer?: string;
-  convenience: {
-    includeGst: boolean;
-    gstPercentage: number;
-    includeConvenience: boolean;
-    conveniencePercentage: number;
-    convenienceFixedAmount: number;
+  convenience?: {
+    includeGst?: boolean;
+    gstPercentage?: number;
+    includeConvenience?: boolean;
+    conveniencePercentage?: number;
+    convenienceFixedAmount?: number;
+    percentage?: number;
+    fixedAmount?: number;
   };
 }
 
@@ -156,7 +158,76 @@ export default function ApprovedEvents() {
   }, []);
 
   const handleEditClick = (event: Event) => {
-    setEditingEvent(JSON.parse(JSON.stringify(event))); // Deep copy to avoid direct state mutation
+    // Deep copy and ensure all fields are properly initialized
+    const eventCopy = JSON.parse(JSON.stringify(event));
+    
+    // Fix category case - convert from database format (Music) to frontend format (music)
+    if (eventCopy.category) {
+      eventCopy.category = eventCopy.category.toLowerCase();
+    }
+    
+    // Ensure location has all required fields
+    if (!eventCopy.location) {
+      eventCopy.location = {
+        address: '',
+        city: '',
+        state: '',
+        country: 'India',
+        pincode: ''
+      };
+    } else {
+      eventCopy.location = {
+        address: eventCopy.location.address || '',
+        city: eventCopy.location.city || '',
+        state: eventCopy.location.state || '',
+        country: eventCopy.location.country || 'India',
+        pincode: eventCopy.location.pincode || '',
+        coordinates: eventCopy.location.coordinates
+      };
+    }
+    
+    // Ensure convenience fees are properly structured
+    if (!eventCopy.convenience) {
+      eventCopy.convenience = {
+        includeGst: false,
+        gstPercentage: 18,
+        includeConvenience: true,
+        conveniencePercentage: 5,
+        convenienceFixedAmount: 0
+      };
+    } else {
+      // Handle both old and new convenience structure
+      eventCopy.convenience = {
+        includeGst: eventCopy.convenience.includeGst || false,
+        gstPercentage: eventCopy.convenience.gstPercentage || 18,
+        includeConvenience: eventCopy.convenience.includeConvenience !== false,
+        conveniencePercentage: eventCopy.convenience.conveniencePercentage || eventCopy.convenience.percentage || 5,
+        convenienceFixedAmount: eventCopy.convenience.convenienceFixedAmount || eventCopy.convenience.fixedAmount || 0
+      };
+    }
+    
+    // Ensure ticket types have all required fields
+    if (!eventCopy.ticketTypes || eventCopy.ticketTypes.length === 0) {
+      eventCopy.ticketTypes = [{
+        name: 'General Admission',
+        description: '',
+        price: 0,
+        quantity: 100,
+        capacity: 1,
+        benefits: ['Entry to the event'],
+        sold: 0
+      }];
+    } else {
+      eventCopy.ticketTypes = eventCopy.ticketTypes.map((ticket: TicketType) => ({
+        ...ticket,
+        benefits: ticket.benefits && ticket.benefits.length > 0 ? ticket.benefits : ['Entry to the event'],
+        capacity: ticket.capacity || 1,
+        sold: ticket.sold || 0
+      }));
+    }
+    
+    console.log('Event data for editing:', eventCopy); // Debug log
+    setEditingEvent(eventCopy);
     setImagePreview(event.banner || null);
     setIsEditDialogOpen(true);
     setEditError(null);
@@ -267,7 +338,7 @@ export default function ApprovedEvents() {
     }
   };
 
-  const handleFeeChange = (field: keyof Event['convenience'], value: any) => {
+  const handleFeeChange = (field: string, value: any) => {
     if (editingEvent) {
       setEditingEvent({
         ...editingEvent,
@@ -289,8 +360,17 @@ export default function ApprovedEvents() {
         window.location.href = "/admin/login";
         return;
       }
+      
+      // Prepare data for backend - convert category back to database format
+      const dataToSend = {
+        ...editingEvent,
+        category: editingEvent.category ? editingEvent.category.charAt(0).toUpperCase() + editingEvent.category.slice(1) : 'Other'
+      };
+      
+      console.log('Sending data to backend:', dataToSend); // Debug log
+      
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await axios.put(`${apiUrl}/api/admin/events/${editingEvent._id}`, editingEvent, {
+      const response = await axios.put(`${apiUrl}/api/admin/events/${editingEvent._id}`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 200 && response.data) {
@@ -302,6 +382,7 @@ export default function ApprovedEvents() {
         setEditError("Failed to update event");
       }
     } catch (err: any) {
+      console.error('Update error:', err);
       setEditError(err.response?.data?.message || "Failed to update event");
     } finally {
       setIsEditLoading(false);
@@ -438,8 +519,37 @@ export default function ApprovedEvents() {
 
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label htmlFor="title">Event Title</Label><Input id="title" value={editingEvent.title} onChange={(e) => handleEventInputChange('title', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="category">Category</Label><Select value={editingEvent.category} onValueChange={(value) => handleEventInputChange('category', value)}><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger><SelectContent><SelectItem value="music">Music</SelectItem><SelectItem value="comedy">Comedy</SelectItem><SelectItem value="theatre">Theatre</SelectItem><SelectItem value="dance">Dance</SelectItem><SelectItem value="food">Food</SelectItem><SelectItem value="art">Art</SelectItem><SelectItem value="sports">Sports</SelectItem><SelectItem value="business">Business</SelectItem><SelectItem value="education">Education</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Event Title</Label>
+                    <Input 
+                      id="title" 
+                      value={editingEvent.title || ''} 
+                      onChange={(e) => handleEventInputChange('title', e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select 
+                      value={editingEvent.category || ''} 
+                      onValueChange={(value) => handleEventInputChange('category', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="music">Music</SelectItem>
+                        <SelectItem value="comedy">Comedy</SelectItem>
+                        <SelectItem value="theatre">Theatre</SelectItem>
+                        <SelectItem value="dance">Dance</SelectItem>
+                        <SelectItem value="food">Food</SelectItem>
+                        <SelectItem value="art">Art</SelectItem>
+                        <SelectItem value="sports">Sports</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                        <SelectItem value="education">Education</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={editingEvent.description} onChange={(e) => handleEventInputChange('description', e.target.value)} /></div>
 
@@ -450,7 +560,63 @@ export default function ApprovedEvents() {
                 </div>
 
                 {/* Location */}
-                <div className="space-y-4 p-4 border rounded-md"><h4 className="font-medium">Location</h4><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="space-y-2"><Label htmlFor="address">Address</Label><Input id="address" value={editingEvent.location.address} onChange={(e) => handleEventInputChange('location.address', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="city">City</Label><Input id="city" value={editingEvent.location.city} onChange={(e) => handleEventInputChange('location.city', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="state">State</Label><Input id="state" value={editingEvent.location.state} onChange={(e) => handleEventInputChange('location.state', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="country">Country</Label><Input id="country" value={editingEvent.location.country} onChange={(e) => handleEventInputChange('location.country', e.target.value)} /></div></div></div>
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h4 className="font-medium">Location</h4>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Venue Address *</Label>
+                      <Input 
+                        id="address" 
+                        value={editingEvent.location?.address || ''} 
+                        onChange={(e) => handleEventInputChange('location.address', e.target.value)}
+                        placeholder="e.g., 123 Main St, City Convention Center"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City *</Label>
+                        <Input 
+                          id="city" 
+                          value={editingEvent.location?.city || ''} 
+                          onChange={(e) => handleEventInputChange('location.city', e.target.value)}
+                          placeholder="e.g., Mumbai"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State *</Label>
+                        <Input 
+                          id="state" 
+                          value={editingEvent.location?.state || ''} 
+                          onChange={(e) => handleEventInputChange('location.state', e.target.value)}
+                          placeholder="e.g., Maharashtra"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Country *</Label>
+                        <Input 
+                          id="country" 
+                          value={editingEvent.location?.country || 'India'} 
+                          onChange={(e) => handleEventInputChange('location.country', e.target.value)}
+                          placeholder="e.g., India"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pincode">Pincode *</Label>
+                        <Input 
+                          id="pincode" 
+                          value={editingEvent.location?.pincode || ''} 
+                          onChange={(e) => handleEventInputChange('location.pincode', e.target.value)}
+                          placeholder="e.g., 400001"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Ticket Types */}
                 <div className="space-y-4 p-4 border rounded-md"><div className="flex items-center justify-between"><h4 className="font-medium">Ticket Types</h4><Button type="button" variant="outline" size="sm" onClick={addTicketType}><PlusCircle className="h-4 w-4 mr-2" />Add Ticket</Button></div>
@@ -473,11 +639,81 @@ export default function ApprovedEvents() {
                   ))}
                 </div>
 
-                {/* Fees */}
-                <div className="space-y-4 p-4 border rounded-md"><h4 className="font-medium">Fee Configuration</h4>
+                {/* Fees Configuration */}
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h4 className="font-medium">Fee Configuration</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4"><div className="flex items-center space-x-2"><Checkbox id="includeGst" checked={editingEvent.convenience.includeGst} onCheckedChange={(checked) => handleFeeChange('includeGst', checked === true)} /><Label htmlFor="includeGst">Include GST</Label></div>{editingEvent.convenience.includeGst && <div className="space-y-2"><Label htmlFor="gstPercentage">GST Percentage</Label><Input id="gstPercentage" type="number" value={editingEvent.convenience.gstPercentage} onChange={(e) => handleFeeChange('gstPercentage', e.target.value)} /></div>}</div>
-                    <div className="space-y-4"><div className="flex items-center space-x-2"><Checkbox id="includeConvenience" checked={editingEvent.convenience.includeConvenience} onCheckedChange={(checked) => handleFeeChange('includeConvenience', checked === true)} /><Label htmlFor="includeConvenience">Include Convenience Fee</Label></div>{editingEvent.convenience.includeConvenience && <><div className="space-y-2"><Label htmlFor="conveniencePercentage">Percentage</Label><Input id="conveniencePercentage" type="number" value={editingEvent.convenience.conveniencePercentage} onChange={(e) => handleFeeChange('conveniencePercentage', e.target.value)} /></div><div className="space-y-2"><Label htmlFor="convenienceFixedAmount">Fixed Amount</Label><Input id="convenienceFixedAmount" type="number" value={editingEvent.convenience.convenienceFixedAmount} onChange={(e) => handleFeeChange('convenienceFixedAmount', e.target.value)} /></div></>}</div>
+                    {/* GST Configuration */}
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="includeGst"
+                          checked={editingEvent.convenience?.includeGst || false}
+                          onCheckedChange={(checked) => handleFeeChange('includeGst', checked === true)}
+                        />
+                        <Label htmlFor="includeGst" className="text-sm font-medium">
+                          Include GST
+                        </Label>
+                      </div>
+                      {editingEvent.convenience?.includeGst && (
+                        <div className="space-y-2">
+                          <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
+                          <Input
+                            id="gstPercentage"
+                            type="number"
+                            value={editingEvent.convenience?.gstPercentage || 18}
+                            onChange={(e) => handleFeeChange('gstPercentage', parseFloat(e.target.value) || 0)}
+                            placeholder="18"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Convenience Fee Configuration */}
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="includeConvenience"
+                          checked={editingEvent.convenience?.includeConvenience !== false}
+                          onCheckedChange={(checked) => handleFeeChange('includeConvenience', checked === true)}
+                        />
+                        <Label htmlFor="includeConvenience" className="text-sm font-medium">
+                          Include Convenience Fee
+                        </Label>
+                      </div>
+                      {editingEvent.convenience?.includeConvenience !== false && (
+                        <div className="space-y-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
+                            <Input
+                              id="conveniencePercentage"
+                              type="number"
+                              value={editingEvent.convenience?.conveniencePercentage || 5}
+                              onChange={(e) => handleFeeChange('conveniencePercentage', parseFloat(e.target.value) || 0)}
+                              placeholder="5"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="convenienceFixed">Fixed Amount (₹)</Label>
+                            <Input
+                              id="convenienceFixed"
+                              type="number"
+                              value={editingEvent.convenience?.convenienceFixedAmount || 0}
+                              onChange={(e) => handleFeeChange('convenienceFixedAmount', parseFloat(e.target.value) || 0)}
+                              placeholder="0"
+                              min="0"
+                              step="0.01"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
