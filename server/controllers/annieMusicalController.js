@@ -795,6 +795,164 @@ const checkOutAnnieTicket = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get all customers for admin selection
+// @route   GET /api/annie-musical/admin/customers
+// @access  Private/Admin
+const getCustomers = asyncHandler(async (req, res) => {
+  try {
+    const { search } = req.query;
+    let query = { role: 'user' };
+
+    if (search) {
+      query = {
+        ...query,
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+
+    const customers = await User.find(query)
+      .select('name email phone city createdAt')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json({
+      success: true,
+      customers: customers.map(customer => ({
+        _id: customer._id,
+        name: customer.name || 'N/A',
+        email: customer.email || 'N/A',
+        phone: customer.phone,
+        city: customer.city || 'N/A',
+        createdAt: customer.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    res.status(500);
+    throw new Error('Failed to fetch customers');
+  }
+});
+
+// @desc    Create manual booking by admin for existing customer
+// @route   POST /api/annie-musical/admin/manual-booking
+// @access  Private/Admin
+const createManualBooking = asyncHandler(async (req, res) => {
+  const { customerId, seatIds } = req.body;
+
+  if (!customerId || !seatIds || seatIds.length === 0) {
+    res.status(400);
+    throw new Error("Customer ID and seat IDs are required");
+  }
+
+  // Verify customer exists
+  const customer = await User.findById(customerId);
+  if (!customer) {
+    res.status(404);
+    throw new Error("Customer not found");
+  }
+
+  // Use a transaction to ensure atomicity
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const seats = await AnnieSeat.find({ _id: { $in: seatIds } }).session(session);
+
+    if (seats.length !== seatIds.length) {
+      throw new Error("One or more selected seats do not exist.");
+    }
+
+    const unavailableSeats = seats.filter((seat) => seat.status !== "available");
+    if (unavailableSeats.length > 0) {
+      throw new Error(
+        `Sorry, the following seats are no longer available: ${unavailableSeats
+          .map((s) => `${s.row}${s.number}`)
+          .join(", ")}`
+      );
+    }
+
+    const totalPrice = seats.reduce((acc, seat) => acc + seat.price, 0);
+
+    // Update seats to booked status directly (no payment needed)
+    await AnnieSeat.updateMany(
+      { _id: { $in: seatIds } },
+      { $set: { status: "booked" } },
+      { session }
+    );
+
+    // Create the booking with confirmed status
+    const booking = new AnnieBooking({
+      userId: customerId,
+      seats: seatIds,
+      totalPrice,
+      status: "confirmed",
+      expiresAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000), // 10 years in the future
+      razorpayPaymentId: `manual_${Date.now()}`, // Manual booking identifier
+      razorpayOrderId: `manual_order_${Date.now()}`,
+    });
+
+    await booking.save({ session });
+
+    // Also create entry in main Booking collection for QR compatibility
+    const Booking = require("../models/Booking");
+    const mainBooking = new Booking({
+      user: customerId,
+      event: new mongoose.Types.ObjectId('000000000000000000000001'), // Annie Musical event ID
+      ticketType: 'Annie Musical Seat',
+      quantity: seats.length,
+      price: totalPrice / seats.length,
+      total: totalPrice,
+      paymentId: `manual_${Date.now()}`,
+      status: 'confirmed',
+      paymentStatus: 'completed',
+      bookedAt: new Date()
+    });
+
+    await mainBooking.save({ session });
+
+    await session.commitTransaction();
+
+    // Populate the booking for response
+    const populatedBooking = await AnnieBooking.findById(booking._id)
+      .populate('userId', 'name email phone')
+      .populate('seats', 'row number price');
+
+    res.status(201).json({
+      success: true,
+      message: "Manual booking created successfully",
+      booking: {
+        _id: populatedBooking._id,
+        customer: {
+          name: populatedBooking.userId.name,
+          email: populatedBooking.userId.email,
+          phone: populatedBooking.userId.phone
+        },
+        seats: populatedBooking.seats.map(seat => ({
+          id: `${seat.row}${seat.number}`,
+          price: seat.price,
+          category: seat.row >= 'D' ? 'Premium' : 'Standard'
+        })),
+        totalAmount: populatedBooking.totalPrice,
+        paymentStatus: 'completed',
+        paymentId: populatedBooking.razorpayPaymentId,
+        transactionId: populatedBooking.razorpayOrderId,
+        bookedAt: populatedBooking.createdAt,
+        status: populatedBooking.status
+      }
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400);
+    throw new Error(error.message || "Failed to create manual booking");
+  } finally {
+    session.endSession();
+  }
+});
+
 module.exports = {
   getSeats,
   createBooking,
@@ -809,4 +967,6 @@ module.exports = {
   verifyAnnieTicket,
   checkInAnnieTicket,
   checkOutAnnieTicket,
+  getCustomers,
+  createManualBooking,
 };

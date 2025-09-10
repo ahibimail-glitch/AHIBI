@@ -45,6 +45,7 @@ import FC25Players from "./components/FC25Players";
 import FailedPayments from "./components/FailedPayments";
 import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
 import AnnieMusicalQrScanner from "./components/AnnieMusicalQrScanner";
+import AnnieManualBooking from "./components/AnnieManualBooking";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -152,6 +153,8 @@ export default function AdminDashboard() {
         return <AnnieMusicalBookings />;
       case "annie-musical-qr":
         return <AnnieMusicalQrScanner />;
+      case "annie-manual-booking":
+        return <AnnieManualBooking />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -209,6 +212,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
           <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
+          <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => setActiveView("annie-manual-booking")} />
           <SidebarButton icon={Music} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
 
           <div className="pt-4 pb-2 px-2">

@@ -590,18 +590,30 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     return (
       <>
         <div className="fixed top-0 left-0 right-0 z-50">
-          {/* <div className="p-4 bg-black/90 backdrop-blur-sm text-white text-lg font-semibold cursor-pointer" onClick={() => router.back()}>
-          Go Back
-        </div> */}
+          <Navbar />
+        </div>
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-black via-red-950 to-black relative overflow-hidden">
           <div
-            className="absolute inset-0 z-25"
+            className="absolute inset-0 z-10"
             style={{
-              backgroundImage: "linear-gradient(rgba(239, 68, 68, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(239, 68, 68, 0.1) 1px, transparent 1px)",
+              backgroundImage: `linear-gradient(rgba(239, 68, 68, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(239, 68, 68, 0.1) 1px, transparent 1px)`,
               backgroundSize: "20px 20px",
             }}
           />
-        </div>
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-black via-red-950 to-black relative overflow-hidden">
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-8 left-8 text-red-500 text-6xl font-black transform -rotate-12 animate-pulse">
+              ♪
+            </div>
+            <div className="absolute top-24 right-16 text-red-400 text-4xl font-black transform rotate-45 animate-bounce">
+              🎤
+            </div>
+            <div className="absolute bottom-16 left-1/4 text-red-600 text-5xl font-black transform -rotate-45 animate-pulse">
+              🎵
+            </div>
+            <div className="absolute bottom-32 right-8 text-red-500 text-6xl font-black transform rotate-12 animate-bounce">
+              ♫
+            </div>
+          </div>
 
           <div className="absolute inset-0 opacity-10">
             <div
@@ -626,28 +638,33 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <div className="absolute bottom-1/4 left-1/2 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-25"></div>
           </div>
 
-          <div className="w-full relative z-10">
-            <div className="relative overflow-hidden rounded my-4 sm:my-6 md:my-8 mx-2 sm:mx-4 md:mx-8">
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 via-black/60 to-red-600/20 z-10" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/50 z-20" />
-
-
-              <AspectRatio ratio={16 / 9} className="relative">
+          <div className="w-full relative z-10 pt-12 md:pt-2">
+            <div className="relative overflow-hidden px-2 sm:px-4 md:px-8 py-2 sm:py-4 md:py-6 my-2 sm:my-4 md:my-8 mx-2 sm:mx-4 md:mx-8 rounded">
+              <AspectRatio ratio={16 / 9} className="relative my-4 sm:my-6 md:my-12 rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden shadow-xl sm:shadow-2xl hover:shadow-red-500/30 hover:scale-[1.02] transition-all duration-500 group">
                 <img
                   src={event.banner || "/placeholder.svg"}
                   alt={event.title}
-                  className="object-cover filter brightness-110 contrast-125"
+                  className="object-cover filter brightness-110 contrast-125 group-hover:brightness-125 group-hover:contrast-150 transition-all duration-500"
                 />
               </AspectRatio>
 
               <div className="absolute inset-0 z-40 flex items-end">
                 <div className="container mx-auto px-3 md:px-4 pb-4 md:pb-6 pt-20 md:pt-24">
-                  <div className="max-w-4xl mx-auto text-center">
+                  <div className="max-w-4xl mx-auto text-center ">
 
 
-                    <h1 className="text-xl sm:text-4xl md:text-4xl lg:text-4xl font-hiphop font-normal text-transparent bg-clip-text bg-gradient-to-r from-white via-red-200 to-red-400 drop-shadow-2xl leading-tight tracking-wide mb-2 md:mb-3 transform hover:scale-105 hover:rotate-1 transition-all duration-500 cursor-pointer">
+                    <h1
+                      className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold font-hiphop 
+                                  text-transparent bg-clip-text 
+                                  bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 
+                                  drop-shadow-[0_4px_10px_rgba(255,0,0,0.7)] 
+                                  tracking-wider uppercase 
+                                  transform hover:scale-110 hover:skew-x-3 hover:rotate-1 
+                                  transition-all duration-500 cursor-pointer"
+                    >
                       {event.title}
                     </h1>
+
                     {/* <div className="mb-2 md:mb-3">
                       <div className="inline-flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-red-500 to-red-600 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full shadow-2xl hover:shadow-red-500/25 hover:scale-105 transition-all duration-300 cursor-pointer">
                         <span className="text-white font-hiphop font-normal text-xs md:text-sm uppercase tracking-wider">

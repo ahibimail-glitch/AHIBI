@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getSeats, createBooking, confirmBooking, getRevenue, getAdminBookings, getBookingDetails, adminConfirmBooking, handleWebhook, getUserBookings, verifyAnnieTicket, checkInAnnieTicket, checkOutAnnieTicket } = require("../controllers/annieMusicalController");
+const { getSeats, createBooking, confirmBooking, getRevenue, getAdminBookings, getBookingDetails, adminConfirmBooking, handleWebhook, getUserBookings, verifyAnnieTicket, checkInAnnieTicket, checkOutAnnieTicket, getCustomers, createManualBooking } = require("../controllers/annieMusicalController");
 const { protect } = require("../middleware/authMiddleware"); // Assuming a standard auth middleware
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
@@ -119,5 +119,15 @@ router.post("/check-in", protectAdminRoute, checkInAnnieTicket);
 // @route   POST /api/annie-musical/check-out
 // @access  Private/Admin
 router.post("/check-out", protectAdminRoute, checkOutAnnieTicket);
+
+// @desc    Get all customers for admin selection
+// @route   GET /api/annie-musical/admin/customers
+// @access  Private/Admin
+router.get("/admin/customers", protectAdminRoute, getCustomers);
+
+// @desc    Create manual booking by admin for existing customer
+// @route   POST /api/annie-musical/admin/manual-booking
+// @access  Private/Admin
+router.post("/admin/manual-booking", protectAdminRoute, createManualBooking);
 
 module.exports = router;
