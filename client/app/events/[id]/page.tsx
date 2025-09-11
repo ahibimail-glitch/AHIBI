@@ -592,7 +592,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const timeRange = formatTimeRange(event.startDate, event.endDate);
-  const isSpecial = params.id === "68bc6cdf40915f05c90380d4";
+  const isSpecial = params.id === "68c2c33eb6ef88c76f50ce7c";
 
   // Customized UI for a specific event ID while preserving booking logic
   if (isSpecial) {
