@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,7 +37,7 @@ import Link from "next/link";
 import { PasswordSetupModal } from "@/components/ui/password-setup-modal";
 import { PasswordResetModal } from "@/components/ui/password-reset-modal";
 
-export default function AuthPage() {
+function AuthPageContent() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect');
   
@@ -784,6 +784,37 @@ export default function AuthPage() {
         phone={loginData.loginId}
       />
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-[#0F172A]">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center space-x-2">
+              <img
+                src="/images/Logo.png"
+                alt="Ahibi logo"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
+            <CardTitle className="text-white">Loading...</CardTitle>
+            <CardDescription className="text-white/80">
+              Please wait while we load the authentication page
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <AuthPageContent />
+    </Suspense>
   );
 }
 
