@@ -242,8 +242,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   const handleBooking = async () => {
+    // clear any prior error shown in UI
+    setBookingError(null);
     if (selectedTickets.size === 0) {
       toast.error("Please select at least one ticket type");
       return;
@@ -259,6 +262,69 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       toast.error("You must be logged in to book tickets");
       router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
       return;
+    }
+
+    // For special events, check if user already has 10 or more tickets
+    if (isSpecial) {
+      setIsBooking(true); // Show loading state while checking
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/my-bookings`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (res.ok) {
+          const bookingsData = await res.json();
+          console.log("Bookings data:", bookingsData); // Debug log
+
+          const allBookings: any[] = bookingsData.bookings || bookingsData.data || [];
+
+          const eventBookings = allBookings.filter((b: any) => {
+            const ev = b.event || b.eventSnapshot || null;
+            const evId = typeof ev === 'string' ? ev : ev?._id;
+            const sameEvent = String(evId) === String(event._id);
+            const isConfirmed = b?.status === 'confirmed' || b?.paymentStatus === 'completed';
+            const notAnnie = b?.bookingType !== 'annie-musical';
+            return sameEvent && isConfirmed && notAnnie;
+          });
+
+          console.log("Event bookings (confirmed):", eventBookings); // Debug log
+
+          // Calculate total existing tickets for this event
+          const existingTicketCount = eventBookings.reduce((total: number, b: any) => {
+            return total + (b.quantity || 0);
+          }, 0);
+
+          // Calculate new tickets being requested
+          const newTicketCount = Array.from(selectedTickets.values()).reduce((sum, item) => {
+            return sum + item.quantity;
+          }, 0);
+
+          console.log("Existing tickets:", existingTicketCount, "New tickets:", newTicketCount); // Debug log
+
+          // Check if total would exceed 10
+          if (existingTicketCount + newTicketCount > 10) {
+            setIsBooking(false); // Reset loading state
+            console.log("TICKET LIMIT EXCEEDED - Showing error message"); // Debug log
+            const msg = `You can't buy more than 10 tickets from 1 ID. You already have ${existingTicketCount} tickets for this event.`;
+            setBookingError(msg); // show in UI
+            toast.error(msg);
+            return;
+          }
+        } else {
+          console.error("Failed to fetch bookings:", res.status, res.statusText);
+          const errorData = await res.json().catch(() => ({}));
+          console.error("Error data:", errorData);
+        }
+      } catch (error) {
+        console.error("Error checking existing bookings:", error);
+        setIsBooking(false); // Reset loading state on error
+        toast.error("Unable to verify existing bookings. Please try again.");
+        return;
+      }
+      setIsBooking(false); // Reset loading state before continuing
     }
 
     setIsBooking(true);
@@ -592,12 +658,30 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const timeRange = formatTimeRange(event.startDate, event.endDate);
-  const isSpecial = params.id === "68bc6cdf40915f05c90380d4";
+  const isSpecial = params.id === "68c2c33eb6ef88c76f50ce7c";
 
   // Customized UI for a specific event ID while preserving booking logic
   if (isSpecial) {
     return (
       <>
+        {/* Error Modal */}
+        <Dialog open={!!bookingError} onOpenChange={(open) => { if (!open) setBookingError(null); }}>
+          <DialogContent className="sm:max-w-lg md:max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <XCircle className="h-5 w-5" />
+                Booking Limit Reached
+              </DialogTitle>
+              <DialogDescription className="text-gray-800">
+                {bookingError}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end">
+              <Button onClick={() => setBookingError(null)} className="bg-red-600 hover:bg-red-700 text-white">Okay</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Fixed Navbar */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
           <Navbar />
@@ -783,7 +867,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
                     </Badge> */}
                   </div>
-
+                  {bookingError && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 flex items-start gap-2">
+                      <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div className="text-sm">{bookingError}</div>
+                    </div>
+                  )}
                   {/* Ticket Types */}
                   <div className="grid grid-cols-1 gap-4">
                     {event.ticketTypes.map((ticket) => {
