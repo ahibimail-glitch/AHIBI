@@ -945,10 +945,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                                   </Button>
                                 </div>
-                                <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
+                                {/* <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
                                   <Info className="h-3 w-3" />
                                   Max {ticket.quantity - ticket.sold} per booking
-                                </p>
+                                </p> */}
                               </div>
                             )}
                           </CardContent>
