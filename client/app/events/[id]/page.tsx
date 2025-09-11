@@ -28,6 +28,7 @@ import {
   Info,
   ExternalLink,
   Calendar,
+  Instagram
 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -76,7 +77,7 @@ const EventCard = ({
 }: {
   event: { id: string; title: string; date: string; image: string };
 }) => (
-  <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+  <Card className="overflow-hidden hover:shadow-md transition-shadow">
     <div className="relative aspect-video">
       <Image
         src={event.image}
@@ -86,9 +87,9 @@ const EventCard = ({
       />
     </div>
     <CardContent className="p-4">
-      <h3 className="font-semibold line-clamp-2">{event.title}</h3>
-      <p className="text-sm text-muted-foreground mt-1">{event.date}</p>
-      <Button variant="outline" size="sm" className="mt-3 w-full" asChild>
+      <h3 className="font-semibold line-clamp-2 text-sm sm:text-base">{event.title}</h3>
+      <p className="text-xs sm:text-sm text-muted-foreground mt-1">{event.date}</p>
+      <Button variant="outline" size="sm" className="mt-3 w-full text-xs sm:text-sm" asChild>
         <Link href={`/events/${event.id}`}>View Details</Link>
       </Button>
     </CardContent>
@@ -525,15 +526,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6">
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-xl opacity-50"></div>
-            <Loader2 className="h-12 w-12 animate-spin text-white relative z-10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full blur-xl opacity-30"></div>
+            <Loader2 className="h-10 w-10 animate-spin text-indigo-600 relative z-10" />
           </div>
           <div className="text-center">
-            <p className="text-xl font-semibold text-white mb-2">Loading Event</p>
-            <p className="text-slate-300">Please wait...</p>
+            <p className="text-lg font-semibold text-gray-900">Loading Event</p>
+            <p className="text-sm text-gray-600">Please wait a moment...</p>
           </div>
         </div>
       </div>
@@ -542,32 +543,32 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-              <XCircle className="h-8 w-8 text-red-400" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-4 sm:p-6">
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="h-7 w-7 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Event Unavailable</h2>
-            <p className="text-slate-300 mb-6">{error || "Invalid event data received"}</p>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Unavailable</h2>
+            <p className="text-gray-600 mb-6 text-sm">{error || "Invalid event data received"}</p>
             <div className="space-y-3">
               <Button
                 onClick={() => window.location.reload()}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-full"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm"
               >
                 Try Again
               </Button>
               <Button
                 variant="outline"
                 onClick={() => router.push('/events')}
-                className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+                className="w-full border-gray-300 text-gray-900 hover:bg-gray-100 rounded-lg text-sm"
               >
                 Browse All Events
               </Button>
               <Button
                 variant="outline"
                 onClick={() => router.push('/')}
-                className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full"
+                className="w-full border-gray-300 text-gray-900 hover:bg-gray-100 rounded-lg text-sm"
               >
                 Go to Homepage
               </Button>
@@ -594,821 +595,668 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const isSpecial = params.id === "68bc6cdf40915f05c90380d4";
 
   // Customized UI for a specific event ID while preserving booking logic
-
   if (isSpecial) {
     return (
       <>
         {/* Fixed Navbar */}
-        <div className="fixed top-0 left-0 right-0 z-50">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
           <Navbar />
         </div>
 
-        <div className="min-h-screen flex flex-col bg-gradient-to-b from-white via-orange-50 to-teal-50 relative overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-white relative overflow-hidden pt-16">
+          {/* Decorative Background */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 left-0 w-1/2 h-1/2 bg-gradient-to-br from-indigo-100/20 to-purple-100/20 blur-3xl"></div>
+            <div className="absolute bottom-0 right-0 w-1/2 h-1/2 bg-gradient-to-tl from-pink-100/20 to-orange-100/20 blur-3xl"></div>
+          </div>
+
           {/* Banner */}
-          <div className="w-full relative z-10 pt-12 md:pt-2">
-            <div className="relative overflow-hidden px-2 sm:px-4 md:px-8 py-2 sm:py-4 md:py-6 my-2 sm:my-4 md:my-8 mx-2 sm:mx-4 md:mx-8 rounded-xl">
+          <div className="w-full relative z-10">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <AspectRatio
                 ratio={16 / 9}
-                className="relative my-4 sm:my-6 md:my-12 rounded-xl md:rounded-2xl overflow-hidden "
+                className="relative rounded-xl overflow-hidden shadow-lg"
               >
-                <img
+                <Image
                   src={event.banner || "/placeholder.svg"}
                   alt={event.title}
-                  className="object-cover filter  "
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">{event.title}</h1>
+                  <p className="text-xs sm:text-sm text-gray-200 mt-1">{event.category}</p>
+                </div>
               </AspectRatio>
             </div>
+            {/* Marquee for Early Bird Tickets */}
+            <div className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 sm:py-3 overflow-hidden">
+              <div className="marquee">
+                <span className="inline-block text-sm sm:text-base md:text-lg font-extrabold tracking-tight animate-marquee whitespace-nowrap font-['Bungee',_cursive] text-yellow-300 drop-shadow-md">
+                  🎉 Early Bird tickets for AHIBI Fest 2025 is LIVE NOW! 🚀 These special-priced tickets are EXTREMELY LIMITED and won’t last long. 🔥 Grab your tickets now!
+                </span>
 
+              </div>
+            </div>
+            <style jsx>{`
+              .marquee {
+                width: 100%;
+                overflow: hidden;
+                white-space: nowrap;
+              }
+              .animate-marquee {
+                display: inline-block;
+                animation: marquee 12s linear infinite;
+              }
+              @keyframes marquee {
+                0% {
+                  transform: translateX(100%);
+                }
+                100% {
+                  transform: translateX(-100%);
+                }
+              }
+              @media (max-width: 640px) {
+                .marquee span {
+                  font-size: 0.75rem; /* Smaller font size for mobile */
+                }
+              }
+            `}</style>
+          </div>
 
-
-
-
-
-            {/* Sections */}
-            <div className="mx-4 sm:mx-8 md:mx-16 lg:mx-24 space-y-8 md:space-y-10 mb-16">
-
-
-              {/* Failed Booking */}
-              <div className="bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 
-                border border-orange-300/40 rounded-2xl shadow-lg 
-                hover:shadow-orange-400/40 transition-all duration-500 overflow-hidden">
-                <div className="p-2 sm:p-4 flex items-start gap-3">
-
-                  {/* Icon Circle */}
-
-
-                  {/* Text */}
-                  <div>
-                    <p className="text-orange-800 font-semibold text-base mb-1">
-                      Failed Booking?
-                    </p>
-                    <p className="text-orange-700 text-xs md:text-sm leading-relaxed">
-                      No worries — your ticket will appear within a few hours in your Dashboard.
-                      If not, contact us via <span className="font-medium text-orange-600">WhatsApp</span> or <span className="font-medium text-orange-600">Email</span>.
-                    </p>
-                  </div>
+          {/* Sections */}
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            {/* Failed Booking */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
+              <div className="flex items-start gap-3">
+                <div className="bg-indigo-100 rounded-full p-2">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-base sm:text-lg font-semibold text-gray-900">Failed Booking?</p>
+                  <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                    No worries — your ticket will appear within a few hours in your Dashboard.
+                    If not, contact us via{" "}
+                    <a href="#" className="text-indigo-600 hover:underline font-medium">WhatsApp</a> or{" "}
+                    <a href="#" className="text-indigo-600 hover:underline font-medium">Email</a>.
+                  </p>
                 </div>
               </div>
+            </div>
 
-
-              {/* Info Badges */}
-              <div className=" mx-4 px-4 sm:px-8 md:px-12 my-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-gray-800">
-
-                {/* Date */}
-                <div className="flex flex-1 items-center bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-500 rounded-xl px-4 py-3 shadow-lg cursor-pointer text-white">
-                  <CalendarIcon className="h-5 w-5 mr-2 shrink-0" />
+            {/* Info Badges */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow">
+                <div className="bg-indigo-100 rounded-full p-2">
+                  <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Date</p>
+                  <p className="text-sm font-semibold text-gray-900">{startDateTime.date}</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow">
+                <div className="bg-purple-100 rounded-full p-2">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Time</p>
+                  <p className="text-sm font-semibold text-gray-900">{timeRange}</p>
+                </div>
+              </div>
+              {event.category && (
+                <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow">
+                  <div className="bg-pink-100 rounded-full p-2">
+                    <span className="text-pink-600 text-xs sm:text-sm font-bold">♪</span>
+                  </div>
                   <div>
-                    <div className="text-xs uppercase">Date</div>
-                    <div className="font-bold text-sm md:text-base">{startDateTime.date}</div>
+                    <p className="text-xs uppercase text-gray-500">Genre</p>
+                    <p className="text-sm font-semibold text-gray-900">{event.category}</p>
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Time */}
-                <div className="flex flex-1 items-center bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500 rounded-xl px-4 py-3 shadow-lg cursor-pointer text-white">
-                  <Clock className="h-5 w-5 mr-2 shrink-0" />
-                  <div>
-                    <div className="text-xs uppercase">Time</div>
-                    <div className="font-bold text-sm md:text-base">{timeRange}</div>
-                  </div>
+            {/* About and Venue */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">About Ahibi Fest 2025</h2>
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed mb-4">
+                <span className="font-semibold text-indigo-600">AHIBI FEST 2025</span> is
+                Nagaland’s premier music festival — where global headliners meet Northeast’s hottest talent on one massive stage.
+              </p>
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed mb-4">
+                This year, we bring you
+                <span className="font-semibold text-purple-600"> Iyaz live in Dimapur</span>, alongside
+                <span className="font-semibold"> “The Ultimate Naga Playlist”</span> and breakout acts
+                that will set the crowd on fire. 🎶✨
+              </p>
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed italic">
+                Get ready for a night of music, culture, and energy that will echo far beyond.
+              </p>
+              <p className="mt-2 text-xs sm:text-sm font-semibold text-gray-900 leading-relaxed flex flex-wrap items-center gap-1">
+                Follow our instagram
+                <a
+                  href="https://www.instagram.com/ahibi_fest?utm_source=ig_web_button_share_sheet&igsh=ZWtwOXd6andwNmY3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-indigo-600 hover:underline font-medium"
+                >
+                  <Instagram className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500" />
+                  @ahibi_fest
+                </a>
+                for the latest updates!
+              </p>
+              <div className="mt-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Venue</h3>
+                <div className="flex items-center gap-3 mb-4">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900">Agri Expo Grounds, Dimapur</p>
                 </div>
+                <div className="rounded-lg overflow-hidden shadow-sm border border-gray-100">
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3685.763256664233!2d93.75891477519677!3d25.864940902890885!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x374623d1f57f1c2d%3A0x5e272d1d23a3b5f7!2sAgri%20Expo%20Grounds!5e0!3m2!1sen!2sin!4v1726070000000!5m2!1sen!2sin"
+                    width="100%"
+                    height="200"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
 
-                {/* Genre */}
-                {event.category && (
-                  <div className="flex flex-1 items-center bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-xl px-4 py-3 shadow-lg cursor-pointer text-white transition-all duration-300 hover:scale-105">
-                    <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center mr-2 shrink-0">
-                      <span className="text-pink-600 text-xs font-black">♪</span>
-                    </div>
+            {/* Tickets */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ticket Categories</h2>
+              {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Ticket Selection Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                     <div>
-                      <div className="text-xs uppercase">Genre</div>
-                      <div className="font-bold text-sm md:text-base">Music</div>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select Tickets</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">Choose your preferred ticket type</p>
                     </div>
-                  </div>
-                )}
-
-              </div>
-              {/* About  and Venue Festival */}
-              <div className="bg-gradient-to-br from-orange-100 via-white to-teal-100 border border-orange-200 rounded-2xl shadow-xl hover:shadow-orange-300/40 transition-all duration-500">
-                {/* About Section */}
-                <div className="p-6 sm:p-10 relative">
-                  {/* Decorative accent */}
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-orange-200/40 rounded-full blur-3xl -z-10"></div>
-
-                  <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-6">
-                    About
-                  </h2>
-                  <p className="text-gray-800 leading-relaxed text-lg sm:text-xl font-medium">
-                    <span className="font-bold text-orange-600">AHIBI FEST 2025</span> is
-                    <span className="text-pink-600 font-semibold"> Nagaland’s premier music festival</span> —
-                    where global headliners meet Northeast’s hottest talent on one massive stage.
-                  </p>
-                  <p className="mt-4 text-gray-700 leading-relaxed text-base sm:text-lg">
-                    This year, we bring you
-                    <span className="font-semibold text-teal-600"> Iyaz live in Dimapur</span>, alongside
-                    <span className="font-semibold"> “The Ultimate Naga Playlist”</span> and breakout acts
-                    that will set the crowd on fire. 🎶✨
-                  </p>
-                  <p className="mt-4 text-gray-700 leading-relaxed text-base sm:text-lg italic">
-                    Get ready for a night of music, culture, and energy that will echo far beyond.
-                  </p>
-                </div>
-
-                {/* Venue Section */}
-                <div className="p-6 sm:p-8 pt-0">
-                  <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-4">
-                    Venue
-                  </h2>
-
-                  <p className="text-gray-700 mb-4 text-lg flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-teal-500" />
-                    <span className="font-semibold bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500 bg-clip-text text-transparent">
-                      Agri Expo Grounds, Dimapur
-                    </span>
-                  </p>
-
-
-                  <div className="w-full h-64 md:h-80 rounded-xl overflow-hidden shadow-md border border-gray-200">
-                    <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3685.763256664233!2d93.75891477519677!3d25.864940902890885!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x374623d1f57f1c2d%3A0x5e272d1d23a3b5f7!2sAgri%20Expo%20Grounds!5e0!3m2!1sen!2sin!4v1726070000000!5m2!1sen!2sin"
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    ></iframe>
+                    {/* <Badge variant="outline" className="mt-2 sm:mt-0 px-3 py-1 bg-white border-indigo-200 text-indigo-700 text-xs sm:text-sm">
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
+                    </Badge> */}
                   </div>
 
-                </div>
-              </div>
+                  {/* Ticket Types */}
+                  <div className="grid grid-cols-1 gap-4">
+                    {event.ticketTypes.map((ticket) => {
+                      const availabilityPercentage = Math.max(
+                        0,
+                        Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
+                      );
+                      const isSoldOut = ticket.quantity <= ticket.sold;
+                      const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                      const selectedItem = selectedTickets.get(ticket._id);
+                      const quantity = selectedItem?.quantity || 0;
 
-
-
-
-
-              {/* Tickets */}
-              <div className="bg-gradient-to-br from-pink-100 via-white to-orange-100 border border-pink-200 rounded-2xl shadow-xl hover:shadow-pink-300/40 transition-all duration-500">
-                <div className="p-6 sm:p-8">
-                  <h2 className="text-3xl font-extrabold bg-gradient-to-r from-pink-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent mb-6">
-                    Ticket Categories
-                  </h2>
-
-                  {/* Ticket Cards Grid */}
-                  {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                    <div className="space-y-6">
-                      {/* Enhanced Ticket Selection Header */}
-                      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg border border-orange-200">
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">Select Tickets</h3>
-                          <p className="text-sm text-gray-600">Choose your preferred ticket type</p>
-                        </div>
-                        <Badge variant="outline" className="px-4 py-2 bg-white border-2 border-orange-300 text-orange-700">
-                          <Users className="h-4 w-4 mr-1" />
-                          {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
-                        </Badge>
-                      </div>
-
-                      {/* Enhanced Ticket Types - Grid Layout */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {event.ticketTypes.map((ticket) => {
-                          // Calculate availability percentage
-                          const availabilityPercentage = Math.max(
-                            0,
-                            Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
-                          );
-
-                          // Determine status badge
-                          const isSoldOut = ticket.quantity <= ticket.sold;
-                          const isLimited = availabilityPercentage <= 20 && !isSoldOut;
-                          const selectedItem = selectedTickets.get(ticket._id);
-                          const quantity = selectedItem?.quantity || 0;
-
-                          return (
-                            <Card
-                              key={ticket._id}
-                              className={`border-2 transition-all duration-300 hover:shadow-xl ${quantity > 0
-                                ? 'border-orange-500 shadow-lg ring-4 ring-orange-500/10 bg-gradient-to-r from-orange-50 to-pink-50'
-                                : isSoldOut
-                                  ? 'border-gray-200 bg-gray-50'
-                                  : 'border-orange-200 hover:border-orange-400 bg-white hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50'
-                                } overflow-hidden`}
-                            >
-                              <CardHeader className="pb-1 p-4">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center gap-2">
-                                    <div className={`p-2 rounded-lg transition-colors ${isSoldOut
-                                      ? 'bg-gray-100'
-                                      : quantity > 0
-                                        ? 'bg-gradient-to-r from-orange-100 to-pink-100'
-                                        : 'bg-orange-50 hover:bg-orange-100'
-                                      }`}>
-                                      <TicketIcon className={`h-4 w-4 ${isSoldOut
-                                        ? 'text-gray-400'
-                                        : quantity > 0
-                                          ? 'text-orange-600'
-                                          : 'text-orange-500'
-                                        }`} />
-                                    </div>
-                                    <div>
-                                      <CardTitle className="text-lg text-gray-900">{ticket.name}</CardTitle>
-                                      <div className="flex flex-wrap gap-1 mt-1">
-                                        {isSoldOut && (
-                                          <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
-                                            Sold Out
-                                          </Badge>
-                                        )}
-                                        {isLimited && !isSoldOut && (
-                                          <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 animate-pulse text-xs">
-                                            Limited
-                                          </Badge>
-                                        )}
-                                        {quantity > 0 && (
-                                          <Badge className="bg-orange-500 text-white animate-in text-xs">
-                                            {quantity} selected
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="text-2xl font-bold text-orange-600">₹{ticket.price}</span>
-                                    <p className="text-xs text-gray-500">per ticket</p>
+                      return (
+                        <Card
+                          key={ticket._id}
+                          className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
+                            ? 'border-indigo-500 bg-indigo-50/30'
+                            : isSoldOut
+                              ? 'border-gray-200 bg-gray-50'
+                              : 'border-gray-200 hover:border-indigo-300'
+                            } rounded-lg overflow-hidden`}
+                        >
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'
+                                  }`}>
+                                  <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'
+                                    }`} />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {isSoldOut && (
+                                      <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
+                                        Sold Out
+                                      </Badge>
+                                    )}
+                                    {isLimited && !isSoldOut && (
+                                      <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
+                                        Limited Availability
+                                      </Badge>
+                                    )}
+                                    {quantity > 0 && (
+                                      <Badge className="bg-indigo-500 text-white text-xs">
+                                        {quantity} selected
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
-                              </CardHeader>
-
-                              <CardContent className="p-4 pt-2">
-                                <p className="text-gray-600 mb-3 leading-relaxed text-sm">
-                                  {ticket.description}
+                              </div>
+                              <div className="text-right">
+                                <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                                <p className="text-xs text-gray-500">per ticket</p>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <p className="text-lg text-2xl text-green-600 font-bold mb-3">{ticket.description}</p>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
+                                <Users className="h-3 w-3 mr-1" />
+                                {ticket.capacity} capacity
+                              </Badge>
+                            </div>
+                            {ticket.benefits && ticket.benefits.length > 0 && (
+                              <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Included Benefits
                                 </p>
-
-                                <div className="flex items-center gap-2 mb-3">
-                                  <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
-                                    <Users className="h-3 w-3 mr-1" />
-                                    {ticket.capacity} capacity
-                                  </Badge>
-                                </div>
-
-                                {/* Enhanced Benefits list */}
-                                {ticket.benefits && ticket.benefits.length > 0 && (
-                                  <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg p-3 mb-3 border border-orange-200">
-                                    <p className="text-xs font-bold mb-2 text-orange-800 flex items-center">
-                                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                                      INCLUDED:
-                                    </p>
-                                    <ul className="space-y-1">
-                                      {ticket.benefits.map((benefit: string, i: number) => (
-                                        <li key={i} className="flex items-center gap-2 text-xs">
-                                          <div className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 flex-shrink-0"></div>
-                                          <span className="text-gray-700">{benefit}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {/* Enhanced Availability indicator */}
-                                <div className="mb-3">
-                                  <div className="flex items-center justify-between text-xs mb-1">
-                                    <span className={`font-bold flex items-center gap-1 ${isSoldOut
-                                      ? 'text-red-600'
-                                      : isLimited
-                                        ? 'text-amber-600'
-                                        : 'text-green-600'
-                                      }`}>
-                                      {isSoldOut ? (
-                                        <>
-                                          <XCircle className="h-3 w-3" />
-                                          Sold Out
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle2 className="h-3 w-3" />
-                                          {ticket.quantity - ticket.sold} left
-                                        </>
-                                      )}
-                                    </span>
-                                    <span className="text-gray-500 text-xs">
-                                      {ticket.sold} / {ticket.quantity} sold
-                                    </span>
-                                  </div>
-                                  <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full transition-all duration-500 ${isSoldOut
-                                        ? 'bg-gradient-to-r from-red-500 to-red-600'
-                                        : isLimited
-                                          ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                                          : 'bg-gradient-to-r from-green-500 to-teal-500'
-                                        }`}
-                                      style={{ width: `${100 - availabilityPercentage}%` }}
-                                    ></div>
-                                  </div>
-                                </div>
-
-                                {/* Quantity Selector */}
-                                {!isSoldOut && (
-                                  <div className="p-3 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg border border-orange-200">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="font-bold text-gray-800 text-sm">Quantity</span>
-                                      <div className="text-right">
-                                        <span className="text-xs text-gray-600">Total: </span>
-                                        <span className="text-sm font-bold text-orange-600">
-                                          ₹{(ticket.price * quantity).toLocaleString()}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-3">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          if (quantity > 0) {
-                                            const newQuantity = quantity - 1;
-                                            if (newQuantity === 0) {
-                                              setSelectedTickets(prev => {
-                                                const newMap = new Map(prev);
-                                                newMap.delete(ticket._id);
-                                                return newMap;
-                                              });
-                                            } else {
-                                              setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                            }
-                                          }
-                                        }}
-                                        disabled={quantity <= 0}
-                                        className="h-8 w-8 p-0 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
-                                      >
-                                        <Minus className="h-4 w-4" />
-                                      </Button>
-                                      <div className="px-4 py-1 bg-white rounded-lg border border-orange-300 min-w-[3rem] text-center">
-                                        <span className="text-lg font-bold text-orange-600">
-                                          {quantity}
-                                        </span>
-                                      </div>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          const newQuantity = quantity + 1;
-                                          if (newQuantity <= ticket.quantity - ticket.sold) {
-                                            setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                            if (newQuantity === 1) {
-                                              setTimeout(() => {
-                                                summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                              }, 100);
-                                            }
-                                          }
-                                        }}
-                                        disabled={quantity >= ticket.quantity - ticket.sold}
-                                        className="h-8 w-8 p-0 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition-colors"
-                                      >
-                                        <Plus className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                    <div className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
-                                      <Info className="h-3 w-3" />
-                                      Max {ticket.quantity - ticket.sold} per booking
-                                    </div>
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-
-                      {/* Booking Summary */}
-                      {selectedTickets.size > 0 && (
-                        <div ref={summaryRef} className="animate-in slide-in-from-bottom-4">
-                          <Card className="border-2 rounded border-orange-500 shadow-xl bg-gradient-to-r from-orange-50 to-pink-50">
-                            <CardHeader className="bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-                              <CardTitle className="text-2xl flex items-center">
-                                <TicketIcon className="h-6 w-6 mr-2" />
-                                Booking Summary
-                              </CardTitle>
-                              <CardDescription className="text-white/80">
-                                Review your ticket selection
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-6">
-                              <div className="space-y-4">
-                                {Array.from(selectedTickets.values()).map((item) => (
-                                  <div key={item.ticket._id} className="flex justify-between items-center p-3 bg-white rounded-lg border border-orange-200">
-                                    <div className="flex items-center gap-3">
-                                      <div className="p-2 bg-orange-100 rounded-lg">
-                                        <TicketIcon className="h-4 w-4 text-orange-600" />
-                                      </div>
-                                      <div>
-                                        <span className="font-bold text-gray-900">{item.ticket.name}</span>
-                                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                                          <span>Quantity: {item.quantity}</span>
-                                          <span>•</span>
-                                          <span>₹{item.ticket.price} each</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <span className="text-xl font-bold text-orange-600">
-                                      ₹{(item.ticket.price * item.quantity).toLocaleString()}
-                                    </span>
-                                  </div>
-                                ))}
-                                <div className="border-t-2 border-dashed border-orange-300 pt-4">
-                                  <div className="flex justify-between items-center p-4 bg-gradient-to-r from-orange-100 to-pink-100 rounded-lg">
-                                    <div>
-                                      <span className="text-2xl font-bold text-gray-900">Grand Total</span>
-                                      <p className="text-sm text-gray-600">
-                                        {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
-                                      </p>
-                                    </div>
-                                    <span className="text-4xl font-bold text-orange-600">
-                                      ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
-                                    </span>
-                                  </div>
-                                </div>
+                                <ul className="space-y-1">
+                                  {ticket.benefits.map((benefit: string, i: number) => (
+                                    <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                                      {benefit}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
-                            </CardContent>
-                            <CardFooter className="p-4 sm:p-6 pt-0 space-y-4">
-                              {/* Terms & Conditions Checkbox */}
-                              <div className="flex items-start gap-2 sm:gap-3 w-full">
-                                <Checkbox
-                                  id="terms"
-                                  checked={acceptedTerms}
-                                  onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                                  className="mt-1 shrink-0"
-                                />
-                                <label
-                                  htmlFor="terms"
-                                  className="text-xs sm:text-sm text-gray-600 leading-relaxed cursor-pointer"
-                                >
-                                  I accept to the{" "}
-                                  <button
-                                    type="button"
-                                    onClick={() => setTermsModalOpen(true)}
-                                    className="text-orange-600 hover:text-orange-700  font-medium"
+                            )}
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
+                                  }`}>
+                                  {isSoldOut ? (
+                                    <>
+                                      <XCircle className="h-3 w-3" />
+                                      Sold Out
+                                    </>
+                                  ) : (
+                                    <>
+                                      {/* <CheckCircle2 className="h-3 w-3" />
+                                      {ticket.quantity - ticket.sold} remaining */}
+                                    </>
+                                  )}
+                                </span>
+                                <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span>
+                              </div>
+                              {/* <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-300 ${isSoldOut ? 'bg-red-500' : isLimited ? 'bg-amber-500' : 'bg-green-500'
+                                    }`}
+                                  style={{ width: `${100 - availabilityPercentage}%` }}
+                                ></div>
+                              </div> */}
+                            </div>
+                            {!isSoldOut && (
+                              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
+                                  <span className="text-xs sm:text-sm font-semibold text-indigo-600">
+                                    ₹{(ticket.price * quantity).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (quantity > 0) {
+                                        const newQuantity = quantity - 1;
+                                        if (newQuantity === 0) {
+                                          setSelectedTickets(prev => {
+                                            const newMap = new Map(prev);
+                                            newMap.delete(ticket._id);
+                                            return newMap;
+                                          });
+                                        } else {
+                                          setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        }
+                                      }
+                                    }}
+                                    disabled={quantity <= 0}
+                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
                                   >
-                                    Terms and Conditions*
-                                  </button>
-                                </label>
+                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                  <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
+                                    {quantity}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newQuantity = quantity + 1;
+                                      if (newQuantity <= ticket.quantity - ticket.sold) {
+                                        setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        if (newQuantity === 1) {
+                                          setTimeout(() => {
+                                            summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                          }, 100);
+                                        }
+                                      }
+                                    }}
+                                    disabled={quantity >= ticket.quantity - ticket.sold}
+                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
+                                  >
+                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
+                                  <Info className="h-3 w-3" />
+                                  Max {ticket.quantity - ticket.sold} per booking
+                                </p>
                               </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
 
-                              {/* Booking Button */}
-                              <Button
-                                className="w-full h-12 sm:h-14 text-base sm:text-lg font-bold 
-               bg-gradient-to-r from-orange-500 to-pink-500 
-               hover:from-orange-600 hover:to-pink-600 
-               shadow-md hover:shadow-lg 
-               transition-all text-white 
-               disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
-                                onClick={handleBooking}
-                                disabled={isBooking || !acceptedTerms}
+                  {/* Booking Summary */}
+                  {selectedTickets.size > 0 && (
+                    <div ref={summaryRef} className="animate-in slide-in-from-bottom-4 w-full max-w-full">
+                      <Card className="border-2 border-indigo-500 shadow-md bg-white w-full">
+                        <CardHeader className="bg-indigo-600 text-white rounded-t-lg p-4">
+                          <CardTitle className="text-base sm:text-xl flex items-center">
+                            <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                            Booking Summary
+                          </CardTitle>
+                          <CardDescription className="text-indigo-100 text-xs sm:text-sm">
+                            Review your ticket selection
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="space-y-3">
+                            {Array.from(selectedTickets.values()).map((item) => (
+                              <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-indigo-100 rounded-full">
+                                    <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-semibold text-gray-900 text-sm sm:text-base block truncate">{item.ticket.name}</span>
+                                    <p className="text-xs sm:text-sm text-gray-600">
+                                      Quantity: {item.quantity} • ₹{item.ticket.price} each
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-sm sm:text-lg font-semibold text-indigo-600 sm:text-right">
+                                  ₹{(item.ticket.price * item.quantity).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="border-t border-gray-200 pt-3">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
+                                <div className="mb-2 sm:mb-0">
+                                  <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
+                                  <p className="text-xs sm:text-sm text-gray-600">
+                                    {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
+                                  </p>
+                                </div>
+                                <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
+                                  ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
+                          <div className="flex items-start gap-2 w-full">
+                            <Checkbox
+                              id="terms"
+                              checked={acceptedTerms}
+                              onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                              className="mt-1"
+                            />
+                            <label
+                              htmlFor="terms"
+                              className="text-xs sm:text-sm text-gray-600 cursor-pointer"
+                            >
+                              I accept to the{" "}
+                              <button
+                                type="button"
+                                onClick={() => setTermsModalOpen(true)}
+                                className="text-indigo-600 hover:underline font-semibold"
                               >
-                                {isBooking ? (
-                                  <>
-                                    <Loader2 className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                                    Processing Payment...
-                                  </>
-                                ) : (
-                                  <>
-                                    <TicketIcon className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5" />
-                                    Book{" "}
-                                    {Array.from(selectedTickets.values()).reduce(
-                                      (sum, item) => sum + item.quantity,
-                                      0
-                                    )}{" "}
-                                    Ticket
-                                    {Array.from(selectedTickets.values()).reduce(
-                                      (sum, item) => sum + item.quantity,
-                                      0
-                                    ) > 1
-                                      ? "s"
-                                      : ""}
-                                  </>
-                                )}
-                              </Button>
-                            </CardFooter>
-
-                          </Card>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="py-8 text-center">
-                      <div className="bg-orange-100 inline-flex rounded-full p-3 mb-4">
-                        <TicketIcon className="h-6 w-6 text-orange-600" />
-                      </div>
-                      <p className="text-gray-600">No tickets available for this event</p>
+                                Terms and Conditions*
+                              </button>
+                            </label>
+                          </div>
+                          <Button
+                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
+                            onClick={handleBooking}
+                            disabled={isBooking || !acceptedTerms}
+                          >
+                            {isBooking ? (
+                              <>
+                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                Processing Payment...
+                              </>
+                            ) : (
+                              <>
+                                <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
+                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
+                              </>
+                            )}
+                          </Button>
+                        </CardFooter>
+                      </Card>
                     </div>
                   )}
-
                 </div>
-              </div>
-              {/* Terms and Condtions*/}
-              <TermsAndConditions />
-              {/* FAQ*/}
-              <FAQPage />
+              ) : (
+                <div className="py-6 text-center">
+                  <div className="bg-gray-100 rounded-full p-3 inline-flex mb-3">
+                    <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-gray-600">No tickets available for this event</p>
+                </div>
+              )}
             </div>
-            <Footer />
-            {/* Payment Processing Overlay */}
-            {isProcessingPayment && (
-              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
-                  <div className="mb-6">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      Generating Your Ticket
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Your payment was successful! We're now generating your ticket and invoice.
-                    </p>
-                  </div>
 
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-amber-800">
-                          Please do not leave or refresh this page
-                        </p>
-                        <p className="text-sm text-amber-700 mt-1">
-                          This process may take a few moments. You'll be redirected automatically once complete.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+            <TermsAndConditions />
+            <FAQPage />
+          </div>
+          <Footer />
 
-                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          {/* Payment Processing Overlay */}
+          {isProcessingPayment && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="bg-white rounded-xl p-4 sm:p-6 max-w-[90vw] sm:max-w-sm mx-4 text-center shadow-lg">
+                <div className="mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">Generating Your Ticket</h3>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                    Your payment was successful! We're now generating your ticket and invoice.
+                  </p>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <div className="text-left">
+                      <p className="text-xs sm:text-sm font-semibold text-amber-800">Please do not refresh</p>
+                      <p className="text-xs text-amber-700">This may take a moment. You'll be redirected automatically.</p>
                     </div>
-                    <span>Processing...</span>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </>
-    )
+    );
   }
 
-
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
 
       {/* Premium Information Banner */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20"></div>
-        <div className="container mx-auto p-4 relative z-10">
-          <div className="bg-amber-500/10 backdrop-blur-xl border-l-4 border-amber-400 rounded-2xl p-6 border border-amber-400/30">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 bg-amber-400/20 rounded-full p-2">
-                <Shield className="h-6 w-6 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-amber-100 font-semibold mb-2">Payment done but ticket missing?</p>
-                <p className="text-amber-200/90 text-sm leading-relaxed">
-                  No worries—your ticket will appear within a few hours in your Dashboard. If not, contact us via WhatsApp or Email.   </p>
-              </div>
+      <div className="bg-white border-b border-gray-100">
+        <div className="container mx-auto px-4 py-4">
+          <div className="bg-indigo-50 rounded-lg p-4 flex items-start gap-3">
+            <div className="bg-indigo-100 rounded-full p-2">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Payment done but ticket missing?</p>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                No worries—your ticket will appear within a few hours in your Dashboard. If not, contact us via{" "}
+                <a href="#" className="text-indigo-600 hover:underline font-medium">WhatsApp</a> or{" "}
+                <a href="#" className="text-indigo-600 hover:underline font-medium">Email</a>.
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 flex-1">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <div className="container mx-auto px-4 py-8 flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-12">
-            {/* Premium Hero Image */}
-            <div className="relative group">
-              <div className="absolute  rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-              <AspectRatio ratio={16 / 9} className="relative rounded-2xl overflow-hidden">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Hero Image */}
+            <div className="relative rounded-xl overflow-hidden shadow-lg">
+              <AspectRatio ratio={16 / 9}>
                 <Image
                   src={event.banner || "/placeholder.svg"}
                   alt={event.title}
                   fill
-                  className="object-contain"
+                  className="object-cover transition-transform duration-300 hover:scale-105"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                   priority
                 />
-                {/* <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div> */}
-
-
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                <div className="absolute bottom-4 left-4">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">{event.title}</h1>
+                  <p className="text-xs sm:text-sm text-gray-200 mt-1">{event.category}</p>
+                </div>
               </AspectRatio>
             </div>
 
-            {/* Premium Event Info */}
-            <div className="space-y-8">
-              <div>
-                <h1 className="text-6xl font-black tracking-tighter mb-6 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent leading-tight">
-                  {event.title}
-                </h1>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-purple-500/20 rounded-full p-3">
-                        <CalendarIcon className="h-6 w-6 text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-sm font-medium">DATE</p>
-                        <p className="text-white font-semibold text-lg">
-                          {startDateTime.date}
-                          {endDateTime && (
-                            <>
-                              <span className="mx-2 text-slate-400">→</span>
-                              <span>{endDateTime.date}</span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-pink-500/20 rounded-full p-3">
-                        <Clock className="h-6 w-6 text-pink-400" />
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-sm font-medium">TIME</p>
-                        <p className="text-white font-semibold text-lg">{timeRange}</p>
-                      </div>
-                    </div>
-                  </div>
+            {/* Event Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
+                <div className="bg-indigo-100 rounded-full p-2">
+                  <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                 </div>
-
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent flex-1"></div>
-                  <Badge variant="outline" className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-400/30 text-purple-200 px-4 py-2">
-                    {event.category}
-                  </Badge>
-                  <div className="h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent flex-1"></div>
-                </div>
-              </div>
-
-              {/* Premium Description */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
-                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  About This Event
-                </h2>
-                <div className="prose prose-invert max-w-none">
-                  <p className="text-slate-200 text-lg leading-relaxed whitespace-pre-line">
-                    {event.description}
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Date</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {startDateTime.date}
+                    {endDateTime && (
+                      <>
+                        <span className="mx-1">→</span>
+                        <span>{endDateTime.date}</span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
-
-              {/* Premium Location */}
-              {/* <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
-                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                  Venue Details
-                </h2>
-                <div className="flex items-start gap-6">
-                  <div className="bg-blue-500/20 rounded-2xl p-4">
-                    <MapPin className="h-8 w-8 text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-xl text-white mb-2">{event.location.address}</h3>
-                    <p className="text-slate-300 text-lg mb-4">
-                      {[
-                        event.location.city,
-                        event.location.state,
-                        event.location.country,
-                      ]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
-                    {event.location.coordinates && (
-                      <Button
-                        variant="outline"
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-full px-6"
-                        asChild
-                      >
-                        <a
-                          href={`https://www.google.com/maps?q=${encodeURIComponent(
-                            event.location.address
-                          )}+${encodeURIComponent(event.location.city)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <MapIcon className="h-4 w-4 mr-2" />
-                          View on Map
-                        </a>
-                      </Button>
-                    )}
-                  </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
+                <div className="bg-purple-100 rounded-full p-2">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                 </div>
-              </div> */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
-                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Location & Venue
-                </h2>
-
-                <div className="flex items-center gap-5 p-6 rounded-2xl bg-gradient-to-r from-purple-50/5 to-pink-50/5 border border-white/10 shadow-inner">
-                  {/* Icon */}
-                  <div className="p-3 bg-gradient-to-br from-green-100 to-teal-100 rounded-2xl shadow-md">
-                    <MapPin className="h-7 w-7 text-green-700" />
-                  </div>
-
-                  {/* Address details */}
-                  <div className="flex-1">
-                    <p className="text-xl font-semibold text-white">
-                      {event.location.address || "Town Hall"}
-                    </p>
-                    <p className="text-gray-300 text-sm">
-                      {[
-                        event.location.city,
-                        event.location.state,
-                        event.location.country,
-                      ]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
-
-                    {/* Google Maps Button */}
-                    {event.location.coordinates && (
-                      <div className="mt-4">
-                        <Button
-                          variant="outline"
-                          className="px-4 py-2 text-sm font-medium rounded-xl border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all duration-200"
-                          asChild
-                        >
-                          <a
-                            href={`https://www.google.com/maps?q=${encodeURIComponent(
-                              event.location.address
-                            )}+${encodeURIComponent(event.location.city)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            View on Google Maps
-                          </a>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                <div>
+                  <p className="text-xs uppercase text-gray-500">Time</p>
+                  <p className="text-sm font-semibold text-gray-900">{timeRange}</p>
                 </div>
               </div>
-
-
-              {/* Premium Tags */}
-              {event.tags && event.tags.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
-                  <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-                    Events Tags
-                  </h2>
-                  <div className="flex flex-wrap gap-3">
-                    {event.tags.map((tag: string) => (
-                      <Badge
-                        key={tag}
-                        className="bg-gradient-to-r from-slate-700 to-slate-600 text-white border-slate-500 px-4 py-2 text-sm font-medium hover:from-slate-600 hover:to-slate-500 transition-all duration-300"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Description */}
+            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">About This Event</h2>
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+            </div>
+
+            {/* Location */}
+            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Venue Details</h2>
+              <div className="flex items-start gap-3">
+                <div className="bg-indigo-100 rounded-full p-2">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1">{event.location.address}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    {[
+                      event.location.city,
+                      event.location.state,
+                      event.location.country,
+                    ].filter(Boolean).join(", ")}
+                  </p>
+                  {event.location.coordinates && (
+                    <Button
+                      variant="outline"
+                      className="mt-3 border-gray-300 text-gray-900 hover:bg-gray-100 rounded-lg text-xs sm:text-sm"
+                      asChild
+                    >
+                      <a
+                        href={`https://www.google.com/maps?q=${encodeURIComponent(
+                          event.location.address
+                        )}+${encodeURIComponent(event.location.city)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MapIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                        View on Map
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            {event.tags && event.tags.length > 0 && (
+              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Events Tags</h2>
+                <div className="flex flex-wrap gap-2">
+                  {event.tags.map((tag: string) => (
+                    <Badge
+                      key={tag}
+                      className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs px-2 sm:px-3 py-1"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Premium Sidebar */}
-          <div className="space-y-8">
-            {/* Premium Tickets Section */}
-            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20">
-
-
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Tickets Section */}
+            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">
-                  {/* Enhanced Ticket Selection Header */}
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900">Select Tickets</h3>
-                      <p className="text-sm text-gray-600">Choose your preferred ticket type</p>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select Tickets</h3>
+                      <p className="text-xs sm:text-sm text-gray-600">Choose your preferred ticket type</p>
                     </div>
-                    <Badge variant="outline" className="px-4 py-2 bg-white border-2">
-                      <Users className="h-4 w-4 mr-1" />
+                    <Badge variant="outline" className="mt-2 sm:mt-0 px-3 py-1 bg-white border-indigo-200 text-indigo-700 text-xs sm:text-sm">
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
                     </Badge>
                   </div>
 
-                  {/* Enhanced Ticket Types */}
                   {event.ticketTypes.map((ticket) => {
-                    // Calculate availability percentage
                     const availabilityPercentage = Math.max(
                       0,
                       Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
                     );
-
-                    // Determine status badge
                     const isSoldOut = ticket.quantity <= ticket.sold;
                     const isLimited = availabilityPercentage <= 20 && !isSoldOut;
                     const selectedItem = selectedTickets.get(ticket._id);
@@ -1417,44 +1265,36 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     return (
                       <Card
                         key={ticket._id}
-                        className={`border-2 transition-all duration-300 hover:shadow-xl ${quantity > 0
-                          ? 'border-primary shadow-lg ring-4 ring-primary/10'
+                        className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
+                          ? 'border-indigo-500 bg-indigo-50/30'
                           : isSoldOut
                             ? 'border-gray-200 bg-gray-50'
-                            : 'border-gray-200 hover:border-primary/50'
-                          } overflow-hidden`}
+                            : 'border-gray-200 hover:border-indigo-300'
+                          } rounded-lg overflow-hidden`}
                       >
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
+                        <CardHeader className="p-4 pb-2">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                             <div className="flex items-center gap-3">
-                              <div className={`p-3 rounded-lg transition-colors ${isSoldOut
-                                ? 'bg-gray-100'
-                                : quantity > 0
-                                  ? 'bg-gradient-to-r from-primary/10 to-primary/20'
-                                  : 'bg-gray-50 hover:bg-primary/10'
+                              <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'
                                 }`}>
-                                <TicketIcon className={`h-6 w-6 ${isSoldOut
-                                  ? 'text-gray-400'
-                                  : quantity > 0
-                                    ? 'text-primary'
-                                    : 'text-gray-600'
+                                <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'
                                   }`} />
                               </div>
                               <div>
-                                <CardTitle className="text-xl">{ticket.name}</CardTitle>
-                                <div className="flex flex-wrap gap-2 mt-2">
+                                <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
+                                <div className="flex flex-wrap gap-2 mt-1">
                                   {isSoldOut && (
-                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">
+                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
                                       Sold Out
                                     </Badge>
                                   )}
                                   {isLimited && !isSoldOut && (
-                                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 animate-pulse">
+                                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
                                       Limited Availability
                                     </Badge>
                                   )}
                                   {quantity > 0 && (
-                                    <Badge className="bg-primary text-primary-foreground animate-in">
+                                    <Badge className="bg-indigo-500 text-white text-xs">
                                       {quantity} selected
                                     </Badge>
                                   )}
@@ -1462,94 +1302,70 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </div>
                             </div>
                             <div className="text-right">
-                              <span className="text-3xl font-bold text-primary">₹{ticket.price}</span>
-                              <p className="text-sm text-gray-500">per ticket</p>
+                              <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                              <p className="text-xs text-gray-500">per ticket</p>
                             </div>
                           </div>
                         </CardHeader>
-
-                        <CardContent>
-                          <p className="text-gray-600 mb-4 leading-relaxed">
-                            {ticket.description}
-                          </p>
-
-                          <div className="flex items-center gap-2 mb-4">
-                            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                        <CardContent className="p-4 pt-0">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3">{ticket.description}</p>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
                               <Users className="h-3 w-3 mr-1" />
                               {ticket.capacity} person capacity
                             </Badge>
                           </div>
-
-                          {/* Enhanced Benefits list */}
                           {ticket.benefits && ticket.benefits.length > 0 && (
-                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-4 border border-blue-100">
-                              <p className="text-sm font-bold mb-3 text-blue-800 flex items-center">
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                WHAT'S INCLUDED:
+                            <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                              <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                What's Included
                               </p>
-                              <ul className="space-y-2">
+                              <ul className="space-y-1">
                                 {ticket.benefits.map((benefit: string, i: number) => (
-                                  <li key={i} className="flex items-center gap-3 text-sm">
-                                    <div className="h-2 w-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex-shrink-0"></div>
-                                    <span className="text-gray-700 font-medium">{benefit}</span>
+                                  <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                                    {benefit}
                                   </li>
                                 ))}
                               </ul>
                             </div>
                           )}
-
-                          {/* Enhanced Availability indicator */}
-                          <div className="mb-4">
-                            <div className="flex items-center justify-between text-sm mb-2">
-                              <span className={`font-bold flex items-center gap-1 ${isSoldOut
-                                ? 'text-red-600'
-                                : isLimited
-                                  ? 'text-amber-600'
-                                  : 'text-green-600'
+                          <div className="mb-3">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
                                 }`}>
                                 {isSoldOut ? (
                                   <>
-                                    <XCircle className="h-4 w-4" />
+                                    <XCircle className="h-3 w-3" />
                                     Sold Out
                                   </>
                                 ) : (
                                   <>
-                                    <CheckCircle2 className="h-4 w-4" />
+                                    <CheckCircle2 className="h-3 w-3" />
                                     {ticket.quantity - ticket.sold} remaining
                                   </>
                                 )}
                               </span>
-                              <span className="text-gray-500 text-xs">
-                                {ticket.sold} / {ticket.quantity} sold
-                              </span>
+                              <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span>
                             </div>
-                            <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
-                                className={`h-full transition-all duration-500 ${isSoldOut
-                                  ? 'bg-gradient-to-r from-red-500 to-red-600'
-                                  : isLimited
-                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                                    : 'bg-gradient-to-r from-green-500 to-blue-500'
+                                className={`h-full transition-all duration-300 ${isSoldOut ? 'bg-red-500' : isLimited ? 'bg-amber-500' : 'bg-green-500'
                                   }`}
                                 style={{ width: `${100 - availabilityPercentage}%` }}
                               ></div>
                             </div>
                           </div>
-
-                          {/* Quantity Selector */}
-                          {/* Enhanced Quantity Selector */}
                           {!isSoldOut && (
-                            <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border-2 border-dashed border-gray-200">
-                              <div className="flex items-center justify-between mb-3">
-                                <span className="font-bold text-gray-800">Quantity</span>
-                                <div className="text-right">
-                                  <span className="text-sm text-gray-600">Total: </span>
-                                  <span className="text-lg font-bold text-primary">
-                                    ₹{(ticket.price * quantity).toLocaleString()}
-                                  </span>
-                                </div>
+                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
+                                <span className="text-xs sm:text-sm font-semibold text-indigo-600">
+                                  ₹{(ticket.price * quantity).toLocaleString()}
+                                </span>
                               </div>
-                              <div className="flex items-center justify-center gap-4">
+                              <div className="flex items-center justify-center gap-2 sm:gap-3">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1568,15 +1384,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     }
                                   }}
                                   disabled={quantity <= 0}
-                                  className="h-10 w-10 p-0 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
                                 >
-                                  <Minus className="h-5 w-5" />
+                                  <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </Button>
-                                <div className="px-6 py-2 bg-white rounded-lg border-2 border-primary/20 min-w-[4rem] text-center">
-                                  <span className="text-2xl font-bold text-primary">
-                                    {quantity}
-                                  </span>
-                                </div>
+                                <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
+                                  {quantity}
+                                </span>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1592,15 +1406,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     }
                                   }}
                                   disabled={quantity >= ticket.quantity - ticket.sold}
-                                  className="h-10 w-10 p-0 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600 transition-colors"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
                                 >
-                                  <Plus className="h-5 w-5" />
+                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                                 </Button>
                               </div>
-                              <div className="text-xs text-gray-500 text-center mt-3 flex items-center justify-center gap-1">
+                              <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
                                 <Info className="h-3 w-3" />
                                 Maximum {ticket.quantity - ticket.sold} tickets per booking
-                              </div>
+                              </p>
                             </div>
                           )}
                         </CardContent>
@@ -1610,69 +1424,68 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
                   {/* Booking Summary */}
                   {selectedTickets.size > 0 && (
-                    <div ref={summaryRef} className="animate-in slide-in-from-bottom-4">
-                      <Card className="border-2 border-primary shadow-xl bg-gradient-to-r from-blue-50 to-purple-50">
-                        <CardHeader className="bg-gradient-to-r from-primary to-primary/90 text-white">
-                          <CardTitle className="text-2xl flex items-center">
-                            <TicketIcon className="h-6 w-6 mr-2" />
+                    <div ref={summaryRef} className="animate-in slide-in-from-bottom-4 w-full max-w-full">
+                      <Card className="border-2 border-indigo-500 shadow-md bg-white w-full">
+                        <CardHeader className="bg-indigo-600 text-white rounded-t-lg p-4">
+                          <CardTitle className="text-base sm:text-xl flex items-center">
+                            <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                             Booking Summary
                           </CardTitle>
-                          <CardDescription className="text-primary-foreground/80">
+                          <CardDescription className="text-indigo-100 text-xs sm:text-sm">
                             Review your ticket selection
                           </CardDescription>
                         </CardHeader>
-                        <CardContent className="p-6">
-                          <div className="space-y-4">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="space-y-3">
                             {Array.from(selectedTickets.values()).map((item) => (
-                              <div key={item.ticket._id} className="flex justify-between items-center p-3 bg-white rounded-lg border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-primary/10 rounded-lg">
-                                    <TicketIcon className="h-4 w-4 text-primary" />
+                              <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="p-2 bg-indigo-100 rounded-full">
+                                    <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                                   </div>
-                                  <div>
-                                    <span className="font-bold text-gray-900">{item.ticket.name}</span>
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                      <span>Quantity: {item.quantity}</span>
-                                      <span>•</span>
-                                      <span>₹{item.ticket.price} each</span>
-                                    </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-semibold text-gray-900 text-sm sm:text-base block truncate">{item.ticket.name}</span>
+                                    <p className="text-xs sm:text-sm text-gray-600">
+                                      Quantity: {item.quantity} • ₹{item.ticket.price} each
+                                    </p>
                                   </div>
                                 </div>
-                                <span className="text-xl font-bold text-primary">
+                                <span className="text-sm sm:text-lg font-semibold text-indigo-600 sm:text-right">
                                   ₹{(item.ticket.price * item.quantity).toLocaleString()}
                                 </span>
                               </div>
                             ))}
-                            <div className="border-t-2 border-dashed border-gray-300 pt-4">
-                              <div className="flex justify-between items-center p-4 bg-gradient-to-r from-primary/5 to-purple/5 rounded-lg">
-                                <div>
-                                  <span className="text-2xl font-bold text-gray-900">Grand Total</span>
-                                  <p className="text-sm text-gray-600">
+                            <div className="border-t border-gray-200 pt-3">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
+                                <div className="mb-2 sm:mb-0">
+                                  <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
+                                  <p className="text-xs sm:text-sm text-gray-600">
                                     {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
                                   </p>
                                 </div>
-                                <span className="text-4xl font-bold text-primary">
+                                <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
                                   ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
                                 </span>
                               </div>
                             </div>
                           </div>
                         </CardContent>
-                        <CardFooter className="p-6 pt-0">
+                        <CardFooter className="p-4 sm:p-6 pt-0">
                           <Button
-                            className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all"
+                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
                             onClick={handleBooking}
                             disabled={isBooking}
                           >
                             {isBooking ? (
                               <>
-                                <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                 Processing Payment...
                               </>
                             ) : (
                               <>
-                                <TicketIcon className="mr-3 h-5 w-5" />
-                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket{Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
+                                <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
+                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
                               </>
                             )}
                           </Button>
@@ -1682,21 +1495,21 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   )}
                 </div>
               ) : (
-                <div className="py-8 text-center">
-                  <div className="bg-muted/30 inline-flex rounded-full p-3 mb-4">
-                    <TicketIcon className="h-6 w-6 text-muted-foreground" />
+                <div className="py-6 text-center">
+                  <div className="bg-gray-100 rounded-full p-3 inline-flex mb-3">
+                    <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
                   </div>
-                  <p className="text-muted-foreground">No tickets available for this event</p>
+                  <p className="text-xs sm:text-sm text-gray-600">No tickets available for this event</p>
                 </div>
               )}
             </div>
 
             {/* Organizer */}
             {event.organizer && (
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <h2 className="text-2xl font-semibold mb-4">Organizer</h2>
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12 bg-muted">
+              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Organizer</h2>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10 bg-gray-100">
                     {event.organizer.avatar ? (
                       <AvatarImage
                         src={event.organizer.avatar}
@@ -1709,11 +1522,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     )}
                   </Avatar>
                   <div>
-                    <h3 className="font-medium">{event.organizer.name}</h3>
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900">{event.organizer.name}</h3>
                     {event.organizer.rating && (
                       <div className="flex items-center mt-1">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current mr-1" />
-                        <span className="text-sm text-muted-foreground">
+                        <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 fill-current mr-1" />
+                        <span className="text-xs text-gray-600">
                           {event.organizer.rating.toFixed(1)}
                         </span>
                       </div>
@@ -1729,45 +1542,27 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
       {/* Payment Processing Overlay */}
       {isProcessingPayment && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center shadow-2xl">
-            <div className="mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-white animate-spin" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-4 sm:p-6 max-w-[90vw] sm:max-w-sm mx-4 text-center shadow-lg">
+            <div className="mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Generating Your Ticket
-              </h3>
-              <p className="text-gray-600 mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Generating Your Ticket</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 Your payment was successful! We're now generating your ticket and invoice.
               </p>
             </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <svg className="w-5 h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-amber-800">
-                    Please do not leave or refresh this page
-                  </p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    This process may take a few moments. You'll be redirected automatically once complete.
-                  </p>
+                  <p className="text-xs sm:text-sm font-semibold text-amber-800">Please do not refresh</p>
+                  <p className="text-xs text-amber-700">This may take a moment. You'll be redirected automatically.</p>
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-              <span>Processing...</span>
             </div>
           </div>
         </div>
@@ -1787,8 +1582,7 @@ function Label({
 }) {
   return (
     <label
-      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className || ""
-        }`}
+      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${className || ""}`}
       {...props}
     >
       {children}
