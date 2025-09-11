@@ -1335,191 +1335,209 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Tickets Section */}
-            <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ticket Categories</h2>
               {event.ticketTypes && event.ticketTypes.length > 0 ? (
                 <div className="space-y-6">
+                  {/* Ticket Selection Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
                     <div>
                       <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select Tickets</h3>
                       <p className="text-xs sm:text-sm text-gray-600">Choose your preferred ticket type</p>
                     </div>
-                    <Badge variant="outline" className="mt-2 sm:mt-0 px-3 py-1 bg-white border-indigo-200 text-indigo-700 text-xs sm:text-sm">
+                    {/* <Badge variant="outline" className="mt-2 sm:mt-0 px-3 py-1 bg-white border-indigo-200 text-indigo-700 text-xs sm:text-sm">
                       <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
-                    </Badge>
+                    </Badge> */}
                   </div>
+                  {bookingError && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 flex items-start gap-2">
+                      <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <div className="text-sm">{bookingError}</div>
+                    </div>
+                  )}
+                  {/* Ticket Types */}
+                  <div className="grid grid-cols-1 gap-4">
+                    {event.ticketTypes.map((ticket) => {
+                      const availabilityPercentage = Math.max(
+                        0,
+                        Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
+                      );
+                      const isSoldOut = ticket.quantity <= ticket.sold;
+                      const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                      const selectedItem = selectedTickets.get(ticket._id);
+                      const quantity = selectedItem?.quantity || 0;
 
-                  {event.ticketTypes.map((ticket) => {
-                    const availabilityPercentage = Math.max(
-                      0,
-                      Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
-                    );
-                    const isSoldOut = ticket.quantity <= ticket.sold;
-                    const isLimited = availabilityPercentage <= 20 && !isSoldOut;
-                    const selectedItem = selectedTickets.get(ticket._id);
-                    const quantity = selectedItem?.quantity || 0;
+                      return (
+                        <Card
+                          key={ticket._id}
+                          className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
+                            ? 'border-indigo-500 bg-indigo-50/30'
+                            : isSoldOut
+                              ? 'border-gray-200 bg-gray-50'
+                              : 'border-gray-200 hover:border-indigo-300'
+                            } rounded-lg overflow-hidden relative`}
+                        >
+                          {/* Sold Out Overlay */}
+                          {isSoldOut && (
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10 rounded-lg">
 
-                    return (
-                      <Card
-                        key={ticket._id}
-                        className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
-                          ? 'border-indigo-500 bg-indigo-50/30'
-                          : isSoldOut
-                            ? 'border-gray-200 bg-gray-50'
-                            : 'border-gray-200 hover:border-indigo-300'
-                          } rounded-lg overflow-hidden`}
-                      >
-                        <CardHeader className="p-4 pb-2">
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'
-                                }`}>
-                                <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'
-                                  }`} />
-                              </div>
-                              <div>
-                                <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
-                                <div className="flex flex-wrap gap-2 mt-1">
-                                  {isSoldOut && (
-                                    <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
-                                      Sold Out
-                                    </Badge>
-                                  )}
-                                  {isLimited && !isSoldOut && (
-                                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
-                                      Limited Availability
-                                    </Badge>
-                                  )}
-                                  {quantity > 0 && (
-                                    <Badge className="bg-indigo-500 text-white text-xs">
-                                      {quantity} selected
-                                    </Badge>
-                                  )}
+
+                              <img src="/sold-out.webp" className="h-60 w-60" />
+
+
+                            </div>
+                          )}
+                          <CardHeader className="p-4 pb-2">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'
+                                  }`}>
+                                  <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'
+                                    }`} />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {isSoldOut && (
+                                      <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
+                                        Sold Out
+                                      </Badge>
+                                    )}
+                                    {isLimited && !isSoldOut && (
+                                      <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
+                                        Limited Availability
+                                      </Badge>
+                                    )}
+                                    {quantity > 0 && (
+                                      <Badge className="bg-indigo-500 text-white text-xs">
+                                        {quantity} selected
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
-                              <p className="text-xs text-gray-500">per ticket</p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                          <p className="text-xs sm:text-sm text-gray-600 mb-3">{ticket.description}</p>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
-                              <Users className="h-3 w-3 mr-1" />
-                              {ticket.capacity} person capacity
-                            </Badge>
-                          </div>
-                          {ticket.benefits && ticket.benefits.length > 0 && (
-                            <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
-                              <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                What's Included
-                              </p>
-                              <ul className="space-y-1">
-                                {ticket.benefits.map((benefit: string, i: number) => (
-                                  <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
-                                    {benefit}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          <div className="mb-3">
-                            <div className="flex items-center justify-between text-xs mb-1">
-                              <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
-                                }`}>
-                                {isSoldOut ? (
-                                  <>
-                                    <XCircle className="h-3 w-3" />
-                                    Sold Out
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    {ticket.quantity - ticket.sold} remaining
-                                  </>
-                                )}
-                              </span>
-                              <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span>
-                            </div>
-                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-300 ${isSoldOut ? 'bg-red-500' : isLimited ? 'bg-amber-500' : 'bg-green-500'
-                                  }`}
-                                style={{ width: `${100 - availabilityPercentage}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                          {!isSoldOut && (
-                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
-                                <span className="text-xs sm:text-sm font-semibold text-indigo-600">
-                                  ₹{(ticket.price * quantity).toLocaleString()}
-                                </span>
+                              <div className="text-left">
+                                <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                                <p className="text-xs text-gray-500">per ticket</p>
                               </div>
-                              <div className="flex items-center justify-center gap-2 sm:gap-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (quantity > 0) {
-                                      const newQuantity = quantity - 1;
-                                      if (newQuantity === 0) {
-                                        setSelectedTickets(prev => {
-                                          const newMap = new Map(prev);
-                                          newMap.delete(ticket._id);
-                                          return newMap;
-                                        });
-                                      } else {
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <p className=" text-green-600 font-bold mb-3">{ticket.description}</p>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
+                                <Users className="h-3 w-3 mr-1" />
+                                {ticket.capacity} capacity
+                              </Badge>
+                            </div>
+                            {ticket.benefits && ticket.benefits.length > 0 && (
+                              <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                                <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Included Benefits
+                                </p>
+                                <ul className="space-y-1">
+                                  {ticket.benefits.map((benefit: string, i: number) => (
+                                    <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                                      {benefit}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
+                                  }`}>
+                                  {isSoldOut ? (
+                                    <>
+                                      <XCircle className="h-3 w-3" />
+                                      Sold Out
+                                    </>
+                                  ) : (
+                                    <>
+                                      {/* <CheckCircle2 className="h-3 w-3" />
+                                      {ticket.quantity - ticket.sold} remaining */}
+                                    </>
+                                  )}
+                                </span>
+                                {/* <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span> */}
+                              </div>
+                              {/* <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-300 ${isSoldOut ? 'bg-red-500' : isLimited ? 'bg-amber-500' : 'bg-green-500'
+                                    }`}
+                                  style={{ width: `${100 - availabilityPercentage}%` }}
+                                ></div>
+                              </div> */}
+                            </div>
+                            {!isSoldOut && (
+                              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
+                                  <span className="text-xs sm:text-sm font-semibold text-indigo-600">
+                                    ₹{(ticket.price * quantity).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (quantity > 0) {
+                                        const newQuantity = quantity - 1;
+                                        if (newQuantity === 0) {
+                                          setSelectedTickets(prev => {
+                                            const newMap = new Map(prev);
+                                            newMap.delete(ticket._id);
+                                            return newMap;
+                                          });
+                                        } else {
+                                          setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        }
+                                      }
+                                    }}
+                                    disabled={quantity <= 0}
+                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                                  >
+                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                  <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
+                                    {quantity}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const newQuantity = quantity + 1;
+                                      if (newQuantity <= ticket.quantity - ticket.sold) {
                                         setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        if (newQuantity === 1) {
+                                          setTimeout(() => {
+                                            summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                          }, 100);
+                                        }
                                       }
-                                    }
-                                  }}
-                                  disabled={quantity <= 0}
-                                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                                >
-                                  <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                                <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
-                                  {quantity}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const newQuantity = quantity + 1;
-                                    if (newQuantity <= ticket.quantity - ticket.sold) {
-                                      setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                      if (newQuantity === 1) {
-                                        setTimeout(() => {
-                                          summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }, 100);
-                                      }
-                                    }
-                                  }}
-                                  disabled={quantity >= ticket.quantity - ticket.sold}
-                                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
-                                >
-                                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
+                                    }}
+                                    disabled={quantity >= ticket.quantity - ticket.sold}
+                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
+                                  >
+                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </Button>
+                                </div>
+                                {/* <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
+                                  <Info className="h-3 w-3" />
+                                  Max {ticket.quantity - ticket.sold} per booking
+                                </p> */}
                               </div>
-                              <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
-                                <Info className="h-3 w-3" />
-                                Maximum {ticket.quantity - ticket.sold} tickets per booking
-                              </p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
 
                   {/* Booking Summary */}
                   {selectedTickets.size > 0 && (
@@ -1538,7 +1556,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <div className="space-y-3">
                             {Array.from(selectedTickets.values()).map((item) => (
                               <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
-                                <div className="flex items-center gap-3 flex-1">
+                                <div className="flex items-center gap-3">
                                   <div className="p-2 bg-indigo-100 rounded-full">
                                     <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                                   </div>
@@ -1569,11 +1587,32 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             </div>
                           </div>
                         </CardContent>
-                        <CardFooter className="p-4 sm:p-6 pt-0">
+                        <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
+                          <div className="flex items-start gap-2 w-full">
+                            <Checkbox
+                              id="terms"
+                              checked={acceptedTerms}
+                              onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                              className="mt-1"
+                            />
+                            <label
+                              htmlFor="terms"
+                              className="text-xs sm:text-sm text-gray-600 cursor-pointer"
+                            >
+                              I accept to the{" "}
+                              <button
+                                type="button"
+                                onClick={() => setTermsModalOpen(true)}
+                                className="text-indigo-600 hover:underline font-semibold"
+                              >
+                                Terms and Conditions*
+                              </button>
+                            </label>
+                          </div>
                           <Button
-                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
                             onClick={handleBooking}
-                            disabled={isBooking}
+                            disabled={isBooking || !acceptedTerms}
                           >
                             {isBooking ? (
                               <>
@@ -1584,7 +1623,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               <>
                                 <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                                 Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
-                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
+                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
                               </>
                             )}
                           </Button>
@@ -1602,39 +1641,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
               )}
             </div>
-
-            {/* Organizer */}
-            {event.organizer && (
-              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Organizer</h2>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10 bg-gray-100">
-                    {event.organizer.avatar ? (
-                      <AvatarImage
-                        src={event.organizer.avatar}
-                        alt={event.organizer.name}
-                      />
-                    ) : (
-                      <AvatarFallback>
-                        {event.organizer.name.charAt(0)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-semibold text-gray-900">{event.organizer.name}</h3>
-                    {event.organizer.rating && (
-                      <div className="flex items-center mt-1">
-                        <Star className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500 fill-current mr-1" />
-                        <span className="text-xs text-gray-600">
-                          {event.organizer.rating.toFixed(1)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
       <Footer />
