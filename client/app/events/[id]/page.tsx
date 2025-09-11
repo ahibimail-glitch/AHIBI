@@ -592,7 +592,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const timeRange = formatTimeRange(event.startDate, event.endDate);
-  const isSpecial = params.id === "68c2c33eb6ef88c76f50ce7c";
+  const isSpecial = params.id === "68bc6cdf40915f05c90380d4";
 
   // Customized UI for a specific event ID while preserving booking logic
   if (isSpecial) {
@@ -804,8 +804,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                             : isSoldOut
                               ? 'border-gray-200 bg-gray-50'
                               : 'border-gray-200 hover:border-indigo-300'
-                            } rounded-lg overflow-hidden`}
+                            } rounded-lg overflow-hidden relative`}
                         >
+                          {/* Sold Out Overlay */}
+                          {isSoldOut && (
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10 rounded-lg">
+
+
+                              <img src="/sold-out.webp" className="h-60 w-60" />
+
+
+                            </div>
+                          )}
                           <CardHeader className="p-4 pb-2">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                               <div className="flex items-center gap-3">
