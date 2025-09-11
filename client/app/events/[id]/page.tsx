@@ -1588,46 +1588,36 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           </div>
                         </CardContent>
                         <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
-                          <div className="flex items-start gap-2 w-full">
-                            <Checkbox
-                              id="terms"
-                              checked={acceptedTerms}
-                              onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                              className="mt-1"
-                            />
-                            <label
-                              htmlFor="terms"
-                              className="text-xs sm:text-sm text-gray-600 cursor-pointer"
-                            >
-                              I accept to the{" "}
-                              <button
-                                type="button"
-                                onClick={() => setTermsModalOpen(true)}
-                                className="text-indigo-600 hover:underline font-semibold"
-                              >
-                                Terms and Conditions*
-                              </button>
-                            </label>
-                          </div>
-                          <Button
-                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
-                            onClick={handleBooking}
-                            disabled={isBooking || !acceptedTerms}
-                          >
-                            {isBooking ? (
-                              <>
-                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                                Processing Payment...
-                              </>
-                            ) : (
-                              <>
-                                <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
-                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
-                              </>
-                            )}
-                          </Button>
-                        </CardFooter>
+  <Button
+    className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
+    onClick={handleBooking}
+    disabled={isBooking}
+  >
+    {isBooking ? (
+      <>
+        <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+        Processing Payment...
+      </>
+    ) : (
+      <>
+        <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+        Book{" "}
+        {Array.from(selectedTickets.values()).reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        )}{" "}
+        Ticket
+        {Array.from(selectedTickets.values()).reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        ) > 1
+          ? "s"
+          : ""}
+      </>
+    )}
+  </Button>
+</CardFooter>
+
                       </Card>
                     </div>
                   )}
