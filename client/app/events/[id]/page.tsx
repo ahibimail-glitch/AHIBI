@@ -54,6 +54,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -239,6 +240,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleBooking = async () => {
     if (selectedTickets.size === 0) {
@@ -607,7 +609,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <div className="relative overflow-hidden px-2 sm:px-4 md:px-8 py-2 sm:py-4 md:py-6 my-2 sm:my-4 md:my-8 mx-2 sm:mx-4 md:mx-8 rounded-xl">
               <AspectRatio
                 ratio={16 / 9}
-                className="relative my-4 sm:my-6 md:my-12 rounded-xl md:rounded-2xl overflow-hidden shadow-2xl group"
+                className="relative my-4 sm:my-6 md:my-12 rounded-xl md:rounded-2xl overflow-hidden "
               >
                 <img
                   src={event.banner || "/placeholder.svg"}
@@ -672,7 +674,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
                 {/* Genre */}
                 {event.category && (
-                  <div className="flex flex-1 items-center bg-[#11C37F] rounded-xl px-4 py-3 shadow-lg cursor-pointer text-white">
+                  <div className="flex flex-1 items-center bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-xl px-4 py-3 shadow-lg cursor-pointer text-white transition-all duration-300 hover:scale-105">
                     <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center mr-2 shrink-0">
                       <span className="text-pink-600 text-xs font-black">♪</span>
                     </div>
@@ -682,51 +684,63 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     </div>
                   </div>
                 )}
+
               </div>
               {/* About  and Venue Festival */}
               <div className="bg-gradient-to-br from-orange-100 via-white to-teal-100 border border-orange-200 rounded-2xl shadow-xl hover:shadow-orange-300/40 transition-all duration-500">
-                <div className="p-6 sm:p-8">
-                  <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-4">
+                {/* About Section */}
+                <div className="p-6 sm:p-10 relative">
+                  {/* Decorative accent */}
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-orange-200/40 rounded-full blur-3xl -z-10"></div>
+
+                  <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-6">
                     About
                   </h2>
-                  <p className="text-gray-700 leading-relaxed">
-                    On Friday, October 24, we are launching Nagaland's Biggest Music Event.
-                    We're bringing global R&B star Iyaz, whose music has garnered over 400
-                    million YouTube views and a combined 90M+ streams on Spotify for his hit
-                    single "Replay."
-                    <br />
-                    And top Naga talent like Lenen Jamir-Itaya Nungu (10M+ views), Momo
-                    Girl~Aseno Metha (9.1M views), and Mintu Love Pinky~Sunep Lemtur (8.6M+
-                    views). The lineup also features artists like Moko Koza, whose hits have
-                    reached 3.6M+ views, and Shelomi~ Kivika Achumi, with over 4.9M views,
-                    offering your brand a unique connection to a fanbase with a proven track
-                    record of engagement and support.
-                    <br />
-                    This isn’t just a concert, it's a landmark event.
+                  <p className="text-gray-800 leading-relaxed text-lg sm:text-xl font-medium">
+                    <span className="font-bold text-orange-600">AHIBI FEST 2025</span> is
+                    <span className="text-pink-600 font-semibold"> Nagaland’s premier music festival</span> —
+                    where global headliners meet Northeast’s hottest talent on one massive stage.
+                  </p>
+                  <p className="mt-4 text-gray-700 leading-relaxed text-base sm:text-lg">
+                    This year, we bring you
+                    <span className="font-semibold text-teal-600"> Iyaz live in Dimapur</span>, alongside
+                    <span className="font-semibold"> “The Ultimate Naga Playlist”</span> and breakout acts
+                    that will set the crowd on fire. 🎶✨
+                  </p>
+                  <p className="mt-4 text-gray-700 leading-relaxed text-base sm:text-lg italic">
+                    Get ready for a night of music, culture, and energy that will echo far beyond.
                   </p>
                 </div>
 
-                {/* Venue & Map */}
+                {/* Venue Section */}
                 <div className="p-6 sm:p-8 pt-0">
                   <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-500 via-pink-500 to-teal-500 bg-clip-text text-transparent mb-4">
                     Venue
                   </h2>
 
-                  {/* Google Map */}
+                  <p className="text-gray-700 mb-4 text-lg flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-teal-500" />
+                    <span className="font-semibold bg-gradient-to-r from-teal-400 via-cyan-400 to-teal-500 bg-clip-text text-transparent">
+                      Agri Expo Grounds, Dimapur
+                    </span>
+                  </p>
+
+
                   <div className="w-full h-64 md:h-80 rounded-xl overflow-hidden shadow-md border border-gray-200">
                     <iframe
-                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3651.902187396978!2d90.39150517523705!3d23.75088597866816!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755b8952f043d13%3A0x3b9c0e08e23c89a6!2sConcert%20Venue!5e0!3m2!1sen!2sin!4v1694356123456!5m2!1sen!2sin"
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3685.763256664233!2d93.75891477519677!3d25.864940902890885!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x374623d1f57f1c2d%3A0x5e272d1d23a3b5f7!2sAgri%20Expo%20Grounds!5e0!3m2!1sen!2sin!4v1726070000000!5m2!1sen!2sin"
                       width="100%"
                       height="100%"
                       style={{ border: 0 }}
+                      allowFullScreen
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
                     ></iframe>
                   </div>
 
-
                 </div>
               </div>
+
 
 
 
@@ -1012,25 +1026,66 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 </div>
                               </div>
                             </CardContent>
-                            <CardFooter className="p-6 pt-0">
+                            <CardFooter className="p-4 sm:p-6 pt-0 space-y-4">
+                              {/* Terms & Conditions Checkbox */}
+                              <div className="flex items-start gap-2 sm:gap-3 w-full">
+                                <Checkbox
+                                  id="terms"
+                                  checked={acceptedTerms}
+                                  onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                                  className="mt-1 shrink-0"
+                                />
+                                <label
+                                  htmlFor="terms"
+                                  className="text-xs sm:text-sm text-gray-600 leading-relaxed cursor-pointer"
+                                >
+                                  I accept to the{" "}
+                                  <button
+                                    type="button"
+                                    onClick={() => setTermsModalOpen(true)}
+                                    className="text-orange-600 hover:text-orange-700  font-medium"
+                                  >
+                                    Terms and Conditions*
+                                  </button>
+                                </label>
+                              </div>
+
+                              {/* Booking Button */}
                               <Button
-                                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 shadow-lg hover:shadow-xl transition-all text-white"
+                                className="w-full h-12 sm:h-14 text-base sm:text-lg font-bold 
+               bg-gradient-to-r from-orange-500 to-pink-500 
+               hover:from-orange-600 hover:to-pink-600 
+               shadow-md hover:shadow-lg 
+               transition-all text-white 
+               disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
                                 onClick={handleBooking}
-                                disabled={isBooking}
+                                disabled={isBooking || !acceptedTerms}
                               >
                                 {isBooking ? (
                                   <>
-                                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                                    <Loader2 className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                                     Processing Payment...
                                   </>
                                 ) : (
                                   <>
-                                    <TicketIcon className="mr-3 h-5 w-5" />
-                                    Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket{Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
+                                    <TicketIcon className="mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5" />
+                                    Book{" "}
+                                    {Array.from(selectedTickets.values()).reduce(
+                                      (sum, item) => sum + item.quantity,
+                                      0
+                                    )}{" "}
+                                    Ticket
+                                    {Array.from(selectedTickets.values()).reduce(
+                                      (sum, item) => sum + item.quantity,
+                                      0
+                                    ) > 1
+                                      ? "s"
+                                      : ""}
                                   </>
                                 )}
                               </Button>
                             </CardFooter>
+
                           </Card>
                         </div>
                       )}
