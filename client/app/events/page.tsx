@@ -334,7 +334,7 @@ export default function EventsPage() {
               transition={{ duration: 0.8 }}
               className="text-center"
             >
-              <Link href="/68c2c33eb6ef88c76f50ce7c">
+              <Link href="/events/68c2c33eb6ef88c76f50ce7c">
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg"
