@@ -1347,7 +1347,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                   </>
                                 )}
                               </span>
-                              <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span>
+                              {/* <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span> */}
                             </div>
                             <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
