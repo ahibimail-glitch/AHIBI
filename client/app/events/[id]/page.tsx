@@ -934,14 +934,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
+                              <div className="text-left">
                                 <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
                                 <p className="text-xs text-gray-500">per ticket</p>
                               </div>
                             </div>
                           </CardHeader>
                           <CardContent className="p-4 pt-0">
-                            <p className="text-lg text-2xl text-green-600 font-bold mb-3">{ticket.description}</p>
+                            <p className=" text-green-600 font-bold mb-3">{ticket.description}</p>
                             <div className="flex items-center gap-2 mb-3">
                               <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
                                 <Users className="h-3 w-3 mr-1" />

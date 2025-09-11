@@ -86,7 +86,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       aria-labelledby={`event-title-${event._id}`}
     >
       <div className="absolute -inset-1 bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 rounded-2xl blur-lg opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
-      
+
       <Card
         className="relative overflow-hidden bg-white border border-gray-200 rounded-2xl transition-all duration-300 hover:shadow-2xl"
         onMouseEnter={() => setIsHovered(true)}
@@ -183,8 +183,8 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                     >
                       <Link href={
                         event._id === "6899cb7215438afd622a7646" ? "/events/FC25" :
-                        event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
-                        `/events/${event._id}`
+                          event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
+                            `/events/${event._id}`
                       }>
                         View Details
                       </Link>
@@ -305,36 +305,47 @@ export default function EventsPage() {
             transition={{ duration: 10, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Desktop Image */}
             <Image
-              src="/images/carausel1.jpg"
+              src="/images/ahibi-earlybird.jpg"
               alt="Event Background"
               fill
-              className="object-cover"
+              className="object-cover hidden sm:block"
               priority
             />
+
+            {/* Mobile Image */}
+            <Image
+              src="/images/ahibi-fest-early-bird-phone.jpg"
+              alt="Event Background Mobile"
+              fill
+              className="object-cover block sm:hidden"
+              priority
+            />
+
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60"></div>
           </motion.div>
-          <div className="relative z-10 h-full flex items-center justify-center">
+
+          {/* BOOK NOW button at bottom */}
+          <div className="relative z-10 h-full flex items-end justify-center pb-28">
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-center px-4"
+              className="text-center"
             >
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6">
-                <span className="block bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Discover Extraordinary
-                </span>
-                <span className="block bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Events
-                </span>
-              </h1>
-              <p className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto">
-                Experience curated events that inspire and connect you with world-class talent.
-              </p>
+              <Link href="/68c2c33eb6ef88c76f50ce7c">
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg"
+                >
+                  BOOK NOW
+                </Button>
+              </Link>
             </motion.div>
           </div>
         </section>
+
 
         {/* Filter Section */}
         <section className="py-3 bg-white/90 backdrop-blur-md shadow-sm sticky top-0 z-20">
