@@ -28,6 +28,23 @@ export default function RootLayout({
             <FloatingWhatsapp />
           </div>
           <Script id="razorpay-checkout-js" src="https://checkout.razorpay.com/v1/checkout.js" />
+          {/* Google Analytics */}
+          <Script
+            src="https://www.googletagmanager.com/gtag/js?id=G-6HK1GRM61F"
+            strategy="afterInteractive"
+          />
+          <Script
+            id="ga-gtag"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'G-6HK1GRM61F');
+              `,
+            }}
+          />
         </VenueAuthProvider>
       </body>
     </html>
