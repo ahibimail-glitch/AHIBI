@@ -204,7 +204,7 @@ export default function SeatingChart() {
                   your selection will be released and you may need to start again.
                 </li>
                 <li>
-                  If you face any payment failure, please contact us via WhatsApp or email.
+                  If you face any booking issues, please contact us via WhatsApp or email.
                 </li>
               </ul>
               <div className="mt-2 flex items-center gap-2 text-[11px] sm:text-xs text-amber-700">
