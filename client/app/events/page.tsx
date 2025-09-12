@@ -307,7 +307,7 @@ export default function EventsPage() {
           >
             {/* Desktop Image */}
             <Image
-              src="/images/ahibi-earlybird.jpg"
+              src="/images/iyaz-live.jpg"
               alt="Event Background"
               fill
               className="object-cover hidden sm:block"
@@ -316,7 +316,7 @@ export default function EventsPage() {
 
             {/* Mobile Image */}
             <Image
-              src="/images/ahibi-fest-early-bird-phone.jpg"
+              src="/images/iyaz-live.jpg"
               alt="Event Background Mobile"
               fill
               className="object-cover block sm:hidden"
