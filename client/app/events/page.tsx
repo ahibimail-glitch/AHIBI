@@ -298,7 +298,7 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1">
-        <section className="relative h-[90vh] overflow-hidden">
+        <section className="relative w-full aspect-[16/9] overflow-hidden">
           <motion.div
             initial={{ scale: 1.2 }}
             animate={{ scale: 1 }}
@@ -327,7 +327,7 @@ export default function EventsPage() {
           </motion.div>
 
           {/* BOOK NOW button at bottom */}
-          <div className="relative z-10 h-full flex items-end justify-center pb-28">
+          <div className="absolute inset-0 z-10 flex items-end justify-center pb-12 sm:pb-20">
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -337,14 +337,23 @@ export default function EventsPage() {
               <Link href="/events/68c2c33eb6ef88c76f50ce7c">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg"
+                  className="
+    bg-gradient-to-r from-blue-600 to-purple-600 
+    hover:from-blue-700 hover:to-purple-700 
+    text-white font-semibold 
+    px-8 py-3 rounded-full shadow-lg
+    text-base sm:text-lg        /* smaller font on small screens */
+    px-5 py-2.5 sm:px-8 sm:py-3 /* smaller padding on small screens */
+  "
                 >
                   BOOK NOW
                 </Button>
+
               </Link>
             </motion.div>
           </div>
         </section>
+
 
 
         {/* Filter Section */}
