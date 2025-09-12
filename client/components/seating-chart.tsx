@@ -187,6 +187,33 @@ export default function SeatingChart() {
       <div className="mb-4 sm:mb-5">
         <Legend />
       </div>
+      {/* Booking Notice */}
+      <div className="mb-4 sm:mb-6">
+        <div className="relative overflow-hidden rounded-xl border border-amber-300 bg-gradient-to-br from-amber-50 to-white shadow-sm">
+          <div className="absolute -left-6 -top-6 h-20 w-20 rounded-full bg-amber-200/40 blur-2xl" />
+          <div className="flex items-start gap-3 p-3 sm:p-4">
+            <div className="mt-0.5 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-amber-500 text-white shadow">
+              ⚠️
+            </div>
+            <div className="text-xs sm:text-sm text-slate-700">
+              <div className="font-semibold text-amber-800">Important booking notice</div>
+              <ul className="mt-1 list-disc space-y-1 pl-4">
+                <li>
+                  Once you select a seat, ensure you have a stable internet connection and complete the
+                  payment within <span className="font-semibold text-amber-800">10 minutes</span>. Otherwise,
+                  your selection will be released and you may need to start again.
+                </li>
+                <li>
+                  If you face any payment failure, please contact us via WhatsApp or email.
+                </li>
+              </ul>
+              <div className="mt-2 flex items-center gap-2 text-[11px] sm:text-xs text-amber-700">
+                <span>⏳ Hold window: 10 minutes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Theater Layout */}
       <div className="space-y-4 sm:space-y-5">

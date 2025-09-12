@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useSeatsStore } from "@/store/seats-store"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/useAuth"
@@ -19,11 +19,25 @@ export default function CartSummary() {
   const [showInvoice, setShowInvoice] = useState(false)
   const [invoiceData, setInvoiceData] = useState<any>(null)
   const [paymentProcessed, setPaymentProcessed] = useState(false)
+  const [generatingTicket, setGeneratingTicket] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth() // Get user from auth hook
 
   const selectedSeats = useMemo(() => selectedIds.map((id) => seats[id]).filter(Boolean), [selectedIds, seats])
   const total = useMemo(() => selectedSeats.reduce((sum, s) => sum + s.price, 0), [selectedSeats])
+
+  // Warn users against accidental refresh/close while ticket is generating
+  useEffect(() => {
+    if (!generatingTicket) return
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = "Your ticket is being generated. Are you sure you want to leave?"
+    }
+    window.addEventListener("beforeunload", beforeUnload)
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload)
+    }
+  }, [generatingTicket])
 
   // Function to check booking status after payment
   const checkBookingStatus = async (bookingId: string, attempts = 0) => {
@@ -116,6 +130,7 @@ export default function CartSummary() {
           try {
             console.log("Payment completed:", response.razorpay_payment_id)
             setPaymentProcessed(true)
+            setGeneratingTicket(true)
             
             // Directly confirm the booking on the server
             const confirmResp = await fetch("/api/annie-musical/confirm", {
@@ -173,6 +188,7 @@ export default function CartSummary() {
             
             setInvoiceData(invoiceInfo)
             console.log(invoiceInfo)
+            setGeneratingTicket(false)
             setShowInvoice(true)
             
             toast({ 
@@ -193,6 +209,7 @@ export default function CartSummary() {
               description: "There was an error confirming your booking. Please contact support.",
               variant: "destructive"
             })
+            setGeneratingTicket(false)
           }
         },
         prefill: {
@@ -226,6 +243,33 @@ export default function CartSummary() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Full-screen loader shown right after payment while ticket is being generated
+  if (generatingTicket) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-amber-200">
+          <div className="p-5 sm:p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500 text-white shadow">
+                <svg className="h-5 w-5 animate-pulse" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.72-1.36 3.485 0l6.516 11.593c.75 1.335-.213 2.993-1.742 2.993H3.483c-1.53 0-2.492-1.658-1.743-2.993L8.257 3.1zM11 14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a.75.75 0 01-.75-.75V7.5a.75.75 0 011.5 0v3.75A.75.75 0 0110 12z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-amber-800">Please do not refresh or leave this page</h3>
+                <p className="mt-1 text-sm text-slate-600">Your ticket is being generated. This may take a few seconds.</p>
+              </div>
+            </div>
+            <div className="mt-5 flex items-center gap-3">
+              <div className="h-5 w-5 rounded-full border-2 border-amber-200 border-t-amber-600 animate-spin" aria-hidden />
+              <p className="text-xs text-slate-500">Finalizing your booking and preparing your invoice…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (showInvoice && invoiceData) {

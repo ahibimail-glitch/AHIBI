@@ -84,7 +84,7 @@ const createBooking = asyncHandler(async (req, res) => {
     }
 
     const totalPrice = seats.reduce((acc, seat) => acc + seat.price, 0);
-    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 10 minutes from now
+    const expiresAt = new Date(Date.now() + 10  * 60 * 1000); // 10 minutes from now
 
     // Lock the seats
     await AnnieSeat.updateMany(
