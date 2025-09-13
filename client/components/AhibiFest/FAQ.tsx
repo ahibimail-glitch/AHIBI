@@ -32,7 +32,7 @@ export default function FAQCard() {
         {/* Content */}
         <div
           className={`overflow-hidden transition-all duration-700 ease-in-out ${
-            open ? "max-h-[2000px] mt-4" : "max-h-0"
+            open ? "max-h-[2020px] mt-4" : "max-h-0"
           }`}
         >
           <div className="bg-white/95 backdrop-blur-sm text-gray-800 rounded-lg p-4 sm:p-6 text-sm sm:text-base space-y-3">
