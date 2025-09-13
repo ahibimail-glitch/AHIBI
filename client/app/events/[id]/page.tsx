@@ -685,7 +685,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         {/* Fixed Navbar */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
           <Navbar />
-          
+
 
 
         </div>
@@ -718,39 +718,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
               </AspectRatio>
             </div>
-            {/* Marquee for Early Bird Tickets */}
-            <div className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 sm:py-3 overflow-hidden">
-              <div className="marquee">
-                <span className="inline-block text-sm sm:text-base md:text-lg font-extrabold tracking-tight animate-marquee whitespace-nowrap font-['Bungee',_cursive] text-yellow-300 drop-shadow-md">
-                  🎉 Early Bird tickets for AHIBI Fest 2025 is LIVE NOW! 🚀 These special-priced tickets are EXTREMELY LIMITED and won’t last long. 🔥 Grab your tickets now!
-                </span>
 
-              </div>
-            </div>
-            <style jsx>{`
-              .marquee {
-                width: 100%;
-                overflow: hidden;
-                white-space: nowrap;
-              }
-              .animate-marquee {
-                display: inline-block;
-                animation: marquee 12s linear infinite;
-              }
-              @keyframes marquee {
-                0% {
-                  transform: translateX(100%);
-                }
-                100% {
-                  transform: translateX(-100%);
-                }
-              }
-              @media (max-width: 640px) {
-                .marquee span {
-                  font-size: 0.75rem; /* Smaller font size for mobile */
-                }
-              }
-            `}</style>
           </div>
 
           {/* Sections */}
@@ -855,313 +823,338 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </div>
             </div>
 
-            {/* Tickets */}
-            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ticket Categories</h2>
-              {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                <div className="space-y-6">
-                  {/* Ticket Selection Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
-                    <div>
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select Tickets</h3>
-                      <p className="text-xs sm:text-sm text-gray-600">Choose your preferred ticket type</p>
-                    </div>
-                    {/* <Badge variant="outline" className="mt-2 sm:mt-0 px-3 py-1 bg-white border-indigo-200 text-indigo-700 text-xs sm:text-sm">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="flex flex-col lg:flex-row lg:gap-6">
+                {/* Left: Image */}
+                <div className="w-full lg:w-1/2 mx-auto">
+                  <AspectRatio ratio={9 / 16} className="relative overflow-hidden rounded-xl shadow-lg">
+                    <Image
+                      src={"/images/FESTSEATS.jpg"}
+                      alt={event.title}
+                      fill
+                      className="object-cover w-full h-full transition-transform duration-300"
+                      priority
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </AspectRatio>
+                </div>
+
+                {/* Right: Tickets */}
+                <div className="lg:w-1/2 mt-6 lg:mt-0">
+                  <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ticket Categories</h2>
+                    {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                      <div className="space-y-6">
+                        {/* Ticket Selection Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                          <div>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Select Tickets</h3>
+                            <p className="text-xs sm:text-sm text-gray-600">Choose your preferred ticket type</p>
+                          </div>
+                          {/* <Badge variant="outline" className="mt-2 sm:mt-0 px-3 py-1 bg-white border-indigo-200 text-indigo-700 text-xs sm:text-sm">
                       <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       {event.ticketTypes.reduce((acc, t) => acc + (t.quantity - t.sold), 0)} available
                     </Badge> */}
-                  </div>
-                  {bookingError && (
-                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 flex items-start gap-2">
-                      <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                      <div className="text-sm">{bookingError}</div>
-                    </div>
-                  )}
-                  {/* Ticket Types */}
-                  <div className="grid grid-cols-1 gap-4">
-                    {event.ticketTypes.map((ticket) => {
-                      const availabilityPercentage = Math.max(
-                        0,
-                        Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
-                      );
-                      const isSoldOut = ticket.quantity <= ticket.sold;
-                      const isLimited = availabilityPercentage <= 20 && !isSoldOut;
-                      const selectedItem = selectedTickets.get(ticket._id);
-                      const quantity = selectedItem?.quantity || 0;
+                        </div>
+                        {bookingError && (
+                          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 flex items-start gap-2">
+                            <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                            <div className="text-sm">{bookingError}</div>
+                          </div>
+                        )}
+                        {/* Ticket Types */}
+                        <div className="grid grid-cols-1 gap-4">
+                          {event.ticketTypes.map((ticket) => {
+                            const availabilityPercentage = Math.max(
+                              0,
+                              Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
+                            );
+                            const isSoldOut = ticket.quantity <= ticket.sold;
+                            const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                            const selectedItem = selectedTickets.get(ticket._id);
+                            const quantity = selectedItem?.quantity || 0;
 
-                      return (
-                        <Card
-                          key={ticket._id}
-                          className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
-                            ? 'border-indigo-500 bg-indigo-50/30'
-                            : isSoldOut
-                              ? 'border-gray-200 bg-gray-50'
-                              : 'border-gray-200 hover:border-indigo-300'
-                            } rounded-lg overflow-hidden relative`}
-                        >
-                          {/* Sold Out Overlay */}
-                          {isSoldOut && (
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10 rounded-lg">
-
-
-                              <img src="/sold-out.webp" className="h-60 w-60" />
+                            return (
+                              <Card
+                                key={ticket._id}
+                                className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
+                                  ? 'border-indigo-500 bg-indigo-50/30'
+                                  : isSoldOut
+                                    ? 'border-gray-200 bg-gray-50'
+                                    : 'border-gray-200 hover:border-indigo-300'
+                                  } rounded-lg overflow-hidden relative`}
+                              >
+                                {/* Sold Out Overlay */}
+                                {isSoldOut && (
+                                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10 rounded-lg">
 
 
-                            </div>
-                          )}
-                          <CardHeader className="p-4 pb-2">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                              <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'
-                                  }`}>
-                                  <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'
-                                    }`} />
-                                </div>
-                                <div>
-                                  <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    {isSoldOut && (
-                                      <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
-                                        Sold Out
-                                      </Badge>
-                                    )}
-                                    {isLimited && !isSoldOut && (
-                                      <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
-                                        Limited Availability
-                                      </Badge>
-                                    )}
-                                    {quantity > 0 && (
-                                      <Badge className="bg-indigo-500 text-white text-xs">
-                                        {quantity} selected
-                                      </Badge>
-                                    )}
+                                    <img src="/sold-out.webp" className="h-60 w-60" />
+
+
                                   </div>
-                                </div>
-                              </div>
-                              <div className="text-left">
-                                <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
-                                <p className="text-xs text-gray-500">per ticket</p>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-4 pt-0">
-                            <p className=" text-green-600 font-bold mb-3">{ticket.description}</p>
-                            <div className="flex items-center gap-2 mb-3">
-                              <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
-                                <Users className="h-3 w-3 mr-1" />
-                                {ticket.capacity} capacity
-                              </Badge>
-                            </div>
-                            {ticket.benefits && ticket.benefits.length > 0 && (
-                              <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
-                                <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Included Benefits
-                                </p>
-                                <ul className="space-y-1">
-                                  {ticket.benefits.map((benefit: string, i: number) => (
-                                    <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
-                                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
-                                      {benefit}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            <div className="mb-3">
-                              <div className="flex items-center justify-between text-xs mb-1">
-                                <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
-                                  }`}>
-                                  {isSoldOut ? (
-                                    <>
-                                      <XCircle className="h-3 w-3" />
-                                      Sold Out
-                                    </>
-                                  ) : (
-                                    <>
-                                      {/* <CheckCircle2 className="h-3 w-3" />
-                                      {ticket.quantity - ticket.sold} remaining */}
-                                    </>
+                                )}
+                                <CardHeader className="p-4 pb-2">
+                                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'
+                                        }`}>
+                                        <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'
+                                          }`} />
+                                      </div>
+                                      <div>
+                                        <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                          {isSoldOut && (
+                                            <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
+                                              Sold Out
+                                            </Badge>
+                                          )}
+                                          {isLimited && !isSoldOut && (
+                                            <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
+                                              Limited Availability
+                                            </Badge>
+                                          )}
+                                          {quantity > 0 && (
+                                            <Badge className="bg-indigo-500 text-white text-xs">
+                                              {quantity} selected
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-left">
+                                      <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                                      <p className="text-xs text-gray-500">per ticket</p>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0">
+                                  <p className=" text-green-600 font-bold mb-3">{ticket.description}</p>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
+                                      <Users className="h-3 w-3 mr-1" />
+                                      {ticket.capacity} capacity
+                                    </Badge>
+                                  </div>
+                                  {ticket.benefits && ticket.benefits.length > 0 && (
+                                    <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                                      <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        Included Benefits
+                                      </p>
+                                      <ul className="space-y-1">
+                                        {ticket.benefits.map((benefit: string, i: number) => (
+                                          <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                                            {benefit}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   )}
-                                </span>
-                                {/* <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span> */}
-                              </div>
-                              {/* <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="mb-3">
+                                    <div className="flex items-center justify-between text-xs mb-1">
+                                      <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
+                                        }`}>
+                                        {isSoldOut ? (
+                                          <>
+                                            <XCircle className="h-3 w-3" />
+                                            Sold Out
+                                          </>
+                                        ) : (
+                                          <>
+                                            {/* <CheckCircle2 className="h-3 w-3" />
+                                      {ticket.quantity - ticket.sold} remaining */}
+                                          </>
+                                        )}
+                                      </span>
+                                      {/* <span className="text-gray-500">{ticket.sold} / {ticket.quantity} sold</span> */}
+                                    </div>
+                                    {/* <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                                 <div
                                   className={`h-full transition-all duration-300 ${isSoldOut ? 'bg-red-500' : isLimited ? 'bg-amber-500' : 'bg-green-500'
                                     }`}
                                   style={{ width: `${100 - availabilityPercentage}%` }}
                                 ></div>
                               </div> */}
-                            </div>
-                            {!isSoldOut && (
-                              <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
-                                  <span className="text-xs sm:text-sm font-semibold text-indigo-600">
-                                    ₹{(ticket.price * quantity).toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-center gap-2 sm:gap-3">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      if (quantity > 0) {
-                                        const newQuantity = quantity - 1;
-                                        if (newQuantity === 0) {
-                                          setSelectedTickets(prev => {
-                                            const newMap = new Map(prev);
-                                            newMap.delete(ticket._id);
-                                            return newMap;
-                                          });
-                                        } else {
-                                          setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                        }
-                                      }
-                                    }}
-                                    disabled={quantity <= 0}
-                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                                  >
-                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  </Button>
-                                  <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
-                                    {quantity}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const newQuantity = quantity + 1;
-                                      if (newQuantity <= ticket.quantity - ticket.sold) {
-                                        setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                        if (newQuantity === 1) {
-                                          setTimeout(() => {
-                                            summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                          }, 100);
-                                        }
-                                      }
-                                    }}
-                                    disabled={quantity >= ticket.quantity - ticket.sold}
-                                    className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
-                                  >
-                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  </Button>
-                                </div>
-                                {/* <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
+                                  </div>
+                                  {!isSoldOut && (
+                                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
+                                        <span className="text-xs sm:text-sm font-semibold text-indigo-600">
+                                          ₹{(ticket.price * quantity).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            if (quantity > 0) {
+                                              const newQuantity = quantity - 1;
+                                              if (newQuantity === 0) {
+                                                setSelectedTickets(prev => {
+                                                  const newMap = new Map(prev);
+                                                  newMap.delete(ticket._id);
+                                                  return newMap;
+                                                });
+                                              } else {
+                                                setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                              }
+                                            }
+                                          }}
+                                          disabled={quantity <= 0}
+                                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                                        >
+                                          <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                        </Button>
+                                        <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
+                                          {quantity}
+                                        </span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const newQuantity = quantity + 1;
+                                            if (newQuantity <= ticket.quantity - ticket.sold) {
+                                              setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                              if (newQuantity === 1) {
+                                                setTimeout(() => {
+                                                  summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                }, 100);
+                                              }
+                                            }
+                                          }}
+                                          disabled={quantity >= ticket.quantity - ticket.sold}
+                                          className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
+                                        >
+                                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                        </Button>
+                                      </div>
+                                      {/* <p className="text-xs text-gray-500 text-center mt-2 flex items-center justify-center gap-1">
                                   <Info className="h-3 w-3" />
                                   Max {ticket.quantity - ticket.sold} per booking
                                 </p> */}
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
 
-                  {/* Booking Summary */}
-                  {selectedTickets.size > 0 && (
-                    <div ref={summaryRef} className="animate-in slide-in-from-bottom-4 w-full max-w-full">
-                      <Card className="border-2 border-indigo-500 shadow-md bg-white w-full">
-                        <CardHeader className="bg-indigo-600 text-white rounded-t-lg p-4">
-                          <CardTitle className="text-base sm:text-xl flex items-center">
-                            <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                            Booking Summary
-                          </CardTitle>
-                          <CardDescription className="text-indigo-100 text-xs sm:text-sm">
-                            Review your ticket selection
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="space-y-3">
-                            {Array.from(selectedTickets.values()).map((item) => (
-                              <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-indigo-100 rounded-full">
-                                    <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <span className="font-semibold text-gray-900 text-sm sm:text-base block truncate">{item.ticket.name}</span>
-                                    <p className="text-xs sm:text-sm text-gray-600">
-                                      Quantity: {item.quantity} • ₹{item.ticket.price} each
-                                    </p>
+                        {/* Booking Summary */}
+                        {selectedTickets.size > 0 && (
+                          <div ref={summaryRef} className="animate-in slide-in-from-bottom-4 w-full max-w-full">
+                            <Card className="border-2 border-indigo-500 shadow-md bg-white w-full">
+                              <CardHeader className="bg-indigo-600 text-white rounded-t-lg p-4">
+                                <CardTitle className="text-base sm:text-xl flex items-center">
+                                  <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                                  Booking Summary
+                                </CardTitle>
+                                <CardDescription className="text-indigo-100 text-xs sm:text-sm">
+                                  Review your ticket selection
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="p-4 sm:p-6">
+                                <div className="space-y-3">
+                                  {Array.from(selectedTickets.values()).map((item) => (
+                                    <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-100 rounded-full">
+                                          <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <span className="font-semibold text-gray-900 text-sm sm:text-base block truncate">{item.ticket.name}</span>
+                                          <p className="text-xs sm:text-sm text-gray-600">
+                                            Quantity: {item.quantity} • ₹{item.ticket.price} each
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <span className="text-sm sm:text-lg font-semibold text-indigo-600 sm:text-right">
+                                        ₹{(item.ticket.price * item.quantity).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  <div className="border-t border-gray-200 pt-3">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
+                                      <div className="mb-2 sm:mb-0">
+                                        <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
+                                        <p className="text-xs sm:text-sm text-gray-600">
+                                          {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
+                                        </p>
+                                      </div>
+                                      <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
+                                        ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                                <span className="text-sm sm:text-lg font-semibold text-indigo-600 sm:text-right">
-                                  ₹{(item.ticket.price * item.quantity).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                            <div className="border-t border-gray-200 pt-3">
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
-                                <div className="mb-2 sm:mb-0">
-                                  <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
-                                  <p className="text-xs sm:text-sm text-gray-600">
-                                    {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
-                                  </p>
+                              </CardContent>
+                              <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
+                                <div className="flex items-start gap-2 w-full">
+                                  <Checkbox
+                                    id="terms"
+                                    checked={acceptedTerms}
+                                    onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                                    className="mt-1"
+                                  />
+                                  <label
+                                    htmlFor="terms"
+                                    className="text-xs sm:text-sm text-gray-600 cursor-pointer"
+                                  >
+                                    I accept to the{" "}
+                                    <button
+                                      type="button"
+                                      onClick={() => setTermsModalOpen(true)}
+                                      className="text-indigo-600 hover:underline font-semibold"
+                                    >
+                                      Terms and Conditions*
+                                    </button>
+                                  </label>
                                 </div>
-                                <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
-                                  ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
+                                <Button
+                                  className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
+                                  onClick={handleBooking}
+                                  disabled={isBooking || !acceptedTerms}
+                                >
+                                  {isBooking ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                      Processing Payment...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                      Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
+                                      {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
+                                    </>
+                                  )}
+                                </Button>
+                              </CardFooter>
+                            </Card>
                           </div>
-                        </CardContent>
-                        <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
-                          <div className="flex items-start gap-2 w-full">
-                            <Checkbox
-                              id="terms"
-                              checked={acceptedTerms}
-                              onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                              className="mt-1"
-                            />
-                            <label
-                              htmlFor="terms"
-                              className="text-xs sm:text-sm text-gray-600 cursor-pointer"
-                            >
-                              I accept to the{" "}
-                              <button
-                                type="button"
-                                onClick={() => setTermsModalOpen(true)}
-                                className="text-indigo-600 hover:underline font-semibold"
-                              >
-                                Terms and Conditions*
-                              </button>
-                            </label>
-                          </div>
-                          <Button
-                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
-                            onClick={handleBooking}
-                            disabled={isBooking || !acceptedTerms}
-                          >
-                            {isBooking ? (
-                              <>
-                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                                Processing Payment...
-                              </>
-                            ) : (
-                              <>
-                                <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
-                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
-                              </>
-                            )}
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <div className="bg-gray-100 rounded-full p-3 inline-flex mb-3">
-                    <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center">
+                        <div className="bg-gray-100 rounded-full p-3 inline-flex mb-3">
+                          <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-600">No tickets available for this event</p>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-600">No tickets available for this event</p>
                 </div>
-              )}
+              </div>
             </div>
+
+
+
+            {/* Tickets */}
+
 
             <TermsAndConditions />
             <FAQPage />
@@ -1325,9 +1318,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Follow Us On:</h2>
                 <div className="flex items-center space-x-4">
-                  <a 
-                    href="https://www.instagram.com/tribefc.nl/?hl=en" 
-                    target="_blank" 
+                  <a
+                    href="https://www.instagram.com/tribefc.nl/?hl=en"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-pink-600 hover:text-pink-700 transition-colors"
                     aria-label="Instagram"
@@ -1336,9 +1329,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.415-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.415-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
                     </svg>
                   </a>
-                  <a 
-                    href="https://www.facebook.com/people/Tribe-Fighting-Championship/61566285986297/#" 
-                    target="_blank" 
+                  <a
+                    href="https://www.facebook.com/people/Tribe-Fighting-Championship/61566285986297/#"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 transition-colors"
                     aria-label="Facebook"
@@ -1347,9 +1340,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
                     </svg>
                   </a>
-                  <a 
-                    href="https://www.youtube.com/@TribeFightingChampionship" 
-                    target="_blank" 
+                  <a
+                    href="https://www.youtube.com/@TribeFightingChampionship"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-red-600 hover:text-red-700 transition-colors"
                     aria-label="YouTube"
@@ -1379,7 +1372,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </div>
             )}
           </div>
-          
+
 
           {/* Sidebar */}
           <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
@@ -1586,98 +1579,98 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   })}
                 </div>
 
-                 {/* Booking Summary */}
-                 {selectedTickets.size > 0 && (
-                    <div ref={summaryRef} className="animate-in slide-in-from-bottom-4 w-full max-w-full">
-                      <Card className="border-2 border-indigo-500 shadow-md bg-white w-full">
-                        <CardHeader className="bg-indigo-600 text-white rounded-t-lg p-4">
-                          <CardTitle className="text-base sm:text-xl flex items-center">
-                            <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                            Booking Summary
-                          </CardTitle>
-                          <CardDescription className="text-indigo-100 text-xs sm:text-sm">
-                            Review your ticket selection
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="space-y-3">
-                            {Array.from(selectedTickets.values()).map((item) => (
-                              <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-indigo-100 rounded-full">
-                                    <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <span className="font-semibold text-gray-900 text-sm sm:text-base block truncate">{item.ticket.name}</span>
-                                    <p className="text-xs sm:text-sm text-gray-600">
-                                      Quantity: {item.quantity} • ₹{item.ticket.price} each
-                                    </p>
-                                  </div>
+                {/* Booking Summary */}
+                {selectedTickets.size > 0 && (
+                  <div ref={summaryRef} className="animate-in slide-in-from-bottom-4 w-full max-w-full">
+                    <Card className="border-2 border-indigo-500 shadow-md bg-white w-full">
+                      <CardHeader className="bg-indigo-600 text-white rounded-t-lg p-4">
+                        <CardTitle className="text-base sm:text-xl flex items-center">
+                          <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                          Booking Summary
+                        </CardTitle>
+                        <CardDescription className="text-indigo-100 text-xs sm:text-sm">
+                          Review your ticket selection
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="space-y-3">
+                          {Array.from(selectedTickets.values()).map((item) => (
+                            <div key={item.ticket._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg border border-gray-100 gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-100 rounded-full">
+                                  <TicketIcon className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                                 </div>
-                                <span className="text-sm sm:text-lg font-semibold text-indigo-600 sm:text-right">
-                                  ₹{(item.ticket.price * item.quantity).toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                            <div className="border-t border-gray-200 pt-3">
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
-                                <div className="mb-2 sm:mb-0">
-                                  <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-semibold text-gray-900 text-sm sm:text-base block truncate">{item.ticket.name}</span>
                                   <p className="text-xs sm:text-sm text-gray-600">
-                                    {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
+                                    Quantity: {item.quantity} • ₹{item.ticket.price} each
                                   </p>
                                 </div>
-                                <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
-                                  ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
-                                </span>
                               </div>
+                              <span className="text-sm sm:text-lg font-semibold text-indigo-600 sm:text-right">
+                                ₹{(item.ticket.price * item.quantity).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="border-t border-gray-200 pt-3">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
+                              <div className="mb-2 sm:mb-0">
+                                <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
+                                <p className="text-xs sm:text-sm text-gray-600">
+                                  {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
+                                </p>
+                              </div>
+                              <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
+                                ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
+                              </span>
                             </div>
                           </div>
-                        </CardContent>
-                        <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
-                          <div className="flex items-start gap-2 w-full">
-                            <Checkbox
-                              id="terms"
-                              checked={acceptedTerms}
-                              onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                              className="mt-1"
-                            />
-                            <label
-                              htmlFor="terms"
-                              className="text-xs sm:text-sm text-gray-600 cursor-pointer"
-                            >
-                              I accept to the{" "}
-                              <button
-                                type="button"
-                                onClick={() => setTermsModalOpen(true)}
-                                className="text-indigo-600 hover:underline font-semibold"
-                              >
-                                Terms and Conditions*
-                              </button>
-                            </label>
-                          </div>
-                          <Button
-                            className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
-                            onClick={handleBooking}
-                            disabled={isBooking || !acceptedTerms}
+                        </div>
+                      </CardContent>
+                      <CardFooter className="p-4 sm:p-6 pt-0 space-y-3">
+                        <div className="flex items-start gap-2 w-full">
+                          <Checkbox
+                            id="terms"
+                            checked={acceptedTerms}
+                            onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                            className="mt-1"
+                          />
+                          <label
+                            htmlFor="terms"
+                            className="text-xs sm:text-sm text-gray-600 cursor-pointer"
                           >
-                            {isBooking ? (
-                              <>
-                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                                Processing Payment...
-                              </>
-                            ) : (
-                              <>
-                                <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
-                                {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
-                              </>
-                            )}
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    </div>
-                  )}
+                            I accept to the{" "}
+                            <button
+                              type="button"
+                              onClick={() => setTermsModalOpen(true)}
+                              className="text-indigo-600 hover:underline font-semibold"
+                            >
+                              Terms and Conditions*
+                            </button>
+                          </label>
+                        </div>
+                        <Button
+                          className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
+                          onClick={handleBooking}
+                          disabled={isBooking || !acceptedTerms}
+                        >
+                          {isBooking ? (
+                            <>
+                              <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                              Processing Payment...
+                            </>
+                          ) : (
+                            <>
+                              <TicketIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                              Book {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} Ticket
+                              {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}
+                            </>
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="py-6 text-center">
