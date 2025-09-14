@@ -1314,7 +1314,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
 
             {/* Social Media - Only for specific event */}
-            {params.id === '68c54be0e0a28b9006543798' && (
+            {params.id === '68c6d350e0a28b9006548bd2' && (
               <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Follow Us On:</h2>
                 <div className="flex items-center space-x-4">
