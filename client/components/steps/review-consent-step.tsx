@@ -302,7 +302,7 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep }: Review
               </div>
             </div>
 
-            <div className="flex items-start space-x-3">
+            {/* <div className="flex items-start space-x-3">
               <Checkbox
                 id="emailCopy"
                 checked={formData.consents.emailCopy}
@@ -316,7 +316,7 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep }: Review
                   Optional: Receive a PDF copy of your registration via email.
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="pt-4 border-t">

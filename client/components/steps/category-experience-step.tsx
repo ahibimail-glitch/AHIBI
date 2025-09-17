@@ -212,7 +212,7 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
             className="glass"
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+          <div className="py-4 px-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
             {filteredCategories.map((category) => (
               <Card
                 key={category.id}

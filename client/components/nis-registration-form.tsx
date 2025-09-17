@@ -72,7 +72,7 @@ export interface FormData {
 const initialFormData: FormData = {
   fullName: "",
   creatorName: "",
-  email: "user@example.com",
+  email: "",
   dateOfBirth: "",
   gender: "",
   bio: "",
@@ -97,6 +97,8 @@ export function RegistrationForm() {
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const totalSteps = 5
 
   // Auto-save to localStorage
@@ -135,12 +137,37 @@ export function RegistrationForm() {
     setCurrentStep(step)
   }
 
-  const handleSubmit = () => {
-    // Generate registration ID
-    const registrationId = `NIS2025-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-    localStorage.setItem("nis-2025-registration-id", registrationId)
-    localStorage.removeItem("nis-2025-draft")
-    setIsSubmitted(true)
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+    setSubmitError(null)
+    
+    try {
+      // Submit to backend API
+      const response = await fetch('/api/nis/registrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to submit registration')
+      }
+
+      const result = await response.json()
+      
+      // Store registration ID from backend response
+      localStorage.setItem("nis-2025-registration-id", result.data.registrationId)
+      localStorage.removeItem("nis-2025-draft")
+      setIsSubmitted(true)
+    } catch (error: unknown) {
+      console.error('Registration submission failed:', error)
+      setSubmitError(error instanceof Error ? error.message : 'An unexpected error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isSubmitted) {
@@ -192,9 +219,7 @@ export function RegistrationForm() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
-          Nagaland Influencers Summit 2025
-        </h1>
+        <img src="/images/NIS-logo.png"/>
         <p className="text-xl text-muted-foreground">Content Creator Awards Registration</p>
       </div>
 
@@ -246,6 +271,13 @@ export function RegistrationForm() {
         <CardContent className="p-6">{renderStep()}</CardContent>
       </Card>
 
+      {/* Error Display */}
+      {submitError && (
+        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 text-sm">{submitError}</p>
+        </div>
+      )}
+
       {/* Navigation */}
       <div className="flex justify-between mt-8">
         <Button
@@ -259,8 +291,12 @@ export function RegistrationForm() {
         </Button>
 
         {currentStep === totalSteps ? (
-          <Button onClick={handleSubmit} disabled={!isStepValid()} className="gradient-primary flex items-center gap-2">
-            Submit Application
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!isStepValid() || isSubmitting} 
+            className="gradient-primary flex items-center gap-2"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Application'}
           </Button>
         ) : (
           <Button onClick={nextStep} disabled={!isStepValid()} className="gradient-primary flex items-center gap-2">

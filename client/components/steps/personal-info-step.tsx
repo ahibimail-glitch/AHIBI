@@ -74,10 +74,16 @@ export function PersonalInfoStep({ formData, updateFormData }: PersonalInfoStepP
       <div className="space-y-2">
         <Label htmlFor="email" className="flex items-center gap-2">
           <Mail className="w-4 h-4" />
-          Email Address
+          Email Address *
         </Label>
-        <Input id="email" type="email" value={formData.email} readOnly className="glass bg-muted/50" />
-        <p className="text-xs text-muted-foreground">Email is auto-filled and cannot be changed</p>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => updateFormData({ email: e.target.value })}
+          placeholder="your@email.com"
+          className="glass"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

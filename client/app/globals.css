@@ -1,48 +1,23 @@
-/* Tailwind directives */
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Custom animations */
-/* @import "tw-animate-css"; */
-
-/* Base styles */
 @layer base {
   :root {
-    /* Updated to light theme with white background and blue accents */
-    --background: #ffffff;
-    --foreground: #1e293b;
-    --card: #ffffff;
-    --card-foreground: #1e293b;
-    --popover: #ffffff;
-    --popover-foreground: #1e293b;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --secondary: #6366f1;
-    --secondary-foreground: #ffffff;
-    --muted: #f8fafc;
-    --muted-foreground: #64748b;
-    --accent: #3b82f6;
-    --accent-foreground: #ffffff;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #f8fafc;
-    --ring: rgba(59, 130, 246, 0.3);
-    --chart-1: #3b82f6;
-    --chart-2: #6366f1;
-    --chart-3: #8b5cf6;
-    --chart-4: #a855f7;
-    --chart-5: #ec4899;
-    --radius: 0.75rem;
-    --sidebar: #ffffff;
-    --sidebar-foreground: #1e293b;
-    --sidebar-primary: #3b82f6;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #6366f1;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: #e2e8f0;
-    --sidebar-ring: rgba(59, 130, 246, 0.3);
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
@@ -52,38 +27,7 @@
   }
 
   .dark {
-    --background: #0f172a;
-    --foreground: #f8fafc;
-    --card: rgba(30, 41, 59, 0.8);
-    --card-foreground: #f8fafc;
-    --popover: rgba(30, 41, 59, 0.95);
-    --popover-foreground: #f8fafc;
-    --primary: #6366f1;
-    --primary-foreground: #ffffff;
-    --secondary: #8b5cf6;
-    --secondary-foreground: #ffffff;
-    --muted: #64748b;
-    --muted-foreground: #cbd5e1;
-    --accent: #3b82f6;
-    --accent-foreground: #ffffff;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: rgba(148, 163, 184, 0.2);
-    --input: rgba(30, 41, 59, 0.6);
-    --ring: rgba(99, 102, 241, 0.5);
-    --chart-1: #6366f1;
-    --chart-2: #8b5cf6;
-    --chart-3: #3b82f6;
-    --chart-4: #a855f7;
-    --chart-5: #ec4899;
-    --sidebar: #1e293b;
-    --sidebar-foreground: #f8fafc;
-    --sidebar-primary: #6366f1;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #8b5cf6;
-    --sidebar-accent-foreground: #ffffff;
-    --sidebar-border: rgba(148, 163, 184, 0.2);
-    --sidebar-ring: rgba(99, 102, 241, 0.5);
+    --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
@@ -95,26 +39,22 @@
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 217.2 91.2% 59.8%;
+    --ring: 224.3 76.3% 94.1%;
   }
+}
 
+@layer base {
   * {
-    border-color: hsl(var(--border));
-    outline-color: hsl(var(--ring) / 0.5);
+    @apply border-border;
   }
-  
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    /* Added subtle background pattern for visual interest */
-    background-image: radial-gradient(circle at 1px 1px, rgba(59, 130, 246, 0.05) 1px, transparent 0);
-    background-size: 20px 20px;
-    min-height: 100vh;
+    @apply bg-background text-foreground;
   }
 }
 
@@ -124,6 +64,5 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    line-clamp: 2;
   }
 }
