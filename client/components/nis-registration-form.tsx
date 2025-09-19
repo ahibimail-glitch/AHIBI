@@ -11,6 +11,7 @@ import { CategoryExperienceStep } from "./steps/category-experience-step"
 import { ReviewConsentStep } from "./steps/review-consent-step"
 import { SuccessStep } from "./steps/success-step"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import TermsAndConditionsNIS from "@/app/NagalandInfluencerSummit/register/termsAndCond"
 
 export interface FormData {
   // Personal Info
@@ -45,6 +46,7 @@ export interface FormData {
     comments: number
   }>
   analyticsFile?: File
+  analyticsFileUrl?: string
 
   // Category & Experience
   contentNiches: string[]
@@ -80,6 +82,7 @@ const initialFormData: FormData = {
   platforms: [],
   totalFollowers: 0,
   topContent: [],
+  analyticsFileUrl: undefined,
   contentNiches: [],
   awardCategory: "",
   yearsActive: 0,
@@ -222,6 +225,7 @@ export function RegistrationForm() {
         <img src="/images/NIS-logo.png"/>
         <p className="text-xl text-muted-foreground">Content Creator Awards Registration</p>
       </div>
+      <TermsAndConditionsNIS/>
 
       {/* Progress Bar */}
       <Card className="glass mb-8">

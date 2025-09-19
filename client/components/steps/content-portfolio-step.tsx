@@ -24,6 +24,7 @@ const platforms = ["Instagram", "YouTube", "Facebook", "TikTok", "Twitter", "Lin
 export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfolioStepProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const addContent = () => {
     const newContent = {
@@ -51,7 +52,7 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
     updateFormData({ topContent: newContent })
   }
 
-  const handleFileUpload = (files: FileList | null) => {
+  const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
 
     const file = files[0]
@@ -66,18 +67,38 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
       return
     }
 
-    // Simulate upload progress
-    setUploadProgress(0)
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          updateFormData({ analyticsFile: file })
-          return 100
-        }
-        return prev + 10
+    // Upload to API
+    try {
+      setUploadError(null)
+      setUploadProgress(10)
+
+      const form = new FormData()
+      form.append('document', file)
+      form.append('folder', 'ahibi/nis-analytics')
+
+      const response = await fetch('/api/upload/document', {
+        method: 'POST',
+        body: form,
       })
-    }, 200)
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.message || 'Failed to upload PDF')
+      }
+
+      const result = await response.json()
+      const url: string | undefined = result?.data?.document?.url
+      if (!url) {
+        throw new Error('Upload succeeded but URL missing in response')
+      }
+
+      setUploadProgress(100)
+      // Store URL; do not keep File in state to simplify submission
+      updateFormData({ analyticsFile: undefined, analyticsFileUrl: url as any })
+    } catch (e: any) {
+      setUploadProgress(0)
+      setUploadError(e?.message || 'Upload failed')
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -282,7 +303,7 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
           >
             <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-lg font-medium mb-2">
-              {formData.analyticsFile ? formData.analyticsFile.name : "Drop your analytics PDF here"}
+              {formData.analyticsFile ? formData.analyticsFile.name : (formData as any).analyticsFileUrl ? 'PDF uploaded' : "Drop your analytics PDF here"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">or click to browse files (Max 100MB)</p>
             <input
@@ -331,6 +352,31 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
                 <X className="w-4 h-4" />
               </Button>
             </div>
+          )}
+
+          {/* Uploaded URL Preview */}
+          {!formData.analyticsFile && (formData as any).analyticsFileUrl && (
+            <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-medium">Analytics PDF uploaded</p>
+                  <a href={(formData as any).analyticsFileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline">View</a>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => updateFormData({ analyticsFile: undefined, analyticsFileUrl: undefined as any })}
+                className="text-destructive hover:text-destructive"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {uploadError && (
+            <div className="text-sm text-red-600">{uploadError}</div>
           )}
 
           {/* Required Analytics Checklist */}

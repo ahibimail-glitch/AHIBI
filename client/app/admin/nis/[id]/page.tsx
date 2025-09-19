@@ -130,200 +130,236 @@ export default function NISRegistrationDetailsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <div className="container mx-auto px-4 md:px-8 py-6">
-      <div className="flex items-center justify-between mb-6 print:hidden">
-     
+        <div className="flex items-center justify-between mb-6 print:hidden">
+
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Registration Details - {data.registrationId}</h1>
-    
-      </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="bg-white/70 backdrop-blur-sm border border-blue-200 shadow-lg">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-blue-700">
-              <User className="h-4 w-4" />
-              <p className="text-sm">Full Name</p>
-            </div>
-            <p className="text-lg font-semibold break-words text-gray-900">{data.fullName}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/70 backdrop-blur-sm border border-purple-200 shadow-lg">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-purple-700">
-              <UserCircle className="h-4 w-4" />
-              <p className="text-sm">Creator Name</p>
-            </div>
-            <p className="text-lg font-semibold break-words text-gray-900">{data.creatorName}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/70 backdrop-blur-sm border border-amber-200 shadow-lg">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-2 text-amber-700">
-              <Award className="h-4 w-4" />
-              <p className="text-sm">Category</p>
-            </div>
-            <div className={`inline-flex items-center gap-2 px-3 py-1 mt-1 rounded-md border ${getCategoryColor(data.awardCategory)}`}>
-              <Award className="h-4 w-4" />
-              <span className="text-sm font-medium">{data.awardCategory}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
 
-      {/* Personal Information */}
-      <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-gray-900 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600" /> Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Email</p>
-              <p className="font-medium break-words">{data.email}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Date of Birth</p>
-              <p className="font-medium">{data.dateOfBirth}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Gender</p>
-              <p className="font-medium">{data.gender}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Nagaland Resident</p>
-              <Badge variant={data.nagalandResident ? "default" : "secondary"}>
-                {data.nagalandResident ? "Yes" : "No"}
-              </Badge>
-            </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-sm text-gray-600">Bio</p>
-            <p className="whitespace-pre-wrap break-words">{data.bio}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Social Media Presence */}
-      <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-gray-900 flex items-center gap-2"><Users className="h-5 w-5 text-purple-600" /> Social Media Presence</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-3">
-          <div>
-            <p className="text-sm text-gray-600">Total Followers</p>
-            <p className="text-2xl font-bold">{formatNumber(data.totalFollowers)}</p>
-          </div>
-          {data.platforms.map((p, i) => (
-            <div key={i} className="border rounded-md p-3 bg-white/60">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-purple-600" /> {p.platform}</p>
-                  <p className="text-sm text-gray-600">@{p.handle}</p>
-                  <a href={p.profileUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1">
-                    <LinkIcon className="h-3 w-3" /> {p.profileUrl}
-                  </a>
-                </div>
-                <div className="text-right text-sm">
-                  <p className="font-medium">{formatNumber(p.followerCount)} followers</p>
-                  {p.engagementRate ? (
-                    <p className="text-gray-600">{p.engagementRate}% engagement</p>
-                  ) : null}
-                  {p.isPrimary ? <Badge className="mt-1">Primary</Badge> : null}
-                </div>
+        {/* Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-white/70 backdrop-blur-sm border border-blue-200 shadow-lg">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-blue-700">
+                <User className="h-4 w-4" />
+                <p className="text-sm">Full Name</p>
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Content Portfolio */}
-      <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-gray-900 flex items-center gap-2"><Layers className="h-5 w-5 text-emerald-600" /> Content Portfolio</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-3">
-          {data.topContent.map((c, i) => (
-            <div key={i} className="border rounded-md p-3 bg-white/60">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-semibold">{c.title}</p>
-                  <p className="text-sm text-gray-600">{c.platform} • {c.type}</p>
-                  <a href={c.url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1">
-                    <LinkIcon className="h-3 w-3" /> {c.url}
-                  </a>
-                </div>
-                <div className="text-right text-sm">
-                  <p>{formatNumber(c.views)} views</p>
-                  <p>{formatNumber(c.likes)} likes</p>
-                  <p>{formatNumber(c.shares)} shares</p>
-                  <p>{formatNumber(c.comments)} comments</p>
-                </div>
+              <p className="text-lg font-semibold break-words text-gray-900">{data.fullName}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/70 backdrop-blur-sm border border-purple-200 shadow-lg">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-purple-700">
+                <UserCircle className="h-4 w-4" />
+                <p className="text-sm">Creator Name</p>
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Category & Experience */}
-      <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-gray-900 flex items-center gap-2"><Award className="h-5 w-5 text-amber-600" /> Category & Experience</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Content Niches</p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.contentNiches.map((n, i) => (
-                  <Badge key={i} variant="outline" className="whitespace-normal break-words">{n}</Badge>
-                ))}
+              <p className="text-lg font-semibold break-words text-gray-900">{data.creatorName}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/70 backdrop-blur-sm border border-amber-200 shadow-lg">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-amber-700">
+                <Award className="h-4 w-4" />
+                <p className="text-sm">Category</p>
               </div>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Award Category</p>
-              <p className="font-medium break-words">{data.awardCategory}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Campus Name</p>
-              <p className="font-medium break-words">{data.campusName || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Years Active</p>
-              <p className="font-medium">{data.yearsActive} years</p>
-            </div>
-          </div>
-          {data.achievements ? (
-            <div>
-              <p className="text-sm text-gray-600">Achievements</p>
-              <p className="font-medium whitespace-pre-wrap break-words">{data.achievements}</p>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+              <div className={`inline-flex items-center gap-2 px-3 py-1 mt-1 rounded-md border ${getCategoryColor(data.awardCategory)}`}>
+                <Award className="h-4 w-4" />
+                <span className="text-sm font-medium">{data.awardCategory}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Brand Collaborations */}
-      {data.brandCollaborations?.length ? (
+        {/* Personal Information */}
         <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-gray-900 flex items-center gap-2"><Users className="h-5 w-5 text-fuchsia-600" /> Brand Collaborations</CardTitle>
+            <CardTitle className="text-gray-900 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600" /> Personal Information</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="font-medium break-words">{data.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Date of Birth</p>
+                <p className="font-medium">{data.dateOfBirth}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Gender</p>
+                <p className="font-medium">{data.gender}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Nagaland Resident</p>
+                <Badge variant={data.nagalandResident ? "default" : "secondary"}>
+                  {data.nagalandResident ? "Yes" : "No"}
+                </Badge>
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-sm text-gray-600">Bio</p>
+              <p className="whitespace-pre-wrap break-words">{data.bio}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Social Media Presence */}
+        <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-gray-900 flex items-center gap-2"><Users className="h-5 w-5 text-purple-600" /> Social Media Presence</CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-3">
-            {data.brandCollaborations.map((b, i) => (
+            <div>
+              <p className="text-sm text-gray-600">Total Followers</p>
+              <p className="text-2xl font-bold">{formatNumber(data.totalFollowers)}</p>
+            </div>
+            {data.platforms.map((p, i) => (
               <div key={i} className="border rounded-md p-3 bg-white/60">
-                <p className="font-semibold">{b.brandName}</p>
-                <p className="text-sm text-gray-600">{b.campaignTitle}</p>
-                <p className="text-sm text-gray-500">{b.year} • {b.type}</p>
-                {b.description ? (
-                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap break-words">{b.description}</p>
-                ) : null}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-purple-600" /> {p.platform}</p>
+                    <p className="text-sm text-gray-600">@{p.handle}</p>
+                    <a href={p.profileUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1">
+                      <LinkIcon className="h-3 w-3" /> {p.profileUrl}
+                    </a>
+                  </div>
+                  <div className="text-right text-sm">
+                    <p className="font-medium">{formatNumber(p.followerCount)} followers</p>
+                    {p.engagementRate ? (
+                      <p className="text-gray-600">{p.engagementRate}% engagement</p>
+                    ) : null}
+                    {p.isPrimary ? <Badge className="mt-1">Primary</Badge> : null}
+                  </div>
+                </div>
               </div>
             ))}
           </CardContent>
         </Card>
-      ) : null}
 
-      {/* Consents */}
-      {/* <Card className="mb-10 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+        {/* Content Portfolio */}
+        <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-gray-900 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-emerald-600" /> Content Portfolio
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="p-6 space-y-6">
+            {/* Content List */}
+            <div className="space-y-3">
+              {data.topContent.map((c, i) => (
+                <div
+                  key={i}
+                  className="border rounded-lg p-4 bg-white/60 shadow-sm hover:shadow-md transition"
+                >
+                  <div className="flex items-start justify-between gap-6">
+                    {/* Left Section */}
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-semibold text-gray-800">{c.title}</p>
+                      <p className="text-sm text-gray-600">
+                        {c.platform} • {c.type}
+                      </p>
+                      <a
+                        href={c.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1 hover:text-blue-800"
+                      >
+                        <LinkIcon className="h-3 w-3" /> {c.url}
+                      </a>
+                    </div>
+
+                    {/* Right Section */}
+                    <div className="text-right text-xs sm:text-sm text-gray-700 space-y-0.5">
+                      <p>{formatNumber(c.views)} views</p>
+                      <p>{formatNumber(c.likes)} likes</p>
+                      <p>{formatNumber(c.shares)} shares</p>
+                      <p>{formatNumber(c.comments)} comments</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Analytics File */}
+            {data.analyticsFileUrl && (
+              <div className="border-t pt-4">
+                <h3 className="text-gray-900 font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-600" /> Analytics Document
+                </h3>
+                <a
+                  href={data.analyticsFileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1 mt-1 hover:text-blue-800"
+                >
+                  <LinkIcon className="h-3 w-3" /> {data.analyticsFileUrl}
+                </a>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Category & Experience */}
+        <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-gray-900 flex items-center gap-2"><Award className="h-5 w-5 text-amber-600" /> Category & Experience</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Content Niches</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {data.contentNiches.map((n, i) => (
+                    <Badge key={i} variant="outline" className="whitespace-normal break-words">{n}</Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Award Category</p>
+                <p className="font-medium break-words">{data.awardCategory}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Campus Name</p>
+                <p className="font-medium break-words">{data.campusName || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Years Active</p>
+                <p className="font-medium">{data.yearsActive} years</p>
+              </div>
+            </div>
+            {data.achievements ? (
+              <div>
+                <p className="text-sm text-gray-600">Achievements</p>
+                <p className="font-medium whitespace-pre-wrap break-words">{data.achievements}</p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {/* Brand Collaborations */}
+        {data.brandCollaborations?.length ? (
+          <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-gray-900 flex items-center gap-2"><Users className="h-5 w-5 text-fuchsia-600" /> Brand Collaborations</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-3">
+              {data.brandCollaborations.map((b, i) => (
+                <div key={i} className="border rounded-md p-3 bg-white/60">
+                  <p className="font-semibold">{b.brandName}</p>
+                  <p className="text-sm text-gray-600">{b.campaignTitle}</p>
+                  <p className="text-sm text-gray-500">{b.year} • {b.type}</p>
+                  {b.description ? (
+                    <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap break-words">{b.description}</p>
+                  ) : null}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {/* Consents */}
+        {/* <Card className="mb-10 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="text-gray-900 flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-green-600" /> Consents</CardTitle>
         </CardHeader>

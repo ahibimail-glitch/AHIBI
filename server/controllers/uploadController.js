@@ -1,5 +1,6 @@
 const { 
     uploadPhoto, 
+    uploadDocument,
     uploadMultiplePhotos, 
     deletePhoto, 
     getPhotoInfo, 
@@ -59,6 +60,55 @@ const {
     }
   };
   
+  // Upload a document (PDF)
+  exports.uploadDocument = async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return next(new AppError('Please upload a document', 400));
+      }
+
+      const { folder = 'ahibi/documents', description } = req.body;
+      const file = req.file;
+
+      // Validate file type
+      const allowedTypes = ['application/pdf'];
+      if (!allowedTypes.includes(file.mimetype)) {
+        return next(new AppError('Invalid file type. Only PDF is allowed', 400));
+      }
+
+      // Validate file size (100MB max)
+      const maxSize = 100 * 1024 * 1024; // 100MB
+      if (file.size > maxSize) {
+        return next(new AppError('File size too large. Maximum size is 100MB', 400));
+      }
+
+      const uploadOptions = {
+        context: {
+          description: description || 'Uploaded document',
+        },
+      };
+
+      const userId = req.user?.id || 'anonymous';
+      if (userId) {
+        uploadOptions.context.uploaded_by = userId;
+      }
+
+      const result = await uploadDocument(file, folder, uploadOptions);
+
+      logger.info(`Document uploaded successfully: ${result.public_id} by user ${userId}`);
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          document: result,
+        },
+      });
+    } catch (error) {
+      logger.error(`Document upload failed: ${error.message}`);
+      next(error);
+    }
+  };
+
   // Upload multiple photos
   exports.uploadMultiplePhotos = async (req, res, next) => {
     try {

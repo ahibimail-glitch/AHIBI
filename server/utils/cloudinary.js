@@ -64,6 +64,33 @@ const uploadPhoto = async (file, folder = 'ahibi', options = {}) => {
     }
 };
 
+// Upload document (e.g., PDF) to Cloudinary as raw resource
+const uploadDocument = async (file, folder = 'ahibi/documents', options = {}) => {
+    try {
+        const uploadOptions = {
+            folder,
+            resource_type: 'raw',
+            allowed_formats: ['pdf'],
+            ...options
+        };
+
+        const b64 = Buffer.from(file.buffer).toString('base64');
+        const dataURI = 'data:' + file.mimetype + ';base64,' + b64;
+
+        const result = await cloudinary.uploader.upload(dataURI, uploadOptions);
+
+        return {
+            public_id: result.public_id,
+            url: result.secure_url,
+            format: result.format,
+            size: result.bytes,
+            created_at: result.created_at
+        };
+    } catch (error) {
+        throw new Error(`Document upload failed: ${error.message}`);
+    }
+};
+
 // Upload multiple photos
 const uploadMultiplePhotos = async (files, folder = 'ahibi', options = {}) => {
     try {
@@ -139,6 +166,7 @@ const getResponsiveUrls = (publicId) => {
 module.exports = {
     cloudinary,
     uploadPhoto,
+    uploadDocument,
     uploadMultiplePhotos,
     deletePhoto,
     getPhotoInfo,

@@ -34,4 +34,10 @@ router.get('/:publicId/urls',
     uploadController.getResponsiveUrls
 );
 
+// Upload a document (PDF)
+router.post('/document',
+    upload.pdf.single('document'),
+    uploadController.uploadDocument
+);
+
 module.exports = router;

@@ -6,8 +6,8 @@ const ApiResponse = require('../utils/apiResponse');
 // Configure storage
 const storage = multer.memoryStorage();
 
-// File filter to allow only images
-const fileFilter = (req, file, cb) => {
+// File filters
+const imageFileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -16,12 +16,30 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const pdfFileFilter = (req, file, cb) => {
+  const allowedTypes = ['application/pdf'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only PDF is allowed.'), false);
+  }
+};
+
 // Configure multer
 const upload = multer({
   storage: storage,
-  fileFilter: fileFilter,
+  fileFilter: imageFileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+});
+
+// Separate multer instance for PDFs (larger size limit)
+const uploadPdf = multer({
+  storage: storage,
+  fileFilter: pdfFileFilter,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit
   },
 });
 
@@ -43,5 +61,13 @@ module.exports = {
   array: (fieldName, maxCount) => [upload.array(fieldName, maxCount), handleMulterErrors],
   fields: (fields) => [upload.fields(fields), handleMulterErrors],
   none: () => [upload.none(), handleMulterErrors],
+  // Specific helpers
+  image: {
+    single: (fieldName) => [upload.single(fieldName), handleMulterErrors],
+    array: (fieldName, maxCount) => [upload.array(fieldName, maxCount), handleMulterErrors],
+  },
+  pdf: {
+    single: (fieldName) => [uploadPdf.single(fieldName), handleMulterErrors],
+  },
   upload,
 };
