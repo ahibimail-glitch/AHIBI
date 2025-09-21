@@ -1,6 +1,25 @@
 const NISRegistration = require('../models/NISRegistration');
 const ApiResponse = require('../utils/apiResponse');
 
+// Valid content niches - original categories plus others option
+const VALID_CONTENT_NICHES = [
+	'lifestyle',
+	'fashion-beauty',
+	'food',
+	'travel',
+	'fitness',
+	'technology',
+	'education',
+	'entertainment',
+	'music',
+	'photography',
+	'art',
+	'business',
+	'health-wellness',
+	'gaming',
+	'others'
+];
+
 exports.createRegistration = async (req, res, next) => {
 	try {
 		const payload = req.body;
@@ -20,6 +39,25 @@ exports.createRegistration = async (req, res, next) => {
 		}
 		if (!Array.isArray(payload.contentNiches) || payload.contentNiches.length === 0 || !payload.awardCategory) {
 			return ApiResponse.badRequest(res, 'Category and experience requirements not met');
+		}
+		
+		// Validate content niches against allowed values
+		const invalidNiches = payload.contentNiches.filter(niche => !VALID_CONTENT_NICHES.includes(niche));
+		if (invalidNiches.length > 0) {
+			return ApiResponse.badRequest(res, `Invalid content niches: ${invalidNiches.join(', ')}`);
+		}
+		
+		// Validate custom niches if "others" is selected
+		if (payload.contentNiches.includes('others')) {
+			if (!Array.isArray(payload.customNiches) || payload.customNiches.length === 0) {
+				return ApiResponse.badRequest(res, 'Custom niches are required when "Others" is selected');
+			}
+			
+			// Validate that all custom niches are non-empty strings
+			const emptyCustomNiches = payload.customNiches.filter(niche => !niche || niche.trim() === '');
+			if (emptyCustomNiches.length > 0) {
+				return ApiResponse.badRequest(res, 'All custom niches must be non-empty');
+			}
 		}
 		if (!payload.consents || !payload.consents.accuracy || !payload.consents.terms || !payload.consents.dataUsage) {
 			return ApiResponse.badRequest(res, 'Required consents not provided');
@@ -70,6 +108,14 @@ exports.listRegistrations = async (req, res, next) => {
 			.limit(Number(limit));
 		const total = await NISRegistration.countDocuments(query);
 		return ApiResponse.success(res, 'Registrations list', { docs, total });
+	} catch (err) {
+		next(err);
+	}
+};
+
+exports.getValidContentNiches = async (req, res, next) => {
+	try {
+		return ApiResponse.success(res, 'Valid content niches', VALID_CONTENT_NICHES);
 	} catch (err) {
 		next(err);
 	}

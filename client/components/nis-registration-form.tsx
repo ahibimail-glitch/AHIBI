@@ -50,6 +50,7 @@ export interface FormData {
 
   // Category & Experience
   contentNiches: string[]
+  customNiches: string[]
   awardCategory: string
   campusName?: string
   yearsActive: number
@@ -84,6 +85,7 @@ const initialFormData: FormData = {
   topContent: [],
   analyticsFileUrl: undefined,
   contentNiches: [],
+  customNiches: [],
   awardCategory: "",
   yearsActive: 0,
   achievements: "",
@@ -210,7 +212,10 @@ export function RegistrationForm() {
       case 3:
         return formData.topContent.length >= 3
       case 4:
-        return formData.contentNiches.length > 0 && formData.awardCategory
+        const hasContentNiches = formData.contentNiches.length > 0
+        const hasCustomNiches = !formData.contentNiches.includes("others") || formData.customNiches.length > 0
+        const allCustomNichesFilled = !formData.contentNiches.includes("others") || formData.customNiches.every(niche => niche.trim() !== "")
+        return hasContentNiches && hasCustomNiches && allCustomNichesFilled && formData.awardCategory
       case 5:
         return formData.consents.accuracy && formData.consents.terms && formData.consents.dataUsage
       default:

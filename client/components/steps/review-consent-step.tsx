@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, Edit, User, Users, FileText, Award, Check } from "lucide-react"
 import { useState } from "react"
 import type { FormData } from "../nis-registration-form"
+import { getNicheLabel } from "@/lib/niche-labels"
 
 interface ReviewConsentStepProps {
   formData: FormData
@@ -223,6 +224,11 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep }: Review
                     <div className="flex flex-wrap gap-1 mt-1">
                       {formData.contentNiches.map((niche) => (
                         <Badge key={niche} variant="outline">
+                          {getNicheLabel(niche)}
+                        </Badge>
+                      ))}
+                      {formData.customNiches.map((niche, index) => (
+                        <Badge key={`custom-${index}`} variant="secondary">
                           {niche}
                         </Badge>
                       ))}

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, User, UserCircle, Award, Users, Link as LinkIcon, Layers, Calendar as CalendarIcon, ShieldCheck, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { getNicheLabel } from "@/lib/niche-labels";
 
 interface NISRegistration {
   _id: string;
@@ -38,6 +39,7 @@ interface NISRegistration {
   }>;
   analyticsFileUrl?: string;
   contentNiches: string[];
+  customNiches: string[];
   awardCategory: string;
   campusName?: string;
   yearsActive: number;
@@ -78,6 +80,7 @@ function getCategoryColor(category: string) {
   };
   return colors[category] || "bg-gray-100 text-gray-800 border-gray-200";
 }
+
 
 export default function NISRegistrationDetailsPage() {
   const params = useParams();
@@ -311,7 +314,10 @@ export default function NISRegistrationDetailsPage() {
                 <p className="text-sm text-gray-600">Content Niches</p>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {data.contentNiches.map((n, i) => (
-                    <Badge key={i} variant="outline" className="whitespace-normal break-words">{n}</Badge>
+                    <Badge key={i} variant="outline" className="whitespace-normal break-words">{getNicheLabel(n)}</Badge>
+                  ))}
+                  {data.customNiches.map((n, i) => (
+                    <Badge key={`custom-${i}`} variant="secondary" className="whitespace-normal break-words">{n}</Badge>
                   ))}
                 </div>
               </div>

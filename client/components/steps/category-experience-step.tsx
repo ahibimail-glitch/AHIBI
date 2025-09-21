@@ -25,8 +25,10 @@ import {
   Gamepad2,
   Award,
   Users,
+  Edit3,
 } from "lucide-react"
 import type { FormData } from "../nis-registration-form"
+import { getNicheLabel } from "@/lib/niche-labels"
 
 interface CategoryExperienceStepProps {
   formData: FormData
@@ -48,6 +50,7 @@ const contentNiches = [
   { id: "business", label: "Business", icon: Briefcase },
   { id: "health-wellness", label: "Health & Wellness", icon: Heart },
   { id: "gaming", label: "Gaming", icon: Gamepad2 },
+  { id: "others", label: "Others (Specify)", icon: Edit3 },
 ]
 
 const awardCategories = [
@@ -165,7 +168,7 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
       {/* Content Niche Selection */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Content Niche Selection *</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {contentNiches.map((niche) => {
             const Icon = niche.icon
             const isSelected = formData.contentNiches.includes(niche.id)
@@ -200,6 +203,54 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
           </div>
         </div>
       </div>
+
+      {/* Custom Niches Input */}
+      {formData.contentNiches.includes("others") && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Specify Other Content Niches *</h3>
+          <div className="space-y-3">
+            {formData.customNiches.map((niche, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  value={niche}
+                  onChange={(e) => {
+                    const newCustomNiches = [...formData.customNiches];
+                    newCustomNiches[index] = e.target.value;
+                    updateFormData({ customNiches: newCustomNiches });
+                  }}
+                  placeholder="Enter your niche category"
+                  className="glass"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const newCustomNiches = formData.customNiches.filter((_, i) => i !== index);
+                    updateFormData({ customNiches: newCustomNiches });
+                  }}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              onClick={() => {
+                updateFormData({ customNiches: [...formData.customNiches, ""] });
+              }}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 bg-transparent"
+            >
+              <Plus className="w-4 h-4" />
+              Add Custom Niche
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Please specify at least one custom niche category if you selected "Others".
+          </p>
+        </div>
+      )}
 
       {/* Award Category Selection */}
       <div>

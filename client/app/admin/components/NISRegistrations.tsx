@@ -18,6 +18,7 @@ import {
   Filter,
   RefreshCw
 } from "lucide-react";
+import { getNicheLabel } from "@/lib/niche-labels";
 
 interface NISRegistration {
   _id: string;
@@ -49,6 +50,7 @@ interface NISRegistration {
     comments: number;
   }>;
   contentNiches: string[];
+  customNiches: string[];
   awardCategory: string;
   campusName?: string;
   yearsActive: number;
@@ -152,7 +154,7 @@ export default function NISRegistrations() {
       reg.totalFollowers,
       reg.awardCategory,
       reg.yearsActive,
-      reg.contentNiches.join(', '),
+      [...reg.contentNiches.map(niche => getNicheLabel(niche)), ...reg.customNiches].join(', '),
       new Date(reg.createdAt).toLocaleDateString()
     ]);
 
@@ -188,6 +190,7 @@ export default function NISRegistrations() {
     };
     return colors[category] || 'bg-gray-100 text-gray-800';
   };
+
 
   if (loading) {
     return (

@@ -69,6 +69,7 @@ const NISRegistrationSchema = new mongoose.Schema(
 
 		// Category & Experience
 		contentNiches: { type: [String], default: [] },
+		customNiches: { type: [String], default: [] },
 		awardCategory: { type: String, required: true },
 		campusName: { type: String },
 		yearsActive: { type: Number, required: true, min: 0 },

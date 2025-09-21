@@ -65,28 +65,21 @@ export function SuccessStep() {
             </div>
           </div>
 
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <h3 className="text-lg font-semibold">What's Next?</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              <div className="flex items-start gap-3 p-3 bg-muted/20 rounded-lg">
-                <Mail className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-sm">Email Confirmation</h4>
-                  <p className="text-xs text-muted-foreground">You'll receive a confirmation email within 24 hours</p>
-                </div>
+
+
+            <div className="flex items-start gap-3 p-3 bg-muted/20 rounded-lg">
+              <Calendar className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
+              <div>
+                <h4 className="font-medium text-sm">Review Process</h4>
+                <p className="text-xs text-muted-foreground">Applications will be reviewed by our panel of judges</p>
               </div>
 
-              <div className="flex items-start gap-3 p-3 bg-muted/20 rounded-lg">
-                <Calendar className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-sm">Review Process</h4>
-                  <p className="text-xs text-muted-foreground">Applications will be reviewed by our panel of judges</p>
-                </div>
-              </div>
             </div>
-          </div>
+          </div> */}
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          {/* <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={downloadPDF} variant="outline" className="flex items-center gap-2 bg-transparent">
               <Download className="w-4 h-4" />
               Download PDF Copy
@@ -96,13 +89,13 @@ export function SuccessStep() {
               <Share2 className="w-4 h-4" />
               Share Registration
             </Button>
-          </div>
+          </div> */}
 
           <div className="pt-6 border-t text-sm text-muted-foreground">
             <p>
               For any questions or support, please contact us at{" "}
-              <a href="mailto:support@nis2025.com" className="text-primary hover:underline">
-                support@nis2025.com
+              <a href="mailto:connect@ahibi.in" className="text-primary hover:underline">
+                connect@ahibi.in
               </a>
             </p>
           </div>

@@ -7,6 +7,7 @@ const controller = require('../controllers/nisRegistrationController');
 
 router.post('/', controller.createRegistration);
 router.get('/', controller.listRegistrations);
+router.get('/valid-niches', controller.getValidContentNiches);
 router.get('/:id', controller.getRegistrationById);
 
 module.exports = router;

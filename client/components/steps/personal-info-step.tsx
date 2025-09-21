@@ -124,7 +124,7 @@ export function PersonalInfoStep({ formData, updateFormData }: PersonalInfoStepP
       <div className="space-y-2">
         <Label htmlFor="bio" className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4" />
-          Bio *
+          Tell us about yourself, your content, and your journey as an influencer *
         </Label>
         <Textarea
           id="bio"
