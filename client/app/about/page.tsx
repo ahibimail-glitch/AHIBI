@@ -39,12 +39,9 @@ import Navbar from "../Navbar"
 
 export default function AboutPage() {
   const stats = [
-    { number: "50K+", label: "Active Users", icon: Users, color: "text-blue-600" },
-    { number: "2,500+", label: "Events Created", icon: Calendar, color: "text-green-600" },
-    { number: "₹2.5Cr+", label: "Revenue Generated", icon: DollarSign, color: "text-purple-600" },
-    { number: "15+", label: "Cities Covered", icon: Globe, color: "text-orange-600" },
-    { number: "98%", label: "Customer Satisfaction", icon: Star, color: "text-yellow-600" },
-    { number: "24/7", label: "Support Available", icon: Headphones, color: "text-red-600" },
+    { number: "30+", label: "Events Hosted", icon: Calendar, gradient: "from-blue-500 to-cyan-500" },
+    { number: "60,000+", label: "Tickets Sold", icon: Users, gradient: "from-purple-500 to-pink-500" },
+    { number: "50,000+", label: "Happy Users", icon: Star, gradient: "from-orange-500 to-red-500" },
   ]
 
   const journey = [
@@ -307,18 +304,22 @@ export default function AboutPage() {
               Our platform powers events across India, from intimate gatherings to massive festivals
             </p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {stats.map((stat, index) => (
-              <Card
+              <div
                 key={index}
-                className="text-center border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50"
+                className="text-center group hover:scale-105 transition-all duration-500"
               >
-                <CardContent className="pt-8 pb-6">
-                  <stat.icon className={`h-10 w-10 mx-auto mb-4 ${stat.color}`} />
-                  <div className="text-3xl font-bold text-gray-900 mb-2">{stat.number}</div>
-                  <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
-                </CardContent>
-              </Card>
+                <Card className="p-8 border border-indigo-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm hover:bg-white">
+                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r ${stat.gradient} mb-6 shadow-lg`}>
+                    <stat.icon className="h-8 w-8 text-white" />
+                  </div>
+                  <div className={`text-5xl md:text-6xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-4`}>
+                    {stat.number}
+                  </div>
+                  <div className="text-xl font-semibold text-gray-600">{stat.label}</div>
+                </Card>
+              </div>
             ))}
           </div>
         </div>
