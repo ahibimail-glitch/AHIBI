@@ -104,6 +104,7 @@ export function RegistrationForm() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [showErrors, setShowErrors] = useState(false)
   const totalSteps = 5
 
   // Auto-save to localStorage
@@ -127,6 +128,11 @@ export function RegistrationForm() {
   }
 
   const nextStep = () => {
+    if (!isStepValid()) {
+      setShowErrors(true)
+      return
+    }
+    setShowErrors(false)
     if (currentStep < totalSteps) {
       setCurrentStep((prev) => prev + 1)
     }
@@ -143,6 +149,10 @@ export function RegistrationForm() {
   }
 
   const handleSubmit = async () => {
+    if (!isStepValid()) {
+      setShowErrors(true)
+      return
+    }
     setIsSubmitting(true)
     setSubmitError(null)
     
@@ -182,15 +192,15 @@ export function RegistrationForm() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <PersonalInfoStep formData={formData} updateFormData={updateFormData} />
+        return <PersonalInfoStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 2:
-        return <SocialMediaStep formData={formData} updateFormData={updateFormData} />
+        return <SocialMediaStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 3:
-        return <ContentPortfolioStep formData={formData} updateFormData={updateFormData} />
+        return <ContentPortfolioStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 4:
-        return <CategoryExperienceStep formData={formData} updateFormData={updateFormData} />
+        return <CategoryExperienceStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 5:
-        return <ReviewConsentStep formData={formData} updateFormData={updateFormData} goToStep={goToStep} />
+        return <ReviewConsentStep formData={formData} updateFormData={updateFormData} goToStep={goToStep} showErrors={showErrors} />
       default:
         return null
     }
@@ -302,13 +312,13 @@ export function RegistrationForm() {
         {currentStep === totalSteps ? (
           <Button 
             onClick={handleSubmit} 
-            disabled={!isStepValid() || isSubmitting} 
+            disabled={isSubmitting} 
             className="gradient-primary flex items-center gap-2"
           >
             {isSubmitting ? 'Submitting...' : 'Submit Application'}
           </Button>
         ) : (
-          <Button onClick={nextStep} disabled={!isStepValid()} className="gradient-primary flex items-center gap-2">
+          <Button onClick={nextStep} className="gradient-primary flex items-center gap-2">
             Next
             <ChevronRight className="w-4 h-4" />
           </Button>

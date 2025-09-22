@@ -15,9 +15,10 @@ interface ReviewConsentStepProps {
   formData: FormData
   updateFormData: (updates: Partial<FormData>) => void
   goToStep: (step: number) => void
+  showErrors?: boolean
 }
 
-export function ReviewConsentStep({ formData, updateFormData, goToStep }: ReviewConsentStepProps) {
+export function ReviewConsentStep({ formData, updateFormData, goToStep, showErrors }: ReviewConsentStepProps) {
   const [openSections, setOpenSections] = useState<string[]>(["personal"])
 
   const toggleSection = (section: string) => {
@@ -275,6 +276,9 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep }: Review
                 </p>
               </div>
             </div>
+            {showErrors && !formData.consents.accuracy && (
+              <p className="text-xs text-destructive ml-7">Please confirm accuracy of information.</p>
+            )}
 
             <div className="flex items-start space-x-3">
               <Checkbox
@@ -291,6 +295,9 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep }: Review
                 </p>
               </div>
             </div>
+            {showErrors && !formData.consents.terms && (
+              <p className="text-xs text-destructive ml-7">Please agree to terms & conditions.</p>
+            )}
 
             <div className="flex items-start space-x-3">
               <Checkbox
@@ -307,6 +314,9 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep }: Review
                 </p>
               </div>
             </div>
+            {showErrors && !formData.consents.dataUsage && (
+              <p className="text-xs text-destructive ml-7">Please consent to data usage.</p>
+            )}
 
             {/* <div className="flex items-start space-x-3">
               <Checkbox

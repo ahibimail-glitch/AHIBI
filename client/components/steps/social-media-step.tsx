@@ -15,6 +15,7 @@ import type { FormData } from "../nis-registration-form"
 interface SocialMediaStepProps {
   formData: FormData
   updateFormData: (updates: Partial<FormData>) => void
+  showErrors?: boolean
 }
 
 const platformIcons = {
@@ -37,7 +38,7 @@ const platformColors = {
   Other: "bg-gray-500",
 }
 
-export function SocialMediaStep({ formData, updateFormData }: SocialMediaStepProps) {
+export function SocialMediaStep({ formData, updateFormData, showErrors }: SocialMediaStepProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
 
   const platforms = ["Instagram", "YouTube", "Facebook", "TikTok", "Twitter", "LinkedIn", "Other"]
@@ -154,8 +155,11 @@ export function SocialMediaStep({ formData, updateFormData }: SocialMediaStepPro
                     value={platform.handle}
                     onChange={(e) => updatePlatform(index, { handle: e.target.value })}
                     placeholder="@yourusername"
-                    className="glass"
+                    className={`glass ${showErrors && !platform.handle ? "border-destructive" : ""}`}
                   />
+                  {showErrors && !platform.handle && (
+                    <p className="text-xs text-destructive">Please enter your handle for this platform.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -165,8 +169,11 @@ export function SocialMediaStep({ formData, updateFormData }: SocialMediaStepPro
                     value={platform.followerCount || ""}
                     onChange={(e) => updatePlatform(index, { followerCount: Number.parseInt(e.target.value) || 0 })}
                     placeholder="0"
-                    className="glass"
+                    className={`glass ${showErrors && !platform.followerCount ? "border-destructive" : ""}`}
                   />
+                  {showErrors && !platform.followerCount && (
+                    <p className="text-xs text-destructive">Please enter follower count.</p>
+                  )}
                 </div>
               </div>
 
@@ -188,9 +195,9 @@ export function SocialMediaStep({ formData, updateFormData }: SocialMediaStepPro
                   value={platform.profileUrl}
                   onChange={(e) => updatePlatform(index, { profileUrl: e.target.value })}
                   placeholder={`https://${platform.platform.toLowerCase()}.com/yourusername`}
-                  className={`glass ${!isUrlValid && platform.profileUrl ? "border-destructive" : ""}`}
+                  className={`glass ${(!isUrlValid && platform.profileUrl) || (showErrors && !platform.profileUrl) ? "border-destructive" : ""}`}
                 />
-                {!isUrlValid && platform.profileUrl && (
+                {((!isUrlValid && platform.profileUrl) || (showErrors && !platform.profileUrl)) && (
                   <p className="text-xs text-destructive">Please enter a valid {platform.platform} URL</p>
                 )}
               </div>
@@ -267,6 +274,9 @@ export function SocialMediaStep({ formData, updateFormData }: SocialMediaStepPro
               <p className="text-sm text-destructive">
                 You need at least 4,000 total followers across all platforms to be eligible.
               </p>
+            )}
+            {showErrors && formData.platforms.length === 0 && (
+              <p className="text-sm text-destructive">Please add at least one platform.</p>
             )}
           </div>
         </CardContent>

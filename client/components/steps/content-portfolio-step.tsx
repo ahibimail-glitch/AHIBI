@@ -15,13 +15,14 @@ import type { FormData } from "../nis-registration-form"
 interface ContentPortfolioStepProps {
   formData: FormData
   updateFormData: (updates: Partial<FormData>) => void
+  showErrors?: boolean
 }
 
 const contentTypes = ["Video", "Image", "Carousel", "Story", "Reel", "Post", "Article", "Live Stream"]
 
 const platforms = ["Instagram", "YouTube", "Facebook", "TikTok", "Twitter", "LinkedIn", "Other"]
 
-export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfolioStepProps) {
+export function ContentPortfolioStep({ formData, updateFormData, showErrors }: ContentPortfolioStepProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -133,6 +134,9 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
           <Card className="glass border-dashed">
             <CardContent className="p-8 text-center">
               <p className="text-muted-foreground">No content added yet. Click "Add Content" to get started.</p>
+              {showErrors && (
+                <p className="text-sm text-destructive mt-2">Please add at least 3 top content entries.</p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -160,14 +164,17 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
                     value={content.title}
                     onChange={(e) => updateContent(index, { title: e.target.value })}
                     placeholder="Enter content title"
-                    className="glass"
+                    className={`glass ${showErrors && !content.title ? "border-destructive" : ""}`}
                   />
+                  {showErrors && !content.title && (
+                    <p className="text-xs text-destructive">Please enter a title.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>Platform *</Label>
                   <Select value={content.platform} onValueChange={(value) => updateContent(index, { platform: value })}>
-                    <SelectTrigger className="glass">
+                    <SelectTrigger className={`glass ${showErrors && !content.platform ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Select platform" />
                     </SelectTrigger>
                     <SelectContent>
@@ -178,6 +185,9 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
                       ))}
                     </SelectContent>
                   </Select>
+                  {showErrors && !content.platform && (
+                    <p className="text-xs text-destructive">Please select a platform.</p>
+                  )}
                 </div>
               </div>
 
@@ -200,14 +210,17 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
                     value={content.url}
                     onChange={(e) => updateContent(index, { url: e.target.value })}
                     placeholder="https://..."
-                    className="glass"
+                    className={`glass ${showErrors && !content.url ? "border-destructive" : ""}`}
                   />
+                  {showErrors && !content.url && (
+                    <p className="text-xs text-destructive">Please enter a content URL.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>Content Type *</Label>
                   <Select value={content.type} onValueChange={(value) => updateContent(index, { type: value })}>
-                    <SelectTrigger className="glass">
+                    <SelectTrigger className={`glass ${showErrors && !content.type ? "border-destructive" : ""}`}>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -218,6 +231,9 @@ export function ContentPortfolioStep({ formData, updateFormData }: ContentPortfo
                       ))}
                     </SelectContent>
                   </Select>
+                  {showErrors && !content.type && (
+                    <p className="text-xs text-destructive">Please select a content type.</p>
+                  )}
                 </div>
               </div>
 

@@ -33,6 +33,7 @@ import { getNicheLabel } from "@/lib/niche-labels"
 interface CategoryExperienceStepProps {
   formData: FormData
   updateFormData: (updates: Partial<FormData>) => void
+  showErrors?: boolean
 }
 
 const contentNiches = [
@@ -122,7 +123,7 @@ const collaborationTypes = [
   "Affiliate Marketing",
 ]
 
-export function CategoryExperienceStep({ formData, updateFormData }: CategoryExperienceStepProps) {
+export function CategoryExperienceStep({ formData, updateFormData, showErrors }: CategoryExperienceStepProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
   const toggleNiche = (nicheId: string) => {
@@ -201,6 +202,9 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
               ) : null
             })}
           </div>
+          {showErrors && formData.contentNiches.length === 0 && (
+            <p className="text-xs text-destructive mt-2">Please select at least one content niche.</p>
+          )}
         </div>
       </div>
 
@@ -219,7 +223,7 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
                     updateFormData({ customNiches: newCustomNiches });
                   }}
                   placeholder="Enter your niche category"
-                  className="glass"
+                  className={`glass ${showErrors && niche.trim() === "" ? "border-destructive" : ""}`}
                 />
                 <Button
                   variant="ghost"
@@ -249,6 +253,9 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
           <p className="text-sm text-muted-foreground">
             Please specify at least one custom niche category if you selected "Others".
           </p>
+          {showErrors && formData.customNiches.some((n) => n.trim() === "") && (
+            <p className="text-xs text-destructive">Please fill all custom niche fields.</p>
+          )}
         </div>
       )}
 
@@ -270,7 +277,7 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
                 className={`cursor-pointer transition-all hover:scale-[1.02] ${
                   formData.awardCategory === category.id
                     ? "ring-2 ring-primary bg-primary/10"
-                    : "glass hover:bg-muted/20"
+                    : `glass hover:bg-muted/20${showErrors && !formData.awardCategory ? ' border-destructive' : ''}`
                 }`}
                 onClick={() => updateFormData({ awardCategory: category.id })}
               >
@@ -287,6 +294,9 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
             ))}
           </div>
         </div>
+        {showErrors && !formData.awardCategory && (
+          <p className="text-xs text-destructive mt-2">Please select an award category.</p>
+        )}
       </div>
 
       {/* Campus Name (conditional) */}
@@ -298,8 +308,11 @@ export function CategoryExperienceStep({ formData, updateFormData }: CategoryExp
             value={formData.campusName || ""}
             onChange={(e) => updateFormData({ campusName: e.target.value })}
             placeholder="Enter your campus/university name"
-            className="glass"
+            className={`glass ${showErrors && !(formData.campusName || "").trim() ? "border-destructive" : ""}`}
           />
+          {showErrors && !(formData.campusName || "").trim() && (
+            <p className="text-xs text-destructive">Please enter campus name.</p>
+          )}
         </div>
       )}
 
