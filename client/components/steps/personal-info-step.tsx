@@ -124,13 +124,13 @@ export function PersonalInfoStep({ formData, updateFormData }: PersonalInfoStepP
       <div className="space-y-2">
         <Label htmlFor="bio" className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4" />
-          Tell us about yourself, your content, and your journey as an influencer *
+        Bio
         </Label>
         <Textarea
           id="bio"
           value={formData.bio}
           onChange={(e) => handleBioChange(e.target.value)}
-          placeholder="Tell us about yourself, your content, and what makes you unique as a creator..."
+          placeholder="Tell us about yourself, your content, and your journey as an influencer .... "
           className="glass min-h-[120px]"
           maxLength={1000}
         />
