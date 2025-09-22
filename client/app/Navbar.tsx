@@ -109,13 +109,7 @@ export default function Navbar() {
               >
                 Events
               </Link>
-              <Link
-                href="/organizer"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="hover:text-white transition"
-              >
-                Organize
-              </Link>
+            
               <Link
                 href="/artist"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -124,11 +118,11 @@ export default function Navbar() {
                 Artists
               </Link>
               <Link
-                href="/venue"
+                href="/partners"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="hover:text-white transition"
               >
-                Venues
+                Partners
               </Link>
               <Link
                 href="/about"
