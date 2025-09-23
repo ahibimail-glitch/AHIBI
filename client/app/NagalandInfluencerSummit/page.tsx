@@ -1,5 +1,5 @@
 "use client"
-// import Link from "next/link"
+import Link from "next/link"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,7 +119,7 @@ export default function NagalandInfluencerSummit() {
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-                        {/* <Link href="/NagalandInfluencerSummit/register" passHref>
+                        <Link href="/NagalandInfluencerSummit/register" passHref>
                             <Button
                                 asChild
                                 size="lg"
@@ -127,7 +127,7 @@ export default function NagalandInfluencerSummit() {
                             >
                                 <span>Register Now</span>
                             </Button>
-                        </Link> */}
+                        </Link>
                         {/* <Button
                             size="lg"
                             variant="outline"
