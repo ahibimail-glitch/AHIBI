@@ -119,7 +119,7 @@ app.use('/api/nis/registrations', nisRegistrationRoutes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.send('Welcome to the Ahibi 3.0 API');
+  res.send('Welcome to Ahibi 3.0 API');
 });
 
 // Import error handler
