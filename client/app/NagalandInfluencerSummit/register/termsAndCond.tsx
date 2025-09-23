@@ -44,7 +44,7 @@ export default function TermsAndConditionsNIS() {
                   <strong>70% original content</strong> on their platforms.
                 </li>
                 <li>
-                  For <strong>“Emerging Influencer (Under 21)”</strong>, the
+                  For <strong>Rising  Creator Award (U- 21)”</strong>, the
                   applicant must be below 21 years as of{" "}
                   <strong>September 30, 2025</strong>.
                 </li>
