@@ -212,11 +212,12 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
                           <Info className="w-4 h-4 text-muted-foreground" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Average percentage of followers who engage with your content</p>
+                          <p>How to calculate: (Likes + Shares + Comments) / Total followers × 100</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </Label>
+                  <p className="text-xs text-muted-foreground">Formula: (Likes + Shares + Comments) / Total followers × 100</p>
                   <Input
                     type="number"
                     step="0.1"

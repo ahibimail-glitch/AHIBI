@@ -70,8 +70,22 @@ const NISRegistrationSchema = new mongoose.Schema(
 		// Category & Experience
 		contentNiches: { type: [String], default: [] },
 		customNiches: { type: [String], default: [] },
-		awardCategory: { type: String, required: true },
-		campusName: { type: String },
+		awardCategories: { 
+			type: [String], 
+			default: [],
+			validate: {
+				validator: function(arr) {
+					return Array.isArray(arr) && arr.length > 0 && arr.length <= 3;
+				},
+				message: 'Select between 1 and 3 award categories'
+			}
+		},
+		campusName: { 
+			type: String,
+			required: function() {
+				return Array.isArray(this.awardCategories) && this.awardCategories.includes('campus-voice');
+			}
+		},
 		yearsActive: { type: Number, required: true, min: 0 },
 		achievements: { type: String },
 		brandCollaborations: { type: [BrandCollaborationSchema], default: [] },

@@ -24,6 +24,11 @@ exports.createRegistration = async (req, res, next) => {
 	try {
 		const payload = req.body;
 
+		// Backward compatibility: map legacy single field to new array
+		if ((!Array.isArray(payload.awardCategories) || payload.awardCategories.length === 0) && payload.awardCategory) {
+			payload.awardCategories = [payload.awardCategory];
+		}
+
 		// Basic backend validation mirroring frontend step checks
 		if (!payload.fullName || !payload.creatorName || !payload.dateOfBirth || !payload.gender) {
 			return ApiResponse.badRequest(res, 'Missing required personal information');
@@ -37,8 +42,20 @@ exports.createRegistration = async (req, res, next) => {
 		if (!Array.isArray(payload.topContent) || payload.topContent.length < 3) {
 			return ApiResponse.badRequest(res, 'At least 3 top content items required');
 		}
-		if (!Array.isArray(payload.contentNiches) || payload.contentNiches.length === 0 || !payload.awardCategory) {
+		if (!Array.isArray(payload.contentNiches) || payload.contentNiches.length === 0) {
 			return ApiResponse.badRequest(res, 'Category and experience requirements not met');
+		}
+
+		// Validate award categories (1 to 3)
+		if (!Array.isArray(payload.awardCategories) || payload.awardCategories.length === 0 || payload.awardCategories.length > 3) {
+			return ApiResponse.badRequest(res, 'Select between 1 and 3 award categories');
+		}
+
+		// Campus name required if campus-voice selected
+		if (payload.awardCategories.includes('campus-voice')) {
+			if (!payload.campusName || String(payload.campusName).trim() === '') {
+				return ApiResponse.badRequest(res, 'Campus name is required for Campus Voice category');
+			}
 		}
 		
 		// Validate content niches against allowed values
@@ -84,6 +101,11 @@ exports.getRegistrationById = async (req, res, next) => {
 		const { id } = req.params;
 		const doc = await NISRegistration.findById(id);
 		if (!doc) return ApiResponse.notFound(res, 'Registration not found');
+		// Ensure response includes awardCategories for legacy docs
+		const json = doc.toObject();
+		if ((!Array.isArray(json.awardCategories) || json.awardCategories.length === 0) && json.awardCategory) {
+			json.awardCategories = [json.awardCategory];
+		}
 		return ApiResponse.success(res, 'Registration fetched', doc);
 	} catch (err) {
 		next(err);
@@ -107,7 +129,15 @@ exports.listRegistrations = async (req, res, next) => {
 			.skip((Number(page) - 1) * Number(limit))
 			.limit(Number(limit));
 		const total = await NISRegistration.countDocuments(query);
-		return ApiResponse.success(res, 'Registrations list', { docs, total });
+		// Map legacy records to include awardCategories
+		const mapped = docs.map(d => {
+			const o = d.toObject();
+			if ((!Array.isArray(o.awardCategories) || o.awardCategories.length === 0) && o.awardCategory) {
+				o.awardCategories = [o.awardCategory];
+			}
+			return o;
+		});
+		return ApiResponse.success(res, 'Registrations list', { docs: mapped, total });
 	} catch (err) {
 		next(err);
 	}

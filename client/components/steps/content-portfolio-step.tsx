@@ -306,6 +306,7 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
             <Upload className="w-5 h-5" />
             Analytics Upload
           </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">1-year analytics report required (PDF)</p>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Upload Area */}

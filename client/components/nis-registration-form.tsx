@@ -51,7 +51,7 @@ export interface FormData {
   // Category & Experience
   contentNiches: string[]
   customNiches: string[]
-  awardCategory: string
+  awardCategories: string[]
   campusName?: string
   yearsActive: number
   achievements: string
@@ -86,7 +86,7 @@ const initialFormData: FormData = {
   analyticsFileUrl: undefined,
   contentNiches: [],
   customNiches: [],
-  awardCategory: "",
+  awardCategories: [],
   yearsActive: 0,
   achievements: "",
   brandCollaborations: [],
@@ -225,7 +225,10 @@ export function RegistrationForm() {
         const hasContentNiches = formData.contentNiches.length > 0
         const hasCustomNiches = !formData.contentNiches.includes("others") || formData.customNiches.length > 0
         const allCustomNichesFilled = !formData.contentNiches.includes("others") || formData.customNiches.every(niche => niche.trim() !== "")
-        return hasContentNiches && hasCustomNiches && allCustomNichesFilled && formData.awardCategory
+        const hasAwardCategories = formData.awardCategories.length > 0 && formData.awardCategories.length <= 3
+        const campusCategorySelected = formData.awardCategories.includes("campus-voice")
+        const campusValid = !campusCategorySelected || (formData.campusName || "").trim() !== ""
+        return hasContentNiches && hasCustomNiches && allCustomNichesFilled && hasAwardCategories && campusValid
       case 5:
         return formData.consents.accuracy && formData.consents.terms && formData.consents.dataUsage
       default:

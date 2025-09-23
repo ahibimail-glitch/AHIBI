@@ -51,7 +51,7 @@ interface NISRegistration {
   }>;
   contentNiches: string[];
   customNiches: string[];
-  awardCategory: string;
+  awardCategories: string[];
   campusName?: string;
   yearsActive: number;
   achievements: string;
@@ -101,8 +101,10 @@ export default function NISRegistrations() {
 
         // Build category frequency map then find top category name
         const categoryCounts = docs.reduce((acc: Record<string, number>, reg: NISRegistration) => {
-          const key = reg.awardCategory || 'Uncategorised';
-          acc[key] = (acc[key] || 0) + 1;
+          const cats = Array.isArray(reg.awardCategories) && reg.awardCategories.length ? reg.awardCategories : ['Uncategorised'];
+          cats.forEach((key) => {
+            acc[key] = (acc[key] || 0) + 1;
+          });
           return acc;
         }, {} as Record<string, number>);
         const topCategory = Object.keys(categoryCounts).length
@@ -132,14 +134,14 @@ export default function NISRegistrations() {
     reg.creatorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     reg.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     reg.registrationId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    reg.awardCategory.toLowerCase().includes(searchQuery.toLowerCase())
+    (Array.isArray(reg.awardCategories) && reg.awardCategories.some(c => c.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   // Export to CSV
   const exportToCSV = () => {
     const headers = [
       'Registration ID', 'Full Name', 'Creator Name', 'Email', 'Date of Birth',
-      'Gender', 'Nagaland Resident', 'Total Followers', 'Award Category',
+      'Gender', 'Nagaland Resident', 'Total Followers', 'Award Categories',
       'Years Active', 'Content Niches', 'Created At'
     ];
 
@@ -152,7 +154,7 @@ export default function NISRegistrations() {
       reg.gender,
       reg.nagalandResident ? 'Yes' : 'No',
       reg.totalFollowers,
-      reg.awardCategory,
+      (reg.awardCategories || []).join('|'),
       reg.yearsActive,
       [...reg.contentNiches.map(niche => getNicheLabel(niche)), ...reg.customNiches].join(', '),
       new Date(reg.createdAt).toLocaleDateString()
@@ -323,9 +325,13 @@ export default function NISRegistrations() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getCategoryColor(registration.awardCategory)}>
-                        {registration.awardCategory}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {(registration.awardCategories || []).map((cat, i) => (
+                          <Badge key={i} className={getCategoryColor(cat)}>
+                            {cat}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={registration.nagalandResident ? "default" : "secondary"}>

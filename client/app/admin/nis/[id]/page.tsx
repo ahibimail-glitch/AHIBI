@@ -40,7 +40,7 @@ interface NISRegistration {
   analyticsFileUrl?: string;
   contentNiches: string[];
   customNiches: string[];
-  awardCategory: string;
+  awardCategories: string[];
   campusName?: string;
   yearsActive: number;
   achievements: string;
@@ -97,7 +97,14 @@ export default function NISRegistrationDetailsPage() {
         const res = await fetch(`/api/nis/registrations/${id}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json?.message || "Failed to load registration");
-        setData(json.data);
+        const incoming = json.data || {};
+        const normalized = {
+          ...incoming,
+          awardCategories: Array.isArray(incoming.awardCategories) && incoming.awardCategories.length
+            ? incoming.awardCategories
+            : (incoming.awardCategory ? [incoming.awardCategory] : []),
+        } as NISRegistration as any;
+        setData(normalized);
       } catch (e: any) {
         setError(e?.message || "Failed to load registration");
       } finally {
@@ -165,9 +172,13 @@ export default function NISRegistrationDetailsPage() {
                 <Award className="h-4 w-4" />
                 <p className="text-sm">Category</p>
               </div>
-              <div className={`inline-flex items-center gap-2 px-3 py-1 mt-1 rounded-md border ${getCategoryColor(data.awardCategory)}`}>
-                <Award className="h-4 w-4" />
-                <span className="text-sm font-medium">{data.awardCategory}</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(data.awardCategories || []).map((cat, i) => (
+                  <div key={i} className={`inline-flex items-center gap-2 px-3 py-1 rounded-md border ${getCategoryColor(cat)}`}>
+                    <Award className="h-4 w-4" />
+                    <span className="text-sm font-medium">{cat}</span>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -322,8 +333,12 @@ export default function NISRegistrationDetailsPage() {
                 </div>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Award Category</p>
-                <p className="font-medium break-words">{data.awardCategory}</p>
+                <p className="text-sm text-gray-600">Award Categories</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {(data.awardCategories || []).map((cat, i) => (
+                    <Badge key={i} variant="outline" className="whitespace-normal break-words">{cat}</Badge>
+                  ))}
+                </div>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Campus Name</p>

@@ -236,7 +236,12 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep, showErro
                     </div>
                   </div>
                   <div>
-                    <span className="font-medium">Award Category:</span> {formData.awardCategory}
+                    <span className="font-medium">Award Categories:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(formData.awardCategories || []).map((cat) => (
+                        <Badge key={cat} variant="outline">{cat}</Badge>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <span className="font-medium">Years Active:</span> {formData.yearsActive} years

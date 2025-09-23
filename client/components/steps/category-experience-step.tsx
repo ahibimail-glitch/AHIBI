@@ -261,7 +261,8 @@ export function CategoryExperienceStep({ formData, updateFormData, showErrors }:
 
       {/* Award Category Selection */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">Award Category Selection *</h3>
+        <h3 className="text-lg font-semibold mb-1">Award Category Selection *</h3>
+        <p className="text-sm text-muted-foreground mb-3">Select up to 3 categories maximum.</p>
         <div className="space-y-4">
           <Input
             placeholder="Search award categories..."
@@ -275,11 +276,19 @@ export function CategoryExperienceStep({ formData, updateFormData, showErrors }:
               <Card
                 key={category.id}
                 className={`cursor-pointer transition-all hover:scale-[1.02] ${
-                  formData.awardCategory === category.id
+                  formData.awardCategories.includes(category.id)
                     ? "ring-2 ring-primary bg-primary/10"
-                    : `glass hover:bg-muted/20${showErrors && !formData.awardCategory ? ' border-destructive' : ''}`
+                    : `glass hover:bg-muted/20${showErrors && (formData.awardCategories.length === 0) ? ' border-destructive' : ''}`
                 }`}
-                onClick={() => updateFormData({ awardCategory: category.id })}
+                onClick={() => {
+                  const isSelected = formData.awardCategories.includes(category.id)
+                  if (isSelected) {
+                    updateFormData({ awardCategories: formData.awardCategories.filter((id) => id !== category.id) })
+                  } else {
+                    if (formData.awardCategories.length >= 3) return
+                    updateFormData({ awardCategories: [...formData.awardCategories, category.id] })
+                  }
+                }}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -294,13 +303,16 @@ export function CategoryExperienceStep({ formData, updateFormData, showErrors }:
             ))}
           </div>
         </div>
-        {showErrors && !formData.awardCategory && (
-          <p className="text-xs text-destructive mt-2">Please select an award category.</p>
+        {showErrors && formData.awardCategories.length === 0 && (
+          <p className="text-xs text-destructive mt-2">Please select at least one award category (max 3).</p>
+        )}
+        {formData.awardCategories.length > 3 && (
+          <p className="text-xs text-destructive mt-2">You can select a maximum of 3 categories.</p>
         )}
       </div>
 
       {/* Campus Name (conditional) */}
-      {formData.awardCategory === "campus-voice" && (
+      {formData.awardCategories.includes("campus-voice") && (
         <div className="space-y-2">
           <Label htmlFor="campusName">Campus Name *</Label>
           <Input
