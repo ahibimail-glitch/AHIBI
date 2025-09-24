@@ -755,23 +755,24 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Hero Image */}
-              <div className="relative  overflow-hidden ">
-                <AspectRatio ratio={16 / 9}>
-                  <Image
-                    src={event.banner || "/placeholder.svg"}
-                    alt={event.title}
-                    fill
-                    className="object-contain transition-transform duration-300 "
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                    priority
-                  />
-                  {/* <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div> */}
-                  {/* <div className="absolute bottom-4 left-4">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">{event.title}</h1>
-                    <p className="text-xs sm:text-sm text-gray-200 mt-1">{event.category}</p>
-                  </div> */}
-                </AspectRatio>
-              </div>
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <AspectRatio
+                ratio={16 / 9}
+                className="relative rounded-xl overflow-hidden shadow-lg"
+              >
+                <Image
+                  src={event.banner || "/placeholder.svg"}
+                  alt={event.title}
+                  fill
+                  className="object-cover transition-transform duration-300 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">{event.title}</h1>
+                  <p className="text-xs sm:text-sm text-gray-200 mt-1">{event.category}</p>
+                </div>
+              </AspectRatio>
+            </div>
 
               {/* Event Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
