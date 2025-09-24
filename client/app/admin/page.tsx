@@ -25,6 +25,7 @@ import {
   QrCode,
   ImageIcon,
   Plus,
+  Bike,
 } from "lucide-react";
 
 // Import child components
@@ -48,6 +49,7 @@ import AnnieMusicalQrScanner from "./components/AnnieMusicalQrScanner";
 import AnnieManualBooking from "./components/AnnieManualBooking";
 import AnnieFailedBookings from "./components/AnnieFailedBookings";
 import NISRegistrations from "./components/NISRegistrations";
+import BikerBash from "./components/BikerBash";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -161,6 +163,8 @@ export default function AdminDashboard() {
         return <AnnieFailedBookings />;
       case "nis-registrations":
         return <NISRegistrations />;
+      case "bikerbash":
+        return <BikerBash />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -243,6 +247,7 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Events & Programs</h3>
           </div>
           <SidebarButton icon={Users} label="NIS Registrations" active={activeView === "nis-registrations"} onClick={() => setActiveView("nis-registrations")} />
+          {/* <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => setActiveView("bikerbash")} /> */}
           
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>

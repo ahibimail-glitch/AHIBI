@@ -26,6 +26,7 @@ const paymentRoutes = require('./routes/payment.routes');
 const heroImageRoutes = require('./routes/heroImageRoutes');
 const annieMusicalRoutes = require('./routes/annieMusicalRoutes');
 const nisRegistrationRoutes = require('./routes/nisRegistration.routes');
+const bikerBashRoutes = require('./routes/bikerBash.routes');
 
 
 
@@ -116,6 +117,7 @@ app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/hero-images', heroImageRoutes);
 app.use('/api/annie-musical', annieMusicalRoutes);
 app.use('/api/nis/registrations', nisRegistrationRoutes);
+app.use('/api/admin/bikerbash', bikerBashRoutes);
 
 // Root route
 app.get('/', (req, res) => {

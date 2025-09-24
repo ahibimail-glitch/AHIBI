@@ -8,6 +8,7 @@ const QRCode = require('qrcode'); // Import QRCode library
 const emailService = require('../services/emailService');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
+const BikerBash = require('../models/BikerBash');
 
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
@@ -227,6 +228,36 @@ exports.verifyPayment = async (req, res) => {
       for (let i = 1; i < bookings.length; i++) {
         bookings[i].parentBookingId = parentBookingId;
         await bookings[i].save();
+      }
+    }
+
+    // Create BikerBash registration if this is a BikerBash event
+    if (bookingDetails.contactInfo && bookingDetails.contactInfo.name) {
+      try {
+        console.log('[Payment] Creating BikerBash registration for booking:', bookingIds[0]);
+        
+        const bikerBashRegistration = new BikerBash({
+          bookingId: bookingIds[0], // Use the first booking ID as the main booking reference
+          eventId: event._id,
+          userId: user.id,
+          contactInfo: {
+            name: bookingDetails.contactInfo.name,
+            phone: bookingDetails.contactInfo.phone,
+            email: bookingDetails.contactInfo.email
+          },
+          ticketInfo: {
+            ticketType: tickets[0].ticketType, // Assuming single ticket type for BikerBash
+            price: tickets[0].price,
+            quantity: tickets[0].quantity
+          },
+          status: 'confirmed'
+        });
+
+        await bikerBashRegistration.save();
+        console.log('[Payment] BikerBash registration created successfully:', bikerBashRegistration._id);
+      } catch (error) {
+        console.error('[Payment] Error creating BikerBash registration:', error);
+        // Don't fail the payment if BikerBash registration fails
       }
     }
 
