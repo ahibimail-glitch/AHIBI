@@ -720,7 +720,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const isSpecial = params.id === "68c2c33eb6ef88c76f50ce7c";
   const isBikerBash = params.id === "68d3ce2c0d439c1425c6cdd1";
   // Customized UI for a specific event ID while preserving booking logic
-  if (isBikerBash) {
+    if (isBikerBash) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
         <Navbar />
@@ -747,7 +747,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <svg className="mr-3 inline h-5 w-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
           </svg>
-          <span className="font-medium">Terms and Conditions:</span>&nbsp;This event is for bikes that are 150cc and above.
+          <span className="font-medium">Terms and Conditions:</span>
+          <span className="break-words ml-4">This event is for bikes that are 150cc and above.</span>
         </div>
 
         <div className="container mx-auto px-4 py-8 flex-1">
@@ -1066,7 +1067,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                   </div>
                                 </div>
                                 <div className="text-left">
-                                  <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹1000 +<span className="text-sm">16%gst</span></span>
+                                  <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
                                   <p className="text-xs text-gray-500">per ticket</p>
                                 </div>
                               </div>
