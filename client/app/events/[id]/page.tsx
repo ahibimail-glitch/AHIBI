@@ -718,7 +718,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   const timeRange = formatTimeRange(event.startDate, event.endDate);
   const isSpecial = params.id === "68c2c33eb6ef88c76f50ce7c";
-  const isBikerBash = params.id === "68d3767de68c3c0f29a0838e";
+  const isBikerBash = params.id === "68d3ce2c0d439c1425c6cdd1";
   // Customized UI for a specific event ID while preserving booking logic
   if (isBikerBash) {
     return (
