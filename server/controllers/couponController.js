@@ -101,3 +101,59 @@ exports.deleteCoupon = async (req, res, next) => {
 };
 
 
+// Validate a coupon for an event and selected tickets
+// Expects: { code, eventId, tickets: [{ ticketType, quantity, price }] }
+exports.validateCoupon = async (req, res, next) => {
+  try {
+    const { code, eventId, tickets } = req.body || {};
+    if (!code || !eventId || !Array.isArray(tickets)) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const coupon = await Coupon.findOne({ code: String(code).trim().toUpperCase() });
+    if (!coupon) {
+      return res.status(404).json({ message: 'Invalid coupon code' });
+    }
+
+    if (String(coupon.event?.id) !== String(eventId)) {
+      return res.status(400).json({ message: 'Coupon not valid for this event' });
+    }
+
+    if (coupon.status === 'used') {
+      return res.status(400).json({ message: 'Coupon already used' });
+    }
+
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+      return res.status(400).json({ message: 'Coupon has expired' });
+    }
+
+    // Check if selected tickets contain the applicable category
+    const applicableCategory = coupon.ticketCategory;
+    const applicableTickets = tickets.filter(t => t.ticketType === applicableCategory);
+    if (applicableTickets.length === 0) {
+      return res.status(400).json({ message: `Coupon applies to ${applicableCategory} tickets only` });
+    }
+
+    // Compute discount: apply ONCE per applicable ticket category (single unit price)
+    const singleTicket = applicableTickets[0];
+    const unitPrice = Number(singleTicket?.price) || 0;
+    const discountAmount = Math.round((unitPrice * coupon.discountPercentage) / 100);
+    const totalAmount = tickets.reduce((sum, t) => sum + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
+    const payable = Math.max(0, totalAmount - discountAmount);
+
+    return res.json({
+      valid: true,
+      code: coupon.code,
+      ticketCategory: applicableCategory,
+      discountPercentage: coupon.discountPercentage,
+      discountAmount,
+      totalAmount,
+      payable,
+      message: 'Coupon applied'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+

@@ -9,6 +9,7 @@ const emailService = require('../services/emailService');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
 const BikerBash = require('../models/BikerBash');
+const Coupon = require('../models/Coupon');
 
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
@@ -31,10 +32,45 @@ exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
   console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
   try {
-    const { amount, currency, receipt, bookingDetails } = req.body;
+    const { amount, currency, receipt, bookingDetails, coupon } = req.body;
+
+    // Recompute server-side total from bookingDetails to avoid tampering
+    let computedTotal = 0;
+    if (Array.isArray(bookingDetails?.tickets)) {
+      computedTotal = bookingDetails.tickets.reduce((s, t) => s + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
+    }
+
+    // Apply coupon if provided and structurally valid. Validate against DB to avoid tampering.
+    let discountAmount = 0;
+    let appliedCoupon = null;
+    try {
+      if (coupon && coupon.code) {
+        const dbCoupon = await Coupon.findOne({ code: String(coupon.code).trim().toUpperCase() });
+        if (dbCoupon && String(dbCoupon.event?.id) === String(bookingDetails?.event?._id) && dbCoupon.status === 'active' && (!dbCoupon.expiresAt || new Date(dbCoupon.expiresAt) >= new Date())) {
+          // Apply ONCE for the category: take the unit price of the first matching ticket
+          const applicableTickets = (bookingDetails?.tickets || []).filter(t => t.ticketType === dbCoupon.ticketCategory);
+          const unitPrice = applicableTickets.length > 0 ? Number(applicableTickets[0].price) || 0 : 0;
+          discountAmount = Math.round((unitPrice * dbCoupon.discountPercentage) / 100);
+          if (discountAmount > 0) {
+            appliedCoupon = {
+              code: dbCoupon.code,
+              ticketCategory: dbCoupon.ticketCategory,
+              discountPercentage: dbCoupon.discountPercentage,
+              discountAmount,
+            };
+          }
+        }
+      }
+    } catch (e) {
+      // ignore coupon if malformed
+      discountAmount = 0;
+      appliedCoupon = null;
+    }
+
+    const payable = Math.max(0, computedTotal - discountAmount);
 
     const options = {
-      amount: amount * 100, // amount in the smallest currency unit
+      amount: payable * 100, // amount in the smallest currency unit
       currency,
       receipt,
       notes: {
@@ -44,6 +80,7 @@ exports.createOrder = async (req, res) => {
         userEmail: bookingDetails?.user?.email || '',
         userPhone: bookingDetails?.user?.phone || '',
         tickets: bookingDetails?.tickets ? JSON.stringify(bookingDetails.tickets) : '[]',
+        coupon: appliedCoupon ? JSON.stringify(appliedCoupon) : undefined,
       }
     };
 
@@ -62,9 +99,9 @@ exports.createOrder = async (req, res) => {
         { orderId: order.id },
         {
           $set: {
-            amount,
+            amount: payable,
             currency,
-            bookingDetails,
+            bookingDetails: appliedCoupon ? { ...bookingDetails, coupon: appliedCoupon } : bookingDetails,
             user: bookingDetails?.user?.id,
             event: bookingDetails?.event?._id,
             status: 'created'
@@ -138,7 +175,9 @@ exports.verifyPayment = async (req, res) => {
         orderId: razorpay_order_id,
         paymentId: razorpay_payment_id,
         signature: razorpay_signature,
-        amount: Array.isArray(bookingDetails?.tickets) ? bookingDetails.tickets.reduce((s, t) => s + (t.price || 0) * (t.quantity || 0), 0) : undefined,
+        amount: Array.isArray(bookingDetails?.tickets)
+          ? Math.max(0, bookingDetails.tickets.reduce((s, t) => s + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0) - (bookingDetails?.coupon?.discountAmount || 0))
+          : undefined,
         user: bookingDetails?.user?.id,
         userSnapshot: {
           id: bookingDetails?.user?.id,
@@ -229,6 +268,18 @@ exports.verifyPayment = async (req, res) => {
         bookings[i].parentBookingId = parentBookingId;
         await bookings[i].save();
       }
+    }
+
+    // Mark coupon as used if applied
+    try {
+      if (bookingDetails?.coupon?.code) {
+        await Coupon.findOneAndUpdate(
+          { code: bookingDetails.coupon.code },
+          { $set: { status: 'used', usedAt: new Date() } }
+        );
+      }
+    } catch (couponErr) {
+      console.error('Failed to mark coupon used:', couponErr);
     }
 
     // Create BikerBash registration if this is a BikerBash event

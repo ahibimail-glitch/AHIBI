@@ -64,6 +64,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 // App Components - Using dynamic imports to avoid SSR issues
 import Navbar from "@/app/Navbar";
@@ -243,6 +244,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
 
   // Form state for BikerBash contact form
   const [formData, setFormData] = useState({
@@ -257,6 +262,61 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   // Check if any ticket is selected
   const hasSelectedTicket = selectedTickets.size > 0;
+
+  // Reset applied coupon if selection changes
+  useEffect(() => {
+    setAppliedCoupon(null);
+    setCouponError(null);
+  }, [Array.from(selectedTickets.entries()).map(([id, v]) => `${id}:${v.quantity}`).join('|')]);
+
+  const subtotalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+  // Discount applies ONCE per category
+  const discountAmount = appliedCoupon?.discountAmount ? appliedCoupon.discountAmount : 0;
+  const payableAmount = Math.max(0, subtotalAmount - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    try {
+      setCouponApplying(true);
+      setCouponError(null);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setCouponError("Please log in to apply coupon");
+        toast.error("Please log in to apply coupon");
+        return;
+      }
+      if (!event?._id) return;
+      const tickets = Array.from(selectedTickets.values()).map(item => ({
+        ticketType: item.ticket.name,
+        quantity: item.quantity,
+        price: item.ticket.price,
+      }));
+      const apiBase = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000");
+      const res = await fetch(`${apiBase}/api/coupons/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ code: couponCode, eventId: event._id, tickets }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        console.warn('Coupon validation failed:', res.status, data);
+        setAppliedCoupon(null);
+        setCouponError(data?.message || 'Invalid coupon');
+        toast.error(data?.message || 'Invalid coupon');
+        return;
+      }
+      setAppliedCoupon(data);
+      toast.success(`Coupon ${data.code} applied: ${data.discountPercentage}% off`);
+    } catch (e) {
+      console.error('Coupon apply error:', e);
+      setCouponError('Failed to apply coupon');
+      toast.error('Failed to apply coupon');
+    } finally {
+      setCouponApplying(false);
+    }
+  };
 
   // Handle form submission for BikerBash contact form
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -380,9 +440,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         throw new Error("Please log in to book tickets");
       }
 
-      const totalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => {
-        return sum + (item.ticket.price * item.quantity);
-      }, 0);
+      const subtotal = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+      const totalAmount = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
 
       // 1. Create Order (send bookingDetails so backend can recover via webhook if needed)
       const orderResponse = await fetch(
@@ -413,6 +472,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 }
               }),
             },
+            ...(appliedCoupon ? { coupon: { code: appliedCoupon.code } } : {}),
           }),
         }
       );
@@ -457,6 +517,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     email: formData.email,
                   }
                 }),
+                ...(appliedCoupon ? { coupon: {
+                  code: appliedCoupon.code,
+                  ticketCategory: appliedCoupon.ticketCategory,
+                  discountPercentage: appliedCoupon.discountPercentage,
+                  discountAmount: appliedCoupon.discountAmount,
+                } } : {}),
               },
             };
 
@@ -1229,17 +1295,32 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                   </span>
                                 </div>
                               ))}
-                              <div className="border-t border-gray-200 pt-3">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
-                                  <div className="mb-2 sm:mb-0">
-                                    <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
-                                    <p className="text-xs sm:text-sm text-gray-600">
-                                      1 ticket
-                                    </p>
+                              <div className="border-t border-gray-200 pt-3 space-y-2">
+                                {/* Coupon input */}
+                                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                  <div className="flex-1">
+                                    <Input placeholder="Enter coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
                                   </div>
-                                  <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
-                                    ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
-                                  </span>
+                                  <Button variant="outline" onClick={handleApplyCoupon} disabled={couponApplying || !couponCode.trim()}>
+                                    {couponApplying ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...</>) : 'Apply'}
+                                  </Button>
+                                </div>
+                                {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+
+                                {/* Summary rows */}
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <span className="text-sm sm:text-base text-gray-700">Subtotal</span>
+                                  <span className="text-sm sm:text-base font-semibold text-gray-900">₹{subtotalAmount.toLocaleString()}</span>
+                                </div>
+                                {appliedCoupon?.discountAmount > 0 && (
+                                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                    <span className="text-sm sm:text-base text-green-700">Coupon ({appliedCoupon.code})</span>
+                                    <span className="text-sm sm:text-base font-semibold text-green-700">-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                                  <span className="text-base sm:text-lg font-semibold text-gray-900">To Pay</span>
+                                  <span className="text-base sm:text-xl font-bold text-indigo-600">₹{payableAmount.toLocaleString()}</span>
                                 </div>
                               </div>
                             </div>
@@ -1751,17 +1832,32 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       </span>
                                     </div>
                                   ))}
-                                  <div className="border-t border-gray-200 pt-3">
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
-                                      <div className="mb-2 sm:mb-0">
-                                        <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
-                                        <p className="text-xs sm:text-sm text-gray-600">
-                                          {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
-                                        </p>
+                                  <div className="border-t border-gray-200 pt-3 space-y-2">
+                                    {/* Coupon input */}
+                                    <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                      <div className="flex-1">
+                                        <Input placeholder="Enter coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
                                       </div>
-                                      <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
-                                        ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
-                                      </span>
+                                      <Button variant="outline" onClick={handleApplyCoupon} disabled={couponApplying || !couponCode.trim()}>
+                                        {couponApplying ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...</>) : 'Apply'}
+                                      </Button>
+                                    </div>
+                                    {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+
+                                    {/* Summary rows */}
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                      <span className="text-sm sm:text-base text-gray-700">Subtotal</span>
+                                      <span className="text-sm sm:text-base font-semibold text-gray-900">₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}</span>
+                                    </div>
+                                    {appliedCoupon?.discountAmount > 0 && (
+                                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                        <span className="text-sm sm:text-base text-green-700">Coupon ({appliedCoupon.code})</span>
+                                        <span className="text-sm sm:text-base font-semibold text-green-700">-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                                      <span className="text-base sm:text-lg font-semibold text-gray-900">To Pay</span>
+                                      <span className="text-base sm:text-xl font-bold text-indigo-600">₹{Math.max(0, Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0) - (appliedCoupon?.discountAmount || 0)).toLocaleString()}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -2273,17 +2369,32 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </span>
                             </div>
                           ))}
-                          <div className="border-t border-gray-200 pt-3">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-gray-50 rounded-lg">
-                              <div className="mb-2 sm:mb-0">
-                                <span className="text-base sm:text-lg font-semibold text-gray-900">Grand Total</span>
-                                <p className="text-xs sm:text-sm text-gray-600">
-                                  {Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0)} ticket(s)
-                                </p>
+                          <div className="border-t border-gray-200 pt-3 space-y-2">
+                            {/* Coupon input */}
+                            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                              <div className="flex-1">
+                                <Input placeholder="Enter coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
                               </div>
-                              <span className="text-base sm:text-xl font-bold text-indigo-600 sm:text-right">
-                                ₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}
-                              </span>
+                              <Button variant="outline" onClick={handleApplyCoupon} disabled={couponApplying || !couponCode.trim()}>
+                                {couponApplying ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Applying...</>) : 'Apply'}
+                              </Button>
+                            </div>
+                            {couponError && <p className="text-xs text-red-600">{couponError}</p>}
+
+                            {/* Summary rows */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <span className="text-sm sm:text-base text-gray-700">Subtotal</span>
+                              <span className="text-sm sm:text-base font-semibold text-gray-900">₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}</span>
+                            </div>
+                            {appliedCoupon?.discountAmount > 0 && (
+                              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                <span className="text-sm sm:text-base text-green-700">Coupon ({appliedCoupon.code})</span>
+                                <span className="text-sm sm:text-base font-semibold text-green-700">-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                              <span className="text-base sm:text-lg font-semibold text-gray-900">To Pay</span>
+                              <span className="text-base sm:text-xl font-bold text-indigo-600">₹{Math.max(0, Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0) - (appliedCoupon?.discountAmount || 0)).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
