@@ -36,6 +36,11 @@ const CouponSchema = new mongoose.Schema({
   usedAt: {
     type: Date,
   },
+  generatedBy: {
+    id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    name: { type: String },
+    email: { type: String },
+  },
 });
 
 CouponSchema.index({ code: 1 });

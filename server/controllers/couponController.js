@@ -16,7 +16,7 @@ function generateUniqueCode() {
 
 exports.createCoupon = async (req, res, next) => {
   try {
-    const { eventId, ticketCategory, discountPercentage, expiresAt } = req.body;
+    const { eventId, ticketCategory, discountPercentage, expiresAt, generatedBy } = req.body;
 
     if (!eventId || !ticketCategory || discountPercentage === undefined) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -55,6 +55,11 @@ exports.createCoupon = async (req, res, next) => {
       ticketCategory,
       discountPercentage,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+      generatedBy: generatedBy ? {
+        id: generatedBy.id || undefined,
+        name: generatedBy.name || undefined,
+        email: generatedBy.email || undefined,
+      } : undefined,
     });
 
     res.status(201).json(coupon);
@@ -65,9 +70,24 @@ exports.createCoupon = async (req, res, next) => {
 
 exports.getCoupons = async (req, res, next) => {
   try {
-    const { status } = req.query;
+    const { status, code, eventName, eventId, ticketCategory, generatedBy, from, to } = req.query;
     const filter = {};
     if (status) filter.status = status;
+    if (code) filter.code = { $regex: String(code).trim(), $options: 'i' };
+    if (eventId) filter['event.id'] = eventId;
+    if (eventName) filter['event.name'] = { $regex: String(eventName).trim(), $options: 'i' };
+    if (ticketCategory) filter.ticketCategory = { $regex: String(ticketCategory).trim(), $options: 'i' };
+    if (generatedBy) {
+      filter.$or = [
+        { 'generatedBy.name': { $regex: String(generatedBy).trim(), $options: 'i' } },
+        { 'generatedBy.email': { $regex: String(generatedBy).trim(), $options: 'i' } }
+      ];
+    }
+    if (from || to) {
+      filter.createdAt = {};
+      if (from) filter.createdAt.$gte = new Date(from);
+      if (to) filter.createdAt.$lte = new Date(to);
+    }
     const coupons = await Coupon.find(filter).sort({ createdAt: -1 });
     res.json(coupons);
   } catch (err) {
