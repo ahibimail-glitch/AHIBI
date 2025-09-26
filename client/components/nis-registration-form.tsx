@@ -218,9 +218,16 @@ export function RegistrationForm() {
           formData.nagalandResident
         )
       case 2:
-        return formData.platforms.length > 0 && formData.totalFollowers >= 4000
+        return formData.platforms.length > 0 && 
+               formData.totalFollowers >= 4000 &&
+               formData.platforms.every(platform => 
+                 platform.engagementRate !== undefined && 
+                 platform.engagementRate > 0 && 
+                 platform.engagementRate <= 100
+               )
       case 3:
-        return formData.topContent.length >= 3
+        return formData.topContent.length >= 3 && 
+               (formData.analyticsFile !== undefined || (formData as any).analyticsFileUrl !== undefined)
       case 4:
         const hasContentNiches = formData.contentNiches.length > 0
         const hasCustomNiches = !formData.contentNiches.includes("others") || formData.customNiches.length > 0
