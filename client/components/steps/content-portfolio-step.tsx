@@ -304,7 +304,7 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            Analytics Upload
+            Analytics Upload <span className="text-destructive">*</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">1-year analytics report required (PDF)</p>
         </CardHeader>
@@ -312,7 +312,11 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
           {/* Upload Area */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/25"
+              isDragging 
+                ? "border-primary bg-primary/10" 
+                : showErrors && !formData.analyticsFile && !(formData as any).analyticsFileUrl 
+                  ? "border-destructive" 
+                  : "border-muted-foreground/25"
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -323,6 +327,9 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
               {formData.analyticsFile ? formData.analyticsFile.name : (formData as any).analyticsFileUrl ? 'PDF uploaded' : "Drop your analytics PDF here"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">or click to browse files (Max 100MB)</p>
+            {showErrors && !formData.analyticsFile && !(formData as any).analyticsFileUrl && (
+              <p className="text-xs text-destructive mt-2">Analytics report is required</p>
+            )}
             <input
               type="file"
               accept=".pdf"
