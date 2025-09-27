@@ -12,11 +12,13 @@ import { Progress } from "@/components/ui/progress"
 import { Plus, X, Upload, FileText, Eye, Heart, Share, MessageCircle, ExternalLink } from "lucide-react"
 import type { FormData } from "../nis-registration-form"
 
+import { Dispatch, SetStateAction } from 'react'
+
 interface ContentPortfolioStepProps {
   formData: FormData
   updateFormData: (updates: Partial<FormData>) => void
   showErrors?: boolean
-  onUploadStatusChange?: (isUploading: boolean) => void
+  onUploadStatusChange?: Dispatch<SetStateAction<boolean>>
 }
 
 const contentTypes = ["Video", "Image", "Carousel", "Story", "Reel", "Post", "Article", "Live Stream"]
@@ -437,5 +439,3 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors, onU
         </CardContent>
       </Card>
     </div>
-  )
-}
