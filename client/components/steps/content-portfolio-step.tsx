@@ -439,3 +439,5 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors, onU
         </CardContent>
       </Card>
     </div>
+  )
+}
