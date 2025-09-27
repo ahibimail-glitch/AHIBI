@@ -51,6 +51,7 @@ import AnnieFailedBookings from "./components/AnnieFailedBookings";
 import NISRegistrations from "./components/NISRegistrations";
 import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
+// import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -168,6 +169,8 @@ export default function AdminDashboard() {
         return <BikerBash />;
       case "coupons":
         return <Coupons />;
+      // case "aiko-hall":
+      //   return <AikoHallManagement />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -256,6 +259,7 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
           <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => setActiveView("coupons")} />
+          {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => setActiveView("aiko-hall")} /> */}
           <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => setActiveView("create-event")} />
           <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => setActiveView("hero-images")} />
           <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => setActiveView("analytics")} />

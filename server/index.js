@@ -28,6 +28,7 @@ const annieMusicalRoutes = require('./routes/annieMusicalRoutes');
 const nisRegistrationRoutes = require('./routes/nisRegistration.routes');
 const bikerBashRoutes = require('./routes/bikerBash.routes');
 const couponRoutes = require('./routes/coupon.routes');
+const aikoHallRoutes = require('./routes/aikoHall.routes');
 
 
 
@@ -120,6 +121,7 @@ app.use('/api/annie-musical', annieMusicalRoutes);
 app.use('/api/nis/registrations', nisRegistrationRoutes);
 app.use('/api/admin/bikerbash', bikerBashRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/aiko', aikoHallRoutes);
 
 // Root route
 app.get('/', (req, res) => {
