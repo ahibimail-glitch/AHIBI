@@ -81,7 +81,7 @@ const MelitaProductsPage = () => {
     ];
 
 
-    const toggleFavorite = (productId) => {
+    const toggleFavorite = (productId: number) => {
         const newFavorites = new Set(favorites);
         if (newFavorites.has(productId)) {
             newFavorites.delete(productId);
@@ -91,11 +91,11 @@ const MelitaProductsPage = () => {
         setFavorites(newFavorites);
     };
 
-    const addToCart = (product) => {
-        setCart([...cart, product]);
+    const addToCart = (product: any) => {
+        // setCart([...cart, product]);
     };
 
-    const renderStars = (rating) => {
+    const renderStars = (rating: any) => {
         return Array.from({ length: 5 }, (_, i) => (
             <Star
                 key={i}
