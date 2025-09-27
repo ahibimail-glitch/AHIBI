@@ -105,6 +105,7 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showErrors, setShowErrors] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const totalSteps = 5
 
   // Auto-save to localStorage
@@ -196,7 +197,14 @@ export function RegistrationForm() {
       case 2:
         return <SocialMediaStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 3:
-        return <ContentPortfolioStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
+        return (
+          <ContentPortfolioStep 
+            formData={formData} 
+            updateFormData={updateFormData} 
+            showErrors={showErrors} 
+            onUploadStatusChange={setIsUploading}
+          />
+        )
       case 4:
         return <CategoryExperienceStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 5:
@@ -328,8 +336,12 @@ export function RegistrationForm() {
             {isSubmitting ? 'Submitting...' : 'Submit Application'}
           </Button>
         ) : (
-          <Button onClick={nextStep} className="gradient-primary flex items-center gap-2">
-            Next
+          <Button 
+            onClick={nextStep} 
+            className="gradient-primary flex items-center gap-2"
+            disabled={isUploading || (currentStep === 3 && !formData.analyticsFileUrl)}
+          >
+            {isUploading ? 'Uploading...' : 'Next'}
             <ChevronRight className="w-4 h-4" />
           </Button>
         )}
