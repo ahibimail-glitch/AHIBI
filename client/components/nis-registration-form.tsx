@@ -105,6 +105,7 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showErrors, setShowErrors] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const totalSteps = 5
 
   // Auto-save to localStorage
@@ -196,7 +197,14 @@ export function RegistrationForm() {
       case 2:
         return <SocialMediaStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 3:
-        return <ContentPortfolioStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
+        return (
+          <ContentPortfolioStep 
+            formData={formData} 
+            updateFormData={updateFormData} 
+            showErrors={showErrors} 
+            onUploadStatusChange={setIsUploading}
+          />
+        )
       case 4:
         return <CategoryExperienceStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 5:
@@ -218,9 +226,16 @@ export function RegistrationForm() {
           formData.nagalandResident
         )
       case 2:
-        return formData.platforms.length > 0 && formData.totalFollowers >= 4000
+        return formData.platforms.length > 0 && 
+               formData.totalFollowers >= 4000 &&
+               formData.platforms.every(platform => 
+                 platform.engagementRate !== undefined && 
+                 platform.engagementRate > 0 && 
+                 platform.engagementRate <= 100
+               )
       case 3:
-        return formData.topContent.length >= 3
+        return formData.topContent.length >= 3 && 
+               (formData.analyticsFile !== undefined || (formData as any).analyticsFileUrl !== undefined)
       case 4:
         const hasContentNiches = formData.contentNiches.length > 0
         const hasCustomNiches = !formData.contentNiches.includes("others") || formData.customNiches.length > 0
@@ -321,8 +336,12 @@ export function RegistrationForm() {
             {isSubmitting ? 'Submitting...' : 'Submit Application'}
           </Button>
         ) : (
-          <Button onClick={nextStep} className="gradient-primary flex items-center gap-2">
-            Next
+          <Button 
+            onClick={nextStep} 
+            className="gradient-primary flex items-center gap-2"
+            disabled={isUploading || (currentStep === 3 && !formData.analyticsFileUrl)}
+          >
+            {isUploading ? 'Uploading...' : 'Next'}
             <ChevronRight className="w-4 h-4" />
           </Button>
         )}

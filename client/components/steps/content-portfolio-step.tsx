@@ -12,20 +12,24 @@ import { Progress } from "@/components/ui/progress"
 import { Plus, X, Upload, FileText, Eye, Heart, Share, MessageCircle, ExternalLink } from "lucide-react"
 import type { FormData } from "../nis-registration-form"
 
+import { Dispatch, SetStateAction } from 'react'
+
 interface ContentPortfolioStepProps {
   formData: FormData
   updateFormData: (updates: Partial<FormData>) => void
   showErrors?: boolean
+  onUploadStatusChange?: Dispatch<SetStateAction<boolean>>
 }
 
 const contentTypes = ["Video", "Image", "Carousel", "Story", "Reel", "Post", "Article", "Live Stream"]
 
 const platforms = ["Instagram", "YouTube", "Facebook", "TikTok", "Twitter", "LinkedIn", "Other"]
 
-export function ContentPortfolioStep({ formData, updateFormData, showErrors }: ContentPortfolioStepProps) {
+export function ContentPortfolioStep({ formData, updateFormData, showErrors, onUploadStatusChange }: ContentPortfolioStepProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const addContent = () => {
     const newContent = {
@@ -68,6 +72,9 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
       return
     }
 
+    setIsUploading(true)
+    onUploadStatusChange?.(true)
+
     // Upload to API
     try {
       setUploadError(null)
@@ -96,9 +103,13 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
       setUploadProgress(100)
       // Store URL; do not keep File in state to simplify submission
       updateFormData({ analyticsFile: undefined, analyticsFileUrl: url as any })
+      setIsUploading(false)
+      onUploadStatusChange?.(false)
     } catch (e: any) {
       setUploadProgress(0)
       setUploadError(e?.message || 'Upload failed')
+      setIsUploading(false)
+      onUploadStatusChange?.(false)
     }
   }
 
@@ -304,7 +315,7 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            Analytics Upload
+            Analytics Upload <span className="text-destructive">*</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">1-year analytics report required (PDF)</p>
         </CardHeader>
@@ -312,7 +323,11 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
           {/* Upload Area */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/25"
+              isDragging 
+                ? "border-primary bg-primary/10" 
+                : showErrors && !formData.analyticsFile && !(formData as any).analyticsFileUrl 
+                  ? "border-destructive" 
+                  : "border-muted-foreground/25"
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -322,7 +337,10 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
             <p className="text-lg font-medium mb-2">
               {formData.analyticsFile ? formData.analyticsFile.name : (formData as any).analyticsFileUrl ? 'PDF uploaded' : "Drop your analytics PDF here"}
             </p>
-            <p className="text-sm text-muted-foreground mb-4">or click to browse files (Max 100MB)</p>
+            <p className="text-sm text-muted-foreground mb-4">or click to browse files (Max 10MB)</p>
+            {showErrors && !formData.analyticsFile && !(formData as any).analyticsFileUrl && (
+              <p className="text-xs text-destructive mt-2">Analytics report is required</p>
+            )}
             <input
               type="file"
               accept=".pdf"
@@ -421,5 +439,3 @@ export function ContentPortfolioStep({ formData, updateFormData, showErrors }: C
         </CardContent>
       </Card>
     </div>
-  )
-}
