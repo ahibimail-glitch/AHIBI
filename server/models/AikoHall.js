@@ -133,6 +133,10 @@ const AikoHallSchema = new mongoose.Schema({
     minBookingHours: {
       type: Number,
       default: 6
+    },
+    pricePerHour: {
+      type: Number,
+      default: 2000 // Default price per hour
     }
   },
   // Statistics

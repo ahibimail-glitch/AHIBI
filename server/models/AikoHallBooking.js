@@ -1,23 +1,11 @@
 const mongoose = require('mongoose');
 
 const AikoHallBookingSchema = new mongoose.Schema({
-  // Customer information
-  customer: {
-    name: {
-      type: String,
-      required: [true, 'Customer name is required'],
-      trim: true
-    },
-    phone: {
-      type: String,
-      required: [true, 'Phone number is required'],
-      match: [/^\d{10}$/, 'Please enter a valid 10-digit phone number']
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
-    }
+  // User information
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   // Booking details
   bookingDate: {

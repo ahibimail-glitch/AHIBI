@@ -1,6 +1,8 @@
 
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
+import { useAuth } from "../../../hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +31,8 @@ import {
   Award,
   Shield,
   Gift,
-  Heart
+  Heart,
+  Download
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -69,6 +72,9 @@ interface AikoHallData {
   advancePayment: boolean;
   bookingTerms: string;
   notes: string;
+  adminSettings: {
+    pricePerHour: number;
+  };
 }
 
 interface Booking {
@@ -89,53 +95,21 @@ const venueImages = [
 ];
 
 export default function AikoHallPage() {
-  const [aikoHallData, setAikoHallData] = useState<AikoHallData | null>({
-    name: "Aiko Hall",
-    address: {
-      street: "Near City Center",
-      city: "Dimapur",
-      state: "Nagaland",
-      pincode: "797112"
-    },
-    contactPerson: {
-      name: "Mr. Rajesh Kumar",
-      phone: ["+91-9876543210", "+91-8765432109"],
-      email: "contact@aikohall.com"
-    },
-    venueType: ["Banquet", "Wedding", "Corporate"],
-    venueCategory: "Premium",
-    maxCapacity: 250,
-    minBookingHours: 4,
-    facilities: {
-      inHouseCatering: true,
-      parking: true,
-      soundSystem: true,
-      stage: true,
-      powerBackup: true,
-      accommodation: false,
-      airConditioned: true,
-    },
-    inHouseEventManager: true,
-    externalVendorsAllowed: true,
-    marketingWithAhibi: true,
-    advancePayment: true,
-    bookingTerms: "50% advance payment required",
-    notes: "One of the finest venues in Dimapur"
-  });
+  const [aikoHallData, setAikoHallData] = useState<AikoHallData | null>(null);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [finalBookingDetails, setFinalBookingDetails] = useState<any>(null);
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
   // Booking form state
   const [bookingForm, setBookingForm] = useState({
-    customer: {
-      name: "",
-      phone: "",
-      email: ""
-    },
     startTime: "",
     endTime: "",
     guestCount: "",
@@ -143,14 +117,41 @@ export default function AikoHallPage() {
   });
 
   useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    const fetchAikoHallData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/aiko');
+        const data = await response.json();
+        if (data.success) {
+          setAikoHallData(data.data);
+        } else {
+          toast.error('Failed to load venue data.');
+        }
+      } catch (error) {
+        toast.error('An error occurred while fetching venue data.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAikoHallData();
+    fetchBookings();
+
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % venueImages.length);
     }, 5000);
-    
-    // Fetch bookings on component mount
-    fetchBookings();
-    
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
   }, []);
 
   // Fetch bookings from API
@@ -194,6 +195,35 @@ export default function AikoHallPage() {
     airConditioned: Snowflake,
   };
 
+  const handleDownloadInvoice = () => {
+    if (!finalBookingDetails) return;
+
+    const invoiceContent = `
+      Aiko Hall - Booking Invoice
+      =============================
+      Booking ID: ${finalBookingDetails._id}
+      Date: ${format(new Date(finalBookingDetails.bookingDate), 'PPP')}
+      Time: ${finalBookingDetails.startTime} - ${finalBookingDetails.endTime}
+      Guests: ${finalBookingDetails.guestCount}
+      
+      Total Amount Paid: INR ${finalBookingDetails.pricing.totalAmount}
+      Payment Status: ${finalBookingDetails.pricing.paymentStatus}
+      Payment ID: ${finalBookingDetails.paymentDetails.paymentId}
+      
+      Thank you for booking with Aiko Hall!
+    `;
+
+    const blob = new Blob([invoiceContent.trim()], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AikoHall-Invoice-${finalBookingDetails._id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getUnavailableDates = () => {
     const unavailableDates: Date[] = [];
     bookings.forEach(booking => {
@@ -206,57 +236,119 @@ export default function AikoHallPage() {
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (!user) {
+      toast.error('You must be logged in to book.');
+      router.push('/auth');
+      return;
+    }
 
     if (!selectedDate) {
-      toast.error('Please select a booking date');
+      setFormError('Please select a booking date.');
       return;
     }
-
     if (!bookingForm.startTime || !bookingForm.endTime) {
-      toast.error('Please select start and end times');
+      setFormError('Please select both start and end times.');
       return;
     }
-
-    if (parseInt(bookingForm.guestCount) > (aikoHallData?.maxCapacity || 250)) {
-      toast.error(`Guest count cannot exceed ${aikoHallData?.maxCapacity || 250}`);
+    if (bookingForm.startTime >= bookingForm.endTime) {
+      setFormError('End time must be after start time.');
+      return;
+    }
+    if (!bookingForm.guestCount || parseInt(bookingForm.guestCount) <= 0) {
+      setFormError('Please enter a valid number of guests.');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const response = await fetch('/api/aiko/bookings', {
+      const orderResponse = await fetch('/api/aiko/bookings/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          ...bookingForm,
           bookingDate: selectedDate.toISOString().split('T')[0],
-          guestCount: parseInt(bookingForm.guestCount)
+          startTime: bookingForm.startTime,
+          endTime: bookingForm.endTime,
+          guestCount: parseInt(bookingForm.guestCount),
         }),
       });
 
-      const data = await response.json();
+      const order = await orderResponse.json();
 
-      if (data.success) {
-        toast.success('Booking request submitted successfully!');
-        setBookingForm({
-          customer: { name: "", phone: "", email: "" },
-          startTime: "",
-          endTime: "",
-          guestCount: "",
-          specialNotes: ""
-        });
-        setSelectedDate(undefined);
-        // Refresh bookings to update availability
-        fetchBookings();
-      } else {
-        toast.error(data.message || 'Failed to submit booking');
+      if (!orderResponse.ok) {
+        throw new Error(order.message || 'Failed to create order.');
       }
-    } catch (error) {
-      console.error('Error submitting booking:', error);
-      toast.error('Failed to submit booking. Please try again.');
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Aiko Hall Booking',
+        description: `Booking for ${format(selectedDate, 'PPP')}`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          const verificationResponse = await fetch('/api/aiko/bookings/verify-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              bookingDetails: {
+                ...bookingForm,
+                bookingDate: selectedDate.toISOString().split('T')[0],
+                guestCount: parseInt(bookingForm.guestCount),
+                amount: order.amount,
+                durationHours: order.notes.durationHours
+              }
+            }),
+          });
+
+          const verificationData = await verificationResponse.json();
+
+          if (verificationData.success) {
+            toast.success('Booking confirmed!');
+            setFinalBookingDetails(verificationData.data);
+            setBookingSuccess(true);
+            fetchBookings(); // Refresh calendar
+          } else {
+            toast.error(verificationData.message || 'Payment verification failed.');
+            setFormError('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone,
+        },
+        notes: {
+          address: 'Aiko Hall, Dimapur'
+        },
+        theme: {
+          color: '#8A2BE2'
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
+      rzp.on('payment.failed', function (response: any) {
+        toast.error('Payment failed. Please try again.');
+        setFormError(`Payment failed: ${response.error.description}`);
+      });
+
+    } catch (error: any) {
+      console.error('Booking process error:', error);
+      setFormError(error.message || 'An unexpected error occurred.');
+      toast.error(error.message || 'An error occurred during the booking process.');
     } finally {
       setSubmitting(false);
     }
@@ -286,6 +378,10 @@ export default function AikoHallPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+
+      {/* Navbar Section */}
+      <Navbar className="bg-transparent fixed w-full z-50" />
+
       {/* Hero Section with Image Carousel */}
       <div className="relative h-[60vh] md:h-[70vh] overflow-hidden">
         <div className="absolute inset-0">
@@ -296,7 +392,6 @@ export default function AikoHallPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         </div>
-        <Navbar />
 
         {/* Navigation Buttons */}
         <button
@@ -318,8 +413,7 @@ export default function AikoHallPage() {
             <button
               key={index}
               onClick={() => setCurrentImageIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                }`}
+              className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentImageIndex ? 'bg-white' : 'bg-white/50'}`}
             />
           ))}
         </div>
@@ -350,6 +444,7 @@ export default function AikoHallPage() {
           </div>
         </div>
       </div>
+
 
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -384,6 +479,16 @@ export default function AikoHallPage() {
                   </div>
                   <h3 className="font-semibold text-gray-800 mb-2">Min Duration</h3>
                   <p className="text-sm text-gray-600">{aikoHallData.minBookingHours} hours minimum</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                <CardContent className="p-6 text-center">
+                  <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <Zap className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="font-semibold text-gray-800 mb-2">Price</h3>
+                  <p className="text-sm text-gray-600">₹{aikoHallData.adminSettings.pricePerHour}/hour</p>
                 </CardContent>
               </Card>
             </div>
@@ -566,7 +671,18 @@ export default function AikoHallPage() {
                       const unavailableDates = getUnavailableDates();
                       return unavailableDates.some(unavailableDate =>
                         date.toDateString() === unavailableDate.toDateString()
-                      ) || date < new Date();
+                      ) || date < new Date(new Date().setHours(0, 0, 0, 0));
+                    }}
+                    modifiers={{
+                      unavailable: getUnavailableDates(),
+                      past: date => date < new Date(new Date().setHours(0, 0, 0, 0)),
+                      available: date => date >= new Date(new Date().setHours(0, 0, 0, 0)) && !getUnavailableDates().some(unavailableDate => unavailableDate.toDateString() === date.toDateString()),
+                    }}
+                    modifiersClassNames={{
+                      unavailable: 'bg-red-200 text-red-900 cursor-not-allowed opacity-60',
+                      past: 'text-gray-400 cursor-not-allowed opacity-50',
+                      available: 'text-green-600',
+                      today: 'bg-blue-200 text-blue-900',
                     }}
                     className="rounded-md"
                   />
@@ -585,7 +701,7 @@ export default function AikoHallPage() {
               </CardContent>
             </Card>
 
-            {/* Booking Form */}
+            {/* Booking Section */}
             {selectedDate && (
               <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader>
@@ -595,136 +711,60 @@ export default function AikoHallPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleBookingSubmit} className="space-y-4">
-                    <div className="space-y-4">
-                      {/* Customer Information */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Full Name *</Label>
-                          <Input
-                            id="name"
-                            value={bookingForm.customer.name}
-                            onChange={(e) => setBookingForm({
-                              ...bookingForm,
-                              customer: { ...bookingForm.customer, name: e.target.value }
-                            })}
-                            className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">Phone Number *</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={bookingForm.customer.phone}
-                            onChange={(e) => setBookingForm({
-                              ...bookingForm,
-                              customer: { ...bookingForm.customer, phone: e.target.value }
-                            })}
-                            className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                            required
-                          />
-                        </div>
+                  {bookingSuccess ? (
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                      <h3 className="text-2xl font-bold text-gray-800">Booking Confirmed!</h3>
+                      <p className="text-gray-600 mt-2 mb-6">Your invoice has been generated.</p>
+                      
+                      <div className="text-left space-y-2 text-gray-700 mb-6 bg-white p-4 rounded-md border">
+                        <p><strong>Booking ID:</strong> {finalBookingDetails?._id}</p>
+                        <p><strong>Date:</strong> {format(new Date(finalBookingDetails?.bookingDate), 'PPP')}</p>
+                        <p><strong>Time:</strong> {finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</p>
+                        <p><strong>Guests:</strong> {finalBookingDetails?.guestCount}</p>
+                        <p><strong>Total Paid:</strong> ₹{finalBookingDetails?.pricing?.totalAmount}</p>
                       </div>
 
-                      <div>
-                        <Label htmlFor="email" className="text-sm font-semibold text-gray-700">Email Address *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={bookingForm.customer.email}
-                          onChange={(e) => setBookingForm({
-                            ...bookingForm,
-                            customer: { ...bookingForm.customer, email: e.target.value }
-                          })}
-                          className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                          required
-                        />
-                      </div>
-
-                      {/* Time Selection */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="startTime" className="text-sm font-semibold text-gray-700">Start Time *</Label>
-                          <Input
-                            id="startTime"
-                            type="time"
-                            value={bookingForm.startTime}
-                            onChange={(e) => setBookingForm({
-                              ...bookingForm,
-                              startTime: e.target.value
-                            })}
-                            className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="endTime" className="text-sm font-semibold text-gray-700">End Time *</Label>
-                          <Input
-                            id="endTime"
-                            type="time"
-                            value={bookingForm.endTime}
-                            onChange={(e) => setBookingForm({
-                              ...bookingForm,
-                              endTime: e.target.value
-                            })}
-                            className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="guestCount" className="text-sm font-semibold text-gray-700">Number of Guests *</Label>
-                        <Input
-                          id="guestCount"
-                          type="number"
-                          min="1"
-                          max={aikoHallData.maxCapacity}
-                          value={bookingForm.guestCount}
-                          onChange={(e) => setBookingForm({
-                            ...bookingForm,
-                            guestCount: e.target.value
-                          })}
-                          className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Maximum: {aikoHallData.maxCapacity} guests
-                        </p>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="specialNotes" className="text-sm font-semibold text-gray-700">Special Notes (Optional)</Label>
-                        <Textarea
-                          id="specialNotes"
-                          value={bookingForm.specialNotes}
-                          onChange={(e) => setBookingForm({
-                            ...bookingForm,
-                            specialNotes: e.target.value
-                          })}
-                          rows={3}
-                          className="mt-2 border-2 border-gray-200 focus:border-purple-500"
-                        />
-                      </div>
+                      <Button
+                        onClick={handleDownloadInvoice}
+                        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                      >
+                        <Download className="h-5 w-5 mr-2" />
+                        Download Invoice
+                      </Button>
                     </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                      disabled={submitting}
-                    >
-                      {submitting ? (
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Submitting...
+                  ) : (
+                    <form onSubmit={handleBookingSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="startTime">Start Time *</Label>
+                          <Input id="startTime" type="time" value={bookingForm.startTime} onChange={(e) => setBookingForm({ ...bookingForm, startTime: e.target.value })} required />
                         </div>
-                      ) : (
-                        'Submit Booking Request'
+                        <div>
+                          <Label htmlFor="endTime">End Time *</Label>
+                          <Input id="endTime" type="time" value={bookingForm.endTime} onChange={(e) => setBookingForm({ ...bookingForm, endTime: e.target.value })} required />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="guestCount">Number of Guests *</Label>
+                        <Input id="guestCount" type="number" min="1" max={aikoHallData.maxCapacity} value={bookingForm.guestCount} onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })} required />
+                      </div>
+                      <div>
+                        <Label htmlFor="specialNotes">Special Notes</Label>
+                        <Textarea id="specialNotes" value={bookingForm.specialNotes} onChange={(e) => setBookingForm({ ...bookingForm, specialNotes: e.target.value })} />
+                      </div>
+
+                      {formError && (
+                        <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg">
+                          <span className="font-medium">Error:</span> {formError}
+                        </div>
                       )}
-                    </Button>
-                  </form>
+
+                      <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3" disabled={submitting || authLoading}>
+                        {submitting ? 'Processing...' : 'Book and Pay Now'}
+                      </Button>
+                    </form>
+                  )}
                 </CardContent>
               </Card>
             )}

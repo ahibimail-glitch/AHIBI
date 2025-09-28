@@ -5,6 +5,7 @@ import Script from "next/script"
 import "./globals.css"
 import FloatingWhatsapp from "@/components/ui/FloatingWhatsapp"
 import { VenueAuthProvider } from "@/hooks/useVenueAuth"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -81,6 +82,7 @@ export default function RootLayout({
             />
           </noscript>
         </VenueAuthProvider>
+        <Toaster />
       </body>
     </html>
   )

@@ -59,6 +59,7 @@ interface AikoHallData {
     facilities: any;
     terms: string;
     minBookingHours: number;
+    pricePerHour: number;
   };
   totalBookings: number;
   totalRevenue: number;
@@ -66,7 +67,7 @@ interface AikoHallData {
 
 interface Booking {
   _id: string;
-  customer: {
+  user: {
     name: string;
     phone: string;
     email: string;
@@ -94,6 +95,24 @@ interface BookingStats {
   upcomingBookings: number;
 }
 
+interface SettingsForm {
+  capacity: number;
+  minBookingHours: number;
+  pricePerHour: number;
+  terms: string;
+  contactPerson: { name: string; phone: string[] };
+  address: { street: string };
+  facilities: {
+    inHouseCatering: boolean;
+    parking: boolean;
+    soundSystem: boolean;
+    stage: boolean;
+    powerBackup: boolean;
+    accommodation: boolean;
+    airConditioned: boolean;
+  };
+}
+
 export default function AikoHallManagement() {
   const [aikoHallData, setAikoHallData] = useState<AikoHallData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -108,10 +127,13 @@ export default function AikoHallManagement() {
   const [updating, setUpdating] = useState(false);
 
   // Settings form state
-  const [settingsForm, setSettingsForm] = useState({
+  const [settingsForm, setSettingsForm] = useState<SettingsForm>({
     capacity: 250,
     minBookingHours: 6,
+    pricePerHour: 2000,
     terms: "",
+    contactPerson: { name: '', phone: [] as string[] },
+    address: { street: '' },
     facilities: {
       inHouseCatering: true,
       parking: true,
@@ -163,8 +185,11 @@ export default function AikoHallManagement() {
         setSettingsForm({
           capacity: data.data.adminSettings.capacity,
           minBookingHours: data.data.adminSettings.minBookingHours,
+          pricePerHour: data.data.adminSettings.pricePerHour,
           terms: data.data.adminSettings.terms,
-          facilities: data.data.adminSettings.facilities
+          facilities: data.data.adminSettings.facilities,
+          contactPerson: data.data.contactPerson,
+          address: data.data.address
         });
       }
     } catch (error) {
@@ -275,9 +300,9 @@ export default function AikoHallManagement() {
     const csvContent = [
       ['Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time', 'Duration', 'Guests', 'Status', 'Booked At'].join(','),
       ...bookings.map(booking => [
-        booking.customer.name,
-        booking.customer.phone,
-        booking.customer.email,
+        booking.user?.name || 'N/A',
+        booking.user?.phone || 'N/A',
+        booking.user?.email || 'N/A',
         format(new Date(booking.bookingDate), 'yyyy-MM-dd'),
         booking.startTime,
         booking.endTime,
@@ -311,9 +336,10 @@ export default function AikoHallManagement() {
   };
 
   const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = booking.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.customer.phone.includes(searchTerm);
+    const matchesSearch = (booking.user?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (booking.user?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (booking.user?.phone || '').includes(searchTerm);
+
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -346,84 +372,69 @@ export default function AikoHallManagement() {
                 Settings
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl">
               <DialogHeader>
                 <DialogTitle>Venue Settings</DialogTitle>
                 <DialogDescription>
-                  Update Aiko Hall configuration and terms
+                  Update all details for Aiko Hall.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="capacity">Maximum Capacity</Label>
-                    <Input
-                      id="capacity"
-                      type="number"
-                      value={settingsForm.capacity}
-                      onChange={(e) => setSettingsForm({
-                        ...settingsForm,
-                        capacity: parseInt(e.target.value)
-                      })}
-                    />
+              <div className="space-y-6 max-h-[70vh] overflow-y-auto p-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-medium text-lg border-b pb-2">Core Details</h4>
+                    <div>
+                      <Label htmlFor="capacity">Maximum Capacity</Label>
+                      <Input id="capacity" type="number" value={settingsForm.capacity} onChange={(e) => setSettingsForm({ ...settingsForm, capacity: parseInt(e.target.value) })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="minHours">Minimum Booking Hours</Label>
+                      <Input id="minHours" type="number" value={settingsForm.minBookingHours} onChange={(e) => setSettingsForm({ ...settingsForm, minBookingHours: parseInt(e.target.value) })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="pricePerHour">Price Per Hour (INR)</Label>
+                      <Input id="pricePerHour" type="number" value={settingsForm.pricePerHour} onChange={(e) => setSettingsForm({ ...settingsForm, pricePerHour: parseInt(e.target.value) })} />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="minHours">Minimum Booking Hours</Label>
-                    <Input
-                      id="minHours"
-                      type="number"
-                      value={settingsForm.minBookingHours}
-                      onChange={(e) => setSettingsForm({
-                        ...settingsForm,
-                        minBookingHours: parseInt(e.target.value)
-                      })}
-                    />
+
+                  <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-medium text-lg border-b pb-2">Contact & Address</h4>
+                    <div>
+                      <Label>Contact Person Name</Label>
+                      <Input value={settingsForm.contactPerson.name} onChange={(e) => setSettingsForm({ ...settingsForm, contactPerson: { ...settingsForm.contactPerson, name: e.target.value }})} />
+                    </div>
+                    <div>
+                      <Label>Contact Phone (comma-separated)</Label>
+                      <Input value={settingsForm.contactPerson.phone.join(', ')} onChange={(e) => setSettingsForm({ ...settingsForm, contactPerson: { ...settingsForm.contactPerson, phone: e.target.value.split(',').map(p => p.trim()) }})} />
+                    </div>
+                     <div>
+                      <Label>Street</Label>
+                      <Input value={settingsForm.address.street} onChange={(e) => setSettingsForm({ ...settingsForm, address: { ...settingsForm.address, street: e.target.value }})} />
+                    </div>
                   </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="terms">Booking Terms</Label>
-                  <Textarea
-                    id="terms"
-                    value={settingsForm.terms}
-                    onChange={(e) => setSettingsForm({
-                      ...settingsForm,
-                      terms: e.target.value
-                    })}
-                    rows={4}
-                  />
                 </div>
 
                 <div>
                   <Label>Facilities</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2 p-4 border rounded-lg">
                     {Object.entries(settingsForm.facilities).map(([key, value]) => (
                       <label key={key} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={value}
-                          onChange={(e) => setSettingsForm({
-                            ...settingsForm,
-                            facilities: {
-                              ...settingsForm.facilities,
-                              [key]: e.target.checked
-                            }
-                          })}
-                        />
-                        <span className="text-sm capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
+                        <input type="checkbox" checked={value} onChange={(e) => setSettingsForm({ ...settingsForm, facilities: { ...settingsForm.facilities, [key]: e.target.checked }})} />
+                        <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>
-                    Cancel
-                  </Button>
+                <div>
+                  <Label htmlFor="terms">Booking Terms & Notes</Label>
+                  <Textarea id="terms" value={settingsForm.terms} onChange={(e) => setSettingsForm({ ...settingsForm, terms: e.target.value })} rows={4} />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setShowSettingsDialog(false)}>Cancel</Button>
                   <Button onClick={handleUpdateSettings} disabled={updating}>
-                    {updating ? 'Updating...' : 'Update Settings'}
+                    {updating ? 'Updating...' : 'Save All Settings'}
                   </Button>
                 </div>
               </div>
@@ -568,9 +579,9 @@ export default function AikoHallManagement() {
                       <TableRow key={booking._id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{booking.customer.name}</div>
-                            <div className="text-sm text-gray-500">{booking.customer.phone}</div>
-                            <div className="text-sm text-gray-500">{booking.customer.email}</div>
+                            <div className="font-medium">{booking.user?.name || 'Unknown User'}</div>
+                            <div className="text-sm text-gray-500">{booking.user?.phone || 'No phone'}</div>
+                            <div className="text-sm text-gray-500">{booking.user?.email || 'No email'}</div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -646,8 +657,8 @@ export default function AikoHallManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Customer</Label>
-                  <p className="text-sm font-medium">{selectedBooking.customer.name}</p>
-                  <p className="text-sm text-gray-500">{selectedBooking.customer.phone}</p>
+                  <p className="text-sm font-medium">{selectedBooking.user?.name || 'Unknown User'}</p>
+                  <p className="text-sm text-gray-500">{selectedBooking.user?.phone || 'No phone'}</p>
                 </div>
                 <div>
                   <Label>Event Details</Label>
