@@ -11,6 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   CalendarIcon,
   MapPin,
   Phone,
@@ -86,6 +93,20 @@ interface Booking {
 }
 
 // Mock images for the carousel - replace with actual venue images
+// Generate time options for dropdowns (e.g., 9:00 AM to 9:00 PM)
+const generateTimeOptions = () => {
+  const times = [];
+  for (let i = 0; i < 24; i++) {
+    const time = `${String(i).padStart(2, '0')}:00`;
+    const h = i % 12 || 12;
+    const ampm = i < 12 ? 'AM' : 'PM';
+    times.push({ value: time, label: `${h}:00 ${ampm}` });
+  }
+  return times;
+};
+
+const availableTimes = generateTimeOptions();
+
 const venueImages = [
   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2098&q=80",
   "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80",
@@ -105,6 +126,7 @@ export default function AikoHallPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [finalBookingDetails, setFinalBookingDetails] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -235,6 +257,13 @@ export default function AikoHallPage() {
   };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
+    // Function to format the date as YYYY-MM-DD in the local timezone
+    const toYYYYMMDD = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
     e.preventDefault();
     setFormError(null);
 
@@ -271,7 +300,7 @@ export default function AikoHallPage() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          bookingDate: selectedDate.toISOString().split('T')[0],
+          bookingDate: toYYYYMMDD(selectedDate),
           startTime: bookingForm.startTime,
           endTime: bookingForm.endTime,
           guestCount: parseInt(bookingForm.guestCount),
@@ -292,6 +321,7 @@ export default function AikoHallPage() {
         description: `Booking for ${format(selectedDate, 'PPP')}`,
         order_id: order.id,
         handler: async function (response: any) {
+          setIsVerifying(true);
           const verificationResponse = await fetch('/api/aiko/bookings/verify-payment', {
             method: 'POST',
             headers: {
@@ -304,7 +334,7 @@ export default function AikoHallPage() {
               razorpay_signature: response.razorpay_signature,
               bookingDetails: {
                 ...bookingForm,
-                bookingDate: selectedDate.toISOString().split('T')[0],
+                bookingDate: toYYYYMMDD(selectedDate),
                 guestCount: parseInt(bookingForm.guestCount),
                 amount: order.amount,
                 durationHours: order.notes.durationHours
@@ -313,12 +343,11 @@ export default function AikoHallPage() {
           });
 
           const verificationData = await verificationResponse.json();
+          setIsVerifying(false);
 
           if (verificationData.success) {
-            toast.success('Booking confirmed!');
-            setFinalBookingDetails(verificationData.data);
-            setBookingSuccess(true);
-            fetchBookings(); // Refresh calendar
+            toast.success('Booking confirmed! Redirecting to invoice...');
+            router.push(`/allVenues/aiko-hall/${verificationData.data._id}`);
           } else {
             toast.error(verificationData.message || 'Payment verification failed.');
             setFormError('Payment verification failed. Please contact support.');
@@ -378,9 +407,19 @@ export default function AikoHallPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+      {isVerifying && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-[100]">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white"></div>
+          <p className="text-white text-lg mt-4">Verifying payment, please wait...</p>
+        </div>
+      )}
+
 
       {/* Navbar Section */}
-      <Navbar className="bg-transparent fixed w-full z-50" />
+      <div className="bg-transparent fixed w-full z-50">
+
+        <Navbar />
+      </div>
 
       {/* Hero Section with Image Carousel */}
       <div className="relative h-[60vh] md:h-[70vh] overflow-hidden">
@@ -682,7 +721,7 @@ export default function AikoHallPage() {
                       unavailable: 'bg-red-200 text-red-900 cursor-not-allowed opacity-60',
                       past: 'text-gray-400 cursor-not-allowed opacity-50',
                       available: 'text-green-600',
-                      today: 'bg-blue-200 text-blue-900',
+                      today: '',
                     }}
                     className="rounded-md"
                   />
@@ -716,7 +755,7 @@ export default function AikoHallPage() {
                       <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                       <h3 className="text-2xl font-bold text-gray-800">Booking Confirmed!</h3>
                       <p className="text-gray-600 mt-2 mb-6">Your invoice has been generated.</p>
-                      
+
                       <div className="text-left space-y-2 text-gray-700 mb-6 bg-white p-4 rounded-md border">
                         <p><strong>Booking ID:</strong> {finalBookingDetails?._id}</p>
                         <p><strong>Date:</strong> {format(new Date(finalBookingDetails?.bookingDate), 'PPP')}</p>
@@ -738,11 +777,39 @@ export default function AikoHallPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="startTime">Start Time *</Label>
-                          <Input id="startTime" type="time" value={bookingForm.startTime} onChange={(e) => setBookingForm({ ...bookingForm, startTime: e.target.value })} required />
+                          <Select
+                            onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })}
+                            value={bookingForm.startTime}
+                          >
+                            <SelectTrigger id="startTime">
+                              <SelectValue placeholder="Select start time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableTimes.map((time) => (
+                                <SelectItem key={time.value} value={time.value}>
+                                  {time.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label htmlFor="endTime">End Time *</Label>
-                          <Input id="endTime" type="time" value={bookingForm.endTime} onChange={(e) => setBookingForm({ ...bookingForm, endTime: e.target.value })} required />
+                          <Select
+                            onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })}
+                            value={bookingForm.endTime}
+                          >
+                            <SelectTrigger id="endTime">
+                              <SelectValue placeholder="Select end time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableTimes.map((time) => (
+                                <SelectItem key={time.value} value={time.value}>
+                                  {time.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       <div>

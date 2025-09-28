@@ -44,6 +44,16 @@ exports.getBookings = async (req, res) => {
 exports.createOrder = async (req, res) => {
   try {
     const { bookingDate, startTime, endTime, guestCount } = req.body;
+
+    // Check if a booking already exists for this date
+    const existingBooking = await AikoHallBooking.findOne({
+      bookingDate: new Date(bookingDate),
+      status: { $in: ['approved', 'pending'] },
+    });
+
+    if (existingBooking) {
+      return res.status(409).json({ success: false, message: 'This date is already booked. Please select another date.' });
+    }
     const userId = req.user.id;
 
     const aikoHall = await AikoHall.getAikoHall();
@@ -135,10 +145,16 @@ exports.verifyPayment = async (req, res) => {
 exports.getBookingById = async (req, res) => {
   try {
     const booking = await AikoHallBooking.findById(req.params.id).populate('user', 'name email phone');
-    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+    // Ensure the user who booked is the one requesting, or an admin
+    if (booking.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Not authorized to view this booking' });
+    }
     res.status(200).json({ success: true, data: booking });
   } catch (error) {
-    console.error('Error fetching booking:', error);
+    console.error('Error fetching booking by ID:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -187,17 +203,35 @@ exports.getBookingStats = async (req, res) => {
 // @access  Private (Admin)
 exports.updateSettings = async (req, res) => {
   try {
-    const { adminSettings, contactPerson, address } = req.body;
     const aikoHall = await AikoHall.getAikoHall();
+    const { adminSettings, ...otherFields } = req.body;
 
+    // Handle adminSettings separately to merge them
     if (adminSettings) {
       aikoHall.adminSettings = { ...aikoHall.adminSettings, ...adminSettings };
     }
-    if (contactPerson) {
-      aikoHall.contactPerson = { ...aikoHall.contactPerson, ...contactPerson };
+
+    // Handle other top-level fields
+    for (const key in otherFields) {
+      if (Object.prototype.hasOwnProperty.call(aikoHall, key)) {
+        if (typeof otherFields[key] === 'object' && !Array.isArray(otherFields[key]) && aikoHall[key]) {
+          aikoHall[key] = { ...aikoHall[key], ...otherFields[key] };
+        } else {
+          aikoHall[key] = otherFields[key];
+        }
+      }
     }
-    if (address) {
-      aikoHall.address = { ...aikoHall.address, ...address };
+
+    // Consolidate redundant fields
+    if (adminSettings && adminSettings.capacity !== undefined) {
+      aikoHall.maxCapacity = adminSettings.capacity;
+    }
+    if (adminSettings && adminSettings.minBookingHours !== undefined) {
+      aikoHall.minBookingHours = adminSettings.minBookingHours;
+    }
+    if (adminSettings && adminSettings.terms !== undefined) {
+      aikoHall.bookingTerms = adminSettings.terms;
+      aikoHall.notes = adminSettings.terms; // Or handle separately if needed
     }
 
     await aikoHall.save();

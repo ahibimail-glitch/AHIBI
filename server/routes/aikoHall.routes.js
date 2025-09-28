@@ -1,6 +1,8 @@
 const express = require('express');
 const { check } = require('express-validator');
 const aikoHallController = require('../controllers/aikoHallController');
+const aikoHallAuthController = require('../controllers/aikoHallAuthController');
+const { protectAiko } = require('../middlewares/aikoAuth');
 const { protect } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -8,7 +10,7 @@ const router = express.Router();
 // Public routes
 router.get('/', aikoHallController.getAikoHallDetails);
 router.get('/bookings', aikoHallController.getBookings);
-router.get('/bookings/:id', aikoHallController.getBookingById);
+router.get('/bookings/:id', protect, aikoHallController.getBookingById);
 
 // Create booking with validation
 router.post('/bookings', protect, [
@@ -23,11 +25,17 @@ router.post('/bookings', protect, [
 router.post('/bookings/create-order', protect, aikoHallController.createOrder);
 router.post('/bookings/verify-payment', protect, aikoHallController.verifyPayment);
 
+// Aiko Hall Admin Auth routes
+router.post('/auth/login', [
+  check('email', 'Please include a valid email').isEmail(),
+  check('password', 'Password is required').exists()
+], aikoHallAuthController.login);
+
 // Admin protected routes
-router.get('/stats', protect, aikoHallController.getBookingStats);
-router.put('/settings', protect, aikoHallController.updateSettings);
+router.get('/stats', protectAiko, aikoHallController.getBookingStats);
+router.put('/settings', protectAiko, aikoHallController.updateSettings);
 router.put('/bookings/:id/status', [
-  protect,
+  protectAiko,
   check('status', 'Status is required').isIn(['pending', 'approved', 'rejected', 'cancelled', 'completed']),
   check('rejectionReason', 'Rejection reason is required when rejecting').if(
     check('status').equals('rejected')

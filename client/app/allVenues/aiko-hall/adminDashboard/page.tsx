@@ -63,6 +63,13 @@ interface AikoHallData {
   };
   totalBookings: number;
   totalRevenue: number;
+  venueCategory: string;
+  inHouseEventManager: boolean;
+  externalVendorsAllowed: boolean;
+  marketingWithAhibi: boolean;
+  advancePayment: boolean;
+  bookingTerms: string;
+  notes: string;
 }
 
 interface Booking {
@@ -111,7 +118,30 @@ interface SettingsForm {
     accommodation: boolean;
     airConditioned: boolean;
   };
+  venueCategory: string;
+  inHouseEventManager: boolean;
+  externalVendorsAllowed: boolean;
+  marketingWithAhibi: boolean;
+  advancePayment: boolean;
+  maxCapacity: number;
 }
+
+const facilityKeys = [
+  'inHouseCatering',
+  'parking',
+  'soundSystem',
+  'stage',
+  'powerBackup',
+  'accommodation',
+  'airConditioned'
+] as const;
+
+const additionalServiceKeys = [
+  'inHouseEventManager',
+  'externalVendorsAllowed',
+  'marketingWithAhibi',
+  'advancePayment'
+] as const;
 
 export default function AikoHallManagement() {
   const [aikoHallData, setAikoHallData] = useState<AikoHallData | null>(null);
@@ -125,24 +155,33 @@ export default function AikoHallManagement() {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [updating, setUpdating] = useState(false);
-
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<SettingsForm>({
-    capacity: 250,
-    minBookingHours: 6,
-    pricePerHour: 2000,
+    capacity: 0,
+    minBookingHours: 0,
+    pricePerHour: 0,
     terms: "",
-    contactPerson: { name: '', phone: [] as string[] },
+    contactPerson: { name: '', phone: [] },
     address: { street: '' },
     facilities: {
-      inHouseCatering: true,
-      parking: true,
-      soundSystem: true,
-      stage: true,
-      powerBackup: true,
-      accommodation: true,
-      airConditioned: true
-    }
+      inHouseCatering: false,
+      parking: false,
+      soundSystem: false,
+      stage: false,
+      powerBackup: false,
+      accommodation: false,
+      airConditioned: false
+    },
+    venueCategory: '',
+    inHouseEventManager: false,
+    externalVendorsAllowed: false,
+    marketingWithAhibi: false,
+    advancePayment: false,
+    maxCapacity: 0
   });
 
   // Booking action form state
@@ -153,10 +192,46 @@ export default function AikoHallManagement() {
   });
 
   useEffect(() => {
-    fetchData();
+    const token = localStorage.getItem('aiko_admin_token');
+    if (token) {
+      setIsLoggedIn(true);
+      fetchData();
+    } else {
+      setLoading(false); 
+    }
   }, []);
 
+  const handleLogin = async () => {
+    setLoggingIn(true);
+    try {
+      const response = await fetch('/api/aiko/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('aiko_admin_token', data.data.token);
+        setIsLoggedIn(true);
+        toast.success('Login successful');
+        fetchData();
+      } else {
+        toast.error(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An error occurred during login.');
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
   const fetchData = async () => {
+    setLoading(true); 
     try {
       await Promise.all([
         fetchAikoHallData(),
@@ -173,7 +248,7 @@ export default function AikoHallManagement() {
 
   const fetchAikoHallData = async () => {
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('aiko_admin_token');
       const response = await fetch('/api/aiko', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -189,7 +264,16 @@ export default function AikoHallManagement() {
           terms: data.data.adminSettings.terms,
           facilities: data.data.adminSettings.facilities,
           contactPerson: data.data.contactPerson,
-          address: data.data.address
+          address: data.data.address,
+          venueCategory: data.data.venueCategory,
+          inHouseEventManager: data.data.inHouseEventManager,
+          externalVendorsAllowed: data.data.externalVendorsAllowed,
+          marketingWithAhibi: data.data.marketingWithAhibi,
+          advancePayment: data.data.advancePayment,
+          // Redundant fields are removed from the form state
+          maxCapacity: data.data.maxCapacity, // This is now set by 'capacity'
+          // bookingTerms: data.data.bookingTerms, // This is now set by 'terms'
+          // notes: data.data.notes, // This is now set by 'terms'
         });
       }
     } catch (error) {
@@ -199,7 +283,7 @@ export default function AikoHallManagement() {
 
   const fetchBookings = async () => {
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('aiko_admin_token');
       const response = await fetch('/api/aiko/bookings', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -216,7 +300,7 @@ export default function AikoHallManagement() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('aiko_admin_token');
       const response = await fetch('/api/aiko/stats', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -234,7 +318,7 @@ export default function AikoHallManagement() {
   const handleUpdateSettings = async () => {
     setUpdating(true);
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('aiko_admin_token');
       const response = await fetch('/api/aiko/settings', {
         method: 'PUT',
         headers: {
@@ -242,7 +326,20 @@ export default function AikoHallManagement() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          adminSettings: settingsForm
+          adminSettings: {
+            capacity: settingsForm.capacity,
+            minBookingHours: settingsForm.minBookingHours,
+            pricePerHour: settingsForm.pricePerHour,
+            terms: settingsForm.terms,
+            facilities: settingsForm.facilities,
+          },
+          contactPerson: settingsForm.contactPerson,
+          address: settingsForm.address,
+          venueCategory: settingsForm.venueCategory,
+          inHouseEventManager: settingsForm.inHouseEventManager,
+          externalVendorsAllowed: settingsForm.externalVendorsAllowed,
+          marketingWithAhibi: settingsForm.marketingWithAhibi,
+          advancePayment: settingsForm.advancePayment,
         })
       });
 
@@ -267,7 +364,7 @@ export default function AikoHallManagement() {
 
     setUpdating(true);
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('aiko_admin_token');
       const response = await fetch(`/api/aiko/bookings/${selectedBooking._id}/status`, {
         method: 'PUT',
         headers: {
@@ -351,7 +448,8 @@ export default function AikoHallManagement() {
       </div>
     );
   }
-
+  if (!isLoggedIn) { return ( <Dialog open={true}> <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle>Admin Login</DialogTitle> </DialogHeader> <div className="space-y-4"> <div> <Label>Email</Label> <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter admin email" /> </div> <div> <Label>Password</Label> <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" /> </div> <Button className="w-full" onClick={handleLogin} disabled={loggingIn}> {loggingIn ? "Logging in..." : "Login"} </Button> </div> </DialogContent> </Dialog> ); }
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -384,11 +482,11 @@ export default function AikoHallManagement() {
                   <div className="space-y-4 p-4 border rounded-lg">
                     <h4 className="font-medium text-lg border-b pb-2">Core Details</h4>
                     <div>
-                      <Label htmlFor="capacity">Maximum Capacity</Label>
+                      <Label htmlFor="capacity">Maximum Capacity (Admin)</Label>
                       <Input id="capacity" type="number" value={settingsForm.capacity} onChange={(e) => setSettingsForm({ ...settingsForm, capacity: parseInt(e.target.value) })} />
                     </div>
                     <div>
-                      <Label htmlFor="minHours">Minimum Booking Hours</Label>
+                      <Label htmlFor="minHours">Minimum Booking Hours (Admin)</Label>
                       <Input id="minHours" type="number" value={settingsForm.minBookingHours} onChange={(e) => setSettingsForm({ ...settingsForm, minBookingHours: parseInt(e.target.value) })} />
                     </div>
                     <div>
@@ -415,11 +513,18 @@ export default function AikoHallManagement() {
                 </div>
 
                 <div>
-                  <Label>Facilities</Label>
+                  <Label>Facilities & Amenities</Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2 p-4 border rounded-lg">
-                    {Object.entries(settingsForm.facilities).map(([key, value]) => (
+                    {facilityKeys.map((key) => (
                       <label key={key} className="flex items-center space-x-2">
-                        <input type="checkbox" checked={value} onChange={(e) => setSettingsForm({ ...settingsForm, facilities: { ...settingsForm.facilities, [key]: e.target.checked }})} />
+                        <input 
+                          type="checkbox" 
+                          checked={settingsForm.facilities[key] || false}
+                          onChange={(e) => setSettingsForm({ 
+                            ...settingsForm, 
+                            facilities: { ...settingsForm.facilities, [key]: e.target.checked } 
+                          })} 
+                        />
                         <span className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                       </label>
                     ))}
@@ -427,8 +532,31 @@ export default function AikoHallManagement() {
                 </div>
 
                 <div>
-                  <Label htmlFor="terms">Booking Terms & Notes</Label>
+                  <Label htmlFor="terms">Admin Booking Terms & Notes</Label>
                   <Textarea id="terms" value={settingsForm.terms} onChange={(e) => setSettingsForm({ ...settingsForm, terms: e.target.value })} rows={4} />
+                </div>
+
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h4 className="font-medium text-lg border-b pb-2">Venue Properties</h4>
+                  <div>
+                    <Label htmlFor="venueCategory">Venue Category</Label>
+                    <Input id="venueCategory" value={settingsForm.venueCategory} onChange={(e) => setSettingsForm({ ...settingsForm, venueCategory: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-medium text-lg border-b pb-2">Additional Services</h4>
+                    {additionalServiceKeys.map((key) => (
+                      <div key={key} className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" 
+                          id={key}
+                          checked={settingsForm[key] || false}
+                          onChange={(e) => setSettingsForm({ ...settingsForm, [key]: e.target.checked })} 
+                        />
+                        <Label htmlFor={key} className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</Label>
+                      </div>
+                    ))}
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4 border-t">
