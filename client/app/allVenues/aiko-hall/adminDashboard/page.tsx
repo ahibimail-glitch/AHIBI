@@ -752,23 +752,43 @@ export default function AikoHallManagement() {
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking Calendar</CardTitle>
-              <CardDescription>View all bookings in calendar format</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="multiple"
-                selected={bookings
-                  .filter(b => b.status === 'approved' || b.status === 'pending')
-                  .map(b => new Date(b.bookingDate))
-                }
-                className="rounded-md border"
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+  <Card>
+    <CardHeader>
+      <div className="flex items-center justify-between">
+        <div>
+          <CardTitle>Booking Calendar</CardTitle>
+          <CardDescription>
+            View all bookings with color-coded status
+          </CardDescription>
+        </div>
+        <div className="flex gap-3">
+          <Badge className="bg-green-500">Approved</Badge>
+          <Badge className="bg-yellow-500 text-black">Pending</Badge>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent>
+      <Calendar
+        mode="multiple"
+        selected={bookings.map(b => new Date(b.bookingDate))}
+        modifiers={{
+          approved: bookings
+            .filter(b => b.status === "approved")
+            .map(b => new Date(b.bookingDate)),
+          pending: bookings
+            .filter(b => b.status === "pending")
+            .map(b => new Date(b.bookingDate)),
+        }}
+        modifiersClassNames={{
+          approved: "bg-green-500 text-white rounded-md",
+          pending: "bg-yellow-300 text-black rounded-md",
+        }}
+        className="rounded-md border p-2"
+      />
+    </CardContent>
+  </Card>
+</TabsContent>
+
       </Tabs>
 
       {/* Booking Action Dialog */}
