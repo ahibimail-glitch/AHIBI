@@ -34,6 +34,11 @@ const MelitaBookingSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  coupon: {
+    code: { type: String },
+    discountPercentage: { type: Number },
+    discountAmount: { type: Number },
+  },
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'failed'],

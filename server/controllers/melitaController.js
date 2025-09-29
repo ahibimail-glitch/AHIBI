@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Razorpay = require('razorpay');
 const MelitaBooking = require('../models/MelitaBooking');
+const Coupon = require('../models/Coupon');
 const crypto = require('crypto');
 
 const razorpay = new Razorpay({
@@ -12,7 +13,7 @@ const razorpay = new Razorpay({
 // @route   POST /api/melita/orders
 // @access  Private
 const createOrder = asyncHandler(async (req, res) => {
-  const { amount, product, userId, deliveryAddress } = req.body;
+  const { amount, product, userId, deliveryAddress, coupon } = req.body;
 
   const options = {
     amount: amount * 100, // amount in the smallest currency unit
@@ -28,6 +29,7 @@ const createOrder = asyncHandler(async (req, res) => {
         product: product,
         deliveryAddress: deliveryAddress,
         amount: amount,
+        ...(coupon ? { coupon } : {}),
         razorpay_order_id: order.id,
         status: 'pending',
     });
@@ -60,6 +62,22 @@ const verifyPayment = asyncHandler(async (req, res) => {
       booking.razorpay_signature = req.headers['x-razorpay-signature'];
       booking.status = 'confirmed';
       await booking.save();
+
+      // If a coupon was used, mark it as used in the database (if it exists)
+      if (booking.coupon?.code) {
+        const code = String(booking.coupon.code).trim().toUpperCase();
+        try {
+          const couponDoc = await Coupon.findOne({ code });
+          if (couponDoc && couponDoc.status !== 'used') {
+            couponDoc.status = 'used';
+            couponDoc.usedAt = new Date();
+            await couponDoc.save();
+          }
+        } catch (e) {
+          // Log and continue; do not fail webhook on coupon mark-used failure
+          console.error('Failed to mark coupon used for Melita:', code, e?.message);
+        }
+      }
 
       // TODO: Implement invoice generation and email notification
     }

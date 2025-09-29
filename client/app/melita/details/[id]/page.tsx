@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type MouseEvent, type ChangeEvent } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { useParams } from 'next/navigation';
 import { Check, Shield, Truck, Heart, Star } from 'lucide-react';
 import Footer from '@/app/Footer';
 import Navbar from '@/app/Navbar';
+import { useToast } from '@/components/ui/use-toast';
 
 const products = [
     {
@@ -60,15 +61,21 @@ interface RazorpaySuccessResponse {
 
 const ProductDetailsPage = () => {
     const { user } = useAuth();
+    const { toast } = useToast();
     const router = useRouter();
     // Get product ID from URL
     const params = useParams();
     const { id } = params;
         const [isLiked, setIsLiked] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [couponCode, setCouponCode] = useState('');
+    const [couponApplying, setCouponApplying] = useState(false);
+    const [couponError, setCouponError] = useState<string | null>(null);
+    const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
     const [formData, setFormData] = useState({
         name: '', address: '', city: '', state: '', zip: '', phone: ''
     });
+    const [formError, setFormError] = useState<string | null>(null);
 
     const product = products.find((p) => p.id === id);
 
@@ -84,7 +91,7 @@ const ProductDetailsPage = () => {
 
     const discount = Math.round(((parseFloat(product.originalPrice.replace(/[₹,]/g, '')) - parseFloat(product.salePrice.replace(/[₹,]/g, ''))) / parseFloat(product.originalPrice.replace(/[₹,]/g, ''))) * 100);
 
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
@@ -95,15 +102,17 @@ const ProductDetailsPage = () => {
         document.body.appendChild(script);
     }, []);
 
-    const handlePayment = async (e) => {
+    const handlePayment = async (e: MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.zip || !formData.phone) {
-            alert('Please fill in all delivery details.');
+            setFormError('Please fill in all delivery details.');
+            toast({ variant: 'destructive', title: 'Missing details', description: 'Please fill in all delivery details.' });
             return;
         }
 
         if (!user) {
-            alert('Please log in to place an order.');
+            setFormError('Please log in to place an order.');
+            toast({ variant: 'destructive', title: 'Login required', description: 'Please log in to place an order.' });
             router.push('/auth');
             return;
         }
@@ -111,11 +120,13 @@ const ProductDetailsPage = () => {
         setLoading(true);
 
         try {
-            const amount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+            const baseAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+            const amount = Math.max(0, baseAmount - (appliedCoupon?.discountAmount || 0));
 
                         const token = localStorage.getItem('token');
             if (!token) {
-                alert('Authentication token not found. Please log in again.');
+                setFormError('Authentication token not found. Please log in again.');
+                toast({ variant: 'destructive', title: 'Auth error', description: 'Please log in again.' });
                 router.push('/auth');
                 return;
             }
@@ -131,6 +142,7 @@ const ProductDetailsPage = () => {
                     },
                     userId: user.id,
                     deliveryAddress: formData,
+                    ...(appliedCoupon ? { coupon: { code: appliedCoupon.code, discountPercentage: appliedCoupon.discountPercentage, discountAmount: appliedCoupon.discountAmount } } : {}),
                 },
                 {
                     headers: {
@@ -148,8 +160,23 @@ const ProductDetailsPage = () => {
                 name: 'Melita Purchase',
                 description: product.name,
                 order_id: order.id,
-                handler: function (response: RazorpaySuccessResponse) {
-                    router.push(`/melita/payment/success?payment_id=${response.razorpay_payment_id}&order_id=${order.id}&booking_id=${melitaBooking._id}`);
+                handler: async function (response: RazorpaySuccessResponse) {
+                    try {
+                        // Mark coupon as used on the backend for non-MELITA40 codes
+                        if (appliedCoupon?.code && appliedCoupon.code !== 'MELITA40') {
+                            const apiBase = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+                            await fetch(`${apiBase}/api/coupons/${appliedCoupon.code}/use`, {
+                                method: 'POST',
+                                headers: {
+                                    Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                                },
+                            }).catch(() => {});
+                        }
+                    } catch (_) {
+                        // Non-blocking: even if this fails, continue to success
+                    } finally {
+                        router.push(`/melita/payment/success?payment_id=${response.razorpay_payment_id}&order_id=${order.id}&booking_id=${melitaBooking._id}`);
+                    }
                 },
                 prefill: {
                     name: formData.name,
@@ -165,9 +192,65 @@ const ProductDetailsPage = () => {
 
         } catch (error) {
             console.error('Payment failed:', error);
-            alert('Payment failed. Please try again.');
+            setFormError('Payment failed. Please try again.');
+            toast({ variant: 'destructive', title: 'Payment failed', description: 'Please try again.' });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleApplyCoupon = async (): Promise<void> => {
+        try {
+            setCouponApplying(true);
+            setCouponError(null);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setCouponError('Please log in to apply coupon');
+                toast({ variant: 'destructive', title: 'Login required', description: 'Please log in to apply coupon.' });
+                return;
+            }
+
+            const baseAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+
+            // Special-case MELITA40: flat 40% off
+            if (couponCode.trim().toUpperCase() === 'MELITA40') {
+                const discountAmount = Math.round((baseAmount * 40) / 100);
+                setAppliedCoupon({
+                    valid: true,
+                    code: 'MELITA40',
+                    discountPercentage: 40,
+                    discountAmount,
+                    totalAmount: baseAmount,
+                    payable: Math.max(0, baseAmount - discountAmount),
+                });
+                toast({ title: 'Coupon applied', description: 'MELITA40 applied: 40% off.' });
+                return;
+            }
+
+            const apiBase = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
+            const res = await fetch(`${apiBase}/api/melita/coupons/validate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ code: couponCode, amount: baseAmount }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.valid) {
+                setAppliedCoupon(null);
+                setCouponError(data?.message || 'Invalid coupon');
+                toast({ variant: 'destructive', title: 'Coupon invalid', description: data?.message || 'Invalid coupon' });
+                return;
+            }
+            setAppliedCoupon(data);
+            toast({ title: 'Coupon applied', description: `Coupon ${data.code} applied: ${data.discountPercentage}% off` });
+        } catch (e) {
+            console.error('Coupon apply error:', e);
+            setCouponError('Failed to apply coupon');
+            toast({ variant: 'destructive', title: 'Coupon error', description: 'Failed to apply coupon' });
+        } finally {
+            setCouponApplying(false);
         }
     };
 
@@ -229,9 +312,39 @@ const ProductDetailsPage = () => {
                             </div>
 
                             {/* Price */}
-                            <div className="flex items-baseline gap-4 mb-8 pb-8 border-b border-gray-200">
+                            <div className="flex items-baseline gap-4 mb-4">
                                 <span className="text-5xl font-light text-[#835339]">{product.salePrice}</span>
                                 <span className="text-2xl line-through text-gray-400">{product.originalPrice}</span>
+                            </div>
+                            {/* Coupon input */}
+                            <div className="mb-4">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter coupon code"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
+                                    />
+                                    <button
+                                        onClick={handleApplyCoupon}
+                                        disabled={couponApplying || !couponCode.trim()}
+                                        className="px-6 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                    >
+                                        {couponApplying ? 'Applying...' : 'Apply'}
+                                    </button>
+                                </div>
+                                {couponError && <p className="text-xs text-red-600 mt-2">{couponError}</p>}
+                                {appliedCoupon?.discountAmount > 0 && (
+                                    <div className="mt-3 p-3 bg-green-50 rounded-lg text-green-700 flex justify-between">
+                                        <span>Coupon ({appliedCoupon.code})</span>
+                                        <span>-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                <div className="mt-3 p-3 bg-gray-100 rounded-lg flex justify-between">
+                                    <span className="font-semibold text-gray-900">To Pay</span>
+                                    <span className="font-bold text-indigo-600">₹{Math.max(0, parseFloat(product.salePrice.replace(/[₹,]/g, '')) - (appliedCoupon?.discountAmount || 0)).toLocaleString()}</span>
+                                </div>
                             </div>
 
                             {/* Trust Badges */}
@@ -331,11 +444,39 @@ const ProductDetailsPage = () => {
                                     />
                                 </div>
                             </div>
+                            {/* Coupon input inside checkout form */}
+                            <div className="mt-2">
+                                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                                    <input
+                                        type="text"
+                                        placeholder="Enter coupon code"
+                                        value={couponCode}
+                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
+                                    />
+                                    <button
+                                        onClick={handleApplyCoupon}
+                                        disabled={couponApplying || !couponCode.trim()}
+                                        className="px-6 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 h-[48px]"
+                                    >
+                                        {couponApplying ? 'Applying...' : 'Apply'}
+                                    </button>
+                                </div>
+                                {couponError && <p className="text-xs text-red-600 mt-2">{couponError}</p>}
+                                {appliedCoupon?.discountAmount > 0 && (
+                                    <div className="mt-3 p-3 bg-green-50 rounded-lg text-green-700 flex justify-between">
+                                        <span>Coupon ({appliedCoupon.code})</span>
+                                        <span>-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Place order with dynamic amount */}
                             <button
                                 onClick={handlePayment}
                                 className="w-full bg-gradient-to-r from-[#835339] to-amber-700 text-white font-semibold rounded-xl py-4 mt-8 transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] transform duration-300"
                             >
-                                {loading ? 'PROCESSING...' : `PLACE ORDER • ${product.salePrice}`}
+                                {loading ? 'PROCESSING...' : `PLACE ORDER • ₹${Math.max(0, parseFloat(product.salePrice.replace(/[₹,]/g, '')) - (appliedCoupon?.discountAmount || 0)).toLocaleString()}`}
                             </button>
                             {/* <p className="text-center text-sm text-gray-500 mt-4">🔒 Secure checkout • Free shipping on all orders • 30-day money-back guarantee</p> */}
                         </div>

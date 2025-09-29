@@ -98,7 +98,8 @@ exports.getCoupons = async (req, res, next) => {
 exports.markUsed = async (req, res, next) => {
   try {
     const { code } = req.params;
-    const coupon = await Coupon.findOne({ code });
+    const normalized = String(code).trim().toUpperCase();
+    const coupon = await Coupon.findOne({ code: normalized });
     if (!coupon) return res.status(404).json({ message: 'Coupon not found' });
     if (coupon.status === 'used') return res.status(400).json({ message: 'Coupon already used' });
     coupon.status = 'used';
@@ -176,4 +177,51 @@ exports.validateCoupon = async (req, res, next) => {
   }
 };
 
+
+// Validate a coupon for Melita purchases (product-based, not event-based)
+// Expects: { code, amount }
+// Rules: event.name must be 'melita' (case-insensitive). Apply coupon percentage to amount.
+exports.validateMelitaCoupon = async (req, res, next) => {
+  try {
+    const { code, amount } = req.body || {};
+    if (!code || amount === undefined || amount === null) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const coupon = await Coupon.findOne({ code: String(code).trim().toUpperCase() });
+    if (!coupon) {
+      return res.status(404).json({ message: 'Invalid coupon code' });
+    }
+
+    // Enforce event.name === 'melita'
+    const eventName = (coupon.event?.name || '').toLowerCase();
+    if (eventName !== 'melita') {
+      return res.status(400).json({ message: 'Coupon not valid for Melita' });
+    }
+
+    if (coupon.status === 'used') {
+      return res.status(400).json({ message: 'Coupon already used' });
+    }
+
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+      return res.status(400).json({ message: 'Coupon has expired' });
+    }
+
+    const baseAmount = Number(amount) || 0;
+    const discountAmount = Math.round((baseAmount * coupon.discountPercentage) / 100);
+    const payable = Math.max(0, baseAmount - discountAmount);
+
+    return res.json({
+      valid: true,
+      code: coupon.code,
+      discountPercentage: coupon.discountPercentage,
+      discountAmount,
+      totalAmount: baseAmount,
+      payable,
+      message: 'Coupon applied'
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
