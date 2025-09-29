@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { 
@@ -24,7 +25,8 @@ import {
   Filter,
   Search,
   Settings,
-  BarChart3
+  BarChart3,
+  FileText
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -395,19 +397,26 @@ export default function AikoHallManagement() {
 
   const exportBookings = () => {
     const csvContent = [
-      ['Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time', 'Duration', 'Guests', 'Status', 'Booked At'].join(','),
-      ...bookings.map(booking => [
-        booking.user?.name || 'N/A',
-        booking.user?.phone || 'N/A',
-        booking.user?.email || 'N/A',
-        format(new Date(booking.bookingDate), 'yyyy-MM-dd'),
-        booking.startTime,
-        booking.endTime,
-        booking.duration,
-        booking.guestCount,
-        booking.status,
-        format(new Date(booking.bookedAt), 'yyyy-MM-dd HH:mm')
-      ].join(','))
+      ['Name', 'Phone', 'Email', 'Date', 'Start Time', 'End Time', 'Duration', 'Guests', 'Amount', 'Status', 'Special Notes', 'Booked At'].join(','),
+      ...bookings.map(booking => {
+        const amount = aikoHallData?.adminSettings?.pricePerHour
+          ? booking.duration * aikoHallData.adminSettings.pricePerHour
+          : 'N/A';
+        return [
+          booking.user?.name || 'N/A',
+          booking.user?.phone || 'N/A',
+          booking.user?.email || 'N/A',
+          format(new Date(booking.bookingDate), 'yyyy-MM-dd'),
+          booking.startTime,
+          booking.endTime,
+          booking.duration,
+          booking.guestCount,
+          amount,
+          booking.status,
+          `"${booking.specialNotes || ''}"`,
+          format(new Date(booking.bookedAt), 'yyyy-MM-dd HH:mm')
+        ].join(',');
+      })
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -698,6 +707,7 @@ export default function AikoHallManagement() {
                       <TableHead>Date & Time</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Guests</TableHead>
+                      <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -706,10 +716,27 @@ export default function AikoHallManagement() {
                     {filteredBookings.map((booking) => (
                       <TableRow key={booking._id}>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{booking.user?.name || 'Unknown User'}</div>
-                            <div className="text-sm text-gray-500">{booking.user?.phone || 'No phone'}</div>
-                            <div className="text-sm text-gray-500">{booking.user?.email || 'No email'}</div>
+                          <div className="flex items-center space-x-2">
+                            <div>
+                              <div className="font-medium">{booking.user?.name || 'Unknown User'}</div>
+                              <div className="text-sm text-gray-500">{booking.user?.phone || 'No phone'}</div>
+                              <div className="text-sm text-gray-500">{booking.user?.email || 'No email'}</div>
+                            </div>
+                            {booking.specialNotes && (
+                              <div className="mt-1">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger className="flex items-center text-xs text-blue-600 hover:underline cursor-pointer">
+                                      <FileText className="h-3 w-3 mr-1" />
+                                      View client Notes
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs whitespace-pre-wrap">{booking.specialNotes}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -724,6 +751,11 @@ export default function AikoHallManagement() {
                         </TableCell>
                         <TableCell>{booking.duration} hours</TableCell>
                         <TableCell>{booking.guestCount}</TableCell>
+                        <TableCell>
+                          {aikoHallData?.adminSettings?.pricePerHour
+                            ? `₹${(booking.duration * aikoHallData.adminSettings.pricePerHour).toLocaleString()}`
+                            : 'N/A'}
+                        </TableCell>
                         <TableCell>{getStatusBadge(booking.status)}</TableCell>
                         <TableCell>
                           <Button
@@ -752,43 +784,23 @@ export default function AikoHallManagement() {
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-4">
-  <Card>
-    <CardHeader>
-      <div className="flex items-center justify-between">
-        <div>
-          <CardTitle>Booking Calendar</CardTitle>
-          <CardDescription>
-            View all bookings with color-coded status
-          </CardDescription>
-        </div>
-        <div className="flex gap-3">
-          <Badge className="bg-green-500">Approved</Badge>
-          <Badge className="bg-yellow-500 text-black">Pending</Badge>
-        </div>
-      </div>
-    </CardHeader>
-    <CardContent>
-      <Calendar
-        mode="multiple"
-        selected={bookings.map(b => new Date(b.bookingDate))}
-        modifiers={{
-          approved: bookings
-            .filter(b => b.status === "approved")
-            .map(b => new Date(b.bookingDate)),
-          pending: bookings
-            .filter(b => b.status === "pending")
-            .map(b => new Date(b.bookingDate)),
-        }}
-        modifiersClassNames={{
-          approved: "bg-green-500 text-white rounded-md",
-          pending: "bg-yellow-300 text-black rounded-md",
-        }}
-        className="rounded-md border p-2"
-      />
-    </CardContent>
-  </Card>
-</TabsContent>
-
+          <Card>
+            <CardHeader>
+              <CardTitle>Booking Calendar</CardTitle>
+              <CardDescription>View all bookings in calendar format</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Calendar
+                mode="multiple"
+                selected={bookings
+                  .filter(b => b.status === 'approved' || b.status === 'pending')
+                  .map(b => new Date(b.bookingDate))
+                }
+                className="rounded-md border"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Booking Action Dialog */}
@@ -818,6 +830,7 @@ export default function AikoHallManagement() {
                   </p>
                 </div>
               </div>
+
 
               <div>
                 <Label htmlFor="status">Status</Label>
