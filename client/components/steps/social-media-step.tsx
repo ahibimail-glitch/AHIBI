@@ -203,7 +203,7 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     Average Engagement Rate (%) <span className="text-destructive">*</span>
                     <TooltipProvider>
@@ -231,7 +231,7 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
                   {showErrors && (platform.engagementRate === undefined || platform.engagementRate === null) && (
                     <p className="text-xs text-destructive">Engagement rate is required</p>
                   )}
-                </div>
+                </div> */}
 
                 <div className="flex items-end">
                   <div className="flex items-center space-x-2">
