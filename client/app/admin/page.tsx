@@ -51,6 +51,7 @@ import AnnieFailedBookings from "./components/AnnieFailedBookings";
 import NISRegistrations from "./components/NISRegistrations";
 import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
+import MelitaBookings from "./components/MelitaBookings";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -169,6 +170,8 @@ export default function AdminDashboard() {
         return <BikerBash />;
       case "coupons":
         return <Coupons />;
+      case "melita-bookings":
+        return <MelitaBookings />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -234,6 +237,11 @@ export default function AdminDashboard() {
           <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => setActiveView("annie-manual-booking")} />
           {/* <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => setActiveView("annie-failed-bookings")} /> */}
           <SidebarButton icon={QrCode} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
+
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Melita</h3>
+          </div>
+          <SidebarButton icon={Ticket} label="Melita Bookings" active={activeView === "melita-bookings"} onClick={() => setActiveView("melita-bookings")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>

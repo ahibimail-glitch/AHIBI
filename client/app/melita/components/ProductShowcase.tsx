@@ -1,9 +1,11 @@
 import { useRef } from 'react';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ProductShowcase = () => {
     const products = [
         {
+            id: "71947811847165801",
             name: "Melita Ultra Hydrating Essence",
             originalPrice: "₹1,499.00",
             salePrice: "₹1,199.00",
@@ -12,6 +14,7 @@ const ProductShowcase = () => {
                 "Meet Melita Ultra Hydrating Essence. A featherlight essence powered by Squalane, Hyaluronic Acid, and Peptides to deeply hydrate, strengthen your skin barrier, and prep your skin for actives. Clinically shown to boost hydration by up to 400%. Healthy skin starts with a strong, resilient barrier.",
         },
         {
+            id: "71947811847165802",
             name: "Melita Ultra Protecting Sunscreen",
             originalPrice: "₹1,450.00",
             salePrice: "₹1,299.00",
@@ -20,6 +23,7 @@ const ProductShowcase = () => {
                 "Your daily skin shield. Meet your new favourite sun shield. This SPF 50+ PA++++ sunscreen blends into your skin within seconds, leaving no white cast and a beautiful, glass-like glow. Its gel-cream texture is refreshing and cooling, making application feel like a treat—not a chore. Infused with powerful antioxidants, it helps protect your skin from UV rays, pollution, and everyday environmental stressors—so you stay radiant and resilient, wherever life takes you. Lightweight, nourishing, and virtually invisible—this is protection you'll want to wear every single day.",
         },
         {
+            id: "71947811847165803",
             name: "Melita Oily Skin Daily Essentials",
             originalPrice: "₹3,324.00",
             salePrice: "₹2,593.00",
@@ -28,6 +32,7 @@ const ProductShowcase = () => {
                 "Light on skin. Strong on results. This 3-step routine is designed to gently cleanse, deeply hydrate, and invisibly protect oily or acne-prone skin—all without heaviness, stickiness, or residue. Start with the Renewing Cleanser, a soap-free gel that foams just enough to lift away excess oil, buildup, and light makeup without disrupting your skin barrier. Follow with the Ultra Hydrating Essence, a featherlight formula that boosts hydration by up to 400%, helping to balance oil production and soothe skin. Finish with the Ultra Protecting Sunscreen, a fragrance-free gel-cream with SPF 50+ that absorbs quickly, leaves no white cast, and protects against sun and screen damage. Together, they help oily skin stay fresh, calm, and protected—without weighing it down.",
         },
         {
+            id: "71947811847165804",
             name: "Melita Barrier Care Starter Duo",
             originalPrice: "₹1,874.00",
             salePrice: "₹1,499.00",
@@ -85,12 +90,14 @@ const ProductShowcase = () => {
 
                                     {/* Hover Add to Bag (Desktop only) */}
                                     <div className="hidden sm:block absolute top-[90%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                                        <button
-                                            type="button"
-                                            className="bg-[#835339] text-white font-headingTwo font-semibold rounded-sm text-sm md:text-base px-12 md:px-16 py-2 transition-all whitespace-nowrap shadow-md hover:bg-white hover:text-[#835339] hover:border border-[#835339]"
-                                        >
-                                            ADD TO BAG
-                                        </button>
+                                        <Link href={`/melita/details/${product.id}`} passHref>
+                                            <button
+                                                type="button"
+                                                className="bg-[#835339] text-white font-headingTwo font-semibold rounded-sm text-sm md:text-base px-12 md:px-16 py-2 transition-all whitespace-nowrap shadow-md hover:bg-white hover:text-[#835339] hover:border border-[#835339]"
+                                            >
+                                                BUY NOW
+                                            </button>
+                                        </Link>
                                     </div>
                                 </a>
 
@@ -111,12 +118,14 @@ const ProductShowcase = () => {
 
                                 {/* Add to Bag (Mobile only) */}
                                 <div className="block sm:hidden px-3 pb-4 bg-[#f0e4d4]">
-                                    <button
-                                        type="button"
-                                        className="w-full block text-center bg-white font-headingTwo font-semibold rounded-sm text-sm px-6 py-2.5 transition-all shadow-md text-[#835339] border border-[#835339] active:bg-[#835339] active:text-white"
-                                    >
-                                        ADD TO BAG
-                                    </button>
+                                    <Link href={`/melita/details/${product.id}`} passHref>
+                                        <button
+                                            type="button"
+                                            className="w-full block text-center bg-white font-headingTwo font-semibold rounded-sm text-sm px-6 py-2.5 transition-all shadow-md text-[#835339] border border-[#835339] active:bg-[#835339] active:text-white"
+                                        >
+                                            BUY NOW
+                                        </button>
+                                    </Link>
                                 </div>
                             </div>
                         </div>
