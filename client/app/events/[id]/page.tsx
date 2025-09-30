@@ -361,6 +361,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       return;
     }
 
+    // Fire Meta Pixel CompleteRegistration on payment intent for Biker Bash
+    if (typeof window !== 'undefined' && (window as any).fbq && isBikerBash) {
+      try {
+        (window as any).fbq('track', 'CompleteRegistration', {
+          value: 1160,
+          currency: 'INR',
+        });
+      } catch (err) {
+        console.warn('fbq track CompleteRegistration failed', err);
+      }
+    }
+
     // Check if user is logged in
     const token = localStorage.getItem("token");
     if (!token || !user) {
