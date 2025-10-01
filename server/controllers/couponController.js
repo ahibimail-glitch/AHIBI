@@ -108,19 +108,8 @@ exports.getCoupons = async (req, res, next) => {
 };
 
 exports.markUsed = async (req, res, next) => {
-  try {
-    const { code } = req.params;
-    const normalized = String(code).trim().toUpperCase();
-    const coupon = await Coupon.findOne({ code: normalized });
-    if (!coupon) return res.status(404).json({ message: 'Coupon not found' });
-    if (coupon.status === 'used') return res.status(400).json({ message: 'Coupon already used' });
-    coupon.status = 'used';
-    coupon.usedAt = new Date();
-    await coupon.save();
-    res.json(coupon);
-  } catch (err) {
-    next(err);
-  }
+  // This feature is disabled to allow multiple uses of a coupon.
+  return res.status(403).json({ message: 'This feature is disabled.' });
 };
 
 exports.deleteCoupon = async (req, res, next) => {
@@ -152,9 +141,9 @@ exports.validateCoupon = async (req, res, next) => {
       return res.status(400).json({ message: 'Coupon not valid for this event' });
     }
 
-    if (coupon.status === 'used') {
-      return res.status(400).json({ message: 'Coupon already used' });
-    }
+    // if (coupon.status === 'used') {
+    //   return res.status(400).json({ message: 'Coupon already used' });
+    // }
 
     if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
       return res.status(400).json({ message: 'Coupon has expired' });
@@ -173,6 +162,9 @@ exports.validateCoupon = async (req, res, next) => {
     const discountAmount = Math.round((unitPrice * coupon.discountPercentage) / 100);
     const totalAmount = tickets.reduce((sum, t) => sum + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
     const payable = Math.max(0, totalAmount - discountAmount);
+
+    // Increment the usage count without waiting
+    coupon.updateOne({ $inc: { timesUsed: 1 } }).catch(err => console.error('Failed to increment coupon usage:', err));
 
     return res.json({
       valid: true,
@@ -211,9 +203,9 @@ exports.validateMelitaCoupon = async (req, res, next) => {
       return res.status(400).json({ message: 'Coupon not valid for Melita' });
     }
 
-    if (coupon.status === 'used') {
-      return res.status(400).json({ message: 'Coupon already used' });
-    }
+    // if (coupon.status === 'used') {
+    //   return res.status(400).json({ message: 'Coupon already used' });
+    // }
 
     if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
       return res.status(400).json({ message: 'Coupon has expired' });
@@ -222,6 +214,9 @@ exports.validateMelitaCoupon = async (req, res, next) => {
     const baseAmount = Number(amount) || 0;
     const discountAmount = Math.round((baseAmount * coupon.discountPercentage) / 100);
     const payable = Math.max(0, baseAmount - discountAmount);
+
+    // Increment the usage count without waiting
+    coupon.updateOne({ $inc: { timesUsed: 1 } }).catch(err => console.error('Failed to increment coupon usage:', err));
 
     return res.json({
       valid: true,

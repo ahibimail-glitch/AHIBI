@@ -36,6 +36,10 @@ const CouponSchema = new mongoose.Schema({
   usedAt: {
     type: Date,
   },
+  timesUsed: {
+    type: Number,
+    default: 0,
+  },
   generatedBy: {
     id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     name: { type: String },
