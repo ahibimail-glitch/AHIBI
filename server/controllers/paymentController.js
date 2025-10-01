@@ -270,12 +270,15 @@ exports.verifyPayment = async (req, res) => {
       }
     }
 
-    // Mark coupon as used if applied
+    // Mark coupon as used and increment usage count if applied
     try {
       if (bookingDetails?.coupon?.code) {
         await Coupon.findOneAndUpdate(
           { code: bookingDetails.coupon.code },
-          { $set: { status: 'used', usedAt: new Date() } }
+          { 
+            $set: { status: 'used', usedAt: new Date() },
+            $inc: { timesUsed: 1 }
+          }
         );
       }
     } catch (couponErr) {

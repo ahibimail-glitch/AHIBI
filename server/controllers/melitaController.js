@@ -107,7 +107,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
       booking.status = 'confirmed';
       await booking.save();
 
-      // If a coupon was used, mark it as used in the database (if it exists)
+      // If a coupon was used, mark it as used and increment usage count in the database
       if (booking.coupon?.code) {
         const code = String(booking.coupon.code).trim().toUpperCase();
         try {
@@ -115,6 +115,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
           if (couponDoc && couponDoc.status !== 'used') {
             couponDoc.status = 'used';
             couponDoc.usedAt = new Date();
+            couponDoc.timesUsed = (couponDoc.timesUsed || 0) + 1;
             await couponDoc.save();
           }
           // After marking used, generate an AHIBI Fest coupon once per booking

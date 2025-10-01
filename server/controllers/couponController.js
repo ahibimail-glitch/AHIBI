@@ -163,8 +163,8 @@ exports.validateCoupon = async (req, res, next) => {
     const totalAmount = tickets.reduce((sum, t) => sum + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
     const payable = Math.max(0, totalAmount - discountAmount);
 
-    // Increment the usage count without waiting
-    coupon.updateOne({ $inc: { timesUsed: 1 } }).catch(err => console.error('Failed to increment coupon usage:', err));
+    // NOTE: timesUsed will be incremented when the booking is actually completed
+    // Do not increment here as this is just validation
 
     return res.json({
       valid: true,
@@ -215,8 +215,8 @@ exports.validateMelitaCoupon = async (req, res, next) => {
     const discountAmount = Math.round((baseAmount * coupon.discountPercentage) / 100);
     const payable = Math.max(0, baseAmount - discountAmount);
 
-    // Increment the usage count without waiting
-    coupon.updateOne({ $inc: { timesUsed: 1 } }).catch(err => console.error('Failed to increment coupon usage:', err));
+    // NOTE: timesUsed will be incremented when the booking is actually completed
+    // Do not increment here as this is just validation
 
     return res.json({
       valid: true,
