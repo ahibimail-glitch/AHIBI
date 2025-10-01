@@ -172,6 +172,7 @@ const ProductDetailsPage = () => {
                                 },
                             }).catch(() => {});
                         }
+                        // Removed client-side reward generation to prevent duplicates
                     } catch (_) {
                         // Non-blocking: even if this fails, continue to success
                     } finally {

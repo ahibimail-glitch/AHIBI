@@ -44,6 +44,9 @@ const MelitaBookingSchema = new mongoose.Schema({
     enum: ['pending', 'confirmed', 'failed'],
     default: 'pending',
   },
+  rewardCouponCode: {
+    type: String,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

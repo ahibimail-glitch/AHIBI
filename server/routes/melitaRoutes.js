@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createOrder, verifyPayment, getAdminBookings, getBookingById } = require('../controllers/melitaController');
+const { createOrder, verifyPayment, getAdminBookings, getBookingById, generateRewardCoupon } = require('../controllers/melitaController');
 const { protect, authorize } = require('../middlewares/auth');
 const couponController = require('../controllers/couponController');
 
@@ -28,5 +28,10 @@ router.get('/bookings/:id', protect, getBookingById);
 // @desc    Validate coupon for Melita purchases
 // @access  Private
 router.post('/coupons/validate', protect, couponController.validateMelitaCoupon);
+
+// @route   POST /api/melita/rewards/generate
+// @desc    Generate reward coupon for AHIBI Fest based on used Melita coupon
+// @access  Private
+router.post('/rewards/generate', protect, generateRewardCoupon);
 
 module.exports = router;
