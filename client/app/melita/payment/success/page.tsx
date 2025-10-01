@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useSearchParams } from 'next/navigation';
@@ -322,7 +322,9 @@ const PaymentSuccessPage = () => {
         <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-stone-50">
             <Navbar />
             <main className="max-w-7xl mx-auto px-6 py-12">
-                <PaymentSuccessContent />
+                <Suspense fallback={<div className="flex flex-col items-center justify-center min-h-[60vh] text-center"><Loader className="w-12 h-12 animate-spin text-[#835339] mb-4" /><p className="text-lg text-gray-600">Loading...</p></div>}>
+                    <PaymentSuccessContent />
+                </Suspense>
             </main>
             <Footer />
         </div>

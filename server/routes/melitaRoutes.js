@@ -32,6 +32,6 @@ router.post('/coupons/validate', protect, couponController.validateMelitaCoupon)
 // @route   POST /api/melita/rewards/generate
 // @desc    Generate reward coupon for AHIBI Fest based on used Melita coupon
 // @access  Private
-router.post('/rewards/generate', protect, generateRewardCoupon);
+// router.post('/rewards/generate', protect, generateRewardCoupon);
 
 module.exports = router;
