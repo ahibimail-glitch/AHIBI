@@ -318,7 +318,7 @@ const ProductDetailsPage = () => {
                                 <span className="text-2xl line-through text-gray-400">{product.originalPrice}</span>
                             </div>
                             {/* Coupon input */}
-                            <div className="mb-4">
+                            {/* <div className="mb-4">
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -346,7 +346,7 @@ const ProductDetailsPage = () => {
                                     <span className="font-semibold text-gray-900">To Pay</span>
                                     <span className="font-bold text-indigo-600">₹{Math.max(0, parseFloat(product.salePrice.replace(/[₹,]/g, '')) - (appliedCoupon?.discountAmount || 0)).toLocaleString()}</span>
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* Trust Badges */}
                             <div className="grid grid-cols-3 gap-4">

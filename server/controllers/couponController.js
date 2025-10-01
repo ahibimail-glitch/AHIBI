@@ -16,7 +16,7 @@ function generateUniqueCode() {
 
 exports.createCoupon = async (req, res, next) => {
   try {
-    const { eventId, ticketCategory, discountPercentage, expiresAt, generatedBy } = req.body;
+    const { eventId, ticketCategory, discountPercentage, expiresAt, generatedBy, code: manualCode } = req.body;
 
     if (!eventId || !ticketCategory || discountPercentage === undefined) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -39,14 +39,26 @@ exports.createCoupon = async (req, res, next) => {
     }
 
     let code;
-    for (let attempts = 0; attempts < 5; attempts++) {
-      code = generateUniqueCode();
-      const exists = await Coupon.findOne({ code });
-      if (!exists) break;
-      code = undefined;
-    }
-    if (!code) {
-      return res.status(500).json({ message: 'Failed to generate unique coupon code' });
+    if (manualCode) {
+      const normalized = String(manualCode).trim().toUpperCase();
+      if (!/^[A-Z0-9\-]{4,36}$/.test(normalized)) {
+        return res.status(400).json({ message: 'Invalid code format' });
+      }
+      const exists = await Coupon.findOne({ code: normalized });
+      if (exists) {
+        return res.status(400).json({ message: 'Coupon code already exists' });
+      }
+      code = normalized;
+    } else {
+      for (let attempts = 0; attempts < 5; attempts++) {
+        code = generateUniqueCode();
+        const exists = await Coupon.findOne({ code });
+        if (!exists) break;
+        code = undefined;
+      }
+      if (!code) {
+        return res.status(500).json({ message: 'Failed to generate unique coupon code' });
+      }
     }
 
     const coupon = await Coupon.create({
