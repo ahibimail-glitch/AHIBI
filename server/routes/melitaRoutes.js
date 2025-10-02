@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createOrder, verifyPayment, getAdminBookings, getBookingById, generateRewardCoupon } = require('../controllers/melitaController');
+const { createOrder, verifyPayment, getAdminBookings, getBookingById, generateRewardCoupon, verifyPaymentClient } = require('../controllers/melitaController');
 const { protect, authorize } = require('../middlewares/auth');
 const couponController = require('../controllers/couponController');
 
@@ -13,6 +13,11 @@ router.post('/orders', protect, createOrder);
 // @desc    Verify payment and update booking
 // @access  Public (Webhook)
 router.post('/verify-payment', verifyPayment);
+
+// @route   POST /api/melita/verify-payment-client
+// @desc    Verify payment from client and create AHIBI bookings
+// @access  Private
+router.post('/verify-payment-client', protect, verifyPaymentClient);
 
 // @route   GET /api/melita/admin/bookings
 // @desc    Get all Melita bookings

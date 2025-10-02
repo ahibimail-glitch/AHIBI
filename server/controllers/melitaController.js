@@ -57,7 +57,7 @@ async function createAhibiFestCoupon(discountPercentage) {
 // @route   POST /api/melita/orders
 // @access  Private
 const createOrder = asyncHandler(async (req, res) => {
-  const { amount, product, userId, deliveryAddress, coupon } = req.body;
+  const { amount, product, userId, deliveryAddress, coupon, ahibiTickets } = req.body;
 
   const options = {
     amount: amount * 100, // amount in the smallest currency unit
@@ -74,6 +74,7 @@ const createOrder = asyncHandler(async (req, res) => {
         deliveryAddress: deliveryAddress,
         amount: amount,
         ...(coupon ? { coupon } : {}),
+        ...(ahibiTickets ? { ahibiTickets } : {}),
         razorpay_order_id: order.id,
         status: 'pending',
     });
@@ -82,7 +83,8 @@ const createOrder = asyncHandler(async (req, res) => {
 
     res.status(201).json({ order, melitaBooking });
   } catch (error) {
-    res.status(500).json({ message: 'Error creating Razorpay order', error });
+    console.error('Error creating Razorpay order:', error);
+    res.status(500).json({ message: 'Error creating Razorpay order', error: error.message });
   }
 });
 
@@ -90,22 +92,106 @@ const createOrder = asyncHandler(async (req, res) => {
 // @route   POST /api/melita/verify-payment
 // @access  Public (Webhook)
 const verifyPayment = asyncHandler(async (req, res) => {
+  console.log('=== MELITA WEBHOOK RECEIVED ===');
+  console.log('Request body:', JSON.stringify(req.body, null, 2));
+  console.log('Headers:', req.headers);
+  
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
   const shasum = crypto.createHmac('sha256', secret);
   shasum.update(JSON.stringify(req.body));
   const digest = shasum.digest('hex');
 
+  console.log('Signature match:', digest === req.headers['x-razorpay-signature']);
+
   if (digest === req.headers['x-razorpay-signature']) {
     const { order_id, payment_id } = req.body.payload.payment.entity;
+    console.log('Processing payment - Order ID:', order_id, 'Payment ID:', payment_id);
 
     const booking = await MelitaBooking.findOne({ razorpay_order_id: order_id });
+    console.log('Found booking:', booking ? booking._id : 'NOT FOUND');
 
     if (booking) {
+      console.log('Booking ahibiTickets:', JSON.stringify(booking.ahibiTickets, null, 2));
+      
       booking.razorpay_payment_id = payment_id;
       booking.razorpay_signature = req.headers['x-razorpay-signature'];
       booking.status = 'confirmed';
       await booking.save();
+      console.log('Booking status updated to confirmed');
+
+      // If AHIBI tickets were purchased, create bookings for them
+      if (booking.ahibiTickets && booking.ahibiTickets.tickets && booking.ahibiTickets.tickets.length > 0) {
+        console.log('AHIBI tickets found in booking, proceeding to create bookings...');
+        try {
+          const Booking = require('../models/Booking');
+          const Event = require('../models/Event');
+          
+          console.log('Creating AHIBI FEST bookings for Melita order:', booking.razorpay_order_id);
+          
+          const event = await Event.findById(booking.ahibiTickets.eventId);
+          if (!event) {
+            console.error('AHIBI FEST event not found:', booking.ahibiTickets.eventId);
+            throw new Error('Event not found');
+          }
+          
+          console.log('Found AHIBI FEST event:', event.title);
+          
+          // Create a booking for each ticket type
+          for (const ticketItem of booking.ahibiTickets.tickets) {
+            console.log('Processing ticket:', ticketItem.ticketType, 'Quantity:', ticketItem.quantity);
+            
+            const ticketType = event.ticketTypes.find(t => t.name === ticketItem.ticketType);
+            if (!ticketType) {
+              console.error('Ticket type not found:', ticketItem.ticketType);
+              continue;
+            }
+            
+            console.log('Found ticket type:', ticketType.name, 'Current sold:', ticketType.sold);
+            
+            // Create event snapshot
+            const eventSnapshot = {
+              _id: event._id,
+              title: event.title,
+              banner: event.banner,
+              startDate: event.startDate,
+              endDate: event.endDate,
+              location: {
+                address: event.location?.address || '',
+                city: event.location?.city || ''
+              }
+            };
+            
+            const ahibiBooking = new Booking({
+              user: booking.user,
+              event: event._id,
+              eventSnapshot: eventSnapshot,
+              ticketType: ticketItem.ticketType,
+              quantity: ticketItem.quantity,
+              price: ticketItem.price,
+              total: ticketItem.price * ticketItem.quantity,
+              status: 'confirmed',
+              paymentStatus: 'completed',
+              paymentId: payment_id,
+              bookedAt: new Date(),
+            });
+            
+            await ahibiBooking.save();
+            console.log('Created AHIBI booking:', ahibiBooking._id);
+            
+            // Update ticket sold count
+            ticketType.sold = (ticketType.sold || 0) + ticketItem.quantity;
+            await event.save();
+            console.log('Updated ticket sold count:', ticketType.sold);
+          }
+          
+          console.log('Successfully created all AHIBI FEST bookings');
+        } catch (ahibiError) {
+          console.error('Failed to create AHIBI FEST bookings:', ahibiError);
+          console.error('Error stack:', ahibiError.stack);
+          // Don't fail the webhook, just log the error
+        }
+      }
 
       // If a coupon was used, mark it as used and increment usage count in the database
       if (booking.coupon?.code) {
@@ -170,7 +256,127 @@ const getBookingById = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { createOrder, verifyPayment, getAdminBookings, getBookingById };
+// @desc    Verify payment from client (not webhook)
+// @route   POST /api/melita/verify-payment-client
+// @access  Private
+const verifyPaymentClient = asyncHandler(async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  
+  console.log('=== CLIENT PAYMENT VERIFICATION ===');
+  console.log('Order ID:', razorpay_order_id);
+  console.log('Payment ID:', razorpay_payment_id);
+  
+  try {
+    // Verify signature
+    const text = razorpay_order_id + '|' + razorpay_payment_id;
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(text)
+      .digest('hex');
+    
+    if (generated_signature !== razorpay_signature) {
+      console.error('Signature mismatch');
+      return res.status(400).json({ success: false, message: 'Invalid signature' });
+    }
+    
+    console.log('Signature verified successfully');
+    
+    // Find the booking
+    const booking = await MelitaBooking.findOne({ razorpay_order_id });
+    if (!booking) {
+      console.error('Booking not found for order:', razorpay_order_id);
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+    
+    console.log('Found booking:', booking._id);
+    console.log('Booking ahibiTickets:', JSON.stringify(booking.ahibiTickets, null, 2));
+    
+    // Update booking status
+    booking.razorpay_payment_id = razorpay_payment_id;
+    booking.razorpay_signature = razorpay_signature;
+    booking.status = 'confirmed';
+    await booking.save();
+    console.log('Booking status updated to confirmed');
+    
+    // If AHIBI tickets were purchased, create bookings for them
+    if (booking.ahibiTickets && booking.ahibiTickets.tickets && booking.ahibiTickets.tickets.length > 0) {
+      console.log('AHIBI tickets found, creating bookings...');
+      
+      const Booking = require('../models/Booking');
+      const Event = require('../models/Event');
+      
+      const event = await Event.findById(booking.ahibiTickets.eventId);
+      if (!event) {
+        console.error('AHIBI FEST event not found:', booking.ahibiTickets.eventId);
+        return res.status(404).json({ success: false, message: 'Event not found' });
+      }
+      
+      console.log('Found AHIBI FEST event:', event.title);
+      
+      const createdBookings = [];
+      
+      // Create a booking for each ticket type
+      for (const ticketItem of booking.ahibiTickets.tickets) {
+        console.log('Processing ticket:', ticketItem.ticketType, 'Quantity:', ticketItem.quantity);
+        
+        const ticketType = event.ticketTypes.find(t => t.name === ticketItem.ticketType);
+        if (!ticketType) {
+          console.error('Ticket type not found:', ticketItem.ticketType);
+          continue;
+        }
+        
+        console.log('Found ticket type:', ticketType.name);
+        
+        // Create event snapshot
+        const eventSnapshot = {
+          _id: event._id,
+          title: event.title,
+          banner: event.banner,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          location: {
+            address: event.location?.address || '',
+            city: event.location?.city || ''
+          }
+        };
+        
+        const ahibiBooking = new Booking({
+          user: booking.user,
+          event: event._id,
+          eventSnapshot: eventSnapshot,
+          ticketType: ticketItem.ticketType,
+          quantity: ticketItem.quantity,
+          price: ticketItem.price,
+          total: ticketItem.price * ticketItem.quantity,
+          status: 'confirmed',
+          paymentStatus: 'completed',
+          paymentId: razorpay_payment_id,
+          bookedAt: new Date(),
+        });
+        
+        await ahibiBooking.save();
+        console.log('Created AHIBI booking:', ahibiBooking._id);
+        createdBookings.push(ahibiBooking);
+        
+        // Update ticket sold count
+        ticketType.sold = (ticketType.sold || 0) + ticketItem.quantity;
+        await event.save();
+        console.log('Updated ticket sold count:', ticketType.sold);
+      }
+      
+      console.log('Successfully created', createdBookings.length, 'AHIBI FEST bookings');
+    } else {
+      console.log('No AHIBI tickets in this booking');
+    }
+    
+    res.json({ success: true, booking });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+module.exports = { createOrder, verifyPayment, getAdminBookings, getBookingById, verifyPaymentClient };
 // Generate Ahibi Fest reward coupon based on used Melita coupon code
 module.exports.generateRewardCoupon = asyncHandler(async (req, res) => {
   try {

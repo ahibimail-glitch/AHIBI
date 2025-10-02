@@ -1,14 +1,26 @@
 'use client';
 
-import { useState, useEffect, type MouseEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, type MouseEvent, type ChangeEvent, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
-import { Check, Shield, Truck, Heart, Star } from 'lucide-react';
+import { Check, Shield, Truck, Heart, Star, Loader2, Minus, Plus, XCircle, Calendar as CalendarIcon, Clock, MapPin, Instagram, Ticket as TicketIcon, Users, CheckCircle2 } from 'lucide-react';
 import Footer from '@/app/Footer';
 import Navbar from '@/app/Navbar';
 import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import Image from 'next/image';
+import TermsAndConditions from '@/components/AhibiFest/TermsAndConditons';
+import FAQPage from '@/components/AhibiFest/FAQ';
+import { format } from 'date-fns';
 
 const products = [
     {
@@ -59,6 +71,36 @@ interface RazorpaySuccessResponse {
     razorpay_signature: string;
 }
 
+interface TicketType {
+    _id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    sold: number;
+    description: string;
+    benefits?: string[];
+    capacity: number;
+}
+
+interface EventLocation {
+    address: string;
+    city: string;
+    state?: string;
+    country?: string;
+}
+
+interface Event {
+    _id: string;
+    title: string;
+    description: string;
+    banner: string;
+    category: string;
+    startDate: string;
+    endDate: string;
+    ticketTypes: TicketType[];
+    location: EventLocation;
+}
+
 const ProductDetailsPage = () => {
     const { user } = useAuth();
     const { toast } = useToast();
@@ -66,7 +108,7 @@ const ProductDetailsPage = () => {
     // Get product ID from URL
     const params = useParams();
     const { id } = params;
-        const [isLiked, setIsLiked] = useState(false);
+    const [isLiked, setIsLiked] = useState(false);
     const [loading, setLoading] = useState(false);
     const [couponCode, setCouponCode] = useState('');
     const [couponApplying, setCouponApplying] = useState(false);
@@ -76,6 +118,22 @@ const ProductDetailsPage = () => {
         name: '', address: '', city: '', state: '', zip: '', phone: ''
     });
     const [formError, setFormError] = useState<string | null>(null);
+    const [ticketError, setTicketError] = useState<string | null>(null);
+    const [termsError, setTermsError] = useState<string | null>(null);
+
+    // AHIBI FEST Event State
+    const [event, setEvent] = useState<Event | null>(null);
+    const [eventLoading, setEventLoading] = useState(true);
+    const [selectedTickets, setSelectedTickets] = useState<Map<string, { ticket: TicketType; quantity: number }>>(new Map());
+    const [bookingError, setBookingError] = useState<string | null>(null);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [isBooking, setIsBooking] = useState(false);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [termsModalOpen, setTermsModalOpen] = useState(false);
+    const summaryRef = useRef<HTMLDivElement | null>(null);
+
+    // AHIBI FEST Event ID (special event)
+    const AHIBI_FEST_EVENT_ID = '68c2c33eb6ef88c76f50ce7c';
 
     const product = products.find((p) => p.id === id);
 
@@ -93,6 +151,8 @@ const ProductDetailsPage = () => {
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        // Clear form error when user starts typing
+        if (formError) setFormError(null);
     };
 
     useEffect(() => {
@@ -100,30 +160,100 @@ const ProductDetailsPage = () => {
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
         document.body.appendChild(script);
+
+        // Fetch AHIBI FEST event data
+        const fetchEvent = async () => {
+            try {
+                setEventLoading(true);
+                console.log('Fetching AHIBI FEST event:', AHIBI_FEST_EVENT_ID);
+                const response = await fetch(`/api/events/${AHIBI_FEST_EVENT_ID}`, {
+                    cache: 'no-store',
+                });
+                console.log('AHIBI FEST response status:', response.status);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('AHIBI FEST event data:', data);
+                    setEvent(data);
+                } else {
+                    console.error('Failed to fetch AHIBI FEST event:', response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error('Error fetching AHIBI FEST event:', error);
+            } finally {
+                setEventLoading(false);
+            }
+        };
+
+        fetchEvent();
     }, []);
 
     const handlePayment = async (e: MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
-        if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.zip || !formData.phone) {
-            setFormError('Please fill in all delivery details.');
-            toast({ variant: 'destructive', title: 'Missing details', description: 'Please fill in all delivery details.' });
+
+        // Clear all errors
+        setFormError(null);
+        setTicketError(null);
+        setTermsError(null);
+
+        if (!user) {
+            const errorMsg = 'Please log in to place an order.';
+            setFormError(errorMsg);
+            toast({ variant: 'destructive', title: 'Login required', description: errorMsg });
+            router.push('/auth');
             return;
         }
 
-        if (!user) {
-            setFormError('Please log in to place an order.');
-            toast({ variant: 'destructive', title: 'Login required', description: 'Please log in to place an order.' });
-            router.push('/auth');
+        // Check if AHIBI tickets are selected
+        if (selectedTickets.size === 0) {
+            const errorMsg = 'Please select at least one AHIBI FEST ticket to proceed with your order.';
+            setTicketError(errorMsg);
+            toast({
+                variant: 'destructive',
+                title: 'No tickets selected',
+                description: errorMsg
+            });
+            // Scroll to AHIBI tickets section
+            const ticketsSection = document.querySelector('[data-ahibi-tickets]');
+            if (ticketsSection) {
+                ticketsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+
+        if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.zip || !formData.phone) {
+            const errorMsg = 'Please fill in all delivery details.';
+            setFormError(errorMsg);
+            toast({ variant: 'destructive', title: 'Missing details', description: errorMsg });
+            // Scroll to delivery form
+            const deliveryForm = document.querySelector('[data-delivery-form]');
+            if (deliveryForm) {
+                deliveryForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+        }
+
+        // Check if AHIBI tickets selected but terms not accepted
+        if (selectedTickets.size > 0 && !acceptedTerms) {
+            const errorMsg = 'Please accept the terms and conditions for AHIBI FEST tickets.';
+            setTermsError(errorMsg);
+            toast({ variant: 'destructive', title: 'Terms required', description: errorMsg });
+            // Scroll to terms checkbox
+            const termsCheckbox = document.querySelector('[data-ahibi-terms]');
+            if (termsCheckbox) {
+                termsCheckbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             return;
         }
 
         setLoading(true);
 
         try {
-            const baseAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
-            const amount = Math.max(0, baseAmount - (appliedCoupon?.discountAmount || 0));
+            const melitaAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+            const ahibiTicketsAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+            const combinedAmount = melitaAmount + ahibiTicketsAmount;
+            const amount = Math.max(0, combinedAmount - (appliedCoupon?.discountAmount || 0));
 
-                        const token = localStorage.getItem('token');
+            const token = localStorage.getItem('token');
             if (!token) {
                 setFormError('Authentication token not found. Please log in again.');
                 toast({ variant: 'destructive', title: 'Auth error', description: 'Please log in again.' });
@@ -131,17 +261,25 @@ const ProductDetailsPage = () => {
                 return;
             }
 
-            const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/melita/orders`, 
+            const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/melita/orders`,
                 {
                     amount,
                     product: {
                         id: product.id,
                         name: product.name,
                         image: product.image,
-                        size: 'Standard' // Assuming a standard size for now
+                        size: 'Standard'
                     },
                     userId: user.id,
                     deliveryAddress: formData,
+                    ahibiTickets: selectedTickets.size > 0 ? {
+                        eventId: AHIBI_FEST_EVENT_ID,
+                        tickets: Array.from(selectedTickets.values()).map(item => ({
+                            ticketType: item.ticket.name,
+                            quantity: item.quantity,
+                            price: item.ticket.price,
+                        }))
+                    } : undefined,
                     ...(appliedCoupon ? { coupon: { code: appliedCoupon.code, discountPercentage: appliedCoupon.discountPercentage, discountAmount: appliedCoupon.discountAmount } } : {}),
                 },
                 {
@@ -162,6 +300,25 @@ const ProductDetailsPage = () => {
                 order_id: order.id,
                 handler: async function (response: RazorpaySuccessResponse) {
                     try {
+                        console.log('Payment successful, verifying...', response);
+
+                        // Verify payment and create AHIBI bookings
+                        const verifyResponse = await axios.post(
+                            `${process.env.NEXT_PUBLIC_API_URL}/api/melita/verify-payment-client`,
+                            {
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                            },
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${token}`
+                                }
+                            }
+                        );
+
+                        console.log('Payment verified:', verifyResponse.data);
+
                         // Mark coupon as used on the backend for non-MELITA40 codes
                         if (appliedCoupon?.code && appliedCoupon.code !== 'MELITA40') {
                             const apiBase = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
@@ -170,11 +327,11 @@ const ProductDetailsPage = () => {
                                 headers: {
                                     Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
                                 },
-                            }).catch(() => {});
+                            }).catch(() => { });
                         }
-                        // Removed client-side reward generation to prevent duplicates
-                    } catch (_) {
-                        // Non-blocking: even if this fails, continue to success
+                    } catch (error) {
+                        console.error('Error verifying payment:', error);
+                        toast({ variant: 'destructive', title: 'Verification Error', description: 'Payment successful but verification failed. Please contact support.' });
                     } finally {
                         router.push(`/melita/payment/success?payment_id=${response.razorpay_payment_id}&order_id=${order.id}&booking_id=${melitaBooking._id}`);
                     }
@@ -204,27 +361,39 @@ const ProductDetailsPage = () => {
         try {
             setCouponApplying(true);
             setCouponError(null);
+
             const token = localStorage.getItem('token');
             if (!token) {
                 setCouponError('Please log in to apply coupon');
                 toast({ variant: 'destructive', title: 'Login required', description: 'Please log in to apply coupon.' });
+                setCouponApplying(false);
                 return;
             }
 
-            const baseAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+            const melitaAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+            const ahibiTicketsAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+            const combinedAmount = melitaAmount + ahibiTicketsAmount;
 
-            // Special-case MELITA40: flat 40% off
+            // Check if there's anything to apply coupon on
+            if (combinedAmount <= 0) {
+                setCouponError('Please add items to your cart before applying a coupon');
+                toast({ variant: 'destructive', title: 'Cart Empty', description: 'Please select AHIBI FEST tickets or ensure Melita product is in cart.' });
+                setCouponApplying(false);
+                return;
+            }
+
+            // Special-case MELITA40: flat 40% off on combined amount
             if (couponCode.trim().toUpperCase() === 'MELITA40') {
-                const discountAmount = Math.round((baseAmount * 40) / 100);
+                const discountAmount = Math.round((combinedAmount * 40) / 100);
                 setAppliedCoupon({
                     valid: true,
                     code: 'MELITA40',
                     discountPercentage: 40,
                     discountAmount,
-                    totalAmount: baseAmount,
-                    payable: Math.max(0, baseAmount - discountAmount),
+                    totalAmount: combinedAmount,
+                    payable: Math.max(0, combinedAmount - discountAmount),
                 });
-                toast({ title: 'Coupon applied', description: 'MELITA40 applied: 40% off.' });
+                toast({ title: 'Coupon applied', description: 'MELITA40 applied: 40% off on combined total.' });
                 return;
             }
 
@@ -235,7 +404,7 @@ const ProductDetailsPage = () => {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ code: couponCode, amount: baseAmount }),
+                body: JSON.stringify({ code: couponCode, amount: combinedAmount }),
             });
             const data = await res.json();
             if (!res.ok || !data.valid) {
@@ -258,7 +427,7 @@ const ProductDetailsPage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-stone-50">
             {/* Navbar */}
-           <Navbar/>
+            <Navbar />
 
             <div className="max-w-7xl mx-auto px-6 py-12">
                 {/* Main Product Section */}
@@ -268,13 +437,13 @@ const ProductDetailsPage = () => {
                         <div className="relative bg-gradient-to-br from-amber-50 to-stone-100 p-12 flex items-center justify-center">
                             <div className="relative group">
                                 <div className="absolute inset-0 bg-gradient-to-br from-[#835339]/20 to-transparent rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500"></div>
-                                <img 
-                                    src={product.image} 
-                                    alt={product.name} 
-                                    className="relative w-full h-auto object-cover rounded-2xl shadow-2xl transform group-hover:scale-105 transition-transform duration-500" 
+                                <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="relative w-full h-auto object-cover rounded-2xl shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
                                 />
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsLiked(!isLiked)}
                                 className="absolute top-8 right-8 p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-all"
                             >
@@ -365,100 +534,384 @@ const ProductDetailsPage = () => {
                             </div>
                         </div>
                     </div>
+                    {/* AHIBI FEST TICKETS */}
+                    {eventLoading && (
+                        <div className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 p-6 sm:p-12 border-t border-gray-200">
+                            <div className="text-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto mb-4" />
+                                <p className="text-gray-600">Loading AHIBI FEST tickets...</p>
+                            </div>
+                        </div>
+                    )}
+                    {!eventLoading && !event && (
+                        <div className="bg-gradient-to-br from-gray-50/50 to-gray-100/50 p-6 sm:p-12 border-t border-gray-200">
+                            <div className="text-center">
+                                <p className="text-gray-600">AHIBI FEST tickets are currently unavailable. You can still purchase Melita products.</p>
+                            </div>
+                        </div>
+                    )}
+                    {!eventLoading && event && (
+                        <div data-ahibi-tickets className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 p-6 sm:p-12 border-t border-gray-200">
+                            <h2 className="text-3xl font-light text-gray-900 mb-2 text-center">Add AHIBI FEST 2025 Tickets</h2>
+                            <p className="text-center text-gray-600 mb-8">Combine your Melita order with AHIBI FEST tickets and get a discount!</p>
+
+                            {/* Ticket Selection Error */}
+                            {ticketError && (
+                                <div className="mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-xl animate-pulse">
+                                    <div className="flex items-start gap-3">
+                                        <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <h3 className="font-semibold text-red-800 mb-1">Ticket Selection Required</h3>
+                                            <p className="text-sm text-red-700">{ticketError}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Error Modal */}
+                            <Dialog open={!!bookingError} onOpenChange={(open) => { if (!open) setBookingError(null); }}>
+                                <DialogContent className="sm:max-w-lg md:max-w-xl">
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                                            <XCircle className="h-5 w-5" />
+                                            Booking Limit Reached
+                                        </DialogTitle>
+                                        <DialogDescription className="text-gray-800">
+                                            {bookingError}
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="flex justify-end">
+                                        <Button onClick={() => setBookingError(null)} className="bg-red-600 hover:bg-red-700 text-white">Okay</Button>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+
+                            {/* Event Info Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-4xl mx-auto">
+                                <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
+                                    <div className="bg-indigo-100 rounded-full p-2">
+                                        <CalendarIcon className="h-5 w-5 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs uppercase text-gray-500">Date</p>
+                                        <p className="text-sm font-semibold text-gray-900">{format(new Date(event.startDate), 'MMM d, yyyy')}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
+                                    <div className="bg-purple-100 rounded-full p-2">
+                                        <Clock className="h-5 w-5 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs uppercase text-gray-500">Time</p>
+                                        <p className="text-sm font-semibold text-gray-900">{format(new Date(event.startDate), 'h:mm a')}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
+                                    <div className="bg-pink-100 rounded-full p-2">
+                                        <MapPin className="h-5 w-5 text-pink-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs uppercase text-gray-500">Venue</p>
+                                        <p className="text-sm font-semibold text-gray-900">{event.location.city}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Ticket Selection */}
+                            <div className="max-w-4xl mx-auto">
+                                {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {bookingError && (
+                                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 flex items-start gap-2">
+                                                <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                                                <div className="text-sm">{bookingError}</div>
+                                            </div>
+                                        )}
+                                        {/* Ticket Types */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                                            {event.ticketTypes.map((ticket) => {
+                                                const availabilityPercentage = Math.max(
+                                                    0,
+                                                    Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100)
+                                                );
+                                                const isSoldOut = ticket.quantity <= ticket.sold;
+                                                const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                                                const selectedItem = selectedTickets.get(ticket._id);
+                                                const quantity = selectedItem?.quantity || 0;
+
+                                                return (
+                                                    <Card
+                                                        key={ticket._id}
+                                                        className={`border-2 transition-all duration-200 hover:shadow-md w-full max-w-full ${quantity > 0
+                                                            ? 'border-indigo-500 bg-indigo-50/30'
+                                                            : isSoldOut
+                                                                ? 'border-gray-200 bg-gray-50'
+                                                                : 'border-gray-200 hover:border-indigo-300'
+                                                            } rounded-lg overflow-hidden relative`}
+                                                    >
+                                                        {isSoldOut && (
+                                                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10 rounded-lg">
+                                                                <img src="/sold-out.webp" className="h-60 w-60" alt="Sold Out" />
+                                                            </div>
+                                                        )}
+                                                        <CardHeader className="p-4 pb-2">
+                                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`p-2 rounded-full ${isSoldOut ? 'bg-gray-100' : quantity > 0 ? 'bg-indigo-100' : 'bg-gray-50'}`}>
+                                                                        <TicketIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSoldOut ? 'text-gray-400' : quantity > 0 ? 'text-indigo-600' : 'text-gray-600'}`} />
+                                                                    </div>
+                                                                    <div>
+                                                                        <CardTitle className="text-base sm:text-lg text-gray-900">{ticket.name}</CardTitle>
+                                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                                            {isSoldOut && (
+                                                                                <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
+                                                                                    Sold Out
+                                                                                </Badge>
+                                                                            )}
+                                                                            {isLimited && !isSoldOut && (
+                                                                                <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-xs animate-pulse">
+                                                                                    Limited Availability
+                                                                                </Badge>
+                                                                            )}
+                                                                            {quantity > 0 && (
+                                                                                <Badge className="bg-indigo-500 text-white text-xs">
+                                                                                    {quantity} selected
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                                                                    <p className="text-xs text-gray-500">per ticket</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent className="p-4 pt-0">
+                                                            <p className="text-green-600 font-bold mb-3">{ticket.description}</p>
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
+                                                                    <Users className="h-3 w-3 mr-1" />
+                                                                    {ticket.capacity} capacity
+                                                                </Badge>
+                                                            </div>
+                                                            {ticket.benefits && ticket.benefits.length > 0 && (
+                                                                <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
+                                                                    <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                                        Included Benefits
+                                                                    </p>
+                                                                    <ul className="space-y-1">
+                                                                        {ticket.benefits.map((benefit: string, i: number) => (
+                                                                            <li key={i} className="flex items-center gap-2 text-xs text-gray-700">
+                                                                                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                                                                                {benefit}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </div>
+                                                            )}
+                                                            {!isSoldOut && (
+                                                                <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <span className="text-xs sm:text-sm font-semibold text-gray-800">Quantity</span>
+                                                                        <span className="text-xs sm:text-sm font-semibold text-indigo-600">
+                                                                            ₹{(ticket.price * quantity).toLocaleString()}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => {
+                                                                                if (quantity > 0) {
+                                                                                    const newQuantity = quantity - 1;
+                                                                                    if (newQuantity === 0) {
+                                                                                        setSelectedTickets(prev => {
+                                                                                            const newMap = new Map(prev);
+                                                                                            newMap.delete(ticket._id);
+                                                                                            return newMap;
+                                                                                        });
+                                                                                    } else {
+                                                                                        setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            disabled={quantity <= 0}
+                                                                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                                                                        >
+                                                                            <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                                        </Button>
+                                                                        <span className="px-3 sm:px-4 py-1 bg-white rounded-lg border border-gray-200 text-sm sm:text-base font-semibold text-indigo-600">
+                                                                            {quantity}
+                                                                        </span>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => {
+                                                                                const newQuantity = quantity + 1;
+                                                                                if (newQuantity <= ticket.quantity - ticket.sold) {
+                                                                                    setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                                                                    if (newQuantity === 1) {
+                                                                                        setTimeout(() => {
+                                                                                            summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                                                        }, 100);
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            disabled={quantity >= ticket.quantity - ticket.sold}
+                                                                            className="h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-green-50 hover:border-green-300 hover:text-green-600"
+                                                                        >
+                                                                            <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                );
+                                            })}
+                                        </div>
+
+
+                                    </div>
+                                ) : (
+                                    <div className="py-6 text-center">
+                                        <div className="bg-gray-100 rounded-full p-3 inline-flex mb-3">
+                                            <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+                                        </div>
+                                        <p className="text-xs sm:text-sm text-gray-600">No tickets available for this event</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Terms Modal */}
+                            <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
+                                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>AHIBI FEST 2025 - Terms and Conditions</DialogTitle>
+                                    </DialogHeader>
+                                    <TermsAndConditions />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    )}
 
                     {/* Delivery Form Section */}
-                    <div className="bg-gradient-to-br from-amber-50/50 to-stone-50/50 p-12 border-t border-gray-200">
+                    <div data-delivery-form className="bg-gradient-to-br from-amber-50/50 to-stone-50/50 p-12 border-t border-gray-200">
                         <h2 className="text-3xl font-light text-gray-900 mb-2 text-center">Complete Your Order</h2>
                         <p className="text-center text-gray-600 mb-8">Enter your delivery details below</p>
+                        
+                        {/* Form Error */}
+                        {formError && (
+                            <div className="max-w-3xl mx-auto mb-6 p-4 bg-red-50 border-2 border-red-300 rounded-xl animate-pulse">
+                                <div className="flex items-start gap-3">
+                                    <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <h3 className="font-semibold text-red-800 mb-1">Delivery Details Required</h3>
+                                        <p className="text-sm text-red-700">{formError}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
                         <div className="max-w-3xl mx-auto space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2">
                                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                                    <input 
-                                        type="text" 
-                                        id="name" 
+                                    <input
+                                        type="text"
+                                        id="name"
                                         name="name"
                                         value={formData.name}
                                         onChange={handleInputChange}
                                         placeholder="Enter your full name"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white" 
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
                                     />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">Delivery Address</label>
-                                    <input 
-                                        type="text" 
-                                        id="address" 
+                                    <input
+                                        type="text"
+                                        id="address"
                                         name="address"
                                         value={formData.address}
                                         onChange={handleInputChange}
                                         placeholder="Street address, apartment, etc."
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white" 
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
                                     />
                                 </div>
                                 <div>
                                     <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                                    <input 
-                                        type="text" 
-                                        id="city" 
+                                    <input
+                                        type="text"
+                                        id="city"
                                         name="city"
                                         value={formData.city}
                                         onChange={handleInputChange}
                                         placeholder="City"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white" 
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
                                     />
                                 </div>
                                 <div>
                                     <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                                    <input 
-                                        type="text" 
-                                        id="state" 
+                                    <input
+                                        type="text"
+                                        id="state"
                                         name="state"
                                         value={formData.state}
                                         onChange={handleInputChange}
                                         placeholder="State"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white" 
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
                                     />
                                 </div>
                                 <div>
                                     <label htmlFor="zip" className="block text-sm font-medium text-gray-700 mb-2">PIN Code</label>
-                                    <input 
-                                        type="text" 
-                                        id="zip" 
+                                    <input
+                                        type="text"
+                                        id="zip"
                                         name="zip"
                                         value={formData.zip}
                                         onChange={handleInputChange}
                                         placeholder="123456"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white" 
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
                                     />
                                 </div>
                                 <div>
                                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                    <input 
-                                        type="tel" 
-                                        id="phone" 
+                                    <input
+                                        type="tel"
+                                        id="phone"
                                         name="phone"
                                         value={formData.phone}
                                         onChange={handleInputChange}
                                         placeholder="+91 98765 43210"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white" 
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
                                     />
                                 </div>
                             </div>
                             {/* Coupon input inside checkout form */}
                             <div className="mt-2">
+                                {selectedTickets.size === 0 && (
+                                    <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <p className="text-xs text-amber-700 text-center">
+                                            ⚠️ Please select AHIBI FEST tickets to apply coupons
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                                     <input
                                         type="text"
-                                        placeholder="Enter coupon code"
+                                        placeholder={selectedTickets.size === 0 ? "Select tickets first to apply coupon" : "Enter coupon code"}
                                         value={couponCode}
                                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white"
+                                        disabled={selectedTickets.size === 0}
+                                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#835339] focus:border-transparent transition-all bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     />
                                     <button
                                         onClick={handleApplyCoupon}
-                                        disabled={couponApplying || !couponCode.trim()}
-                                        className="px-6 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 h-[48px]"
+                                        disabled={couponApplying || !couponCode.trim() || selectedTickets.size === 0}
+                                        className="px-6 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 h-[48px] disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {couponApplying ? 'Applying...' : 'Apply'}
                                     </button>
@@ -472,12 +925,98 @@ const ProductDetailsPage = () => {
                                 )}
                             </div>
 
+                            {/* Summary breakdown */}
+                            <div className="space-y-2 mb-4">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Melita Product</span>
+                                    <span className="font-semibold">₹{parseFloat(product.salePrice.replace(/[₹,]/g, '')).toLocaleString()}</span>
+                                </div>
+                                {selectedTickets.size > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">AHIBI FEST Tickets</span>
+                                        <span className="font-semibold">₹{Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0).toLocaleString()}</span>
+                                    </div>
+                                )}
+                                {appliedCoupon?.discountAmount > 0 && (
+                                    <div className="flex justify-between text-sm text-green-600">
+                                        <span>Discount ({appliedCoupon.code})</span>
+                                        <span className="font-semibold">-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                    </div>
+                                )}
+                                <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                                    <span>Total</span>
+                                    <span className="text-[#835339]">₹{(() => {
+                                        const melitaAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+                                        const ahibiAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+                                        return Math.max(0, melitaAmount + ahibiAmount - (appliedCoupon?.discountAmount || 0)).toLocaleString();
+                                    })()}</span>
+                                </div>
+                            </div>
+
+                            {/* Warning if no tickets selected */}
+                            {selectedTickets.size === 0 && (
+                                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <p className="text-sm text-red-700 text-center font-medium">
+                                        ⚠️ Please select at least one AHIBI FEST ticket before placing your order
+                                    </p>
+                                </div>
+                            )}
+                            {/* Terms and Conditions for AHIBI tickets */}
+                            {selectedTickets.size > 0 && (
+                                <>
+                                    {termsError && (
+                                        <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-xl animate-pulse">
+                                            <div className="flex items-start gap-3">
+                                                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <h3 className="font-semibold text-red-800 mb-1">Terms & Conditions Required</h3>
+                                                    <p className="text-sm text-red-700">{termsError}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div data-ahibi-terms className={`flex items-start gap-2 p-4 rounded-lg border ${termsError ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-200'}`}>
+                                        <Checkbox
+                                            id="ahibi-terms"
+                                            checked={acceptedTerms}
+                                            onCheckedChange={(checked) => {
+                                                setAcceptedTerms(checked as boolean);
+                                                if (checked) setTermsError(null);
+                                            }}
+                                            className="mt-1"
+                                        />
+                                        <label
+                                            htmlFor="ahibi-terms"
+                                            className="text-xs sm:text-sm text-gray-700 cursor-pointer"
+                                        >
+                                            I accept the{" "}
+                                            <button
+                                                type="button"
+                                                onClick={() => setTermsModalOpen(true)}
+                                                className="text-indigo-600 hover:underline font-semibold"
+                                            >
+                                                Terms and Conditions
+                                            </button>
+                                            {" "}for AHIBI FEST 2025 tickets*
+                                        </label>
+                                    </div>
+                                </>
+                            )}
+
                             {/* Place order with dynamic amount */}
                             <button
                                 onClick={handlePayment}
-                                className="w-full bg-gradient-to-r from-[#835339] to-amber-700 text-white font-semibold rounded-xl py-4 mt-8 transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] transform duration-300"
+                                disabled={selectedTickets.size === 0}
+                                className={`w-full font-semibold rounded-xl py-4 mt-8 transition-all shadow-lg transform duration-300 ${selectedTickets.size === 0
+                                        ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                                        : 'bg-gradient-to-r from-[#835339] to-amber-700 text-white hover:shadow-2xl hover:scale-[1.02]'
+                                    }`}
                             >
-                                {loading ? 'PROCESSING...' : `PLACE ORDER • ₹${Math.max(0, parseFloat(product.salePrice.replace(/[₹,]/g, '')) - (appliedCoupon?.discountAmount || 0)).toLocaleString()}`}
+                                {loading ? 'PROCESSING...' : selectedTickets.size === 0 ? 'SELECT AHIBI FEST TICKETS TO CONTINUE' : `PLACE ORDER • ₹${(() => {
+                                    const melitaAmount = parseFloat(product.salePrice.replace(/[₹,]/g, ''));
+                                    const ahibiAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+                                    return Math.max(0, melitaAmount + ahibiAmount - (appliedCoupon?.discountAmount || 0)).toLocaleString();
+                                })()}`}
                             </button>
                             {/* <p className="text-center text-sm text-gray-500 mt-4">🔒 Secure checkout • Free shipping on all orders • 30-day money-back guarantee</p> */}
                         </div>
@@ -486,7 +1025,10 @@ const ProductDetailsPage = () => {
             </div>
 
             {/* Footer */}
-           <Footer/>
+            <Footer />
+            
+            {/* Toast Notifications */}
+            <Toaster />
         </div>
     );
 };

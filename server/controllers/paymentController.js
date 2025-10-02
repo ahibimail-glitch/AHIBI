@@ -46,7 +46,7 @@ exports.createOrder = async (req, res) => {
     try {
       if (coupon && coupon.code) {
         const dbCoupon = await Coupon.findOne({ code: String(coupon.code).trim().toUpperCase() });
-        if (dbCoupon && String(dbCoupon.event?.id) === String(bookingDetails?.event?._id) && dbCoupon.status === 'active' && (!dbCoupon.expiresAt || new Date(dbCoupon.expiresAt) >= new Date())) {
+        if (dbCoupon && String(dbCoupon.event?.id) === String(bookingDetails?.event?._id) && (!dbCoupon.expiresAt || new Date(dbCoupon.expiresAt) >= new Date())) {
           // Apply ONCE for the category: take the unit price of the first matching ticket
           const applicableTickets = (bookingDetails?.tickets || []).filter(t => t.ticketType === dbCoupon.ticketCategory);
           const unitPrice = applicableTickets.length > 0 ? Number(applicableTickets[0].price) || 0 : 0;
@@ -270,19 +270,19 @@ exports.verifyPayment = async (req, res) => {
       }
     }
 
-    // Mark coupon as used and increment usage count if applied
+    // Increment coupon usage count if applied (keep status as active for reuse)
     try {
       if (bookingDetails?.coupon?.code) {
         await Coupon.findOneAndUpdate(
           { code: bookingDetails.coupon.code },
           { 
-            $set: { status: 'used', usedAt: new Date() },
+            $set: { usedAt: new Date() },
             $inc: { timesUsed: 1 }
           }
         );
       }
     } catch (couponErr) {
-      console.error('Failed to mark coupon used:', couponErr);
+      console.error('Failed to update coupon usage:', couponErr);
     }
 
     // Create BikerBash registration if this is a BikerBash event
