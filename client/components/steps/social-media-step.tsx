@@ -38,6 +38,16 @@ const platformColors = {
   Other: "bg-gray-500",
 }
 
+const platformTerminology = {
+  Instagram: "Followers",
+  YouTube: "Subscribers",
+  Facebook: "Followers",
+  TikTok: "Followers",
+  Twitter: "Followers",
+  LinkedIn: "Connections",
+  Other: "Followers/Members",
+}
+
 export function SocialMediaStep({ formData, updateFormData, showErrors }: SocialMediaStepProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
 
@@ -102,6 +112,9 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
       {/* Platform Selection */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Select Your Platforms</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Choose the social media platforms where you have a presence. You can add multiple platforms and mark one as your primary platform.
+        </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {platforms.map((platform) => {
             const Icon = platformIcons[platform as keyof typeof platformIcons]
@@ -163,7 +176,7 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Follower Count *</Label>
+                  <Label>{platformTerminology[platform.platform as keyof typeof platformTerminology]} Count *</Label>
                   <Input
                     type="number"
                     value={platform.followerCount || ""}
@@ -172,7 +185,7 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
                     className={`glass ${showErrors && !platform.followerCount ? "border-destructive" : ""}`}
                   />
                   {showErrors && !platform.followerCount && (
-                    <p className="text-xs text-destructive">Please enter follower count.</p>
+                    <p className="text-xs text-destructive">Please enter {platformTerminology[platform.platform as keyof typeof platformTerminology].toLowerCase()} count.</p>
                   )}
                 </div>
               </div>
@@ -262,8 +275,9 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
           <div className="text-center space-y-4">
             <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
               <Users className="w-5 h-5" />
-              Total Follower Count
+              Total Audience Count
             </h3>
+            <p className="text-xs text-muted-foreground">Combined followers or subscribers or connections across all platforms</p>
             <div className="text-3xl font-bold text-primary">{formData.totalFollowers.toLocaleString()}</div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -276,7 +290,7 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
             </div>
             {formData.totalFollowers < 4000 && (
               <p className="text-sm text-destructive">
-                You need at least 4,000 total followers across all platforms to be eligible.
+                You need at least 4,000 total followers or subscribers or connections across all platforms to be eligible.
               </p>
             )}
             {showErrors && formData.platforms.length === 0 && (
