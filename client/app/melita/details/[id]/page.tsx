@@ -194,9 +194,9 @@ const ProductDetailsPage = () => {
             const ahibiTicketsAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
             const combinedAmount = melitaAmount + ahibiTicketsAmount;
 
-            // Recalculate discount based on new combined amount
+            // Apply discount ONLY on AHIBI tickets, not on Melita products
             const discountPercentage = appliedCoupon.discountPercentage || 40; // Default to 40 for MELITA40
-            const discountAmount = Math.round((combinedAmount * discountPercentage) / 100);
+            const discountAmount = Math.round((ahibiTicketsAmount * discountPercentage) / 100);
 
             setAppliedCoupon({
                 ...appliedCoupon,
@@ -394,17 +394,17 @@ const ProductDetailsPage = () => {
             const ahibiTicketsAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
             const combinedAmount = melitaAmount + ahibiTicketsAmount;
 
-            // Check if there's anything to apply coupon on
-            if (combinedAmount <= 0) {
-                setCouponError('Please add items to your cart before applying a coupon');
-                toast({ variant: 'destructive', title: 'Cart Empty', description: 'Please select AHIBI FEST tickets or ensure Melita product is in cart.' });
+            // Check if there are AHIBI tickets to apply coupon on
+            if (ahibiTicketsAmount <= 0) {
+                setCouponError('Please select AHIBI FEST tickets to apply a coupon');
+                toast({ variant: 'destructive', title: 'No AHIBI Tickets', description: 'Coupons can only be applied to AHIBI FEST tickets.' });
                 setCouponApplying(false);
                 return;
             }
 
-            // Special-case MELITA40: flat 40% off on combined amount
+            // Special-case MELITA40: flat 40% off on AHIBI tickets ONLY
             if (couponCode.trim().toUpperCase() === 'MELITA40') {
-                const discountAmount = Math.round((combinedAmount * 40) / 100);
+                const discountAmount = Math.round((ahibiTicketsAmount * 40) / 100);
                 setAppliedCoupon({
                     valid: true,
                     code: 'MELITA40',
@@ -413,7 +413,7 @@ const ProductDetailsPage = () => {
                     totalAmount: combinedAmount,
                     payable: Math.max(0, combinedAmount - discountAmount),
                 });
-                toast({ title: 'Coupon applied', description: 'MELITA40 applied: 40% off on combined total.' });
+                toast({ title: 'Coupon applied', description: 'MELITA40 applied: 40% off on AHIBI FEST tickets.' });
                 return;
             }
 
@@ -424,7 +424,7 @@ const ProductDetailsPage = () => {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ code: couponCode, amount: combinedAmount }),
+                body: JSON.stringify({ code: couponCode, amount: ahibiTicketsAmount }),
             });
             const data = await res.json();
             if (!res.ok || !data.valid) {
@@ -581,7 +581,7 @@ const ProductDetailsPage = () => {
                         <div data-ahibi-tickets className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 p-6 sm:p-12 border-t border-gray-200">
                             <h2 className="text-3xl font-light text-gray-900 mb-2 text-center">Add AHIBI FEST 2025 Tickets</h2>
                             <p className="text-center text-gray-600 mb-8">Combine your Melita order with AHIBI FEST tickets and get a discount!</p>
-                            <p className="text-center text-gray-600 mb-8">Use Code: <span className="bg-[#835339] text-white px-2 py-1 rounded-md">MELITA40</span> for 40% OFF</p>
+                            <p className="text-center text-gray-600 mb-8">Use Code: <span className="bg-[#835339] text-white px-2 py-1 rounded-md">MELITA40</span> for 40% OFF on AHIBI FEST Tickets</p>
 
                             {/* Ticket Selection Error */}
                             {ticketError && (
@@ -910,7 +910,7 @@ const ProductDetailsPage = () => {
                                         </p>
                                     </div>
                                 )}
-                                <p className="text-center text-gray-600 m-4">Use Code: <span className="bg-[#835339] text-white px-2 py-1 rounded-md">MELITA40</span> for 40% OFF</p>
+                                <p className="text-center text-gray-600 m-4">Use Code: <span className="bg-[#835339] text-white px-2 py-1 rounded-md">MELITA40</span> for 40% OFF on AHIBI FEST Tickets</p>
 
                                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
                                     <input
