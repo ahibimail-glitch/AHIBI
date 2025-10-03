@@ -94,11 +94,13 @@ export default function HomePage() {
         }
         const data: EventsResponse = await response.json()
         
-        // Filter out past events (events where endDate has passed)
+        // Filter out past events (events where endDate has passed) and exclude specific event ID
         const currentDate = new Date()
         const upcomingEvents = (data.data.events || []).filter(event => {
           const eventEndDate = new Date(event.endDate || event.startDate)
-          return eventEndDate >= currentDate
+          const isUpcoming = eventEndDate >= currentDate
+          const isNotExcluded = event._id !== '68dac96e8d5dd14f277d5b1a'
+          return isUpcoming && isNotExcluded
         })
         
         setFeaturedEvents(upcomingEvents)

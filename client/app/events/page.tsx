@@ -215,9 +215,13 @@ export default function EventsPage() {
     const fetchEvents = async () => {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events`);
+
         if (!response.ok) throw new Error('Failed to fetch events');
         const data: EventsResponse = await response.json();
-        setEvents(data.data.events || []);
+        const filteredEvents = (data.data.events || []).filter(
+          (event) => event._id !== '68dac96e8d5dd14f277d5b1a'
+        );
+        setEvents(filteredEvents);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
         console.error('Error fetching events:', errorMessage);
