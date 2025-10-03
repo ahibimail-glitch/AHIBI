@@ -11,7 +11,7 @@ import Footer from '@/app/Footer';
 
 interface Booking {
     _id: string;
-    product: { name: string; image: string };
+    product: { name: string; image: string; id: string };
     amount: number;
     razorpay_order_id: string;
     createdAt: string;
@@ -28,6 +28,14 @@ interface Booking {
         code: string;
         discountPercentage: number;
         discountAmount: number;
+    };
+    ahibiTickets?: {
+        eventId: string;
+        tickets: Array<{
+            ticketType: string;
+            quantity: number;
+            price: number;
+        }>;
     };
 }
 
@@ -105,37 +113,73 @@ const PaymentSuccessContent = () => {
         doc.text(title, (pageWidth - textWidth) / 2, 22);  // Centered
 
         doc.setFontSize(12);
-        doc.text('Melita', 14, 30);
-        doc.text('123 Beauty Lane, Glam City, 110011', 14, 36);
-        doc.text(`Phone: +91 9876543210`, 14, 42);
+        doc.text('E&L Beauty Solutions Private Limited', 14, 30);
+        doc.text('152/20, 3/F Royal Space 5th Main', 14, 36);
+        doc.text('7th Sector, Madina Nagar, HSR Layout', 14, 42);
+        doc.text('Bangalore, Karnataka, India - 560102', 14, 48);
 
         // BILL TO
         doc.setFontSize(12);
-        doc.text('Bill To:', 14, 55);
-        doc.text(`${booking.deliveryAddress.name}`, 14, 61);
-        doc.text(`${booking.deliveryAddress.address}, ${booking.deliveryAddress.city}, ${booking.deliveryAddress.state} - ${booking.deliveryAddress.zip}`, 14, 67);
-        doc.text(`Phone: ${booking.deliveryAddress.phone}`, 14, 73);
-        doc.text(`Email: ${booking.user.email}`, 14, 79);
+        doc.text('Bill To:', 14, 61);
+        doc.text(`${booking.deliveryAddress.name}`, 14, 67);
+        doc.text(`${booking.deliveryAddress.address}, ${booking.deliveryAddress.city}, ${booking.deliveryAddress.state} - ${booking.deliveryAddress.zip}`, 14, 73);
+        doc.text(`Phone: ${booking.deliveryAddress.phone}`, 14, 79);
+        doc.text(`Email: ${booking.user.email}`, 14, 85);
 
 
         // ORDER DETAILS
-        doc.text(`Order ID: ${booking.razorpay_order_id}`, 14, 85);
-        doc.text(`Date: ${new Date(booking.createdAt).toLocaleDateString()}`, 14, 91);
+        doc.text(`Order ID: ${booking.razorpay_order_id}`, 14, 91);
+        doc.text(`Date: ${new Date(booking.createdAt).toLocaleDateString()}`, 14, 97);
 
 
 
-        // TABLE WITH IMAGE
-        (doc as any).autoTable({
-            startY: 105,
-            head: [['Product', 'Quantity', 'Price', 'Total']],
-            body: [
-                [
-                    booking.product.name,
-                    '1',
-                    `₹${booking.amount.toFixed(2)}`,
-                    `₹${booking.amount.toFixed(2)}`,
-                ],
+        // Calculate breakdown
+        const ahibiTotal = booking.ahibiTickets?.tickets.reduce((sum, t) => sum + (t.price * t.quantity), 0) || 0;
+        const beforeDiscount = booking.amount + (booking.coupon?.discountAmount || 0);
+        const melitaPrice = beforeDiscount - ahibiTotal;
+
+        // TABLE WITH BREAKDOWN
+        const tableBody: any[] = [
+            [
+                booking.product.name,
+                '1',
+                `₹${melitaPrice.toFixed(2)}`,
+                `₹${melitaPrice.toFixed(2)}`,
             ],
+        ];
+
+        // Add AHIBI tickets if present
+        if (booking.ahibiTickets && booking.ahibiTickets.tickets.length > 0) {
+            booking.ahibiTickets.tickets.forEach(ticket => {
+                tableBody.push([
+                    `AHIBI FEST - ${ticket.ticketType}`,
+                    ticket.quantity.toString(),
+                    `₹${ticket.price.toFixed(2)}`,
+                    `₹${(ticket.price * ticket.quantity).toFixed(2)}`,
+                ]);
+            });
+        }
+
+        // Add discount row if applicable
+        if (booking.coupon && booking.coupon.discountAmount > 0) {
+            tableBody.push([
+                `Discount (${booking.coupon.code})`,
+                '-',
+                '-',
+                `-₹${booking.coupon.discountAmount.toFixed(2)}`,
+            ]);
+        }
+
+        // Add total row
+        tableBody.push([
+            { content: 'TOTAL PAID', colSpan: 3, styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: `₹${booking.amount.toFixed(2)}`, styles: { fontStyle: 'bold' } },
+        ]);
+
+        (doc as any).autoTable({
+            startY: 110,
+            head: [['Product', 'Quantity', 'Price', 'Total']],
+            body: tableBody,
             theme: 'striped',
             headStyles: { fillColor: [131, 83, 57] },
         });
@@ -217,21 +261,49 @@ const PaymentSuccessContent = () => {
                 <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
                 <h1 className="text-3xl sm:text-4xl font-light text-gray-900">Payment Successful!</h1>
                 <p className="text-gray-600 mt-2">Thank you for your purchase. Your order has been confirmed.</p>
+                <p className="text-gray-600 mt-2">You will get confirmation with your order details shortly.</p>
+                <h2 className="text-2xl font-light text-gray-900 mt-2">Your ticket to the Ahibi Fest is in your Dashboard</h2>
+                <p className="text-gray-600 mt-2">Go to <a href="/profile" className="text-blue-600 ">Dashboard</a> to view your ticket.</p>
             </header>
 
             <div className="bg-gradient-to-br from-amber-50/50 to-stone-50/50 rounded-2xl p-6 sm:p-8 mb-8">
                 <h2 className="text-2xl font-light text-gray-800 mb-6 border-b pb-4">Order Summary</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                     <div className="flex items-center gap-4">
                         <img src={booking.product.image} alt={booking.product.name} className="w-24 h-24 rounded-lg object-cover" />
-                        <div>
+                        <div className="flex-1">
                             <p className="font-semibold text-lg text-gray-800">{booking.product.name}</p>
                             <p className="text-gray-600 text-sm">Order ID: {booking.razorpay_order_id}</p>
                         </div>
                     </div>
-                    <div className="text-right flex flex-col justify-center">
-                        <p className="text-3xl font-light text-[#835339]">₹{booking.amount.toFixed(2)}</p>
-                        <p className="text-gray-500 text-sm">Paid on {new Date(booking.createdAt).toLocaleDateString()}</p>
+                    
+                    {/* Price Breakdown */}
+                    <div className="border-t pt-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Melita Product</span>
+                            <span className="font-semibold">₹{(() => {
+                                const ahibiTotal = booking.ahibiTickets?.tickets.reduce((sum, t) => sum + (t.price * t.quantity), 0) || 0;
+                                const beforeDiscount = booking.amount + (booking.coupon?.discountAmount || 0);
+                                return (beforeDiscount - ahibiTotal).toFixed(2);
+                            })()}</span>
+                        </div>
+                        {booking.ahibiTickets && booking.ahibiTickets.tickets.length > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">AHIBI FEST Tickets</span>
+                                <span className="font-semibold">₹{booking.ahibiTickets.tickets.reduce((sum, t) => sum + (t.price * t.quantity), 0).toFixed(2)}</span>
+                            </div>
+                        )}
+                        {booking.coupon && booking.coupon.discountAmount > 0 && (
+                            <div className="flex justify-between text-sm text-green-600">
+                                <span>Discount ({booking.coupon.code})</span>
+                                <span className="font-semibold">-₹{booking.coupon.discountAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                            <span>Total Paid</span>
+                            <span className="text-[#835339]">₹{booking.amount.toFixed(2)}</span>
+                        </div>
+                        <p className="text-gray-500 text-sm text-right">Paid on {new Date(booking.createdAt).toLocaleDateString()}</p>
                     </div>
                 </div>
             </div>

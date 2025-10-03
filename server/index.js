@@ -123,7 +123,7 @@ app.use('/api/nis/registrations', nisRegistrationRoutes);
 app.use('/api/admin/bikerbash', bikerBashRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/aiko', aikoHallRoutes);
-// app.use('/api/melita', melitaRoutes);
+app.use('/api/melita', melitaRoutes);
 
 // Root route
 app.get('/', (req, res) => {

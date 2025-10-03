@@ -26,6 +26,11 @@ interface MelitaBooking {
     status: string;
     razorpay_order_id: string;
     createdAt: string;
+    coupon?: {
+        code: string;
+        discountPercentage: number;
+        discountAmount: number;
+    };
 }
 
 const MelitaBookings = () => {
@@ -43,8 +48,8 @@ const MelitaBookings = () => {
             'State': b.deliveryAddress.state,
             'ZIP': b.deliveryAddress.zip,
             'Product': b.product.name,
-            'Amount': b.amount,
-            'Status': b.status,
+            'Coupon Used': b.coupon?.code || 'None',
+            'Discount': b.coupon?.discountAmount ? `₹${b.coupon.discountAmount}` : 'N/A',
             'Date': new Date(b.createdAt).toLocaleDateString(),
         })));
         const workbook = XLSX.utils.book_new();
@@ -102,8 +107,7 @@ const MelitaBookings = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupon Used</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         </tr>
                     </thead>
@@ -115,11 +119,17 @@ const MelitaBookings = () => {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.deliveryAddress.phone}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{`${booking.deliveryAddress.address}, ${booking.deliveryAddress.city}, ${booking.deliveryAddress.state} - ${booking.deliveryAddress.zip}`}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.product.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{booking.amount.toFixed(2)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                        {booking.status}
-                                    </span>
+                                    {booking.coupon ? (
+                                        <div>
+                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                {booking.coupon.code}
+                                            </span>
+                                            {/* <p className="text-xs text-gray-500 mt-1">-₹{booking.coupon.discountAmount.toFixed(2)} ({booking.coupon.discountPercentage}% off)</p> */}
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400 text-xs">No coupon</span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(booking.createdAt).toLocaleDateString()}</td>
                             </tr>

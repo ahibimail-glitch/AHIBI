@@ -193,15 +193,15 @@ const verifyPayment = asyncHandler(async (req, res) => {
         }
       }
 
-      // If a coupon was used, mark it as used and increment usage count in the database
+      // If a coupon was used, increment usage count in the database
       if (booking.coupon?.code) {
         const code = String(booking.coupon.code).trim().toUpperCase();
         try {
           const couponDoc = await Coupon.findOne({ code });
-          if (couponDoc && couponDoc.status !== 'used') {
-            couponDoc.status = 'used';
-            couponDoc.usedAt = new Date();
+          if (couponDoc) {
+            // Increment timesUsed for all coupons
             couponDoc.timesUsed = (couponDoc.timesUsed || 0) + 1;
+            // Never mark as 'used' - all coupons can be reused
             await couponDoc.save();
           }
           // After marking used, generate an AHIBI Fest coupon once per booking
@@ -297,6 +297,24 @@ const verifyPaymentClient = asyncHandler(async (req, res) => {
     booking.status = 'confirmed';
     await booking.save();
     console.log('Booking status updated to confirmed');
+    
+    // If a coupon was used, increment usage count
+    if (booking.coupon?.code) {
+      const code = String(booking.coupon.code).trim().toUpperCase();
+      try {
+        const Coupon = require('../models/Coupon');
+        const couponDoc = await Coupon.findOne({ code });
+        if (couponDoc) {
+          // Increment timesUsed for all coupons
+          couponDoc.timesUsed = (couponDoc.timesUsed || 0) + 1;
+          // Never mark as 'used' - all coupons can be reused
+          await couponDoc.save();
+          console.log('Coupon usage incremented:', code, 'timesUsed:', couponDoc.timesUsed);
+        }
+      } catch (couponErr) {
+        console.error('Failed to increment coupon usage:', code, couponErr?.message);
+      }
+    }
     
     // If AHIBI tickets were purchased, create bookings for them
     if (booking.ahibiTickets && booking.ahibiTickets.tickets && booking.ahibiTickets.tickets.length > 0) {

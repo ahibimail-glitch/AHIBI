@@ -213,8 +213,9 @@ const getPublicEvents = async (req, res) => {
     // Get query parameters for filtering
     const { category, city, search, limit = 20, page = 1 } = req.query;
 
-    // Build query for approved events only
+    // Build query for approved events only, excluding specific event ID
     const query = {
+      _id: { $ne: '68dac96e8d5dd14f277d5b1a' } // Exclude this event ID
       // status: 'approved',
       // startDate: { $gte: new Date() } // Only show upcoming events
     };
