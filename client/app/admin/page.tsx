@@ -261,7 +261,7 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Events & Programs</h3>
           </div>
           <SidebarButton icon={Users} label="NIS Registrations" active={activeView === "nis-registrations"} onClick={() => setActiveView("nis-registrations")} />
-          {/* <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => setActiveView("bikerbash")} /> */}
+          <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => setActiveView("bikerbash")} />
           
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
