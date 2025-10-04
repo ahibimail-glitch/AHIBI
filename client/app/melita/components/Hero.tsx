@@ -45,7 +45,7 @@ const Hero = () => {
               {/* Discount Banner Overlay */}
               <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#f0e4d4]/90 border border-[#835339]/40 rounded-lg shadow-md px-6 py-3 text-center">
                 <h2 className="text-[#1e4323] text-sm sm:text-base md:text-lg lg:text-xl font-headingOne font-semibold uppercase tracking-wide">
-                  Use Code: <span className="bg-[#835339] text-white px-2 py-1 rounded-md">MELITA40</span> for 40% OFF on Ahibi Fest Tickets
+                  Use Code: <span className="bg-[#835339] text-white px-2 py-1 rounded-md">MELITA50</span> for 50% OFF on Ahibi Fest Tickets
                 </h2>
                 <p className="mt-1 text-xs sm:text-sm text-gray-700 italic">Limited Time Offer</p>
               </div>
@@ -90,7 +90,7 @@ const Hero = () => {
               {/* Discount Banner Overlay (Mobile) */}
               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-[#f0e4d4]/90 border border-[#835339]/30 rounded-md shadow px-4 py-2 text-center">
                 <h2 className="text-[#1e4323] text-xs sm:text-sm font-headingOne font-semibold uppercase">
-                  Use Code: <span className="bg-[#835339] text-white px-2 rounded">MELITA40</span>
+                  Use Code: <span className="bg-[#835339] text-white px-2 rounded">MELITA50</span>
                 </h2>
                 <p className="text-[10px] sm:text-xs text-gray-700 italic">40% OFF • Limited Time</p>
               </div>

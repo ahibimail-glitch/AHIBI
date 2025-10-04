@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 const TopStrip = () => {
   const messages = [
     "Free Shipping Pan India",
-    "40% Off use Coupon: MELITA40",
+    "50% Off use Coupon: MELITA50",
     "Skincare That Works",
   ];
 
