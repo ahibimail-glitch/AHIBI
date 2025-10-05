@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { getSafeRedirectUrl } from "@/utils/redirectUtils"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Ticket, Building, Mail, Shield, Phone } from "lucide-react"
 import Link from "next/link"
 import { useVenueAuth } from "@/hooks/useVenueAuth"
 
-export default function VenueLoginPage() {
+function VenueLoginContent() {
   const searchParams = useSearchParams()
   const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), '/venue/dashboard')
   const [step, setStep] = useState<"login" | "otp-verify" | "pending" | "rejected">("login")
@@ -286,5 +286,23 @@ export default function VenueLoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function VenueLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-orange-900 via-amber-900 to-yellow-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-900/90 backdrop-blur-sm border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center">
+              <div className="h-8 w-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <VenueLoginContent />
+    </Suspense>
   )
 }

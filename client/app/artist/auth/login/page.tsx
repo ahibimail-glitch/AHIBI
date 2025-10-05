@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getSafeRedirectUrl } from "@/utils/redirectUtils"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Ticket, Music, Mail, Shield, AlertCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-export default function ArtistLoginPage() {
+function ArtistLoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), '/artist/dashboard')
@@ -282,5 +282,23 @@ export default function ArtistLoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function ArtistLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-indigo-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-900/90 backdrop-blur-sm border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-purple-400 animate-spin" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <ArtistLoginContent />
+    </Suspense>
   )
 }

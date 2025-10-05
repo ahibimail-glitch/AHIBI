@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { getSafeRedirectUrl } from "@/utils/redirectUtils"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Ticket, Calendar, Mail, Shield } from "lucide-react"
 import Link from "next/link"
 
-export default function OrganizerLoginPage() {
+function OrganizerLoginContent() {
   const searchParams = useSearchParams()
   const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), '/organizer/dashboard')
   const [step, setStep] = useState<"login" | "otp-verify" | "pending" | "rejected">("login")
@@ -361,5 +361,23 @@ export default function OrganizerLoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function OrganizerLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-gray-900/90 backdrop-blur-sm border-gray-800">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center">
+              <div className="h-8 w-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <OrganizerLoginContent />
+    </Suspense>
   )
 }
