@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, Search, Heart, Loader2, Sparkles, Crown, Filter, X } from "lucide-react";
+import { Calendar, MapPin, Search, Heart, Loader2, Sparkles, Crown, Filter, X, Zap, Timer, ExternalLink, Gift, CheckCircle2, Percent, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import Link from "next/link";
@@ -549,6 +549,103 @@ export default function EventsPage() {
             </AnimatePresence>
           </div>
         </section>
+         {/* Melita Exclusive Offer */}
+                    <div className="bg-gradient-to-r from-pink-50 via-purple-50 to-indigo-50 rounded-xl p-4 sm:p-6 shadow-lg border border-purple-200 relative overflow-hidden">
+                      {/* Background Pattern */}
+                      <div className="absolute inset-0 opacity-10">
+                        <div className="absolute top-4 right-4 text-purple-300">
+                          <Sparkles className="h-8 w-8 sm:h-12 sm:w-12" />
+                        </div>
+                        <div className="absolute bottom-4 left-4 text-pink-300">
+                          <Gift className="h-6 w-6 sm:h-8 sm:w-8" />
+                        </div>
+                      </div>
+                      
+                      <div className="relative z-10">
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6">
+                          {/* Left: Melita Logo/Brand */}
+                          <div className="flex-shrink-0">
+                            <div className="bg-white rounded-xl p-3 sm:p-4 shadow-md border border-purple-100">
+                              <div className="flex items-center gap-2">
+                                <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-2">
+                                  <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">Melita</h3>
+                                  <p className="text-xs sm:text-sm text-purple-600 font-medium">Premium Skincare</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+        
+                          {/* Center: Offer Details */}
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 text-xs sm:text-sm font-semibold">
+                                <Percent className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                EXCLUSIVE OFFER
+                              </Badge>
+                              <Badge variant="outline" className="border-purple-300 text-purple-700 px-2 py-1 text-xs">
+                                Limited Time
+                              </Badge>
+                            </div>
+                            
+                            <h4 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">
+                              Get Premium Skincare with Your Ahibi Fest Ticket!
+                            </h4>
+                            
+                            <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                              Book your event ticket and get <span className="font-semibold text-purple-700">exclusive discounts</span> on 
+                              Melita's premium skincare collection. From hydrating essences to protective sunscreens - 
+                              <span className="font-semibold text-pink-700"> elevate your skincare routine</span> while enjoying amazing events!
+                            </p>
+        
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              <div className="flex items-center gap-1 text-xs sm:text-sm text-purple-700 bg-purple-100 px-2 py-1 rounded-full">
+                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                Premium Quality
+                              </div>
+                              <div className="flex items-center gap-1 text-xs sm:text-sm text-pink-700 bg-pink-100 px-2 py-1 rounded-full">
+                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                Exclusive Discounts
+                              </div>
+                              <div className="flex items-center gap-1 text-xs sm:text-sm text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full">
+                                <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                                Fast Delivery
+                              </div>
+                            </div>
+                          </div>
+        
+                          {/* Right: CTA Button */}
+                          <div className="flex-shrink-0 w-full lg:w-auto">
+                            <Link href="/melita" className="block">
+                              <Button 
+                                size="lg" 
+                                className="w-full lg:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                              >
+                                <Gift className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                                <span className="text-sm sm:text-base">Explore Melita</span>
+                                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+        
+                        {/* Bottom: Special Offer Highlight */}
+                        <div className="mt-4 pt-4 border-t border-purple-200">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Timer className="h-4 w-4 text-purple-500" />
+                              <span>Limited time offer for event attendees</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm font-semibold text-purple-700">
+                              <Zap className="h-4 w-4" />
+                              <span>50% OFF ON AHIBI FEST TICKETS</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
         <section className="py-12">
           <div className="container mx-auto px-4">

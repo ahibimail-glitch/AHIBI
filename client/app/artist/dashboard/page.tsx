@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import {
   Card,
   CardContent,
@@ -149,7 +150,7 @@ export default function ArtistDashboard() {
     const userData = localStorage.getItem('artist_user');
     
     if (!token || !userData) {
-      router.push('/artist/auth/login');
+      router.push(createRoleAuthRedirectUrl('artist'));
       return;
     }
 

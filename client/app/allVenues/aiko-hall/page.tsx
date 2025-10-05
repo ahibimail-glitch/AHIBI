@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import { useAuth } from "../../../hooks/useAuth";
+import { createAuthRedirectUrl } from "@/utils/redirectUtils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -269,7 +270,7 @@ export default function AikoHallPage() {
 
     if (!user) {
       toast.error('You must be logged in to book.');
-      router.push('/auth');
+      router.push(createAuthRedirectUrl());
       return;
     }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createAuthRedirectUrl } from '@/utils/redirectUtils';
 
 interface User {
   id: string;
@@ -68,7 +69,7 @@ export const useAuth = (options?: UseAuthOptions) => {
           setUser(null);
           setLoading(false);
           if (redirectPath) {
-            router.replace(redirectPath);
+            router.replace(createAuthRedirectUrl());
           }
           return;
         }
@@ -102,7 +103,7 @@ export const useAuth = (options?: UseAuthOptions) => {
           setIsAuthenticated(false);
           setUser(null);
           if (redirectPath) {
-            router.replace(redirectPath);
+            router.replace(createAuthRedirectUrl());
           }
         } finally {
           setLoading(false);

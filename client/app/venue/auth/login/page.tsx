@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { getSafeRedirectUrl } from "@/utils/redirectUtils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,6 +15,8 @@ import Link from "next/link"
 import { useVenueAuth } from "@/hooks/useVenueAuth"
 
 export default function VenueLoginPage() {
+  const searchParams = useSearchParams()
+  const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), '/venue/dashboard')
   const [step, setStep] = useState<"login" | "otp-verify" | "pending" | "rejected">("login")
   const [loginData, setLoginData] = useState({
     phone: "",
@@ -82,7 +86,7 @@ export default function VenueLoginPage() {
         setStep("rejected")
       } else if (response.ok) {
         login(data.data.token, data.data.user)
-        window.location.href = "/venue/dashboard"
+        window.location.href = redirectUrl
       } else {
         setError(data.message || 'Invalid OTP');
       }

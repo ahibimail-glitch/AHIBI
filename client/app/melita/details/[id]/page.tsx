@@ -10,6 +10,7 @@ import Footer from '@/app/Footer';
 import Navbar from '@/app/Navbar';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import { createAuthRedirectUrl } from '@/utils/redirectUtils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -219,7 +220,7 @@ const ProductDetailsPage = () => {
             const errorMsg = 'Please log in to place an order.';
             setFormError(errorMsg);
             toast({ variant: 'destructive', title: 'Login required', description: errorMsg });
-            router.push('/auth');
+            router.push(createAuthRedirectUrl());
             return;
         }
 
@@ -277,7 +278,7 @@ const ProductDetailsPage = () => {
             if (!token) {
                 setFormError('Authentication token not found. Please log in again.');
                 toast({ variant: 'destructive', title: 'Auth error', description: 'Please log in again.' });
-                router.push('/auth');
+                router.push(createAuthRedirectUrl());
                 return;
             }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, ArrowLeft, Download } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { createAuthRedirectUrl } from '@/utils/redirectUtils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ModernBookingTicket from '@/app/events/[id]/bookings/booking-invoice';
@@ -53,7 +54,7 @@ export default function BookingSuccessPage() {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          router.push('/auth');
+          router.push(createAuthRedirectUrl());
           return;
         }
 

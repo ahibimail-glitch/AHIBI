@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
+import { getSafeRedirectUrl } from "@/utils/redirectUtils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +14,8 @@ import { Ticket, Calendar, Mail, Shield } from "lucide-react"
 import Link from "next/link"
 
 export default function OrganizerLoginPage() {
+  const searchParams = useSearchParams()
+  const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), '/organizer/dashboard')
   const [step, setStep] = useState<"login" | "otp-verify" | "pending" | "rejected">("login")
   const [loginData, setLoginData] = useState({
     phone: "",
@@ -52,7 +56,7 @@ export default function OrganizerLoginPage() {
         // Success - store token and redirect
         localStorage.setItem('organizer_token', data.data.token);
         localStorage.setItem('organizer_user', JSON.stringify(data.data.user));
-        window.location.href = "/organizer/dashboard"
+        window.location.href = redirectUrl
       } else {
         setError(data.message || 'Login failed');
       }
@@ -127,7 +131,7 @@ export default function OrganizerLoginPage() {
         // Success - store token and redirect
         localStorage.setItem('organizer_token', data.data.token);
         localStorage.setItem('organizer_user', JSON.stringify(data.data.user));
-        window.location.href = "/organizer/dashboard"
+        window.location.href = redirectUrl
       } else {
         setError(data.message || 'Invalid OTP');
       }

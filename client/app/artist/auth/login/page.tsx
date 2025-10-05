@@ -3,7 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { getSafeRedirectUrl } from "@/utils/redirectUtils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,6 +16,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ArtistLoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), '/artist/dashboard')
   const [step, setStep] = useState<"login" | "otp-verify">("login")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,8 +87,8 @@ export default function ArtistLoginPage() {
       localStorage.setItem('artist_token', data.data.token)
       localStorage.setItem('artist_user', JSON.stringify(data.data.user))
 
-      // Redirect to dashboard
-      router.push('/artist/dashboard')
+      // Redirect to original page or dashboard
+      router.push(redirectUrl)
     } catch (error) {
       console.error('Error verifying OTP:', error)
       setError(error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.')

@@ -36,10 +36,11 @@ import {
 import Link from "next/link";
 import { PasswordSetupModal } from "@/components/ui/password-setup-modal";
 import { PasswordResetModal } from "@/components/ui/password-reset-modal";
+import { getSafeRedirectUrl } from "@/utils/redirectUtils";
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect');
+  const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'));
   
   const [mode, setMode] = useState<"login" | "signup" | "otp-login">("login");
   const [step, setStep] = useState<"details" | "otp">("details");
@@ -131,7 +132,7 @@ function AuthPageContent() {
       
       localStorage.setItem("token", data.data.token);
       // Redirect to the original page or home
-      window.location.href = redirectUrl || "/";
+      window.location.href = redirectUrl;
     } catch (err) {
       setError("Network error. Please try again.");
     }
@@ -157,7 +158,7 @@ function AuthPageContent() {
       // Password set successfully, redirect to original page or home
       localStorage.setItem("token", currentToken);
       setShowPasswordSetupModal(false);
-      window.location.href = redirectUrl || "/";
+      window.location.href = redirectUrl;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set password");
       throw err; // Re-throw to let the modal handle the error
@@ -306,7 +307,7 @@ function AuthPageContent() {
       
       localStorage.setItem("token", data.data.token);
       // Redirect to the original page or home
-      window.location.href = redirectUrl || "/";
+      window.location.href = redirectUrl;
     } catch (err) {
       setError("Network error. Please try again.");
     }
@@ -368,7 +369,7 @@ function AuthPageContent() {
       }
       
       localStorage.setItem("token", data.data.token);
-      window.location.href = redirectUrl || "/";
+      window.location.href = redirectUrl;
     } catch (err) {
       setError("Network error. Please try again.");
     }

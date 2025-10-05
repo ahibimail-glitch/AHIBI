@@ -17,18 +17,12 @@ import {
   Ticket as TicketIcon,
   X,
   XCircle,
-  Crown,
-  Sparkles,
   MapIcon,
   Users,
   Shield,
   CheckCircle2,
-  Timer,
-  Zap,
-  Info,
-  ExternalLink,
-  Calendar,
-  Instagram
+  Instagram,
+ 
 } from "lucide-react";
 import { format } from "date-fns";
 import Image from "next/image";

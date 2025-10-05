@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import { 
   Star, MapPin, Phone, Mail, Instagram, Youtube, 
   Calendar, Clock, Award, Play, Image as ImageIcon,
@@ -212,7 +213,7 @@ export default function PublicArtistProfile() {
                     </Dialog>
                   )}
                   {!isOrganizerLoggedIn && (
-                    <Button size="lg" onClick={() => window.location.href = '/organizer/auth/login'}>
+                    <Button size="lg" onClick={() => window.location.href = createRoleAuthRedirectUrl('organizer')}>
                       Login to Book
                     </Button>
                   )}
