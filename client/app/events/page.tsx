@@ -650,7 +650,7 @@ export default function EventsPage() {
         <section className="py-12">
           <div className="container mx-auto px-4">
             <AnimatePresence>
-              {featuredEvents.length > 0 && (
+              {/* {featuredEvents.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -669,7 +669,7 @@ export default function EventsPage() {
                     ))}
                   </div>
                 </motion.div>
-              )}
+              )} */}
               {currentEvents.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}

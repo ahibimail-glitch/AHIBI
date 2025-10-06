@@ -211,7 +211,7 @@ const rejectEvent = async (req, res) => {
 const getPublicEvents = async (req, res) => {
   try {
     // Get query parameters for filtering
-    const { category, city, search, limit = 20, page = 1 } = req.query;
+    const { category, city, search, limit = 20, page = 1, isFeatured } = req.query;
 
     // Build query for approved events only, excluding specific event ID
     const query = {
@@ -227,6 +227,11 @@ const getPublicEvents = async (req, res) => {
 
     if (city) {
       query['location.city'] = { $regex: city, $options: 'i' };
+    }
+
+    // Filter by featured status if provided
+    if (isFeatured !== undefined) {
+      query.isFeatured = isFeatured === 'true' || isFeatured === true;
     }
 
     if (search) {

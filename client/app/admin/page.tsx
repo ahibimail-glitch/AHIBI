@@ -18,6 +18,7 @@ import {
   CalendarCheck2,
   ListOrdered,
   PlusCircle,
+  Star,
   Bell,
   Calendar,
   DollarSign,
@@ -52,6 +53,7 @@ import NISRegistrations from "./components/NISRegistrations";
 import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
+import FeaturedEvents from "./components/FeaturedEvents";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -172,6 +174,8 @@ export default function AdminDashboard() {
         return <Coupons />;
       case "melita-bookings":
         return <MelitaBookings />;
+      case "featured-events":
+        return <FeaturedEvents />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -255,6 +259,12 @@ export default function AdminDashboard() {
             label="Approved Events" 
             active={activeView === "approved-events"} 
             onClick={() => setActiveView("approved-events")} 
+          />
+          <SidebarButton 
+            icon={Star} 
+            label="Featured Events" 
+            active={activeView === "featured-events"} 
+            onClick={() => setActiveView("featured-events")} 
           />
 
           <div className="pt-4 pb-2 px-2">
