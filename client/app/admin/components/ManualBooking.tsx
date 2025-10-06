@@ -25,6 +25,7 @@ interface Event {
   title: string;
   ticketTypes: TicketType[];
   startDate: string;
+  endDate?: string;
   location: {
     address?: string;
     city?: string;
@@ -502,13 +503,10 @@ const ManualBooking = () => {
                                 <Clock className="w-5 h-5 text-blue-600 mx-auto mb-2" />
                                 <p className="text-xs text-gray-500 uppercase tracking-wide">Time</p>
                                 <p className="text-sm font-bold text-gray-900">
-                                    {formatTime(selectedEvent?.startDate || new Date())} - {
-                                        (() => {
-                                            const start = new Date(selectedEvent?.startDate || new Date());
-                                            start.setHours(start.getHours() + 2); // Default to 2 hours after start
-                                            return formatTime(start);
-                                        })()
-                                    }
+                                    {formatTime(selectedEvent?.startDate || new Date())}
+                                    {selectedEvent?.endDate && selectedEvent.endDate !== selectedEvent.startDate && (
+                                        <> - {formatTime(selectedEvent.endDate)}</>
+                                    )}
                                 </p>
                             </div>
                         </div>
