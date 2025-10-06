@@ -238,7 +238,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
 // @route   GET /api/melita/admin/bookings
 // @access  Admin
 const getAdminBookings = asyncHandler(async (req, res) => {
-    const bookings = await MelitaBooking.find().populate('user', 'name email');
+    // Only return confirmed bookings (payment completed)
+    const bookings = await MelitaBooking.find({ status: 'confirmed' }).populate('user', 'name email');
     res.json(bookings);
 });
 
@@ -246,13 +247,17 @@ const getAdminBookings = asyncHandler(async (req, res) => {
 // @route   GET /api/melita/bookings/:id
 // @access  Private
 const getBookingById = asyncHandler(async (req, res) => {
-    const booking = await MelitaBooking.findById(req.params.id).populate('user', 'name email');
+    // Only return confirmed bookings (payment completed)
+    const booking = await MelitaBooking.findOne({ 
+        _id: req.params.id, 
+        status: 'confirmed' 
+    }).populate('user', 'name email');
 
     if (booking) {
         res.json(booking);
     } else {
         res.status(404);
-        throw new Error('Booking not found');
+        throw new Error('Booking not found or payment not completed');
     }
 });
 
