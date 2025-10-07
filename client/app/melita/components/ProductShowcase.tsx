@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ProductShowcase = () => {
+    // Product data remains the same...
     const products = [
         {
             id: "71947811847165801",
@@ -40,21 +41,33 @@ const ProductShowcase = () => {
             details:
                 "A Simple Start to Healthy Skin. Start strong with two foundational steps designed to reset your skin and support long-term health. The Renewing Cleanser is a soap-free gel that gently foams to remove dirt, oil, and light makeup without drying or stripping your skin barrier. It leaves your face clean, calm, and ready for hydration. Follow up with the Ultra Hydrating Essence, a water-light formula powered by Squalane, Hyaluronic Acid, and Peptides. Clinically shown to boost hydration by up to 400%, it absorbs instantly and preps your skin to get more from every step that follows. Together, they rebalance, hydrate, and strengthen your skin from the very first use.",
         },
+        {
+            id: "71947811847165805",
+            name: "Melita Balancing Moisturizer",
+            originalPrice: "₹1,299.00",
+            salePrice: "₹1,099.00",
+            image: "/melita/product5.jpg",
+            details:
+                "PROVIDES INTENSE MOISTURIZATION",
+        },
+        {
+            id: "71947811847165806",
+            name: "Melita Dry Skin Daily Essentials",
+            originalPrice: "₹4,623.00",
+            salePrice: "₹3,699.00", // adjust if needed
+            image: "/melita/product6.jpg",
+            details:
+                "PROVIDES INTENSE MOISTURIZATION",
+        },
     ];
 
     const sliderRef = useRef<HTMLDivElement | null>(null);
 
-    const scrollLeft = () => {
+    const scroll = (direction: 'left' | 'right') => {
         if (sliderRef.current) {
-            const scrollAmount = window.innerWidth < 640 ? 260 : 280;
-            sliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-        }
-    };
-
-    const scrollRight = () => {
-        if (sliderRef.current) {
-            const scrollAmount = window.innerWidth < 640 ? 260 : 280;
-            sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            const scrollAmount = 320; // A consistent scroll amount
+            const newScrollLeft = sliderRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+            sliderRef.current.scrollTo({ left: newScrollLeft, behavior: 'smooth' });
         }
     };
 
@@ -66,40 +79,36 @@ const ProductShowcase = () => {
                 </h2>
             </div>
 
-            <div className="relative px-2 sm:px-4 lg:px-10">
+            <div className="relative">
                 {/* Product Slider */}
                 <div
                     ref={sliderRef}
-                    className="overflow-x-auto flex justify-start sm:justify-center snap-x snap-mandatory gap-3 sm:gap-4 md:gap-6 py-4 sm:py-6 scroll-smooth scrollbar-hide"
-                    style={{
-                        scrollbarWidth: 'none',
-                        msOverflowStyle: 'none',
-                        WebkitOverflowScrolling: 'touch'
-                    }}
+                    className="flex gap-4 md:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth scrollbar-none py-6 px-4 sm:px-6 lg:px-8 scroll-p-4 sm:scroll-p-6 lg:scroll-p-8"
                 >
-                    {products.map((product, index) => (
-                        <div key={index} className="flex-none w-[280px] sm:w-[300px] md:w-[320px] snap-center first:ml-2 sm:first:ml-0 last:mr-2 sm:last:mr-0">
-                            <div className="relative group w-full overflow-hidden rounded-lg sm:rounded-xl shadow-lg sm:shadow-xl bg-[#f0e4d4] border border-gray-200">
-                                <a href="#" className="block relative h-72 sm:h-80 md:h-96 overflow-hidden">
-                                    <img
-                                        src={product.image}
-                                        loading="lazy"
-                                        alt={product.name}
-                                        className="w-full h-full object-cover"
-                                    />
+                    {products.map((product) => (
+                        <div key={product.id} className="flex-shrink-0 w-[280px] sm:w-[320px] snap-center">
+                            <div className="group/card relative w-full overflow-hidden rounded-lg sm:rounded-xl shadow-lg sm:shadow-xl bg-[#f0e4d4] border border-gray-200">
+                                <Link href={`/melita/details/${product.id}`} passHref legacyBehavior>
+                                    <a className="block relative h-72 sm:h-80 md:h-96 overflow-hidden group/card">
+                                        <img
+                                            src={product.image}
+                                            loading="lazy"
+                                            alt={product.name}
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
+                                        />
 
-                                    {/* Hover Add to Bag (Desktop only) */}
-                                    <div className="hidden sm:block absolute top-[90%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-all duration-500">
-                                        <Link href={`/melita/details/${product.id}`} passHref>
+                                        {/* Hover Add to Bag (Desktop only) */}
+                                        <div className="hidden sm:flex items-end justify-center absolute inset-0 z-10 pb-4 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/card:opacity-100 transition-all duration-500">
                                             <button
                                                 type="button"
                                                 className="bg-[#835339] text-white font-headingTwo font-semibold rounded-sm text-sm md:text-base px-12 md:px-16 py-2 transition-all whitespace-nowrap shadow-md hover:bg-white hover:text-[#835339] hover:border border-[#835339]"
                                             >
                                                 BUY NOW
                                             </button>
-                                        </Link>
-                                    </div>
-                                </a>
+                                        </div>
+                                    </a>
+                                </Link>
+
 
                                 {/* Product Info */}
                                 <div className="p-2 sm:p-3 space-y-1 text-center bg-[#f0e4d4] min-h-[120px] sm:min-h-[140px] flex flex-col justify-center">
@@ -118,7 +127,7 @@ const ProductShowcase = () => {
 
                                 {/* Add to Bag (Mobile only) */}
                                 <div className="block sm:hidden px-3 pb-4 bg-[#f0e4d4]">
-                                    <Link href={`/melita/details/${product.id}`} passHref>
+                                    <Link href={`/melita/details/${product.id}`} passHref legacyBehavior>
                                         <button
                                             type="button"
                                             className="w-full block text-center bg-white font-headingTwo font-semibold rounded-sm text-sm px-6 py-2.5 transition-all shadow-md text-[#835339] border border-[#835339] active:bg-[#835339] active:text-white"
@@ -134,15 +143,15 @@ const ProductShowcase = () => {
 
                 {/* Navigation Arrows (Desktop only) */}
                 <button
-                    onClick={scrollLeft}
-                    className="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg z-10 items-center justify-center transition-all"
+                    onClick={() => scroll('left')}
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg z-20 items-center justify-center transition-all"
                     aria-label="Scroll left"
                 >
                     <ChevronLeft className="w-6 h-6 text-[#835339]" />
                 </button>
                 <button
-                    onClick={scrollRight}
-                    className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg z-10 items-center justify-center transition-all"
+                    onClick={() => scroll('right')}
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-lg z-20 items-center justify-center transition-all"
                     aria-label="Scroll right"
                 >
                     <ChevronRight className="w-6 h-6 text-[#835339]" />

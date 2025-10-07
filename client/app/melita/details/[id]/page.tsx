@@ -64,6 +64,42 @@ const products = [
             "A Simple Start to Healthy Skin. Start strong with two foundational steps designed to reset your skin and support long-term health. The perfect introduction to a skincare routine that truly works.",
         benefits: ["Perfect for beginners", "Gentle cleansing", "Instant hydration"]
     },
+    {
+        id: "71947811847165805",
+        name: "Melita Balancing Moisturizer",
+        originalPrice: "₹1,299.00",
+        salePrice: "₹1,099.00",
+        image: "/melita/product5.jpg",
+        details:
+            "A deeply nourishing, barrier-repairing moisturizer formulated for normal to dry and sensitive skin. It restores hydration, strengthens the skin barrier, and leaves your skin soft, smooth, and resilient.",
+        benefits: [
+            "Deep, long-lasting hydration",
+            "Antioxidant protection",
+            "Supports collagen and skin elasticity",
+            "Barrier repair and strengthening",
+            "Visible smoothing and softening",
+            "Comforting and soothing relief"
+        ]
+    },
+
+    {
+        id: "71947811847165806",
+        name: "Melita Dry Skin Daily Essentials",
+        originalPrice: "₹4,623.00",
+        salePrice: "₹3,606.00",
+        image: "/melita/product6.jpg",
+        details:
+            "A complete 4-step skincare routine designed for dry, dull, or compromised skin. It restores your skin barrier, replenishes deep hydration, and protects your skin throughout the day.",
+        benefits: [
+            "Deeply hydrates at every step",
+            "Repairs and strengthens the skin barrier",
+            "Reduces flakiness, tightness, and discomfort",
+            "Shields skin from UV, blue light, and pollution",
+            "Smooths texture and restores glow",
+            "Delivers all-day comfort and balance"
+        ]
+    }
+
 ];
 
 interface RazorpaySuccessResponse {
@@ -131,6 +167,7 @@ const ProductDetailsPage = () => {
     const [isBooking, setIsBooking] = useState(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [termsModalOpen, setTermsModalOpen] = useState(false);
+    const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
     const summaryRef = useRef<HTMLDivElement | null>(null);
 
     // AHIBI FEST Event ID (special event)
@@ -322,6 +359,9 @@ const ProductDetailsPage = () => {
                 handler: async function (response: RazorpaySuccessResponse) {
                     try {
                         console.log('Payment successful, verifying...', response);
+                        
+                        // Show invoice generation loader
+                        setIsGeneratingInvoice(true);
 
                         // Verify payment and create AHIBI bookings
                         const verifyResponse = await axios.post(
@@ -350,11 +390,16 @@ const ProductDetailsPage = () => {
                                 },
                             }).catch(() => { });
                         }
+                        
+                        // Small delay to ensure all processing is complete
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        // Navigate to success page
+                        router.push(`/melita/payment/success?payment_id=${response.razorpay_payment_id}&order_id=${order.id}&booking_id=${melitaBooking._id}`);
                     } catch (error) {
                         console.error('Error verifying payment:', error);
+                        setIsGeneratingInvoice(false);
                         toast({ variant: 'destructive', title: 'Verification Error', description: 'Payment successful but verification failed. Please contact support.' });
-                    } finally {
-                        router.push(`/melita/payment/success?payment_id=${response.razorpay_payment_id}&order_id=${order.id}&booking_id=${melitaBooking._id}`);
                     }
                 },
                 prefill: {
@@ -1037,6 +1082,30 @@ const ProductDetailsPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Invoice Generation Loader Overlay */}
+            {isGeneratingInvoice && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 sm:p-12 max-w-md mx-4 text-center">
+                        <div className="mb-6">
+                            <Loader2 className="w-16 h-16 animate-spin text-[#835339] mx-auto" />
+                        </div>
+                        <h2 className="text-2xl font-light text-gray-900 mb-3">
+                            Payment Successful!
+                        </h2>
+                        <p className="text-gray-600 mb-2">
+                            Please do not reload or leave this page
+                        </p>
+                        <p className="text-lg font-semibold text-[#835339]">
+                            Your invoice is getting generated...
+                        </p>
+                        <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            <span>Verifying payment</span>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Footer */}
             <Footer />
