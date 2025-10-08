@@ -812,7 +812,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     },
     {
       _id: "68c56699e0a28b9006543bdc",
-      quantity: 50
+      quantity: 0
     }
   ];
 
