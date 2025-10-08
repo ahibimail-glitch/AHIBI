@@ -106,7 +106,7 @@ app.use('/api/admin', (req, res, next) => {
 }, adminRoutes);
 app.use('/api/artist', artistRoutes);
 app.use('/api/venue', venueRoutes);
-app.use('/api/organizer', organizerRoutes);
+// app.use('/api/organizer', organizerRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/qrs', qrRoutes);

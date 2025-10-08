@@ -794,6 +794,29 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const isSpecial = params.id === "68c2c33eb6ef88c76f50ce7c";
   const isBikerBash = params.id === "68d3ce2c0d439c1425c6cdd1";
   // Customized UI for a specific event ID while preserving booking logic
+
+  //How many ticket left from each ticket category
+  // AHIBI TICKETS LEFT
+  const left = [
+    {
+      _id: "68c2c33eb6ef88c76f50ce7d",
+      quantity: 50
+    },
+    {
+      _id: "68c2c33eb6ef88c76f50ce7e",
+      quantity: 50
+    },
+    {
+      _id: "68c2c33eb6ef88c76f50ce80",
+      quantity: 50
+    },
+    {
+      _id: "68c56699e0a28b9006543bdc",
+      quantity: 50
+    }
+  ];
+
+
   if (isBikerBash) {
     return (
       <div className="min-h-screen flex flex-col bg-white">
@@ -1693,12 +1716,23 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 </CardHeader>
                                 <CardContent className="p-4 pt-0">
                                   <p className=" text-green-600 font-bold mb-3">{ticket.description}</p>
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-xs">
+                                  <div className="flex items-center justify-between gap-3 mb-3">
+                                    <Badge
+                                      variant="outline"
+                                      className="flex items-center bg-green-50 text-green-600 border-green-200 text-xs font-medium px-2 py-1 rounded-md"
+                                    >
                                       <Users className="h-3 w-3 mr-1" />
-                                      {ticket.capacity} capacity
+                                      {ticket.capacity} Capacity
+                                    </Badge>
+
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-red-50 text-red-600 border-red-200 text-xs font-medium px-2 py-1 rounded-md"
+                                    >
+                                      Only {left.find(item => item._id === ticket._id)?.quantity ?? 0} Left
                                     </Badge>
                                   </div>
+
                                   {ticket.benefits && ticket.benefits.length > 0 && (
                                     <div className="bg-gray-50 rounded-lg p-3 mb-3 border border-gray-100">
                                       <p className="text-xs font-semibold text-gray-800 mb-2 flex items-center">
