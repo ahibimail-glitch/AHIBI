@@ -807,8 +807,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       quantity: 50
     },
     {
-      _id:"68c2c33eb6ef88c76f50ce7f",
-      quantity:50
+      _id: "68c2c33eb6ef88c76f50ce7f",
+      quantity: 50
     },
     {
       _id: "68c2c33eb6ef88c76f50ce80",
@@ -1474,6 +1474,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         {/* Fixed Navbar */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
           <Navbar />
+          <div className="flex justify-center items-center bg-red-600 py-2 px-3 sm:px-6 shadow-lg">
+            <p className="text-white font-semibold text-xs sm:text-sm md:text-base text-center uppercase tracking-widest leading-snug">
+              🚨 Phase 2 Tickets Almost Gone — Book Now Before It’s Too Late!
+            </p>
+          </div>
+
+
 
 
 
@@ -1489,7 +1496,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
           {/* Banner */}
           <div className="w-full relative z-10">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-14">
               <AspectRatio
                 ratio={16 / 9}
                 className="relative rounded-xl overflow-hidden shadow-lg"
@@ -1729,12 +1736,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       {ticket.capacity} Capacity
                                     </Badge>
 
-                                    <Badge
+                                    {/* <Badge
                                       variant="outline"
                                       className="bg-red-50 text-red-600 border-red-200 text-xs font-medium px-2 py-1 rounded-md"
                                     >
                                       Only {left.find(item => item._id === ticket._id)?.quantity ?? 0} Left
-                                    </Badge>
+                                    </Badge> */}
                                   </div>
 
                                   {ticket.benefits && ticket.benefits.length > 0 && (
