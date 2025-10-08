@@ -807,6 +807,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       quantity: 50
     },
     {
+      _id:"68c2c33eb6ef88c76f50ce7f",
+      quantity:50
+    },
+    {
       _id: "68c2c33eb6ef88c76f50ce80",
       quantity: 50
     },
