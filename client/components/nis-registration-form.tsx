@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { PersonalInfoStep } from "./steps/personal-info-step"
 import { SocialMediaStep } from "./steps/social-media-step"
 import { CategoryExperienceStep } from "./steps/category-experience-step"
+import { ContentPortfolioStep } from "./steps/content-portfolio-step"
 import { ReviewConsentStep } from "./steps/review-consent-step"
 import { SuccessStep } from "./steps/success-step"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -49,6 +50,20 @@ export interface FormData {
     description: string
   }>
 
+  // Content Portfolio
+  topContent: Array<{
+    title: string
+    platform: string
+    url: string
+    type: string
+    views: number
+    likes: number
+    shares: number
+    comments: number
+  }>
+  analyticsFile?: File
+  analyticsFileUrl?: string
+
   // Consent
   consents: {
     accuracy: boolean
@@ -74,6 +89,8 @@ const initialFormData: FormData = {
   yearsActive: 0,
   achievements: "",
   brandCollaborations: [],
+  topContent: [],
+  analyticsFileUrl: "",
   consents: {
     accuracy: false,
     terms: false,
@@ -89,7 +106,7 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showErrors, setShowErrors] = useState(false)
-  const totalSteps = 4
+  const totalSteps = 5
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -181,7 +198,9 @@ export function RegistrationForm() {
         return <SocialMediaStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 3:
         return <CategoryExperienceStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
-      case 4:
+            case 4:
+        return <ContentPortfolioStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
+      case 5:
         return <ReviewConsentStep formData={formData} updateFormData={updateFormData} goToStep={goToStep} showErrors={showErrors} />
       default:
         return null
@@ -215,7 +234,12 @@ export function RegistrationForm() {
         const campusCategorySelected = formData.awardCategories.includes("campus-voice")
         const campusValid = !campusCategorySelected || (formData.campusName || "").trim() !== ""
         return hasContentNiches && hasCustomNiches && allCustomNichesFilled && hasAwardCategories && campusValid
-      case 4:
+            case 4:
+        return (
+          formData.topContent.length >= 3 &&
+          !!formData.analyticsFileUrl
+        )
+      case 5:
         return formData.consents.accuracy && formData.consents.terms && formData.consents.dataUsage
       default:
         return false
@@ -272,7 +296,8 @@ export function RegistrationForm() {
             {currentStep === 1 && "Personal Information"}
             {currentStep === 2 && "Social Media Presence"}
             {currentStep === 3 && "Category & Experience"}
-            {currentStep === 4 && "Review & Consent"}
+                        {currentStep === 4 && "Content Portfolio"}
+            {currentStep === 5 && "Review & Consent"}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">{renderStep()}</CardContent>
