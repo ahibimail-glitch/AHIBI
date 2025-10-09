@@ -108,21 +108,6 @@ export function RegistrationForm() {
   const [showErrors, setShowErrors] = useState(false)
   const totalSteps = 5
 
-  // Auto-save to localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("nis-2025-draft")
-    if (saved) {
-      try {
-        setFormData(JSON.parse(saved))
-      } catch (e) {
-        console.error("Failed to load saved draft")
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem("nis-2025-draft", JSON.stringify(formData))
-  }, [formData])
 
   const updateFormData = (updates: Partial<FormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }))
@@ -176,7 +161,6 @@ export function RegistrationForm() {
       
       // Store registration ID from backend response
       localStorage.setItem("nis-2025-registration-id", result.data.registrationId)
-      localStorage.removeItem("nis-2025-draft")
       setIsSubmitted(true)
     } catch (error: unknown) {
       console.error('Registration submission failed:', error)
