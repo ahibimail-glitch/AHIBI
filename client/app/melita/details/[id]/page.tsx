@@ -232,16 +232,32 @@ const ProductDetailsPage = () => {
             const ahibiTicketsAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
             const combinedAmount = melitaAmount + ahibiTicketsAmount;
 
-            // Apply discount ONLY on AHIBI tickets, not on Melita products
-            const discountPercentage = appliedCoupon.discountPercentage || 50; // Default to 50 for MELITA50
-            const discountAmount = Math.round((ahibiTicketsAmount * discountPercentage) / 100);
+            if (appliedCoupon.isAhibiFestCoupon) {
+                // For AHIBI FEST coupons: 50% off Melita + coupon percentage off tickets
+                const melitaDiscountAmount = Math.round((melitaAmount * 50) / 100);
+                const ticketDiscountAmount = Math.round((ahibiTicketsAmount * appliedCoupon.discountPercentage) / 100);
+                const totalDiscountAmount = melitaDiscountAmount + ticketDiscountAmount;
 
-            setAppliedCoupon({
-                ...appliedCoupon,
-                discountAmount,
-                totalAmount: combinedAmount,
-                payable: Math.max(0, combinedAmount - discountAmount),
-            });
+                setAppliedCoupon({
+                    ...appliedCoupon,
+                    discountAmount: totalDiscountAmount,
+                    melitaDiscountAmount,
+                    ticketDiscountAmount,
+                    totalAmount: combinedAmount,
+                    payable: Math.max(0, combinedAmount - totalDiscountAmount),
+                });
+            } else {
+                // Apply discount ONLY on AHIBI tickets, not on Melita products (original logic)
+                const discountPercentage = appliedCoupon.discountPercentage || 50; // Default to 50 for MELITA50
+                const discountAmount = Math.round((ahibiTicketsAmount * discountPercentage) / 100);
+
+                setAppliedCoupon({
+                    ...appliedCoupon,
+                    discountAmount,
+                    totalAmount: combinedAmount,
+                    payable: Math.max(0, combinedAmount - discountAmount),
+                });
+            }
         }
     }, [selectedTickets, product.salePrice]);
 
@@ -448,20 +464,12 @@ const ProductDetailsPage = () => {
                 return;
             }
 
-            // Special-case MELITA50: flat 50% off on AHIBI tickets ONLY
-            if (couponCode.trim().toUpperCase() === 'MELITA50') {
-                const discountAmount = Math.round((ahibiTicketsAmount * 50) / 100);
-                setAppliedCoupon({
-                    valid: true,
-                    code: 'MELITA50',
-                    discountPercentage: 50,
-                    discountAmount,
-                    totalAmount: combinedAmount,
-                    payable: Math.max(0, combinedAmount - discountAmount),
-                });
-                toast({ title: 'Coupon applied', description: 'MELITA50 applied: 50% off on AHIBI FEST tickets.' });
-                return;
-            }
+            // Prepare selected tickets data for backend validation
+            const selectedTicketsData = Array.from(selectedTickets.values()).map(item => ({
+                ticketType: item.ticket.name,
+                quantity: item.quantity,
+                price: item.ticket.price
+            }));
 
             const apiBase = (typeof window !== 'undefined' && window.location?.origin) ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
             const res = await fetch(`${apiBase}/api/melita/coupons/validate`, {
@@ -470,7 +478,12 @@ const ProductDetailsPage = () => {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ code: couponCode, amount: ahibiTicketsAmount }),
+                body: JSON.stringify({ 
+                    code: couponCode, 
+                    amount: ahibiTicketsAmount,
+                    melitaAmount: melitaAmount,
+                    selectedTickets: selectedTicketsData
+                }),
             });
             const data = await res.json();
             if (!res.ok || !data.valid) {
@@ -480,7 +493,7 @@ const ProductDetailsPage = () => {
                 return;
             }
             setAppliedCoupon(data);
-            toast({ title: 'Coupon applied', description: `Coupon ${data.code} applied: ${data.discountPercentage}% off` });
+            toast({ title: 'Coupon applied', description: data.message || `Coupon ${data.code} applied: ${data.discountPercentage}% off` });
         } catch (e) {
             console.error('Coupon apply error:', e);
             setCouponError('Failed to apply coupon');
@@ -976,12 +989,30 @@ const ProductDetailsPage = () => {
                                     </button>
                                 </div>
                                 {couponError && <p className="text-xs text-red-600 mt-2">{couponError}</p>}
-                                {appliedCoupon?.discountAmount > 0 && (
-                                    <div className="mt-3 p-3 bg-green-50 rounded-lg text-green-700 flex justify-between">
-                                        <span>Coupon ({appliedCoupon.code})</span>
-                                        <span>-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                {/* {appliedCoupon?.discountAmount > 0 && (
+                                    <div className="mt-3 p-3 bg-green-50 rounded-lg text-green-700">
+                                        <div className="flex justify-between font-semibold mb-2">
+                                            <span>Coupon ({appliedCoupon.code})</span>
+                                            <span>-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                        </div>
+                                        {appliedCoupon.isAhibiFestCoupon && (
+                                            <div className="text-xs space-y-1">
+                                                {appliedCoupon.melitaDiscountAmount > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span>• Melita Product (50% off)</span>
+                                                        <span>-₹{appliedCoupon.melitaDiscountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                {appliedCoupon.ticketDiscountAmount > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span>• AHIBI Tickets ({appliedCoupon.discountPercentage}% off)</span>
+                                                        <span>-₹{appliedCoupon.ticketDiscountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                )} */}
                             </div>
 
                             {/* Summary breakdown */}
@@ -997,10 +1028,29 @@ const ProductDetailsPage = () => {
                                     </div>
                                 )}
                                 {appliedCoupon?.discountAmount > 0 && (
-                                    <div className="flex justify-between text-sm text-green-600">
-                                        <span>Discount ({appliedCoupon.code})</span>
-                                        <span className="font-semibold">-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
-                                    </div>
+                                    <>
+                                        {appliedCoupon.isAhibiFestCoupon ? (
+                                            <>
+                                                {appliedCoupon.melitaDiscountAmount > 0 && (
+                                                    <div className="flex justify-between text-sm text-green-600">
+                                                        <span>Melita Discount (50%)</span>
+                                                        <span className="font-semibold">-₹{appliedCoupon.melitaDiscountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                                {appliedCoupon.ticketDiscountAmount > 0 && (
+                                                    <div className="flex justify-between text-sm text-green-600">
+                                                        <span>Ticket Discount ({appliedCoupon.discountPercentage}%)</span>
+                                                        <span className="font-semibold">-₹{appliedCoupon.ticketDiscountAmount.toLocaleString()}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="flex justify-between text-sm text-green-600">
+                                                <span>Discount ({appliedCoupon.code})</span>
+                                                <span className="font-semibold">-₹{appliedCoupon.discountAmount.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                                 <div className="border-t pt-2 flex justify-between text-lg font-bold">
                                     <span>Total</span>
