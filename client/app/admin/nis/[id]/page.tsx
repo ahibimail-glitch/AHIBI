@@ -251,68 +251,7 @@ export default function NISRegistrationDetailsPage() {
         </Card>
 
         {/* Content Portfolio */}
-        <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-gray-900 flex items-center gap-2">
-              <Layers className="h-5 w-5 text-emerald-600" /> Content Portfolio
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="p-6 space-y-6">
-            {/* Content List */}
-            <div className="space-y-3">
-              {data.topContent.map((c, i) => (
-                <div
-                  key={i}
-                  className="border rounded-lg p-4 bg-white/60 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="flex items-start justify-between gap-6">
-                    {/* Left Section */}
-                    <div className="min-w-0 space-y-1">
-                      <p className="font-semibold text-gray-800">{c.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {c.platform} • {c.type}
-                      </p>
-                      <a
-                        href={c.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1 hover:text-blue-800"
-                      >
-                        <LinkIcon className="h-3 w-3" /> {c.url}
-                      </a>
-                    </div>
-
-                    {/* Right Section */}
-                    <div className="text-right text-xs sm:text-sm text-gray-700 space-y-0.5">
-                      <p>{formatNumber(c.views)} views</p>
-                      <p>{formatNumber(c.likes)} likes</p>
-                      <p>{formatNumber(c.shares)} shares</p>
-                      <p>{formatNumber(c.comments)} comments</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Analytics File */}
-            {data.analyticsFileUrl && (
-              <div className="border-t pt-4">
-                <h3 className="text-gray-900 font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-emerald-600" /> Analytics Document
-                </h3>
-                <a
-                  href={data.analyticsFileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-blue-600 underline break-all inline-flex items-center gap-1 mt-1 hover:text-blue-800"
-                >
-                  <LinkIcon className="h-3 w-3" /> {data.analyticsFileUrl}
-                </a>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/*  */}
 
         {/* Category & Experience */}
         <Card className="mb-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">

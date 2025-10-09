@@ -345,7 +345,7 @@ export function CategoryExperienceStep({ formData, updateFormData, showErrors }:
       </div>
 
       {/* Notable Achievements */}
-      <div className="space-y-2">
+      {/* <div className="space-y-2">
         <Label htmlFor="achievements">Notable Achievements (Optional)</Label>
         <Textarea
           id="achievements"
@@ -354,11 +354,11 @@ export function CategoryExperienceStep({ formData, updateFormData, showErrors }:
           placeholder="Share any awards, recognitions, viral content, or significant milestones..."
           className="glass min-h-[100px]"
         />
-      </div>
+      </div> */}
 
       {/* Brand Collaborations */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        {/* <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Brand Collaborations (Optional)</h3>
           <Button
             onClick={addCollaboration}
@@ -369,7 +369,7 @@ export function CategoryExperienceStep({ formData, updateFormData, showErrors }:
             <Plus className="w-4 h-4" />
             Add Collaboration
           </Button>
-        </div>
+        </div> */}
 
         {formData.brandCollaborations.map((collab, index) => (
           <Card key={index} className="glass mb-4">

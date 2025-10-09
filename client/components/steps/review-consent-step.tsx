@@ -149,47 +149,6 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep, showErro
           </Card>
         </Collapsible>
 
-        {/* Content Portfolio */}
-        <Collapsible open={openSections.includes("content")} onOpenChange={() => toggleSection("content")}>
-          <Card className="glass">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/10 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileText className="w-5 h-5" />
-                    Content Portfolio
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        goToStep(3)
-                      }}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <ChevronDown className="w-4 h-4 transition-transform" />
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div>
-                    <span className="font-medium">Top Content Pieces:</span> {formData.topContent.length}
-                  </div>
-                  <div>
-                    <span className="font-medium">Analytics File:</span>
-                    {formData.analyticsFile ? formData.analyticsFile.name : "Not uploaded"}
-                  </div>
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
 
         {/* Category & Experience */}
         <Collapsible open={openSections.includes("category")} onOpenChange={() => toggleSection("category")}>
@@ -207,7 +166,7 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep, showErro
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        goToStep(4)
+                        goToStep(3)
                       }}
                     >
                       <Edit className="w-4 h-4" />
@@ -245,9 +204,6 @@ export function ReviewConsentStep({ formData, updateFormData, goToStep, showErro
                   </div>
                   <div>
                     <span className="font-medium">Years Active:</span> {formData.yearsActive} years
-                  </div>
-                  <div>
-                    <span className="font-medium">Brand Collaborations:</span> {formData.brandCollaborations.length}
                   </div>
                 </div>
               </CardContent>

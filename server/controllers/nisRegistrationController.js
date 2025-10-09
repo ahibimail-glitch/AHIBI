@@ -39,9 +39,9 @@ exports.createRegistration = async (req, res, next) => {
 		if (!Array.isArray(payload.platforms) || payload.platforms.length === 0 || (payload.totalFollowers ?? 0) < 4000) {
 			return ApiResponse.badRequest(res, 'Social presence requirements not met');
 		}
-		if (!Array.isArray(payload.topContent) || payload.topContent.length < 3) {
-			return ApiResponse.badRequest(res, 'At least 3 top content items required');
-		}
+		// if (!Array.isArray(payload.topContent) || payload.topContent.length < 3) {
+		// 	return ApiResponse.badRequest(res, 'At least 3 top content items required');
+		// }
 		if (!Array.isArray(payload.contentNiches) || payload.contentNiches.length === 0) {
 			return ApiResponse.badRequest(res, 'Category and experience requirements not met');
 		}

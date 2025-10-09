@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { PersonalInfoStep } from "./steps/personal-info-step"
 import { SocialMediaStep } from "./steps/social-media-step"
-import { ContentPortfolioStep } from "./steps/content-portfolio-step"
 import { CategoryExperienceStep } from "./steps/category-experience-step"
 import { ReviewConsentStep } from "./steps/review-consent-step"
 import { SuccessStep } from "./steps/success-step"
@@ -34,19 +33,6 @@ export interface FormData {
   }>
   totalFollowers: number
 
-  // Content Portfolio
-  topContent: Array<{
-    title: string
-    platform: string
-    url: string
-    type: string
-    views: number
-    likes: number
-    shares: number
-    comments: number
-  }>
-  analyticsFile?: File
-  analyticsFileUrl?: string
 
   // Category & Experience
   contentNiches: string[]
@@ -82,8 +68,6 @@ const initialFormData: FormData = {
   nagalandResident: false,
   platforms: [],
   totalFollowers: 0,
-  topContent: [],
-  analyticsFileUrl: undefined,
   contentNiches: [],
   customNiches: [],
   awardCategories: [],
@@ -105,8 +89,7 @@ export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [showErrors, setShowErrors] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const totalSteps = 5
+  const totalSteps = 4
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -197,17 +180,8 @@ export function RegistrationForm() {
       case 2:
         return <SocialMediaStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
       case 3:
-        return (
-          <ContentPortfolioStep 
-            formData={formData} 
-            updateFormData={updateFormData} 
-            showErrors={showErrors} 
-            onUploadStatusChange={setIsUploading}
-          />
-        )
-      case 4:
         return <CategoryExperienceStep formData={formData} updateFormData={updateFormData} showErrors={showErrors} />
-      case 5:
+      case 4:
         return <ReviewConsentStep formData={formData} updateFormData={updateFormData} goToStep={goToStep} showErrors={showErrors} />
       default:
         return null
@@ -234,9 +208,6 @@ export function RegistrationForm() {
               //    platform.engagementRate <= 100
               //  )
       case 3:
-        return formData.topContent.length >= 3 && 
-               (formData.analyticsFile !== undefined || (formData as any).analyticsFileUrl !== undefined)
-      case 4:
         const hasContentNiches = formData.contentNiches.length > 0
         const hasCustomNiches = !formData.contentNiches.includes("others") || formData.customNiches.length > 0
         const allCustomNichesFilled = !formData.contentNiches.includes("others") || formData.customNiches.every(niche => niche.trim() !== "")
@@ -244,7 +215,7 @@ export function RegistrationForm() {
         const campusCategorySelected = formData.awardCategories.includes("campus-voice")
         const campusValid = !campusCategorySelected || (formData.campusName || "").trim() !== ""
         return hasContentNiches && hasCustomNiches && allCustomNichesFilled && hasAwardCategories && campusValid
-      case 5:
+      case 4:
         return formData.consents.accuracy && formData.consents.terms && formData.consents.dataUsage
       default:
         return false
@@ -300,9 +271,8 @@ export function RegistrationForm() {
           <CardTitle className="text-2xl">
             {currentStep === 1 && "Personal Information"}
             {currentStep === 2 && "Social Media Presence"}
-            {currentStep === 3 && "Content Portfolio"}
-            {currentStep === 4 && "Category & Experience"}
-            {currentStep === 5 && "Review & Consent"}
+            {currentStep === 3 && "Category & Experience"}
+            {currentStep === 4 && "Review & Consent"}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">{renderStep()}</CardContent>
@@ -339,9 +309,9 @@ export function RegistrationForm() {
           <Button 
             onClick={nextStep} 
             className="gradient-primary flex items-center gap-2"
-            disabled={isUploading || (currentStep === 3 && !formData.analyticsFileUrl)}
+            disabled={false}
           >
-            {isUploading ? 'Uploading...' : 'Next'}
+            {'Next'}
             <ChevronRight className="w-4 h-4" />
           </Button>
         )}
