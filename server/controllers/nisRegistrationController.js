@@ -114,7 +114,7 @@ exports.getRegistrationById = async (req, res, next) => {
 
 exports.listRegistrations = async (req, res, next) => {
 	try {
-		const { page = 1, limit = 20, search } = req.query;
+		const { page = 1, limit = 100, search } = req.query;
 		const query = {};
 		if (search) {
 			query.$or = [
