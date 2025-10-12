@@ -4,206 +4,162 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Ticket,
   Building,
   Calendar,
   Music,
-  Users,
-  TrendingUp,
-  Star,
   Check,
   ArrowRight,
-  Clock,
   Shield,
   Zap,
+  Headphones,
+  TrendingUp,
+  Clock,
+  Star,
+  Users,
+  Sparkles,
+  BarChart3,
+  Target,
   HeadphonesIcon,
 } from "lucide-react";
 import Link from "next/link";
 import Footer from "../Footer";
-import { Header } from "@radix-ui/react-accordion";
 import Navbar from "../Navbar";
+
+const FeatureItem = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex items-start group">
+    <div className="flex-shrink-0 mt-1">
+      <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+        <Check className="h-4 w-4 text-green-600" />
+      </div>
+    </div>
+    <p className="ml-3 text-base text-gray-700">{children}</p>
+  </div>
+);
+
+const StatCard = ({ icon: Icon, label, value, color }: any) => (
+  <div className="group">
+    <div className={`flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br ${color} hover:scale-105 transition-transform`}>
+      <div className="p-2 bg-white/90 rounded-lg">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="text-2xl font-bold text-white">{value}</div>
+        <div className="text-sm text-white/90">{label}</div>
+      </div>
+    </div>
+  </div>
+);
 
 export default function PartnersPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white">
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
         <Navbar />
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
-              Partner with Ahibi
-            </span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            Join thousands of venue managers, event organizers, and artists who
-            are transforming the entertainment industry with our comprehensive
-            platform.
-          </p>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Building className="h-12 w-12 text-orange-600 mx-auto mb-4" />
-                <div className="text-3xl font-bold text-gray-900 mb-2">
-                  2,500+
-                </div>
-                <div className="text-gray-600">Active Venues</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Calendar className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <div className="text-3xl font-bold text-gray-900 mb-2">
-                  15,000+
-                </div>
-                <div className="text-gray-600">Events Organized</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Music className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <div className="text-3xl font-bold text-gray-900 mb-2">
-                  8,000+
-                </div>
-                <div className="text-gray-600">Professional Artists</div>
-              </CardContent>
-            </Card>
+      {/* Hero Section - Enhanced */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-purple-50 to-green-50 opacity-60"></div>
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+          <div className="absolute top-40 right-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+          <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full mb-6 border border-gray-200">
+            <Sparkles className="h-4 w-4 text-orange-500" />
+            <span className="text-sm font-medium text-gray-700">Trusted by 50,000+ Users</span>
           </div>
+          
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent">
+            Partner with Ahibi
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+            A single platform for venues, organizers, and artists to manage, grow, and connect — seamlessly.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12">
+            <StatCard icon={Users} label="Active Users" value="50K+" color="from-blue-500 to-blue-600" />
+            <StatCard icon={Calendar} label="Events Hosted" value="30+" color="from-purple-500 to-purple-600" />
+            <StatCard icon={TrendingUp} label="Tickets Sold" value="60K+" color="from-green-500 to-green-600" />
+          </div>
+          
+        
         </div>
       </section>
 
-      {/* Venue Manager Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-orange-100/50 to-red-100/50">
+      {/* Venues Section - Enhanced */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mr-4">
-                  <Building className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-4xl font-bold text-gray-900 mb-2">
-                    Venue Managers
-                  </h2>
-                  <p className="text-gray-600">
-                    Maximize your venue's potential
-                  </p>
-                </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-orange-100 rounded-full mb-4">
+                <Building className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-semibold text-orange-600 uppercase tracking-wide">For Venue Managers</span>
               </div>
-
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Advanced booking management system
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Real-time availability tracking
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Automated payment processing
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Revenue optimization tools
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Customer relationship management
-                  </span>
-                </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Maximize every booking.
+              </h2>
+              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                Simplify how you manage your space — from schedules to payments — all in one dashboard.
+              </p>
+              <div className="space-y-4 mb-10">
+                <FeatureItem>Smart booking and availability management</FeatureItem>
+                <FeatureItem>Automated payments and real-time tracking</FeatureItem>
+                <FeatureItem>Revenue and performance analytics</FeatureItem>
+                <FeatureItem>Customer management tools</FeatureItem>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 shadow-lg"
-                >
-                  <Link href="/venue/auth/signup">
-                    Start as Venue Manager
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  asChild
-                  className="border-orange-300 text-orange-700 hover:bg-orange-50 bg-transparent"
-                >
-                  <Link href="/venue/auth/login">Sign In</Link>
-                </Button>
-              </div>
+              <Button asChild className="bg-gradient-to-r from-orange-600 to-orange-500 text-white hover:from-orange-700 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 px-6 py-6">
+                <Link href="/venue/auth/signup">
+                  Start as Venue Manager
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-
             <div className="lg:pl-8">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-6">
-                  <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg p-4 mb-4">
-                    <h3 className="text-white font-semibold mb-2">
-                      Venue Dashboard
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-white text-sm">
-                      <div>
-                        <div className="opacity-80">Today's Bookings</div>
-                        <div className="text-2xl font-bold">12</div>
+              <Card className="bg-white border-gray-200 border shadow-2xl hover:shadow-3xl transition-shadow overflow-hidden">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-gray-900 font-bold text-lg">Venue Dashboard</h3>
+                      <BarChart3 className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="text-sm text-gray-600 mb-1">Upcoming Bookings</div>
+                        <div className="text-3xl font-bold text-gray-900">12</div>
+                        <div className="text-xs text-green-600 mt-1">↑ 23% this month</div>
                       </div>
-                      <div>
-                        <div className="opacity-80">Monthly Revenue</div>
-                        <div className="text-2xl font-bold">$24.5K</div>
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="text-sm text-gray-600 mb-1">Monthly Revenue</div>
+                        <div className="text-3xl font-bold text-gray-900">₹45K</div>
+                        <div className="text-xs text-green-600 mt-1">↑ 18% growth</div>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-orange-200 transition-colors">
                       <div>
-                        <div className="font-medium text-gray-900">
-                          Main Hall
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Wedding Reception
+                        <div className="font-semibold text-gray-900 mb-1">Main Hall</div>
+                        <div className="text-sm text-gray-600 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Oct 15 • Music Concert
                         </div>
                       </div>
-                      <Badge className="bg-green-100 text-green-800">
+                      <Badge className="bg-green-100 text-green-700 border-green-200">
                         Confirmed
                       </Badge>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-orange-200 transition-colors">
                       <div>
-                        <div className="font-medium text-gray-900">
-                          Conference Room A
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Corporate Meeting
+                        <div className="font-semibold text-gray-900 mb-1">Rooftop Lounge</div>
+                        <div className="text-sm text-gray-600 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          Oct 18 • Private Event
                         </div>
                       </div>
-                      <Badge className="bg-blue-100 text-blue-800">
-                        In Progress
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          Outdoor Space
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Music Festival
-                        </div>
-                      </div>
-                      <Badge className="bg-yellow-100 text-yellow-800">
+                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">
                         Pending
                       </Badge>
                     </div>
@@ -215,127 +171,81 @@ export default function PartnersPage() {
         </div>
       </section>
 
-      {/* Event Organizer Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-purple-100/50 to-pink-100/50">
+      {/* Organizers Section - Enhanced */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-purple-50/50 to-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="lg:order-2">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mr-4">
-                  <Calendar className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-4xl font-bold text-gray-900 mb-2">
-                    Event Organizers
-                  </h2>
-                  <p className="text-gray-600">
-                    Create unforgettable experiences
-                  </p>
-                </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-100 rounded-full mb-4">
+                <Target className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-semibold text-purple-600 uppercase tracking-wide">For Event Organizers</span>
               </div>
-
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    End-to-end event management
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Integrated ticketing system
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Attendee engagement tools
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">Marketing automation</span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Real-time analytics dashboard
-                  </span>
-                </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Plan better. Sell faster.
+              </h2>
+              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                Manage your entire event lifecycle — ticketing, marketing, analytics, and audience engagement — without juggling multiple tools.
+              </p>
+              <div className="space-y-4 mb-10">
+                <FeatureItem>End-to-end event management</FeatureItem>
+                <FeatureItem>Integrated ticketing and QR check-ins</FeatureItem>
+                <FeatureItem>Audience engagement tools</FeatureItem>
+                <FeatureItem>Marketing Support</FeatureItem>
+                <FeatureItem>Analytics dashboard</FeatureItem>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-purple-500 to-pink-600 hover:opacity-90 shadow-lg"
-                >
-                  <Link href="/organizer/auth/signup">
-                    Start as Organizer
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  asChild
-                  className="border-purple-300 text-purple-700 hover:bg-purple-50 bg-transparent"
-                >
-                  <Link href="/organizer/auth/login">Sign In</Link>
-                </Button>
-              </div>
+              <Button asChild className="bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:from-purple-700 hover:to-purple-600 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 px-6 py-6">
+                <Link href="/organizer/auth/signup">
+                  Start as Organizer
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-
             <div className="lg:order-1 lg:pr-8">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-6">
-                  <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg p-4 mb-4">
-                    <h3 className="text-white font-semibold mb-2">
-                      Event Management
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-white text-sm">
-                      <div>
-                        <div className="opacity-80">Active Events</div>
-                        <div className="text-2xl font-bold">8</div>
+              <Card className="bg-white border-gray-200 border shadow-2xl hover:shadow-3xl transition-shadow overflow-hidden">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-gray-900 font-bold text-lg">Event Management</h3>
+                      <Calendar className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="text-sm text-gray-600 mb-1">Active Events</div>
+                        <div className="text-3xl font-bold text-gray-900">8</div>
+                        <div className="text-xs text-purple-600 mt-1">3 starting soon</div>
                       </div>
-                      <div>
-                        <div className="opacity-80">Total Attendees</div>
-                        <div className="text-2xl font-bold">2.1K</div>
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="text-sm text-gray-600 mb-1">Tickets Sold</div>
+                        <div className="text-3xl font-bold text-gray-900">2.4K</div>
+                        <div className="text-xs text-green-600 mt-1">↑ 156 today</div>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-gray-900">
-                          Summer Music Festival
+                    <div className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-purple-200 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="font-semibold text-gray-900">Summer Music Festival</div>
+                        <Badge className="bg-green-100 text-green-700 border-green-200">Live</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">85% sold</span>
+                        <div className="flex items-center gap-1 text-orange-600">
+                          <TrendingUp className="h-3 w-3" />
+                          <span className="font-medium">Hot</span>
                         </div>
-                        <Badge className="bg-green-100 text-green-800">
-                          Live
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Central Park • 500 attendees
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                        <span className="text-green-600">95% capacity</span>
                       </div>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-gray-900">
-                          Tech Conference 2024
+                    <div className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-purple-200 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="font-semibold text-gray-900">Tech Conference 2025</div>
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">Planning</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">450 interested</span>
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <Users className="h-3 w-3" />
+                          <span className="font-medium">Growing</span>
                         </div>
-                        <Badge className="bg-blue-100 text-blue-800">
-                          Planning
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Convention Center • 1200 expected
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Clock className="h-4 w-4 text-blue-600 mr-1" />
-                        <span className="text-blue-600">30 days to go</span>
                       </div>
                     </div>
                   </div>
@@ -346,126 +256,81 @@ export default function PartnersPage() {
         </div>
       </section>
 
-      {/* Artist Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-green-100/50 to-teal-100/50">
+      {/* Artists Section - Enhanced */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-600 rounded-full flex items-center justify-center mr-4">
-                  <Music className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-4xl font-bold text-gray-900 mb-2">
-                    Artists
-                  </h2>
-                  <p className="text-gray-600">
-                    Showcase your talent to the world
-                  </p>
-                </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full mb-4">
+                <Music className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-green-600 uppercase tracking-wide">For Artists</span>
               </div>
-
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Professional portfolio builder
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">Direct booking system</span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">Fan engagement platform</span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Revenue tracking & analytics
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">
-                    Promotional support tools
-                  </span>
-                </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Showcase. Connect. Grow.
+              </h2>
+              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+                Build your professional portfolio, get booked directly, and track your performance in real time.
+              </p>
+              <div className="space-y-4 mb-10">
+                <FeatureItem>Verified profile and booking system</FeatureItem>
+                <FeatureItem>Fan engagement and promotions</FeatureItem>
+                <FeatureItem>Revenue tracking and insights</FeatureItem>
+                <FeatureItem>Performance analytics</FeatureItem>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  asChild
-                  className="bg-gradient-to-r from-green-500 to-teal-600 hover:opacity-90 shadow-lg"
-                >
-                  <Link href="/artist/auth/signup">
-                    Start as Artist
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  asChild
-                  className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
-                >
-                  <Link href="/artist/auth/login">Sign In</Link>
-                </Button>
-              </div>
+              <Button asChild className="bg-gradient-to-r from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600 shadow-lg hover:shadow-xl transition-all transform hover:scale-105 px-6 py-6">
+                <Link href="/artist/auth/signup">
+                  Start as Artist
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </div>
-
             <div className="lg:pl-8">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-6">
-                  <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg p-4 mb-4">
-                    <h3 className="text-white font-semibold mb-2">
-                      Artist Profile
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-white text-sm">
-                      <div>
-                        <div className="opacity-80">Followers</div>
-                        <div className="text-2xl font-bold">12.5K</div>
+              <Card className="bg-white border-gray-200 border shadow-2xl hover:shadow-3xl transition-shadow overflow-hidden">
+                <CardContent className="p-8">
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-gray-900 font-bold text-lg">Artist Dashboard</h3>
+                      <Star className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="text-sm text-gray-600 mb-1">Followers</div>
+                        <div className="text-3xl font-bold text-gray-900">12.5K</div>
+                        <div className="text-xs text-green-600 mt-1">↑ 340 this week</div>
                       </div>
-                      <div>
-                        <div className="opacity-80">This Month</div>
-                        <div className="text-2xl font-bold">$8.2K</div>
+                      <div className="bg-white rounded-lg p-4">
+                        <div className="text-sm text-gray-600 mb-1">This Month</div>
+                        <div className="text-3xl font-bold text-gray-900">₹28K</div>
+                        <div className="text-xs text-green-600 mt-1">↑ 42% growth</div>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-gray-900">
-                          Jazz Night Performance
-                        </div>
-                        <div className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                          <span className="text-sm text-gray-600">4.9</span>
-                        </div>
+                    <div className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-green-200 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="font-semibold text-gray-900">Live at The Junction</div>
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">Booked</Badge>
                       </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Blue Note Club • $1,200
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Oct 20, 8:00 PM
+                        </span>
+                        <span className="text-green-600 font-medium">₹15K</span>
                       </div>
-                      <Badge className="bg-green-100 text-green-800">
-                        Completed
-                      </Badge>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-gray-900">
-                          Wedding Reception
-                        </div>
-                        <div className="flex items-center">
-                          <Users className="h-4 w-4 text-blue-500 mr-1" />
-                          <span className="text-sm text-gray-600">150</span>
+                    <div className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 hover:border-green-200 transition-colors">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="font-semibold text-gray-900">New Single Release</div>
+                        <Badge className="bg-green-100 text-green-700 border-green-200">Active</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">2.3K plays</span>
+                        <div className="flex items-center gap-1 text-purple-600">
+                          <TrendingUp className="h-3 w-3" />
+                          <span className="font-medium">Trending</span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Grand Ballroom • $2,500
-                      </div>
-                      <Badge className="bg-blue-100 text-blue-800">
-                        Upcoming
-                      </Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -475,68 +340,83 @@ export default function PartnersPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            Why Choose Ahibi?
-          </h2>
-          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            Join the platform that's revolutionizing the entertainment industry
-            with cutting-edge technology and unmatched support.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Secure & Reliable
-                </h3>
-                <p className="text-gray-600">
-                  Bank-level security with 99.9% uptime guarantee
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6 text-center">
-                <Zap className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Lightning Fast
-                </h3>
-                <p className="text-gray-600">
-                  Optimized performance for seamless user experience
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-6 text-center">
-                <HeadphonesIcon className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  24/7 Support
-                </h3>
-                <p className="text-gray-600">
-                  Dedicated support team ready to help you succeed
-                </p>
-              </CardContent>
-            </Card>
+      {/* Why Ahibi Section - Enhanced */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white via-gray-50 to-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Why Partners Choose Ahibi</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Technology built for simplicity, reliability, and scale — so you can focus on what you do best.
+            </p>
           </div>
-
-          <Button
-            asChild
-            size="lg"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 shadow-lg text-lg px-8 py-3"
-          >
-            {/* <Link href="/auth">
-              Get Started Today
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link> */}
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="group p-8 rounded-2xl bg-white border border-gray-200 hover:border-blue-300 hover:shadow-xl transition-all">
+              <div className="h-14 w-14 rounded-xl bg-blue-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Shield className="h-7 w-7 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Secure & Reliable</h3>
+              <p className="text-gray-600 leading-relaxed">Bank-grade security with 256-bit encryption and 99.9% uptime guarantee.</p>
+            </div>
+            <div className="group p-8 rounded-2xl bg-white border border-gray-200 hover:border-yellow-300 hover:shadow-xl transition-all">
+              <div className="h-14 w-14 rounded-xl bg-yellow-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Zap className="h-7 w-7 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Fast & Seamless</h3>
+              <p className="text-gray-600 leading-relaxed">Lightning-fast performance optimized for modern workflows and user experience.</p>
+            </div>
+            <div className="group p-8 rounded-2xl bg-white border border-gray-200 hover:border-green-300 hover:shadow-xl transition-all">
+              <div className="h-14 w-14 rounded-xl bg-green-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <HeadphonesIcon className="h-7 w-7 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Dedicated Support</h3>
+              <p className="text-gray-600 leading-relaxed">24/7 expert assistance from our dedicated partner success team.</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Closing CTA - Enhanced */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative rounded-3xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-12 md:p-16 overflow-hidden">
+            <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]"></div>
+            <div className="relative z-10 text-center">
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+                Let's build better events together.
+              </h2>
+              <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+                Join a network of creators, venues, and organizers shaping the next generation of live experiences.
+              </p>
+              {/* <Button asChild size="lg" className="bg-white text-gray-900 hover:bg-gray-100 shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 px-8 py-6 text-lg font-semibold">
+                <Link href="/auth/signup">
+                  Become a Partner
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button> */}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
+      
+      <style jsx>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }
