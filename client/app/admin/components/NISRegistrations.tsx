@@ -26,6 +26,7 @@ interface NISRegistration {
   fullName: string;
   creatorName: string;
   email: string;
+  mobileNumber: string;
   dateOfBirth: string;
   gender: string;
   bio: string;
@@ -140,7 +141,7 @@ export default function NISRegistrations() {
   // Export to CSV
   const exportToCSV = () => {
     const headers = [
-      'Registration ID', 'Full Name', 'Creator Name', 'Email', 'Date of Birth',
+      'Registration ID', 'Full Name', 'Creator Name', 'Email', 'Mobile Number', 'Date of Birth',
       'Gender', 'Nagaland Resident', 'Total Followers', 'Award Categories',
       'Years Active', 'Content Niches', 'Created At'
     ];
@@ -150,6 +151,7 @@ export default function NISRegistrations() {
       reg.fullName,
       reg.creatorName,
       reg.email,
+      reg.mobileNumber,
       reg.dateOfBirth,
       reg.gender,
       reg.nagalandResident ? 'Yes' : 'No',
@@ -297,6 +299,7 @@ export default function NISRegistrations() {
                   <TableHead>Name</TableHead>
                   <TableHead>Creator Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Mobile</TableHead>
                   <TableHead>Followers</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Resident</TableHead>
@@ -318,6 +321,9 @@ export default function NISRegistrations() {
                     </TableCell>
                     <TableCell className="text-gray-600">
                       {registration.email}
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {registration.mobileNumber}
                     </TableCell>
                     <TableCell>
                       <span className="font-medium">

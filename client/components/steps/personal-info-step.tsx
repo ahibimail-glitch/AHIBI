@@ -94,6 +94,24 @@ export function PersonalInfoStep({ formData, updateFormData, showErrors }: Perso
         {showErrors && !formData.email && <p className="text-xs text-destructive">Please enter your email.</p>}
       </div>
 
+      {/* Mobile Number */}
+      <div className="space-y-2">
+        <Label htmlFor="mobileNumber" className="flex items-center gap-2">
+          <User className="w-4 h-4" />
+          Mobile Number *
+        </Label>
+        <Input
+          id="mobileNumber"
+          value={formData.mobileNumber}
+          onChange={(e) => updateFormData({ mobileNumber: e.target.value })}
+          placeholder="Enter your mobile number"
+          className={`glass ${showErrors && !formData.mobileNumber ? "border-destructive" : ""}`}
+        />
+        {showErrors && !formData.mobileNumber && (
+          <p className="text-xs text-destructive">Please enter your mobile number.</p>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Date of Birth */}
         <div className="space-y-2">
@@ -136,7 +154,7 @@ export function PersonalInfoStep({ formData, updateFormData, showErrors }: Perso
       <div className="space-y-2">
         <Label htmlFor="bio" className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4" />
-        Bio
+          Bio
         </Label>
         <Textarea
           id="bio"

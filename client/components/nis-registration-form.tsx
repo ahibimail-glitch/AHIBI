@@ -20,6 +20,7 @@ export interface FormData {
   dateOfBirth: string
   gender: string
   bio: string
+  mobileNumber: string
   nagalandResident: boolean
 
   // Social Media
@@ -66,6 +67,7 @@ const initialFormData: FormData = {
   dateOfBirth: "",
   gender: "",
   bio: "",
+  mobileNumber: "",
   nagalandResident: false,
   platforms: [],
   totalFollowers: 0,
@@ -182,6 +184,7 @@ export function RegistrationForm() {
           formData.dateOfBirth &&
           formData.gender &&
           formData.bio.length >= 50 &&
+          !!formData.mobileNumber &&
           formData.nagalandResident
         )
       case 2:

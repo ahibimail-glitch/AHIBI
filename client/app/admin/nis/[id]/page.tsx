@@ -14,6 +14,7 @@ interface NISRegistration {
   fullName: string;
   creatorName: string;
   email: string;
+  mobileNumber: string;
   dateOfBirth: string;
   gender: string;
   bio: string;
@@ -194,6 +195,10 @@ export default function NISRegistrationDetailsPage() {
               <div>
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="font-medium break-words">{data.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Mobile Number</p>
+                <p className="font-medium break-words">{data.mobileNumber}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Date of Birth</p>

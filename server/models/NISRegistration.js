@@ -54,6 +54,7 @@ const NISRegistrationSchema = new mongoose.Schema(
 		fullName: { type: String, required: true },
 		creatorName: { type: String, required: true },
 		email: { type: String, required: true, index: true },
+		mobileNumber: { type: String, required: true },
 		dateOfBirth: { type: String, required: true },
 		gender: { type: String, required: true },
 		bio: { type: String, required: true, minlength: 50 },

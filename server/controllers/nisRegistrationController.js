@@ -30,7 +30,7 @@ exports.createRegistration = async (req, res, next) => {
 		}
 
 		// Basic backend validation mirroring frontend step checks
-		if (!payload.fullName || !payload.creatorName || !payload.dateOfBirth || !payload.gender) {
+		if (!payload.fullName || !payload.creatorName || !payload.dateOfBirth || !payload.gender || !payload.mobileNumber) {
 			return ApiResponse.badRequest(res, 'Missing required personal information');
 		}
 		if (!payload.bio || payload.bio.length < 50 || !payload.nagalandResident) {
