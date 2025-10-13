@@ -2093,9 +2093,83 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             {/* Description */}
             <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">About This Event</h2>
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">{event.description}</p>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
+                About This Event
+              </h2>
+
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                {event.description}
+              </p>
+              {/*CONCERT SCHEDULE FOR NIS  */}
+              {params.id === '68e3b8037e8e587e70ed9371' && (
+                <div className="mt-6 border-t border-gray-200 pt-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                    🎵 Evening Concert Schedule
+                  </h3>
+
+                  <div className="flex flex-col gap-6">
+                    {/* Day 1 */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-base sm:text-lg font-semibold text-indigo-600">
+                          📅 Day 1
+                        </h4>
+                        <span className="text-sm sm:text-base text-gray-500 font-medium">
+                          05:30 PM – 07:30 PM
+                        </span>
+                      </div>
+                      <p className="text-sm sm:text-base text-gray-800">
+                        <span className="font-medium">Evening Concert by</span>{" "}
+                        <em>House of Tyah</em>, <em>Incipit Band</em>
+                      </p>
+                    </div>
+
+                    {/* Day 2 */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-base sm:text-lg font-semibold text-indigo-600">
+                          📅 Day 2
+                        </h4>
+                        <span className="text-sm sm:text-base text-gray-500 font-medium">
+                          06:00 PM – 07:30 PM
+                        </span>
+                      </div>
+
+                      <p className="text-sm sm:text-base text-gray-800 mb-3">
+                        <span className="font-medium">Concert begins</span>
+                      </p>
+
+                      <ul className="list-disc list-inside space-y-2 text-gray-700 text-sm sm:text-base">
+                        <li>
+                          <strong>Band 1 – AFTER AMEN</strong>{" "}
+                          <span className="text-gray-500">(20 minutes)</span>
+                        </li>
+                        <li>
+                          <em>Freebies / Merch Giveaway</em>
+                        </li>
+                        <li>
+                          <strong>Band 2 – Power Faith</strong>{" "}
+                          <span className="text-gray-500">(30 minutes)</span>
+                        </li>
+                        <li>
+                          Pastor Temjen <span className="text-gray-500">(10–15 minutes)</span>
+                        </li>
+                        <li>
+                          <strong>Band 3 – 5th Note</strong>{" "}
+                          <span className="text-gray-500">(30 minutes)</span>
+                        </li>
+                      </ul>
+
+                      <div className="mt-4 text-xs sm:text-sm text-gray-500">
+                        ⏱️ Total Duration: 1 hour 30 minutes
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
+
 
             {/* Location */}
             <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
