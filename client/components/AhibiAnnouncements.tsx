@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const announcements = [
   "🚨 Phase 2 Tickets Almost Gone — Book Now Before It’s Too Late!",
-  "BUY AHIBI FEST TICKETS WORTH ₹4,000+ AND GET ₹2,500 MADAME SHOPPING VOUCHERS! Redeem exclusively at Madame Store, Dimapur!"
+  "BUY AHIBI FEST TICKETS WORTH ₹4,000+ AND GET ₹2,000 MADAME SHOPPING VOUCHERS! Redeem exclusively at Madame Store, Dimapur!"
 ];
 
 export default function AnnouncementCarousel() {

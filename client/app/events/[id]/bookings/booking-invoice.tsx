@@ -27,9 +27,9 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
     useEffect(() => {
         if (
             booking &&
-                booking.event._id === "68c2c33eb6ef88c76f50ce7c" &&
-                booking.total * booking.totalTickets >= 4000 &&
-                booking?.ticketIndex == 1 &&
+            booking.event._id === "68c2c33eb6ef88c76f50ce7c" &&
+            booking.total * booking.totalTickets >= 4000 &&
+            booking?.ticketIndex == 1 &&
             new Date(booking.bookedAt) >= new Date("2025-10-15T07:02:08.225+00:00") // Note: 20:00 UTC+5:30 is 14:30 UTC
         ) {
             console.log('Booking Data:', booking);
@@ -308,6 +308,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
                         </div>
 
                         <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Congratulations!</h2>
+
+                        {/* Madame Logo */}
                         <img
                             src="/images/Madame_(clothing).svg.png"
                             alt="Madame Logo"
@@ -317,19 +319,19 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
                         {/* Main Voucher Text */}
                         <p className="text-gray-700 mb-4 text-sm">
                             <span className="font-semibold text-indigo-600">You have got</span>{" "}
-                            <span className="font-bold text-green-600">₹2,500 Madame shopping vouchers</span>!<br />
-                            Redeem exclusively at{" "}
-                            <span className="font-semibold text-indigo-600">Madame Store, Dimapur</span>.
+                            <span className="font-bold text-green-600">₹2,000 Madame Shopping Vouchers</span>!<br />
+                            Redeem your voucher at <span className="font-semibold text-pink-700">any Madame Store PAN India</span> within{" "}
+                            <span className="font-semibold text-orange-600">6 months</span> of issue.
                         </p>
 
                         {/* Contact Info */}
                         <p className="text-gray-700 mb-4 text-sm">
-                            Please contact <span className="font-semibold text-indigo-600">8730986585</span> for availing this offer.
+                            Please contact <span className="font-semibold text-indigo-600">8730986585</span> to claim your voucher.
                         </p>
 
                         {/* Brand Info */}
                         <p className="text-gray-500 mb-6 text-xs leading-relaxed">
-                            With over 900+ retail touchpoints nationwide, Madame is India’s leading women’s western-wear brand — creating looks for every season and styles for every reason.
+                            With over <span className="font-semibold text-gray-700">900+ retail touchpoints nationwide</span>, Madame is India’s leading women’s western-wear brand — creating looks for every season and styles for every reason.
                         </p>
 
                         {/* Close Button */}
@@ -342,6 +344,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
                     </div>
                 </div>
             )}
+
 
 
 
