@@ -1540,14 +1540,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 alt="Madame"
                 className="h-14 sm:h-16 w-auto object-contain drop-shadow-md"
               />
+
               {/* Center: Offer */}
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-1">
                   <Badge className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
                     <Percent className="h-3 w-3" /> EXCLUSIVE VOUCHER
                   </Badge>
-                  <Badge variant="outline" className="border-orange-300 text-orange-700 px-2 py-0.5 text-xs">
-                    Limited Time
+                  <Badge variant="outline" className="border-orange-300 font-bold text-orange-700 px-2 py-0.5 text-xs">
+                    <strong>Limited Time Only</strong>
                   </Badge>
                 </div>
 
@@ -1555,12 +1556,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   Buy Ahibi Fest Tickets Worth ₹4,000 and above and Get ₹2,000 Madame Shopping Vouchers!
                 </h4>
                 <p className="text-gray-700 leading-snug">
-                  Redeem your voucher exclusively at <span className="font-semibold text-pink-700">Madame Store, Dimapur</span>. Contact <span className="font-semibold text-indigo-600">8730986585</span> to claim.
+                  Redeem your voucher at <span className="font-semibold text-pink-700">any Madame Store PAN India</span> within{' '}
+                  <span className="font-semibold text-orange-600">6 months</span> of issue.
+                  Contact <span className="font-semibold text-indigo-600">8730986585</span> to claim.
                 </p>
               </div>
 
-
+              
+              
             </div>
+
 
             {/* Bottom */}
             <div className="mt-2 border-t border-orange-200 pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm text-gray-600 gap-1 sm:gap-2">
