@@ -185,9 +185,9 @@ exports.validateCoupon = async (req, res, next) => {
 // Validate a coupon for Melita purchases (product-based, not event-based)
 // Expects: { code, amount, melitaAmount, selectedTickets }
 // Rules: 
-// - If coupon event ID is 68c2c33eb6ef88c76f50ce7c (AHIBI FEST), apply 50% discount on Melita product and coupon percentage on tickets
+// - ALWAYS apply 50% discount on Melita product
+// - If coupon is NOT "MELITA50" and is valid Melita coupon, apply extra coupon discount on AHIBI tickets
 // - Validates that coupon ticket category matches selected ticket types
-// - Otherwise, event.name must be 'melita' (case-insensitive). Apply coupon percentage to amount.
 exports.validateMelitaCoupon = async (req, res, next) => {
   try {
     const { code, amount, melitaAmount, selectedTickets } = req.body || {};
@@ -195,91 +195,83 @@ exports.validateMelitaCoupon = async (req, res, next) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const coupon = await Coupon.findOne({ code: String(code).trim().toUpperCase() });
+    const normalizedCode = String(code).trim().toUpperCase();
+    const coupon = await Coupon.findOne({ code: normalizedCode });
+
     if (!coupon) {
       return res.status(404).json({ message: 'Invalid coupon code' });
     }
 
-    // Check if coupon is for AHIBI FEST event (special case)
-    const AHIBI_FEST_EVENT_ID = '68c2c33eb6ef88c76f50ce7c';
-    const isAhibiFestCoupon = String(coupon.event?.id) === AHIBI_FEST_EVENT_ID;
+    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+      return res.status(400).json({ message: 'Coupon has expired' });
+    }
 
-    if (isAhibiFestCoupon) {
-      // Special logic for AHIBI FEST coupons
-      // Apply 50% discount on Melita product and coupon percentage on AHIBI tickets
-      
-      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
-        return res.status(400).json({ message: 'Coupon has expired' });
-      }
+    const ticketAmount = Number(amount) || 0; // AHIBI tickets amount
+    const melitaProductAmount = Number(melitaAmount) || 0; // Melita product amount
 
-      // Validate ticket category matches selected tickets
-      if (selectedTickets && Array.isArray(selectedTickets) && selectedTickets.length > 0) {
-        const couponTicketCategory = coupon.ticketCategory;
-        const hasMatchingTicket = selectedTickets.some(ticket => ticket.ticketType === couponTicketCategory);
-        
-        if (!hasMatchingTicket) {
-          return res.status(400).json({ 
-            message: `This coupon is only valid for ${couponTicketCategory} tickets. Please select ${couponTicketCategory} tickets to use this coupon.` 
-          });
-        }
-      }
+    // ALWAYS apply 50% discount on Melita product
+    const melitaDiscountAmount = Math.round((melitaProductAmount * 50) / 100);
 
-      const baseAmount = Number(amount) || 0; // AHIBI tickets amount
-      const melitaProductAmount = Number(melitaAmount) || 0; // Melita product amount
-      
-      // Apply 50% discount on Melita product
-      const melitaDiscountAmount = Math.round((melitaProductAmount * 50) / 100);
-      
-      // Apply coupon percentage on AHIBI tickets
-      const ticketDiscountAmount = Math.round((baseAmount * coupon.discountPercentage) / 100);
-      
-      // Total discount is sum of both discounts
-      const totalDiscountAmount = melitaDiscountAmount + ticketDiscountAmount;
-      const totalAmount = melitaProductAmount + baseAmount;
-      const payable = Math.max(0, totalAmount - totalDiscountAmount);
+    // Special case for MELITA50 coupon - only Melita discount, no ticket discount
+    if (normalizedCode === 'MELITA50') {
+      const totalAmount = melitaProductAmount + ticketAmount;
+      const payable = Math.max(0, totalAmount - melitaDiscountAmount);
 
       return res.json({
         valid: true,
         code: coupon.code,
-        discountPercentage: coupon.discountPercentage,
-        discountAmount: totalDiscountAmount,
+        discountPercentage: 50,
+        discountAmount: melitaDiscountAmount,
         melitaDiscountAmount,
-        ticketDiscountAmount,
+        ticketDiscountAmount: 0,
         totalAmount,
         payable,
-        isAhibiFestCoupon: true,
-        message: `Coupon applied: 50% off Melita + ${coupon.discountPercentage}% off AHIBI tickets`
-      });
-    } else {
-      // Original logic for regular Melita coupons
-      // Enforce event.name === 'melita'
-      const eventName = (coupon.event?.name || '').toLowerCase();
-      if (eventName !== 'melita') {
-        return res.status(400).json({ message: 'Coupon not valid for Melita' });
-      }
-
-      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
-        return res.status(400).json({ message: 'Coupon has expired' });
-      }
-
-      const baseAmount = Number(amount) || 0;
-      const discountAmount = Math.round((baseAmount * coupon.discountPercentage) / 100);
-      const payable = Math.max(0, baseAmount - discountAmount);
-
-      return res.json({
-        valid: true,
-        code: coupon.code,
-        discountPercentage: coupon.discountPercentage,
-        discountAmount,
-        totalAmount: baseAmount,
-        payable,
-        isAhibiFestCoupon: false,
-        message: 'Coupon applied'
+        isMelita50: true,
+        message: 'Coupon applied: 50% off Melita product'
       });
     }
 
-    // NOTE: timesUsed will be incremented when the booking is actually completed
-    // Do not increment here as this is just validation
+    // For all other valid Melita coupons
+    const eventName = (coupon.event?.name || '').toLowerCase();
+    if (eventName !== 'melita') {
+      return res.status(400).json({ message: 'Coupon not valid for Melita' });
+    }
+
+    // Validate ticket category matches selected tickets (only if not for Melita Products)
+    const couponTicketCategory = coupon.ticketCategory;
+    const isMelitaProductCoupon = couponTicketCategory && 
+      (couponTicketCategory.toLowerCase().includes('melita') || 
+       couponTicketCategory.toLowerCase().includes('product'));
+    
+    // If coupon is for AHIBI tickets (not Melita products), validate ticket selection
+    if (!isMelitaProductCoupon && selectedTickets && Array.isArray(selectedTickets) && selectedTickets.length > 0) {
+      const hasMatchingTicket = selectedTickets.some(ticket => ticket.ticketType === couponTicketCategory);
+      if (!hasMatchingTicket) {
+        return res.status(400).json({
+          message: `This coupon is only valid for ${couponTicketCategory} tickets. Please select ${couponTicketCategory} tickets to use this coupon.`
+        });
+      }
+    }
+
+    // Apply coupon percentage on AHIBI tickets (additional discount)
+    const ticketDiscountAmount = Math.round((ticketAmount * coupon.discountPercentage) / 100);
+
+    const totalDiscountAmount = melitaDiscountAmount + ticketDiscountAmount;
+    const totalAmount = melitaProductAmount + ticketAmount;
+    const payable = Math.max(0, totalAmount - totalDiscountAmount);
+
+    return res.json({
+      valid: true,
+      code: coupon.code,
+      discountPercentage: coupon.discountPercentage,
+      discountAmount: totalDiscountAmount,
+      melitaDiscountAmount,
+      ticketDiscountAmount,
+      totalAmount,
+      payable,
+      isMelita50: false,
+      message: `Coupon applied: 50% off Melita + ${coupon.discountPercentage}% off AHIBI tickets`
+    });
 
   } catch (err) {
     next(err);
