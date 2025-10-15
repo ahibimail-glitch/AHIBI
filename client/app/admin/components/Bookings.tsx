@@ -43,6 +43,7 @@ interface Booking {
   user: {
     name: string;
     email: string;
+    phone?: string;
   };
   bookedAt: string;
   quantity: number;
@@ -64,6 +65,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Filter states
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [nameFilter, setNameFilter] = useState<string>("");
+  const [phoneFilter, setPhoneFilter] = useState<string>("");
   const [ticketTypeFilter, setTicketTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   
@@ -135,7 +137,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Apply filters whenever filter values change
   useEffect(() => {
     applyFilters();
-  }, [eventFilter, nameFilter, ticketTypeFilter, dateFilter, bookings]);
+  }, [eventFilter, nameFilter, phoneFilter, ticketTypeFilter, dateFilter, bookings]);
   
   // Filter function
   const applyFilters = () => {
@@ -148,6 +150,12 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     if (nameFilter) {
       result = result.filter((booking: Booking) => 
         booking.user?.name?.toLowerCase().includes(nameFilter.toLowerCase())
+      );
+    }
+
+    if (phoneFilter) {
+      result = result.filter((booking: Booking) =>
+        booking.user?.phone?.includes(phoneFilter)
       );
     }
     
@@ -170,6 +178,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   const resetFilters = () => {
     setEventFilter("all");
     setNameFilter("");
+    setPhoneFilter("");
     setTicketTypeFilter("all");
     setDateFilter(undefined);
   };
@@ -177,7 +186,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Export to Excel function
   const exportToExcel = () => {
     // Prepare data for Excel export
-    const headers = ["Event", "Customer", "Email", "Booked Date", "Ticket Type", "Quantity", "Total Amount"];
+    const headers = ["Event", "Customer", "Email", "Phone", "Booked Date", "Ticket Type", "Quantity", "Total Amount"];
     
     const data = [
       headers,
@@ -185,6 +194,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title || "NA",
         booking.user?.name || "NA",
         booking.user?.email || "NA",
+        booking.user?.phone || "NA",
         new Date(booking.bookedAt).toLocaleDateString(),
         booking.ticketType || "NA",
         booking.quantity,   
@@ -200,6 +210,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       { wch: 25 }, // Event
       { wch: 20 }, // Customer
       { wch: 25 }, // Email
+      { wch: 15 }, // Phone
       { wch: 15 }, // Booked Date
       { wch: 15 }, // Ticket Type
       { wch: 10 }, // Quantity
@@ -258,7 +269,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       </CardHeader>
       <CardContent>
         {/* Filter section */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <Label htmlFor="event-filter">Event</Label>
             <Select value={eventFilter} onValueChange={setEventFilter}>
@@ -289,6 +300,27 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
               {nameFilter && (
                 <button 
                   onClick={() => setNameFilter("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="phone-filter">Phone Number</Label>
+            <div className="relative">
+              <Input
+                id="phone-filter"
+                placeholder="Search by phone"
+                value={phoneFilter}
+                onChange={(e) => setPhoneFilter(e.target.value)}
+                className="pr-8"
+              />
+              {phoneFilter && (
+                <button
+                  onClick={() => setPhoneFilter("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2"
                 >
                   <X className="h-4 w-4 text-gray-500" />
@@ -343,7 +375,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         </div>
         
         {/* Active filters display */}
-        {(eventFilter !== "all" || nameFilter || ticketTypeFilter !== "all" || dateFilter) && (
+        {(eventFilter !== "all" || nameFilter || phoneFilter || ticketTypeFilter !== "all" || dateFilter) && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-gray-500">Active filters:</span>
             <div className="flex flex-wrap gap-2">
@@ -359,6 +391,14 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
                 <Badge variant="outline" className="flex items-center gap-1">
                   Name: {nameFilter}
                   <button onClick={() => setNameFilter("")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {phoneFilter && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  Phone: {phoneFilter}
+                  <button onClick={() => setPhoneFilter("")}>
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
@@ -391,6 +431,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
             <TableRow>
               <TableHead>Event</TableHead>
               <TableHead>Customer</TableHead>
+              <TableHead>Phone</TableHead>
               <TableHead>Booked Date</TableHead>
               <TableHead>Ticket Type</TableHead>
               <TableHead>Quantity</TableHead>
@@ -401,7 +442,11 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
             {filteredBookings.map((booking: Booking) => (
               <TableRow key={booking._id}>
                 <TableCell>{booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title || "NA"}</TableCell>
-                <TableCell>{booking.user?.name || "NA"}</TableCell>
+                <TableCell>
+                  <div>{booking.user?.name || "NA"}</div>
+                  <div className="text-xs text-gray-500">{booking.user?.email || "NA"}</div>
+                </TableCell>
+                <TableCell>{booking.user?.phone || "NA"}</TableCell>
                 <TableCell>{new Date(booking.bookedAt).toLocaleDateString()}</TableCell>
                 <TableCell>{booking.ticketType || "NA"}</TableCell>
                 <TableCell>{booking.quantity}</TableCell>

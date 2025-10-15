@@ -110,7 +110,8 @@ router.get("/bookings/all",  async (req, res) => {
           // user display fields
           user: {
             name: '$userDoc.name',
-            email: '$userDoc.email'
+            email: '$userDoc.email',
+            phone: '$userDoc.phone'
           },
           // flat title for consistent filtering on the client
           eventTitle: {
