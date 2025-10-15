@@ -676,7 +676,7 @@ export default function EventsPage() {
                 <Timer className="h-3 w-3 text-orange-500" /> Limited time offer for festival attendees
               </div>
               <div className="flex items-center gap-1 text-orange-700 font-semibold">
-                <Zap className="h-3 w-3" /> Get ₹2,500 Madame Shopping Voucher
+                <Zap className="h-3 w-3" /> Get ₹2,000 Madame Shopping Voucher
               </div>
             </div>
           </div>
