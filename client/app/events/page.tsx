@@ -565,17 +565,11 @@ export default function EventsPage() {
 
             <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-4">
               {/* Left: Logo */}
-              <div className="flex-shrink-0">
-                <div className="bg-white rounded-lg p-2 sm:p-3 shadow border border-purple-100 flex items-center gap-2">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded p-1 sm:p-2">
-                    <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base">Melita</h3>
-                    <p className="text-purple-600 text-xs sm:text-sm">Premium Skincare</p>
-                  </div>
-                </div>
-              </div>
+               <img
+                src="/images/melita-logo.jpg"
+                alt="Melita"
+                className="h-14 sm:h-16 w-auto object-contain drop-shadow-md"
+              />
 
               {/* Center: Offer */}
               <div className="flex-1 space-y-1">
