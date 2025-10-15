@@ -1,4 +1,4 @@
-const HeroImage = require('../models/HeroImage');
+const HeroImage = require('../models/heroImage');
 const { uploadPhoto, deletePhoto } = require('../utils/cloudinary');
 const { body, validationResult } = require('express-validator');
 
