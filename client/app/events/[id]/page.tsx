@@ -1552,7 +1552,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
 
                 <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-snug">
-                  Buy Ahibi Fest Tickets Worth ₹4,000+ and Get ₹2,000 Madame Shopping Vouchers!
+                  Buy Ahibi Fest Tickets Worth ₹4,000 and above and Get ₹2,000 Madame Shopping Vouchers!
                 </h4>
                 <p className="text-gray-700 leading-snug">
                   Redeem your voucher exclusively at <span className="font-semibold text-pink-700">Madame Store, Dimapur</span>. Contact <span className="font-semibold text-indigo-600">8730986585</span> to claim.
