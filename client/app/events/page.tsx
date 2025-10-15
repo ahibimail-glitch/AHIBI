@@ -646,13 +646,13 @@ export default function EventsPage() {
                   <Badge className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
                     <Percent className="h-3 w-3" /> EXCLUSIVE VOUCHER
                   </Badge>
-                  <Badge variant="outline" className="border-orange-300 text-orange-700 px-2 py-0.5 text-xs">
+                  <Badge variant="outline" className="border-orange-300 text-bold text-orange-700 px-2 py-0.5 text-xs">
                     Limited Time
                   </Badge>
                 </div>
 
                 <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-snug">
-                  Buy Ah!ibi Fest Tickets Worth ₹4,000+ and Get ₹2,500 Madame Shopping Vouchers!
+                  Buy Ahibi Fest Tickets Worth ₹4,000+ and Get ₹2,000 Madame Shopping Vouchers!
                 </h4>
                 <p className="text-gray-700 leading-snug">
                   Redeem your voucher exclusively at <span className="font-semibold text-pink-700">Madame Store, Dimapur</span>. Contact <span className="font-semibold text-indigo-600">8730986585</span> to claim.
