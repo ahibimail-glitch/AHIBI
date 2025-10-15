@@ -24,6 +24,8 @@ interface HeroImage {
   description: string;
   url: string;
   public_id: string;
+  mobileUrl?: string;
+  mobilePublic_id?: string;
   active: boolean;
   order: number;
   createdAt: string;
@@ -36,6 +38,7 @@ export default function HeroImages() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedMobileFile, setSelectedMobileFile] = useState<File | null>(null);
   const [imageTitle, setImageTitle] = useState("");
   const [imageDescription, setImageDescription] = useState("");
 
@@ -77,6 +80,14 @@ export default function HeroImages() {
     }
   };
 
+  const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedMobileFile(e.target.files[0]);
+      setError(null);
+      setSuccess(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadLoading(true);
@@ -89,13 +100,15 @@ export default function HeroImages() {
         throw new Error("Authentication token not found");
       }
 
-      if (!selectedFile) {
-        throw new Error("Please select an image to upload");
-      }
 
       // Create form data
       const formData = new FormData();
-      formData.append("image", selectedFile);
+      if (selectedFile) {
+        formData.append("image", selectedFile);
+      }
+      if (selectedMobileFile) {
+        formData.append("mobileImage", selectedMobileFile);
+      }
       formData.append("title", imageTitle);
       formData.append("description", imageDescription);
       
@@ -115,6 +128,7 @@ export default function HeroImages() {
 
       // Reset form
       setSelectedFile(null);
+      setSelectedMobileFile(null);
       setImageTitle("");
       setImageDescription("");
       
@@ -128,6 +142,10 @@ export default function HeroImages() {
       const fileInput = document.getElementById("image-upload") as HTMLInputElement;
       if (fileInput) {
         fileInput.value = "";
+      }
+      const mobileFileInput = document.getElementById("mobile-image-upload") as HTMLInputElement;
+      if (mobileFileInput) {
+        mobileFileInput.value = "";
       }
     } catch (err: any) {
       console.error("Error uploading image:", err);
@@ -259,27 +277,50 @@ export default function HeroImages() {
               </div>
             </div>
             
-            <div>
-              <Label htmlFor="image-upload" className="block mb-2">Select Image</Label>
-              <Input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Recommended size: 1920x1080px. Maximum size: 5MB.
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <Label htmlFor="image-upload" className="block mb-2">Select Desktop Image</Label>
+                    <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                       
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Recommended: 1920x1080px. Max: 5MB.
+                    </p>
+                </div>
+                <div>
+                    <Label htmlFor="mobile-image-upload" className="block mb-2">Select Mobile Image (Optional)</Label>
+                    <Input
+                        id="mobile-image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMobileFileChange}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Recommended: 750x1334px. Max: 2MB.
+                    </p>
+                </div>
             </div>
             
             <div>
               {selectedFile && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 text-sm">
                   <ImageIcon className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700">{selectedFile.name}</span>
+                  <span className="text-gray-700">Desktop: {selectedFile.name}</span>
                   <span className="text-xs text-gray-500">
                     ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+                  </span>
+                </div>
+              )}
+              {selectedMobileFile && (
+                <div className="flex items-center space-x-2 text-sm mt-1">
+                  <ImageIcon className="h-4 w-4 text-gray-500" />
+                  <span className="text-gray-700">Mobile: {selectedMobileFile.name}</span>
+                  <span className="text-xs text-gray-500">
+                    ({(selectedMobileFile.size / (1024 * 1024)).toFixed(2)} MB)
                   </span>
                 </div>
               )}
@@ -325,17 +366,38 @@ export default function HeroImages() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {images.map((image) => (
             <Card key={image._id} className="overflow-hidden">
-              <div className="aspect-video relative">
-                <img 
-                  src={image.url}
-                  alt={image.title || "Hero image"}
-                  className="object-cover w-full h-full"
-                />
-                <div className="absolute top-2 right-2">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${image.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                    {image.active ? "Active" : "Inactive"}
-                  </span>
+              <div className="grid grid-cols-2 divide-x divide-gray-200">
+                <div className="aspect-video relative">
+                    <img 
+                        src={image.url}
+                        alt={image.title || "Hero image"}
+                        className="object-cover w-full h-full"
+                    />
+                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        Desktop
+                    </div>
                 </div>
+                <div className="aspect-video relative bg-gray-100">
+                    {image.mobileUrl ? (
+                        <img 
+                            src={image.mobileUrl}
+                            alt={`${image.title || "Hero image"} (Mobile)`}
+                            className="object-cover w-full h-full"
+                        />
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                            <ImageIcon className="h-8 w-8" />
+                        </div>
+                    )}
+                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        Mobile
+                    </div>
+                </div>
+              </div>
+              <div className="absolute top-2 right-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${image.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                  {image.active ? "Active" : "Inactive"}
+                </span>
               </div>
               
               <CardContent className="p-4">

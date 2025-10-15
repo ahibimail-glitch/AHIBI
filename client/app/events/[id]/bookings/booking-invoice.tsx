@@ -22,6 +22,21 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
     const [error, setError] = useState<string>("");
     const [user, setUser] = useState<UserProfile | null>(null);
     const ticketRef = useRef<HTMLDivElement>(null);
+    const [showVoucherPopup, setShowVoucherPopup] = useState(false);
+
+    useEffect(() => {
+        if (
+            booking &&
+                booking.event._id === "68c2c33eb6ef88c76f50ce7c" &&
+                booking.total * booking.totalTickets >= 4000 &&
+                booking?.ticketIndex == 1 &&
+            new Date(booking.bookedAt) >= new Date("2025-10-15T07:02:08.225+00:00") // Note: 20:00 UTC+5:30 is 14:30 UTC
+        ) {
+            console.log('Booking Data:', booking);
+            setShowVoucherPopup(true);
+        }
+
+    }, [booking]);
 
     useEffect(() => {
         const fetchBookingAndProfileData = async () => {
@@ -51,9 +66,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
                 }
 
                 const bookingData = await bookingRes.json();
+                console.log('Fetched Booking Data:', bookingData.data);
                 setBooking(bookingData.data);
-                // console.log(bookingData.event.startTime);
-                console.log(bookingData.data)
 
                 // Fetch user profile (can be redundant if booking populates user, but good for consistency)
                 const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/profile`, {
@@ -260,6 +274,77 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
 
     return (
         <div className="max-w-md mx-auto my-10 p-4 font-sans">
+            {showVoucherPopup && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 animate-fadeIn"
+                    onClick={() => setShowVoucherPopup(false)} // clicking outside also closes
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-96 max-w-sm p-6 text-center relative overflow-hidden"
+                        onClick={(e) => e.stopPropagation()} // prevents overlay click from closing when clicking inside
+                    >
+                        {/* Decorative Top Circle */}
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-500 rounded-full opacity-30"></div>
+
+                        {/* Decorative Bottom Circle */}
+                        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-tr from-indigo-400 via-purple-500 to-pink-500 rounded-full opacity-30"></div>
+
+                        {/* Header Icon */}
+                        <div className="flex items-center justify-center mb-4">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-12 h-12 text-yellow-400 animate-bounce"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={1.5}
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M11.48 3.499a.562.562 0 011.04 0l2.064 4.186a.563.563 0 00.424.308l4.62.672a.563.563 0 01.312.961l-3.343 3.26a.563.563 0 00-.162.498l.789 4.596a.563.563 0 01-.817.593l-4.125-2.17a.563.563 0 00-.524 0l-4.125 2.17a.563.563 0 01-.817-.593l.789-4.596a.563.563 0 00-.162-.498l-3.343-3.26a.563.563 0 01.312-.961l4.62-.672a.563.563 0 00.424-.308L11.48 3.5z"
+                                />
+                            </svg>
+                        </div>
+
+                        <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Congratulations!</h2>
+                        <img
+                            src="/images/Madame_(clothing).svg.png"
+                            alt="Madame Logo"
+                            className="w-1/2 h-auto mx-auto mb-4"
+                        />
+
+                        {/* Main Voucher Text */}
+                        <p className="text-gray-700 mb-4 text-sm">
+                            <span className="font-semibold text-indigo-600">You have got</span>{" "}
+                            <span className="font-bold text-green-600">₹2,500 Madame shopping vouchers</span>!<br />
+                            Redeem exclusively at{" "}
+                            <span className="font-semibold text-indigo-600">Madame Store, Dimapur</span>.
+                        </p>
+
+                        {/* Contact Info */}
+                        <p className="text-gray-700 mb-4 text-sm">
+                            Please contact <span className="font-semibold text-indigo-600">8730986585</span> for availing this offer.
+                        </p>
+
+                        {/* Brand Info */}
+                        <p className="text-gray-500 mb-6 text-xs leading-relaxed">
+                            With over 900+ retail touchpoints nationwide, Madame is India’s leading women’s western-wear brand — creating looks for every season and styles for every reason.
+                        </p>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setShowVoucherPopup(false)}
+                            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+
+
             <div ref={ticketRef} id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative">

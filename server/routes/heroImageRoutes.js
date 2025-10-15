@@ -85,7 +85,10 @@ const protectAdminRoute = async (req, res, next) => {
 router.post(
   '/',
   protectAdminRoute, // Use admin-specific authentication
-  upload.single('image'),
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'mobileImage', maxCount: 1 },
+  ]),
   heroImageController.validate('uploadImage'),
   heroImageController.uploadImage
 );

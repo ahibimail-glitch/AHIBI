@@ -1,4 +1,4 @@
-const HeroImage = require('../models/heroImage');
+const HeroImage = require('../models/HeroImage');
 const { uploadPhoto, deletePhoto } = require('../utils/cloudinary');
 const { body, validationResult } = require('express-validator');
 
@@ -33,32 +33,51 @@ exports.uploadImage = async (req, res) => {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    // Check if file exists
-    if (!req.file) {
+    // Check if at least one file exists
+    if (!req.files || (!req.files.image && !req.files.mobileImage)) {
       return res.status(400).json({
         success: false,
-        message: 'Please upload an image file'
+        message: 'Please upload at least one image file (desktop or mobile)'
       });
     }
 
-    // Upload to cloudinary
-    const uploadResult = await uploadPhoto(req.file, 'ahibi/hero');
+    let uploadResult, mobileUploadResult;
+
+    // Upload desktop image if it exists
+    if (req.files.image && req.files.image[0]) {
+      uploadResult = await uploadPhoto(req.files.image[0], 'ahibi/hero');
+    }
+
+    // Upload mobile image if it exists
+    if (req.files.mobileImage && req.files.mobileImage[0]) {
+      mobileUploadResult = await uploadPhoto(req.files.mobileImage[0], 'ahibi/hero/mobile');
+    }
 
     // Get user ID from the authenticated user
     const userId = req.user ? req.user._id : null;
 
     // Create new hero image record
-    const heroImage = new HeroImage({
+    const newImageData = {
       title: req.body.title || '',
       description: req.body.description || '',
-      public_id: uploadResult.public_id,
-      url: uploadResult.url,
-      width: uploadResult.width,
-      height: uploadResult.height,
       order: req.body.order || 0,
       active: req.body.active !== undefined ? req.body.active : true,
-      uploadedBy: userId // Track who uploaded the image
-    });
+      uploadedBy: userId
+    };
+
+    if (uploadResult) {
+      newImageData.public_id = uploadResult.public_id;
+      newImageData.url = uploadResult.url;
+      newImageData.width = uploadResult.width;
+      newImageData.height = uploadResult.height;
+    }
+
+    if (mobileUploadResult) {
+      newImageData.mobilePublic_id = mobileUploadResult.public_id;
+      newImageData.mobileUrl = mobileUploadResult.url;
+    }
+
+    const heroImage = new HeroImage(newImageData);
 
     await heroImage.save();
 
@@ -189,6 +208,9 @@ exports.deleteImage = async (req, res) => {
 
     // Delete from cloudinary
     await deletePhoto(heroImage.public_id);
+    if (heroImage.mobilePublic_id) {
+      await deletePhoto(heroImage.mobilePublic_id);
+    }
 
     // Delete from database
     await HeroImage.findByIdAndDelete(req.params.id);

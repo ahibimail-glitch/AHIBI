@@ -22,6 +22,11 @@ import {
   Shield,
   CheckCircle2,
   Instagram,
+  Gift,
+  Percent,
+  Sparkles,
+  Timer,
+  Zap,
 
 } from "lucide-react";
 import { format } from "date-fns";
@@ -1484,6 +1489,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
 
 
+
         </div>
 
 
@@ -1496,7 +1502,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
           {/* Banner */}
           <div className="w-full relative z-10">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 mt-14">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 mt-14">
               <AspectRatio
                 ratio={16 / 9}
                 className="relative rounded-xl overflow-hidden shadow-lg"
@@ -1515,6 +1521,56 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               </AspectRatio>
             </div>
 
+          </div>
+          <div className="bg-gradient-to-r from-pink-50 via-orange-50 to-yellow-50 rounded-lg p-3 sm:p-4 shadow-md border border-orange-200 relative overflow-hidden text-sm sm:text-base">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-2 right-2 text-orange-300">
+                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8" />
+              </div>
+              <div className="absolute bottom-2 left-2 text-pink-300">
+                <Gift className="h-5 w-5 sm:h-6 sm:w-6" />
+              </div>
+            </div>
+
+            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+              {/* Madame Logo */}
+              <img
+                src="/images/Madame_(clothing).svg.png"
+                alt="Madame"
+                className="h-14 sm:h-16 w-auto object-contain drop-shadow-md"
+              />
+              {/* Center: Offer */}
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-1">
+                  <Badge className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                    <Percent className="h-3 w-3" /> EXCLUSIVE VOUCHER
+                  </Badge>
+                  <Badge variant="outline" className="border-orange-300 text-orange-700 px-2 py-0.5 text-xs">
+                    Limited Time
+                  </Badge>
+                </div>
+
+                <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-snug">
+                  Buy Ah!ibi Fest Tickets Worth ₹4,000+ and Get ₹2,500 Madame Shopping Vouchers!
+                </h4>
+                <p className="text-gray-700 leading-snug">
+                  Redeem your voucher exclusively at <span className="font-semibold text-pink-700">Madame Store, Dimapur</span>. Contact <span className="font-semibold text-indigo-600">8730986585</span> to claim.
+                </p>
+              </div>
+
+
+            </div>
+
+            {/* Bottom */}
+            <div className="mt-2 border-t border-orange-200 pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm text-gray-600 gap-1 sm:gap-2">
+              <div className="flex items-center gap-1">
+                <Timer className="h-3 w-3 text-orange-500" /> Limited time offer for festival attendees
+              </div>
+              <div className="flex items-center gap-1 text-orange-700 font-semibold">
+                <Zap className="h-3 w-3" /> Get ₹2,500 Madame Shopping Voucher
+              </div>
+            </div>
           </div>
 
           {/* Sections */}

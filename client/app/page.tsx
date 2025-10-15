@@ -38,7 +38,7 @@ export default function HomePage() {
   // Background carousel state
   const [currentBgSlide, setCurrentBgSlide] = useState(0)
   const [isBgAutoPlaying, setIsBgAutoPlaying] = useState(true)
-  const [backgroundImages, setBackgroundImages] = useState<string[]>([])
+  const [backgroundImages, setBackgroundImages] = useState<{ url: string; mobileUrl?: string }[]>([])
   const [loadingHeroImages, setLoadingHeroImages] = useState(true)
 
   const stats = [
@@ -59,21 +59,24 @@ export default function HomePage() {
         const data = await response.json()
 
         if (data.success && data.data && data.data.length > 0) {
-          const imageUrls = data.data.map((image: any) => image.url)
-          setBackgroundImages(imageUrls)
+          const images = data.data.map((image: any) => ({ 
+            url: image.url, 
+            mobileUrl: image.mobileUrl 
+          }))
+          setBackgroundImages(images)
         } else {
           setBackgroundImages([
-            "/images/carausel1.jpg",
-            "/images/carausel2.jpg",
-            "/images/carausel3.jpg",
+            { url: "/images/carausel1.jpg" },
+            { url: "/images/carausel2.jpg" },
+            { url: "/images/carausel3.jpg" },
           ])
         }
       } catch (err) {
         console.error("Error fetching hero images:", err)
         setBackgroundImages([
-          "/images/carausel1.jpg",
-          "/images/carausel2.jpg",
-          "/images/carausel3.jpg",
+            { url: "/images/carausel1.jpg" },
+            { url: "/images/carausel2.jpg" },
+            { url: "/images/carausel3.jpg" },
         ])
       } finally {
         setLoadingHeroImages(false)
@@ -299,11 +302,14 @@ export default function HomePage() {
                   className="absolute inset-0 transition-transform duration-1000 ease-in-out will-change-transform"
                   style={{ transform: `translateX(${(index - currentBgSlide) * 100}%)` }}
                 >
-                  <img
-                    src={image || "/placeholder.svg"}
-                    alt={`Background ${index + 1}`}
-                    className="w-full h-full object-cover opacity-80 brightness-75"
-                  />
+                  <picture>
+                    <source media="(max-width: 768px)" srcSet={image.mobileUrl || image.url} />
+                    <img
+                      src={image.url || "/placeholder.svg"}
+                      alt={`Background ${index + 1}`}
+                      className="w-full h-full object-cover opacity-80 brightness-75"
+                    />
+                  </picture>
                 </div>
               ))
             ) : (

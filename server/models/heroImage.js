@@ -13,19 +13,27 @@ const heroImageSchema = new mongoose.Schema({
   },
   public_id: {
     type: String,
-    required: true
+    required: false
   },
   url: {
     type: String,
-    required: true
+    required: false
+  },
+  mobilePublic_id: {
+    type: String,
+    required: false
+  },
+  mobileUrl: {
+    type: String,
+    required: false
   },
   width: {
     type: Number,
-    required: true
+    required: false
   },
   height: {
     type: Number,
-    required: true
+    required: false
   },
   order: {
     type: Number,
@@ -46,6 +54,14 @@ const heroImageSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true
+});
+
+heroImageSchema.pre('save', function(next) {
+  if (!this.url && !this.mobileUrl) {
+    next(new Error('At least one image (desktop or mobile) must be provided.'));
+  } else {
+    next();
+  }
 });
 
 const HeroImage = mongoose.model('HeroImage', heroImageSchema);
