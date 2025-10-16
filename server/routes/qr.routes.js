@@ -6,6 +6,7 @@ const { protect } = require('../middlewares/auth');
 // @route   POST /api/qr/scan
 // @desc    Scan a QR code and record it
 // @access  Private
-router.post('/scan', protect, qrController.scanQrCode);
+//router.post('/scan', protect, qrController.scanQrCode);
+router.post('/scan', qrController.scanQrCode);
 
 module.exports = router;
