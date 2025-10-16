@@ -1481,7 +1481,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           <Navbar />
           <div className="flex justify-center items-center bg-red-600 py-2 px-3 sm:px-6 shadow-lg">
             <p className="text-white font-semibold text-xs sm:text-sm md:text-base text-center uppercase tracking-widest leading-snug">
-              🚨 Phase 2 Tickets Almost Gone — Book Now Before It’s Too Late!
+              🚨 Hurry! Only a Few Tickets Left — Secure Yours Before They’re Gone Forever!
             </p>
           </div>
 
@@ -1562,8 +1562,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </p>
               </div>
 
-              
-              
+
+
             </div>
 
 
