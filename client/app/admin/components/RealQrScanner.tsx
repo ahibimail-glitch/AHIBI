@@ -29,9 +29,9 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
-            facingMode: 'user', // Use front-facing (main) camera
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
+            facingMode: { exact: 'environment' }, // Force rear camera
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 }
           }
         });
         
