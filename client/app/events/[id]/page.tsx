@@ -1482,7 +1482,32 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         {/* Fixed Navbar */}
         <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
           <Navbar />
-        
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="relative text-center p-10 rounded-3xl bg-gradient-to-br from-gray-900/80 to-black/90 shadow-2xl border border-gray-700/50 animate-in fade-in zoom-in duration-500">
+
+              {/* Alert Icon */}
+              <div className="mb-6 flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-red-600/20 flex items-center justify-center shadow-lg animate-pulse">
+                  <span className="text-red-500 text-3xl font-extrabold">⚠</span>
+                </div>
+              </div>
+
+              {/* Headline */}
+              <h2 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent drop-shadow-lg tracking-wide">
+                ONLINE TICKETS SOLD OUT
+              </h2>
+
+              {/* Subtitle */}
+              <p className="mt-4 text-lg sm:text-xl text-gray-200">
+                Physical tickets available at the Venue!
+              </p>
+              <p className="mt-2 text-gray-400 font-medium">
+                Hurry — limited availability!
+              </p>
+
+            </div>
+  </div>
+
 
           <div className="flex justify-center items-center bg-red-600 py-2 px-3 sm:px-6 shadow-lg">
             <p className="text-white font-semibold text-xs sm:text-sm md:text-base text-center uppercase tracking-widest leading-snug">
@@ -1705,7 +1730,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <div className="lg:w-1/2 mt-6 lg:mt-0">
                   <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Ticket Categories</h2>
-                    {event.ticketTypes  && event.ticketTypes.length > 0 ? (
+                    {event.ticketTypes && dontshow && event.ticketTypes.length > 0 ? (
                       <div className="space-y-6">
                         {/* Ticket Selection Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
