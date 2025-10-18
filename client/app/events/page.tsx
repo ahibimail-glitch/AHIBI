@@ -303,6 +303,7 @@ export default function EventsPage() {
       <Navbar />
       <main className="flex-1">
         <section className="relative w-full aspect-[16/9] overflow-hidden">
+          {/* Background with slow zoom animation */}
           <motion.div
             initial={{ scale: 1.2 }}
             animate={{ scale: 1 }}
@@ -311,7 +312,7 @@ export default function EventsPage() {
           >
             {/* Desktop Image */}
             <Image
-              src="/images/iyaz-live.jpg"
+              src="/images/carausel1.jpg"
               alt="Event Background"
               fill
               className="object-cover hidden sm:block"
@@ -320,43 +321,50 @@ export default function EventsPage() {
 
             {/* Mobile Image */}
             <Image
-              src="/images/iyaz-live.jpg"
+              src="/images/carausel1.jpg"
               alt="Event Background Mobile"
               fill
               className="object-cover block sm:hidden"
               priority
             />
 
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60"></div>
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70"></div>
           </motion.div>
 
-          {/* BOOK NOW button at bottom */}
-          <div className="absolute inset-0 z-10 flex items-end justify-center pb-12 sm:pb-20">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
+          {/* Text Overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center"
+              transition={{ duration: 1 }}
+              className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg"
             >
-              <Link href="/events/68c2c33eb6ef88c76f50ce7c">
-                <Button
-                  size="lg"
-                  className="
-    bg-gradient-to-r from-blue-600 to-purple-600 
-    hover:from-blue-700 hover:to-purple-700 
-    text-white font-semibold 
-    px-8 py-3 rounded-full shadow-lg
-    text-base sm:text-lg        /* smaller font on small screens */
-    px-5 py-2.5 sm:px-8 sm:py-3 /* smaller padding on small screens */
-  "
-                >
-                  BOOK NOW
-                </Button>
+              Explore <span className="text-yellow-400">Exciting Events</span>
+            </motion.h1>
 
-              </Link>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.3 }}
+              className="text-base sm:text-lg md:text-xl max-w-2xl text-gray-200 mb-6"
+            >
+              Discover, participate, and connect through amazing campus events, workshops,
+              and cultural programs that bring our community together.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.6 }}
+            >
+              <button className="bg-yellow-400 text-black font-semibold px-6 py-3 rounded-full shadow-lg hover:bg-yellow-300 transition duration-300">
+                Explore Now
+              </button>
             </motion.div>
           </div>
         </section>
+
 
 
 
@@ -549,138 +557,7 @@ export default function EventsPage() {
             </AnimatePresence>
           </div>
         </section>
-        {/* Melita Exclusive Offer */}
-        <div className="space-y-4 sm:space-y-6">
-          {/* First Card - Pink-Purple Theme */}
-          <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 rounded-lg p-3 sm:p-4 shadow-md border border-purple-200 relative overflow-hidden text-sm sm:text-base">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-2 right-2 text-purple-300">
-                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8" />
-              </div>
-              <div className="absolute bottom-2 left-2 text-pink-300">
-                <Gift className="h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-            </div>
 
-            <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-4">
-              {/* Left: Logo */}
-              <img
-                src="/images/melita-logo.jpg"
-                alt="Melita"
-                className="h-14 sm:h-16 w-auto object-contain drop-shadow-md"
-              />
-
-              {/* Center: Offer */}
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-1">
-                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
-                    <Percent className="h-3 w-3" /> EXCLUSIVE OFFER
-                  </Badge>
-                  <Badge variant="outline" className="border-purple-300 text-purple-700 px-2 py-0.5 text-xs">
-                    Limited Time
-                  </Badge>
-                </div>
-
-                <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-snug">
-                  Get Premium Skincare with Your Ahibi Fest Ticket!
-                </h4>
-                <p className="text-gray-700 leading-snug">
-                  Book your ticket and get <span className="font-semibold text-purple-700">exclusive discounts</span> on
-                  Melita's premium collection.
-                </p>
-              </div>
-
-              {/* Right: CTA */}
-              <div className="flex-shrink-0 w-full sm:w-auto">
-                <Link href="/melita" className="block">
-                  <Button
-                    size="sm"
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold px-4 py-2 rounded-lg shadow hover:shadow-md transition transform hover:scale-105 text-xs sm:text-sm"
-                  >
-                    <Gift className="h-3 w-3 sm:h-4 mr-1" /> Explore Melita
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Bottom */}
-            <div className="mt-2 border-t border-purple-200 pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm text-gray-600 gap-1 sm:gap-2">
-              <div className="flex items-center gap-1">
-                <Timer className="h-3 w-3 text-purple-500" /> Limited time offer for attendees
-              </div>
-              <div className="flex items-center gap-1 text-purple-700 font-semibold">
-                <Zap className="h-3 w-3" /> 50% OFF ON AHIBI FEST TICKETS
-              </div>
-            </div>
-          </div>
-
-          {/* Second Card - Pink-Orange Theme */}
-          <div className="bg-gradient-to-r from-pink-50 via-orange-50 to-yellow-50 rounded-lg p-3 sm:p-4 shadow-md border border-orange-200 relative overflow-hidden text-sm sm:text-base">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-2 right-2 text-orange-300">
-                <Sparkles className="h-6 w-6 sm:h-8 sm:w-8" />
-              </div>
-              <div className="absolute bottom-2 left-2 text-pink-300">
-                <Gift className="h-5 w-5 sm:h-6 sm:w-6" />
-              </div>
-            </div>
-
-            <div className="relative z-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
-              {/* Madame Logo */}
-              <img
-                src="/images/Madame_(clothing).svg.png"
-                alt="Madame"
-                className="h-14 sm:h-16 w-auto object-contain drop-shadow-md"
-              />
-
-              {/* Center: Offer */}
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-1">
-                  <Badge className="bg-gradient-to-r from-pink-500 to-orange-500 text-white px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
-                    <Percent className="h-3 w-3" /> EXCLUSIVE VOUCHER
-                  </Badge>
-                  <Badge variant="outline" className="border-orange-300 font-bold text-orange-700 px-2 py-0.5 text-xs">
-                    <strong>Limited Time Only</strong>
-                  </Badge>
-                </div>
-
-                <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-snug">
-                  Buy Ahibi Fest Tickets Worth ₹4,000 and above and Get ₹2,000 Madame Shopping Vouchers!
-                </h4>
-                <p className="text-gray-700 leading-snug">
-                  Redeem your voucher at <span className="font-semibold text-pink-700">any Madame Store PAN India</span> within{' '}
-                  <span className="font-semibold text-orange-600">6 months</span> of issue.
-                  Contact <span className="font-semibold text-indigo-600">8730986585</span> to claim.
-                </p>
-              </div>
-
-              {/* Right: CTA */}
-              <div className="flex-shrink-0 w-full sm:w-auto">
-                <Link href="/events/68c2c33eb6ef88c76f50ce7c" className="block">
-                  <Button
-                    size="sm"
-                    className="w-full sm:w-auto bg-gradient-to-r from-pink-600 to-orange-500 hover:from-pink-700 hover:to-orange-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:shadow-md transition transform hover:scale-105 text-xs sm:text-sm"
-                  >
-                    <Gift className="h-3 w-3 sm:h-4 mr-1" /> Claim Your Voucher
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-
-            {/* Bottom */}
-            <div className="mt-2 border-t border-orange-200 pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm text-gray-600 gap-1 sm:gap-2">
-              <div className="flex items-center gap-1">
-                <Timer className="h-3 w-3 text-orange-500" /> Limited time offer for festival attendees
-              </div>
-              <div className="flex items-center gap-1 text-orange-700 font-semibold">
-                <Zap className="h-3 w-3" /> Get ₹2,000 Madame Shopping Voucher
-              </div>
-            </div>
-          </div>
-        </div>
 
 
         <section className="py-12">
