@@ -100,6 +100,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         }
 
         const data = await response.json();
+        console.log(data.bookings);
         setBookings(data.bookings);
         setFilteredBookings(data.bookings);
         

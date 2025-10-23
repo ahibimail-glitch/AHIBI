@@ -5,10 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from 'next/navigation';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Ticket, CheckCircle, Download as DownloadIcon, Calendar, Clock, QrCode } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
 import axios from 'axios';
 import InvoiceGenerator from '@/components/invoice-generator';
 
@@ -57,11 +62,10 @@ interface BookingFormData {
   customerPhone?: string;
 }
 
-
 const ManualBooking: React.FC = () => {
   const { toast } = useToast();
-  const [events, setEvents] = useState<EventItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,6 +73,40 @@ const ManualBooking: React.FC = () => {
   const [bookingResult, setBookingResult] = useState<any>(null);
   const [invoiceList, setInvoiceList] = useState<any[] | null>(null);
   const [qrValue, setQrValue] = useState<string>("");
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const query = searchQuery.toLowerCase().trim();
+    return users.filter(user => 
+      (user.name?.toLowerCase().includes(query) || '') || 
+      (user.phone?.includes(query) || '') ||
+      (user.email?.toLowerCase().includes(query) || '')
+    );
+  }, [users, searchQuery]);
+
+  // Handle user selection
+  const handleUserSelect = (userId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      user: userId
+    }));
+    setSearchQuery('');
+    setOpen(false);
+  };
+
+  // Update search query and reset form user if search changes
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value && formData.user) {
+      setFormData(prev => ({
+        ...prev,
+        user: ''
+      }));
+    }
+  };
 
   const [formData, setFormData] = useState<BookingFormData>({
     event: "",
@@ -303,27 +341,68 @@ const ManualBooking: React.FC = () => {
                     </Select>
                   </div>
 
-                  <div>
-                    <Label htmlFor="user">Select User</Label>
-                    <Select onValueChange={(value) => handleSelectChange('user', value)} value={formData.user}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a user" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user._id} value={user._id}>{user.name} ({user.phone})</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-col space-y-2">
+                    <Label htmlFor="user">Search User</Label>
+                    <Popover open={open} onOpenChange={setOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={open}
+                          className="w-full justify-between"
+                        >
+                          {formData.user
+                            ? users.find((user) => user._id === formData.user)?.name || "Select user..."
+                            : searchQuery || "Search user by name, email or phone..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput 
+                            placeholder="Search users..."
+                            value={searchQuery}
+                            onValueChange={handleSearchChange}
+                            className="h-9"
+                          />
+                          <CommandEmpty>
+                            {isSearching ? 'Searching...' : 'No users found. Try a different search term.'}
+                          </CommandEmpty>
+                          <CommandGroup className="max-h-60 overflow-y-auto">
+                            {filteredUsers.map((user) => (
+                              <CommandItem
+                                key={user._id}
+                                value={user._id}
+                                onSelect={() => handleUserSelect(user._id)}
+                                className="cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4 flex-shrink-0",
+                                    formData.user === user._id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">{user.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {[user.email, user.phone].filter(Boolean).join(' • ')}
+                                  </p>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div>
-                    <Label htmlFor="customerName">Guest Name (optional)</Label>
+                    <Label htmlFor="customerName">Customer Name (optional)</Label>
                     <Input id="customerName" name="customerName" type="text" placeholder="Full name for guest (optional)" value={formData.customerName || ''} onChange={handleInputChange} className="w-full" />
                   </div>
 
                   <div>
-                    <Label htmlFor="customerPhone">Guest Mobile (optional)</Label>
+                    <Label htmlFor="customerPhone">Customer Mobile (optional)</Label>
                     <Input id="customerPhone" name="customerPhone" type="tel" placeholder="Mobile number (optional)" value={formData.customerPhone || ''} onChange={handleInputChange} className="w-full" />
                   </div>
                 </div>

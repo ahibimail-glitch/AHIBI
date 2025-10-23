@@ -107,11 +107,33 @@ router.get("/bookings/all",  async (req, res) => {
           // keep ids for potential future use
           eventId: '$event',
           userId: '$user',
-          // user display fields
+          // Use direct customer details if available, otherwise fall back to user document
+          customerName: {
+            $ifNull: [
+              '$customerName',
+              { $ifNull: ['$userDoc.name', 'Guest'] }
+            ]
+          },
+          customerPhone: {
+            $ifNull: [
+              '$customerPhone',
+              { $ifNull: ['$userDoc.phone', ''] }
+            ]
+          },
           user: {
-            name: '$userDoc.name',
-            email: '$userDoc.email',
-            phone: '$userDoc.phone'
+            name: {
+              $ifNull: [
+                '$customerName',
+                { $ifNull: ['$userDoc.name', 'Guest'] }
+              ]
+            },
+            email: { $ifNull: ['$userDoc.email', ''] },
+            phone: {
+              $ifNull: [
+                '$customerPhone',
+                { $ifNull: ['$userDoc.phone', ''] }
+              ]
+            }
           },
           // flat title for consistent filtering on the client
           eventTitle: {
@@ -141,7 +163,10 @@ router.get("/bookings/all",  async (req, res) => {
               ]
             }
           },
-          eventSnapshot: 1
+          eventSnapshot: 1,
+          // Keep the original fields for reference
+          originalCustomerName: '$customerName',
+          originalCustomerPhone: '$customerPhone'
         }
       }
     ]);

@@ -867,6 +867,11 @@ router.post("/admin-manual-booking",  async (req, res) => {
         color: { dark: '#4a154b', light: '#ffffff' }
       });
 
+      // Commented out SMS and Email notifications for manual bookings
+      console.log('[Admin Booking] Notifications disabled for manual bookings');
+      
+      // Uncomment the code below to re-enable notifications
+      /*
       // Send ticket via SMS if phone available
       if (userDetails && userDetails.phone) {
         console.log('[Admin Booking] Preparing to send SMS to:', userDetails.phone);
@@ -886,8 +891,6 @@ router.post("/admin-manual-booking",  async (req, res) => {
         } catch (smsError) {
           console.error('[Admin Booking] SMS sending error:', smsError);
         }
-      } else {
-        console.log('[Admin Booking] Cannot send SMS - no valid phone number found');
       }
 
       // Send ticket via email with QR code if email available
@@ -899,9 +902,8 @@ router.post("/admin-manual-booking",  async (req, res) => {
         } catch (emailError) {
           console.error('[Admin Booking] Email sending error:', emailError);
         }
-      } else {
-        console.log('[Admin Booking] Cannot send email - no valid email found');
       }
+      */
 
       res.status(201).json({
         message: 'Manual booking(s) created successfully',
