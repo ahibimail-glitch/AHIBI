@@ -15,7 +15,7 @@ export const FloatingWhatsAppButton = () => {
   const pathname = usePathname();
   
   // Don't show the WhatsApp button on Annie Musical page
-  if (pathname === '/annie-musical'||pathname === '/NagalandInfluencerSummit/register'||pathname === '/AhibiFestQRScanner') {
+  if (pathname === '/annie-musical'||pathname === '/NagalandInfluencerSummit/register'||pathname === '/AhibiFestQRScanner'||pathname==="/admin/booking") {
     return null;
   }
   

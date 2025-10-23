@@ -85,6 +85,13 @@ const BookingSchema = new mongoose.Schema({
     type: Number,
     default: 1
   },
+  // Optional customer details when booking is created manually or for guests
+  customerName: {
+    type: String,
+  },
+  customerPhone: {
+    type: String,
+  },
   parentBookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'

@@ -743,12 +743,12 @@ router.post("/check-out", async (req, res) => {
 // @access  Private (Admin)
 router.post("/admin-manual-booking",  async (req, res) => {
   try {
-    const { event, user, ticketType, quantity, price } = req.body;
-    console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price });
+    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets } = req.body;
+    console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price, tickets });
 
-    // Validate input
-    if (!event || !user || !ticketType || !quantity || quantity < 1) {
-      return res.status(400).json({ message: "Please provide all required fields" });
+    // Basic validation
+    if (!event || !user) {
+      return res.status(400).json({ message: "Event and user are required" });
     }
 
     const eventDoc = await Event.findById(event);
@@ -756,164 +756,167 @@ router.post("/admin-manual-booking",  async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    // Create booking
-    const booking = new Booking({
-      event,
-      eventSnapshot: {
-        _id: eventDoc._id,
-        title: eventDoc.title,
-        banner: eventDoc.banner,
-        startDate: eventDoc.startDate,
-        endDate: eventDoc.endDate,
-        location: {
-          address: eventDoc.location?.address,
-          city: eventDoc.location?.city
-        }
-      },
-      user,
-      ticketType,
-      quantity,
-      price,
-      total: price,
-      status: "confirmed",
-      paymentStatus: "completed"
-    });
+    // Normalize tickets input: prefer tickets array, fallback to single ticket payload
+    let ticketItems = [];
+    if (Array.isArray(tickets) && tickets.length > 0) {
+      ticketItems = tickets.map(t => ({ ticketType: t.ticketType, quantity: Number(t.quantity) || 1, price: Number(t.price) || 0 }));
+    } else if (ticketType && quantity && price !== undefined) {
+      ticketItems = [{ ticketType, quantity: Number(quantity) || 1, price: Number(price) || 0 }];
+    } else {
+      return res.status(400).json({ message: 'Please provide ticket details (tickets array or ticketType/quantity/price)' });
+    }
 
-    await booking.save();
-    console.log('[Admin Booking] Booking created with ID:', booking._id);
+    // Create bookings for each ticket item (create one Booking per ticket -- quantity times)
+    const createdBookings = [];
+    const bookingIds = [];
+    let totalTickets = 0;
 
-    // Update ticket type sold count
-    await Event.updateOne(
-      { _id: event, "ticketTypes.name": ticketType },
-      {
-        $inc: {
-          "ticketTypes.$.sold": quantity,
-          totalRevenue: price
-        }
+    for (const item of ticketItems) {
+      if (!item.ticketType || !item.quantity || item.quantity < 1) continue;
+
+      // For each quantity, create individual booking records (maintains parity with payment flow)
+      for (let i = 0; i < item.quantity; i++) {
+        const newBooking = new Booking({
+          event: eventDoc._id,
+          eventSnapshot: {
+            _id: eventDoc._id,
+            title: eventDoc.title,
+            banner: eventDoc.banner,
+            startDate: eventDoc.startDate,
+            endDate: eventDoc.endDate,
+            location: {
+              address: eventDoc.location?.address,
+              city: eventDoc.location?.city
+            }
+          },
+          user,
+          customerName: customerName || undefined,
+          customerPhone: customerPhone || undefined,
+          ticketType: item.ticketType,
+          quantity: 1,
+          price: item.price,
+          total: item.price,
+          status: 'confirmed',
+          paymentStatus: 'completed'
+        });
+
+        await newBooking.save();
+        createdBookings.push(newBooking);
+        bookingIds.push(newBooking._id);
+        totalTickets += 1;
       }
-    );
 
-    // Update total tickets sold
-    const updatedEvent = await Event.findById(event);
+      // Update event ticket type sold count and revenue
+      await Event.updateOne(
+        { _id: eventDoc._id, 'ticketTypes.name': item.ticketType },
+        { $inc: { 'ticketTypes.$.sold': item.quantity, totalRevenue: item.price * item.quantity } }
+      );
+    }
+
+    // Ensure event recalculation of sold tickets
+    const updatedEvent = await Event.findById(eventDoc._id);
     if (updatedEvent) {
-      await updatedEvent.save(); // This will recalculate ticketsSold
+      try {
+        await updatedEvent.save();
+      } catch (saveErr) {
+        // fallback: manually update ticketsSold
+        const totalSold = updatedEvent.ticketTypes.reduce((sum, t) => sum + t.sold, 0);
+        await Event.updateOne({ _id: eventDoc._id }, { $set: { ticketsSold: totalSold } });
+      }
       console.log('[Admin Booking] Event updated:', updatedEvent._id);
     }
     
-    // Fetch user details for sending notifications
-    const userDetails = await User.findById(user);
+    // Fetch user details for sending notifications. If not found, use provided customerName/customerPhone
+    let userDetails = null;
+    if (user) {
+      userDetails = await User.findById(user);
+    }
+
+    if (!userDetails) {
+      userDetails = {
+        name: customerName || 'Guest User',
+        phone: customerPhone || null,
+        email: null
+      };
+    }
+
     console.log('[Admin Booking] User details for notifications:', {
       userId: user,
-      hasUserDetails: !!userDetails,
+      hasUserDetails: !!(await User.findById(user)),
       hasPhone: userDetails?.phone ? true : false,
       hasEmail: userDetails?.email ? true : false,
       phone: userDetails?.phone || 'Not available'
     });
-    
-    // Generate QR code for the ticket
+
+    // Notification & QR: build a summary payload for the tickets
     try {
-      console.log('[Admin Booking] Starting ticket notification process');
-      const bookingData = JSON.stringify({
-        bookingId: booking._id,
-        eventId: event,
-        ticketType: ticketType,
-        quantity: quantity
-      });
-      
-      // Generate QR code as data URL
+      console.log('[Admin Booking] Starting ticket notification process for multiple tickets');
+      const bookingSummary = {
+        bookingIds,
+        eventId: eventDoc._id,
+        ticketTypes: ticketItems.map(t => `${t.ticketType} (${t.quantity})`).join(', '),
+        totalTickets
+      };
+
+      const bookingData = JSON.stringify(bookingSummary);
+
+      // Generate QR code as data URL (summary)
       const qrCodeDataUrl = await QRCode.toDataURL(bookingData, {
         errorCorrectionLevel: 'H',
         margin: 2,
-        color: {
-          dark: '#4a154b',  // Dots color
-          light: '#ffffff'  // Background color
-        }
+        color: { dark: '#4a154b', light: '#ffffff' }
       });
-      console.log('[Admin Booking] QR code generated successfully');
-      
-      // Send ticket via SMS
+
+      // Send ticket via SMS if phone available
       if (userDetails && userDetails.phone) {
         console.log('[Admin Booking] Preparing to send SMS to:', userDetails.phone);
-        // Format date for SMS
-        const eventDate = updatedEvent.startDate ? 
-          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { 
-            day: 'numeric', 
-            month: 'short', 
-            year: 'numeric' 
-          }) : 'TBA';
-        
-        // Prepare ticket details
+        const eventDate = updatedEvent.startDate ? new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBA';
+
         const ticketDetails = {
-          bookingId: booking._id,
+          bookingIds,
           eventName: updatedEvent.title,
-          ticketType: ticketType,
-          eventDate: eventDate
+          ticketType: bookingSummary.ticketTypes,
+          quantity: totalTickets,
+          eventDate
         };
-        console.log('[Admin Booking] Sending ticket details via SMS:', ticketDetails);
-        
-        // Send SMS with ticket details - use await to properly catch errors
+
         try {
-          const smsResult = await smsService.sendTicket(userDetails.phone, ticketDetails);
-          console.log('[Admin Booking] SMS result:', smsResult);
+          await smsService.sendTicket(userDetails.phone, ticketDetails);
+          console.log('[Admin Booking] SMS sent to', userDetails.phone);
         } catch (smsError) {
           console.error('[Admin Booking] SMS sending error:', smsError);
         }
       } else {
         console.log('[Admin Booking] Cannot send SMS - no valid phone number found');
       }
-      
-      // Send ticket via email with QR code
+
+      // Send ticket via email with QR code if email available
       if (userDetails && userDetails.email) {
-        console.log('[Admin Booking] Preparing to send email to:', userDetails.email);
-        // Prepare booking object with populated data for email template
-        const bookingWithDetails = {
-          ...booking._doc,
-          user: userDetails,
-          event: updatedEvent
-        };
-        
-        // Send email with ticket details and QR code - use await to properly catch errors
         try {
-          const emailResult = await emailService.sendTicketEmail(bookingWithDetails, qrCodeDataUrl);
-          console.log('[Admin Booking] Email result:', emailResult);
+          const bookingWithDetails = { event: updatedEvent, user: userDetails, bookingIds, totalTickets };
+          await emailService.sendTicketEmail(bookingWithDetails, qrCodeDataUrl);
+          console.log('[Admin Booking] Email sent to', userDetails.email);
         } catch (emailError) {
           console.error('[Admin Booking] Email sending error:', emailError);
         }
       } else {
         console.log('[Admin Booking] Cannot send email - no valid email found');
       }
-      
+
       res.status(201).json({
-        message: "Manual booking created successfully",
-        booking: {
-          id: booking._id,
-          event: booking.event,
-          user: booking.user,
-          ticketType: booking.ticketType,
-          quantity: booking.quantity,
-          price: booking.price,
-          total: booking.total,
-          status: booking.status
-        }
+        message: 'Manual booking(s) created successfully',
+        bookings: createdBookings.map(b => ({ id: b._id, ticketType: b.ticketType, price: b.price })),
+        bookingIds,
+        totalTickets,
       });
-      
+
     } catch (notificationError) {
-      // Log notification errors but don't fail the booking process
       console.error('[Admin Booking] Error sending booking notifications:', notificationError);
-      
-      // Still return success for the booking itself
       res.status(201).json({
-        message: "Manual booking created successfully (notification failed)",
-        booking: {
-          id: booking._id,
-          event: booking.event,
-          user: booking.user,
-          ticketType: booking.ticketType,
-          quantity: booking.quantity,
-          price: booking.price,
-          total: booking.total,
-          status: booking.status
-        }
+        message: 'Manual booking(s) created successfully (notification failed)',
+        bookings: createdBookings.map(b => ({ id: b._id, ticketType: b.ticketType, price: b.price })),
+        bookingIds,
+        totalTickets,
       });
     }
   } catch (error) {
