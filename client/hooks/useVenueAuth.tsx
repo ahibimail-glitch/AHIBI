@@ -7,12 +7,13 @@ interface Venue {
   name: string;
   email: string;
   phone: string;
-  venueName: string;
-  status: 'pending' | 'approved' | 'rejected';
+  role: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 interface VenueAuthContextType {
   isAuthenticated: boolean;
+  user: Venue | null;
   venue: Venue | null;
   token: string | null;
   loading: boolean;
@@ -29,8 +30,8 @@ export const VenueAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('venue_token');
-    const storedVenue = localStorage.getItem('venue_user');
+    const storedToken = localStorage.getItem('venueToken');
+    const storedVenue = localStorage.getItem('venueUser');
 
     if (storedToken && storedVenue) {
       try {
@@ -40,31 +41,31 @@ export const VenueAuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Failed to parse venue data from localStorage", error);
-        localStorage.removeItem('venue_token');
-        localStorage.removeItem('venue_user');
+        localStorage.removeItem('venueToken');
+        localStorage.removeItem('venueUser');
       }
     }
     setLoading(false);
   }, []);
 
   const login = (newToken: string, venueData: Venue) => {
-    localStorage.setItem('venue_token', newToken);
-    localStorage.setItem('venue_user', JSON.stringify(venueData));
+    localStorage.setItem('venueToken', newToken);
+    localStorage.setItem('venueUser', JSON.stringify(venueData));
     setToken(newToken);
     setVenue(venueData);
     setIsAuthenticated(true);
   };
 
   const logout = () => {
-    localStorage.removeItem('venue_token');
-    localStorage.removeItem('venue_user');
+    localStorage.removeItem('venueToken');
+    localStorage.removeItem('venueUser');
     setToken(null);
     setVenue(null);
     setIsAuthenticated(false);
   };
 
   return (
-    <VenueAuthContext.Provider value={{ isAuthenticated, venue, token, loading, login, logout }}>
+    <VenueAuthContext.Provider value={{ isAuthenticated, user: venue, venue, token, loading, login, logout }}>
       {children}
     </VenueAuthContext.Provider>
   );

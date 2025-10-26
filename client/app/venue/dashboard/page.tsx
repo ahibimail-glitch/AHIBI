@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -16,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Table,
   TableBody,
@@ -39,82 +42,181 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
+  Loader2,
+  Music,
+  Zap,
+  Shield,
+  Wifi,
+  XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Footer from "@/app/Footer";
 import Navbar from "@/app/Navbar";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { useVenueAuth } from "@/hooks/useVenueAuth";
 
 export default function VenueDashboard() {
-  const venueData = {
-    name: "Grand Ballroom Mumbai",
-    description:
-      "An elegant and spacious ballroom located in the heart of the city, perfect for grand weddings, exclusive corporate events, and memorable celebrations. Features state-of-the-art lighting and sound systems.",
-    location: "Bandra West, Mumbai",
-    capacity: 500,
-    basePrice: "₹50,000",
-    rating: 4.6,
-    totalBookings: 89,
-    images: [
-      "/images/carausel1.jpg?height=400&width=600",
-      "/images/carausel1.jpg?height=300&width=400",
-      "/images/carausel1.jpg?height=300&width=400",
-    ],
+  const router = useRouter();
+  const { user, loading: authLoading } = useVenueAuth();
+  const [loading, setLoading] = useState(true);
+  const [venueData, setVenueData] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [upcomingBookings, setUpcomingBookings] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/venue/auth/login');
+      return;
+    }
+    if (user) {
+      fetchVenueData();
+      fetchStats();
+      fetchBookings();
+    }
+  }, [user, authLoading]);
+
+  const fetchVenueData = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setVenueData(data.data.venue);
+      }
+    } catch (error) {
+      console.error('Error fetching venue data:', error);
+      toast.error('Failed to load venue data');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const fetchStats = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/manager/stats`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.data.stats);
+        setUpcomingBookings(data.data.upcomingBookings);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/manager/bookings`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setBookings(data.data.bookings);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/manager/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
+        },
+        body: JSON.stringify(venueData)
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Profile updated successfully');
+        setVenueData(data.data.venue);
+      } else {
+        toast.error(data.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBookingAction = async (bookingId: string, status: string, reason?: string) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/manager/bookings/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
+        },
+        body: JSON.stringify({ status, rejectionReason: reason })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Booking ${status} successfully`);
+        fetchBookings();
+        fetchStats();
+      } else {
+        toast.error(data.message || 'Failed to update booking');
+      }
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      toast.error('Failed to update booking');
+    }
+  };
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-muted/40 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!venueData) {
+    return (
+      <div className="min-h-screen bg-muted/40 flex items-center justify-center">
+        <p>Failed to load venue data</p>
+      </div>
+    );
+  }
   const facilities = [
-    { id: "parking", label: "Parking Available", icon: Car, checked: true },
-    { id: "ac", label: "AC Available", icon: Snowflake, checked: true },
-    { id: "petFriendly", label: "Pet Friendly", icon: Heart, checked: false },
-    { id: "catering", label: "Catering", icon: UtensilsCrossed, checked: true },
-    {
-      id: "accessible",
-      label: "Wheelchair Accessible",
-      icon: Accessibility,
-      checked: true,
-    },
+    { id: "parking", label: "Parking Available", icon: Car },
+    { id: "ac", label: "AC Available", icon: Snowflake },
+    { id: "petFriendly", label: "Pet Friendly", icon: Heart },
+    { id: "catering", label: "Catering", icon: UtensilsCrossed },
+    { id: "accessible", label: "Wheelchair Accessible", icon: Accessibility },
+    { id: "wifi", label: "WiFi", icon: Wifi },
+    { id: "soundSystem", label: "Sound System", icon: Music },
+    { id: "lighting", label: "Lighting", icon: Zap },
+    { id: "security", label: "Security", icon: Shield },
+    { id: "alcohol", label: "Alcohol Allowed", icon: Star },
   ];
 
-  const bookingRequests = [
-    {
-      id: 1,
-      event: "Wedding Reception",
-      organizer: "Sharma Family",
-      date: "October 15, 2025",
-      duration: "6 hours",
-      guests: 300,
-      offer: "₹75,000",
-      status: "pending",
-    },
-    {
-      id: 2,
-      event: "Corporate Annual Meet",
-      organizer: "Tech Solutions Ltd",
-      date: "November 5, 2025",
-      duration: "8 hours",
-      guests: 200,
-      offer: "₹60,000",
-      status: "pending",
-    },
-  ];
-
-  const upcomingBookings = [
-    {
-      id: 1,
-      event: "Birthday Party",
-      date: "September 20, 2025",
-      organizer: "Patel Family",
-      payment: "₹45,000",
-      status: "Confirmed",
-    },
-    {
-      id: 2,
-      event: "Product Launch",
-      date: "September 28, 2025",
-      organizer: "StartupXYZ",
-      payment: "₹65,000",
-      status: "Confirmed",
-    },
-  ];
+  const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const confirmedBookings = bookings.filter(b => b.status === 'confirmed');
 
   return (
     <div className="min-h-screen bg-muted/40">
@@ -146,13 +248,13 @@ export default function VenueDashboard() {
                 <div className="flex items-center">
                   <Star className="h-4 w-4 mr-1.5 text-yellow-500 fill-yellow-500" />
                   <span className="font-medium text-foreground">
-                    {venueData.rating}
+                    {venueData.rating?.average || 0}
                   </span>
-                  ({venueData.totalBookings} bookings)
+                  ({stats?.totalBookings || 0} bookings)
                 </div>
                 <div className="flex items-center">
                   <MapPin className="h-4 w-4 mr-1.5" />
-                  {venueData.location}
+                  {venueData.address?.city}, {venueData.address?.state}
                 </div>
                 <div className="flex items-center">
                   <Users className="h-4 w-4 mr-1.5" />
@@ -165,7 +267,7 @@ export default function VenueDashboard() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {facilities
-                  .filter((f) => f.checked)
+                  .filter((f) => venueData.facilities?.[f.id])
                   .map((facility) => (
                     <Badge
                       key={facility.id}
@@ -179,16 +281,23 @@ export default function VenueDashboard() {
               </div>
             </div>
             <div className="relative min-h-[250px] md:min-h-0">
-              <Image
-                src={venueData.images[0] || "/images/placeholder.jpg"}
-                alt={venueData.name}
-                fill
-                className="object-cover"
-              />
+              {venueData.gallery && venueData.gallery.length > 0 ? (
+                <Image
+                  src={venueData.gallery[0].url || "/images/placeholder.jpg"}
+                  alt={venueData.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <Camera className="h-12 w-12 text-muted-foreground" />
+                </div>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
                 className="absolute top-4 right-4"
+                onClick={() => toast.info('Photo upload feature coming soon')}
               >
                 <Camera className="h-4 w-4 mr-2" />
                 Edit Photos
@@ -216,48 +325,66 @@ export default function VenueDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {bookingRequests.map((request) => (
-                    <Card key={request.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">
-                            {request.event}
-                          </CardTitle>
-                          <Badge variant="outline" className="text-base">
-                            {request.offer}
-                          </Badge>
-                        </div>
-                        <CardDescription>
-                          by {request.organizer}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        <div className="flex items-center text-muted-foreground">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          <span>{request.date}</span>
-                        </div>
-                        <div className="flex items-center text-muted-foreground">
-                          <Users className="h-4 w-4 mr-2" />
-                          <span>{request.guests} guests</span>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex space-x-2">
-                        <Button size="sm" className="flex-1">
-                          Accept
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          Counter Offer
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-                          Decline
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
+                  {pendingBookings.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No pending booking requests
+                    </div>
+                  ) : (
+                    pendingBookings.map((request) => (
+                      <Card key={request._id}>
+                        <CardHeader className="pb-3">
+                          <div className="flex justify-between items-start">
+                            <CardTitle className="text-lg">
+                              {request.eventType || 'Event Booking'}
+                            </CardTitle>
+                            <Badge variant="outline" className="text-base">
+                              ₹{request.pricing.totalAmount}
+                            </Badge>
+                          </div>
+                          <CardDescription>
+                            by {request.user?.name || 'Guest'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div className="flex items-center text-muted-foreground">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span>{format(new Date(request.bookingDate), 'PPP')}</span>
+                          </div>
+                          <div className="flex items-center text-muted-foreground">
+                            <Users className="h-4 w-4 mr-2" />
+                            <span>{request.guestCount} guests</span>
+                          </div>
+                          <div className="flex items-center text-muted-foreground">
+                            <Clock className="h-4 w-4 mr-2" />
+                            <span>{request.startTime} - {request.endTime}</span>
+                          </div>
+                          <div className="flex items-center text-muted-foreground">
+                            <span className="font-medium">{request.duration}h duration</span>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => handleBookingAction(request._id, 'confirmed')}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => {
+                              const reason = prompt('Enter rejection reason:');
+                              if (reason) handleBookingAction(request._id, 'rejected', reason);
+                            }}
+                          >
+                            Decline
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))
+                  )}
                 </CardContent>
               </Card>
 
@@ -269,29 +396,39 @@ export default function VenueDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {upcomingBookings.map((booking) => (
-                    <div
-                      key={booking.id}
-                      className="p-4 border rounded-lg flex items-start gap-4 border-l-4 border-green-500 bg-background"
-                    >
-                      <div className="bg-green-100 p-2 rounded-full">
-                         <CheckCircle className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                           <h3 className="font-semibold">{booking.event}</h3>
-                           <p className="text-sm font-medium text-green-600">
-                             {booking.payment}
+                  {upcomingBookings.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No upcoming bookings
+                    </div>
+                  ) : (
+                    upcomingBookings.map((booking) => (
+                      <div
+                        key={booking._id}
+                        className="p-4 border rounded-lg flex items-start gap-4 border-l-4 border-green-500 bg-background"
+                      >
+                        <div className="bg-green-100 p-2 rounded-full">
+                           <CheckCircle className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                             <h3 className="font-semibold">{booking.eventType || 'Event'}</h3>
+                             <p className="text-sm font-medium text-green-600">
+                               ₹{booking.pricing.totalAmount}
+                             </p>
+                          </div>
+                           <p className="text-sm text-muted-foreground">by {booking.user?.name || 'Guest'}</p>
+                           <p className="text-sm text-muted-foreground mt-1 flex items-center">
+                             <Calendar className="h-4 w-4 inline mr-2" />
+                             {format(new Date(booking.bookingDate), 'PPP')}
+                           </p>
+                           <p className="text-sm text-muted-foreground flex items-center">
+                             <Clock className="h-4 w-4 inline mr-2" />
+                             {booking.startTime} - {booking.endTime}
                            </p>
                         </div>
-                         <p className="text-sm text-muted-foreground">by {booking.organizer}</p>
-                         <p className="text-sm text-muted-foreground mt-1 flex items-center">
-                           <Calendar className="h-4 w-4 inline mr-2" />
-                           {booking.date}
-                         </p>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -413,35 +550,35 @@ export default function VenueDashboard() {
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-green-600">₹2,15,000</div>
+                      <div className="text-2xl font-bold text-green-600">₹{stats?.totalRevenue || 0}</div>
                       <p className="text-xs text-muted-foreground">
-                        +12.5% from last month
+                        Total revenue earned
                       </p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">
-                        Pending Payout
+                        Total Bookings
                       </CardTitle>
-                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold text-orange-600">₹85,000</div>
+                      <div className="text-2xl font-bold">{stats?.totalBookings || 0}</div>
                       <p className="text-xs text-muted-foreground">
-                        Next payout on Oct 1, 2025
+                        All time bookings
                       </p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Total Earned</CardTitle>
-                       <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-sm font-medium">This Month</CardTitle>
+                       <Calendar className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">₹12,45,000</div>
+                      <div className="text-2xl font-bold">{stats?.monthlyBookings || 0}</div>
                       <p className="text-xs text-muted-foreground">
-                        Since joining the platform
+                        Bookings this month
                       </p>
                     </CardContent>
                   </Card>
