@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,48 +14,159 @@ import {
   Activity,
   PlusCircle,
   BarChart3,
+  Loader2,
 } from "lucide-react";
 
 interface DashboardProps {
-  stats: Array<{
-    title: string;
-    value: string;
-    icon: React.ElementType;
-    change: string;
-    color: string;
-  }>;
   setActiveView: (view: string) => void;
 }
 
-export default function Dashboard({ stats, setActiveView }: DashboardProps) {
-  const recentEvents = [
-    {
-      id: "1",
-      name: "Summer Music Festival",
-      date: "2025-06-15",
-      status: "active",
-      ticketsSold: 150,
-      revenue: "₹75,000",
-    },
-    {
-      id: "2",
-      name: "Rock Concert Night",
-      date: "2025-05-20",
-      status: "completed",
-      ticketsSold: 200,
-      revenue: "₹1,00,000",
-    },
-  ];
+interface DashboardData {
+  stats: {
+    totalEvents: number;
+    activeEvents: number;
+    pendingEvents: number;
+    completedEvents: number;
+    totalRevenue: number;
+    totalTicketsSold: number;
+    totalBookings: number;
+    pendingBookings: number;
+    acceptedBookings: number;
+    averageRating: number;
+  };
+  recentEvents: Array<{
+    _id: string;
+    title: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+    banner?: string;
+    totalTickets: number;
+    ticketsSold: number;
+  }>;
+  upcomingEvents: Array<{
+    _id: string;
+    title: string;
+    startDate: string;
+    endDate: string;
+    banner?: string;
+    totalTickets: number;
+    ticketsSold: number;
+  }>;
+  recentBookings: Array<{
+    _id: string;
+    artist: {
+      _id: string;
+      name: string;
+      email: string;
+      phone: string;
+      profilePic?: string;
+    };
+    booking: {
+      status: string;
+      eventDate: string;
+      venue: string;
+    };
+    createdAt: string;
+  }>;
+}
 
-  const upcomingEvents = [
-    {
-      id: "3",
-      name: "Jazz Evening",
-      date: "2025-07-10",
-      status: "upcoming",
-      ticketsSold: 50,
-      revenue: "₹25,000",
+export default function Dashboard({ setActiveView }: DashboardProps) {
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('organizer_token');
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/organizer/dashboard`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setDashboardData(response.data.data);
+      } else {
+        setError(response.data.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.response?.data?.message || 'Failed to fetch dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle>Error</CardTitle>
+          <CardDescription className="text-red-500">{error}</CardDescription>
+          <Button onClick={fetchDashboardData} variant="outline">
+            Retry
+          </Button>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No dashboard data available</p>
+      </div>
+    );
+  }
+
+  // Create stats array from dashboard data
+  const stats = [
+    { 
+      title: "Total Events", 
+      value: dashboardData.stats.totalEvents.toString(), 
+      icon: Calendar, 
+      change: "+0%", 
+      color: "text-blue-600" 
     },
+    { 
+      title: "Active Events", 
+      value: dashboardData.stats.activeEvents.toString(), 
+      icon: Activity, 
+      change: "+0%", 
+      color: "text-green-600" 
+    },
+    { 
+      title: "Total Revenue", 
+      value: `₹${dashboardData.stats.totalRevenue.toLocaleString()}`, 
+      icon: DollarSign, 
+      change: "+0%", 
+      color: "text-purple-600" 
+    },
+ 
   ];
 
   return (
@@ -70,10 +183,7 @@ export default function Dashboard({ stats, setActiveView }: DashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground flex items-center">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  {stat.change} from last month
-                </p>
+               
               </CardContent>
             </Card>
           );
@@ -124,14 +234,14 @@ export default function Dashboard({ stats, setActiveView }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentEvents.length > 0 ? (
-                recentEvents.map((event) => (
-                  <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              {dashboardData.recentEvents.length > 0 ? (
+                dashboardData.recentEvents.map((event) => (
+                  <div key={event._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-sm">{event.name}</p>
-                      <p className="text-xs text-gray-500">{event.date}</p>
+                      <p className="font-medium text-sm">{event.title}</p>
+                      <p className="text-xs text-gray-500">{new Date(event.startDate).toLocaleDateString()}</p>
                     </div>
-                    <Badge variant={event.status === "active" ? "default" : "secondary"}>
+                    <Badge variant={event.status === "approved" ? "default" : "secondary"}>
                       {event.status}
                     </Badge>
                   </div>
@@ -158,63 +268,65 @@ export default function Dashboard({ stats, setActiveView }: DashboardProps) {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Total Events</span>
-                <span className="font-semibold">3</span>
+                <span className="font-semibold">{dashboardData.stats.totalEvents}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Active Events</span>
-                <span className="font-semibold text-green-600">1</span>
+                <span className="font-semibold text-green-600">{dashboardData.stats.activeEvents}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Pending Events</span>
+                <span className="font-semibold text-yellow-600">{dashboardData.stats.pendingEvents}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Total Revenue</span>
-                <span className="font-semibold text-purple-600">₹2,00,000</span>
+                <span className="font-semibold text-purple-600">₹{dashboardData.stats.totalRevenue.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Avg. Rating</span>
-                <span className="font-semibold text-yellow-600">4.5/5</span>
+                <span className="text-sm">Tickets Sold</span>
+                <span className="font-semibold text-blue-600">{dashboardData.stats.totalTicketsSold}</span>
               </div>
+              
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Upcoming Events */}
-      <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>Your scheduled events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {upcomingEvents.length > 0 ? (
+      
+
+      {/* Recent Bookings */}
+      {dashboardData.recentBookings.length > 0 && (
+        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle>Recent Artist Bookings</CardTitle>
+            <CardDescription>Your latest booking requests</CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-4">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              {dashboardData.recentBookings.map((booking) => (
+                <div key={booking._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-white" />
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Users className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">{event.name}</h3>
-                      <p className="text-sm text-gray-500">{event.date}</p>
+                      <h3 className="font-semibold">{booking.artist.name}</h3>
+                      <p className="text-sm text-gray-500">{booking.booking.venue}</p>
+                      <p className="text-xs text-gray-400">{new Date(booking.booking.eventDate).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">{event.ticketsSold} tickets sold</p>
-                    <p className="text-sm text-gray-500">{event.revenue}</p>
+                    <Badge variant={booking.booking.status === "accepted" ? "default" : "secondary"}>
+                      {booking.booking.status}
+                    </Badge>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No upcoming events</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Create your first event to get started
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

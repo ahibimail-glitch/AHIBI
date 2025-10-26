@@ -289,7 +289,7 @@ export default function Bookings() {
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dates</TableHead>
-                <TableHead>Actions</TableHead>
+               
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -318,7 +318,7 @@ export default function Bookings() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <DollarSign className="h-4 w-4 text-gray-400" />
+                      
                       <span className="font-medium">₹{booking.total.toLocaleString()}</span>
                     </div>
                   </TableCell>
@@ -334,23 +334,7 @@ export default function Bookings() {
                       <div className="text-gray-500">Event: {formatDate(booking.event.startDate)}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {booking.status === "pending" && (
-                        <>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" className="bg-red-600 hover:bg-red-700">
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+                 
                 </TableRow>
               ))}
             </TableBody>

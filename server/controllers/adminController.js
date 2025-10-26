@@ -670,26 +670,50 @@ exports.getPendingEvents = async (req, res) => {
 exports.getPendingApprovals = async (req, res) => {
   try {
     const organizers = await Organizer.find({})
-      .select('_id name email phone companyName approvalStatus createdAt')
+      .select('_id name email phone companyName approvalStatus createdAt description address contactInfo')
       .sort({ createdAt: -1 });
     
     const artists = await Artist.find({})
-      .select('_id name email phone approvalStatus createdAt')
+      .select('_id name email phone approvalStatus createdAt artistType bio experience')
       .sort({ createdAt: -1 });
     
     const venues = await Venue.find({})
-      .select('_id name email phone approvalStatus createdAt')
+      .select('_id name email phone approvalStatus createdAt address capacity amenities')
       .sort({ createdAt: -1 });
     
     const events = await Event.find({})
-      .select('_id title status createdAt')
+      .populate('organizer', 'name email phone companyName')
+      .select('_id title description startDate endDate category location status createdAt banner organizerInfo ticketTypes totalTickets ticketsSold')
       .sort({ createdAt: -1 });
+    
+    // Transform events to include organizer details
+    const transformedEvents = events.map(event => ({
+      _id: event._id,
+      title: event.title,
+      description: event.description,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      category: event.category,
+      location: event.location,
+      status: event.status,
+      createdAt: event.createdAt,
+      banner: event.banner,
+      ticketTypes: event.ticketTypes,
+      totalTickets: event.totalTickets,
+      ticketsSold: event.ticketsSold,
+      organizerInfo: {
+        name: event.organizer?.name || event.organizerInfo?.name || 'Unknown',
+        email: event.organizer?.email || 'No email',
+        phone: event.organizer?.phone || 'No phone',
+        companyName: event.organizer?.companyName || 'No company'
+      }
+    }));
     
     return ApiResponse.success(res, 'All approvals retrieved successfully', {
       organizers,
       artists,
       venues,
-      events,
+      events: transformedEvents,
       pagination: {
         total: organizers.length + artists.length + venues.length + events.length,
         page: 1,

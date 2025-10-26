@@ -349,7 +349,6 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <DollarSign className="h-4 w-4 text-gray-400" />
                       <span className="font-medium">₹{event.totalRevenue}</span>
                     </div>
                   </TableCell>
@@ -427,7 +426,6 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2">
-              <DollarSign className="h-5 w-5 text-purple-600" />
               <div>
                 <p className="text-sm font-medium">Pending Events</p>
                 <p className="text-2xl font-bold">

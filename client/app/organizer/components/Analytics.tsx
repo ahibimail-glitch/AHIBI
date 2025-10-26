@@ -87,6 +87,9 @@ export default function Analytics() {
     { month: "Jun", revenue: 82000, tickets: 200 },
   ];
 
+  return(<div>
+    This feature will be available soon
+  </div>)
   return (
     <div className="space-y-6">
       {/* Header */}

@@ -25,12 +25,27 @@ interface Event {
     city: string;
     state: string;
     country: string;
+    pincode?: string;
   };
   status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
   createdAt: string;
-  organizerInfo?: {
+  banner?: string;
+  ticketTypes?: Array<{
+    name: string;
+    description?: string;
+    price: number;
+    quantity: number;
+    sold: number;
+    capacity: number;
+    benefits?: string[];
+  }>;
+  totalTickets?: number;
+  ticketsSold?: number;
+  organizerInfo: {
     name: string;
     email: string;
+    phone: string;
+    companyName: string;
   };
 }
 
@@ -42,6 +57,18 @@ interface Organizer {
   companyName: string;
   approvalStatus: string;
   createdAt: string;
+  description?: string;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  contactInfo?: {
+    email: string;
+    alternatePhone?: string;
+    website?: string;
+  };
 }
 
 interface Artist {
@@ -51,6 +78,9 @@ interface Artist {
   phone: string;
   approvalStatus: string;
   createdAt: string;
+  artistType?: string;
+  bio?: string;
+  experience?: string;
 }
 
 interface Venue {
@@ -60,6 +90,14 @@ interface Venue {
   phone: string;
   createdAt: string;
   approvalStatus: string;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  capacity?: number;
+  amenities?: string[];
 }
 
 type ApprovalItem = Event | Organizer | Artist | Venue;
@@ -291,31 +329,201 @@ export default function ApprovalList({ type }: ApprovalListProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               {itemType === 'Event' && (() => { const e = item as Event; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Description</label><p className="text-sm text-gray-600 mt-1">{e.description}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Category</label><p className="text-sm text-gray-600 mt-1">{e.category}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Start Date</label><p className="text-sm text-gray-600 mt-1">{new Date(e.startDate).toLocaleString()}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">End Date</label><p className="text-sm text-gray-600 mt-1">{new Date(e.endDate).toLocaleString()}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Location</label><p className="text-sm text-gray-600 mt-1">{`${e.location?.address || 'Unknown'}, ${e.location?.city || 'Unknown'}, ${e.location?.country || 'Unknown'}`}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Organizer</label><p className="text-sm text-gray-600 mt-1">{`${e.organizerInfo?.name || 'Unknown'} (${e.organizerInfo?.email || 'No email'})`}</p></div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Description</label>
+                    <p className="text-sm text-gray-600 mt-1">{e.description}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Category</label>
+                    <p className="text-sm text-gray-600 mt-1">{e.category}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Status</label>
+                    <p className="text-sm text-gray-600 mt-1 capitalize">{e.status}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Start Date</label>
+                    <p className="text-sm text-gray-600 mt-1">{new Date(e.startDate).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">End Date</label>
+                    <p className="text-sm text-gray-600 mt-1">{new Date(e.endDate).toLocaleString()}</p>
+                  </div>
+                 
+                
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Location</label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {e.location?.address && `${e.location.address}, `}
+                      {e.location?.city && `${e.location.city}, `}
+                      {e.location?.state && `${e.location.state}, `}
+                      {e.location?.country || 'India'}
+                      {e.location?.pincode && ` - ${e.location.pincode}`}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Organizer Details</label>
+                    <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm text-gray-600"><strong>Name:</strong> {e.organizerInfo?.name || 'Unknown'}</p>
+                      <p className="text-sm text-gray-600"><strong>Email:</strong> {e.organizerInfo?.email || 'No email'}</p>
+                      <p className="text-sm text-gray-600"><strong>Phone:</strong> {e.organizerInfo?.phone || 'No phone'}</p>
+                      <p className="text-sm text-gray-600"><strong>Company:</strong> {e.organizerInfo?.companyName || 'No company'}</p>
+                    </div>
+                  </div>
+                  {e.ticketTypes && e.ticketTypes.length > 0 && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Ticket Types</label>
+                      <div className="mt-1 space-y-2">
+                        {e.ticketTypes.map((ticket, index) => (
+                          <div key={index} className="p-2 bg-gray-50 rounded border">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{ticket.name}</p>
+                                {ticket.description && <p className="text-xs text-gray-600">{ticket.description}</p>}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-gray-800">₹{ticket.price}</p>
+                                <p className="text-xs text-gray-600">Quantity :{ticket.quantity} </p>
+                              </div>
+                            </div>
+                            {ticket.benefits && ticket.benefits.length > 0 && (
+                              <div className="mt-1">
+                                <p className="text-xs text-gray-500">Benefits:</p>
+                                <ul className="text-xs text-gray-600 list-disc list-inside">
+                                  {ticket.benefits.map((benefit, benefitIndex) => (
+                                    <li key={benefitIndex}>{benefit}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {e.banner && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Event Banner</label>
+                      <div className="mt-1">
+                        <img 
+                          src={e.banner} 
+                          alt="Event banner" 
+                          className="w-full h-32 object-cover rounded-md border"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </>
               )})()}
               {itemType === 'Organizer' && (() => { const o = item as Organizer; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{o.phone}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Company Name</label><p className="text-sm text-gray-600 mt-1">{o.companyName}</p></div>
-                  <div className="md:col-span-2"><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{o.email}</p></div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <p className="text-sm text-gray-600 mt-1">{o.phone}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Company Name</label>
+                    <p className="text-sm text-gray-600 mt-1">{o.companyName}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Email</label>
+                    <p className="text-sm text-gray-600 mt-1">{o.email}</p>
+                  </div>
+                  {o.description && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Description</label>
+                      <p className="text-sm text-gray-600 mt-1">{o.description}</p>
+                    </div>
+                  )}
+                  {o.address && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Address</label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {o.address.street}, {o.address.city}, {o.address.state} - {o.address.pincode}
+                      </p>
+                    </div>
+                  )}
+                  {o.contactInfo && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Contact Information</label>
+                      <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                        <p className="text-sm text-gray-600"><strong>Email:</strong> {o.contactInfo.email}</p>
+                        {o.contactInfo.alternatePhone && <p className="text-sm text-gray-600"><strong>Alternate Phone:</strong> {o.contactInfo.alternatePhone}</p>}
+                        {o.contactInfo.website && <p className="text-sm text-gray-600"><strong>Website:</strong> {o.contactInfo.website}</p>}
+                      </div>
+                    </div>
+                  )}
                 </>
               )})()}
               {itemType === 'Artist' && (() => { const a = item as Artist; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{a.phone}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{a.email}</p></div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <p className="text-sm text-gray-600 mt-1">{a.phone}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Email</label>
+                    <p className="text-sm text-gray-600 mt-1">{a.email}</p>
+                  </div>
+                  {a.artistType && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Artist Type</label>
+                      <p className="text-sm text-gray-600 mt-1">{a.artistType}</p>
+                    </div>
+                  )}
+                  {a.bio && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Bio</label>
+                      <p className="text-sm text-gray-600 mt-1">{a.bio}</p>
+                    </div>
+                  )}
+                  {a.experience && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Experience</label>
+                      <p className="text-sm text-gray-600 mt-1">{a.experience}</p>
+                    </div>
+                  )}
                 </>
               )})()}
               {itemType === 'Venue' && (() => { const v = item as Venue; return (
                 <>
-                  <div><label className="text-sm font-medium text-gray-700">Phone</label><p className="text-sm text-gray-600 mt-1">{v.phone}</p></div>
-                  <div><label className="text-sm font-medium text-gray-700">Email</label><p className="text-sm text-gray-600 mt-1">{v.email}</p></div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <p className="text-sm text-gray-600 mt-1">{v.phone}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Email</label>
+                    <p className="text-sm text-gray-600 mt-1">{v.email}</p>
+                  </div>
+                  {v.capacity && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Capacity</label>
+                      <p className="text-sm text-gray-600 mt-1">{v.capacity} people</p>
+                    </div>
+                  )}
+                  {v.address && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Address</label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {v.address.street}, {v.address.city}, {v.address.state} - {v.address.pincode}
+                      </p>
+                    </div>
+                  )}
+                  {v.amenities && v.amenities.length > 0 && (
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Amenities</label>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {v.amenities.map((amenity, index) => (
+                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {amenity}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )})()}
             </div>

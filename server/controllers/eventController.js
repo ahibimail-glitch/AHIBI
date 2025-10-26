@@ -830,8 +830,61 @@ const getOrganizerEvents = async (req, res) => {
       .limit(numericLimit)
       .lean();
 
+    // Calculate real-time ticket sales and revenue for each event
+    const eventsWithStats = await Promise.all(events.map(async (event) => {
+      try {
+        // Get booking statistics for this event
+        const bookingStats = await Booking.aggregate([
+          {
+            $match: {
+              event: event._id,
+              paymentStatus: 'completed'
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              totalTicketsSold: { $sum: '$quantity' },
+              totalRevenue: { $sum: '$total' }
+            }
+          }
+        ]);
+
+        const ticketsSold = bookingStats.length > 0 ? bookingStats[0].totalTicketsSold : 0;
+        const revenue = bookingStats.length > 0 ? bookingStats[0].totalRevenue : 0;
+
+        // Calculate total tickets available
+        const totalTickets = event.ticketTypes ? 
+          event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0;
+
+        console.log(`Event ${event._id} stats:`, {
+          eventTitle: event.title,
+          bookingStats: bookingStats.length,
+          ticketsSold,
+          revenue,
+          totalTickets
+        });
+
+        return {
+          ...event,
+          ticketsSold,
+          totalTickets,
+          totalRevenue: revenue
+        };
+      } catch (error) {
+        console.error(`Error calculating stats for event ${event._id}:`, error);
+        return {
+          ...event,
+          ticketsSold: 0,
+          totalTickets: event.ticketTypes ? 
+            event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0,
+          totalRevenue: 0
+        };
+      }
+    }));
+
     return ApiResponse.success(res, 'Organizer events fetched', {
-      events,
+      events: eventsWithStats,
       pagination: {
         page: numericPage,
         limit: numericLimit,
@@ -861,7 +914,59 @@ const getOrganizerEventById = async (req, res) => {
       return ApiResponse.error(res, 'Event not found', {}, 404);
     }
 
-    return ApiResponse.success(res, 'Event fetched successfully', { event });
+    // Calculate real-time ticket sales and revenue for this event
+    try {
+      const bookingStats = await Booking.aggregate([
+        {
+          $match: {
+            event: event._id,
+            paymentStatus: 'completed'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalTicketsSold: { $sum: '$quantity' },
+            totalRevenue: { $sum: '$total' }
+          }
+        }
+      ]);
+
+      const ticketsSold = bookingStats.length > 0 ? bookingStats[0].totalTicketsSold : 0;
+      const revenue = bookingStats.length > 0 ? bookingStats[0].totalRevenue : 0;
+
+      // Calculate total tickets available
+      const totalTickets = event.ticketTypes ? 
+        event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0;
+
+      console.log(`Single event ${event._id} stats:`, {
+        eventTitle: event.title,
+        bookingStats: bookingStats.length,
+        ticketsSold,
+        revenue,
+        totalTickets
+      });
+
+      const eventWithStats = {
+        ...event,
+        ticketsSold,
+        totalTickets,
+        totalRevenue: revenue
+      };
+
+      return ApiResponse.success(res, 'Event fetched successfully', { event: eventWithStats });
+    } catch (statsError) {
+      console.error(`Error calculating stats for event ${event._id}:`, statsError);
+      // Return event with default stats if calculation fails
+      const eventWithStats = {
+        ...event,
+        ticketsSold: 0,
+        totalTickets: event.ticketTypes ? 
+          event.ticketTypes.reduce((sum, ticket) => sum + ticket.quantity, 0) : 0,
+        totalRevenue: 0
+      };
+      return ApiResponse.success(res, 'Event fetched successfully', { event: eventWithStats });
+    }
   } catch (error) {
     console.error('Error fetching organizer event:', error);
     return ApiResponse.serverError(res, 'Error fetching event', error);

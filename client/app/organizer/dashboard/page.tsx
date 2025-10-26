@@ -97,18 +97,12 @@ export default function OrganizerDashboard() {
     router.push('/organizer/auth/login')
   }
 
-  // --- Mock Data (replace with API calls) ---
-  const stats = [
-    { title: "Total Events", value: "12", icon: Calendar, change: "+8.2%", color: "text-blue-600" },
-    { title: "Active Events", value: "3", icon: Activity, change: "+12.5%", color: "text-green-600" },
-    { title: "Total Revenue", value: "₹2,00,000", icon: DollarSign, change: "+15.3%", color: "text-purple-600" },
-    { title: "Tickets Sold", value: "1,247", icon: Ticket, change: "+18.9%", color: "text-orange-600" },
-  ]
+  // Dashboard data is now fetched internally by the Dashboard component
 
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return <Dashboard stats={stats} setActiveView={setActiveView} />
+        return <Dashboard setActiveView={setActiveView} />
       case "events":
         return <Events />
       case "approved-events":
@@ -128,7 +122,7 @@ export default function OrganizerDashboard() {
       case "settings":
         return <SettingsComponent />
       default:
-        return <Dashboard stats={stats} setActiveView={setActiveView} />
+        return <Dashboard setActiveView={setActiveView} />
     }
   }
 
@@ -192,18 +186,7 @@ export default function OrganizerDashboard() {
             active={activeView === "bookings"} 
             onClick={() => setActiveView("bookings")} 
           />
-          <SidebarButton 
-            icon={Music} 
-            label="Book Artists" 
-            active={activeView === "artist-booking"} 
-            onClick={() => setActiveView("artist-booking")} 
-          />
-          <SidebarButton 
-            icon={Calendar} 
-            label="Manage Bookings" 
-            active={activeView === "booking-management"} 
-            onClick={() => setActiveView("booking-management")} 
-          />
+       
           <SidebarButton 
             icon={PlusCircle} 
             label="Create Event" 
@@ -211,7 +194,7 @@ export default function OrganizerDashboard() {
             onClick={() => setActiveView("create-event")} 
           />
 
-          <div className="pt-4 pb-2 px-2">
+          {/* <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Analytics</h3>
           </div>
           <SidebarButton 
@@ -219,9 +202,9 @@ export default function OrganizerDashboard() {
             label="Analytics" 
             active={activeView === "analytics"} 
             onClick={() => setActiveView("analytics")} 
-          />
+          /> */}
 
-          <div className="pt-4 pb-2 px-2">
+          {/* <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Account</h3>
           </div>
           <SidebarButton 
@@ -229,7 +212,7 @@ export default function OrganizerDashboard() {
             label="Settings" 
             active={activeView === "settings"} 
             onClick={() => setActiveView("settings")} 
-          />
+          /> */}
         </nav>
 
         <div className="mt-auto">

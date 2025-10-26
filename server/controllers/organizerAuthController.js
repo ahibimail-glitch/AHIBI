@@ -1,4 +1,8 @@
+const mongoose = require('mongoose');
 const Organizer = require('../models/Organizer');
+const Event = require('../models/Event');
+const Booking = require('../models/Booking');
+const ArtistBooking = require('../models/ArtistBooking');
 const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
@@ -229,5 +233,161 @@ exports.updateOrganizerProfile = async (req, res) => {
   } catch (error) {
     console.error('Update organizer profile error:', error);
     return ApiResponse.serverError(res, 'Error updating organizer profile', error);
+  }
+};
+
+/**
+ * @desc    Get organizer dashboard statistics
+ * @route   GET /api/organizer/dashboard
+ * @access  Private (Organizer only)
+ */
+exports.getOrganizerDashboard = async (req, res) => {
+  try {
+    const organizerId = req.user.id;
+
+    // Get organizer's events statistics
+    const totalEvents = await Event.countDocuments({ organizer: organizerId });
+    const activeEvents = await Event.countDocuments({ 
+      organizer: organizerId,
+      status: 'approved',
+      endDate: { $gte: new Date() }
+    });
+    const pendingEvents = await Event.countDocuments({ 
+      organizer: organizerId,
+      status: 'pending'
+    });
+    const completedEvents = await Event.countDocuments({ 
+      organizer: organizerId,
+      status: 'approved',
+      endDate: { $lt: new Date() }
+    });
+
+    // Get revenue statistics from bookings
+    const revenueStats = await Booking.aggregate([
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'event',
+          foreignField: '_id',
+          as: 'eventData'
+        }
+      },
+      {
+        $match: {
+          'eventData.organizer': new mongoose.Types.ObjectId(organizerId),
+          paymentStatus: 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$total' },
+          totalTicketsSold: { $sum: '$quantity' }
+        }
+      }
+    ]);
+
+    const totalRevenue = revenueStats.length > 0 ? revenueStats[0].totalRevenue : 0;
+    const totalTicketsSold = revenueStats.length > 0 ? revenueStats[0].totalTicketsSold : 0;
+
+    console.log('Revenue calculation debug:', {
+      organizerId,
+      revenueStats: revenueStats.length,
+      totalRevenue,
+      totalTicketsSold
+    });
+
+    // Fallback: Get revenue from Event model if booking aggregation returns 0
+    let fallbackRevenue = 0;
+    let fallbackTicketsSold = 0;
+    if (totalRevenue === 0 || totalTicketsSold === 0) {
+      const eventStats = await Event.aggregate([
+        { $match: { organizer: new mongoose.Types.ObjectId(organizerId) } },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$totalRevenue' },
+            totalTicketsSold: { $sum: '$ticketsSold' }
+          }
+        }
+      ]);
+      
+      if (eventStats.length > 0) {
+        fallbackRevenue = eventStats[0].totalRevenue || 0;
+        fallbackTicketsSold = eventStats[0].totalTicketsSold || 0;
+      }
+      
+      console.log('Fallback revenue calculation:', {
+        eventStats: eventStats.length,
+        fallbackRevenue,
+        fallbackTicketsSold
+      });
+    }
+
+    const finalRevenue = totalRevenue > 0 ? totalRevenue : fallbackRevenue;
+    const finalTicketsSold = totalTicketsSold > 0 ? totalTicketsSold : fallbackTicketsSold;
+
+    // Get recent events (last 5)
+    const recentEvents = await Event.find({ organizer: organizerId })
+      .select('_id title startDate endDate status banner totalTickets ticketsSold')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Get upcoming events (next 30 days)
+    const upcomingEvents = await Event.find({
+      organizer: organizerId,
+      status: 'approved',
+      startDate: { 
+        $gte: new Date(),
+        $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Next 30 days
+      }
+    })
+    .select('_id title startDate endDate banner totalTickets ticketsSold')
+    .sort({ startDate: 1 })
+    .limit(5);
+
+    // Get artist booking statistics
+    const totalBookings = await ArtistBooking.countDocuments({ organizer: organizerId });
+    const pendingBookings = await ArtistBooking.countDocuments({ 
+      organizer: organizerId,
+      'booking.status': 'pending'
+    });
+    const acceptedBookings = await ArtistBooking.countDocuments({ 
+      organizer: organizerId,
+      'booking.status': 'accepted'
+    });
+
+    // Get recent bookings
+    const recentBookings = await ArtistBooking.find({ organizer: organizerId })
+      .populate('artist', 'name email phone profilePic')
+      .select('_id artist booking.status booking.eventDate booking.venue createdAt')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Calculate average rating from organizer ratings
+    const organizer = await Organizer.findById(organizerId).select('statistics');
+    const averageRating = organizer?.statistics?.averageRating || 0;
+
+    return ApiResponse.success(res, 'Organizer dashboard data retrieved successfully', {
+      stats: {
+        totalEvents,
+        activeEvents,
+        pendingEvents,
+        completedEvents,
+        totalRevenue: finalRevenue,
+        totalTicketsSold: finalTicketsSold,
+        totalBookings,
+        pendingBookings,
+        acceptedBookings,
+        averageRating
+      },
+      recentEvents,
+      upcomingEvents,
+      recentBookings
+    });
+
+  } catch (error) {
+    console.error('Get organizer dashboard error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving dashboard data', error);
   }
 };

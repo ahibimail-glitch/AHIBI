@@ -286,7 +286,7 @@ export default function BookingManagement() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Bookings</SelectItem>
+              <SelectItem value="all">All Bookings</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="declined">Declined</SelectItem>

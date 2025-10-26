@@ -375,7 +375,7 @@ export default function ArtistBookingCalendar() {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="musician">Musician</SelectItem>
                   <SelectItem value="singer">Singer</SelectItem>
                   <SelectItem value="dj">DJ</SelectItem>

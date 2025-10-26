@@ -30,6 +30,7 @@ router.post('/auth/verify-otp', [
 ], organizerAuthController.verifyOrganizerOtp);
 
 // Protected routes (require authentication)
+router.get('/dashboard', protect, organizerAuthController.getOrganizerDashboard);
 router.get('/profile', protect, organizerAuthController.getOrganizerProfile);
 router.put('/profile', [
   protect,
