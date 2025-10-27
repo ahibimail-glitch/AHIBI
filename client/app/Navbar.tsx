@@ -57,6 +57,9 @@ export default function Navbar() {
             <Link href="/about" className="hover:text-white transition">
               About
             </Link>
+            <Link href="/allVenues" className="hover:text-white transition">
+              Venues
+            </Link>
           </div>
 
           {/* Action Buttons */}
