@@ -468,8 +468,8 @@ export default function VenueDetailPage() {
     );
   }
 
-  const displayImages = venueData.gallery && venueData.gallery.length > 0 
-    ? venueData.gallery.map(g => g.url) 
+  const displayImages = venueData && venueData.gallery && venueData.gallery.length > 0
+    ? venueData.gallery.map(g => g.url)
     : venueImages;
 
   return (
@@ -493,7 +493,7 @@ export default function VenueDetailPage() {
         <div className="absolute inset-0">
           <img
             src={displayImages[currentImageIndex]}
-            alt={venueData.name}
+            alt={venueData?.name}
             className="w-full h-full object-cover transition-opacity duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
@@ -532,23 +532,23 @@ export default function VenueDetailPage() {
         <div className="absolute inset-0 flex items-center justify-center text-center px-4">
           <div className="max-w-4xl">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 drop-shadow-lg">
-              {venueData.name}
+              {venueData?.name}
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-6 drop-shadow-md">
-              {venueData.address.city}, {venueData.address.state}
+              {venueData?.address.city}, {venueData?.address.state}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
               <div className="flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
                 <Star className="h-5 w-5 text-yellow-400 mr-2" />
-                <span className="text-white font-medium">{venueData.rating.average || 0} Rating</span>
+                <span className="text-white font-medium">{venueData?.rating.average || 0} Rating</span>
               </div>
               <div className="flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
                 <Users className="h-5 w-5 text-white mr-2" />
-                <span className="text-white font-medium">Up to {venueData.capacity} Guests</span>
+                <span className="text-white font-medium">Up to {venueData?.capacity} Guests</span>
               </div>
               <div className="flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
                 <Award className="h-5 w-5 text-white mr-2" />
-                <span className="text-white font-medium">{venueData.totalBookings} Bookings</span>
+                <span className="text-white font-medium">{venueData?.totalBookings} Bookings</span>
               </div>
             </div>
           </div>
@@ -568,7 +568,7 @@ export default function VenueDetailPage() {
                     <MapPin className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="font-semibold text-gray-800 mb-2">Prime Location</h3>
-                  <p className="text-sm text-gray-600">{venueData.address.city}, {venueData.address.state}</p>
+                  <p className="text-sm text-gray-600">{venueData?.address.city}, {venueData?.address.state}</p>
                 </CardContent>
               </Card>
 
@@ -578,7 +578,7 @@ export default function VenueDetailPage() {
                     <Users className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="font-semibold text-gray-800 mb-2">Capacity</h3>
-                  <p className="text-sm text-gray-600">Up to {venueData.capacity} guests</p>
+                  <p className="text-sm text-gray-600">Up to {venueData?.capacity} guests</p>
                 </CardContent>
               </Card>
 
@@ -588,7 +588,7 @@ export default function VenueDetailPage() {
                     <Clock className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="font-semibold text-gray-800 mb-2">Rating</h3>
-                  <p className="text-sm text-gray-600">{venueData.rating.average || 0} / 5.0</p>
+                  <p className="text-sm text-gray-600">{venueData?.rating.average || 0} / 5.0</p>
                 </CardContent>
               </Card>
 
@@ -598,7 +598,7 @@ export default function VenueDetailPage() {
                     <Zap className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="font-semibold text-gray-800 mb-2">Price</h3>
-                  <p className="text-sm text-gray-600">₹{venueData.pricing.hourlyRate || venueData.pricing.basePrice}/hour</p>
+                  <p className="text-sm text-gray-600">₹{venueData?.pricing.hourlyRate || venueData?.pricing.basePrice}/hour</p>
                 </CardContent>
               </Card>
             </div>
@@ -614,15 +614,15 @@ export default function VenueDetailPage() {
               <CardContent className="space-y-6">
                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl">
                   <Label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Description</Label>
-                  <p className="text-lg text-gray-800 mt-2">{venueData.description}</p>
+                  <p className="text-lg text-gray-800 mt-2">{venueData?.description}</p>
                 </div>
 
                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl">
                   <Label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Address</Label>
                   <p className="text-lg text-gray-800 mt-2">
-                    {venueData.address.street}, {venueData.address.city}, {venueData.address.state} - {venueData.address.pincode}
+                    {venueData?.address.street}, {venueData?.address.city}, {venueData?.address.state} - {venueData?.address.pincode}
                   </p>
-                  {venueData.address.landmark && (
+                  {venueData?.address.landmark && (
                     <p className="text-sm text-gray-600 mt-1">Landmark: {venueData.address.landmark}</p>
                   )}
                 </div>
@@ -633,9 +633,9 @@ export default function VenueDetailPage() {
                     <div className="space-y-2 mt-3">
                       <div className="flex items-center text-gray-600">
                         <Phone className="h-4 w-4 mr-2 text-green-600" />
-                        <span>{venueData.contactInfo.phone}</span>
+                        <span>{venueData?.contactInfo.phone}</span>
                       </div>
-                      {venueData.contactInfo.email && (
+                      {venueData?.contactInfo.email && (
                         <div className="flex items-center text-gray-600">
                           <Mail className="h-4 w-4 mr-2 text-blue-600" />
                           <span>{venueData.contactInfo.email}</span>
@@ -647,7 +647,7 @@ export default function VenueDetailPage() {
                   <div className="p-4 bg-blue-50 rounded-lg text-center">
                     <Users className="h-8 w-8 mx-auto text-blue-600 mb-2" />
                     <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Max Capacity</Label>
-                    <p className="text-xl font-bold text-gray-800">{venueData.capacity}</p>
+                    <p className="text-xl font-bold text-gray-800">{venueData?.capacity}</p>
                   </div>
                 </div>
               </CardContent>
@@ -663,7 +663,7 @@ export default function VenueDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {Object.entries(venueData.facilities).map(([key, value]) => {
+                  {Object.entries((venueData?.facilities ?? {}) as Record<string, boolean>).map(([key, value]) => {
                     const IconComponent = facilityIcons[key as keyof typeof facilityIcons];
                     return (
                       <div key={key} className={`p-4 rounded-xl transition-all duration-200 ${value ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200' : 'bg-gray-50 opacity-60'
@@ -693,7 +693,7 @@ export default function VenueDetailPage() {
             </Card>
 
             {/* Terms & Conditions */}
-            {venueData.terms && (venueData.terms.cancellationPolicy || venueData.terms.additionalRules) && (
+            {venueData?.terms && (venueData.terms.cancellationPolicy || venueData.terms.additionalRules) && (
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold text-gray-800 flex items-center">
@@ -702,7 +702,7 @@ export default function VenueDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {venueData.terms.cancellationPolicy && (
+                  {venueData?.terms.cancellationPolicy && (
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <Label className="text-sm font-semibold text-blue-800 uppercase tracking-wide">
                         Cancellation Policy
@@ -711,7 +711,7 @@ export default function VenueDetailPage() {
                     </div>
                   )}
 
-                  {venueData.terms.additionalRules && (
+                  {venueData?.terms.additionalRules && (
                     <div className="p-4 bg-purple-50 rounded-lg">
                       <Label className="text-sm font-semibold text-purple-800 uppercase tracking-wide">
                         Additional Rules
@@ -781,7 +781,7 @@ export default function VenueDetailPage() {
             {selectedDate && (
               <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-800">Book {venueData.name}</CardTitle>
+                  <CardTitle className="text-xl font-bold text-gray-800">Book {venueData?.name}</CardTitle>
                   <CardDescription className="text-purple-600 font-medium">
                     Selected Date: {format(selectedDate, 'PPP')}
                   </CardDescription>
@@ -851,7 +851,7 @@ export default function VenueDetailPage() {
                       </div>
                       <div>
                         <Label htmlFor="guestCount">Number of Guests *</Label>
-                        <Input id="guestCount" type="number" min="1" max={venueData.capacity} value={bookingForm.guestCount} onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })} required />
+                        <Input id="guestCount" type="number" min="1" max={venueData?.capacity} value={bookingForm.guestCount} onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })} required />
                       </div>
                       <div>
                         <Label htmlFor="eventType">Event Type</Label>
@@ -898,9 +898,9 @@ export default function VenueDetailPage() {
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <Phone className="h-5 w-5 mr-3" />
-                    <span className="text-sm">{venueData.contactInfo.phone}</span>
+                    <span className="text-sm">{venueData?.contactInfo.phone}</span>
                   </div>
-                  {venueData.contactInfo.email && (
+                  {venueData?.contactInfo.email && (
                     <div className="flex items-center">
                       <Mail className="h-5 w-5 mr-3" />
                       <span className="text-sm">{venueData.contactInfo.email}</span>
