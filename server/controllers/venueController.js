@@ -66,12 +66,26 @@ exports.getAllVenues = async (req, res) => {
  */
 exports.getVenueById = async (req, res) => {
   try {
+    console.log('Searching for venue with ID:', req.params.id);
+    console.log('ObjectId validation - isValid:', mongoose.Types.ObjectId.isValid(req.params.id));
+    console.log('ObjectId length:', req.params.id.length);
+    
+    // Validate ObjectId format - but don't fail, just log for debugging
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.log('WARNING: Invalid ObjectId format:', req.params.id);
+      // Temporarily comment out the return to see if this is the issue
+      // return ApiResponse.badRequest(res, 'Invalid venue ID format');
+    }
+    
     const venue = await Venue.findById(req.params.id)
       .select('-otp -otpExpires');
     
     if (!venue) {
+      console.log('Venue not found in database for ID:', req.params.id);
       return ApiResponse.notFound(res, 'Venue not found');
     }
+    
+    console.log('Venue found:', venue.name, 'Status:', venue.approvalStatus);
     
     if (venue.approvalStatus !== 'approved') {
       return ApiResponse.forbidden(res, 'Venue is not available for booking');
@@ -121,6 +135,58 @@ exports.getVenueBookings = async (req, res) => {
 };
 
 /**
+ * @desc    Get detailed time slot availability for a specific date
+ * @route   GET /api/venues/:id/availability/:date
+ * @access  Public
+ */
+exports.getTimeSlotAvailability = async (req, res) => {
+  try {
+    const { id: venueId, date } = req.params;
+    
+    console.log('Getting time slot availability for venue:', venueId, 'date:', date);
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      return ApiResponse.badRequest(res, 'Invalid venue ID format');
+    }
+    
+    // Validate date format
+    const bookingDate = new Date(date);
+    if (isNaN(bookingDate.getTime())) {
+      return ApiResponse.badRequest(res, 'Invalid date format. Use YYYY-MM-DD');
+    }
+    
+    console.log('Availability request for date:', date, 'Parsed as:', bookingDate);
+    
+    // Check if venue exists
+    const venue = await Venue.findById(venueId);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    
+    if (venue.approvalStatus !== 'approved') {
+      return ApiResponse.forbidden(res, 'Venue is not available for booking');
+    }
+    
+    // Get detailed availability information
+    const availabilityData = await VenueBooking.getAvailableTimeSlots(venueId, date);
+    
+    return ApiResponse.success(res, 'Time slot availability retrieved successfully', {
+      venue: {
+        id: venue._id,
+        name: venue.name,
+        capacity: venue.capacity
+      },
+      availability: availabilityData
+    });
+    
+  } catch (error) {
+    console.error('Get time slot availability error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving time slot availability', error);
+  }
+};
+
+/**
  * @desc    Create booking order (Razorpay)
  * @route   POST /api/venues/:id/bookings/create-order
  * @access  Private (User)
@@ -134,10 +200,24 @@ exports.createBookingOrder = async (req, res) => {
   try {
     const { bookingDate, startTime, endTime, guestCount, eventType, specialRequirements } = req.body;
     
+    console.log('Creating booking order for venue ID:', req.params.id);
+    console.log('ObjectId validation - isValid:', mongoose.Types.ObjectId.isValid(req.params.id));
+    console.log('ObjectId length:', req.params.id.length);
+    
+    // Validate ObjectId format - but don't fail, just log for debugging
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      console.log('WARNING: Invalid ObjectId format for booking:', req.params.id);
+      // Temporarily comment out the return to see if this is the issue
+      // return ApiResponse.badRequest(res, 'Invalid venue ID format');
+    }
+    
     const venue = await Venue.findById(req.params.id);
     if (!venue) {
+      console.log('Venue not found for booking, ID:', req.params.id);
       return ApiResponse.notFound(res, 'Venue not found');
     }
+    
+    console.log('Venue found for booking:', venue.name, 'Status:', venue.approvalStatus);
     
     if (venue.approvalStatus !== 'approved') {
       return ApiResponse.forbidden(res, 'Venue is not available for booking');
@@ -167,10 +247,15 @@ exports.createBookingOrder = async (req, res) => {
     const totalAmount = Math.round(basePrice * durationHours);
     
     // Create Razorpay order
+    // Generate shorter receipt (max 40 chars): use last 8 chars of venue ID + timestamp suffix
+    const shortVenueId = venue._id.toString().slice(-8);
+    const timestampSuffix = Date.now().toString().slice(-6);
+    const receipt = `v_${shortVenueId}_${timestampSuffix}`;
+    
     const razorpayOrder = await razorpay.orders.create({
       amount: totalAmount * 100, // Convert to paise
       currency: 'INR',
-      receipt: `venue_${venue._id}_${Date.now()}`,
+      receipt: receipt,
       notes: {
         venueId: venue._id.toString(),
         venueName: venue.name,
@@ -553,6 +638,33 @@ exports.updateVenueManagerProfile = async (req, res) => {
   } catch (error) {
     console.error('Update venue profile error:', error);
     return ApiResponse.serverError(res, 'Error updating profile', error);
+  }
+};
+
+/**
+ * @desc    Debug endpoint to list all venues with their IDs
+ * @route   GET /api/venues/debug/list-all
+ * @access  Public (for debugging)
+ */
+exports.debugListAllVenues = async (req, res) => {
+  try {
+    const venues = await Venue.find({})
+      .select('_id name approvalStatus email phone')
+      .sort({ createdAt: -1 });
+    
+    console.log('All venues in database:');
+    venues.forEach(venue => {
+      console.log(`ID: ${venue._id}, Name: ${venue.name}, Status: ${venue.approvalStatus}`);
+    });
+    
+    return ApiResponse.success(res, 'All venues retrieved for debugging', {
+      venues,
+      count: venues.length
+    });
+    
+  } catch (error) {
+    console.error('Debug list venues error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving venues for debugging', error);
   }
 };
 

@@ -54,8 +54,13 @@ router.put('/manager/profile', protect, venueController.updateVenueManagerProfil
 router.get('/my-bookings', protect, venueController.getUserBookings);
 router.get('/bookings/:bookingId', protect, venueController.getBookingById);
 
-// Booking routes (for users) with ':id'
-router.post('/:id/bookings/create-order', protect, [
+// Booking routes (for users) with ':id' - MUST come BEFORE the general /:id routes
+router.post('/:id/bookings/create-order', (req, res, next) => {
+  console.log('=== ROUTE HIT: POST /:id/bookings/create-order ===');
+  console.log('Venue ID from route:', req.params.id);
+  console.log('Request body:', req.body);
+  next();
+}, protect, [
   check('bookingDate', 'Booking date is required').isISO8601(),
   check('startTime', 'Start time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
   check('endTime', 'End time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
@@ -66,9 +71,17 @@ router.post('/:id/bookings/verify-payment', protect, venueController.verifyPayme
 
 // ============ PUBLIC ROUTES ============
 
+// Debug route (should be before parameterized routes)
+router.get('/debug/list-all', venueController.debugListAllVenues);
+
 // Public venue listing should be before parameterized routes
 router.get('/', venueController.getAllVenues);
+
+// Specific routes with parameters - MUST come before general /:id routes
+router.get('/:id/availability/:date', venueController.getTimeSlotAvailability);
 router.get('/:id/bookings', venueController.getVenueBookings);
+
+// General /:id routes - MUST come after specific routes
 router.get('/:id', venueController.getVenueById);
 
 module.exports = router;

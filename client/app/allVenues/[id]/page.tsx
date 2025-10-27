@@ -100,12 +100,42 @@ interface Booking {
   startTime: string;
   endTime: string;
   status: string;
+  eventType?: string;
+  guestCount?: number;
+  user?: {
+    name: string;
+  };
+}
+
+interface TimeSlot {
+  time: string;
+  available: boolean;
+  bookings: any[];
+}
+
+interface AvailabilityData {
+  date: string;
+  existingBookings: Booking[];
+  timeSlots: TimeSlot[];
+  summary: {
+    totalSlots: number;
+    availableSlots: number;
+    bookedSlots: number;
+  };
+}
+
+interface TimeOption {
+  value: string;
+  label: string;
+  available?: boolean;
+  disabled?: boolean;
+  bookings?: any[];
 }
 
 // Mock images for the carousel - replace with actual venue images
 // Generate time options for dropdowns (e.g., 9:00 AM to 9:00 PM)
-const generateTimeOptions = () => {
-  const times = [];
+const generateTimeOptions = (): TimeOption[] => {
+  const times: TimeOption[] = [];
   for (let i = 0; i < 24; i++) {
     const time = `${String(i).padStart(2, '0')}:00`;
     const h = i % 12 || 12;
@@ -115,7 +145,7 @@ const generateTimeOptions = () => {
   return times;
 };
 
-const availableTimes = generateTimeOptions();
+const availableTimes: TimeOption[] = generateTimeOptions();
 
 const venueImages = [
   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2098&q=80",
@@ -158,6 +188,8 @@ export default function VenueDetailPage() {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [finalBookingDetails, setFinalBookingDetails] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [availabilityData, setAvailabilityData] = useState<AvailabilityData | null>(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -243,6 +275,50 @@ export default function VenueDetailPage() {
     }
   };
 
+  // Fetch availability data for selected date
+  const fetchAvailabilityData = async (date: Date) => {
+    if (!resolvedVenueId) return;
+    
+    setLoadingAvailability(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      // Use local date formatting to avoid timezone issues
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      console.log('Fetching availability for date:', dateStr, 'Original date object:', date);
+      console.log('Date components - Year:', year, 'Month:', month, 'Day:', day);
+      
+      const response = await fetch(`${apiUrl}/api/venue/${resolvedVenueId}/availability/${dateStr}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAvailabilityData(data.data.availability);
+      } else {
+        console.error('Failed to fetch availability:', data.message);
+        toast.error('Failed to load availability data');
+      }
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+      toast.error('Error loading availability data');
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
+
+  // Fetch availability when date changes
+  useEffect(() => {
+    if (selectedDate && resolvedVenueId) {
+      console.log('Selected date changed to:', selectedDate);
+      console.log('Selected date string:', selectedDate.toString());
+      console.log('Selected date ISO:', selectedDate.toISOString());
+      fetchAvailabilityData(selectedDate);
+    }
+  }, [selectedDate, resolvedVenueId]);
+
   // Helper function to format date
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -251,6 +327,34 @@ export default function VenueDetailPage() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Generate available time options based on availability data
+  const getAvailableTimeOptions = (): TimeOption[] => {
+    if (!availabilityData) {
+      return availableTimes; // Fallback to all times if no availability data
+    }
+
+    return availableTimes.map(timeOption => {
+      const timeSlot = availabilityData.timeSlots.find(slot => slot.time === timeOption.value);
+      const isAvailable = timeSlot?.available !== false;
+      
+      return {
+        ...timeOption,
+        available: isAvailable,
+        disabled: !isAvailable,
+        bookings: timeSlot?.bookings || []
+      } as TimeOption;
+    });
+  };
+
+  // Format time for display (convert 24h to 12h format)
+  const formatTimeForDisplay = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
   };
 
   const nextImage = () => {
@@ -301,6 +405,12 @@ export default function VenueDetailPage() {
       }
     });
     return unavailableDates;
+  };
+
+  const getPartiallyBookedDates = () => {
+    // For now, we'll treat all dates with bookings as partially booked
+    // In the future, we could check if all time slots are booked
+    return getUnavailableDates();
   };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
@@ -744,34 +854,42 @@ export default function VenueDetailPage() {
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     disabled={(date) => {
-                      const unavailableDates = getUnavailableDates();
-                      return unavailableDates.some(unavailableDate =>
-                        date.toDateString() === unavailableDate.toDateString()
-                      ) || date < new Date(new Date().setHours(0, 0, 0, 0));
+                      // Only disable past dates, allow selection of dates with existing bookings
+                      return date < new Date(new Date().setHours(0, 0, 0, 0));
                     }}
                     modifiers={{
-                      unavailable: getUnavailableDates(),
+                      partiallyBooked: getPartiallyBookedDates(),
                       past: date => date < new Date(new Date().setHours(0, 0, 0, 0)),
-                      available: date => date >= new Date(new Date().setHours(0, 0, 0, 0)) && !getUnavailableDates().some(unavailableDate => unavailableDate.toDateString() === date.toDateString()),
+                      available: date => {
+                        const isNotPast = date >= new Date(new Date().setHours(0, 0, 0, 0));
+                        const hasNoBookings = !getUnavailableDates().some(unavailableDate => 
+                          unavailableDate.toDateString() === date.toDateString()
+                        );
+                        return isNotPast && hasNoBookings;
+                      },
                     }}
                     modifiersClassNames={{
-                      unavailable: 'bg-red-200 text-red-900 cursor-not-allowed opacity-60',
+                      partiallyBooked: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
                       past: 'text-gray-400 cursor-not-allowed opacity-50',
-                      available: 'text-green-600',
-                      today: '',
+                      available: 'text-green-600 hover:bg-green-50',
+                      today: 'bg-blue-100 text-blue-800',
                     }}
                     className="rounded-md"
                   />
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-gray-600">Unavailable</span>
-                  </div>
+                <div className="flex items-center justify-center space-x-6 text-sm">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-gray-600">Available</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <span className="text-gray-600">Partially Booked</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                    <span className="text-gray-600">Past Dates</span>
                   </div>
                 </div>
               </CardContent>
@@ -810,44 +928,140 @@ export default function VenueDetailPage() {
                       </Button>
                     </div>
                   ) : (
-                    <form onSubmit={handleBookingSubmit} className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="startTime">Start Time *</Label>
-                          <Select
-                            onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })}
-                            value={bookingForm.startTime}
-                          >
-                            <SelectTrigger id="startTime">
-                              <SelectValue placeholder="Select start time" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableTimes.map((time) => (
-                                <SelectItem key={time.value} value={time.value}>
-                                  {time.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                    <div className="space-y-6">
+                      {/* Availability Summary */}
+                      {/* {availabilityData && (
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-gray-800 mb-2">Availability Summary</h4>
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-green-600">{availabilityData.summary.availableSlots}</div>
+                              <div className="text-gray-600">Available Slots</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-red-600">{availabilityData.summary.bookedSlots}</div>
+                              <div className="text-gray-600">Booked Slots</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-blue-600">{availabilityData.existingBookings.length}</div>
+                              <div className="text-gray-600">Total Bookings</div>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="endTime">End Time *</Label>
-                          <Select
-                            onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })}
-                            value={bookingForm.endTime}
-                          >
-                            <SelectTrigger id="endTime">
-                              <SelectValue placeholder="Select end time" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableTimes.map((time) => (
-                                <SelectItem key={time.value} value={time.value}>
-                                  {time.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                      )} */}
+
+                      {/* Time Slot Visual Display */}
+                      {/* {availabilityData && (
+                        <div className="bg-white p-4 rounded-lg border">
+                          <h4 className="font-semibold text-gray-800 mb-3">Time Slot Availability</h4>
+                          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1 text-xs">
+                            {availabilityData.timeSlots.filter((_, index) => index % 2 === 0).map((slot, index) => (
+                              <div
+                                key={slot.time}
+                                className={`p-2 rounded text-center cursor-pointer transition-all ${
+                                  slot.available 
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                    : 'bg-red-100 text-red-800'
+                                }`}
+                                title={slot.available ? `Available at ${formatTimeForDisplay(slot.time)}` : `Booked at ${formatTimeForDisplay(slot.time)}`}
+                              >
+                                {formatTimeForDisplay(slot.time)}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-center space-x-6 mt-3 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+                              <span className="text-gray-600">Available</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                              <span className="text-gray-600">Booked</span>
+                            </div>
+                          </div>
                         </div>
+                      )} */}
+
+                      {/* Existing Bookings Display */}
+                      {/* {availabilityData && availabilityData.existingBookings.length > 0 && (
+                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                          <h4 className="font-semibold text-gray-800 mb-3">Existing Bookings for This Date</h4>
+                          <div className="space-y-2">
+                            {availabilityData.existingBookings.map((booking, index) => (
+                              <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
+                                <div className="flex items-center space-x-3">
+                                  <Clock className="h-4 w-4 text-orange-500" />
+                                  <span className="font-medium">
+                                    {formatTimeForDisplay(booking.startTime)} - {formatTimeForDisplay(booking.endTime)}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {booking.eventType} • {booking.guestCount} guests
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )} */}
+
+                      <form onSubmit={handleBookingSubmit} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="startTime">Start Time *</Label>
+                            <Select
+                              onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })}
+                              value={bookingForm.startTime}
+                            >
+                              <SelectTrigger id="startTime">
+                                <SelectValue placeholder="Select start time" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAvailableTimeOptions().map((time) => (
+                                  <SelectItem 
+                                    key={time.value} 
+                                    value={time.value}
+                                    disabled={time.disabled}
+                                    className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                                  >
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{time.label}</span>
+                                      {time.disabled && (
+                                        <span className="text-red-500 text-xs ml-2">Booked</span>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="endTime">End Time *</Label>
+                            <Select
+                              onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })}
+                              value={bookingForm.endTime}
+                            >
+                              <SelectTrigger id="endTime">
+                                <SelectValue placeholder="Select end time" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAvailableTimeOptions().map((time) => (
+                                  <SelectItem 
+                                    key={time.value} 
+                                    value={time.value}
+                                    disabled={time.disabled}
+                                    className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                                  >
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{time.label}</span>
+                                      {time.disabled && (
+                                        <span className="text-red-500 text-xs ml-2">Booked</span>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                       </div>
                       <div>
                         <Label htmlFor="guestCount">Number of Guests *</Label>
@@ -872,6 +1086,7 @@ export default function VenueDetailPage() {
                         {submitting ? 'Processing...' : 'Book and Pay Now'}
                       </Button>
                     </form>
+                    </div>
                   )}
                 </CardContent>
               </Card>

@@ -177,4 +177,69 @@ VenueBookingSchema.statics.checkAvailability = async function(venueId, bookingDa
   return conflictingBookings.length === 0;
 };
 
+// Static method to get all bookings for a specific venue and date
+VenueBookingSchema.statics.getBookingsForDate = async function(venueId, bookingDate) {
+  // Create start and end of day for the given date to handle timezone issues
+  const startOfDay = new Date(bookingDate);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  
+  const endOfDay = new Date(bookingDate);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+  
+  console.log('Searching for bookings between:', startOfDay, 'and', endOfDay);
+  
+  return await this.find({
+    venue: venueId,
+    bookingDate: {
+      $gte: startOfDay,
+      $lte: endOfDay
+    },
+    status: { $in: ['pending', 'confirmed'] }
+  }).select('startTime endTime status user guestCount eventType').populate('user', 'name');
+};
+
+// Static method to generate available time slots for a specific date
+VenueBookingSchema.statics.getAvailableTimeSlots = async function(venueId, bookingDate) {
+  const existingBookings = await this.getBookingsForDate(venueId, bookingDate);
+  
+  // Generate all possible time slots (30-minute intervals from 00:00 to 23:30)
+  const allTimeSlots = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      allTimeSlots.push(timeString);
+    }
+  }
+  
+  // Mark slots as available or booked
+  const timeSlotStatus = allTimeSlots.map(timeSlot => {
+    const isBooked = existingBookings.some(booking => {
+      const bookingStart = booking.startTime;
+      const bookingEnd = booking.endTime;
+      
+      // Check if this time slot falls within any existing booking
+      return timeSlot >= bookingStart && timeSlot < bookingEnd;
+    });
+    
+    return {
+      time: timeSlot,
+      available: !isBooked,
+      bookings: isBooked ? existingBookings.filter(booking => 
+        timeSlot >= booking.startTime && timeSlot < booking.endTime
+      ) : []
+    };
+  });
+  
+  return {
+    date: bookingDate,
+    existingBookings: existingBookings,
+    timeSlots: timeSlotStatus,
+    summary: {
+      totalSlots: allTimeSlots.length,
+      availableSlots: timeSlotStatus.filter(slot => slot.available).length,
+      bookedSlots: timeSlotStatus.filter(slot => !slot.available).length
+    }
+  };
+};
+
 module.exports = mongoose.model('VenueBooking', VenueBookingSchema);
