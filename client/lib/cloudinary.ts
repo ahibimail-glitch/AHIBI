@@ -36,7 +36,7 @@ export const uploadPhoto = async (
     formData.append('description', description);
   }
 
-  const response = await fetch(getApiUrl('api/v1/upload/photo'), {
+  const response = await fetch(getApiUrl('api/upload'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -73,7 +73,7 @@ export const uploadMultiplePhotos = async (
     formData.append('description', description);
   }
 
-  const response = await fetch(getApiUrl('api/v1/upload/photos'), {
+  const response = await fetch(getApiUrl('api/upload/multiple'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -100,7 +100,7 @@ export const uploadProfilePicture = async (file: File): Promise<CloudinaryPhoto>
   const formData = new FormData();
   formData.append('photo', file);
 
-  const response = await fetch(getApiUrl('api/v1/upload/profile-picture'), {
+  const response = await fetch(getApiUrl('api/upload'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -133,7 +133,7 @@ export const uploadCourtImages = async (
   });
   formData.append('courtId', courtId);
 
-  const response = await fetch(getApiUrl('api/v1/upload/court-images'), {
+  const response = await fetch(getApiUrl('api/upload/multiple'), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -157,7 +157,7 @@ export const deletePhoto = async (publicId: string): Promise<void> => {
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(getApiUrl(`api/v1/upload/photo/${publicId}`), {
+  const response = await fetch(getApiUrl(`api/upload/${publicId}`), {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -178,7 +178,7 @@ export const getPhotoInfo = async (publicId: string): Promise<CloudinaryPhoto> =
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(getApiUrl(`api/v1/upload/photo/${publicId}`), {
+  const response = await fetch(getApiUrl(`api/upload/${publicId}`), {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -200,7 +200,7 @@ export const getResponsiveUrls = async (publicId: string): Promise<ResponsiveUrl
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(getApiUrl(`api/v1/upload/photo/${publicId}/urls`), {
+  const response = await fetch(getApiUrl(`api/upload/${publicId}/urls`), {
     headers: {
       'Authorization': `Bearer ${token}`,
     },

@@ -100,3 +100,20 @@
 {"level":"info","message":"Photo uploaded successfully: ahibi/e5uelm3hcoxhmhxn1qiw by user anonymous","service":"ahibi-association","timestamp":"2025-10-06 13:19:37"}
 {"level":"info","message":"Photo uploaded successfully: ahibi/grsoaiimv8jvotjtqzgk by user anonymous","service":"ahibi-association","timestamp":"2025-10-24 13:49:53"}
 {"level":"info","message":"Photo uploaded successfully: venues/evi8woziczwh9jvjuvkd by user anonymous","service":"ahibi-association","timestamp":"2025-10-26 23:45:53"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/rquglqy0vduwwtp3xo0l by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:00:55"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/fy9z1iqbhbxypyasw2us by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:01:20"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/knw7xkn44ws8g97llvix by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:03:24"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/iqkpsoqctuy9lqt5yk4w by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:04:14"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/ra6rtkscghexzz4jwses by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:09:58"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/aysrwzfon4nzzb7hcsza by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:10:12"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/ccsorj7gedtshq2ysrnn by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:11:42"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/hg7y05v0qagvlv2smuyr by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:12:00"}
+{"level":"info","message":"Artist image uploaded successfully: artist-gallery/firp41mceiag2wphexu5 by user 68adf0d330bb08ecc8bd6994","service":"ahibi-association","timestamp":"2025-11-01 00:12:47"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-11-01 00:16:39"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-11-01 00:16:55"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-11-01 00:17:08"}
+{"level":"info","message":"Photo uploaded successfully: gallery/izxqrpfahs1dr4xfm9e3 by user anonymous","service":"ahibi-association","timestamp":"2025-11-01 00:17:53"}
+{"level":"info","message":"Photo uploaded successfully: gallery/fy2qsxkuw06wn6mcvecu by user anonymous","service":"ahibi-association","timestamp":"2025-11-01 00:18:58"}
+{"level":"info","message":"Photo uploaded successfully: gallery/xjpzqoev8clk5agk3xaz by user anonymous","service":"ahibi-association","timestamp":"2025-11-01 00:21:01"}
+{"level":"info","message":"Photo uploaded successfully: cover/o7rumtuy8ii0xruigku6 by user anonymous","service":"ahibi-association","timestamp":"2025-11-01 01:28:08"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/acvbazbh1amleonnhlmx by user anonymous","service":"ahibi-association","timestamp":"2025-11-01 01:33:18"}

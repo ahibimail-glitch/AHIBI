@@ -2,8 +2,18 @@ const ArtistBooking = require('../models/ArtistBooking');
 const ArtistAvailability = require('../models/ArtistAvailability');
 const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
+const PaymentTransaction = require('../models/PaymentTransaction');
 const ApiResponse = require('../utils/apiResponse');
+const ArtistNotificationService = require('../services/artistNotificationService');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 const { validationResult } = require('express-validator');
+
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 /**
  * @desc    Search artists with availability
@@ -138,7 +148,39 @@ exports.getArtistCalendar = async (req, res) => {
       date: { $gte: startDate, $lte: endDate }
     }).sort({ date: 1 });
 
-    // Format calendar data
+    // Format availability array for frontend
+    const availabilityArray = availability.map(avail => {
+      const dateKey = avail.date.toISOString().split('T')[0];
+      
+      // Map all time slots (both available and booked)
+      const timeSlots = avail.timeSlots.map(slot => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        isAvailable: slot.isAvailable,
+        isBooked: slot.isBooked || false,
+        price: slot.price || artist.basePrice,
+        notes: slot.note || '',
+        bookingId: slot.bookingId || undefined
+      }));
+      
+      return {
+        _id: avail._id.toString(),
+        date: dateKey,
+        dayStatus: avail.dayStatus,
+        timeSlots: timeSlots,
+        specialPricing: {
+          isSpecial: avail.specialPricing.isSpecialDay || false,
+          multiplier: avail.specialPricing.multiplier,
+          fixedPrice: avail.specialPricing.fixedPrice,
+          reason: avail.specialPricing.reason
+        },
+        minimumBookingDuration: avail.minimumBookingDuration,
+        maximumBookingDuration: avail.maximumBookingDuration,
+        advanceBookingDays: avail.advanceBookingDays
+      };
+    });
+
+    // Also include calendarData for backward compatibility
     const calendarData = {};
     availability.forEach(avail => {
       const dateKey = avail.date.toISOString().split('T')[0];
@@ -164,7 +206,8 @@ exports.getArtistCalendar = async (req, res) => {
       artist,
       month: currentMonth,
       year: currentYear,
-      calendarData
+      availability: availabilityArray,
+      calendarData // For backward compatibility
     });
 
   } catch (error) {
@@ -181,7 +224,12 @@ exports.getArtistCalendar = async (req, res) => {
 exports.createBookingRequest = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+    console.error('Validation errors:', errors.array());
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Validation failed',
+      errors: errors.array() 
+    });
   }
 
   try {
@@ -193,63 +241,121 @@ exports.createBookingRequest = async (req, res) => {
       specialRequirements
     } = req.body;
 
+    console.log('Received booking request:', {
+      artistId,
+      event: event?.name,
+      date: event?.date,
+      startTime: event?.startTime,
+      endTime: event?.endTime,
+      venue: event?.venue,
+      requestedAmount
+    });
+
     // Validate artist exists and is approved
     const artist = await Artist.findById(artistId);
     if (!artist || artist.approvalStatus !== 'approved') {
       return ApiResponse.notFound(res, 'Artist not found or not approved');
     }
 
-    // Check if the requested time slot is available
-    const availability = await ArtistAvailability.findOne({
+    // Check if there's already a booking for this date (only 1 booking per day)
+    // Parse date correctly - handle both ISO string and Date object
+    const eventDate = event.date instanceof Date ? new Date(event.date) : new Date(event.date);
+    const startOfDay = new Date(eventDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(eventDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const existingBooking = await ArtistBooking.findOne({
       artist: artistId,
-      date: new Date(event.date)
+      'event.date': {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      'booking.status': { $in: ['pending', 'accepted', 'confirmed'] }
     });
 
-    if (!availability) {
-      return ApiResponse.badRequest(res, 'Artist has no availability set for this date');
+    if (existingBooking) {
+      return ApiResponse.badRequest(res, 'This artist already has a booking for this date. Only one booking per day is allowed.');
     }
 
-    const isAvailable = availability.isTimeSlotAvailable(event.startTime, event.endTime);
-    if (!isAvailable) {
-      return ApiResponse.badRequest(res, 'Requested time slot is not available');
-    }
-
-    // Check advance booking requirement
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    const daysDifference = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-    
-    if (daysDifference < availability.advanceBookingDays) {
-      return ApiResponse.badRequest(res, 
-        `Booking must be made at least ${availability.advanceBookingDays} days in advance`
-      );
-    }
-
-    // Check booking duration
+    // Calculate duration hours first (needed regardless of availability)
     const startTime = new Date(`2000-01-01T${event.startTime}:00`);
     const endTime = new Date(`2000-01-01T${event.endTime}:00`);
     const durationHours = (endTime - startTime) / (1000 * 60 * 60);
 
-    if (durationHours < availability.minimumBookingDuration) {
-      return ApiResponse.badRequest(res, 
-        `Minimum booking duration is ${availability.minimumBookingDuration} hours`
-      );
+    // Check if availability is set for this date (optional - by default all dates are available)
+    const availability = await ArtistAvailability.findOne({
+      artist: artistId,
+      date: eventDate
+    });
+
+    let slotBooked = false;
+    let bookingId = null;
+
+    if (availability) {
+      // If availability is set, validate against it
+      const isAvailable = availability.isTimeSlotAvailable(event.startTime, event.endTime);
+      if (!isAvailable) {
+        return ApiResponse.badRequest(res, 'Requested time slot is not available');
+      }
+
+      // Check advance booking requirement
+      const today = new Date();
+      const daysDifference = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+      
+      if (daysDifference < availability.advanceBookingDays) {
+        return ApiResponse.badRequest(res, 
+          `Booking must be made at least ${availability.advanceBookingDays} days in advance`
+        );
+      }
+
+      // Check booking duration
+      if (durationHours < availability.minimumBookingDuration) {
+        return ApiResponse.badRequest(res, 
+          `Minimum booking duration is ${availability.minimumBookingDuration} hours`
+        );
+      }
+
+      if (durationHours > availability.maximumBookingDuration) {
+        return ApiResponse.badRequest(res, 
+          `Maximum booking duration is ${availability.maximumBookingDuration} hours`
+        );
+      }
+
+      // Mark the time slot as booked in availability (direct booking)
+      slotBooked = availability.bookTimeSlot(event.startTime, event.endTime, null);
+      if (!slotBooked) {
+        return ApiResponse.badRequest(res, 'Failed to book the time slot. It may have been booked by another organizer.');
+      }
+      await availability.save();
+    } else {
+      // No availability set - allow booking with basic validations (default: all dates available)
+      const today = new Date();
+      const daysDifference = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+      
+      // Default to at least 1 day in advance if no availability is set
+      if (daysDifference < 1) {
+        return ApiResponse.badRequest(res, 'Booking must be made at least 1 day in advance');
+      }
+      
+      // Check basic duration (at least 1 hour, max 12 hours)
+      if (durationHours < 1) {
+        return ApiResponse.badRequest(res, 'Minimum booking duration is 1 hour');
+      }
+      
+      if (durationHours > 12) {
+        return ApiResponse.badRequest(res, 'Maximum booking duration is 12 hours');
+      }
     }
 
-    if (durationHours > availability.maximumBookingDuration) {
-      return ApiResponse.badRequest(res, 
-        `Maximum booking duration is ${availability.maximumBookingDuration} hours`
-      );
-    }
-
-    // Create booking request
+    // Create booking with pending status - will be confirmed after payment
     const booking = new ArtistBooking({
       artist: artistId,
       organizer: req.user.id,
       event: {
         name: event.name,
         description: event.description,
-        date: new Date(event.date),
+        date: eventDate,
         startTime: event.startTime,
         endTime: event.endTime,
         duration: durationHours,
@@ -258,17 +364,20 @@ exports.createBookingRequest = async (req, res) => {
         expectedAudience: event.expectedAudience
       },
       booking: {
-        status: 'pending',
-        requestedAmount: requestedAmount
+        status: 'pending', // Pending until payment is confirmed
+        requestedAmount: requestedAmount,
+        finalAmount: requestedAmount,
+        paymentStatus: 'pending'
       },
       contract: {
+        termsAccepted: true,
         organizerRequirements,
         specialRequirements
       }
     });
 
     // Add initial timeline entry
-    booking.addTimelineEntry('Booking request created', 'organizer', 'Initial booking request submitted');
+    booking.addTimelineEntry('Booking request created', 'organizer', 'Booking request created, awaiting payment');
 
     // Add initial message
     booking.communication.messages.push({
@@ -279,13 +388,60 @@ exports.createBookingRequest = async (req, res) => {
 
     await booking.save();
 
+    // Create Razorpay order for payment
+    const organizer = await Organizer.findById(req.user.id);
+    const artistData = await Artist.findById(artistId);
+    
+    // Ensure Razorpay is initialized
+    if (!razorpay) {
+      return ApiResponse.serverError(res, 'Payment gateway not initialized');
+    }
+
+    const amountInPaise = Math.round(requestedAmount * 100); // Convert to paise
+    
+    console.log('Creating Razorpay order:', {
+      amount: amountInPaise,
+      currency: 'INR',
+      bookingId: booking._id.toString()
+    });
+    
+    const orderOptions = {
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: `ARTIST_BOOKING_${booking._id}`,
+      notes: {
+        bookingId: booking._id.toString(),
+        artistId: artistId.toString(),
+        organizerId: req.user.id.toString(),
+        artistName: artistData.name,
+        organizerName: organizer.name,
+        eventName: event.name,
+        eventDate: event.date,
+        amount: requestedAmount.toString()
+      }
+    };
+
+    let razorpayOrder;
+    try {
+      razorpayOrder = await razorpay.orders.create(orderOptions);
+      console.log('Razorpay order created:', razorpayOrder.id);
+    } catch (error) {
+      console.error('Error creating Razorpay order:', error);
+      return ApiResponse.serverError(res, `Failed to create payment order: ${error.message || error.error?.description || 'Unknown error'}`);
+    }
+
+    // Store payment order ID in booking (temporary until payment is verified)
+    booking.booking.paymentOrderId = razorpayOrder.id;
+    await booking.save();
+
     // Populate the booking with artist and organizer details
     const populatedBooking = await ArtistBooking.findById(booking._id)
       .populate('artist', 'name email phone')
       .populate('organizer', 'name email phone');
 
-    return ApiResponse.success(res, 'Booking request created successfully', {
-      booking: populatedBooking
+    return ApiResponse.success(res, 'Booking created. Please proceed with payment.', {
+      booking: populatedBooking,
+      paymentOrder: razorpayOrder
     }, 201);
 
   } catch (error) {
@@ -552,6 +708,114 @@ exports.addBookingMessage = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Verify payment and confirm booking
+ * @route   POST /api/organizer/bookings/:id/payment/verify
+ * @access  Private (Organizer only)
+ */
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+
+    // Verify signature
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return ApiResponse.badRequest(res, 'Invalid payment signature');
+    }
+
+    // Find booking
+    const booking = await ArtistBooking.findOne({
+      _id: id,
+      organizer: req.user.id,
+      'booking.status': 'pending'
+    }).populate('artist', 'name email phone').populate('organizer', 'name email phone');
+
+    if (!booking) {
+      return ApiResponse.notFound(res, 'Booking not found or already processed');
+    }
+
+    // Verify the order ID matches
+    if (booking.booking.paymentOrderId !== razorpay_order_id) {
+      return ApiResponse.badRequest(res, 'Payment order ID mismatch');
+    }
+
+    // Create payment transaction record
+    const paymentTransaction = new PaymentTransaction({
+      bookingId: booking._id,
+      bookingType: 'artist',
+      amount: booking.booking.finalAmount,
+      paymentMethod: 'online',
+      transactionId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      paymentGateway: 'razorpay',
+      status: 'completed',
+      paymentDetails: {
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id,
+        signature: razorpay_signature
+      }
+    });
+
+    await paymentTransaction.save();
+
+    // Update booking status to confirmed
+    booking.booking.status = 'confirmed';
+    booking.booking.paymentStatus = 'fully_paid';
+    booking.booking.paymentDetails = {
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      signature: razorpay_signature,
+      paymentGateway: 'razorpay'
+    };
+
+    // Add timeline entry (use 'admin' for system actions)
+    booking.addTimelineEntry('Payment confirmed', 'admin', `Payment of ₹${booking.booking.finalAmount} confirmed`);
+
+    // Update availability slot if exists
+    const availability = await ArtistAvailability.findOne({
+      artist: booking.artist._id,
+      date: booking.event.date
+    });
+
+    if (availability) {
+      const slot = availability.timeSlots.find(s => 
+        s.startTime <= booking.event.startTime && 
+        s.endTime >= booking.event.endTime
+      );
+      if (slot && !slot.isBooked) {
+        slot.isBooked = true;
+        slot.bookingId = booking._id;
+        availability.updateDayStatus();
+        await availability.save();
+      }
+    }
+
+    await booking.save();
+
+    // Send notification to artist
+    try {
+      await ArtistNotificationService.notifyBookingStatusUpdate(booking._id, 'confirmed');
+    } catch (notificationError) {
+      console.error('Error sending booking notification:', notificationError);
+    }
+
+    return ApiResponse.success(res, 'Payment verified and booking confirmed', {
+      booking,
+      paymentTransaction
+    });
+
+  } catch (error) {
+    console.error('Verify Payment Error:', error);
+    return ApiResponse.serverError(res, 'Error verifying payment', error.message);
+  }
+};
+
 module.exports = {
   searchArtistsWithAvailability: exports.searchArtistsWithAvailability,
   getArtistCalendar: exports.getArtistCalendar,
@@ -561,5 +825,6 @@ module.exports = {
   acceptCounterOffer: exports.acceptCounterOffer,
   rejectCounterOffer: exports.rejectCounterOffer,
   cancelBooking: exports.cancelBooking,
-  addBookingMessage: exports.addBookingMessage
+  addBookingMessage: exports.addBookingMessage,
+  verifyPayment: exports.verifyPayment
 };

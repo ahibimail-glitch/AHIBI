@@ -66,3 +66,39 @@
     overflow: hidden;
   }
 }
+
+/* Razorpay Modal Fixes - Ensure proper z-index and pointer events */
+.razorpay-container {
+  z-index: 10000 !important;
+}
+
+.razorpay-checkout-frame {
+  z-index: 10001 !important;
+}
+
+.razorpay-payment-button {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure Razorpay modal elements are clickable */
+iframe[src*="razorpay"] {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+/* Fix for Razorpay overlay */
+.razorpay-overlay,
+div[id^="razorpay"],
+div[class*="razorpay"] {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure text selection doesn't interfere with Razorpay modal */
+.razorpay-checkout-frame * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}

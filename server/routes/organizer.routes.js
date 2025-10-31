@@ -91,4 +91,13 @@ router.post('/bookings/:id/message', [
   check('message', 'Message is required').notEmpty()
 ], organizerBookingController.addBookingMessage);
 
+// Payment routes for artist bookings
+router.post('/bookings/:id/payment/verify', [
+  protect,
+  authorize('organizer'),
+  check('razorpay_payment_id', 'Payment ID is required').notEmpty(),
+  check('razorpay_order_id', 'Order ID is required').notEmpty(),
+  check('razorpay_signature', 'Signature is required').notEmpty()
+], organizerBookingController.verifyPayment);
+
 module.exports = router;
