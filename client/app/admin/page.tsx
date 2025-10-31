@@ -1,323 +1,278 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  LayoutDashboard,
-  Users,
-  Building2,
+import { useState } from "react";
+import AdminLayout from "./components/AdminLayout";
+import EventApprovalList from "./components/EventApprovalList";
+import VenueApprovalList from "./components/VenueApprovalList";
+import Artists from "./components/Artists";
+import ArtistManagement from "./components/ArtistManagement";
+import BookingManagement from "./components/BookingManagement";
+import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
+import AnnieManualBooking from "./components/AnnieManualBooking";
+import MelitaBookings from "./components/MelitaBookings";
+import { 
+  Users, 
+  Calendar, 
+  Building2, 
+  BarChart3, 
   Music,
-  BarChart3,
-  Settings,
-  Shield,
-  Activity,
-  UserCheck,
-  CalendarCheck2,
-  ListOrdered,
-  PlusCircle,
-  Star,
-  Bell,
-  Calendar,
+  TrendingUp,
   DollarSign,
-  Ticket,
-  QrCode,
-  ImageIcon,
-  Plus,
-  Bike,
+  Clock,
+  UserCheck
 } from "lucide-react";
 
-// Import child components
-import Dashboard from "./components/Dashboard";
-import UsersComponent from "./components/Users";
-import Bookings from "./components/Bookings";
-import Organizers from "./components/Organizers";
-import Artists from "./components/Artists";
-import Venues from "./components/Venues";
-import Events from "./components/Events";
-import System from "./components/System";
-import CreateEventForm from "./components/CreateEventForm";
-import Analytics from "./components/Analytics";
-import SettingsComponent from "./components/Settings";
-import ApprovedEvents from "./components/ApprovedEvents";
-import HeroImages from "./components/HeroImages";
-import FC25Players from "./components/FC25Players";
-import FailedPayments from "./components/FailedPayments";
-import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
-import AnnieMusicalQrScanner from "./components/AnnieMusicalQrScanner";
-import AnnieManualBooking from "./components/AnnieManualBooking";
-import AnnieFailedBookings from "./components/AnnieFailedBookings";
-import NISRegistrations from "./components/NISRegistrations";
-import BikerBash from "./components/BikerBash";
-import Coupons from "./components/Coupons";
-import MelitaBookings from "./components/MelitaBookings";
-import FeaturedEvents from "./components/FeaturedEvents";
-// import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
-
-// --- Helper component for sidebar buttons ---
-interface SidebarButtonProps {
-  icon: React.ElementType;
-  label: string;
-  active: boolean;
-  onClick?: () => void;
-}
-
-const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonProps) => (
-  <Button
-    variant={active ? "secondary" : "ghost"}
-    className="w-full justify-start"
-    {...props}
-  >
-    <Icon className="mr-2 h-4 w-4" />
-    {label}
-  </Button>
-);
-
-// --- Main Admin Dashboard Component ---
-export default function AdminDashboard() {
-  const router = useRouter();
-  
-  // Redirect to login if not authenticated or missing required data
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("admin_token");
-      const adminId = localStorage.getItem("admin_id");
-      
-      if (!token || !adminId) {
-        // Clear any partial/invalid auth data
-        localStorage.removeItem("admin_token");
-        localStorage.removeItem("admin_id");
-        router.replace("/admin/login");
-      }
-    }
-  }, [router]);
-
+export default function AdminPage() {
   const [activeView, setActiveView] = useState("dashboard");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // --- Mock Data (replace with API calls) ---
-  const stats = [
-    { title: "Total Users", value: "15,847", icon: Users, change: "+12.5%", color: "text-blue-600" },
-    { title: "Active Events", value: "342", icon: Calendar, change: "+8.2%", color: "text-green-600" },
-    { title: "Registered Venues", value: "1,256", icon: Building2, change: "+15.3%", color: "text-purple-600" },
-    { title: "Artists", value: "2,891", icon: Music, change: "+20.1%", color: "text-orange-600" },
-    { title: "Monthly Revenue", value: "₹4,67,890", icon: DollarSign, change: "+25.7%", color: "text-emerald-600" },
-    { title: "Tickets Sold", value: "12,456", icon: Ticket, change: "+18.9%", color: "text-red-600" },
-  ];
-
-  const allUsers = [
-    { id: "usr_1", name: "Aarav Sharma", email: "aarav.sharma@example.com", mobile: "9876543210", createdOn: "2025-01-20" },
-    { id: "usr_2", name: "Diya Patel", email: "diya.patel@example.com", mobile: "9876543211", createdOn: "2025-02-15" },
-    { id: "usr_3", name: "Rohan Kumar", email: "rohan.kumar@example.com", mobile: "9876543212", createdOn: "2025-03-10" },
-  ];
-
-  const filteredUsers = allUsers.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.mobile.includes(searchQuery)
-  );
 
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return <Dashboard stats={stats} setActiveView={setActiveView} />;
-      case "fc25-players":
-        return <FC25Players />;
-      case "organizer-approvals":
-        return <Organizers />;
+        return <DashboardContent />;
+      case "events":
+        return <EventApprovalList />;
+      case "venues":
+        return <VenueApprovalList />;
+      case "artists":
+        return <Artists />;
       case "artist-approvals":
         return <Artists />;
-      case "venue-approvals":
-        return <Venues />;
-      case "event-approvals":
-        return <Events />;
-      case "approved-events":
-        return <ApprovedEvents />;
-      case "users":
-        return <UsersComponent searchQuery={searchQuery} setSearchQuery={setSearchQuery} users={filteredUsers} />;
-      case "bookings":
-        return <Bookings />;
-      case "create-event":
-        return <CreateEventForm onSuccess={() => setActiveView("dashboard")} />;
-      case "analytics":
-        return <Analytics />;
-      case "settings":
-        return <SettingsComponent />;
-      case "failed-payments":
-        return <FailedPayments />;
-      case "system":
-        return <System />;
-      case "hero-images":
-        return <HeroImages />;
-      case "qr-scanner":
-        router.push("/admin/scan");
-        return null;
-      case "manual-booking":
-        router.push("/admin/booking");
-        return null;
+      case "all-artists":
+        return <ArtistManagement />;
+      case "artist-analytics":
+        return <div>Artist Analytics Coming Soon...</div>;
+      case "all-bookings":
+        return <BookingManagement />;
+      case "pending-bookings":
+        return <BookingManagement />;
+      case "booking-analytics":
+        return <div>Booking Analytics Coming Soon...</div>;
       case "annie-musical-bookings":
         return <AnnieMusicalBookings />;
-      case "annie-musical-qr":
-        return <AnnieMusicalQrScanner />;
       case "annie-manual-booking":
         return <AnnieManualBooking />;
-      case "annie-failed-bookings":
-        return <AnnieFailedBookings />;
-      case "nis-registrations":
-        return <NISRegistrations />;
-      case "bikerbash":
-        return <BikerBash />;
-      case "coupons":
-        return <Coupons />;
       case "melita-bookings":
         return <MelitaBookings />;
-      case "featured-events":
-        return <FeaturedEvents />;
-      // case "aiko-hall":
-      //   return <AikoHallManagement />;
+      case "payments":
+        return <div>Payment Management Coming Soon...</div>;
+      case "notifications":
+        return <div>Notifications Management Coming Soon...</div>;
+      case "settings":
+        return <div>Settings Coming Soon...</div>;
       default:
-        return <Dashboard stats={stats} setActiveView={setActiveView} />;
+        return <DashboardContent />;
     }
   };
-  
-  // Special full-width layout without sidebar for Annie Musical QR view
-  if (activeView === "annie-musical-qr") {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-          <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
-              </div>
-              <div className="flex items-center space-x-3 md:space-x-4">
-                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                  <Activity className="h-3 w-3 mr-1" /> System Healthy
-                </Badge>
-                <Button variant="outline" size="icon"><Bell className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 bg-gradient-to-br from-gray-50 to-blue-50">
-          <div className="p-4 md:p-8">
-            <AnnieMusicalQrScanner />
-          </div>
-        </main>
-      </div>
-    );
-  }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* --- Sidebar --- */}
-      <aside className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-10 overflow-y-auto">
-        <div className="flex items-center space-x-3 mb-6 px-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Ahibi Admin</h2>
-            <p className="text-xs text-gray-600">Control Center</p>
-          </div>
-        </div>
-
-        <nav className="flex flex-col space-y-2">
-          <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
-          <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => setActiveView("bookings")} />
-          <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => setActiveView("users")} />
-          <SidebarButton icon={ListOrdered} label="FC25 Players" active={activeView === "fc25-players"} onClick={() => setActiveView("fc25-players")} />
-          <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
-          <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
-          <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Annie</h3>
-          </div>
-          <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
-          <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => setActiveView("annie-manual-booking")} />
-          {/* <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => setActiveView("annie-failed-bookings")} /> */}
-          <SidebarButton icon={QrCode} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
-
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Melita</h3>
-          </div>
-          <SidebarButton icon={Ticket} label="Melita Bookings" active={activeView === "melita-bookings"} onClick={() => setActiveView("melita-bookings")} />
-
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
-          </div>
-          <SidebarButton icon={UserCheck} label="Organizers" active={activeView === "organizer-approvals"} onClick={() => setActiveView("organizer-approvals")} />
-          <SidebarButton icon={Music} label="Artists" active={activeView === "artist-approvals"} onClick={() => setActiveView("artist-approvals")} />
-          <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => setActiveView("venue-approvals")} />
-          <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => setActiveView("event-approvals")} />
-          <SidebarButton 
-            icon={CalendarCheck2} 
-            label="Approved Events" 
-            active={activeView === "approved-events"} 
-            onClick={() => setActiveView("approved-events")} 
-          />
-          <SidebarButton 
-            icon={Star} 
-            label="Featured Events" 
-            active={activeView === "featured-events"} 
-            onClick={() => setActiveView("featured-events")} 
-          />
-
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Events & Programs</h3>
-          </div>
-          <SidebarButton icon={Users} label="NIS Registrations" active={activeView === "nis-registrations"} onClick={() => setActiveView("nis-registrations")} />
-          <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => setActiveView("bikerbash")} />
-          
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
-          </div>
-          <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => setActiveView("coupons")} />
-          {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => setActiveView("aiko-hall")} /> */}
-          <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => setActiveView("create-event")} />
-          <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => setActiveView("hero-images")} />
-          <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => setActiveView("analytics")} />
-          <SidebarButton icon={Settings} label="Settings" active={activeView === "settings"} onClick={() => setActiveView("settings")} />
-          <SidebarButton icon={Shield} label="System Health" active={activeView === "system"} onClick={() => setActiveView("system")} />
-        </nav>
-
-        <div className="mt-auto">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <h4 className="font-bold text-blue-800">Need Help?</h4>
-              <p className="text-xs text-blue-700 mt-1">Check our documentation or contact support.</p>
-              <Button size="sm" className="w-full mt-3 bg-blue-600 hover:bg-blue-700">Get Support</Button>
-            </CardContent>
-          </Card>
-        </div>
-      </aside>
-
-      {/* --- Main Content --- */}
-      <main className="flex-1 ml-64 bg-gradient-to-br from-gray-50 to-blue-50">
-        <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                  <Activity className="h-3 w-3 mr-1" /> System Healthy
-                </Badge>
-                <Button variant="outline" size="icon"><Bell className="h-4 w-4" /></Button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="p-8">
-          {renderContent()}
-        </div>
-      </main>
-    </div>
+    <AdminLayout activeView={activeView} onViewChange={setActiveView}>
+      {renderContent()}
+    </AdminLayout>
   );
 }
+
+// Dashboard Content Component
+const DashboardContent = () => {
+  return (
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">Welcome to Ahibi Admin</h1>
+        <p className="text-blue-100 text-lg">
+          Manage your platform efficiently with comprehensive tools and analytics
+        </p>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          title="Total Users"
+          value="2,847"
+          change="+12.5%"
+          changeType="positive"
+          icon={Users}
+          color="blue"
+        />
+        <MetricCard
+          title="Active Events"
+          value="156"
+          change="+8.2%"
+          changeType="positive"
+          icon={Calendar}
+          color="green"
+        />
+        <MetricCard
+          title="Total Revenue"
+          value="₹4.2M"
+          change="+15.3%"
+          changeType="positive"
+          icon={DollarSign}
+          color="purple"
+        />
+        <MetricCard
+          title="Pending Approvals"
+          value="23"
+          change="-5.1%"
+          changeType="negative"
+          icon={Clock}
+          color="yellow"
+        />
+      </div>
+
+      {/* Quick Stats Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Artist Stats */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Artist Overview</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Music className="w-5 h-5 text-blue-600" />
+                </div>
+                <span className="text-gray-700">Total Artists</span>
+              </div>
+              <span className="font-semibold text-gray-900">342</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UserCheck className="w-5 h-5 text-green-600" />
+                </div>
+                <span className="text-gray-700">Approved</span>
+              </div>
+              <span className="font-semibold text-gray-900">298</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="w-5 h-5 text-yellow-600" />
+                </div>
+                <span className="text-gray-700">Pending</span>
+              </div>
+              <span className="font-semibold text-gray-900">44</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Booking Stats */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Booking Overview</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                </div>
+                <span className="text-gray-700">Total Bookings</span>
+              </div>
+              <span className="font-semibold text-gray-900">1,247</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <UserCheck className="w-5 h-5 text-green-600" />
+                </div>
+                <span className="text-gray-700">Confirmed</span>
+              </div>
+              <span className="font-semibold text-gray-900">1,089</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Clock className="w-5 h-5 text-yellow-600" />
+                </div>
+                <span className="text-gray-700">Pending</span>
+              </div>
+              <span className="font-semibold text-gray-900">158</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+        <div className="space-y-4">
+          {[
+            { action: "New artist registration", user: "Rahul Sharma", time: "2 minutes ago", type: "artist" },
+            { action: "Booking confirmed", user: "Wedding Bells Pvt Ltd", time: "15 minutes ago", type: "booking" },
+            { action: "Event approved", user: "Tech Conference 2024", time: "1 hour ago", type: "event" },
+            { action: "Venue verification", user: "Grand Ballroom", time: "2 hours ago", type: "venue" },
+            { action: "Payment received", user: "₹45,000 from Priya Events", time: "3 hours ago", type: "payment" }
+          ].map((activity, index) => (
+            <div key={index} className="flex items-center space-x-4 py-3 border-b border-gray-100 last:border-b-0">
+              <div className={`p-2 rounded-full ${
+                activity.type === 'artist' ? 'bg-blue-100' :
+                activity.type === 'booking' ? 'bg-green-100' :
+                activity.type === 'event' ? 'bg-purple-100' :
+                activity.type === 'venue' ? 'bg-yellow-100' :
+                'bg-gray-100'
+              }`}>
+                {activity.type === 'artist' && <Music className="w-4 h-4 text-blue-600" />}
+                {activity.type === 'booking' && <Calendar className="w-4 h-4 text-green-600" />}
+                {activity.type === 'event' && <Users className="w-4 h-4 text-purple-600" />}
+                {activity.type === 'venue' && <Building2 className="w-4 h-4 text-yellow-600" />}
+                {activity.type === 'payment' && <DollarSign className="w-4 h-4 text-gray-600" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                <p className="text-sm text-gray-500">{activity.user}</p>
+              </div>
+              <span className="text-xs text-gray-400">{activity.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Metric Card Component
+const MetricCard = ({ 
+  title, 
+  value, 
+  change, 
+  changeType, 
+  icon: Icon, 
+  color 
+}: {
+  title: string;
+  value: string;
+  change: string;
+  changeType: 'positive' | 'negative';
+  icon: any;
+  color: string;
+}) => {
+  const colorClasses = {
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-green-100 text-green-600',
+    purple: 'bg-purple-100 text-purple-600',
+    yellow: 'bg-yellow-100 text-yellow-600'
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <div className="flex items-center mt-2">
+            <TrendingUp className={`w-4 h-4 mr-1 ${
+              changeType === 'positive' ? 'text-green-500' : 'text-red-500'
+            }`} />
+            <span className={`text-sm font-medium ${
+              changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {change}
+            </span>
+            <span className="text-sm text-gray-500 ml-1">vs last month</span>
+          </div>
+        </div>
+        <div className={`p-3 rounded-full ${colorClasses[color as keyof typeof colorClasses]}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+      </div>
+    </div>
+  );
+};

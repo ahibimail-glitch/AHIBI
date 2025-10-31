@@ -6,7 +6,8 @@ import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import { 
   Star, MapPin, Phone, Mail, Instagram, Youtube, 
   Calendar, Clock, Award, Play, Image as ImageIcon,
-  Music, Users, DollarSign, CheckCircle, XCircle
+  Music, Users, DollarSign, CheckCircle, XCircle,
+  Facebook, Twitter, Globe, ExternalLink
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -395,39 +396,101 @@ export default function PublicArtistProfile() {
                   <CardHeader>
                     <CardTitle>Social Media</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {artist.socialLinks.instagram && (
-                      <a 
-                        href={artist.socialLinks.instagram} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-3 text-pink-600 hover:text-pink-700"
-                      >
-                        <Instagram className="h-5 w-5" />
-                        <span>Instagram</span>
-                      </a>
-                    )}
-                    {artist.socialLinks.youtube && (
-                      <a 
-                        href={artist.socialLinks.youtube} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-3 text-red-600 hover:text-red-700"
-                      >
-                        <Youtube className="h-5 w-5" />
-                        <span>YouTube</span>
-                      </a>
-                    )}
-                    {artist.socialLinks.website && (
-                      <a 
-                        href={artist.socialLinks.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-3 text-blue-600 hover:text-blue-700"
-                      >
-                        <Music className="h-5 w-5" />
-                        <span>Website</span>
-                      </a>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {artist.socialLinks.instagram && (
+                        <a 
+                          href={artist.socialLinks.instagram} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-lg border border-pink-200 bg-pink-50 hover:bg-pink-100 transition-colors group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Instagram className="h-5 w-5 text-pink-600" />
+                            <span className="font-medium text-pink-700">Instagram</span>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-pink-500 group-hover:text-pink-600" />
+                        </a>
+                      )}
+                      
+                      {artist.socialLinks.youtube && (
+                        <a 
+                          href={artist.socialLinks.youtube} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition-colors group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Youtube className="h-5 w-5 text-red-600" />
+                            <span className="font-medium text-red-700">YouTube</span>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-red-500 group-hover:text-red-600" />
+                        </a>
+                      )}
+                      
+                      {artist.socialLinks.facebook && (
+                        <a 
+                          href={artist.socialLinks.facebook} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Facebook className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium text-blue-700">Facebook</span>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-blue-500 group-hover:text-blue-600" />
+                        </a>
+                      )}
+                      
+                      {artist.socialLinks.twitter && (
+                        <a 
+                          href={artist.socialLinks.twitter} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-lg border border-sky-200 bg-sky-50 hover:bg-sky-100 transition-colors group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Twitter className="h-5 w-5 text-sky-600" />
+                            <span className="font-medium text-sky-700">Twitter</span>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-sky-500 group-hover:text-sky-600" />
+                        </a>
+                      )}
+                      
+                      {artist.socialLinks.spotify && (
+                        <a 
+                          href={artist.socialLinks.spotify} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 transition-colors group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Music className="h-5 w-5 text-green-600" />
+                            <span className="font-medium text-green-700">Spotify</span>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-green-500 group-hover:text-green-600" />
+                        </a>
+                      )}
+                      
+                      {artist.socialLinks.website && (
+                        <a 
+                          href={artist.socialLinks.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Globe className="h-5 w-5 text-gray-600" />
+                            <span className="font-medium text-gray-700">Website</span>
+                          </div>
+                          <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-gray-600" />
+                        </a>
+                      )}
+                    </div>
+                    
+                    {(!artist.socialLinks || Object.keys(artist.socialLinks).length === 0) && (
+                      <p className="text-gray-500 text-center py-4">No social media links available.</p>
                     )}
                   </CardContent>
                 </Card>
