@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, FileText, Calendar, Clock, MapPin, User, Phone, Mail, DollarSign } from "lucide-react";
+import { Download, Calendar, Clock, MapPin, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 // Dynamic imports for PDF generation
 // import jsPDF from 'jspdf';
 // import html2canvas from 'html2canvas';
@@ -95,9 +95,8 @@ export default function ArtistBookingInvoice({ booking }: ArtistBookingInvoicePr
       const jsPDF = (await import('jspdf')).default;
 
       const canvas = await html2canvas(invoiceRef.current, {
-        scale: 2,
         useCORS: true,
-        backgroundColor: '#ffffff',
+        background: '#ffffff',
         logging: false,
       });
 

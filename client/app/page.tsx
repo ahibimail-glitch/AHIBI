@@ -43,8 +43,8 @@ export default function HomePage() {
 
   const stats = [
     { number: "30+", label: "Events Hosted", icon: Calendar, gradient: "from-blue-500 to-cyan-500" },
-    { number: "60,000+", label: "Tickets Sold", icon: Users, gradient: "from-purple-500 to-pink-500" },
-    { number: "50,000+", label: "Happy Users", icon: Star, gradient: "from-orange-500 to-red-500" },
+    { number: "1,00,000+", label: "Tickets Sold", icon: Users, gradient: "from-purple-500 to-pink-500" },
+    { number: "1,00,000+", label: "Happy Users", icon: Star, gradient: "from-orange-500 to-red-500" },
   ]
 
   // Fetch hero images from backend
