@@ -195,7 +195,7 @@ export default function ArtistsPage() {
           </div>
         </div>
       </section>
-      <ArtistCarousel/>
+      {/* <ArtistCarousel/> */}
 
       {/* Search and Filters */}
       <section className="py-8 bg-muted/50">
