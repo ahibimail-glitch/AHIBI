@@ -51,14 +51,14 @@ export default function Navbar() {
             <Link href="/allArtists" className="hover:text-white transition">
               Artists
             </Link>
-            <Link href="/partners" className="hover:text-white transition">
-              Partners
+            <Link href="/allVenues" className="hover:text-white transition">
+              Venues
+            </Link>
+            <Link href="/allOrganizers" className="hover:text-white transition">
+              Organizers
             </Link>
             <Link href="/about" className="hover:text-white transition">
               About
-            </Link>
-            <Link href="/allVenues" className="hover:text-white transition">
-              Venues
             </Link>
           </div>
 
@@ -128,11 +128,11 @@ export default function Navbar() {
                 Venue
               </Link>
               <Link
-                href="/partners"
+                href="/allOrganizers"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="hover:text-white transition"
               >
-                Partners
+                Organizers
               </Link>
               <Link
                 href="/about"

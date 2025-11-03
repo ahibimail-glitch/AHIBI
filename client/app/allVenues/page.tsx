@@ -1,338 +1,368 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  MapPin,
-  Users,
-  Star,
-  Search,
-  Filter,
-  Car,
-  Snowflake,
-  Wifi,
-  Music,
-  Zap,
-  Shield,
-  UtensilsCrossed,
-  Loader2,
-} from "lucide-react";
-import Image from "next/image";
-import Navbar from "../Navbar";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, CalendarClock, Sparkles, Wallet, Music, Mic, Headphones, MapPin, Shield, Star, ArrowRight, Search, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 import Footer from "../Footer";
-import { toast } from "sonner";
+import Navbar from "../Navbar";
 
-interface Venue {
-  _id: string;
-  name: string;
-  description: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    pincode: string;
-  };
-  capacity: number;
-  pricing: {
-    basePrice: number;
-    hourlyRate?: number;
-  };
-  facilities: {
-    [key: string]: boolean;
-  };
-  gallery: Array<{
-    url: string;
-    caption?: string;
-    isMain?: boolean;
-  }>;
-  rating: {
-    average: number;
-    count: number;
-  };
-  totalBookings: number;
-}
+const features = [
+  { icon: Search, title: "Get Discovered", text: "Your venue appears in organizer searches with capacity, location, and facility filters." },
+  { icon: CalendarClock, title: "Smart Booking System", text: "Real-time availability calendar, instant booking confirmations, and automated reminders." },
+  { icon: Wallet, title: "Flexible Pricing", text: "Set hourly rates, full-day packages, cleaning fees, and security deposits with transparent pricing." },
+  { icon: Shield, title: "Secure Bookings", text: "Payment verification, cancellation policies, and booking protection in one platform." },
+  { icon: Sparkles, title: "Showcase Your Space", text: "Upload high-quality photos, virtual tours, and highlight your venue's unique features." },
+  { icon: SlidersHorizontal, title: "Management Dashboard", text: "Track bookings, manage availability, view analytics, and handle customer reviews effortlessly." },
+];
 
-const facilityIcons: { [key: string]: any } = {
-  parking: Car,
-  ac: Snowflake,
-  wifi: Wifi,
-  soundSystem: Music,
-  lighting: Zap,
-  security: Shield,
-  catering: UtensilsCrossed,
-};
+const categories = [
+  { icon: Music, label: "Concert Hall" },
+  { icon: Headphones, label: "Banquet Hall" },
+  { icon: Mic, label: "Conference Room" },
+  { icon: Star, label: "Event Space" },
+];
 
-export default function AllVenuesPage() {
-  const router = useRouter();
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [filteredVenues, setFilteredVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCity, setSelectedCity] = useState("all");
-  const [minCapacity, setMinCapacity] = useState("");
-  const [cities, setCities] = useState<string[]>([]);
+const faqs = [
+  {
+    q: "Who can list their venue on AHIBI?",
+    a: "Event halls, banquet spaces, conference rooms, outdoor venues, auditoriums, and any space suitable for events — if you host events, you belong here.",
+  },
+  {
+    q: "How does the booking process work?",
+    a: "Customers find your venue via filters (capacity, location, facilities). They select dates and times, make secure payments through Razorpay, and receive instant confirmation.",
+  },
+  {
+    q: "What facilities should I highlight?",
+    a: "List all amenities: parking, AC, WiFi, sound system, lighting, catering, stage, power backup, accessibility features, and any unique offerings that make your venue stand out.",
+  },
+  {
+    q: "How are payments handled?",
+    a: "All payments are processed securely through Razorpay. You set your pricing (hourly/daily rates, cleaning fees, deposits), and funds are transferred after successful bookings.",
+  },
+  {
+    q: "Is there a review system?",
+    a: "Yes. Verified customers can rate and review your venue post-event. Positive reviews increase your visibility and attract more bookings.",
+  },
+];
 
-  useEffect(() => {
-    fetchVenues();
-  }, []);
+const tiers = [
+  {
+    name: "Starter",
+    tag: "Begin",
+    price: "Free",
+    bullets: [
+      "Public venue listing & search visibility",
+      "Basic booking management",
+      "Photo gallery (up to 10 images)",
+      "Customer reviews & ratings",
+    ],
+    cta: "List your venue",
+  },
+  {
+    name: "Pro",
+    tag: "Grow",
+    price: "Best for active venues",
+    bullets: [
+      "Priority placement in searches",
+      "Unlimited photo & video uploads",
+      "Advanced calendar & availability",
+      "Analytics & booking insights",
+    ],
+    cta: "Upgrade to Pro",
+  },
+  {
+    name: "Premium",
+    tag: "Scale",
+    price: "For venue chains",
+    bullets: [
+      "Multi-venue management",
+      "Custom branding & pages",
+      "Dedicated account manager",
+      "Priority support & marketing",
+    ],
+    cta: "Contact sales",
+  },
+];
 
-  useEffect(() => {
-    filterVenues();
-  }, [searchQuery, selectedCity, minCapacity, venues]);
+const Section = ({ children, id }: { children: React.ReactNode; id?: string }) => (
+  <section id={id} className="py-16 md:py-24">
+    <div className="mx-auto max-w-6xl px-4">{children}</div>
+  </section>
+);
 
-  const fetchVenues = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/venue`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setVenues(data.data.venues);
-        setFilteredVenues(data.data.venues);
-        
-        // Extract unique cities
-        const uniqueCities = Array.from(
-          new Set(data.data.venues.map((v: Venue) => v.address.city))
-        ) as string[];
-        setCities(uniqueCities);
-      } else {
-        toast.error('Failed to load venues');
-      }
-    } catch (error) {
-      console.error('Error fetching venues:', error);
-      toast.error('Failed to load venues');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterVenues = () => {
-    let filtered = [...venues];
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (venue) =>
-          venue.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          venue.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          venue.address.city.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // City filter
-    if (selectedCity !== "all") {
-      filtered = filtered.filter((venue) => venue.address.city === selectedCity);
-    }
-
-    // Capacity filter
-    if (minCapacity) {
-      filtered = filtered.filter((venue) => venue.capacity >= parseInt(minCapacity));
-    }
-
-    setFilteredVenues(filtered);
-  };
-
-  const handleVenueClick = (venueId: string) => {
-    router.push(`/allVenues/${venueId}`);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <div className="bg-transparent fixed w-full z-50">
-        <Navbar />
-      </div>
-
-      {/* Hero Section */}
-      <div className="pt-20 pb-12 px-4">
-        <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
-            Find Your Perfect Venue
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Discover and book amazing venues for your events
-          </p>
+const Hero = () => (
+  <Section>
+    <div className="grid items-center gap-10 md:grid-cols-2">
+      <div>
+        <h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
+          AHIBI Venue
+          <span className="block text-gray-600 text-3xl md:text-4xl mt-2">List. Get Booked. Earn. Grow.</span>
+        </h1>
+        <p className="mt-6 text-gray-600 md:text-xl leading-relaxed">
+          Showcase your venue with photos, facilities, and real-time availability. Event organizers find, compare, and book your space in minutes.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-4">
+          <Link href="/venue/auth/signup">
+          <Button size="lg" className="rounded-2xl px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+            List Your Venue
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          </Link>
+          <Link href="/venue/auth/login">
+          <Button size="lg" className="rounded-2xl px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+            Venue Login
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+          </Link>
+          {/* <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="lg" className="rounded-2xl px-6">Preview form</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>venue onboarding snapshot</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <Input placeholder="Venue name" />
+                  <Input placeholder="City / Base" />
+                  <Input placeholder="Phone" />
+                  <Input placeholder="Email" />
+                </div>
+                <Tabs defaultValue="style">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="style">Style</TabsTrigger>
+                    <TabsTrigger value="fees">Fees</TabsTrigger>
+                    <TabsTrigger value="rider">Rider</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="style" className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Weddings",
+                        "Corporate",
+                        "Clubs",
+                        "College",
+                        "Cultural",
+                        "Festivals",
+                      ].map((t) => (
+                        <Badge key={t} variant="secondary" className="rounded-2xl">{t}</Badge>
+                      ))}
+                    </div>
+                    <Textarea placeholder="Short bio (1–2 lines)" />
+                  </TabsContent>
+                  <TabsContent value="fees" className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <Input placeholder="Fee range (e.g., ₹50k–₹1L)" />
+                      <Input placeholder="Advance % (e.g., 50%)" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <Input placeholder="Payment mode (UPI/Bank/GST)" />
+                      <Input placeholder="Peak-day pricing? (Yes/No)" />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="rider" className="space-y-3">
+                    <Textarea placeholder="Key tech needs (mics, channels, stage size)" />
+                    <Input placeholder="Soundcheck time (e.g., 60 min)" />
+                  </TabsContent>
+                </Tabs>
+                <Button className="rounded-2xl">Looks good</Button>
+              </div>
+            </DialogContent>
+          </Dialog> */}
+        </div>
+        <div className="mt-8 flex items-center gap-6 text-sm text-gray-600">
+          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Instant bookings</div>
+          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Secure payments</div>
+          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Real-time calendar</div>
         </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="container mx-auto px-4 mb-8">
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Search */}
-              <div className="space-y-2">
-                <Label htmlFor="search">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="search"
-                    placeholder="Search venues..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              {/* City Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Cities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Cities</SelectItem>
-                    {cities.map((city) => (
-                      <SelectItem key={city} value={city}>
-                        {city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Capacity Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Min Capacity</Label>
-                <Input
-                  id="capacity"
-                  type="number"
-                  placeholder="e.g., 100"
-                  value={minCapacity}
-                  onChange={(e) => setMinCapacity(e.target.value)}
-                />
-              </div>
-
-              {/* Clear Filters */}
-              <div className="space-y-2 flex items-end">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedCity("all");
-                    setMinCapacity("");
-                  }}
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Clear Filters
-                </Button>
-              </div>
+      <div className="md:justify-self-end">
+        <Card className="rounded-2xl shadow-2xl border-purple-200/50 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-gray-800">Search snapshot for event organizers</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Input placeholder="Search venue, city, capacity" className="flex-1 border-purple-200" />
+              <Button variant="secondary" className="rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-700"><Search className="h-4 w-4" /></Button>
             </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {categories.map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 rounded-2xl border border-purple-200 bg-purple-50/50 p-2 text-sm text-gray-700 hover:bg-purple-100 transition-colors">
+                  <Icon className="h-4 w-4 text-purple-600" /> {label}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3 text-sm text-gray-700"><MapPin className="mr-2 inline h-4 w-4 text-purple-600" /> Dimapur</div>
+              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3 text-sm text-gray-700"><Wallet className="mr-2 inline h-4 w-4 text-purple-600" /> ₹50k–₹1L</div>
+              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3 text-sm text-gray-700"><CalendarClock className="mr-2 inline h-4 w-4 text-purple-600" /> Nov–Dec</div>
+            </div>
+            <Button className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300" asChild>
+              <Link href="/allVenues/list">Explore venues</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
+    </div>
+  </Section>
+);
 
-      {/* Venues Grid */}
-      <div className="container mx-auto px-4 pb-12">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {filteredVenues.length} Venue{filteredVenues.length !== 1 ? 's' : ''} Available
-          </h2>
-        </div>
+const FeatureGrid = () => (
+  <Section id="features">
+    <div className="mb-12 text-center">
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Built for venues, designed for success</h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Everything organizers need to book. Everything venue owners need to manage effortlessly.</p>
+    </div>
+    <div className="grid gap-6 md:grid-cols-3">
+      {features.map((f) => (
+        <Card key={f.title} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600">
+                <f.icon className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-lg font-bold text-gray-800">{f.title}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="text-gray-600">{f.text}</CardContent>
+        </Card>
+      ))}
+    </div>
+  </Section>
+);
 
-        {filteredVenues.length === 0 ? (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-            <CardContent className="p-12 text-center">
-              <p className="text-gray-600 text-lg">No venues found matching your criteria</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredVenues.map((venue) => (
-              <Card
-                key={venue._id}
-                className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden group"
-                onClick={() => handleVenueClick(venue._id)}
-              >
-                {/* Venue Image */}
-                <div className="relative h-48 overflow-hidden">
-                  {venue.gallery && venue.gallery.length > 0 ? (
-                    <Image
-                      src={venue.gallery[0].url}
-                      alt={venue.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center">
-                      <MapPin className="h-16 w-16 text-white/50" />
-                    </div>
-                  )}
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                    <span className="font-semibold text-sm">{venue.rating.average || 0}</span>
-                  </div>
-                </div>
+const HowItWorks = () => (
+  <Section id="how">
+    <div className="mb-12 text-center">
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">How it works</h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Three simple steps to start earning from your venue.</p>
+    </div>
+    <div className="grid gap-6 md:grid-cols-3">
+      {[{
+        step: 1,
+        title: "List your venue",
+        text: "Add photos, facilities, capacity, pricing, and set your availability calendar.",
+      }, {
+        step: 2,
+        title: "Get bookings",
+        text: "Organizers filter by location, capacity, facilities, and book your venue with secure payments.",
+      }, {
+        step: 3,
+        title: "Host & earn",
+        text: "AHIBI handles payments, reviews, and bookings so you focus on providing great experiences.",
+      }].map((s) => (
+        <Card key={s.step} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <Badge className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">Step {s.step}</Badge>
+            <CardTitle className="mt-3 text-xl font-bold text-gray-800">{s.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-gray-600">{s.text}</CardContent>
+        </Card>
+      ))}
+    </div>
+  </Section>
+);
 
-                <CardHeader>
-                  <CardTitle className="text-xl">{venue.name}</CardTitle>
-                  <CardDescription className="flex items-center text-gray-600">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {venue.address.city}, {venue.address.state}
-                  </CardDescription>
-                </CardHeader>
+const Plans = () => (
+  <Section id="plans">
+    <div className="mb-12 text-center">
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Choose your plan</h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Start free. Upgrade when you need advanced features and priority visibility.</p>
+    </div>
+    <div className="grid gap-6 md:grid-cols-3">
+      {tiers.map((t, index) => (
+        <Card key={t.name} className={`rounded-2xl border-purple-200/50 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm ${index === 1 ? 'ring-2 ring-purple-600' : ''}`}>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">{t.tag}</Badge>
+              <CardTitle className="text-xl font-bold text-gray-800">{t.name}</CardTitle>
+            </div>
+            <p className="text-gray-600 font-medium">{t.price}</p>
+          </CardHeader>
+          <CardContent>
+            <ul className="mb-6 space-y-3 text-sm text-gray-600">
+              {t.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 text-purple-600 flex-shrink-0" />{b}</li>
+              ))}
+            </ul>
+            <Button className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">{t.cta}</Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </Section>
+);
 
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-600 line-clamp-2">{venue.description}</p>
+const FAQ = () => (
+  <Section id="faq">
+    <div className="mb-12 text-center">
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Questions, answered</h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Short, clear, and helpful. No jargon.</p>
+    </div>
+    <div className="grid gap-6 md:grid-cols-2">
+      {faqs.map((f) => (
+        <Card key={f.q} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold text-gray-800">{f.q}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-gray-600">{f.a}</CardContent>
+        </Card>
+      ))}
+    </div>
+  </Section>
+);
 
-                  {/* Venue Stats */}
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center text-gray-600">
-                      <Users className="h-4 w-4 mr-1" />
-                      <span>Up to {venue.capacity}</span>
-                    </div>
-                    <div className="font-semibold text-purple-600">
-                      ₹{venue.pricing.hourlyRate || venue.pricing.basePrice}/hr
-                    </div>
-                  </div>
-
-                  {/* Facilities */}
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(venue.facilities)
-                      .filter(([_, value]) => value)
-                      .slice(0, 4)
-                      .map(([key]) => {
-                        const Icon = facilityIcons[key] || Star;
-                        return (
-                          <Badge key={key} variant="secondary" className="text-xs">
-                            <Icon className="h-3 w-3 mr-1" />
-                            {key}
-                          </Badge>
-                        );
-                      })}
-                  </div>
-
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-                    View Details
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+const CTA = () => (
+  <Section id="join">
+    <div className="rounded-3xl bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 p-8 md:p-12 shadow-2xl">
+      <div className="grid items-center gap-8 md:grid-cols-2">
+        <div>
+          <h3 className="text-3xl font-bold md:text-5xl text-white">Ready to maximize your venue bookings?</h3>
+          <p className="mt-4 text-purple-100 md:text-xl">Join AHIBI Venue and let your space shine. Professional listings. Instant bookings. Better revenue.</p>
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Link href="/venue/auth/signup">
+            <Button size="lg" className="rounded-2xl px-8 bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">List your venue free</Button>
+            </Link>
+            <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-white hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Contact support</Button>
           </div>
-        )}
+        </div>
+        <div className="rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm p-6">
+          <div className="mb-6 flex items-center gap-2 text-sm text-white">
+            <Shield className="h-5 w-5" />
+            We keep your data private and only share what you choose.
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Secure payments</div>
+            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Smart calendar</div>
+            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Instant bookings</div>
+            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Customer reviews</div>
+          </div>
+        </div>
       </div>
+    </div>
+  </Section>
+);
+
+export default function AhibiVenuePage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-pink-50/30">
+
+      <main>
+        <Navbar />
+        <Hero />
+        <FeatureGrid />
+        <HowItWorks />
+        <Plans />
+        <FAQ />
+        <CTA />
+      </main>
 
       <Footer />
     </div>
