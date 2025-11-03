@@ -186,22 +186,6 @@ export default function OrganizerDashboard() {
             active={activeView === "bookings"} 
             onClick={() => setActiveView("bookings")} 
           />
-          
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Artists</h3>
-          </div>
-          <SidebarButton 
-            icon={Music} 
-            label="Book Artists" 
-            active={activeView === "artist-booking"} 
-            onClick={() => setActiveView("artist-booking")} 
-          />
-          <SidebarButton 
-            icon={Users} 
-            label="Artist Bookings" 
-            active={activeView === "booking-management"} 
-            onClick={() => setActiveView("booking-management")} 
-          />
        
           <SidebarButton 
             icon={PlusCircle} 

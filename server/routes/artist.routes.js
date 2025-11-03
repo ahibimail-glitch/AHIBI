@@ -5,8 +5,6 @@ const artistAuthController = require('../controllers/artistAuthController');
 const artistBookingController = require('../controllers/artistBookingController');
 const artistProfileController = require('../controllers/artistProfileController');
 const artistAvailabilityController = require('../controllers/artistAvailabilityController');
-const artistAnalyticsController = require('../controllers/artistAnalyticsController');
-const artistPaymentController = require('../controllers/artistPaymentController');
 const { protect, authorize } = require('../middlewares/auth');
 
 // Public routes
@@ -100,37 +98,6 @@ router.post('/availability/bulk', [
   check('timeSlots', 'Time slots are required').isArray({ min: 1 })
 ], artistAvailabilityController.bulkSetAvailability);
 router.get('/calendar-overview', protect, authorize('artist'), artistAvailabilityController.getCalendarOverview);
-
-// Analytics routes
-router.get('/analytics/dashboard', protect, authorize('artist'), artistAnalyticsController.getDashboardStats);
-router.get('/analytics/performance', protect, authorize('artist'), artistAnalyticsController.getPerformanceMetrics);
-router.get('/analytics/event-types', protect, authorize('artist'), artistAnalyticsController.getEventTypeAnalytics);
-router.get('/analytics/availability', protect, authorize('artist'), artistAnalyticsController.getAvailabilityMetrics);
-router.get('/analytics/clients', protect, authorize('artist'), artistAnalyticsController.getClientAnalytics);
-router.get('/analytics/report', protect, authorize('artist'), artistAnalyticsController.generateAnalyticsReport);
-
-// Notification routes
-router.get('/notifications', protect, authorize('artist'), artistAnalyticsController.getNotifications);
-router.put('/notifications/mark-read', [
-  protect,
-  authorize('artist'),
-  check('notificationIds', 'Notification IDs array is required').isArray()
-], artistAnalyticsController.markNotificationsAsRead);
-
-// Payment routes
-router.get('/payments/history', protect, authorize('artist'), artistPaymentController.getPaymentHistory);
-router.get('/payments/earnings', protect, authorize('artist'), artistPaymentController.getEarningsSummary);
-router.get('/payments/invoice/:bookingId', protect, authorize('artist'), artistPaymentController.generatePaymentInvoice);
-
-// Payment processing routes (webhooks)
-router.post('/payments/advance-payment', [
-  check('bookingId', 'Booking ID is required').isMongoId(),
-  check('paymentData', 'Payment data is required').notEmpty()
-], artistPaymentController.processAdvancePayment);
-router.post('/payments/full-payment', [
-  check('bookingId', 'Booking ID is required').isMongoId(),
-  check('paymentData', 'Payment data is required').notEmpty()
-], artistPaymentController.processFullPayment);
 
 // Public availability routes (for organizers to view)
 router.get('/:artistId/availability/:date', artistAvailabilityController.getAvailableSlots);

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import ArtistSidebar from "./components/ArtistSidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,8 +143,6 @@ export default function ArtistDashboard() {
   const [user, setUser] = useState<ArtistUser | null>(null);
   const [profile, setProfile] = useState<ArtistProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState('bookings');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch artist profile from backend
   useEffect(() => {
@@ -401,339 +399,365 @@ export default function ArtistDashboard() {
     );
   }
 
-  const renderContent = () => {
-    switch (activeSection) {
-      case 'bookings':
-        return <BookingsContent bookingRequests={bookingRequests} handleBookingAction={handleBookingAction} loadingBookings={loadingBookings} />;
-      case 'calendar':
-        return <CalendarContent profile={profile} fetchArtistProfile={fetchArtistProfile} />;
-      case 'gallery':
-        return <GalleryContent profile={profile} fetchArtistProfile={fetchArtistProfile} />;
-      case 'accolades':
-        return <AccoladesContent profile={profile} fetchArtistProfile={fetchArtistProfile} />;
-      case 'terms':
-        return <TermsContent profile={profile} fetchArtistProfile={fetchArtistProfile} />;
-      case 'earnings':
-        return <EarningsContent />;
-      case 'profile':
-        return <ProfileContent user={user} profile={profile} handleProfileUpdate={handleProfileUpdate} />;
-      default:
-        return <BookingsContent bookingRequests={bookingRequests} handleBookingAction={handleBookingAction} loadingBookings={loadingBookings} />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-     
-
-      <div className="flex">
-        {/* Sidebar */}
-        <ArtistSidebar
-          activeSection={activeSection}
-          onSectionChange={setActiveSection}
-          isOpen={sidebarOpen}
-          onToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
-
-        {/* Main Content */}
-        <div className="flex-1 md:ml-0">
-          <div className="p-6">
-            {/* Artist Profile Header */}
-            <Card className="mb-6">
-              <div className="relative">
-                <Image
-                  src={profile?.coverImage || "/images/carausel1.jpg"}
-                  alt="Cover"
-                  width={800}
-                  height={300}
-                  className="w-full h-48 md:h-64 object-cover rounded-t-lg"
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="absolute top-4 right-4"
-                >
-                  <Camera className="h-4 w-4 mr-1" />
-                  Change Cover
-                </Button>
-              </div>
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                  <div className="relative">
-                    <Avatar className="w-24 h-24">
-                      <AvatarImage
-                        src={profile?.profileImage || "/images/carausel1.jpg"}
-                      />
-                      <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
-                    </Avatar>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                    >
-                      <Camera className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <h2 className="text-2xl font-bold">{user?.name}</h2>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsEditing(!isEditing)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit Profile
-                      </Button>
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                      {profile?.rating && typeof profile.rating === 'object' && 'average' in profile.rating && profile.rating.average > 0 && (
-                        <div className="flex items-center">
-                          <Star className="h-4 w-4 mr-1 text-yellow-500" />
-                          {profile.rating.average.toFixed(1)} ({profile.rating.count || 0} reviews)
-                        </div>
-                      )}
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {profile?.location || 'Location not set'}
-                      </div>
-                      <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        Starting from ₹{profile?.basePrice || 'Not set'}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground mb-3">{profile?.bio || 'No bio available'}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {profile?.genres?.map((g) => (
-                        <Badge key={g} variant="secondary">
-                          {g}
-                        </Badge>
-                      ))}
-                      {profile?.languages?.map((l) => (
-                        <Badge key={l} variant="outline">
-                          {l}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Dynamic Content */}
-            {renderContent()}
-          </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
+        <Navbar />
+      </header>
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Artist Dashboard</h1>
+        <div className="flex items-center space-x-4">
+          <Badge variant="secondary">Verified Artist</Badge>
+          <Button variant="outline" size="sm">
+            View Public Profile
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
       </div>
 
+      <div className="container mx-auto px-4 py-6">
+        {/* Artist Profile Header */}
+        <Card className="mb-6">
+          <div className="relative">
+            <Image
+              src={profile?.coverImage || "/images/carausel1.jpg"}
+              alt="Cover"
+              width={800}
+              height={300}
+              className="w-full h-48 md:h-64 object-cover rounded-t-lg"
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              className="absolute top-4 right-4"
+            >
+              <Camera className="h-4 w-4 mr-1" />
+              Change Cover
+            </Button>
+          </div>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+              <div className="relative">
+                <Avatar className="w-24 h-24">
+                  <AvatarImage
+                    src={profile?.profileImage || "/images/carausel1.jpg"}
+                  />
+                  <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
+                </Avatar>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-2xl font-bold">{user?.name}</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(!isEditing)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit Profile
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
+                  {profile?.rating && typeof profile.rating === 'object' && 'average' in profile.rating && profile.rating.average > 0 && (
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 mr-1 text-yellow-500" />
+                      {profile.rating.average.toFixed(1)} ({profile.rating.count || 0} reviews)
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {profile?.location || 'Location not set'}
+                  </div>
+                  <div className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Starting from ₹{profile?.basePrice || 'Not set'}
+                  </div>
+                </div>
+                <p className="text-muted-foreground mb-3">{profile?.bio || 'No bio available'}</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile?.genres?.map((g) => (
+                    <Badge key={g} variant="secondary">
+                      {g}
+                    </Badge>
+                  ))}
+                  {profile?.languages?.map((l) => (
+                    <Badge key={l} variant="outline">
+                      {l}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Tabs defaultValue="bookings" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="accolades">Accolades</TabsTrigger>
+            <TabsTrigger value="terms">Terms</TabsTrigger>
+            <TabsTrigger value="earnings">Earnings</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bookings" className="space-y-6">
+            <div className="space-y-4">
+              {/* Booking Requests */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Booking Requests</CardTitle>
+                  <CardDescription>
+                    New requests waiting for your response
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {bookingRequests.length > 0 ? (
+                    bookingRequests.map((request) => (
+                      <div key={request._id} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold">{request.event.name}</h3>
+                          <Badge variant="outline">₹{request.booking.requestedAmount}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          by {request.organizer.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          {new Date(request.event.date).toLocaleDateString()}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          <MapPin className="h-4 w-4 inline mr-1" />
+                          {request.event.venue.name}
+                        </p>
+                        <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => handleBookingAction(request._id, 'accept')}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 bg-transparent"
+                            onClick={() => {
+                              const amount = prompt('Enter counter offer amount:');
+                              const message = prompt('Add a message (optional):');
+                              if (amount) {
+                                handleBookingAction(request._id, 'accept', {
+                                  amount: parseInt(amount),
+                                  message: message || ''
+                                });
+                              }
+                            }}
+                          >
+                            Counter Offer
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleBookingAction(request._id, 'decline')}
+                          >
+                            Decline
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No booking requests yet
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Upcoming Events */}
+              {/* <Card>
+                <CardHeader>
+                  <CardTitle>Upcoming Events</CardTitle>
+                  <CardDescription>Your confirmed performances</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {upcomingEvents.length > 0 ? (
+                    upcomingEvents.map((event) => (
+                      <div key={event.id} className="p-4 border rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold">{event.event}</h3>
+                          <Badge className="bg-green-100 text-green-800">
+                            {event.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          <Calendar className="h-4 w-4 inline mr-1" />
+                          {event.date}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          <MapPin className="h-4 w-4 inline mr-1" />
+                          {event.venue}
+                        </p>
+                        <p className="text-sm font-medium text-green-600">
+                          Payment: {event.payment}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No upcoming events
+                    </div>
+                  )}
+                </CardContent>
+              </Card> */}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <AvailabilityCalendar 
+              onUpdate={() => {
+                const token = localStorage.getItem('artist_token');
+                if (token) fetchArtistProfile(token);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="gallery">
+            <GalleryManager 
+              photos={profile?.gallery?.photos || []}
+              videos={profile?.gallery?.videos || []}
+              onUpdate={() => {
+                const token = localStorage.getItem('artist_token');
+                if (token) fetchArtistProfile(token);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="accolades">
+            <AccoladesManager 
+              accolades={profile?.accolades || []}
+              onUpdate={() => {
+                const token = localStorage.getItem('artist_token');
+                if (token) fetchArtistProfile(token);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="terms" className="space-y-6">
+            {profile && (
+              <TermsManager 
+                terms={profile.termsAndConditions || { content: '', lastUpdated: new Date().toISOString() }}
+                cancellationPolicy={profile.cancellationPolicy || { advanceNotice: 24, refundPolicy: '', emergencyContact: '' }}
+                onUpdate={() => {
+                  const token = localStorage.getItem('artist_token');
+                  if (token) fetchArtistProfile(token);
+                }}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="earnings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Earnings & Payouts</CardTitle>
+                <CardDescription>
+                  Track your income and payment history
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 border rounded-lg text-center">
+                    <h3 className="font-semibold text-lg">This Month</h3>
+                    <p className="text-3xl font-bold text-green-600">
+                      ₹1,25,000
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <h3 className="font-semibold text-lg">Pending</h3>
+                    <p className="text-3xl font-bold text-orange-600">
+                      ₹45,000
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <h3 className="font-semibold text-lg">Total Earned</h3>
+                    <p className="text-3xl font-bold">₹8,75,000</p>
+                  </div>
+                </div>
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold mb-4">Recent Transactions</h3>
+                  <p className="text-center text-muted-foreground">
+                    Transaction history would be displayed here
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Settings</CardTitle>
+                <CardDescription>
+                  Update your profile information
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <form onSubmit={handleProfileUpdate}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Artist Name</Label>
+                      <Input id="name" defaultValue={user?.name} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="location">Location</Label>
+                      <Input id="location" defaultValue={profile?.location} />
+                    </div>
+                  </div>
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea id="bio" defaultValue={profile?.bio} rows={4} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="basePrice">Base Price</Label>
+                      <Input id="basePrice" defaultValue={profile?.basePrice?.toString()} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input id="phone" defaultValue={user?.phone} />
+                    </div>
+                  </div>
+                  <div className="space-y-4 mt-4">
+                    <Label>Social Links</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Instagram className="h-4 w-4" />
+                        <Input placeholder="Instagram URL" defaultValue={profile?.socialLinks?.instagram} />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Youtube className="h-4 w-4" />
+                        <Input placeholder="YouTube URL" defaultValue={profile?.socialLinks?.youtube} />
+                      </div>
+                    </div>
+                  </div>
+                  <Button type="submit" className="mt-6">Save Changes</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
       <Footer />
     </div>
   );
 }
-
-// Content Components
-const BookingsContent = ({ bookingRequests, handleBookingAction, loadingBookings }: any) => (
-  <div className="space-y-4">
-    <Card>
-      <CardHeader>
-        <CardTitle>Booking Requests</CardTitle>
-        <CardDescription>
-          New requests waiting for your response
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {bookingRequests.length > 0 ? (
-          bookingRequests.map((request: any) => (
-            <div key={request._id} className="p-4 border rounded-lg">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold">{request.event.name}</h3>
-                <Badge variant="outline">₹{request.booking.requestedAmount}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mb-1">
-                by {request.organizer.name}
-              </p>
-              <p className="text-sm text-muted-foreground mb-1">
-                <Calendar className="h-4 w-4 inline mr-1" />
-                {new Date(request.event.date).toLocaleDateString()}
-              </p>
-              <p className="text-sm text-muted-foreground mb-3">
-                <MapPin className="h-4 w-4 inline mr-1" />
-                {request.event.venue.name}
-              </p>
-              <div className="flex space-x-2">
-                <Button 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleBookingAction(request._id, 'accept')}
-                >
-                  Accept
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 bg-transparent"
-                  onClick={() => {
-                    const amount = prompt('Enter counter offer amount:');
-                    const message = prompt('Add a message (optional):');
-                    if (amount) {
-                      handleBookingAction(request._id, 'accept', {
-                        amount: parseInt(amount),
-                        message: message || ''
-                      });
-                    }
-                  }}
-                >
-                  Counter Offer
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleBookingAction(request._id, 'decline')}
-                >
-                  Decline
-                </Button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            No booking requests yet
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  </div>
-);
-
-const CalendarContent = ({ profile, fetchArtistProfile }: any) => (
-  <AvailabilityCalendar 
-    onUpdate={() => {
-      const token = localStorage.getItem('artist_token');
-      if (token) fetchArtistProfile(token);
-    }}
-  />
-);
-
-const GalleryContent = ({ profile, fetchArtistProfile }: any) => (
-  <GalleryManager 
-    photos={profile?.gallery?.photos || []}
-    videos={profile?.gallery?.videos || []}
-    onUpdate={() => {
-      const token = localStorage.getItem('artist_token');
-      if (token) fetchArtistProfile(token);
-    }}
-  />
-);
-
-const AccoladesContent = ({ profile, fetchArtistProfile }: any) => (
-  <AccoladesManager 
-    accolades={profile?.accolades || []}
-    onUpdate={() => {
-      const token = localStorage.getItem('artist_token');
-      if (token) fetchArtistProfile(token);
-    }}
-  />
-);
-
-const TermsContent = ({ profile, fetchArtistProfile }: any) => (
-  profile && (
-    <TermsManager 
-      terms={profile.termsAndConditions || { content: '', lastUpdated: new Date().toISOString() }}
-      cancellationPolicy={profile.cancellationPolicy || { advanceNotice: 24, refundPolicy: '', emergencyContact: '' }}
-      onUpdate={() => {
-        const token = localStorage.getItem('artist_token');
-        if (token) fetchArtistProfile(token);
-      }}
-    />
-  )
-);
-
-const EarningsContent = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Earnings & Payouts</CardTitle>
-      <CardDescription>
-        Track your income and payment history
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="p-4 border rounded-lg text-center">
-          <h3 className="font-semibold text-lg">This Month</h3>
-          <p className="text-3xl font-bold text-green-600">
-            ₹1,25,000
-          </p>
-        </div>
-        <div className="p-4 border rounded-lg text-center">
-          <h3 className="font-semibold text-lg">Pending</h3>
-          <p className="text-3xl font-bold text-orange-600">
-            ₹45,000
-          </p>
-        </div>
-        <div className="p-4 border rounded-lg text-center">
-          <h3 className="font-semibold text-lg">Total Earned</h3>
-          <p className="text-3xl font-bold">₹8,75,000</p>
-        </div>
-      </div>
-      <div className="border rounded-lg p-4">
-        <h3 className="font-semibold mb-4">Recent Transactions</h3>
-        <p className="text-center text-muted-foreground">
-          Transaction history would be displayed here
-        </p>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const ProfileContent = ({ user, profile, handleProfileUpdate }: any) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Profile Settings</CardTitle>
-      <CardDescription>
-        Update your profile information
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      <form onSubmit={handleProfileUpdate}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Artist Name</Label>
-            <Input id="name" defaultValue={user?.name} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" defaultValue={profile?.location} />
-          </div>
-        </div>
-        <div className="space-y-2 mt-4">
-          <Label htmlFor="bio">Bio</Label>
-          <Textarea id="bio" defaultValue={profile?.bio} rows={4} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="basePrice">Base Price</Label>
-            <Input id="basePrice" defaultValue={profile?.basePrice?.toString()} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" defaultValue={user?.phone} />
-          </div>
-        </div>
-        <div className="space-y-4 mt-4">
-          <Label>Social Links</Label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Instagram className="h-4 w-4" />
-              <Input placeholder="Instagram URL" defaultValue={profile?.socialLinks?.instagram} />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Youtube className="h-4 w-4" />
-              <Input placeholder="YouTube URL" defaultValue={profile?.socialLinks?.youtube} />
-            </div>
-          </div>
-        </div>
-        <Button type="submit" className="mt-6">Save Changes</Button>
-      </form>
-    </CardContent>
-  </Card>
-);

@@ -1,7 +1,7 @@
 "use client";
 
-import ArtistApprovalList from "./ArtistApprovalList";
+import ApprovalList from "./ApprovalList";
 
 export default function Artists() {
-  return <ArtistApprovalList />;
+  return <ApprovalList type="Artist" />;
 }
