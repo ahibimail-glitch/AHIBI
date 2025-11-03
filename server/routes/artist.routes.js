@@ -8,7 +8,6 @@ const artistAvailabilityController = require('../controllers/artistAvailabilityC
 const artistAnalyticsController = require('../controllers/artistAnalyticsController');
 const artistPaymentController = require('../controllers/artistPaymentController');
 const { protect, authorize } = require('../middlewares/auth');
-const upload = require('../middlewares/uploadMiddleware');
 
 // Public routes
 router.post('/auth/signup', [
@@ -71,14 +70,6 @@ router.post('/gallery/photo', protect, authorize('artist'), artistProfileControl
 router.post('/gallery/video', protect, authorize('artist'), artistProfileController.addVideo);
 router.delete('/gallery/photo/:photoId', protect, authorize('artist'), artistProfileController.removePhoto);
 router.delete('/gallery/video/:videoId', protect, authorize('artist'), artistProfileController.removeVideo);
-
-// Image upload route
-router.post('/upload/image', 
-  protect, 
-  authorize('artist'),
-  upload.single('image'), 
-  artistProfileController.uploadImage
-);
 
 // Accolades management routes
 router.post('/accolades', [

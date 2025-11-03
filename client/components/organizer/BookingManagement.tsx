@@ -118,7 +118,6 @@ export default function BookingManagement() {
     }
   };
 
-  // Counter offer functionality removed - payment automatically confirms bookings
   const acceptCounterOffer = async (bookingId: string) => {
     try {
       setLoading(true);
@@ -253,6 +252,9 @@ export default function BookingManagement() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'accepted': return 'bg-green-100 text-green-800';
+      case 'declined': return 'bg-red-100 text-red-800';
+      case 'counter_offered': return 'bg-blue-100 text-blue-800';
       case 'confirmed': return 'bg-green-100 text-green-800';
       case 'completed': return 'bg-gray-100 text-gray-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
@@ -263,6 +265,9 @@ export default function BookingManagement() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="h-4 w-4" />;
+      case 'accepted': return <CheckCircle className="h-4 w-4" />;
+      case 'declined': return <XCircle className="h-4 w-4" />;
+      case 'counter_offered': return <AlertCircle className="h-4 w-4" />;
       case 'confirmed': return <CheckCircle className="h-4 w-4" />;
       case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'cancelled': return <XCircle className="h-4 w-4" />;
@@ -282,7 +287,10 @@ export default function BookingManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Bookings</SelectItem>
-              <SelectItem value="pending">Payment Pending</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="accepted">Accepted</SelectItem>
+              <SelectItem value="declined">Declined</SelectItem>
+              <SelectItem value="counter_offered">Counter Offered</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -537,6 +545,40 @@ export default function BookingManagement() {
                       </div>
                     </div>
 
+                    {/* Counter Offer Actions */}
+                    {selectedBooking.booking.status === 'counter_offered' && selectedBooking.communication.counterOffer && (
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          <div className="space-y-2">
+                            <p><strong>Counter Offer:</strong> ₹{selectedBooking.communication.counterOffer.amount}</p>
+                            {selectedBooking.communication.counterOffer.message && (
+                              <p><strong>Message:</strong> {selectedBooking.communication.counterOffer.message}</p>
+                            )}
+                            <div className="flex space-x-2">
+                              <Button 
+                                size="sm" 
+                                onClick={() => acceptCounterOffer(selectedBooking._id)}
+                                disabled={loading}
+                              >
+                                Accept Counter Offer
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  const reason = prompt('Reason for rejecting counter offer:');
+                                  if (reason) rejectCounterOffer(selectedBooking._id, reason);
+                                }}
+                                disabled={loading}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </TabsContent>
 

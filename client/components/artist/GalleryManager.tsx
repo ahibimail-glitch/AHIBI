@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Camera, Video, Plus, Trash2, Edit, Star, Upload, Loader2 } from "lucide-react";
+import { Camera, Video, Plus, Trash2, Edit, Star } from "lucide-react";
 import Image from "next/image";
-import { uploadPhoto, validateFile } from "@/lib/cloudinary";
 
 interface Photo {
   _id: string;
@@ -37,12 +36,11 @@ interface GalleryManagerProps {
 export default function GalleryManager({ photos, videos, onUpdate }: GalleryManagerProps) {
   const [isAddingPhoto, setIsAddingPhoto] = useState(false);
   const [isAddingVideo, setIsAddingVideo] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoForm, setPhotoForm] = useState({
+    url: '',
     caption: '',
     isProfileImage: false,
-    isCoverImage: false,
-    file: null as File | null
+    isCoverImage: false
   });
   const [videoForm, setVideoForm] = useState({
     url: '',
@@ -53,73 +51,23 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
 
   const handleAddPhoto = async () => {
     try {
-      if (!photoForm.file) {
-        alert('Please select an image file to upload');
-        return;
-      }
-
-      setUploadingPhoto(true);
-      const validationError = validateFile(photoForm.file);
-      if (validationError) {
-        alert(validationError);
-        setUploadingPhoto(false);
-        return;
-      }
-
-      console.log('Starting image upload...');
-      
-      // Upload the image using the proper Cloudinary function
-      const uploadedPhoto = await uploadPhoto(photoForm.file, 'gallery');
-      console.log('Image uploaded. Photo data:', uploadedPhoto);
-
-      if (!uploadedPhoto || !uploadedPhoto.url) {
-        throw new Error('No URL returned from image upload');
-      }
-
       const token = localStorage.getItem('artist_token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      console.log('Saving photo to gallery with URL:', uploadedPhoto.url);
-      
-      // Save the photo to the gallery
       const response = await fetch('/api/artist/gallery/photo', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          url: uploadedPhoto.url,
-          caption: photoForm.caption || '',
-          isProfileImage: photoForm.isProfileImage || false,
-          isCoverImage: photoForm.isCoverImage || false
-        })
+        body: JSON.stringify(photoForm)
       });
 
-      const responseData = await response.json();
-      console.log('API Response:', responseData);
-
-      if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to save photo to gallery');
+      if (response.ok) {
+        setPhotoForm({ url: '', caption: '', isProfileImage: false, isCoverImage: false });
+        setIsAddingPhoto(false);
+        onUpdate();
       }
-
-      // Reset form and update gallery
-      setPhotoForm({
-        caption: '',
-        isProfileImage: false,
-        isCoverImage: false,
-        file: null
-      });
-      setIsAddingPhoto(false);
-      onUpdate();
-      
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error adding photo:', error);
-      alert(`Error: ${error?.message || 'Failed to add photo. Please try again.'}`);
-    } finally {
-      setUploadingPhoto(false);
     }
   };
 
@@ -198,48 +146,30 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                   Add Photo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Upload New Photo</DialogTitle>
+                  <DialogTitle>Add New Photo</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  {/* File Input */}
                   <div>
-                    <Label htmlFor="photo-file">Select Image File</Label>
-                    <div className="mt-1">
-                      <Input
-                        id="photo-file"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setPhotoForm({ ...photoForm, file });
-                          }
-                        }}
-                        className="cursor-pointer"
-                      />
-                      {photoForm.file && (
-                        <p className="text-sm text-green-600 mt-1">
-                          Selected: {photoForm.file.name} ({(photoForm.file.size / 1024 / 1024).toFixed(2)}MB)
-                        </p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Supported formats: JPEG, PNG, WebP. Max size: 5MB
-                      </p>
-                    </div>
+                    <Label htmlFor="photo-url">Photo URL</Label>
+                    <Input
+                      id="photo-url"
+                      value={photoForm.url}
+                      onChange={(e) => setPhotoForm({ ...photoForm, url: e.target.value })}
+                      placeholder="https://example.com/photo.jpg"
+                    />
                   </div>
-
                   <div>
-                    <Label htmlFor="photo-caption">Caption (Optional)</Label>
+                    <Label htmlFor="photo-caption">Caption</Label>
                     <Textarea
                       id="photo-caption"
                       value={photoForm.caption}
                       onChange={(e) => setPhotoForm({ ...photoForm, caption: e.target.value })}
-                      placeholder="Add a caption for your photo..."
+                      placeholder="Photo description..."
                     />
                   </div>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex space-x-4">
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
@@ -257,18 +187,8 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                       <span>Set as Cover Image</span>
                     </label>
                   </div>
-                  <Button onClick={handleAddPhoto} className="w-full" disabled={!photoForm.file || uploadingPhoto}>
-                    {uploadingPhoto ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {photoForm.file ? 'Upload & Add Photo' : 'Select a file to upload'}
-                      </>
-                    )}
+                  <Button onClick={handleAddPhoto} className="w-full">
+                    Add Photo
                   </Button>
                 </div>
               </DialogContent>
@@ -315,7 +235,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
       </Card>
 
       {/* Videos Section */}
-      {/* <Card>
+      <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center">
@@ -431,7 +351,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
             ))}
           </div>
         </CardContent>
-      </Card> */}
+      </Card>
     </div>
   );
 }

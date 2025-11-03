@@ -90,24 +90,6 @@ const ArtistBookingSchema = new mongoose.Schema({
     paymentMethod: {
       type: String,
       enum: ['cash', 'bank_transfer', 'upi', 'card', 'cheque']
-    },
-    paymentOrderId: {
-      type: String // Razorpay order ID
-    },
-    paymentDetails: {
-      paymentId: {
-        type: String // Razorpay payment ID
-      },
-      orderId: {
-        type: String // Razorpay order ID
-      },
-      signature: {
-        type: String // Razorpay signature
-      },
-      paymentGateway: {
-        type: String,
-        default: 'razorpay'
-      }
     }
   },
   contract: {

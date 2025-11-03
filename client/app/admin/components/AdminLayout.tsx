@@ -16,8 +16,7 @@ import {
   CreditCard,
   Bell,
   Search,
-  ChevronDown,
-  Clock
+  ChevronDown
 } from 'lucide-react';
 
 interface AdminLayoutProps {

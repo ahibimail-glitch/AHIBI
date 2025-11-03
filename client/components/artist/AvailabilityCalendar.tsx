@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, Plus, Edit, Trash2, Save, X, User, DollarSign, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,9 +60,6 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [availability, setAvailability] = useState<{ [key: string]: AvailabilityData }>({});
-  const [bookings, setBookings] = useState<{ [key: string]: any[] }>({});
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
-  const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
@@ -78,7 +75,6 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   // Get calendar data for current month
   useEffect(() => {
     fetchAvailability();
-    fetchBookings();
   }, [currentDate]);
 
   const fetchAvailability = async () => {
@@ -109,44 +105,6 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
       console.error('Error fetching availability:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchBookings = async () => {
-    try {
-      const token = localStorage.getItem('artist_token');
-      const month = currentDate.getMonth() + 1;
-      const year = currentDate.getFullYear();
-      
-      // Fetch all bookings for this month
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
-      
-      const response = await fetch(`/api/artist/bookings`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const bookingsMap: { [key: string]: any[] } = {};
-        
-        (data.data?.bookings || []).forEach((booking: any) => {
-          const bookingDate = new Date(booking.event.date);
-          if (bookingDate >= startDate && bookingDate <= endDate) {
-            const dateKey = bookingDate.toISOString().split('T')[0];
-            if (!bookingsMap[dateKey]) {
-              bookingsMap[dateKey] = [];
-            }
-            bookingsMap[dateKey].push(booking);
-          }
-        });
-        
-        setBookings(bookingsMap);
-      }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
     }
   };
 
@@ -204,15 +162,13 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
       const isCurrentMonth = current.getMonth() === month;
       const isToday = current.toDateString() === new Date().toDateString();
       const dayAvailability = availability[dateKey];
-      const dayBookings = bookings[dateKey] || [];
 
       days.push({
         date: new Date(current),
         dateKey,
         isCurrentMonth,
         isToday,
-        availability: dayAvailability,
-        bookings: dayBookings
+        availability: dayAvailability
       });
 
       current.setDate(current.getDate() + 1);
@@ -292,19 +248,19 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   return (
     <div className="space-y-6">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
-            <ChevronLeft className="h-4 w-4" />
+          <Button variant="outline" onClick={() => navigateMonth('prev')}>
+            ←
           </Button>
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-xl font-semibold">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
-          <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
-            <ChevronRight className="h-4 w-4" />
+          <Button variant="outline" onClick={() => navigateMonth('next')}>
+            →
           </Button>
         </div>
-        <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+        <Button onClick={() => setCurrentDate(new Date())}>
           Today
         </Button>
       </div>
@@ -320,90 +276,44 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
             ))}
           </div>
           
-          <div className="grid grid-cols-7 gap-2">
-            {calendarDays.map(({ date, dateKey, isCurrentMonth, isToday, availability: dayAvailability, bookings: dayBookings }) => {
-              const hasBooking = dayBookings.length > 0;
-              const confirmedBooking = dayBookings.find((b: any) => b.booking?.status === 'confirmed');
-              
-              return (
-                <div
-                  key={dateKey}
-                  className={`
-                    min-h-[100px] p-2 border-2 rounded-lg cursor-pointer transition-all
-                    ${isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
-                    ${isToday ? 'ring-2 ring-purple-500 shadow-md' : ''}
-                    ${selectedDate === dateKey ? 'bg-purple-50 border-purple-300 shadow-md' : 'border-gray-200'}
-                    ${hasBooking ? 'bg-green-50 border-green-300' : ''}
-                    hover:shadow-lg hover:scale-105
-                  `}
-                  onClick={() => {
-                    setSelectedDate(selectedDate === dateKey ? '' : dateKey);
-                    if (hasBooking && dayBookings.length === 1) {
-                      setSelectedBooking(dayBookings[0]);
-                      setShowBookingDialog(true);
-                    }
-                  }}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className={`text-sm font-semibold ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
-                      {date.getDate()}
-                    </span>
-                    <div className="flex flex-col items-end gap-1">
-                      {confirmedBooking && (
-                        <Badge className="bg-green-500 text-white text-xs">
-                          <DollarSign className="h-3 w-3 mr-1" />
-                          ₹{confirmedBooking.booking?.finalAmount || confirmedBooking.booking?.requestedAmount || 0}
-                        </Badge>
-                      )}
-                      {dayAvailability && (
-                        <Badge variant="secondary" className={`text-xs ${getDayStatusColor(dayAvailability.dayStatus)}`}>
-                          {dayAvailability.timeSlots.filter(slot => slot.isAvailable && !slot.isBooked).length} slots
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {hasBooking && (
-                    <div className="space-y-1 mt-2">
-                      {dayBookings.map((booking: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="text-xs bg-white p-1 rounded border border-green-200 cursor-pointer hover:bg-green-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBooking(booking);
-                            setShowBookingDialog(true);
-                          }}
-                        >
-                          <div className="font-semibold text-green-700 truncate">
-                            {booking.event.name}
-                          </div>
-                          <div className="text-gray-600 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {booking.event.startTime} - {booking.event.endTime}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {!hasBooking && dayAvailability && (
-                    <div className="space-y-1 mt-2">
-                      {dayAvailability.specialPricing.isSpecialDay && (
-                        <div className="text-xs text-orange-600 font-medium bg-orange-50 px-1 py-0.5 rounded">
-                          Special Pricing
-                        </div>
-                      )}
-                      {dayAvailability.timeSlots.length > 0 && (
-                        <div className="text-xs text-gray-500">
-                          {dayAvailability.timeSlots.filter(slot => !slot.isBooked).length} available
-                        </div>
-                      )}
-                    </div>
+          <div className="grid grid-cols-7 gap-1">
+            {calendarDays.map(({ date, dateKey, isCurrentMonth, isToday, availability: dayAvailability }) => (
+              <div
+                key={dateKey}
+                className={`
+                  min-h-[80px] p-2 border rounded cursor-pointer transition-colors
+                  ${isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
+                  ${isToday ? 'ring-2 ring-blue-500' : ''}
+                  ${selectedDate === dateKey ? 'bg-blue-50' : ''}
+                  hover:bg-gray-100
+                `}
+                onClick={() => setSelectedDate(selectedDate === dateKey ? '' : dateKey)}
+              >
+                <div className="flex justify-between items-start mb-1">
+                  <span className={`text-sm ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {date.getDate()}
+                  </span>
+                  {dayAvailability && (
+                    <Badge variant="secondary" className={`text-xs ${getDayStatusColor(dayAvailability.dayStatus)}`}>
+                      {dayAvailability.timeSlots.filter(slot => slot.isAvailable && !slot.isBooked).length}
+                    </Badge>
                   )}
                 </div>
-              );
-            })}
+                
+                {dayAvailability && (
+                  <div className="space-y-1">
+                    {dayAvailability.specialPricing.isSpecialDay && (
+                      <div className="text-xs text-orange-600 font-medium">
+                        Special
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-600">
+                      {dayAvailability.timeSlots.length} slots
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -534,7 +444,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   ) : (
                     <Alert>
                       <AlertDescription>
-                        No time slots set for this date. All dates are available for booking by default.
+                        No time slots set for this date. Add time slots to make yourself available for bookings.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -568,7 +478,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
             ) : (
               <Alert>
                 <AlertDescription>
-                  No availability set for this date. All dates are available for booking by default.
+                  No availability set for this date. Click "Add Time Slot" to start accepting bookings.
                 </AlertDescription>
               </Alert>
             )}
@@ -576,100 +486,28 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
         </Card>
       )}
 
-      {/* Booking Details Dialog */}
-      <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Booking Details</DialogTitle>
-            <DialogDescription>
-              Complete information about this booking
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedBooking && (
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{selectedBooking.event.name}</h3>
-                <div className="flex items-center gap-4 text-sm">
-                  <Badge className={selectedBooking.booking?.status === 'confirmed' ? 'bg-green-500' : 'bg-yellow-500'}>
-                    {selectedBooking.booking?.status === 'confirmed' ? 'Confirmed' : 'Pending'}
-                  </Badge>
-                  <span className="text-gray-600 flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    {selectedBooking.organizer?.name || 'Organizer'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Event Date</p>
-                  <p className="font-semibold flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(selectedBooking.event.date).toLocaleDateString('en-IN', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Time</p>
-                  <p className="font-semibold flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    {selectedBooking.event.startTime} - {selectedBooking.event.endTime}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Venue</p>
-                  <p className="font-semibold flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    {selectedBooking.event.venue.name}
-                  </p>
-                  <p className="text-xs text-gray-500">{selectedBooking.event.venue.city}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Amount</p>
-                  <p className="text-xl font-bold text-purple-600 flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    ₹{selectedBooking.booking?.finalAmount || selectedBooking.booking?.requestedAmount || 0}
-                  </p>
-                </div>
-              </div>
-
-              {selectedBooking.contract?.organizerRequirements && (
-                <div className="bg-gray-50 p-3 rounded border">
-                  <p className="text-sm font-semibold mb-1">Special Requirements</p>
-                  <p className="text-sm text-gray-700">{selectedBooking.contract.organizerRequirements}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Legend */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-semibold">Legend</CardTitle>
+          <CardTitle className="text-sm">Legend</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 bg-green-50 border-2 border-green-300 rounded"></div>
-              <span>Booked</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 bg-green-100 border-2 border-green-200 rounded"></div>
+              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
               <span>Available</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 bg-yellow-100 border-2 border-yellow-200 rounded"></div>
+              <div className="w-4 h-4 bg-yellow-100 border border-yellow-200 rounded"></div>
               <span>Partially Booked</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-5 h-5 bg-red-100 border-2 border-red-200 rounded"></div>
+              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
               <span>Fully Booked</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+              <span>Unavailable</span>
             </div>
           </div>
         </CardContent>

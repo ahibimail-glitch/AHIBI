@@ -215,18 +215,8 @@ exports.getArtistProfile = async (req, res) => {
       return ApiResponse.notFound(res, 'Artist profile not found');
     }
 
-    // Convert to plain object and add computed fields for frontend compatibility
-    const artistObj = artist.toObject();
-    
-    // Map profilePic to profileImage for frontend
-    artistObj.profileImage = artist.profilePic || null;
-    
-    // Find cover image from gallery
-    const coverPhoto = artist.gallery.photos.find(photo => photo.isCoverImage === true);
-    artistObj.coverImage = coverPhoto ? coverPhoto.url : null;
-
     return ApiResponse.success(res, 'Artist profile retrieved successfully', {
-      artist: artistObj
+      artist
     });
 
   } catch (error) {
@@ -254,7 +244,7 @@ exports.updateArtistProfile = async (req, res) => {
     }
 
     // Update allowed fields
-    const { name, email, city, bio, genres, type, specialization, basePrice, experience, socialLinks, profilePic, profileImage, coverImage } = req.body;
+    const { name, email, city, bio, genres, type, specialization, basePrice, experience, socialLinks, profilePic } = req.body;
     
     if (name) artist.name = name;
     if (email) artist.email = email;
@@ -265,43 +255,12 @@ exports.updateArtistProfile = async (req, res) => {
     if (basePrice) artist.basePrice = basePrice;
     if (experience) artist.experience = experience;
     if (socialLinks) artist.socialLinks = socialLinks;
-    // Handle both profilePic and profileImage for backward compatibility
     if (profilePic) artist.profilePic = profilePic;
-    if (profileImage) artist.profilePic = profileImage;
-    // Handle coverImage - store in gallery with isCoverImage flag
-    if (coverImage) {
-      // Remove previous cover image flag
-      artist.gallery.photos.forEach(photo => {
-        photo.isCoverImage = false;
-      });
-      // Check if coverImage URL already exists in gallery
-      const existingPhoto = artist.gallery.photos.find(photo => photo.url === coverImage);
-      if (existingPhoto) {
-        existingPhoto.isCoverImage = true;
-      } else {
-        // Add new photo with cover image flag
-        artist.gallery.photos.push({
-          url: coverImage,
-          isCoverImage: true,
-          isProfileImage: false
-        });
-      }
-    }
 
     const updatedArtist = await artist.save();
 
-    // Convert to plain object and add computed fields for frontend compatibility
-    const artistObj = updatedArtist.toObject();
-    
-    // Map profilePic to profileImage for frontend
-    artistObj.profileImage = updatedArtist.profilePic || null;
-    
-    // Find cover image from gallery
-    const coverPhoto = updatedArtist.gallery.photos.find(photo => photo.isCoverImage === true);
-    artistObj.coverImage = coverPhoto ? coverPhoto.url : null;
-
     return ApiResponse.success(res, 'Artist profile updated successfully', {
-      artist: artistObj
+      artist: updatedArtist
     });
 
   } catch (error) {

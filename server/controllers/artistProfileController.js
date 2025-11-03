@@ -1,8 +1,7 @@
 const Artist = require('../models/Artist');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
-const { uploadPhoto } = require('../utils/cloudinary');
-const { logger } = require('../utils/logger');
+// const cloudinary = require('../config/cloudinary');
 
 /**
  * @desc    Update artist gallery (photos/videos)
@@ -402,64 +401,5 @@ exports.getApprovedArtists = async (req, res) => {
   } catch (error) {
     console.error('Get Approved Artists Error:', error);
     return ApiResponse.serverError(res, 'Error retrieving artists', error.message);
-  }
-};
-
-/**
- * @desc    Upload image for artist (profile, cover, gallery)
- * @route   POST /api/artist/upload/image
- * @access  Private (Artist only)
- */
-exports.uploadImage = async (req, res) => {
-  try {
-    if (!req.file) {
-      return ApiResponse.badRequest(res, 'Please upload an image');
-    }
-
-    const { type = 'gallery' } = req.body;
-    const file = req.file;
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.mimetype)) {
-      return ApiResponse.badRequest(res, 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed');
-    }
-
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return ApiResponse.badRequest(res, 'File size too large. Maximum size is 5MB');
-    }
-
-    // Determine folder based on type
-    let folder = 'artist-gallery';
-    if (type === 'profile') {
-      folder = 'artist-profile-pictures';
-    } else if (type === 'cover') {
-      folder = 'artist-cover-images';
-    }
-
-    // Upload to Cloudinary
-    const uploadOptions = {
-      context: {
-        description: `Artist ${type} image`,
-        uploaded_by: req.user.id,
-        artist_id: req.user.id
-      }
-    };
-
-    const result = await uploadPhoto(file, folder, uploadOptions);
-
-    logger.info(`Artist image uploaded successfully: ${result.public_id} by user ${req.user.id}`);
-
-    return ApiResponse.success(res, 'Image uploaded successfully', {
-      url: result.secure_url,
-      publicId: result.public_id,
-      type
-    });
-
-  } catch (error) {
-    logger.error(`Artist image upload failed: ${error.message}`);
-    return ApiResponse.serverError(res, 'Error uploading image', error.message);
   }
 };
