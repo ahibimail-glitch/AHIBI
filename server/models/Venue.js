@@ -18,6 +18,7 @@ const VenueSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: [true, 'Please add a phone number'],
+    unique: true,
     match: [/^\d{10}$/, 'Please enter a valid 10-digit phone number']
   },
   approvalStatus: {
