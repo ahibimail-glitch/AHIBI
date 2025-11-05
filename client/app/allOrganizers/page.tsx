@@ -292,7 +292,7 @@ export default function AhibiOrganizerPage() {
         <Hero />
         <FeatureGrid />
         <HowItWorks />
-        <Plans />
+        {/* <Plans /> */}
         <FAQ />
         <CTA />
       </main>
