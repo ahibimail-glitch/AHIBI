@@ -127,7 +127,7 @@ const Hero = () => (
         </div>
       </div>
 
-      <div className="md:justify-self-end">
+      {/* <div className="md:justify-self-end">
         <Card className="rounded-2xl shadow-2xl border-emerald-200/50 bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-gray-800">Quick search for your event</CardTitle>
@@ -154,7 +154,7 @@ const Hero = () => (
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   </Section>
 );
