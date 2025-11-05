@@ -17,7 +17,6 @@ const ArtistSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: [true, 'Phone number is required'],
-    unique: true,
     trim: true,
     match: [/^\d{10}$/, 'Please add a valid 10 digit phone number']
   },
