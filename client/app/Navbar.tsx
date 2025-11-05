@@ -115,19 +115,27 @@ export default function Navbar() {
               </Link>
             
               <Link
-                href="/artist"
+                href="/allArtists"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="hover:text-white transition"
               >
                 Artists
               </Link>
               <Link
-                href="/partners"
+                href="/allVenues"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="hover:text-white transition"
               >
-                Partners
+                Venues
               </Link>
+              <Link
+                href="/allOrganizers"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="hover:text-white transition"
+              >
+                Organizers
+              </Link>
+              
               <Link
                 href="/about"
                 onClick={() => setIsMobileMenuOpen(false)}
