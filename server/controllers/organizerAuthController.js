@@ -73,18 +73,56 @@ exports.verifyOrganizerOtp = async (req, res) => {
         return ApiResponse.badRequest(res, 'Invalid or expired OTP');
       }
 
+      // Debug log the verification request
+      console.log('Organizer OTP verification request:', { phone, otp: '***', storedData: stored.data });
+
       // Defensive check to prevent duplicates if data changed between steps
       const { email } = stored.data || {};
       if (!email) {
         return ApiResponse.badRequest(res, 'Email is required');
       }
-      const existing = await Organizer.findOne({ $or: [{ phone }, { email }] });
-      if (existing) {
-        return ApiResponse.badRequest(res, existing.email === email ? 'Email is already registered' : 'Number is already registered');
+      // Debug: Check what's in the database
+      const phoneCheck = await Organizer.findOne({ phone });
+      const emailCheck = await Organizer.findOne({ email });
+      const contactEmailCheck = await Organizer.findOne({ 'contactInfo.email': email });
+      console.log('Database check results:', {
+        phoneExists: !!phoneCheck,
+        emailExists: !!emailCheck,
+        contactEmailExists: !!contactEmailCheck,
+        phoneRecord: phoneCheck ? { phone: phoneCheck.phone, email: phoneCheck.email } : null,
+        emailRecord: emailCheck ? { phone: emailCheck.phone, email: emailCheck.email } : null,
+        contactEmailRecord: contactEmailCheck ? { phone: contactEmailCheck.phone, email: contactEmailCheck.email, contactEmail: contactEmailCheck.contactInfo?.email } : null
+      });
+
+      const existingOrganizer = await Organizer.findOne({ $or: [ { phone }, { email }, { 'contactInfo.email': email } ] });
+      if (existingOrganizer) {
+        // Add debugging information
+        console.log('Organizer conflict found during verification:', {
+          requestPhone: phone,
+          requestEmail: email,
+          existingPhone: existingOrganizer.phone,
+          existingEmail: existingOrganizer.email,
+          existingContactEmail: existingOrganizer?.contactInfo?.email,
+          conflictType: existingOrganizer.email === email ? 'email' : 'phone'
+        });
+        
+        return ApiResponse.badRequest(res, existingOrganizer.email === email ? 'Email is already registered as organizer' : 'Number is already registered as organizer');
       }
 
       // Clear OTP and data from temp store
       tempOtpStore.delete(phone);
+
+      // Proactively fix legacy unique index on `user` if present (causes dup key on null)
+      try {
+        const indexes = await Organizer.collection.indexes();
+        const hasLegacyUserUnique = Array.isArray(indexes) && indexes.some((idx) => idx.name === 'user_1' && idx.unique);
+        if (hasLegacyUserUnique) {
+          console.warn('Legacy unique index user_1 found on organizers. Dropping index to proceed.');
+          await Organizer.collection.dropIndex('user_1');
+        }
+      } catch (fixIdxErr) {
+        console.error('Index inspection/drop failed (non-fatal):', fixIdxErr?.message || fixIdxErr);
+      }
 
       try {
         // Create organizer account from stored data
@@ -100,7 +138,17 @@ exports.verifyOrganizerOtp = async (req, res) => {
       } catch (e) {
         if (e && e.code === 11000) {
           const field = e.keyPattern && Object.keys(e.keyPattern)[0];
-          const msg = field === 'email' ? 'Email is already registered' : 'Number is already registered';
+          console.error('Duplicate key error on organizer create:', {
+            keyPattern: e.keyPattern,
+            keyValue: e.keyValue,
+            message: e.message
+          });
+          let msg = 'Duplicate value';
+          if (field === 'email' || field === 'contactInfo.email') {
+            msg = 'Email is already registered as organizer';
+          } else if (field === 'phone') {
+            msg = 'Number is already registered as organizer';
+          }
           return ApiResponse.badRequest(res, msg);
         }
         throw e;
@@ -160,11 +208,24 @@ exports.sendOrganizerOtp = async (req, res) => {
     // For signup, check if organizer already exists
     if (mode === 'signup' || !mode) {
       const { email } = req.body;
-      // Check both phone and email to prevent duplicates later
-      const existing = await Organizer.findOne({ $or: [{ phone }, { email }] });
+      
+      // Debug log the incoming request
+      console.log('Organizer signup request:', { phone, email, mode });
+      
+      // Check phone, email, and contact email in Organizer collection only
+      const existingOrganizer = await Organizer.findOne({ $or: [{ phone }, { email }, { 'contactInfo.email': email }] });
 
-      if (existing) {
-        return ApiResponse.badRequest(res, existing.email === email ? 'Email is already registered' : 'Number is already registered');
+      if (existingOrganizer) {
+        // Add debugging information
+        console.log('Organizer conflict found:', {
+          requestPhone: phone,
+          requestEmail: email,
+          existingPhone: existingOrganizer.phone,
+          existingEmail: existingOrganizer.email,
+          conflictType: existingOrganizer.email === email ? 'email' : 'phone'
+        });
+        
+        return ApiResponse.badRequest(res, existingOrganizer.email === email ? 'Email is already registered as organizer' : 'Number is already registered as organizer');
       }
 
       // Generate OTP
