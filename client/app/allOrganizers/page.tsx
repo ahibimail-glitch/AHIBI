@@ -97,64 +97,52 @@ const Section = ({ children, id }: { children: React.ReactNode; id?: string }) =
 
 const Hero = () => (
   <Section>
-    <div className="grid items-center gap-10 md:grid-cols-2">
-      <div>
+    <div className="min-h-[50vh] flex items-center">
+      <div className="space-y-6 animate-fadeIn mx-auto text-center max-w-3xl">
         <h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-500 bg-clip-text text-transparent">
           AHIBI Organizer
           <span className="block text-gray-600 text-3xl md:text-4xl mt-2">Plan. Book. Execute. Succeed.</span>
         </h1>
-        <p className="mt-6 text-gray-600 md:text-xl leading-relaxed">
-          Your all-in-one platform to discover artists, book venues, and manage events seamlessly. From concept to celebration, we've got you covered.
+        <p className="text-gray-600 md:text-xl leading-relaxed max-w-2xl mx-auto">
+          Your all-in-one platform to discover artists, book venues, and manage
+          events seamlessly. From concept to celebration — we’ve got you covered.
         </p>
-        <div className="mt-8 flex flex-wrap gap-4">
+
+        <div className="flex flex-wrap justify-center gap-4 pt-2">
           <Link href="/organizer/auth/signup">
-          <Button size="lg" className="rounded-2xl px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-            Start Planning
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+            <Button
+              size="lg"
+              className="rounded-2xl px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
+              Start Planning
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </Link>
+
           <Link href="/organizer/auth/login">
-          <Button size="lg" className="rounded-2xl px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-            Organizer Login
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="rounded-2xl px-8 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 transition-all duration-300"
+            >
+              Organizer Login
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </Link>
         </div>
-        <div className="mt-8 flex items-center gap-6 text-sm text-gray-600">
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> One platform</div>
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> Secure bookings</div>
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-600" /> Easy management</div>
+
+        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600 pt-4">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-emerald-600" /> One platform
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-emerald-600" /> Secure bookings
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-emerald-600" /> Easy management
+          </div>
         </div>
       </div>
-
-      {/* <div className="md:justify-self-end">
-        <Card className="rounded-2xl shadow-2xl border-emerald-200/50 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-800">Quick search for your event</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Input placeholder="Search artists, venues, vendors" className="flex-1 border-emerald-200" />
-              <Button variant="secondary" className="rounded-2xl bg-emerald-100 hover:bg-emerald-200 text-emerald-700"><Search className="h-4 w-4" /></Button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {categories.map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-2 text-sm text-gray-700 hover:bg-emerald-100 transition-colors">
-                  <Icon className="h-4 w-4 text-emerald-600" /> {label}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3 text-sm text-gray-700"><MapPin className="mr-2 inline h-4 w-4 text-emerald-600" /> Dimapur</div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3 text-sm text-gray-700"><Wallet className="mr-2 inline h-4 w-4 text-emerald-600" /> ₹2L–₹5L</div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3 text-sm text-gray-700"><CalendarClock className="mr-2 inline h-4 w-4 text-emerald-600" /> Dec 2024</div>
-            </div>
-            <Button className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300" asChild>
-              <Link href="/allOrganizers/list">Browse all options</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div> */}
     </div>
   </Section>
 );
