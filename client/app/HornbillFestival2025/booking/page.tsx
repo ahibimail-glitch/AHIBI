@@ -8,10 +8,10 @@ import Footer from "../../Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { toast } from "sonner";
 
-const Booking = () => {
+const BookingInner = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -353,4 +353,10 @@ const Booking = () => {
   );
 };
 
-export default Booking;
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}> 
+      <BookingInner />
+    </Suspense>
+  );
+}
