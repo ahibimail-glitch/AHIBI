@@ -73,19 +73,38 @@ exports.verifyOrganizerOtp = async (req, res) => {
         return ApiResponse.badRequest(res, 'Invalid or expired OTP');
       }
 
+      // Defensive check to prevent duplicates if data changed between steps
+      const { email } = stored.data || {};
+      if (!email) {
+        return ApiResponse.badRequest(res, 'Email is required');
+      }
+      const existing = await Organizer.findOne({ $or: [{ phone }, { email }] });
+      if (existing) {
+        return ApiResponse.badRequest(res, existing.email === email ? 'Email is already registered' : 'Number is already registered');
+      }
+
       // Clear OTP and data from temp store
       tempOtpStore.delete(phone);
 
-      // Create organizer account from stored data
-      const organizer = await Organizer.create(stored.data);
+      try {
+        // Create organizer account from stored data
+        const organizer = await Organizer.create(stored.data);
 
-      return ApiResponse.success(res, 'Organizer account created successfully. Pending admin approval.', {
-        organizer: {
-          id: organizer._id,
-          companyName: organizer.companyName,
-          approvalStatus: organizer.approvalStatus
+        return ApiResponse.success(res, 'Organizer account created successfully. Pending admin approval.', {
+          organizer: {
+            id: organizer._id,
+            companyName: organizer.companyName,
+            approvalStatus: organizer.approvalStatus
+          }
+        });
+      } catch (e) {
+        if (e && e.code === 11000) {
+          const field = e.keyPattern && Object.keys(e.keyPattern)[0];
+          const msg = field === 'email' ? 'Email is already registered' : 'Number is already registered';
+          return ApiResponse.badRequest(res, msg);
         }
-      });
+        throw e;
+      }
     }
 
   } catch (error) {
@@ -140,10 +159,12 @@ exports.sendOrganizerOtp = async (req, res) => {
 
     // For signup, check if organizer already exists
     if (mode === 'signup' || !mode) {
-      let organizer = await Organizer.findOne({ phone });
+      const { email } = req.body;
+      // Check both phone and email to prevent duplicates later
+      const existing = await Organizer.findOne({ $or: [{ phone }, { email }] });
 
-      if (organizer) {
-        return ApiResponse.badRequest(res, 'Number is already registered');
+      if (existing) {
+        return ApiResponse.badRequest(res, existing.email === email ? 'Email is already registered' : 'Number is already registered');
       }
 
       // Generate OTP
