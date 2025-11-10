@@ -29,7 +29,7 @@ export default function Navbar() {
   return (
     <div>
       {/* Header */}
-      <header className="w-full py-4 flex justify-center bg-transparent">
+      <header className="w-full  flex justify-center bg-[#0F172A] ">
         <nav className="flex items-center justify-between px-6 py-2 rounded-full bg-[#0F172A] w-full max-w-6xl shadow-md relative">
           {/* Logo */}
           <div className="flex items-center space-x-2">

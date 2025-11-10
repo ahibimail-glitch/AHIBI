@@ -302,7 +302,7 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1">
-        <section className="relative w-full aspect-[16/9] overflow-hidden">
+        <section className="relative w-full h-[700px] overflow-hidden">
           {/* Background with slow zoom animation */}
           <motion.div
             initial={{ scale: 1.2 }}
@@ -310,40 +310,45 @@ export default function EventsPage() {
             transition={{ duration: 10, ease: "easeOut" }}
             className="absolute inset-0"
           >
-            {/* Desktop Image */}
-            <Image
-              src="/images/carausel1.jpg"
-              alt="Event Background"
-              fill
-              className="object-cover hidden sm:block"
-              priority
-            />
+            <div className="hidden md:block">
+              <Image
+                src="/images/HMF/hero-desktop.jpg"
+                alt="Hornbill Festival 2025"
+                width={1920}
+                height={1080}
+                title="Hornbill Festival 2025"
 
-            {/* Mobile Image */}
-            <Image
-              src="/images/carausel1.jpg"
-              alt="Event Background Mobile"
-              fill
-              className="object-cover block sm:hidden"
-              priority
-            />
+              />
+            </div>
+            <div className="md:hidden">
+              <Image
+                src="/images/HMF/hero-mobile.jpg"
+                alt="Hornbill Festival 2025"
+                width={1920}
+                height={1080}
+                title="Hornbill Festival 2025"
 
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70"></div>
+              />
+            </div>
+
+
+
+
+
           </motion.div>
 
           {/* Text Overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
-            <motion.h1
+            {/* <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1 }}
               className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg"
             >
               Explore <span className="text-yellow-400">Exciting Events</span>
-            </motion.h1>
+            </motion.h1> */}
 
-            <motion.p
+            {/* <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.3 }}
@@ -351,9 +356,9 @@ export default function EventsPage() {
             >
               Discover, participate, and connect through amazing campus events, workshops,
               and cultural programs that bring our community together.
-            </motion.p>
+            </motion.p> */}
 
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.6 }}
@@ -361,7 +366,7 @@ export default function EventsPage() {
               <button className="bg-yellow-400 text-black font-semibold px-6 py-3 rounded-full shadow-lg hover:bg-yellow-300 transition duration-300">
                 Explore Now
               </button>
-            </motion.div>
+            </motion.div> */}
           </div>
         </section>
 
