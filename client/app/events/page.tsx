@@ -220,7 +220,7 @@ export default function EventsPage() {
         if (!response.ok) throw new Error('Failed to fetch events');
         const data: EventsResponse = await response.json();
         const filteredEvents = (data.data.events || []).filter(
-          (event) => event._id !== '68dac96e8d5dd14f277d5b1a' && event._id !== '6917510439a9643fb98027c0'&&event._id !== '691761e039a9643fb980297f'
+          (event) => event._id !== '68dac96e8d5dd14f277d5b1a' && event._id !== '6917510439a9643fb98027c0'&&event._id !== '69176d6839a9643fb9802ad1'&&event._id !== '69176cdf39a9643fb9802a5d'
         );
         setEvents(filteredEvents);
       } catch (err) {
