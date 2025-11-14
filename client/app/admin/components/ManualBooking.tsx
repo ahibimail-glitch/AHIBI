@@ -136,19 +136,39 @@ const ManualBooking: React.FC = () => {
     try {
       setLoading(true);
       // Use the Next.js proxy route so we don't need CORS or a hardcoded backend URL
-      const resp = await axios.get('/api/events');
+      const resp = await axios.get('/api/events?limit=1000');
       // Possible shapes: { events: [...] } or { data: { events: [...] } } or plain array
       const raw = resp.data?.events || resp.data?.data?.events || resp.data?.data || resp.data;
       const arr: EventItem[] = Array.isArray(raw) ? raw : (Array.isArray(resp.data) ? resp.data : []);
 
-      // Exclude past events: use endDate if present, else startDate
+      // Exclude past events but include ongoing and same-day events (if no endDate)
       const now = new Date();
-      const upcoming = arr.filter((e) => {
-        const d = e?.endDate ? new Date(e.endDate) : (e?.startDate ? new Date(e.startDate) : null);
-        return d instanceof Date && !isNaN(d.getTime()) && d >= now;
-      })
-      // Sort by startDate ascending for convenience
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+
+      const isUpcomingOrOngoing = (e: EventItem): boolean => {
+        const start = e?.startDate ? new Date(e.startDate) : null;
+        const end = e?.endDate ? new Date(e.endDate) : null;
+        if (start && !isNaN(start.getTime())) {
+          if (end && !isNaN(end.getTime())) {
+            // Include if event hasn't ended yet
+            return end >= now;
+          }
+          // No end date: include if start is today or in the future
+          const startDay = new Date(start);
+          startDay.setHours(0, 0, 0, 0);
+          return startDay >= todayStart;
+        }
+        return false;
+      };
+
+      let upcoming = arr.filter(isUpcomingOrOngoing)
+        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+      // Fallback: if filtering removes everything (e.g., bad dates), show all to avoid empty list
+      if (!upcoming.length) {
+        upcoming = arr;
+      }
 
       setEvents(upcoming);
       setLoading(false);
