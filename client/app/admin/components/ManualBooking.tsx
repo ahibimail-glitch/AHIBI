@@ -138,9 +138,19 @@ const ManualBooking: React.FC = () => {
       // Use the Next.js proxy route so we don't need CORS or a hardcoded backend URL
       const resp = await axios.get('/api/events');
       // Possible shapes: { events: [...] } or { data: { events: [...] } } or plain array
-      const data = resp.data?.events || resp.data?.data?.events || resp.data?.data || resp.data;
-      if (Array.isArray(data)) setEvents(data);
-      else if (Array.isArray(resp.data)) setEvents(resp.data);
+      const raw = resp.data?.events || resp.data?.data?.events || resp.data?.data || resp.data;
+      const arr: EventItem[] = Array.isArray(raw) ? raw : (Array.isArray(resp.data) ? resp.data : []);
+
+      // Exclude past events: use endDate if present, else startDate
+      const now = new Date();
+      const upcoming = arr.filter((e) => {
+        const d = e?.endDate ? new Date(e.endDate) : (e?.startDate ? new Date(e.startDate) : null);
+        return d instanceof Date && !isNaN(d.getTime()) && d >= now;
+      })
+      // Sort by startDate ascending for convenience
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+      setEvents(upcoming);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching events', err);
