@@ -6,9 +6,9 @@ interface DaySelectorProps {
 }
 
 const days = [
-  { value: "4", label: "4th December", link: "http://localhost:3000/events/6917510439a9643fb98027c0?day=4" },
-  { value: "5", label: "5th December", link: "http://localhost:3000/events/6917510439a9643fb98027c0?day=5" },
-  { value: "6", label: "6th December", link: "http://localhost:3000/events/6917510439a9643fb98027c0?day=6" },
+  { value: "4", label: "4th December", link: "https://ahibi.in/events/6917510439a9643fb98027c0?day=4" },
+  { value: "5", label: "5th December", link: "https://ahibi.in/events/6917510439a9643fb98027c0?day=5" },
+  { value: "6", label: "6th December", link: "https://ahibi.in/events/6917510439a9643fb98027c0?day=6" },
 ];
 
 export const DaySelector = ({ selectedDay, onSelectDay }: DaySelectorProps) => {
