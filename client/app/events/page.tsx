@@ -184,6 +184,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                       <Link href={
                         event._id === "6899cb7215438afd622a7646" ? "/events/FC25" :
                           event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
+                          event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
                             `/events/${event._id}`
                       }>
                         View Details
@@ -219,7 +220,7 @@ export default function EventsPage() {
         if (!response.ok) throw new Error('Failed to fetch events');
         const data: EventsResponse = await response.json();
         const filteredEvents = (data.data.events || []).filter(
-          (event) => event._id !== '68dac96e8d5dd14f277d5b1a'
+          (event) => event._id !== '68dac96e8d5dd14f277d5b1a' && event._id !== '6917510439a9643fb98027c0'&&event._id !== '691761e039a9643fb980297f'
         );
         setEvents(filteredEvents);
       } catch (err) {

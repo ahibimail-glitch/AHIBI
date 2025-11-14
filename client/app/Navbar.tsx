@@ -37,7 +37,7 @@ export default function Navbar() {
               <img
                 src="/images/Logo.png"
                 alt="Ahibi logo"
-                className="h-10 w-auto object-contain cursor-pointer"
+                className="h-8 w-auto object-contain cursor-pointer"
               />
             </Link>
           </div>

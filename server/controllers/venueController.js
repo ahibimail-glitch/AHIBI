@@ -668,4 +668,64 @@ exports.debugListAllVenues = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Add a review to a venue (user)
+ * @route   POST /api/venues/:id/reviews
+ * @access  Private (User)
+ */
+exports.addVenueReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+
+    // Validate inputs
+    const parsedRating = Number(rating);
+    if (!parsedRating || parsedRating < 1 || parsedRating > 5) {
+      return ApiResponse.badRequest(res, 'Rating must be a number between 1 and 5');
+    }
+
+    const venue = await Venue.findById(id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    if (venue.approvalStatus !== 'approved') {
+      return ApiResponse.forbidden(res, 'Venue is not available for review');
+    }
+
+    // Optional: prevent duplicate reviews by same user
+    const alreadyReviewed = (venue.reviews || []).some(r => r.user?.toString() === req.user.id);
+    if (alreadyReviewed) {
+      return ApiResponse.badRequest(res, 'You have already reviewed this venue');
+    }
+
+    // Push review
+    venue.reviews = venue.reviews || [];
+    venue.reviews.push({
+      user: req.user.id,
+      userName: req.user.name || 'User',
+      rating: parsedRating,
+      comment: comment || ''
+    });
+
+    // Recalculate rating
+    await venue.calculateAverageRating();
+
+    await venue.save();
+
+    // Populate minimal user info for immediate UI display
+    const populated = await Venue.findById(id)
+      .select('rating reviews')
+      .populate('reviews.user', 'name');
+
+    return ApiResponse.success(res, 'Review added successfully', {
+      rating: populated.rating,
+      reviews: populated.reviews
+    });
+
+  } catch (error) {
+    console.error('Add venue review error:', error);
+    return ApiResponse.serverError(res, 'Error adding review', error);
+  }
+};
+
 module.exports = exports;

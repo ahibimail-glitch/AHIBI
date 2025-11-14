@@ -134,7 +134,83 @@ exports.verifyVenueOtp = async (req, res) => {
 
       tempOtpStore.delete(phone);
 
-      const venue = await Venue.create(stored.data);
+      // Prepare venue data with defaults for required fields
+      const signupData = stored.data;
+      
+      // Ensure ownerDetails has all required fields with defaults
+      // Email is required, so we must have it from signup data
+      const ownerEmail = signupData.ownerDetails?.email || signupData.email;
+      if (!ownerEmail) {
+        return ApiResponse.badRequest(res, 'Email is required for venue registration');
+      }
+
+      const ownerDetails = {
+        fullName: signupData.ownerDetails?.fullName || signupData.name || 'Not Provided',
+        primaryContact: signupData.ownerDetails?.primaryContact || signupData.phone || phone,
+        email: ownerEmail,
+        businessName: signupData.ownerDetails?.businessName || signupData.name || 'Not Provided',
+        designation: signupData.ownerDetails?.designation || 'Owner',
+        alternateContact: signupData.ownerDetails?.alternateContact || '',
+        businessRegistrationNumber: signupData.ownerDetails?.businessRegistrationNumber || '',
+        gstNumber: signupData.ownerDetails?.gstNumber || ''
+      };
+
+      // Ensure venueClassification has required fields
+      const venueClassification = {
+        venueTypes: signupData.venueClassification?.venueTypes || [],
+        venueTypeOther: signupData.venueClassification?.venueTypeOther || '',
+        indoorOutdoor: signupData.venueClassification?.indoorOutdoor || 'indoor',
+        operationMode: signupData.venueClassification?.operationMode || 'year_round'
+      };
+
+      // Ensure parking has required fields
+      const parking = {
+        carCapacity: signupData.parking?.carCapacity || 0,
+        twoWheelerAvailable: signupData.parking?.twoWheelerAvailable || false
+      };
+
+      // Ensure capacityDetails has required fields
+      const capacityDetails = {
+        standingCapacity: signupData.capacityDetails?.standingCapacity || 0,
+        seatingCapacity: signupData.capacityDetails?.seatingCapacity || {},
+        minimumBookingCapacity: signupData.capacityDetails?.minimumBookingCapacity || 0,
+        multipleEventsPerDay: signupData.capacityDetails?.multipleEventsPerDay || false,
+        timeSlots: signupData.capacityDetails?.timeSlots || [],
+        peakSeasonRates: signupData.capacityDetails?.peakSeasonRates || '',
+        offSeasonRates: signupData.capacityDetails?.offSeasonRates || '',
+        advanceBookingDays: signupData.capacityDetails?.advanceBookingDays || 30
+      };
+
+      // Ensure pricing has required fields
+      const pricing = {
+        basePrice: signupData.pricing?.basePrice || 0,
+        hourlyRate: signupData.pricing?.hourlyRate || 0,
+        fullDayRate: signupData.pricing?.fullDayRate || 0,
+        halfDayRate: signupData.pricing?.halfDayRate || 0,
+        cleaningFee: signupData.pricing?.cleaningFee || 0,
+        securityDeposit: signupData.pricing?.securityDeposit || 0,
+        rentalIncludes: signupData.pricing?.rentalIncludes || [],
+        otherEquipmentDetails: signupData.pricing?.otherEquipmentDetails || '',
+        securityDepositRequired: signupData.pricing?.securityDepositRequired || false,
+        paymentModes: signupData.pricing?.paymentModes || [],
+        cancellationPolicy: signupData.pricing?.cancellationPolicy || {
+          refundable: false,
+          timeFrame: '',
+          deductionPercentage: 0
+        }
+      };
+
+      // Merge all data with defaults
+      const venueData = {
+        ...signupData,
+        ownerDetails,
+        venueClassification,
+        parking,
+        capacityDetails,
+        pricing
+      };
+
+      const venue = await Venue.create(venueData);
 
       return ApiResponse.success(res, 'Venue account created successfully. Pending admin approval.', {
         venue: {
@@ -195,7 +271,9 @@ exports.updateVenueProfile = async (req, res) => {
     const allowedFields = [
       'name', 'description', 'address', 'location', 'capacity', 
       'facilities', 'pricing', 'gallery', 'contactInfo', 
-      'availability', 'terms'
+      'availability', 'terms', 'ownerDetails', 'venueClassification',
+      'parking', 'accessibility', 'capacityDetails', 'amenities',
+      'policies', 'addOnServices', 'documents', 'authorizations'
     ];
 
     allowedFields.forEach(field => {
@@ -213,5 +291,576 @@ exports.updateVenueProfile = async (req, res) => {
   } catch (error) {
     console.error('Update venue profile error:', error);
     return ApiResponse.serverError(res, 'Error updating venue profile', error);
+  }
+};
+
+/**
+ * @desc    Update owner details section
+ * @route   PUT /api/venue/details/owner-details
+ * @access  Private (Venue only)
+ */
+exports.updateOwnerDetails = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { fullName, primaryContact, alternateContact, email, businessName, designation, businessRegistrationNumber, gstNumber } = req.body;
+
+    // Validation
+    if (designation && !designation.trim()) {
+      return ApiResponse.badRequest(res, 'Designation is required');
+    }
+
+    venue.ownerDetails = {
+      ...venue.ownerDetails,
+      fullName: fullName !== undefined ? fullName : venue.ownerDetails?.fullName,
+      primaryContact: primaryContact !== undefined ? primaryContact : venue.ownerDetails?.primaryContact,
+      alternateContact: alternateContact !== undefined ? alternateContact : venue.ownerDetails?.alternateContact,
+      email: email !== undefined ? email : venue.ownerDetails?.email,
+      businessName: businessName !== undefined ? businessName : venue.ownerDetails?.businessName,
+      designation: designation !== undefined ? designation : venue.ownerDetails?.designation,
+      businessRegistrationNumber: businessRegistrationNumber !== undefined ? businessRegistrationNumber : venue.ownerDetails?.businessRegistrationNumber,
+      gstNumber: gstNumber !== undefined ? gstNumber : venue.ownerDetails?.gstNumber
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Owner details updated successfully', {
+      ownerDetails: venue.ownerDetails
+    });
+  } catch (error) {
+    console.error('Update owner details error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating owner details', error);
+  }
+};
+
+/**
+ * @desc    Update venue classification section
+ * @route   PUT /api/venue/details/venue-classification
+ * @access  Private (Venue only)
+ */
+exports.updateVenueClassification = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { venueTypes, venueTypeOther, indoorOutdoor, operationMode } = req.body;
+
+    // Validation
+    if (indoorOutdoor && !['indoor', 'outdoor', 'both'].includes(indoorOutdoor)) {
+      return ApiResponse.badRequest(res, 'Invalid indoor/outdoor value');
+    }
+    if (operationMode && !['seasonal', 'year_round'].includes(operationMode)) {
+      return ApiResponse.badRequest(res, 'Invalid operation mode');
+    }
+
+    venue.venueClassification = {
+      ...venue.venueClassification,
+      venueTypes: venueTypes !== undefined ? venueTypes : venue.venueClassification?.venueTypes,
+      venueTypeOther: venueTypeOther !== undefined ? venueTypeOther : venue.venueClassification?.venueTypeOther,
+      indoorOutdoor: indoorOutdoor !== undefined ? indoorOutdoor : venue.venueClassification?.indoorOutdoor,
+      operationMode: operationMode !== undefined ? operationMode : venue.venueClassification?.operationMode
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Venue classification updated successfully', {
+      venueClassification: venue.venueClassification
+    });
+  } catch (error) {
+    console.error('Update venue classification error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating venue classification', error);
+  }
+};
+
+/**
+ * @desc    Update location and accessibility section
+ * @route   PUT /api/venue/details/location
+ * @access  Private (Venue only)
+ */
+exports.updateLocation = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { address, parking, accessibility } = req.body;
+
+    // Validation
+    if (parking?.carCapacity !== undefined && (isNaN(parking.carCapacity) || parking.carCapacity < 0)) {
+      return ApiResponse.badRequest(res, 'Car parking capacity must be a valid number');
+    }
+
+    if (address) {
+      venue.address = {
+        ...venue.address,
+        ...address
+      };
+    }
+
+    if (parking) {
+      venue.parking = {
+        ...venue.parking,
+        ...parking
+      };
+    }
+
+    if (accessibility) {
+      venue.accessibility = {
+        ...venue.accessibility,
+        ...accessibility
+      };
+    }
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Location details updated successfully', {
+      address: venue.address,
+      parking: venue.parking,
+      accessibility: venue.accessibility
+    });
+  } catch (error) {
+    console.error('Update location error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating location details', error);
+  }
+};
+
+/**
+ * @desc    Update capacity and booking options section
+ * @route   PUT /api/venue/details/capacity
+ * @access  Private (Venue only)
+ */
+exports.updateCapacity = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { standingCapacity, seatingCapacity, minimumBookingCapacity, multipleEventsPerDay, timeSlots, peakSeasonRates, offSeasonRates, advanceBookingDays } = req.body;
+
+    // Validation
+    if (standingCapacity !== undefined && (isNaN(standingCapacity) || standingCapacity < 0)) {
+      return ApiResponse.badRequest(res, 'Standing capacity must be a valid number');
+    }
+    if (advanceBookingDays !== undefined && (isNaN(advanceBookingDays) || advanceBookingDays < 0)) {
+      return ApiResponse.badRequest(res, 'Advance booking days must be a valid number');
+    }
+
+    venue.capacityDetails = {
+      ...venue.capacityDetails,
+      standingCapacity: standingCapacity !== undefined ? standingCapacity : venue.capacityDetails?.standingCapacity,
+      seatingCapacity: seatingCapacity !== undefined ? seatingCapacity : venue.capacityDetails?.seatingCapacity,
+      minimumBookingCapacity: minimumBookingCapacity !== undefined ? minimumBookingCapacity : venue.capacityDetails?.minimumBookingCapacity,
+      multipleEventsPerDay: multipleEventsPerDay !== undefined ? multipleEventsPerDay : venue.capacityDetails?.multipleEventsPerDay,
+      timeSlots: timeSlots !== undefined ? timeSlots : venue.capacityDetails?.timeSlots,
+      peakSeasonRates: peakSeasonRates !== undefined ? peakSeasonRates : venue.capacityDetails?.peakSeasonRates,
+      offSeasonRates: offSeasonRates !== undefined ? offSeasonRates : venue.capacityDetails?.offSeasonRates,
+      advanceBookingDays: advanceBookingDays !== undefined ? advanceBookingDays : venue.capacityDetails?.advanceBookingDays
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Capacity details updated successfully', {
+      capacityDetails: venue.capacityDetails
+    });
+  } catch (error) {
+    console.error('Update capacity error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating capacity details', error);
+  }
+};
+
+/**
+ * @desc    Update pricing and payment section
+ * @route   PUT /api/venue/details/pricing
+ * @access  Private (Venue only)
+ */
+exports.updatePricing = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { basePrice, hourlyRate, fullDayRate, halfDayRate, cleaningFee, securityDeposit, rentalIncludes, otherEquipmentDetails, securityDepositRequired, paymentModes, cancellationPolicy } = req.body;
+
+    // Validation
+    if (basePrice !== undefined && (isNaN(basePrice) || basePrice < 0)) {
+      return ApiResponse.badRequest(res, 'Base price must be a valid number');
+    }
+
+    venue.pricing = {
+      ...venue.pricing,
+      basePrice: basePrice !== undefined ? basePrice : venue.pricing?.basePrice,
+      hourlyRate: hourlyRate !== undefined ? hourlyRate : venue.pricing?.hourlyRate,
+      fullDayRate: fullDayRate !== undefined ? fullDayRate : venue.pricing?.fullDayRate,
+      halfDayRate: halfDayRate !== undefined ? halfDayRate : venue.pricing?.halfDayRate,
+      cleaningFee: cleaningFee !== undefined ? cleaningFee : venue.pricing?.cleaningFee,
+      securityDeposit: securityDeposit !== undefined ? securityDeposit : venue.pricing?.securityDeposit,
+      rentalIncludes: rentalIncludes !== undefined ? rentalIncludes : venue.pricing?.rentalIncludes,
+      otherEquipmentDetails: otherEquipmentDetails !== undefined ? otherEquipmentDetails : venue.pricing?.otherEquipmentDetails,
+      securityDepositRequired: securityDepositRequired !== undefined ? securityDepositRequired : venue.pricing?.securityDepositRequired,
+      paymentModes: paymentModes !== undefined ? paymentModes : venue.pricing?.paymentModes,
+      cancellationPolicy: cancellationPolicy !== undefined ? cancellationPolicy : venue.pricing?.cancellationPolicy
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Pricing details updated successfully', {
+      pricing: venue.pricing
+    });
+  } catch (error) {
+    console.error('Update pricing error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating pricing details', error);
+  }
+};
+
+/**
+ * @desc    Update amenities section
+ * @route   PUT /api/venue/details/amenities
+ * @access  Private (Venue only)
+ */
+exports.updateAmenities = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    // Filter out undefined values and properly merge nested objects
+    const updateData = {};
+    for (const [key, value] of Object.entries(req.body)) {
+      // Skip undefined and null values
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      // Check if this is a nested object that needs merging (like washrooms)
+      // washrooms doesn't have 'available' property, it has 'count' and 'cleanlinessStandards'
+      const isNestedObject = typeof value === 'object' && 
+                             !Array.isArray(value) && 
+                             !value.hasOwnProperty('available');
+      
+      if (isNestedObject) {
+        // This is a nested object field (like washrooms with count/cleanlinessStandards)
+        // Filter out undefined/null values from nested properties
+        const cleanValue = {};
+        for (const [nestedKey, nestedValue] of Object.entries(value)) {
+          if (nestedValue !== undefined && nestedValue !== null && nestedValue !== '') {
+            cleanValue[nestedKey] = nestedValue;
+          }
+        }
+        
+        // Only set the nested object if it has valid data
+        if (Object.keys(cleanValue).length > 0) {
+          if (venue.amenities?.[key] && typeof venue.amenities[key] === 'object') {
+            // Merge with existing data
+            updateData[key] = {
+              ...venue.amenities[key],
+              ...cleanValue
+            };
+          } else {
+            // New nested object
+            updateData[key] = cleanValue;
+          }
+        }
+        // If cleanValue is empty, we skip adding it to updateData, preserving existing value
+      } else {
+        // Regular amenity field (with available property) or other types
+        updateData[key] = value;
+      }
+    }
+
+    // Only update fields that are in updateData, preserving existing values for others
+    for (const [key, value] of Object.entries(updateData)) {
+      venue.amenities[key] = value;
+    }
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Amenities updated successfully', {
+      amenities: venue.amenities
+    });
+  } catch (error) {
+    console.error('Update amenities error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating amenities', error);
+  }
+};
+
+/**
+ * @desc    Update policies section
+ * @route   PUT /api/venue/details/policies
+ * @access  Private (Venue only)
+ */
+exports.updatePolicies = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    venue.policies = {
+      ...venue.policies,
+      ...req.body
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Policies updated successfully', {
+      policies: venue.policies
+    });
+  } catch (error) {
+    console.error('Update policies error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating policies', error);
+  }
+};
+
+/**
+ * @desc    Update add-on services section
+ * @route   PUT /api/venue/details/addon-services
+ * @access  Private (Venue only)
+ */
+exports.updateAddOnServices = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    venue.addOnServices = {
+      ...venue.addOnServices,
+      ...req.body
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Add-on services updated successfully', {
+      addOnServices: venue.addOnServices
+    });
+  } catch (error) {
+    console.error('Update add-on services error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating add-on services', error);
+  }
+};
+
+/**
+ * @desc    Update documents section
+ * @route   PUT /api/venue/details/documents
+ * @access  Private (Venue only)
+ */
+exports.updateDocuments = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    // Handle documents update - preserve existing data and merge new data
+    const { venueImages, venueVideoTour, menuCards, rateCard, businessLicense } = req.body;
+
+    if (venueImages !== undefined) {
+      venue.documents.venueImages = Array.isArray(venueImages) ? venueImages : venue.documents.venueImages || [];
+    }
+
+    if (venueVideoTour !== undefined) {
+      venue.documents.venueVideoTour = venueVideoTour || venue.documents.venueVideoTour || {};
+    }
+
+    if (menuCards !== undefined) {
+      venue.documents.menuCards = Array.isArray(menuCards) ? menuCards : venue.documents.menuCards || [];
+    }
+
+    if (rateCard !== undefined) {
+      venue.documents.rateCard = rateCard || venue.documents.rateCard || {};
+    }
+
+    if (businessLicense !== undefined) {
+      venue.documents.businessLicense = Array.isArray(businessLicense) ? businessLicense : venue.documents.businessLicense || [];
+    }
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Documents updated successfully', {
+      documents: venue.documents
+    });
+  } catch (error) {
+    console.error('Update documents error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating documents', error);
+  }
+};
+
+/**
+ * @desc    Update authorizations section
+ * @route   PUT /api/venue/details/authorizations
+ * @access  Private (Venue only)
+ */
+exports.updateAuthorizations = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { publicListingAuthorized, onlineBookingEnabled, preferredCommunication } = req.body;
+
+    // Validation
+    if (preferredCommunication && !['whatsapp', 'email', 'phone_call'].includes(preferredCommunication)) {
+      return ApiResponse.badRequest(res, 'Invalid preferred communication channel');
+    }
+
+    venue.authorizations = {
+      ...venue.authorizations,
+      publicListingAuthorized: publicListingAuthorized !== undefined ? publicListingAuthorized : venue.authorizations?.publicListingAuthorized,
+      onlineBookingEnabled: onlineBookingEnabled !== undefined ? onlineBookingEnabled : venue.authorizations?.onlineBookingEnabled,
+      preferredCommunication: preferredCommunication !== undefined ? preferredCommunication : venue.authorizations?.preferredCommunication
+    };
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Authorizations updated successfully', {
+      authorizations: venue.authorizations
+    });
+  } catch (error) {
+    console.error('Update authorizations error:', error);
+    if (error.name === 'ValidationError') {
+      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
+    }
+    return ApiResponse.serverError(res, 'Error updating authorizations', error);
+  }
+};
+
+/**
+ * @desc    Get venue FAQs
+ * @route   GET /api/venue/faqs
+ * @access  Private (Venue only)
+ */
+exports.getFaqs = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id).select('faqs');
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    return ApiResponse.success(res, 'FAQs retrieved successfully', { faqs: venue.faqs || [] });
+  } catch (error) {
+    console.error('Get FAQs error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving FAQs', error);
+  }
+};
+
+/**
+ * @desc    Create a new FAQ
+ * @route   POST /api/venue/faqs
+ * @access  Private (Venue only)
+ */
+exports.createFaq = async (req, res) => {
+  try {
+    const { question, answer, isActive, order } = req.body;
+    if (!question || !answer) {
+      return ApiResponse.badRequest(res, 'Question and answer are required');
+    }
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    const faq = {
+      question,
+      answer,
+      isActive: isActive !== undefined ? isActive : true,
+      order: order || 0,
+      createdAt: new Date()
+    };
+    venue.faqs = venue.faqs || [];
+    venue.faqs.push(faq);
+    await venue.save();
+    return ApiResponse.success(res, 'FAQ added successfully', { faqs: venue.faqs });
+  } catch (error) {
+    console.error('Create FAQ error:', error);
+    return ApiResponse.serverError(res, 'Error creating FAQ', error);
+  }
+};
+
+/**
+ * @desc    Update an existing FAQ
+ * @route   PUT /api/venue/faqs/:faqId
+ * @access  Private (Venue only)
+ */
+exports.updateFaq = async (req, res) => {
+  try {
+    const { faqId } = req.params;
+    const { question, answer, isActive, order } = req.body;
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    const faq = (venue.faqs || []).id(faqId);
+    if (!faq) {
+      return ApiResponse.notFound(res, 'FAQ not found');
+    }
+    if (question !== undefined) faq.question = question;
+    if (answer !== undefined) faq.answer = answer;
+    if (isActive !== undefined) faq.isActive = isActive;
+    if (order !== undefined) faq.order = order;
+    await venue.save();
+    return ApiResponse.success(res, 'FAQ updated successfully', { faqs: venue.faqs });
+  } catch (error) {
+    console.error('Update FAQ error:', error);
+    return ApiResponse.serverError(res, 'Error updating FAQ', error);
+  }
+};
+
+/**
+ * @desc    Delete an FAQ
+ * @route   DELETE /api/venue/faqs/:faqId
+ * @access  Private (Venue only)
+ */
+exports.deleteFaq = async (req, res) => {
+  try {
+    const { faqId } = req.params;
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    const before = (venue.faqs || []).length;
+    venue.faqs = (venue.faqs || []).filter(f => f._id.toString() !== faqId);
+    if (venue.faqs.length === before) {
+      return ApiResponse.notFound(res, 'FAQ not found');
+    }
+    await venue.save();
+    return ApiResponse.success(res, 'FAQ deleted successfully', { faqs: venue.faqs });
+  } catch (error) {
+    console.error('Delete FAQ error:', error);
+    return ApiResponse.serverError(res, 'Error deleting FAQ', error);
   }
 };

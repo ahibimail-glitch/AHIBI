@@ -49,6 +49,7 @@ exports.protect = async (req, res, next) => {
       // Check if this is a venue management route (only venue users should access these)
       const isVenueManagerRoute = req.originalUrl.includes('/manager/') || 
                                   req.originalUrl.includes('/profile') ||
+                                  req.originalUrl.includes('/details/') ||
                                   req.originalUrl.includes('/auth/');
       
       console.log('Route detection - Admin:', isAdminRoute, 'Organizer:', isOrganizerRoute, 'Artist:', isArtistRoute, 'Venue:', isVenueRoute);
@@ -81,7 +82,7 @@ exports.protect = async (req, res, next) => {
           return res.status(404).json({ success: false, message: 'Artist not found' });
         }
         user.role = 'artist';
-      } else if (decoded.role === 'venue' || (isVenueRoute && isVenueManagerRoute)) {
+      } else if (decoded.role === 'venue' || decoded.type === 'venue' || (isVenueRoute && isVenueManagerRoute)) {
         console.log('Looking for Venue with ID:', decoded.id);
         user = await Venue.findById(decoded.id);
         if (!user) {

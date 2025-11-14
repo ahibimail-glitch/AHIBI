@@ -253,14 +253,22 @@ export const uploadFile = async (file: File): Promise<UploadResponse> => {
     const formData = new FormData();
     formData.append('photo', file);
 
-    const response = await fetch('/api/upload', {
+    const response = await fetch(getApiUrl('api/upload'), {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to upload file');
+      let message = 'Failed to upload file';
+      try {
+        const error = await response.json();
+        message = error.message || message;
+      } catch (_e) {
+        // Non-JSON error response
+        const text = await response.text();
+        if (text) message = text;
+      }
+      throw new Error(message);
     }
 
     const result = await response.json();
@@ -288,14 +296,21 @@ export const uploadMultipleFiles = async (files: File[]): Promise<UploadResponse
       formData.append('photos', file);
     });
 
-    const response = await fetch('/api/upload/multiple', {
+    const response = await fetch(getApiUrl('api/upload/multiple'), {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to upload files');
+      let message = 'Failed to upload files';
+      try {
+        const error = await response.json();
+        message = error.message || message;
+      } catch (_e) {
+        const text = await response.text();
+        if (text) message = text;
+      }
+      throw new Error(message);
     }
 
     return await response.json();

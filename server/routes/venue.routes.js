@@ -35,6 +35,24 @@ router.post('/auth/verify-otp', [
 router.get('/profile', protect, venueAuthController.getVenueProfile);
 router.put('/profile', protect, venueAuthController.updateVenueProfile);
 
+// Separate section update endpoints
+router.put('/details/owner-details', protect, venueAuthController.updateOwnerDetails);
+router.put('/details/venue-classification', protect, venueAuthController.updateVenueClassification);
+router.put('/details/location', protect, venueAuthController.updateLocation);
+router.put('/details/capacity', protect, venueAuthController.updateCapacity);
+router.put('/details/pricing', protect, venueAuthController.updatePricing);
+router.put('/details/amenities', protect, venueAuthController.updateAmenities);
+router.put('/details/policies', protect, venueAuthController.updatePolicies);
+router.put('/details/addon-services', protect, venueAuthController.updateAddOnServices);
+router.put('/details/documents', protect, venueAuthController.updateDocuments);
+router.put('/details/authorizations', protect, venueAuthController.updateAuthorizations);
+
+// FAQs management (venue-owned)
+router.get('/faqs', protect, venueAuthController.getFaqs);
+router.post('/faqs', protect, venueAuthController.createFaq);
+router.put('/faqs/:faqId', protect, venueAuthController.updateFaq);
+router.delete('/faqs/:faqId', protect, venueAuthController.deleteFaq);
+
 // Venue manager dashboard
 router.get('/manager/stats', protect, venueController.getVenueManagerStats);
 router.get('/manager/bookings', protect, venueController.getVenueManagerBookings);
@@ -80,6 +98,7 @@ router.get('/', venueController.getAllVenues);
 // Specific routes with parameters - MUST come before general /:id routes
 router.get('/:id/availability/:date', venueController.getTimeSlotAvailability);
 router.get('/:id/bookings', venueController.getVenueBookings);
+router.post('/:id/reviews', protect, venueController.addVenueReview);
 
 // General /:id routes - MUST come after specific routes
 router.get('/:id', venueController.getVenueById);
