@@ -454,6 +454,54 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       const subtotal = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
       const totalAmount = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
 
+      // If payable amount is zero, bypass Razorpay and create booking(s) directly
+      if (totalAmount <= 0) {
+        setIsProcessingPayment(true);
+        try {
+          const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+          const createdBookingIds: string[] = [];
+          for (const { ticket, quantity } of Array.from(selectedTickets.values())) {
+            // Create one booking per quantity to align with scan/check-in capacity logic
+            for (let i = 0; i < quantity; i++) {
+              const resp = await fetch(`${apiBase}/api/bookings`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  event: event._id,
+                  user: (user as any)?._id || 'self',
+                  quantity: 1,
+                  price: 0,
+                  ticketType: ticket.name,
+                }),
+              });
+              const data = await resp.json();
+              if (!resp.ok) {
+                throw new Error(data?.message || 'Failed to create zero-price booking');
+              }
+              const bid = data?.booking?.id || data?.booking?._id;
+              if (bid) createdBookingIds.push(bid);
+            }
+          }
+
+          if (createdBookingIds.length > 0) {
+            toast.success('Booking confirmed!');
+            localStorage.setItem('lastBookingId', createdBookingIds[0]);
+            router.push(`/events/${createdBookingIds[0]}/bookings`);
+            return; // Stop further processing
+          } else {
+            throw new Error('No booking was created');
+          }
+        } catch (e: any) {
+          console.error('Zero-price booking error:', e);
+          toast.error(e?.message || 'Failed to complete zero-price booking');
+          setIsProcessingPayment(false);
+          return;
+        }
+      }
+
       // 1. Create Order (send bookingDetails so backend can recover via webhook if needed)
       const orderResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/create-order`,

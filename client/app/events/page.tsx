@@ -215,7 +215,7 @@ export default function EventsPage() {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000`);
 
         if (!response.ok) throw new Error('Failed to fetch events');
         const data: EventsResponse = await response.json();
@@ -255,10 +255,26 @@ export default function EventsPage() {
   const upcomingEvents = filteredEvents.filter((event: Event) => new Date(event.startDate) > currentDate);
   const currentEvents = filteredEvents.filter((event: Event) => {
     const startDate = new Date(event.startDate);
-    const endDate = new Date(event.endDate);
+    const endDate = event.endDate ? new Date(event.endDate) : null;
+    if (isNaN(startDate.getTime())) return false;
+    if (!endDate) {
+      // Treat events without endDate as same-day; show as current if same calendar day
+      const startDay = new Date(startDate); startDay.setHours(0,0,0,0);
+      const today = new Date(currentDate); today.setHours(0,0,0,0);
+      return startDay.getTime() === today.getTime();
+    }
     return startDate <= currentDate && endDate >= currentDate;
   });
-  const pastEvents = filteredEvents.filter((event: Event) => new Date(event.endDate) < currentDate);
+  const pastEvents = filteredEvents.filter((event: Event) => {
+    const endDate = event.endDate ? new Date(event.endDate) : null;
+    if (endDate) return endDate < currentDate;
+    // If no end date: consider past if startDate is before today (and not same day)
+    const startDate = new Date(event.startDate);
+    if (isNaN(startDate.getTime())) return false;
+    const eventDay = new Date(startDate); eventDay.setHours(0,0,0,0);
+    const today = new Date(currentDate); today.setHours(0,0,0,0);
+    return eventDay < today;
+  });
   const featuredEvents = events.filter((event: Event) => event.isFeatured);
 
   if (isLoading) {
