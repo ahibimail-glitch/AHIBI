@@ -69,6 +69,7 @@ interface Event {
   }>;
   status: string;
   approvalStatus: string;
+  isFreeEvent?: boolean;
 }
 
 interface EditEventFormProps {
@@ -93,8 +94,9 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
     endDate: "",
     category: "",
     image: "",
+    isFreeEvent: false,
   });
-  
+
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [termsAndConditions, setTermsAndConditions] = useState("");
   const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>([]);
@@ -147,6 +149,7 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
         endDate: new Date(new Date(event.endDate).getTime() - new Date(event.endDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
         category: event.category,
         image: event.banner,
+        isFreeEvent: !!event.isFreeEvent,
       });
 
       setTicketTypes(event.ticketTypes.map(ticket => ({
@@ -171,31 +174,31 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
 
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
+
     const file = e.target.files[0];
-    
+
     // Validate file
     const validationError = validateFile(file);
     if (validationError) {
       setError(validationError);
       return;
     }
-    
+
     try {
       setIsUploading(true);
       setError(null);
-      
+
       // Create preview
       const preview = await createImagePreview(file);
       setImagePreview(preview);
-      
+
       // Upload the file
       const uploadedUrl = await uploadFile(file);
-      setEventData(prev => ({ 
-        ...prev, 
-        image: uploadedUrl.status === 'success' && uploadedUrl.data?.photo?.url ? uploadedUrl.data.photo.url : prev.image 
+      setEventData(prev => ({
+        ...prev,
+        image: uploadedUrl.status === 'success' && uploadedUrl.data?.photo?.url ? uploadedUrl.data.photo.url : prev.image
       }));
-      
+
     } catch (err) {
       console.error('Error uploading image:', err);
       setError('Failed to upload image. Please try again.');
@@ -262,22 +265,24 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!eventData.title || !eventData.description || !eventData.venue || !eventData.city || !eventData.startDate || !eventData.endDate || !eventData.category) {
       setError('Please fill in all required fields');
       return;
     }
 
-    if (ticketTypes.length === 0) {
-      setError('Please add at least one ticket type');
-      return;
-    }
-
-    // Validate ticket types
-    for (const ticket of ticketTypes) {
-      if (!ticket.name || !ticket.price || !ticket.quantity) {
-        setError('Please fill in all ticket type fields');
+    // Only require tickets for paid events
+    if (!eventData.isFreeEvent) {
+      if (ticketTypes.length === 0) {
+        setError('Please add at least one ticket type');
         return;
+      }
+      // Validate ticket types
+      for (const ticket of ticketTypes) {
+        if (!ticket.name || !ticket.price || !ticket.quantity) {
+          setError('Please fill in all ticket type fields');
+          return;
+        }
       }
     }
 
@@ -292,36 +297,38 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      
-             const eventPayload = {
-         title: eventData.title,
-         description: eventData.description,
-         banner: eventData.image,
-         category: eventData.category,
-         startDate: eventData.startDate,
-         endDate: eventData.endDate,
-         location: {
-           address: eventData.venue,
-           city: eventData.city,
-           state: eventData.state,
-           country: eventData.country,
-           pincode: eventData.pincode,
-           coordinates: {
-             type: 'Point',
-             coordinates: [0, 0] // [longitude, latitude] - default coordinates
-           }
-         },
-         ticketTypes: ticketTypes.map(ticket => ({
-           name: ticket.name,
-           description: ticket.description,
-           price: parseFloat(ticket.price),
-           quantity: parseInt(ticket.quantity),
-           capacity: parseInt(ticket.capacity),
-           benefits: ticket.benefits.filter(benefit => benefit.trim() !== '')
-         })),
-         termsAndConditions,
-         faqs: faqs.filter(faq => faq.question.trim() !== '' && faq.answer.trim() !== '')
-       };
+
+      const eventPayload = {
+        title: eventData.title,
+        description: eventData.description,
+        banner: eventData.image,
+        category: eventData.category,
+        startDate: eventData.startDate,
+        endDate: eventData.endDate,
+        isFreeEvent: eventData.isFreeEvent,
+        location: {
+          address: eventData.venue,
+          city: eventData.city,
+          state: eventData.state,
+          country: eventData.country,
+          pincode: eventData.pincode,
+          coordinates: {
+            type: 'Point',
+            coordinates: [0, 0] // [longitude, latitude] - default coordinates
+          }
+        },
+        ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => ({
+          name: ticket.name,
+          description: ticket.description,
+          price: parseFloat(ticket.price),
+          quantity: parseInt(ticket.quantity),
+          capacity: parseInt(ticket.capacity),
+          benefits: ticket.benefits.filter(benefit => benefit.trim() !== '')
+        })),
+        ...(eventData.isFreeEvent ? { convenience: { percentage: 0, fixedAmount: 0 } } : {}),
+        termsAndConditions,
+        faqs: faqs.filter(faq => faq.question.trim() !== '' && faq.answer.trim() !== '')
+      };
 
       const response = await fetch(`${apiUrl}/api/organizer/events/${eventId}`, {
         method: 'PUT',
@@ -392,6 +399,7 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           </CardContent>
         </Card>
       </div>
+
     );
   }
 
@@ -580,133 +588,152 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           </CardContent>
         </Card>
 
-        {/* Ticket Types */}
+        {/* Free/RSVP Option */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
-            <CardTitle>Ticket Types</CardTitle>
-            <CardDescription>Define different ticket categories and pricing</CardDescription>
+            <CardTitle>Event Type</CardTitle>
+            <CardDescription>Mark as free/RSVP to disable ticket categories</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {ticketTypes.map((ticket, index) => (
-              <div key={index} className="border rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Ticket Type {index + 1}</h4>
-                  {ticketTypes.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeTicketType(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Name *</Label>
-                    <Input
-                      value={ticket.name}
-                      onChange={(e) => updateTicketType(index, 'name', e.target.value)}
-                      placeholder="e.g., VIP, General Admission"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Price (₹) *</Label>
-                    <Input
-                      type="number"
-                      value={ticket.price}
-                      onChange={(e) => updateTicketType(index, 'price', e.target.value)}
-                      placeholder="0"
-                      min="0"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Quantity Available *</Label>
-                    <Input
-                      type="number"
-                      value={ticket.quantity}
-                      onChange={(e) => updateTicketType(index, 'quantity', e.target.value)}
-                      placeholder="0"
-                      min="1"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Capacity per Ticket</Label>
-                    <Input
-                      type="number"
-                      value={ticket.capacity}
-                      onChange={(e) => updateTicketType(index, 'capacity', e.target.value)}
-                      placeholder="1"
-                      min="1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Description</Label>
-                  <Textarea
-                    value={ticket.description}
-                    onChange={(e) => updateTicketType(index, 'description', e.target.value)}
-                    placeholder="Describe what's included with this ticket"
-                    rows={2}
-                  />
-                </div>
-
-                <div>
-                  <Label>Benefits</Label>
-                  <div className="space-y-2">
-                    {ticket.benefits.map((benefit, benefitIndex) => (
-                      <div key={benefitIndex} className="flex space-x-2">
-                        <Input
-                          value={benefit}
-                          onChange={(e) => updateBenefit(index, benefitIndex, e.target.value)}
-                          placeholder="Enter benefit"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeBenefit(index, benefitIndex)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addBenefit(index)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Benefit
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addTicketType}
-              className="w-full"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Ticket Type
-            </Button>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isFreeEvent"
+                checked={eventData.isFreeEvent}
+                onCheckedChange={(checked) => setEventData(prev => ({ ...prev, isFreeEvent: !!checked }))}
+              />
+              <Label htmlFor="isFreeEvent" className="text-sm font-medium">This is a Free/RSVP Event</Label>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Ticket Types (paid events only) */}
+        {!eventData.isFreeEvent && (
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Ticket Types</CardTitle>
+              <CardDescription>Define different ticket categories and pricing</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {ticketTypes.map((ticket, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Ticket Type {index + 1}</h4>
+                    {ticketTypes.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeTicketType(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Name *</Label>
+                      <Input
+                        value={ticket.name}
+                        onChange={(e) => updateTicketType(index, 'name', e.target.value)}
+                        placeholder="e.g., VIP, General Admission"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Price (₹) *</Label>
+                      <Input
+                        type="number"
+                        value={ticket.price}
+                        onChange={(e) => updateTicketType(index, 'price', e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Quantity Available *</Label>
+                      <Input
+                        type="number"
+                        value={ticket.quantity}
+                        onChange={(e) => updateTicketType(index, 'quantity', e.target.value)}
+                        placeholder="0"
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Capacity per Ticket</Label>
+                      <Input
+                        type="number"
+                        value={ticket.capacity}
+                        onChange={(e) => updateTicketType(index, 'capacity', e.target.value)}
+                        placeholder="1"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={ticket.description}
+                      onChange={(e) => updateTicketType(index, 'description', e.target.value)}
+                      placeholder="Describe what's included with this ticket"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Benefits</Label>
+                    <div className="space-y-2">
+                      {ticket.benefits.map((benefit, benefitIndex) => (
+                        <div key={benefitIndex} className="flex space-x-2">
+                          <Input
+                            value={benefit}
+                            onChange={(e) => updateBenefit(index, benefitIndex, e.target.value)}
+                            placeholder="Enter benefit"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeBenefit(index, benefitIndex)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addBenefit(index)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Benefit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addTicketType}
+                className="w-full"
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Ticket Type
+              </Button>
+            </CardContent>
+          </Card>)}
 
         {/* Error Display */}
         {error && (

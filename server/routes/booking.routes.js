@@ -106,14 +106,14 @@ router.post("/", auth.protect, async (req, res) => {
   try {
     // console.log("Booking payload:", req.body);
     const { event, user, quantity, price, ticketType, country } = req.body;
+    const bodyUser = user || (req.user && req.user._id);
     //console.log("Booking payload:", { event, user, quantity });
 
     // Validate input
-    if (!event || !user || !quantity || quantity < 1) {
-      return res.status(400).json({
-        message: "Please provide event,user, and valid quantity",
-      });
+    if (!event) {
+      return res.status(400).json({ message: "Please provide event" });
     }
+    // quantity validation is enforced for paid bookings below; for free/RSVP we default to 1
 
     // Fetch event and ticket
     console.log("Fetching event and ticket...");
@@ -122,6 +122,9 @@ router.post("/", auth.protect, async (req, res) => {
     if (!isEvent) {
       return res.status(404).json({ message: "Event not found" });
     }
+
+    // Determine if this is a free/RSVP booking
+    const isFree = !!isEvent.isFreeEvent;
 
     // Fetch user details for sending notifications
     const userDetails = await User.findById(req.user._id);
@@ -150,12 +153,12 @@ router.post("/", auth.protect, async (req, res) => {
         }
       },
       user: req.user._id,
-      quantity,
-      price: price,
-      total: price,
+      quantity: isFree ? 1 : quantity,
+      price: isFree ? 0 : price,
+      total: isFree ? 0 : price,
       status: "confirmed",
       paymentStatus: "completed",
-      ticketType: ticketType,
+      ticketType: isFree ? (ticketType || 'RSVP') : ticketType,
       // Add country for HMF events
       ...(country && { country: country }),
     });
@@ -163,16 +166,18 @@ router.post("/", auth.protect, async (req, res) => {
     // Save booking
     await booking.save();
 
-    // Update event tickets sold count and ticket type sold
-    await Event.updateOne(
-      { _id: event, "ticketTypes.name": ticketType },
-      {
-        $inc: {
-          "ticketTypes.$.sold": quantity,
-          totalRevenue: price
+    // Update event tickets sold count and ticket type sold (skip for free events with no ticket types)
+    if (!isFree) {
+      await Event.updateOne(
+        { _id: event, "ticketTypes.name": ticketType },
+        {
+          $inc: {
+            "ticketTypes.$.sold": quantity,
+            totalRevenue: price
+          }
         }
-      }
-    );
+      );
+    }
     
     // Fetch and save the event to trigger the pre-save hook that recalculates ticketsSold
     const updatedEvent = await Event.findById(event);

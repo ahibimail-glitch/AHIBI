@@ -30,6 +30,7 @@ export interface Event {
   ticketTypes: TicketType[];
   status: string;
   isFeatured?: boolean;
+  isFreeEvent?: boolean;
   tags?: string[];
   slug: string;
   attendees?: number;

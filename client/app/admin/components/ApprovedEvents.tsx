@@ -91,6 +91,7 @@ interface Event {
     percentage?: number;
     fixedAmount?: number;
   };
+  isFreeEvent?: boolean;
 }
 
 export default function ApprovedEvents() {
@@ -98,6 +99,7 @@ export default function ApprovedEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewStatus, setViewStatus] = useState<'approved' | 'paused'>('approved');
 
   // Edit event state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -126,7 +128,7 @@ export default function ApprovedEvents() {
         }
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/admin/events?status=approved`, {
+        const res = await fetch(`${apiUrl}/api/admin/events?status=${viewStatus}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -144,7 +146,6 @@ export default function ApprovedEvents() {
         if (!response.data || !Array.isArray(response.data.events)) {
           throw new Error("Invalid data format received from server");
         }
-        
         setEvents(response.data.events);
       } catch (err: any) {
         console.error('Error fetching events:', err);
@@ -155,7 +156,56 @@ export default function ApprovedEvents() {
     };
 
     fetchApprovedEvents();
-  }, []);
+  }, [viewStatus]);
+
+  const handlePauseEvent = async (id: string) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      if (!token) return;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await axios.put(`${apiUrl}/api/admin/events/${id}/pause`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.status === 200) {
+        // If viewing approved list, remove; if viewing paused, update item
+        if (viewStatus === 'approved') {
+          setEvents(prev => prev.filter(e => e._id !== id));
+        } else {
+          const updated = res.data.data?.event || res.data.event || res.data;
+          setEvents(prev => prev.map(e => e._id === id ? updated : e));
+        }
+      }
+    } catch (e) {
+      console.error('Pause event failed', e);
+      alert('Failed to pause event');
+    }
+  };
+
+  const handleResumeEvent = async (id: string) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      if (!token) return;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await axios.put(`${apiUrl}/api/admin/events/${id}/resume`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.status === 200) {
+        const updated = res.data.data?.event || res.data.event || res.data;
+        if (viewStatus === 'paused') {
+          // Remove from paused list when resumed
+          setEvents(prev => prev.filter(e => e._id !== id));
+        } else {
+          setEvents(prev => {
+            const exists = prev.some(e => e._id === id);
+            return exists ? prev.map(e => e._id === id ? updated : e) : [updated, ...prev];
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Resume event failed', e);
+      alert('Failed to resume event');
+    }
+  };
 
   const handleEditClick = (event: Event) => {
     // Deep copy and ensure all fields are properly initialized
@@ -206,24 +256,38 @@ export default function ApprovedEvents() {
       };
     }
     
-    // Ensure ticket types have all required fields
-    if (!eventCopy.ticketTypes || eventCopy.ticketTypes.length === 0) {
-      eventCopy.ticketTypes = [{
-        name: 'General Admission',
-        description: '',
-        price: 0,
-        quantity: 100,
-        capacity: 1,
-        benefits: ['Entry to the event'],
-        sold: 0
-      }];
-    } else {
+    // Mark free flag
+    eventCopy.isFreeEvent = !!eventCopy.isFreeEvent;
+    // Ensure ticket types only for paid events
+    if (!eventCopy.isFreeEvent) {
+      if (!eventCopy.ticketTypes || eventCopy.ticketTypes.length === 0) {
+        eventCopy.ticketTypes = [{
+          name: 'General Admission',
+          description: '',
+          price: 0,
+          quantity: 100,
+          capacity: 1,
+          benefits: ['Entry to the event'],
+          sold: 0
+        }];
+      }
       eventCopy.ticketTypes = eventCopy.ticketTypes.map((ticket: TicketType) => ({
         ...ticket,
         benefits: ticket.benefits && ticket.benefits.length > 0 ? ticket.benefits : ['Entry to the event'],
         capacity: ticket.capacity || 1,
         sold: ticket.sold || 0
       }));
+    } else {
+      // For free events, ensure no ticket types
+      eventCopy.ticketTypes = [];
+      // Zero out convenience for UI consistency
+      eventCopy.convenience = {
+        includeGst: false,
+        gstPercentage: 0,
+        includeConvenience: false,
+        conveniencePercentage: 0,
+        convenienceFixedAmount: 0
+      };
     }
     
     console.log('Event data for editing:', eventCopy); // Debug log
@@ -364,6 +428,9 @@ export default function ApprovedEvents() {
       // Prepare data for backend - convert category back to database format
       const dataToSend = {
         ...editingEvent,
+        isFreeEvent: !!editingEvent.isFreeEvent,
+        ticketTypes: editingEvent.isFreeEvent ? [] : editingEvent.ticketTypes,
+        convenience: editingEvent.isFreeEvent ? { percentage: 0, fixedAmount: 0 } : editingEvent.convenience,
         category: editingEvent.category ? editingEvent.category.charAt(0).toUpperCase() + editingEvent.category.slice(1) : 'Other'
       };
       
@@ -435,9 +502,21 @@ export default function ApprovedEvents() {
               <CardTitle>Approved Events</CardTitle>
               <CardDescription>View and manage all approved events on the platform</CardDescription>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search events..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 w-80" />
+            <div className="flex items-center gap-3">
+              <div className="inline-flex rounded-md border overflow-hidden">
+                <button
+                  className={`px-3 py-1 text-sm ${viewStatus === 'approved' ? 'bg-primary text-white' : 'bg-white'}`}
+                  onClick={() => setViewStatus('approved')}
+                >Approved</button>
+                <button
+                  className={`px-3 py-1 text-sm ${viewStatus === 'paused' ? 'bg-primary text-white' : 'bg-white'}`}
+                  onClick={() => setViewStatus('paused')}
+                >Paused</button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search events..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 w-80" />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -483,6 +562,16 @@ export default function ApprovedEvents() {
                       <TableCell><span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">{event.status.charAt(0).toUpperCase() + event.status.slice(1)}</span></TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          {/* Pause/Resume button */}
+                          {event.status === 'approved' ? (
+                            <Button variant="outline" size="sm" className="h-8 gap-1 text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
+                              Pause
+                            </Button>
+                          ) : event.status === 'paused' ? (
+                            <Button variant="outline" size="sm" className="h-8 gap-1 text-green-600 hover:bg-green-50" onClick={() => handleResumeEvent(event._id)}>
+                              Resume
+                            </Button>
+                          ) : null}
                           <Button variant="outline" size="sm" className="h-8 gap-1" onClick={() => handleEditClick(event)}><Edit className="h-3.5 w-3.5" /><span>Edit</span></Button>
                           <Button variant="outline" size="sm" className="h-8 gap-1 text-red-500 hover:bg-red-50" onClick={() => { setEventToDelete(event._id); setIsDeleteDialogOpen(true); }}><Trash2 className="h-3.5 w-3.5" /><span>Delete</span></Button>
                         </div>
@@ -618,7 +707,21 @@ export default function ApprovedEvents() {
                   </div>
                 </div>
 
+                {/* Event Type */}
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h4 className="font-medium">Event Type</h4>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isFreeEvent"
+                      checked={!!editingEvent.isFreeEvent}
+                      onCheckedChange={(checked) => setEditingEvent(prev => prev ? { ...prev, isFreeEvent: !!checked, ticketTypes: !!checked ? [] : prev.ticketTypes } : prev)}
+                    />
+                    <Label htmlFor="isFreeEvent" className="text-sm">This is a Free/RSVP Event</Label>
+                  </div>
+                </div>
+
                 {/* Ticket Types */}
+                {!editingEvent.isFreeEvent && (
                 <div className="space-y-4 p-4 border rounded-md"><div className="flex items-center justify-between"><h4 className="font-medium">Ticket Types</h4><Button type="button" variant="outline" size="sm" onClick={addTicketType}><PlusCircle className="h-4 w-4 mr-2" />Add Ticket</Button></div>
                   {editingEvent.ticketTypes.map((ticket, index) => (
                     <div key={index} className="p-3 border rounded-md space-y-3 bg-muted/50">
@@ -638,6 +741,7 @@ export default function ApprovedEvents() {
                     </div>
                   ))}
                 </div>
+                )}
 
                 {/* Fees Configuration */}
                 <div className="space-y-4 p-4 border rounded-md">
@@ -648,14 +752,14 @@ export default function ApprovedEvents() {
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="includeGst"
-                          checked={editingEvent.convenience?.includeGst || false}
-                          onCheckedChange={(checked) => handleFeeChange('includeGst', checked === true)}
+                          checked={(editingEvent.convenience?.includeGst || false) && !editingEvent.isFreeEvent}
+                          onCheckedChange={(checked) => !editingEvent.isFreeEvent && handleFeeChange('includeGst', checked === true)}
                         />
                         <Label htmlFor="includeGst" className="text-sm font-medium">
                           Include GST
                         </Label>
                       </div>
-                      {editingEvent.convenience?.includeGst && (
+                      {editingEvent.convenience?.includeGst && !editingEvent.isFreeEvent && (
                         <div className="space-y-2">
                           <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
                           <Input
@@ -677,14 +781,14 @@ export default function ApprovedEvents() {
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="includeConvenience"
-                          checked={editingEvent.convenience?.includeConvenience !== false}
-                          onCheckedChange={(checked) => handleFeeChange('includeConvenience', checked === true)}
+                          checked={(editingEvent.convenience?.includeConvenience !== false) && !editingEvent.isFreeEvent}
+                          onCheckedChange={(checked) => !editingEvent.isFreeEvent && handleFeeChange('includeConvenience', checked === true)}
                         />
                         <Label htmlFor="includeConvenience" className="text-sm font-medium">
                           Include Convenience Fee
                         </Label>
                       </div>
-                      {editingEvent.convenience?.includeConvenience !== false && (
+                      {editingEvent.convenience?.includeConvenience !== false && !editingEvent.isFreeEvent && (
                         <div className="space-y-2">
                           <div className="space-y-2">
                             <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>

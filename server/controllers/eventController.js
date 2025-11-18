@@ -25,7 +25,9 @@ const createEvent = async (req, res) => {
       faqs = [],
       status = 'active',
       isFeatured = false,
-      organizerInfo = {}
+      isFreeEvent = false,
+      organizerInfo = {},
+      convenience = {}
     } = req.body;
 
     // Create event slug from title
@@ -34,7 +36,7 @@ const createEvent = async (req, res) => {
     // Prepare location data with proper GeoJSON format
     // Handle coordinates - support both old format (latitude/longitude) and new format (GeoJSON)
     let coordinates = { type: 'Point', coordinates: [0, 0] };
-    
+
     if (location?.coordinates) {
       if (location.coordinates.coordinates && Array.isArray(location.coordinates.coordinates)) {
         // New GeoJSON format
@@ -82,7 +84,7 @@ const createEvent = async (req, res) => {
       endDate,
       organizer: req.user.id,
       location: locationData,
-      ticketTypes: ticketTypes.map(ticket => ({
+      ticketTypes: isFreeEvent ? [] : ticketTypes.map(ticket => ({
         ...ticket,
         sold: 0,
         benefits: ticket.benefits || []
@@ -91,11 +93,16 @@ const createEvent = async (req, res) => {
       faqs,
       status,
       isFeatured,
+      isFreeEvent,
       createdBy: req.user.id,
       organizerInfo: {
         ...organizerInfo,
         id: req.user.id,
         name: req.user.name
+      },
+      convenience: convenience || {
+        percentage: 0,
+        fixedAmount: 0
       },
       approvalStatus: 'approved',
       approvedBy: req.user.id,
@@ -108,6 +115,52 @@ const createEvent = async (req, res) => {
   } catch (error) {
     console.error('Error creating event:', error);
     return ApiResponse.serverError(res, 'Error creating event', error);
+  }
+};
+
+/**
+ * @desc    Pause organizer's own event
+ * @route   PUT /api/organizer/events/:id/pause
+ * @access  Private (Organizer only)
+ */
+const pauseOrganizerEvent = async (req, res) => {
+  try {
+    const event = await Event.findOne({ _id: req.params.id, organizer: req.user.id });
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+    if (event.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot modify completed events', {}, 400);
+    }
+    event.status = 'paused';
+    await event.save();
+    return ApiResponse.success(res, 'Event paused successfully', { event });
+  } catch (error) {
+    console.error('Error pausing organizer event:', error);
+    return ApiResponse.serverError(res, 'Error pausing event', error);
+  }
+};
+
+/**
+ * @desc    Resume organizer's own event (back to approved)
+ * @route   PUT /api/organizer/events/:id/resume
+ * @access  Private (Organizer only)
+ */
+const resumeOrganizerEvent = async (req, res) => {
+  try {
+    const event = await Event.findOne({ _id: req.params.id, organizer: req.user.id });
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+    if (event.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot modify completed events', {}, 400);
+    }
+    event.status = 'approved';
+    await event.save();
+    return ApiResponse.success(res, 'Event resumed successfully', { event });
+  } catch (error) {
+    console.error('Error resuming organizer event:', error);
+    return ApiResponse.serverError(res, 'Error resuming event', error);
   }
 };
 
@@ -213,11 +266,11 @@ const getPublicEvents = async (req, res) => {
     // Get query parameters for filtering
     const { category, city, search, limit = 20, page = 1, isFeatured } = req.query;
 
-    // Build query for approved events only, excluding specific event ID
+    // Build query for approved events only (paused events won't appear)
     const query = {
-      // Exclude this event ID
-      // status: 'approved',
-      // startDate: { $gte: new Date() } // Only show upcoming events
+      status: 'approved'
+      // Optionally, only show upcoming events:
+      // startDate: { $gte: new Date() }
     };
 
     // Add filters if provided
@@ -268,6 +321,46 @@ const getPublicEvents = async (req, res) => {
   } catch (error) {
     console.error('Error fetching public events:', error);
     return ApiResponse.serverError(res, 'Error fetching events', error);
+  }
+};
+
+/**
+ * @desc    Pause an event (Admin only)
+ * @route   PUT /api/admin/events/:id/pause
+ * @access  Private (Admin only)
+ */
+const pauseEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+    event.status = 'paused';
+    await event.save();
+    return ApiResponse.success(res, 'Event paused successfully', { event });
+  } catch (error) {
+    console.error('Error pausing event:', error);
+    return ApiResponse.serverError(res, 'Error pausing event', error);
+  }
+};
+
+/**
+ * @desc    Resume an event (Admin only) -> sets back to approved
+ * @route   PUT /api/admin/events/:id/resume
+ * @access  Private (Admin only)
+ */
+const resumeEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+    event.status = 'approved';
+    await event.save();
+    return ApiResponse.success(res, 'Event resumed successfully', { event });
+  } catch (error) {
+    console.error('Error resuming event:', error);
+    return ApiResponse.serverError(res, 'Error resuming event', error);
   }
 };
 
@@ -749,7 +842,8 @@ const createOrganizerEvent = async (req, res) => {
       ticketTypes = [],
       termsAndConditions = '',
       faqs = [],
-      convenience = {}
+      convenience = {},
+      isFreeEvent = false
     } = req.body;
 
     // Create event slug from title
@@ -779,7 +873,7 @@ const createOrganizerEvent = async (req, res) => {
       endDate,
       organizer: req.user.id,
       location: locationData,
-      ticketTypes: ticketTypes.map(ticket => ({
+      ticketTypes: isFreeEvent ? [] : ticketTypes.map(ticket => ({
         ...ticket,
         sold: 0,
         benefits: ticket.benefits || []
@@ -788,13 +882,14 @@ const createOrganizerEvent = async (req, res) => {
       faqs,
       status: 'pending', // Organizer events start as pending
       isFeatured: false,
+      isFreeEvent,
       createdBy: req.user.id,
       organizerInfo: {
         id: req.user.id,
         name: req.user.name
       },
       approvalStatus: 'pending',
-      convenience: convenience || {}
+      convenience: isFreeEvent ? { percentage: 0, fixedAmount: 0 } : (convenience || {})
     });
 
     await event.save();
@@ -1065,5 +1160,9 @@ module.exports = {
   getOrganizerEvents,
   getOrganizerEventById,
   updateOrganizerEvent,
-  deleteOrganizerEvent
+  deleteOrganizerEvent,
+  pauseEvent,
+  resumeEvent,
+  pauseOrganizerEvent,
+  resumeOrganizerEvent
 };

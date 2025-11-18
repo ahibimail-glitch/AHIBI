@@ -19,6 +19,8 @@ router.post('/events', validateEvent, eventController.createEvent);
 router.put('/events/:id', eventController.updateEvent);
 router.put('/events/:id/approve', eventController.approveEvent);
 router.put('/events/:id/reject', eventController.rejectEvent);
+router.put('/events/:id/pause', eventController.pauseEvent);
+router.put('/events/:id/resume', eventController.resumeEvent);
 router.delete('/events/:id', eventController.deleteEvent);
 
 // FC25 participants

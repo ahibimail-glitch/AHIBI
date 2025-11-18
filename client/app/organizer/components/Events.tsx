@@ -69,11 +69,13 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
   const { toast } = useToast();
+  // Local view toggle for Approved view
+  const [viewStatus, setViewStatus] = useState<'approved' | 'paused'>('approved');
 
   // Fetch events from API
   useEffect(() => {
     fetchEvents();
-  }, [filterStatus]);
+  }, [filterStatus, viewStatus]);
 
   const fetchEvents = async () => {
     try {
@@ -85,7 +87,9 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const statusParam = filterStatus !== "all" ? `&status=${filterStatus}` : "";
+      // If viewing Approved tab, use local toggle to load approved or paused
+      const effectiveStatus = filterStatus === 'approved' ? viewStatus : (filterStatus !== 'all' ? filterStatus : undefined);
+      const statusParam = effectiveStatus ? `&status=${effectiveStatus}` : "";
       const response = await fetch(`${apiUrl}/api/organizer/events?${statusParam}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -107,19 +111,48 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
     }
   };
 
-  // Filter events based on status and search
+  // Filter and sort events based on status and search
   const getFilteredEvents = () => {
     let filtered = events;
-    
-    if (filterStatus !== "all") {
-      filtered = events.filter(event => event.status === filterStatus);
+    // Determine effective status for filtering
+    const effectiveStatus = filterStatus === 'approved' ? viewStatus : filterStatus;
+    if (effectiveStatus !== "all") {
+      filtered = events.filter(event => event.status === effectiveStatus);
     }
-    
-    return filtered.filter((event) =>
+
+    // Search filter
+    filtered = filtered.filter((event) =>
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.location.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.location.city.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Sorting
+    if (filterStatus === "all") {
+      const priority: Record<string, number> = {
+        approved: 0,
+        active: 0,
+        pending: 1,
+        paused: 2,
+        rejected: 3,
+        completed: 4,
+        draft: 5,
+        cancelled: 6,
+      };
+      filtered = [...filtered].sort((a, b) => {
+        const pa = priority[a.status] ?? 99;
+        const pb = priority[b.status] ?? 99;
+        if (pa !== pb) return pa - pb;
+        return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+      });
+    } else {
+      // For specific tabs like approved/pending etc., sort by start date
+      filtered = [...filtered].sort(
+        (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+      );
+    }
+
+    return filtered;
   };
 
   const filteredEvents = getFilteredEvents();
@@ -181,6 +214,65 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
     });
   };
 
+  // Pause/Resume own events
+  const handlePauseEvent = async (eventId: string) => {
+    try {
+      const token = localStorage.getItem("organizer_token");
+      if (!token) {
+        window.location.href = "/organizer/auth/login";
+        return;
+      }
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${apiUrl}/api/organizer/events/${eventId}/pause`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to pause event');
+      }
+      const data = await res.json();
+      const updated = data.data?.event || data.event || data;
+      setEvents(prev => prev.map(e => e._id === eventId ? { ...e, status: updated.status || 'paused' } : e));
+      toast({ title: 'Event paused', description: 'This event is now paused.' });
+    } catch (err) {
+      console.error('Pause failed', err);
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to pause event', variant: 'destructive' });
+    }
+  };
+
+  const handleResumeEvent = async (eventId: string) => {
+    try {
+      const token = localStorage.getItem("organizer_token");
+      if (!token) {
+        window.location.href = "/organizer/auth/login";
+        return;
+      }
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${apiUrl}/api/organizer/events/${eventId}/resume`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Failed to resume event');
+      }
+      const data = await res.json();
+      const updated = data.data?.event || data.event || data;
+      setEvents(prev => prev.map(e => e._id === eventId ? { ...e, status: updated.status || 'approved' } : e));
+      toast({ title: 'Event resumed', description: 'This event is now live (approved).' });
+    } catch (err) {
+      console.error('Resume failed', err);
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to resume event', variant: 'destructive' });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "approved":
@@ -189,6 +281,8 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
         return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
       case "rejected":
         return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
+      case "paused":
+        return <Badge className="bg-amber-100 text-amber-800">Paused</Badge>;
       case "completed":
         return <Badge variant="secondary">Completed</Badge>;
       case "active":
@@ -267,6 +361,22 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
           <h2 className="text-2xl font-bold text-gray-900">{getPageTitle()}</h2>
           <p className="text-gray-600">{getPageDescription()}</p>
         </div>
+        {filterStatus === 'approved' && (
+          <div className="inline-flex rounded-md border overflow-hidden">
+            <button
+              className={`px-3 py-1 text-sm ${viewStatus === 'approved' ? 'bg-primary text-white' : 'bg-white'}`}
+              onClick={() => setViewStatus('approved')}
+            >
+              Approved
+            </button>
+            <button
+              className={`px-3 py-1 text-sm ${viewStatus === 'paused' ? 'bg-primary text-white' : 'bg-white'}`}
+              onClick={() => setViewStatus('paused')}
+            >
+              Paused
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -354,6 +464,16 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
+                      {event.status === 'approved' || event.status === 'active' ? (
+                        <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
+                          Pause
+                        </Button>
+                      ) : null}
+                      {event.status === 'paused' ? (
+                        <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50" onClick={() => handleResumeEvent(event._id)}>
+                          Resume
+                        </Button>
+                      ) : null}
                       <Button size="sm" variant="outline">
                         <Eye className="h-4 w-4" />
                       </Button>

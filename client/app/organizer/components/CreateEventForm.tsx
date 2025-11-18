@@ -52,6 +52,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     endDate: "",
     category: "",
     image: "",
+    isFreeEvent: false,
   });
   
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
@@ -240,14 +241,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       return;
     }
     
-    // Validate ticket types
-    const hasValidTickets = ticketTypes.every(ticket => 
-      ticket.name && ticket.price && ticket.quantity
-    );
-    
-    if (!hasValidTickets) {
-      setError('Please fill in all ticket type details');
-      return;
+    // Validate ticket types (only for paid events)
+    if (!eventData.isFreeEvent) {
+      const hasValidTickets = ticketTypes.every(ticket => 
+        ticket.name && ticket.price && ticket.quantity
+      );
+      
+      if (!hasValidTickets) {
+        setError('Please fill in all ticket type details');
+        return;
+      }
     }
     
     setIsLoading(true);
@@ -312,6 +315,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       endDate: new Date(eventData.endDate).toISOString(),
       status: 'pending',
       organizer: organizerId,
+      isFreeEvent: eventData.isFreeEvent,
       location: {
         address: eventData.venue,
         city: eventData.city || "Mumbai",
@@ -326,7 +330,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
           ]
         }
       },
-      ticketTypes: ticketTypes.map(ticket => ({
+      ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => ({
         name: ticket.name,
         description: ticket.description || "",
         price: parseFloat(ticket.price) || 0,
@@ -335,7 +339,10 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         sold: 0,
         capacity: parseInt(ticket.capacity, 10) || 1,
       })),
-      convenience: {
+      convenience: eventData.isFreeEvent ? {
+        percentage: 0,
+        fixedAmount: 0
+      } : {
         percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
         fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0
       }
@@ -573,7 +580,22 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </div>
             </div>
 
-            {/* Ticket Types Section */}
+            {/* Free Event Option */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isFreeEvent"
+                checked={eventData.isFreeEvent}
+                onCheckedChange={(checked) =>
+                  setEventData(prev => ({ ...prev, isFreeEvent: checked as boolean }))
+                }
+              />
+              <Label htmlFor="isFreeEvent" className="text-sm font-medium">
+                This is a Free/RSVP Event
+              </Label>
+            </div>
+
+            {/* Ticket Types Section - Only for paid events */}
+            {!eventData.isFreeEvent && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-lg font-semibold">Ticket Types *</Label>
@@ -708,8 +730,10 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </Card>
               ))}
             </div>
+            )}
 
-            {/* Fees Configuration */}
+            {/* Fees Configuration - Only for paid events */}
+            {!eventData.isFreeEvent && (
             <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-base">Fee Configuration</CardTitle>
@@ -790,6 +814,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {error && (
               <div className="p-4 text-red-600 bg-red-50 border border-red-200 rounded-lg">

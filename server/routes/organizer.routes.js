@@ -48,12 +48,38 @@ router.post('/events', [
   check('startDate', 'Start date is required').notEmpty(),
   check('endDate', 'End date is required').notEmpty(),
   check('location.address', 'Venue address is required').notEmpty(),
-  check('ticketTypes', 'At least one ticket type is required').isArray({ min: 1 })
+  // Ticket types validation (conditional for free events)
+  check('ticketTypes').custom((value, { req }) => {
+    if (req.body.isFreeEvent) {
+      return true; // allow empty for free events
+    }
+    if (!Array.isArray(value) || value.length === 0) {
+      throw new Error('At least one ticket type is required');
+    }
+    return true;
+  }),
+  check('ticketTypes.*.name').custom((val, { req }) => {
+    if (req.body.isFreeEvent) return true;
+    if (!val || String(val).trim() === '') throw new Error('Ticket type name is required');
+    return true;
+  }),
+  check('ticketTypes.*.price').custom((val, { req }) => {
+    if (req.body.isFreeEvent) return true;
+    if (typeof val !== 'number') throw new Error('Ticket price is required and must be a number');
+    return true;
+  }),
+  check('ticketTypes.*.quantity').custom((val, { req }) => {
+    if (req.body.isFreeEvent) return true;
+    if (!Number.isInteger(val) || val < 1) throw new Error('Ticket quantity is required and must be a number');
+    return true;
+  })
 ], eventController.createOrganizerEvent);
 
 router.get('/events', protect, eventController.getOrganizerEvents);
 router.get('/events/:id', protect, eventController.getOrganizerEventById);
 router.put('/events/:id', protect, eventController.updateOrganizerEvent);
+router.put('/events/:id/pause', protect, eventController.pauseOrganizerEvent);
+router.put('/events/:id/resume', protect, eventController.resumeOrganizerEvent);
 router.delete('/events/:id', protect, eventController.deleteOrganizerEvent);
 
 // Artist booking routes for organizers

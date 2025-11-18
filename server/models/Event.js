@@ -130,7 +130,7 @@ const EventSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'pending', 'approved', 'rejected', 'cancelled', 'completed'],
+    enum: ['draft', 'pending', 'approved', 'rejected', 'cancelled', 'completed', 'paused'],
     default: 'pending'
   },
   approvalStatus: {
@@ -157,6 +157,10 @@ const EventSchema = new mongoose.Schema({
     default: false
   },
   isSponsored: {
+    type: Boolean,
+    default: false
+  },
+  isFreeEvent: {
     type: Boolean,
     default: false
   },

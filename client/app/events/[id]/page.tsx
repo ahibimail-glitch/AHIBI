@@ -167,6 +167,7 @@ interface Event {
   isSponsored: boolean;
   isExternal: boolean;
   isVirtual: boolean;
+  isFreeEvent?: boolean;
   discounts: any[];
   reviews: any[];
   updatedAt: string;
@@ -247,6 +248,58 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [couponApplying, setCouponApplying] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+
+  // Free/RSVP booking flow
+  const handleFreeBooking = async () => {
+    try {
+      setBookingError(null);
+      if (!acceptedTerms) {
+        setBookingError("Please accept the terms and conditions to proceed.");
+        return;
+      }
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.info("Please login to RSVP");
+        router.push(`/auth?redirect=/events/${params.id}`);
+        return;
+      }
+      setIsBooking(true);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${apiUrl}/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          event: params.id,
+          quantity: 1,
+          price: 0,
+          ticketType: 'RSVP',
+          ...(isHMFEvent ? { country: selectedCountry } : {})
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to create RSVP booking');
+      }
+      toast.success('RSVP confirmed! Your ticket has been generated.');
+      // Redirect to booking invoice page using booking id
+      const bookingId = data?.booking?.id || data?.booking?._id;
+      if (bookingId) {
+        try {
+          localStorage.setItem('lastBookingId', bookingId);
+          router.push(`/events/${bookingId}/bookings`);
+        } catch {
+          // fallback: stay on page
+        }
+      }
+    } catch (e: any) {
+      setBookingError(e.message || 'Something went wrong while booking');
+    } finally {
+      setIsBooking(false);
+    }
+  };
 
   // Form state for BikerBash contact form
   const [formData, setFormData] = useState({
@@ -1271,8 +1324,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-blue-900">
-                {isHMFEvent ? "Please select your country before booking tickets" : "Please fill the details before booking tickets"}
-              </h2>
+                  {isHMFEvent ? "Please select your country before booking tickets" : "Please fill the details before booking tickets"}
+                </h2>
                 {hasSelectedTicket && (
                   <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-lg">
                     <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
@@ -1467,12 +1520,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     size="sm"
                                     onClick={() => {
                                       if (!isFormComplete) {
-                                        const errorMessage = isHMFEvent 
+                                        const errorMessage = isHMFEvent
                                           ? "Please select your country before selecting a ticket"
                                           : "Please fill in all form fields before selecting a ticket";
                                         toast.error(errorMessage);
                                         return;
-                                      } 
+                                      }
                                       if (quantity > 0) {
                                         const newQuantity = quantity - 1;
                                         if (newQuantity === 0) {
@@ -1634,17 +1687,63 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   )}
                 </div>
               ) : (
-                <div className="py-6 text-center">
-                  <div className="bg-gray-100 rounded-full p-3 inline-flex mb-3">
-                    <TicketIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-                  </div>
-                  <p className="text-xs sm:text-sm text-gray-600">No tickets available for this event</p>
+                <div className="py-6">
+                
+                  {event.isFreeEvent && (
+                    <Card className="border-2 border-green-500 bg-white">
+                      <CardHeader className="p-4">
+                        <CardTitle className="text-base sm:text-lg text-green-700">Free/RSVP Booking</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">This is a free event. Reserve your spot instantly.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0 space-y-3">
+                        {bookingError && (
+                          <div className="mt-1 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700 flex items-start gap-2">
+                            <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                            <div className="text-sm">{bookingError}</div>
+                          </div>
+                        )}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            id="terms-free"
+                            checked={acceptedTerms}
+                            onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                            className="mt-1"
+                          />
+                          <label htmlFor="terms-free" className="text-xs sm:text-sm text-gray-600 cursor-pointer">
+                            I accept to the{" "}
+                            <button type="button" onClick={() => setTermsModalOpen(true)} className="text-indigo-600 hover:underline font-semibold">
+                              Terms and Conditions*
+                            </button>
+                          </label>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-0">
+                        <Button
+                          className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+                          onClick={handleFreeBooking}
+                          disabled={isBooking || !acceptedTerms}
+                        >
+                          {isBooking ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Reserving...
+                            </>
+                          ) : (
+                            <>
+                              <TicketIcon className="mr-2 h-4 w-4" />
+                              RSVP Now (Free)
+                            </>
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
-        <Footer />
+
 
         {/* Payment Processing Overlay */}
         {isProcessingPayment && (
@@ -1673,8 +1772,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
           </div>
         )}
-        <Footer />
+
       </div>
+      <Footer />
     </div>
   );
 }
