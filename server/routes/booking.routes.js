@@ -105,7 +105,7 @@ router.post("/verify-ticket", async (req, res) => {
 router.post("/", auth.protect, async (req, res) => {
   try {
     // console.log("Booking payload:", req.body);
-    const { event, user, quantity, price, ticketType } = req.body;
+    const { event, user, quantity, price, ticketType, country } = req.body;
     //console.log("Booking payload:", { event, user, quantity });
 
     // Validate input
@@ -156,6 +156,8 @@ router.post("/", auth.protect, async (req, res) => {
       status: "confirmed",
       paymentStatus: "completed",
       ticketType: ticketType,
+      // Add country for HMF events
+      ...(country && { country: country }),
     });
 
     // Save booking
@@ -743,7 +745,7 @@ router.post("/check-out", async (req, res) => {
 // @access  Private (Admin)
 router.post("/admin-manual-booking",  async (req, res) => {
   try {
-    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets } = req.body;
+    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets, country } = req.body;
     console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price, tickets });
 
     // Basic validation
@@ -797,7 +799,9 @@ router.post("/admin-manual-booking",  async (req, res) => {
           price: item.price,
           total: item.price,
           status: 'confirmed',
-          paymentStatus: 'completed'
+          paymentStatus: 'completed',
+          // Add country for HMF events
+          ...(country && { country: country }),
         });
 
         await newBooking.save();

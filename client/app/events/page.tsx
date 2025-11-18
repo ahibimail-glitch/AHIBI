@@ -36,7 +36,7 @@ const CITIES = [
   "Silchar",
   "Tezpur",
 ];
-
+const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf"]
 const GENRES = ['Music', 'Comedy', 'Theatre', 'Dance', 'Food', 'Art', 'Sports', 'Business', 'Education', 'Other'];
 
 // Format date for display
@@ -184,8 +184,10 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                       <Link href={
                         event._id === "6899cb7215438afd622a7646" ? "/events/FC25" :
                           event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
-                          event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
-                            `/events/${event._id}`
+                            event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
+                              event._id === "691b0e57a9a25d4fec36f8ad" ? "/HornbillFestival2025" :
+
+                                `/events/${event._id}`
                       }>
                         View Details
                       </Link>
@@ -220,7 +222,7 @@ export default function EventsPage() {
         if (!response.ok) throw new Error('Failed to fetch events');
         const data: EventsResponse = await response.json();
         const filteredEvents = (data.data.events || []).filter(
-          (event) => event._id !== '68dac96e8d5dd14f277d5b1a' && event._id !== '6917510439a9643fb98027c0'&&event._id !== '69176d6839a9643fb9802ad1'&&event._id !== '69176cdf39a9643fb9802a5d'
+          (event) => event._id !== '68dac96e8d5dd14f277d5b1a' && event._id !== '6917510439a9643fb98027c0' && event._id !== '69176d6839a9643fb9802ad1' && event._id !== '69176cdf39a9643fb9802a5d' && !HMF_id.includes(event._id)
         );
         setEvents(filteredEvents);
       } catch (err) {
@@ -259,8 +261,8 @@ export default function EventsPage() {
     if (isNaN(startDate.getTime())) return false;
     if (!endDate) {
       // Treat events without endDate as same-day; show as current if same calendar day
-      const startDay = new Date(startDate); startDay.setHours(0,0,0,0);
-      const today = new Date(currentDate); today.setHours(0,0,0,0);
+      const startDay = new Date(startDate); startDay.setHours(0, 0, 0, 0);
+      const today = new Date(currentDate); today.setHours(0, 0, 0, 0);
       return startDay.getTime() === today.getTime();
     }
     return startDate <= currentDate && endDate >= currentDate;
@@ -271,8 +273,8 @@ export default function EventsPage() {
     // If no end date: consider past if startDate is before today (and not same day)
     const startDate = new Date(event.startDate);
     if (isNaN(startDate.getTime())) return false;
-    const eventDay = new Date(startDate); eventDay.setHours(0,0,0,0);
-    const today = new Date(currentDate); today.setHours(0,0,0,0);
+    const eventDay = new Date(startDate); eventDay.setHours(0, 0, 0, 0);
+    const today = new Date(currentDate); today.setHours(0, 0, 0, 0);
     return eventDay < today;
   });
   const featuredEvents = events.filter((event: Event) => event.isFeatured);

@@ -17,9 +17,9 @@ const HeroBanner = ({ image, title, subtitle, children }: HeroBannerProps) => {
         className="absolute inset-0 bg-cover bg-center scale-105"
         style={{ backgroundImage: `url(${image})` }}
       />
-      <div 
+      {/* <div 
         className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-background"
-      />
+      /> */}
       {/* <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 mix-blend-overlay" /> */}
       
       <div className="relative h-full container mx-auto px-4 sm:px-6 flex items-center">

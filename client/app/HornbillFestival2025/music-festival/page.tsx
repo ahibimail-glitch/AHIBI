@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 
 const MusicFestival = () => {
-  const router = useRouter(); 
+  const router = useRouter();
   const [selectedDay, setSelectedDay] = useState(1);
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
   const [ticketType, setTicketType] = useState<"normal" | "highProfile" | "festivalPass">("normal");
@@ -26,6 +26,16 @@ const MusicFestival = () => {
 
   const freeDays = [1, 10];
   const normalDays = [2, 3, 4, 5, 8, 9];
+  const daytoIdMap = {
+    2: "/events/691b1066a9a25d4fec36f96c",
+    3: "/events/691b13caa9a25d4fec36fa70",
+    4: "/events/691b146fa9a25d4fec36fb25",
+    5: "/events/691b14f1a9a25d4fec36fbd7",
+    6: "/events/691b156ea9a25d4fec36fc8d",
+    7: "/events/691b15c5a9a25d4fec36fd3a",
+    8: "/events/691b15faa9a25d4fec36fd3f",
+    9: "/events/691b162ca9a25d4fec36fd44"
+  }
   const highProfileDays = [6, 7];
 
   const isDayFree = (day: number) => freeDays.includes(day);
@@ -180,9 +190,9 @@ const MusicFestival = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <main className="flex-1 pt-16 md:pt-20">
+      <main className="flex-1">
         <HeroBanner
-          image="/images/hero-music.jpg"
+          image="/images/hero-music.jpeg"
           title="Hornbill Music Festival"
           subtitle="Eight Nights of Live Music · Free Entry: 1st & 10th December"
         />
@@ -202,8 +212,8 @@ const MusicFestival = () => {
                   setSelectedTicket(null);
                 }}
                 className={`p-6 rounded-xl border-2 transition-all duration-300 ${ticketType !== "festivalPass"
-                    ? "gradient-hero text-white border-primary shadow-glow"
-                    : "gradient-card text-foreground border-border/30 hover:border-primary/50"
+                  ? "gradient-hero text-white border-primary shadow-glow"
+                  : "gradient-card text-foreground border-border/30 hover:border-primary/50"
                   }`}
               >
                 <h4 className="text-xl font-bold mb-2">Daily Tickets</h4>
@@ -218,8 +228,8 @@ const MusicFestival = () => {
                   setSelectedTicket(null);
                 }}
                 className={`p-6 rounded-xl border-2 transition-all duration-300 ${ticketType === "festivalPass"
-                    ? "gradient-hero text-white border-primary shadow-glow"
-                    : "gradient-card text-foreground border-border/30 hover:border-primary/50"
+                  ? "gradient-hero text-white border-primary shadow-glow"
+                  : "gradient-card text-foreground border-border/30 hover:border-primary/50"
                   }`}
               >
                 <h4 className="text-xl font-bold mb-2">8-Day Festival Pass</h4>
@@ -299,7 +309,19 @@ const MusicFestival = () => {
                 {getCurrentTickets().map((ticket, index) => (
                   <div
                     key={index}
-                    onClick={() => setSelectedTicket(ticket.title)}
+                    onClick={() => {
+                      setSelectedTicket(ticket.title);
+                      if (ticketType === "festivalPass") {
+                        router.push("/events/691b1771a9a25d4fec36feaf");
+                        return;
+                      }
+                      const target = (daytoIdMap as Record<number, string>)[selectedDay];
+                      if (target) {
+                        router.push(target);
+                      } else {
+                        toast.error("Tickets for this day are not live yet.");
+                      }
+                    }}
                     className="cursor-pointer"
                   >
                     <TicketCard
@@ -346,7 +368,7 @@ const MusicFestival = () => {
             </div>
           </div>
 
-          {(selectedTicket || isDayFree(selectedDay)) && ticketType !== "festivalPass" && (
+          {/* {(selectedTicket || isDayFree(selectedDay)) && ticketType !== "festivalPass" && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -401,9 +423,9 @@ const MusicFestival = () => {
                 </div>
               </div>
             </motion.div>
-          )}
+          )} */}
 
-          {selectedTicket && ticketType === "festivalPass" && (
+          {/* {selectedTicket && ticketType === "festivalPass" && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -423,7 +445,7 @@ const MusicFestival = () => {
                 </Button>
               </div>
             </motion.div>
-          )}
+          )} */}
         </section>
       </main>
 

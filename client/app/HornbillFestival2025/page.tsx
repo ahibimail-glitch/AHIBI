@@ -37,7 +37,7 @@ const HornbillFestival2025 = () => {
   return (
     <div className="min-h-screen flex flex-col">
 
-        <Navbar />
+      <Navbar />
       <main className="flex-1">
         <div className="hidden md:block">
           <Image
@@ -60,7 +60,7 @@ const HornbillFestival2025 = () => {
           />
         </div>
 
-        {/* <section className="py-16 md:py-24 container mx-auto px-4 sm:px-6">
+        <section className="py-16 md:py-24 container mx-auto px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -89,7 +89,7 @@ const HornbillFestival2025 = () => {
               </Link>
             ))}
           </div>
-        </section> */}
+        </section>
 
 
       </main>

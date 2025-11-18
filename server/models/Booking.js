@@ -92,6 +92,11 @@ const BookingSchema = new mongoose.Schema({
   customerPhone: {
     type: String,
   },
+  // Country selection for HMF events
+  country: {
+    type: String,
+    default: 'India'
+  },
   parentBookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'
