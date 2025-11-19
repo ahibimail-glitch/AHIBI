@@ -236,8 +236,9 @@ exports.verifyPayment = async (req, res) => {
             paymentGateway: 'Razorpay',
             status: 'Paid'
           },
-          // Add country for HMF events
+          // Add country/state for HMF events
           ...(bookingDetails?.country && { country: bookingDetails.country }),
+          ...(bookingDetails?.state && { state: bookingDetails.state }),
           // Add ticket-specific information
           ticketIndex: currentTicketIndex,
           totalTickets: tickets.reduce((sum, t) => sum + t.quantity, 0),

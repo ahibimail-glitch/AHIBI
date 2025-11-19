@@ -60,6 +60,9 @@ interface BookingFormData {
   total: number;
   customerName?: string;
   customerPhone?: string;
+  country?: string;
+  state?: string;
+  modeOfPayment?: string;
 }
 
 const ManualBooking: React.FC = () => {
@@ -114,10 +117,38 @@ const ManualBooking: React.FC = () => {
     ticketType: "",
     quantity: 1,
     price: 0,
-    total: 0
+    total: 0,
+    modeOfPayment: ""
   });
 
   const [ticketItems, setTicketItems] = useState<TicketItem[]>([{ ticketType: "", quantity: 1, price: 0 }]);
+
+  // HMF event IDs
+  const HMF_IDS = useMemo(() => ([
+    "691b1066a9a25d4fec36f96c",
+    "691b13caa9a25d4fec36fa70",
+    "691b146fa9a25d4fec36fb25",
+    "691b14f1a9a25d4fec36fbd7",
+    "691b156ea9a25d4fec36fc8d",
+    "691b15c5a9a25d4fec36fd3a",
+    "691b15faa9a25d4fec36fd3f",
+    "691b162ca9a25d4fec36fd44",
+    "691b1771a9a25d4fec36feaf",
+  ]), []);
+
+  const isHMFSelected = useMemo(() => !!formData.event && HMF_IDS.includes(formData.event), [formData.event, HMF_IDS]);
+
+  // Country/State selection
+  const countries = useMemo(() => {
+    const list = [
+      "India","Nepal","Bhutan","Bangladesh","Sri Lanka","Thailand","Myanmar","United States","United Kingdom","Australia","Canada"
+    ];
+    return Array.from(new Set(list)).sort((a,b)=>a.localeCompare(b));
+  }, []);
+
+  const indianStates = useMemo(() => [
+    "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Delhi","Jammu and Kashmir","Ladakh"
+  ].sort((a,b)=>a.localeCompare(b)), []);
 
   const [paymentInfo] = useState({
     transactionId: `TXN${Date.now().toString().slice(-8)}`,
@@ -205,6 +236,8 @@ const ManualBooking: React.FC = () => {
     setTicketTypes(ev?.ticketTypes || []);
     // Reset ticket items when event changes
     setTicketItems([{ ticketType: '', quantity: 1, price: 0 }]);
+    // Reset country/state/modeOfPayment when switching events
+    setFormData(prev => ({ ...prev, country: undefined, state: undefined, modeOfPayment: undefined }));
   };
 
   const handleSelectChange = (field: keyof BookingFormData, value: any) => {
@@ -245,6 +278,14 @@ const ManualBooking: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.event || !formData.user) return toast({ title: 'Missing Data', description: 'Select event and user', variant: 'destructive' });
+    if (isHMFSelected) {
+      if (!formData.country || !formData.state) {
+        return toast({ title: 'Country/State required', description: 'For HMF events, please provide both country and state/province.', variant: 'destructive' });
+      }
+      if (!formData.modeOfPayment) {
+        return toast({ title: 'Mode of Payment required', description: 'For HMF events, please select a mode of payment.', variant: 'destructive' });
+      }
+    }
 
     try {
       setLoading(true);
@@ -259,7 +300,10 @@ const ManualBooking: React.FC = () => {
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
         paymentMethod: paymentInfo.method,
-        paymentStatus: paymentInfo.status
+        paymentStatus: paymentInfo.status,
+        ...(formData.country ? { country: formData.country } : {}),
+        ...(formData.state ? { state: formData.state } : {}),
+        ...(formData.modeOfPayment ? { modeOfPayment: formData.modeOfPayment } : {}),
       };
 
       const resp = await axios.post(`${apiUrl}/api/bookings/admin-manual-booking`, payload, {
@@ -435,7 +479,47 @@ const ManualBooking: React.FC = () => {
                     <Label htmlFor="customerPhone">Customer Mobile (optional)</Label>
                     <Input id="customerPhone" name="customerPhone" type="tel" placeholder="Mobile number (optional)" value={formData.customerPhone || ''} onChange={handleInputChange} className="w-full" />
                   </div>
+
+                  {isHMFSelected && (
+                    <>
+                      <div>
+
+                        <Label htmlFor="country">Country <span className="text-red-500">(Mandatory)</span></Label>
+                        <Select value={formData.country || ''} onValueChange={(v) => handleSelectChange('country', v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {countries.map(c => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="state">State / Province <span className="text-red-500">(Mandatory)</span></Label>
+                        {(formData.country || '') === 'India' ? (
+                          <Select value={formData.state || ''} onValueChange={(v) => handleSelectChange('state', v)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {indianStates.map(s => (
+                                <SelectItem key={s} value={s}>{s}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input id="state" name="state" type="text" placeholder="State / Province" value={formData.state || ''} onChange={(e) => handleSelectChange('state', e.target.value)} className="w-full" />
+                        )}
+                      </div>
+
+                   
+                    </>
+                  )}
                 </div>
+                
 
                 <div className="space-y-4">
                   <div>
@@ -470,6 +554,19 @@ const ManualBooking: React.FC = () => {
                   </div>
                 </div>
               </div>
+                 <div>
+                        <Label htmlFor="modeOfPayment">Mode of Payment <span className="text-red-500">(Mandatory)</span></Label>
+                        <Select value={formData.modeOfPayment || ''} onValueChange={(v) => handleSelectChange('modeOfPayment', v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select mode of payment" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Cash">Cash</SelectItem>
+                            <SelectItem value="Card">Card</SelectItem>
+                            <SelectItem value="UPI">UPI</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
               <div className="bg-gray-50 p-4 rounded-md mt-4">
                 <h3 className="font-semibold mb-2">Order Summary</h3>

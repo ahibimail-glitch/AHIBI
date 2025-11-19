@@ -106,6 +106,11 @@ router.get("/bookings/all",  async (req, res) => {
           quantity: 1,
           total: 1,
           status: 1,
+          paymentId: 1,
+          paymentStatus: 1,
+          country: 1,
+          state: 1,
+          modeOfPayment: 1,
           // keep ids for potential future use
           eventId: '$event',
           userId: '$user',

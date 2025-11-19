@@ -276,7 +276,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           quantity: 1,
           price: 0,
           ticketType: 'RSVP',
-          ...(isHMFEvent ? { country: selectedCountry } : {})
+          ...(isHMFEvent ? { country: selectedCountry, state: selectedState } : {})
         })
       });
       const data = await res.json();
@@ -311,6 +311,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   // HMF event country selection state
   const [selectedCountry, setSelectedCountry] = useState('India');
+  const [selectedState, setSelectedState] = useState('');
 
   // HMF event IDs
   const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf"];
@@ -356,8 +357,25 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     "North Korea", "South Korea", "Japan", "China", "Taiwan", "Hong Kong", "Macau"
   ];
 
-  // Check if form is completely filled
-  const isFormComplete = !isHMFEvent || selectedCountry !== '';
+  // Ensure unique country list and sort alphabetically
+  const uniqueCountries = Array.from(new Set(countries));
+  const sortedCountries = uniqueCountries.sort((a, b) => a.localeCompare(b));
+
+  // States by country (extendable). If country not listed, use free-text input fallback
+  const statesByCountry: Record<string, string[]> = {
+    India: [
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+    ],
+  };
+  const availableStates = statesByCountry[selectedCountry] || [];
+  const sortedStates = [...availableStates].sort((a, b) => a.localeCompare(b));
+  useEffect(() => {
+    // Reset state when country changes
+    setSelectedState('');
+  }, [selectedCountry]);
+
+  // Check if form is completely filled (for HMF require both country and state)
+  const isFormComplete = !isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''));
 
   // Check if any ticket is selected
   const hasSelectedTicket = selectedTickets.size > 0;
@@ -453,7 +471,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     // Check if form is complete for BikerBash and HMF events
     if ((isBikerBash || isHMFEvent) && !isFormComplete) {
       const errorMessage = isHMFEvent
-        ? "Please select your country before booking"
+        ? "Please select your country and state before booking"
         : "Please fill in all form fields before booking";
       toast.error(errorMessage);
       return;
@@ -578,7 +596,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   quantity: 1,
                   price: 0,
                   ticketType: ticket.name,
-                  ...(isHMFEvent && { country: selectedCountry }),
+                  ...(isHMFEvent && { country: selectedCountry, state: selectedState }),
                 }),
               });
               const data = await resp.json();
@@ -636,6 +654,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               }),
               ...(isHMFEvent && {
                 country: selectedCountry,
+                state: selectedState,
               }),
             },
             ...(appliedCoupon ? { coupon: { code: appliedCoupon.code } } : {}),
@@ -685,6 +704,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 }),
                 ...(isHMFEvent && {
                   country: selectedCountry,
+                  state: selectedState,
                 }),
                 ...(appliedCoupon ? {
                   coupon: {
@@ -1354,7 +1374,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         <SelectValue placeholder="Select your country" />
                       </SelectTrigger>
                       <SelectContent>
-                        {countries.map((country) => (
+                        {sortedCountries.map((country) => (
                           <SelectItem key={country} value={country}>
                             {country}
                           </SelectItem>
@@ -1362,6 +1382,41 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500 mt-1">Select your country of residence</p>
+                    {/* State selection */}
+                    <div className="mt-4">
+                      <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
+                        State/Province
+                      </label>
+                      {sortedStates.length > 0 ? (
+                        <Select
+                          value={selectedState}
+                          onValueChange={setSelectedState}
+                          disabled={hasSelectedTicket}
+                        >
+                          <SelectTrigger
+                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${hasSelectedTicket ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
+                          >
+                            <SelectValue placeholder="Select your state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sortedStates.map((state) => (
+                              <SelectItem key={state} value={state}>
+                                {state}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          placeholder="Enter your state/province"
+                          value={selectedState}
+                          onChange={(e) => setSelectedState(e.target.value)}
+                          disabled={hasSelectedTicket}
+                          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${hasSelectedTicket ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
+                        />
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">Select your state/region</p>
+                    </div>
                   </div>
                 )}
               </form>
@@ -1453,6 +1508,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               <div className="text-left">
                                 <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
                                 <p className="text-xs text-gray-500">per ticket</p>
+                                
                               </div>
                             </div>
                           </CardHeader>
@@ -1480,6 +1536,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 </ul>
                               </div>
                             )}
+                            
                             <div className="mb-3">
                               <div className="flex items-center justify-between text-xs mb-1">
                                 <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
@@ -1506,6 +1563,24 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 ></div>
                               </div> */}
                             </div>
+                              <CardContent>
+                            {isHMFEvent && (
+                                  <div className="mt-2 text-[11px] sm:text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2">
+                                    <div className="flex items-center justify-between">
+                                      <span>Ticket price</span>
+                                      <span>₹{Math.max(0, (ticket.price || 0) - 50)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1">
+                                      <span>Tourism sustainability tax</span>
+                                      <span>₹50</span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1 font-semibold text-gray-800">
+                                      <span>Total</span>
+                                      <span>₹{ticket.price}</span>
+                                    </div>
+                                  </div>
+                                )}
+                          </CardContent>
                             {!isSoldOut && (
                               <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                                 <div className="flex items-center justify-between mb-2">
@@ -1521,7 +1596,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     onClick={() => {
                                       if (!isFormComplete) {
                                         const errorMessage = isHMFEvent
-                                          ? "Please select your country before selecting a ticket"
+                                          ? "Please select your country and state before selecting a ticket"
                                           : "Please fill in all form fields before selecting a ticket";
                                         toast.error(errorMessage);
                                         return;
@@ -1574,6 +1649,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </div>
                             )}
                           </CardContent>
+                        
                         </Card>
                       );
                     })}

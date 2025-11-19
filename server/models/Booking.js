@@ -97,6 +97,15 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     default: 'India'
   },
+  // State/Province selection for HMF events
+  state: {
+    type: String,
+  },
+  // Mode of payment for manual HMF bookings
+  modeOfPayment: {
+    type: String,
+    enum: ['Cash', 'Card', 'UPI'],
+  },
   parentBookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'

@@ -25,7 +25,7 @@ const MusicFestival = () => {
   });
 
   const freeDays = [1, 10];
-  const normalDays = [2, 3, 4, 5, 8, 9];
+  const normalDays = [2, 3, 4, 5, 6, 7, 8, 9];
   const daytoIdMap = {
     2: "/events/691b1066a9a25d4fec36f96c",
     3: "/events/691b13caa9a25d4fec36fa70",
@@ -49,22 +49,10 @@ const MusicFestival = () => {
       price: "₹200",
       description: "Standing area with direct crowd energy and stage view",
       features: [
-        "Standing area access",
-        "Front crowd energy",
-        "Access to food courts",
-        "Festival merchandise access"
-      ]
-    },
-    {
-      icon: Music,
-      title: "Gallery (Seated)",
-      price: "₹300",
-      description: "Comfortable seated area with elevated stage view",
-      features: [
-        "Comfortable seating",
-        "Elevated stage view",
-        "Priority food court entry",
-        "Dedicated rest areas"
+        // "Standing area access",
+        // "Front crowd energy",
+        // "Access to food courts",
+        // "Festival merchandise access"
       ],
       highlight: true
     }
@@ -102,26 +90,13 @@ const MusicFestival = () => {
     {
       icon: Users2,
       title: "8-Day General Pass",
-      price: "₹1,800",
+      price: "₹1,600",
       description: "Standing access for all 8 nights of the music festival",
       features: [
-        "All 8 nights standing access",
-        "Discounted food & beverages",
-        "Priority re-entry",
-        "Festival merchandise discount"
-      ]
-    },
-    {
-      icon: Star,
-      title: "8-Day Gallery Pass",
-      price: "₹2,600",
-      description: "Seated access for all 8 nights with VIP benefits",
-      features: [
-        "All 8 nights seated access",
-        "VIP lounge access",
-        "Complimentary beverage vouchers",
-        "After-party zone entry",
-        "Exclusive merchandise package"
+        // "All 8 nights standing access",
+        // "Discounted food & beverages",
+        // "Priority re-entry",
+        // "Festival merchandise discount"
       ],
       highlight: true
     }
@@ -305,7 +280,7 @@ const MusicFestival = () => {
                 {ticketType === "festivalPass" ? "Select Your Pass" : "Select Your Ticket"}
               </motion.h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 max-w-4xl mx-auto">
+              <div className=" mb-12 max-w-4xl mx-auto">
                 {getCurrentTickets().map((ticket, index) => (
                   <div
                     key={index}

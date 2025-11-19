@@ -54,6 +54,7 @@ import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
 import FeaturedEvents from "./components/FeaturedEvents";
+import HmfTickets from "./components/HmfTickets";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -176,6 +177,8 @@ export default function AdminDashboard() {
         return <MelitaBookings />;
       case "featured-events":
         return <FeaturedEvents />;
+      case "hmf-tickets":
+        return <HmfTickets />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -246,6 +249,11 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Melita</h3>
           </div>
           <SidebarButton icon={Ticket} label="Melita Bookings" active={activeView === "melita-bookings"} onClick={() => setActiveView("melita-bookings")} />
+
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">HMF</h3>
+          </div>
+          <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => setActiveView("hmf-tickets")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
