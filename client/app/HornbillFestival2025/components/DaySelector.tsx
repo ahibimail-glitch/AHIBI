@@ -40,10 +40,10 @@ const DaySelector = ({
           <div className="w-4 h-4 rounded gradient-hero shadow-sm" />
           <span className="text-muted-foreground font-medium">Normal Days</span>
         </div>
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 shadow-sm" />
           <span className="text-muted-foreground font-medium">High-Profile Artists</span>
-        </div>
+        </div> */}
       </div>
 
       <div className="grid grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
