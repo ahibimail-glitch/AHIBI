@@ -450,6 +450,9 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   <p className="text-sm text-gray-500 mt-2">
                     JPG, PNG or WebP. Max 10MB
                   </p>
+                  <p className="text-sm text-red-500 mt-2">
+                    Image Size: 16:9 ratio (width:16 and height :9)
+                  </p>
                 </div>
               </div>
             </div>
