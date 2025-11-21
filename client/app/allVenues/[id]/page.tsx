@@ -963,7 +963,7 @@ export default function VenueDetailPage() {
                           <p className="text-sm text-gray-600 mb-1">Venue Type</p>
                           <div className="flex flex-wrap gap-2">
                             {venueData.venueClassification.venueTypes?.map((type, idx) => (
-                              <Badge key={idx} variant="secondary">{type.replace(/_/g, ' ')}</Badge>
+                              <Badge key={idx} variant="secondary">{type?.replace?.(/_/g, ' ') || 'N/A'}</Badge>
                             ))}
                           </div>
                         </div>
@@ -973,7 +973,9 @@ export default function VenueDetailPage() {
                         </div>
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Operation</p>
-                          <Badge className="bg-green-100 text-green-800">{venueData.venueClassification.operationMode.replace(/_/g, ' ')}</Badge>
+                          <Badge className="bg-green-100 text-green-800">
+                            {venueData.venueClassification.operationMode?.replace?.(/_/g, ' ') || 'N/A'}
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -1023,7 +1025,7 @@ export default function VenueDetailPage() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-900 break-words">
-                                  {key.replace(/([A-Z])/g, ' $1').trim()}
+                                  {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
                                 </p>
                                 {value.description && (
                                   <p className="text-xs text-gray-600 mt-1 break-words">{value.description}</p>
@@ -1042,7 +1044,7 @@ export default function VenueDetailPage() {
                                 <IconComponent className="h-5 w-5 text-green-600" />
                               </div>
                               <span className="text-sm font-medium text-gray-900">
-                                {key.replace(/([A-Z])/g, ' $1').trim()}
+                                {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
                               </span>
                             </div>
                           );
@@ -1108,7 +1110,9 @@ export default function VenueDetailPage() {
                         {venueData.policies.smokingPolicy && (
                           <div>
                             <p className="text-sm font-medium text-gray-900 mb-1">Smoking Policy</p>
-                            <p className="text-gray-700 capitalize">{venueData.policies.smokingPolicy.replace(/_/g, ' ')}</p>
+                            <p className="text-gray-700 capitalize">
+                              {venueData.policies.smokingPolicy?.replace?.(/_/g, ' ') || 'Not specified'}
+                            </p>
                           </div>
                         )}
                         {venueData.policies.alcoholServingPermission !== undefined && (
@@ -1205,8 +1209,8 @@ export default function VenueDetailPage() {
                         <div className="mt-4">
                           <p className="text-sm font-medium text-gray-900 mb-2">Rental Includes:</p>
                           <div className="flex flex-wrap gap-2">
-                            {venueData.pricing.rentalIncludes.map((item, idx) => (
-                              <Badge key={idx} variant="secondary">{item.replace(/_/g, ' ')}</Badge>
+                            {venueData.pricing.rentalIncludes?.map((item, idx) => (
+                              <Badge key={idx} variant="secondary">{item?.replace?.(/_/g, ' ') || 'N/A'}</Badge>
                             ))}
                           </div>
                         </div>
