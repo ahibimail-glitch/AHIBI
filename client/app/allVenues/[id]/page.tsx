@@ -629,7 +629,7 @@ export default function VenueDetailPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${venueData?.name.replace(/\s+/g, '-')}-Invoice-${finalBookingDetails._id}.txt`;
+    a.download = `${venueData?.name?.replace(/\s+/g, '-') || 'venue'}-Invoice-${finalBookingDetails._id}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
