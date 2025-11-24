@@ -197,4 +197,10 @@ router.put('/settings', adminController.updateSettings);
 router.put('/venues/:id/approve', adminController.approveVenue);
 router.put('/venues/:id/reject', adminController.rejectVenue);
 
+// Merch orders routes
+const merchController = require('../controllers/merchController');
+router.get('/merch/orders', merchController.getAllOrders);
+router.get('/merch/orders/stats', merchController.getOrderStats);
+router.get('/merch/orders/:orderId', merchController.getOrderById);
+
 module.exports = router;

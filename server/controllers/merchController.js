@@ -1,11 +1,13 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const MerchOrder = require('../models/HornbillMerch');
+const User = require('../models/User');
 const { fetchCartBySession } = require('../services/hornbillMerchService');
+const emailService = require('../services/emailService');
 
-const DEFAULT_TAX_RATE = Number(process.env.HORNBILL_MERCH_TAX_RATE ?? 0.12);
+const DEFAULT_TAX_RATE = Number(process.env.HORNBILL_MERCH_TAX_RATE ?? 0);
 const FREE_SHIPPING_THRESHOLD = Number(process.env.HORNBILL_MERCH_FREE_SHIPPING ?? 3000);
-const STANDARD_SHIPPING_FEE = Number(process.env.HORNBILL_MERCH_SHIPPING_FEE ?? 199);
+const STANDARD_SHIPPING_FEE = Number(process.env.HORNBILL_MERCH_SHIPPING_FEE ?? 0);
 
 let razorpayInstance;
 const getRazorpay = () => {
@@ -63,6 +65,14 @@ const validateShippingAddress = (address = {}) => {
 exports.getCartBySession = async (req, res) => {
   try {
     const { sessionId } = req.params;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required'
+      });
+    }
+
     const cart = await fetchCartBySession(sessionId);
     const totals = computeTotals(cart.items);
 
@@ -78,10 +88,32 @@ exports.getCartBySession = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Merch] Failed to fetch cart session', error.message);
+    console.error('[Merch] Failed to fetch cart session:', {
+      sessionId: req.params.sessionId,
+      error: error.message,
+      stack: error.stack
+    });
+
+    // Check if it's a configuration error (should be 500, not 502)
+    if (error.message.includes('not configured') || error.message.includes('environment variable')) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error. Please contact support.'
+      });
+    }
+
+    // Check if it's a client error (400)
+    if (error.message.includes('required') || error.message.includes('empty')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Invalid cart session'
+      });
+    }
+
+    // Default to 502 for external API errors
     return res.status(502).json({
       success: false,
-      message: error.message || 'Unable to fetch Hornbill cart at the moment'
+      message: error.message || 'Unable to fetch Hornbill cart at the moment. Please try again.'
     });
   }
 };
@@ -157,7 +189,7 @@ exports.createOrder = async (req, res) => {
         userId: req.user?._id?.toString()
       },
       reminder_enable: true,
-      callback_url: process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL || 'https://ahibi.in/payments/processing',
+      callback_url: process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL || `https://ahibi.in/HornbillFestival2025/merch/success?orderId=${order._id}`,
       callback_method: 'get'
     });
 
@@ -190,6 +222,133 @@ exports.createOrder = async (req, res) => {
     return res.status(502).json({
       success: false,
       message: error?.message || 'Unable to create merch order right now'
+    });
+  }
+};
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { 'shippingAddress.fullName': { $regex: search, $options: 'i' } },
+        { 'shippingAddress.phone': { $regex: search, $options: 'i' } },
+        { 'shippingAddress.email': { $regex: search, $options: 'i' } },
+        { sessionId: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const orders = await MerchOrder.find(query)
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await MerchOrder.countDocuments(query);
+
+    return res.json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch orders', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch orders'
+    });
+  }
+};
+
+exports.getOrderStats = async (req, res) => {
+  try {
+    const stats = await MerchOrder.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 },
+          totalRevenue: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, '$total', 0] } }
+        }
+      }
+    ]);
+
+    const totalOrders = await MerchOrder.countDocuments();
+    const paidOrders = await MerchOrder.countDocuments({ status: 'paid' });
+    const pendingOrders = await MerchOrder.countDocuments({ status: 'pending' });
+    const failedOrders = await MerchOrder.countDocuments({ status: 'failed' });
+
+    const totalRevenue = await MerchOrder.aggregate([
+      { $match: { status: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$total' } } }
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        totalOrders,
+        paidOrders,
+        pendingOrders,
+        failedOrders,
+        totalRevenue: totalRevenue[0]?.total || 0,
+        statusBreakdown: stats
+      }
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch order stats', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch order stats'
+    });
+  }
+};
+
+exports.getOrderById = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const order = await MerchOrder.findById(orderId).populate('user', 'name email phone');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Check if user owns this order or is admin
+    const userId = req.user?._id?.toString();
+    const orderUserId = order.user?._id?.toString();
+    const isAdmin = req.user?.role === 'admin';
+    
+    if (userId !== orderUserId && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch order', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch order'
     });
   }
 };
@@ -243,6 +402,7 @@ exports.razorpayWebhook = async (req, res) => {
       paymentStatus === 'paid' ||
       paymentStatus === 'captured';
 
+    const wasPaid = order.status === 'paid';
     order.status = isPaid ? 'paid' : order.status;
     order.payment = {
       ...(order.payment || {}),
@@ -259,6 +419,20 @@ exports.razorpayWebhook = async (req, res) => {
     };
 
     await order.save();
+
+    // Send confirmation email if order was just paid
+    if (isPaid && !wasPaid) {
+      try {
+        const populatedOrder = await MerchOrder.findById(order._id).populate('user', 'name email');
+        if (populatedOrder && populatedOrder.user) {
+          await emailService.sendMerchOrderConfirmation(populatedOrder);
+          console.log(`[Merch] Order confirmation email sent for order ${order._id}`);
+        }
+      } catch (emailError) {
+        console.error('[Merch] Failed to send order confirmation email:', emailError);
+        // Don't fail the webhook if email fails
+      }
+    }
 
     return res.json({ status: 'ok' });
   } catch (error) {

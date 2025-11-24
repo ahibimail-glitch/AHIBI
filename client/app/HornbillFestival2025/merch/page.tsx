@@ -372,7 +372,7 @@ const MerchCheckoutPage = () => {
               Return to the Hornbill merch store to add items, then try again.
             </p>
           </div>
-          <Button onClick={() => router.push("https://hornbill.gov.in/merch")}>
+          <Button onClick={() => router.push("https://hornbillmusicfestival.com/merch")}>
             Browse Hornbill Merch
           </Button>
         </div>
@@ -447,7 +447,7 @@ const MerchCheckoutPage = () => {
   
             {/* LOGIN */}
             <div className="rounded-xl border p-6 bg-card">
-              <h2 className="text-lg font-semibold mb-4">User</h2>
+              <h2 className="text-lg font-semibold mb-4">User Details</h2>
   
               {authLoading ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -618,16 +618,7 @@ const MerchCheckoutPage = () => {
               )}
             </Button>
   
-            {/* STEPS */}
-            <div className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground">Checkout Steps</p>
-              <ol className="space-y-1">
-                <li>1. Hornbill sends your cart session</li>
-                <li>2. Ahibi reconstructs your cart</li>
-                <li>3. Login + shipping address</li>
-                <li>4. Pay & complete the order</li>
-              </ol>
-            </div>
+         
           </div>
   
         </div>

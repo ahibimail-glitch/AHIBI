@@ -27,6 +27,7 @@ import {
   ImageIcon,
   Plus,
   Bike,
+  Package,
 } from "lucide-react";
 
 // Import child components
@@ -55,6 +56,7 @@ import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
 import FeaturedEvents from "./components/FeaturedEvents";
 import HmfTickets from "./components/HmfTickets";
+import MerchOrders from "./components/MerchOrders";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -179,6 +181,8 @@ export default function AdminDashboard() {
         return <FeaturedEvents />;
       case "hmf-tickets":
         return <HmfTickets />;
+      case "merch-orders":
+        return <MerchOrders />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -254,6 +258,11 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">HMF</h3>
           </div>
           <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => setActiveView("hmf-tickets")} />
+
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Merch</h3>
+          </div>
+          <SidebarButton icon={Package} label="Merch Orders" active={activeView === "merch-orders"} onClick={() => setActiveView("merch-orders")} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>

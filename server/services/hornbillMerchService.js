@@ -22,7 +22,28 @@ hornbillMerchClient.interceptors.request.use((config) => {
   }
 
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
+
+// Add response interceptor for better error handling
+hornbillMerchClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      throw new Error(`Cannot connect to Hornbill API: ${error.message}`);
+    }
+    if (error.response) {
+      // Server responded with error status
+      throw new Error(`Hornbill API error: ${error.response.status} - ${error.response.data?.message || error.message}`);
+    }
+    if (error.request) {
+      // Request made but no response
+      throw new Error('No response from Hornbill API');
+    }
+    throw error;
+  }
+);
 
 const normalizeItems = (items = []) =>
   items.map((item, index) => ({
@@ -45,20 +66,34 @@ const fetchCartBySession = async (sessionId) => {
     throw new Error('Hornbill sessionId is required');
   }
 
-  const { data } = await hornbillMerchClient.get(`/api/merch/cart/session/${sessionId}`);
-  const payload = data?.data || data?.cart || data;
-
-  if (!payload) {
-    throw new Error('Hornbill cart payload is empty');
+  if (!process.env.HORNBILL_MERCH_API_BASE_URL) {
+    throw new Error('HORNBILL_MERCH_API_BASE_URL environment variable is not configured');
   }
 
-  return {
-    raw: payload,
-    items: normalizeItems(payload.items || payload.cartItems || []),
-    currency: payload.currency || 'INR',
-    notes: payload.notes,
-    sessionId: payload.sessionId || sessionId
-  };
+  try {
+    const { data } = await hornbillMerchClient.get(`/merch/cart/session/${sessionId}`);
+    const payload = data?.data || data?.cart || data;
+
+    if (!payload) {
+      throw new Error('Hornbill cart payload is empty');
+    }
+
+    return {
+      raw: payload,
+      items: normalizeItems(payload.items || payload.cartItems || []),
+      currency: payload.currency || 'INR',
+      notes: payload.notes,
+      sessionId: payload.sessionId || sessionId
+    };
+  } catch (error) {
+    console.error('[HornbillMerchService] Error fetching cart:', {
+      sessionId,
+      message: error.message,
+      code: error.code,
+      response: error.response?.data
+    });
+    throw error;
+  }
 };
 
 module.exports = {
