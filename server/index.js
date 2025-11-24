@@ -23,6 +23,7 @@ const bookingRoutes = require('./routes/booking.routes');
 const { userRouter: supportRoutes, adminRouter: adminSupportRoutes } = require('./routes/support.routes');
 const qrRoutes = require('./routes/qr.routes');
 const paymentRoutes = require('./routes/payment.routes');
+const merchRoutes = require('./routes/merch.routes');
 const heroImageRoutes = require('./routes/heroImageRoutes');
 const annieMusicalRoutes = require('./routes/annieMusicalRoutes');
 const nisRegistrationRoutes = require('./routes/nisRegistration.routes');
@@ -71,7 +72,7 @@ app.use(cors(corsOptions));
 // Handle preflight requests
 app.options('*', cors(corsOptions));
 
-// Mount Razorpay webhook BEFORE json parser to preserve raw body for signature verification
+// Mount Razorpay webhooks BEFORE json parser to preserve raw body for signature verification
 app.post('/api/payments/webhook/razorpay', express.raw({ type: '*/*' }), (req, res, next) => {
   // Store the raw body for the webhook controller
   req.rawBody = req.body;
@@ -80,6 +81,14 @@ app.post('/api/payments/webhook/razorpay', express.raw({ type: '*/*' }), (req, r
   // Import the controller dynamically to avoid circular dependencies
   const paymentController = require('./controllers/paymentController');
   paymentController.razorpayWebhook(req, res);
+});
+
+app.post('/api/merch/payments/webhook/razorpay', express.raw({ type: '*/*' }), (req, res, next) => {
+  req.rawBody = req.body;
+  next();
+}, (req, res) => {
+  const merchController = require('./controllers/merchController');
+  merchController.razorpayWebhook(req, res);
 });
 
 app.use(express.json());
@@ -111,6 +120,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/qrs', qrRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/hornbill-merch', merchRoutes);
 // app.use('/api/tickets', ticketRoutes);
 // app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
