@@ -364,7 +364,7 @@ function MerchOrderSuccessInner() {
               </p>
               <div className="flex gap-4 justify-center">
                 <Button
-                  onClick={() => window.open("https://hornbill.gov.in/merch", "_blank")}
+                  onClick={() => window.open("https://hornbillmusicfestival.com/merch", "_blank")}
                   size="lg"
                 >
                   Continue Shopping

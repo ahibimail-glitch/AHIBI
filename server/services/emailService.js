@@ -430,7 +430,7 @@ class EmailService {
           </div>
 
           <div style="text-align: center; padding: 20px; background: #f0f4ff; border-radius: 0 0 8px 8px;">
-            <p style="margin: 0 0 15px; color: #333; font-size: 16px;">Shop more at <a href="https://hornbill.gov.in/merch" style="color: #667eea; text-decoration: none; font-weight: 600;">Hornbill Merch Store</a></p>
+            <p style="margin: 0 0 15px; color: #333; font-size: 16px;">Shop more at <a href="https://hornbillmusicfestival.com/merch" style="color: #667eea; text-decoration: none; font-weight: 600;">Hornbill Merch Store</a></p>
             <p style="margin: 0; font-size: 12px; color: #666;">We'll send you tracking information once your order ships.</p>
           </div>
 
