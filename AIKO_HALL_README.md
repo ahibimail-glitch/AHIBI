@@ -14,7 +14,7 @@ A comprehensive full-stack booking system specifically designed for Aiko Hall, a
 - **Minimum Booking Duration**: 6 hours
 - **Facilities**: In-house catering, Parking, Sound system, Stage/Platform, Power backup, Accommodation/Stay, Air conditioned
 
-## 🚀 Features
+## 🚀 Features. 
 
 ### User-Facing Features
 
