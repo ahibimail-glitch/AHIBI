@@ -118,6 +118,112 @@ exports.getCartBySession = async (req, res) => {
   }
 };
 
+// Explicit sync endpoint to update payment status from Razorpay using callback params
+exports.syncPaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const {
+      paymentLinkId,
+      paymentId,
+      paymentStatus,
+    } = req.body || {};
+
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: 'orderId is required' });
+    }
+
+    const order = await MerchOrder.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const razorpay = getRazorpay();
+
+    // Prefer live status from Razorpay over client-provided status
+    let linkEntity = null;
+    let paymentEntity = null;
+
+    if (paymentLinkId || order.payment?.paymentLinkId) {
+      const id = paymentLinkId || order.payment.paymentLinkId;
+      try {
+        linkEntity = await razorpay.paymentLink.fetch(id);
+      } catch (e) {
+        console.error('[Merch] Failed to fetch payment link for sync:', e.message);
+      }
+    }
+
+    if (!linkEntity && (paymentId || order.payment?.transactionId)) {
+      const id = paymentId || order.payment.transactionId;
+      try {
+        paymentEntity = await razorpay.payments.fetch(id);
+      } catch (e) {
+        console.error('[Merch] Failed to fetch payment for sync:', e.message);
+      }
+    }
+
+    const finalStatus =
+      linkEntity?.status ||
+      paymentEntity?.status ||
+      paymentStatus ||
+      order.payment?.status;
+
+    const isPaid =
+      finalStatus === 'paid' ||
+      finalStatus === 'captured' ||
+      linkEntity?.status === 'paid';
+
+    if (!isPaid) {
+      return res.json({
+        success: true,
+        data: order,
+        message: 'Payment not marked as paid by Razorpay yet',
+      });
+    }
+
+    const wasPaid = order.status === 'paid';
+    order.status = 'paid';
+    order.payment = {
+      ...(order.payment || {}),
+      gatewayOrderId: linkEntity?.order_id || order.payment?.gatewayOrderId,
+      paymentLinkId: linkEntity?.id || order.payment?.paymentLinkId,
+      transactionId: paymentEntity?.id || paymentId || order.payment?.transactionId,
+      status: finalStatus || order.payment?.status,
+      amount:
+        typeof (paymentEntity?.amount) === 'number'
+          ? roundCurrency(paymentEntity.amount / 100)
+          : order.payment?.amount,
+      currency: paymentEntity?.currency || linkEntity?.currency || order.payment?.currency,
+      paymentLink: order.payment?.paymentLink,
+      rawResponse: paymentEntity || linkEntity || order.payment?.rawResponse,
+      verifiedAt: new Date(),
+      webhookEvents: order.payment?.webhookEvents || [],
+    };
+
+    await order.save();
+
+    // Optionally send email if this is the first time we mark it paid
+    if (!wasPaid) {
+      try {
+        const populatedOrder = await MerchOrder.findById(order._id).populate('user', 'name email');
+        if (populatedOrder && populatedOrder.user) {
+          await emailService.sendMerchOrderConfirmation(populatedOrder);
+          console.log(`[Merch] Order confirmation email sent (sync) for order ${order._id}`);
+        }
+      } catch (emailError) {
+        console.error('[Merch] Failed to send order confirmation email (sync):', emailError);
+      }
+    }
+
+    return res.json({ success: true, data: order });
+  } catch (error) {
+    console.error('[Merch] Failed to sync payment status', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to sync payment status',
+    });
+  }
+};
+
 exports.createOrder = async (req, res) => {
   try {
     const { sessionId, shippingAddress, source, metadata } = req.body || {};
@@ -175,6 +281,8 @@ exports.createOrder = async (req, res) => {
 
     const razorpay = getRazorpay();
 
+    const frontendBaseUrl = process.env.FRONTEND_URL || 'https://ahibi.in';
+
     const paymentLink = await razorpay.paymentLink.create({
       amount: Math.round(totals.total * 100),
       currency: cart.currency || 'INR',
@@ -193,7 +301,7 @@ exports.createOrder = async (req, res) => {
       reminder_enable: true,
       callback_url:
         process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL ||
-        `https://ahibi.in/HornbillFestival2025/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
+        `${frontendBaseUrl}/HornbillFestival2025/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
       callback_method: 'get'
     });
 

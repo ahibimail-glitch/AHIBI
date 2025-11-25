@@ -15,9 +15,13 @@ function MerchOrderSuccessInner() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const accessToken = searchParams.get("accessToken");
+  const razorpayPaymentLinkStatus = searchParams.get("razorpay_payment_link_status");
+  const razorpayPaymentLinkId = searchParams.get("razorpay_payment_link_id");
+  const razorpayPaymentId = searchParams.get("razorpay_payment_id");
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -26,8 +30,36 @@ function MerchOrderSuccessInner() {
       return;
     }
 
-    const fetchOrder = async () => {
+    let cancelled = false;
+    let pollAttempts = 0;
+    let pollTimer: NodeJS.Timeout | null = null;
+
+    const syncPaymentIfNeeded = async () => {
       try {
+        if (razorpayPaymentLinkStatus === "paid" || razorpayPaymentId) {
+          const body = {
+            paymentLinkId: razorpayPaymentLinkId || undefined,
+            paymentId: razorpayPaymentId || undefined,
+            paymentStatus: razorpayPaymentLinkStatus || undefined,
+          };
+          await fetch(`/api/hornbill-merch/orders/${orderId}/sync-payment`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+        }
+      } catch {
+        // ignore sync errors, we will still show whatever status we have
+      }
+    };
+
+    const fetchOrder = async (isPoll = false) => {
+      try {
+        if (!isPoll) {
+          setLoading(true);
+        }
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const query = accessToken ? `?accessToken=${encodeURIComponent(accessToken)}` : "";
         const response = await fetch(`/api/hornbill-merch/orders/${orderId}${query}`, {
@@ -41,22 +73,87 @@ function MerchOrderSuccessInner() {
         }
 
         const data = await response.json();
-        setOrder(data.data);
+        if (!cancelled) {
+          setOrder(data.data);
+
+          // If payment is still pending, poll a few times to allow webhook to update status
+          const status = data.data?.status;
+          if (status && status !== "paid" && pollAttempts < 5 && !isPoll) {
+            setIsPolling(true);
+            pollAttempts = 0;
+            const startPolling = () => {
+              pollTimer = setInterval(async () => {
+                if (cancelled) return;
+                pollAttempts += 1;
+                try {
+                  const pollResponse = await fetch(`/api/hornbill-merch/orders/${orderId}${query}`, {
+                    headers: {
+                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                  });
+
+                  if (!pollResponse.ok) return;
+                  const pollData = await pollResponse.json();
+                  const newStatus = pollData.data?.status;
+                  setOrder(pollData.data);
+
+                  if (!newStatus || newStatus === "paid" || pollAttempts >= 5) {
+                    if (pollTimer) clearInterval(pollTimer);
+                    setIsPolling(false);
+                  }
+                } catch {
+                  // swallow polling errors
+                }
+              }, 4000);
+            };
+
+            startPolling();
+          }
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load order");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load order");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchOrder();
-  }, [orderId, accessToken]);
+    // First, try to sync payment status once using Razorpay callback params
+    syncPaymentIfNeeded().finally(() => {
+      fetchOrder();
+    });
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [orderId, accessToken, razorpayPaymentLinkStatus, razorpayPaymentLinkId, razorpayPaymentId]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
     }).format(value);
+
+  if (loading && !order) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="pt-6 flex flex-col items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-center text-muted-foreground">Fetching your order details...</p>
+            </CardContent>
+          </Card>
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   if (error || !order) {
     return (
@@ -80,20 +177,40 @@ function MerchOrderSuccessInner() {
     );
   }
 
+  const status = order.status || "pending";
+  const isPaid = status === "paid";
+  const isPending = status === "pending" || status === "created";
+  const isFailed = status === "failed" || status === "cancelled";
+
   return (
     <>
       <Navbar />
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Success Header */}
+          {/* Success / Status Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
               <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
             </div>
-            <h1 className="text-4xl font-bold mb-2">Order Confirmed!</h1>
+            <h1 className="text-4xl font-bold mb-2">
+              {isPaid
+                ? "Order Confirmed!"
+                : isFailed
+                ? "Payment Failed"
+                : "Payment Processing"}
+            </h1>
             <p className="text-muted-foreground text-lg">
-              Thank you for your purchase. We've received your order.
+              {isPaid && "Thank you for your purchase. We've received your order."}
+              {isPending && !isPaid &&
+                "Your payment is being processed. If this stays pending for a while, we'll notify you once it is confirmed."}
+              {isFailed &&
+                "We could not confirm your payment. If money was deducted, please contact support with your payment details."}
             </p>
+            {isPolling && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Waiting for payment confirmation from the bank...
+              </p>
+            )}
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -125,15 +242,11 @@ function MerchOrderSuccessInner() {
                   <p className="text-sm text-muted-foreground">Status</p>
                   <Badge
                     variant={
-                      order.status === "paid"
-                        ? "default"
-                        : order.status === "pending"
-                        ? "secondary"
-                        : "destructive"
+                      isPaid ? "default" : isPending ? "secondary" : "destructive"
                     }
                     className="mt-1"
                   >
-                    {order.status?.toUpperCase() || "PENDING"}
+                    {status.toUpperCase()}
                   </Badge>
                 </div>
               </CardContent>

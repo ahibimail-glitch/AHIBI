@@ -90,7 +90,7 @@ const MusicFestival = () => {
     {
       icon: Users2,
       title: "8-Day General Pass",
-      price: "₹1,600",
+      price: "₹1,400",
       description: "Standing access for all 8 nights of the music festival",
       features: [
         // "All 8 nights standing access",
