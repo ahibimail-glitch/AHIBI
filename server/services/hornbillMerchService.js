@@ -36,20 +36,33 @@ hornbillMerchClient.interceptors.request.use((config) => {
 hornbillMerchClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+
+    console.error("[HORNBILL API ERROR]", {
+      url: fullUrl,
+      status: error.response?.status,
+      message: error.response?.data || error.message,
+      headers: error.config?.headers,
+    });
+
     if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-      throw new Error(`Cannot connect to Hornbill API: ${error.message}`);
+      throw new Error(`Cannot connect to Hornbill API: ${error.message} at ${fullUrl}`);
     }
+
     if (error.response) {
-      // Server responded with error status
-      throw new Error(`Hornbill API error: ${error.response.status} - ${error.response.data?.message || error.message}`);
+      throw new Error(
+        `Hornbill API error: ${error.response.status} - ${error.response.data?.message || error.message} | URL: ${fullUrl}`
+      );
     }
+
     if (error.request) {
-      // Request made but no response
-      throw new Error('No response from Hornbill API');
+      throw new Error(`No response from Hornbill API | URL: ${fullUrl}`);
     }
+
     throw error;
   }
 );
+
 
 const normalizeItems = (items = []) =>
   items.map((item, index) => ({
