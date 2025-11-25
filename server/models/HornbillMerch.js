@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const MerchItemSchema = new mongoose.Schema(
   {
@@ -66,6 +67,13 @@ const MerchOrderSchema = new mongoose.Schema(
       type: String,
       enum: ['created', 'pending', 'paid', 'failed', 'cancelled', 'refunded'],
       default: 'created',
+      index: true
+    },
+    accessToken: {
+      type: String,
+      required: true,
+      default: () => crypto.randomBytes(24).toString('hex'),
+      select: false,
       index: true
     },
     source: { type: String, default: 'hornbill-merch' },

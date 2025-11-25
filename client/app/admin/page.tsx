@@ -259,9 +259,7 @@ export default function AdminDashboard() {
           </div>
           <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => setActiveView("hmf-tickets")} />
 
-          <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Merch</h3>
-          </div>
+        
           <SidebarButton icon={Package} label="Merch Orders" active={activeView === "merch-orders"} onClick={() => setActiveView("merch-orders")} />
 
           <div className="pt-4 pb-2 px-2">

@@ -162,3 +162,69 @@ exports.adminOnly = (req, res, next) => {
   }
   next();
 };
+
+/**
+ * Middleware to attach user info if a valid token is provided, but does not require it
+ */
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    if (
+      !req.headers.authorization ||
+      !req.headers.authorization.startsWith('Bearer')
+    ) {
+      return next();
+    }
+
+    const token = req.headers.authorization.split(' ')[1];
+    if (!token) {
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      const isAdminRoute = req.originalUrl.startsWith('/api/admin');
+      const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
+      const isArtistRoute = req.originalUrl.startsWith('/api/artist');
+      const isVenueRoute = req.originalUrl.startsWith('/api/venue');
+      const isVenueManagerRoute =
+        req.originalUrl.includes('/manager/') ||
+        req.originalUrl.includes('/profile') ||
+        req.originalUrl.includes('/details/') ||
+        req.originalUrl.includes('/auth/');
+
+      let user;
+
+      if (decoded.role === 'admin' || isAdminRoute) {
+        user = await Admin.findById(decoded.id);
+        if (user) user.role = 'admin';
+      } else if (decoded.role === 'organizer' || isOrganizerRoute) {
+        user = await Organizer.findById(decoded.id);
+        if (user) user.role = 'organizer';
+      } else if (decoded.role === 'artist' || isArtistRoute) {
+        user = await Artist.findById(decoded.id);
+        if (user) user.role = 'artist';
+      } else if (decoded.role === 'venue' || decoded.type === 'venue' || (isVenueRoute && isVenueManagerRoute)) {
+        user = await Venue.findById(decoded.id);
+        if (user) user.role = 'venue';
+      } else {
+        user = await User.findById(decoded.id);
+      }
+
+      if (user) {
+        req.user = user;
+      }
+
+      return next();
+    } catch (error) {
+      console.warn('Optional auth token verification failed:', error.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+  } catch (error) {
+    console.error('Optional auth middleware error:', error);
+    return next();
+  }
+};

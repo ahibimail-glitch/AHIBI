@@ -170,6 +170,8 @@ exports.createOrder = async (req, res) => {
       metadata: metadata || {},
       cartSnapshot: cart.raw
     });
+    const accessToken = order.accessToken || crypto.randomBytes(24).toString('hex');
+    order.accessToken = accessToken;
 
     const razorpay = getRazorpay();
 
@@ -189,7 +191,9 @@ exports.createOrder = async (req, res) => {
         userId: req.user?._id?.toString()
       },
       reminder_enable: true,
-      callback_url: process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL || `https://ahibi.in/HornbillFestival2025/merch/success?orderId=${order._id}`,
+      callback_url:
+        process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL ||
+        `https://ahibi.in/HornbillFestival2025/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
       callback_method: 'get'
     });
 
@@ -214,7 +218,8 @@ exports.createOrder = async (req, res) => {
         paymentLink: paymentLink.short_url,
         paymentLinkId: paymentLink.id,
         paymentStatus: paymentLink.status,
-        totals
+        totals,
+        accessToken
       }
     });
   } catch (error) {
@@ -319,7 +324,19 @@ exports.getOrderStats = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const order = await MerchOrder.findById(orderId).populate('user', 'name email phone');
+    const accessToken = req.query.accessToken || req.headers['x-merch-access-token'];
+    let order;
+
+    if (req.user) {
+      order = await MerchOrder.findById(orderId).populate('user', 'name email phone');
+    } else if (accessToken) {
+      order = await MerchOrder.findOne({ _id: orderId, accessToken }).populate('user', 'name email phone');
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication or access token required'
+      });
+    }
 
     if (!order) {
       return res.status(404).json({
@@ -328,16 +345,18 @@ exports.getOrderById = async (req, res) => {
       });
     }
 
-    // Check if user owns this order or is admin
-    const userId = req.user?._id?.toString();
-    const orderUserId = order.user?._id?.toString();
-    const isAdmin = req.user?.role === 'admin';
-    
-    if (userId !== orderUserId && !isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied'
-      });
+    if (req.user) {
+      // Check if user owns this order or is admin
+      const userId = req.user?._id?.toString();
+      const orderUserId = order.user?._id?.toString();
+      const isAdmin = req.user?.role === 'admin';
+
+      if (userId !== orderUserId && !isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
     }
 
     return res.json({

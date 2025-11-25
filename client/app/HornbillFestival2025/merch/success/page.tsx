@@ -14,6 +14,7 @@ function MerchOrderSuccessInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const accessToken = searchParams.get("accessToken");
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +29,8 @@ function MerchOrderSuccessInner() {
     const fetchOrder = async () => {
       try {
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-        const response = await fetch(`/api/hornbill-merch/orders/${orderId}`, {
+        const query = accessToken ? `?accessToken=${encodeURIComponent(accessToken)}` : "";
+        const response = await fetch(`/api/hornbill-merch/orders/${orderId}${query}`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
@@ -48,7 +50,7 @@ function MerchOrderSuccessInner() {
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, accessToken]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-IN", {

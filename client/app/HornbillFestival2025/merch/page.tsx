@@ -54,9 +54,9 @@ type ShippingAddress = {
 
 type ValidationErrors = Partial<Record<keyof ShippingAddress, string>>;
 
-const TAX_RATE = 0.12;
+const TAX_RATE = 0;
 const FREE_SHIPPING_THRESHOLD = 3000;
-const STANDARD_SHIPPING_FEE = 199;
+const STANDARD_SHIPPING_FEE =0;
 
 const formatCurrency = (value: number, currency = "INR") =>
   new Intl.NumberFormat("en-IN", {
