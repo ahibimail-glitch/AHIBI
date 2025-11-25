@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -64,7 +64,7 @@ const formatCurrency = (value: number, currency = "INR") =>
     currency
   }).format(value);
 
-const MerchCheckoutPage = () => {
+const MerchCheckoutInner = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session");
@@ -627,7 +627,20 @@ const MerchCheckoutPage = () => {
       <Footer />
     </div>
   );
-  
+};
+
+const MerchCheckoutPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MerchCheckoutInner />
+    </Suspense>
+  );
 };
 
 export default MerchCheckoutPage;

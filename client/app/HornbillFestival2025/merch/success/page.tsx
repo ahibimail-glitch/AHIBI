@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Package, ShoppingBag, ArrowLeft } from "lucide-react";
 import Navbar from "../../../Navbar";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
-export default function MerchOrderSuccessPage() {
+function MerchOrderSuccessInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
@@ -55,14 +55,6 @@ export default function MerchOrderSuccessPage() {
       style: "currency",
       currency: "INR",
     }).format(value);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   if (error || !order) {
     return (
@@ -280,6 +272,20 @@ export default function MerchOrderSuccessPage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+export default function MerchOrderSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MerchOrderSuccessInner />
+    </Suspense>
   );
 }
 
