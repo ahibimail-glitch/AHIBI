@@ -71,7 +71,7 @@ const fetchCartBySession = async (sessionId) => {
   }
 
   try {
-    const { data } = await hornbillMerchClient.get(`/merch/cart/session/${sessionId}`);
+    const { data } = await hornbillMerchClient.get(`api/merch/cart/session/${sessionId}`);
     const payload = data?.data || data?.cart || data;
 
     if (!payload) {

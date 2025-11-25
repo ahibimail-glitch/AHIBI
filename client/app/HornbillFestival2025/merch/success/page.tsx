@@ -99,7 +99,7 @@ function MerchOrderSuccessInner() {
           <div className="grid gap-6 md:grid-cols-2">
             {/* Order Details */}
             <Card>
-              <CardHeader>
+              <CardHeader> 
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
                   Order Details

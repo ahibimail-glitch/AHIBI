@@ -214,15 +214,11 @@ exports.optionalAuth = async (req, res, next) => {
       if (user) {
         req.user = user;
       }
-
-      return next();
     } catch (error) {
       console.warn('Optional auth token verification failed:', error.message);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
     }
+
+    return next();
   } catch (error) {
     console.error('Optional auth middleware error:', error);
     return next();
