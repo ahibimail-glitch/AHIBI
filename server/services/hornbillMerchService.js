@@ -9,6 +9,12 @@ const hornbillMerchClient = axios.create({
 
 hornbillMerchClient.interceptors.request.use((config) => {
   const apiKey = process.env.HORNBILL_MERCH_API_KEY;
+  console.log("[HORNBILL API REQUEST]", {
+    method: config.method,
+    url: `${config.baseURL}${config.url}`,
+    headers: config.headers,
+  });
+
   if (!config.baseURL) {
     throw new Error('HORNBILL_MERCH_API_BASE_URL is not configured');
   }
@@ -72,6 +78,7 @@ const fetchCartBySession = async (sessionId) => {
 
   try {
     const { data } = await hornbillMerchClient.get(`api/merch/cart/session/${sessionId}`);
+  
     const payload = data?.data || data?.cart || data;
 
     if (!payload) {
