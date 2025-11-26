@@ -140,7 +140,7 @@ const HelicopterBookingPage = () => {
         <div className="min-h-screen bg-background text-foreground">
             {/* Hero Section */}
             <Navbar />
-            <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
+            <section className="relative h-[95vh] flex items-center justify-center overflow-hidden">
                 <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${"/images/HeliTaxii/hero-helicopter.jpg"})` }}
