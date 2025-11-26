@@ -36,6 +36,7 @@ import Analytics from "../components/Analytics"
 import SettingsComponent from "../components/Settings"
 import ArtistBookingCalendar from "@/components/organizer/ArtistBookingCalendar"
 import BookingManagement from "@/components/organizer/BookingManagement"
+import QrScanner from "../components/QRScanner"
 
 interface OrganizerUser {
   id: string
@@ -121,6 +122,8 @@ export default function OrganizerDashboard() {
         return <Analytics />
       case "settings":
         return <SettingsComponent />
+      case "qr-scanner":
+        return <QrScanner />
       default:
         return <Dashboard setActiveView={setActiveView} />
     }
@@ -162,12 +165,12 @@ export default function OrganizerDashboard() {
             active={activeView === "dashboard"} 
             onClick={() => setActiveView("dashboard")} 
           />
-          {/* <SidebarButton 
+          <SidebarButton 
             icon={Calendar} 
-            label="My Events" 
-            active={activeView === "events"} 
-            onClick={() => setActiveView("events")} 
-          /> */}
+            label="QR Scanner" 
+            active={activeView === "qr-scanner"} 
+            onClick={() => setActiveView("qr-scanner")} 
+          />
           <SidebarButton 
             icon={CheckCircle} 
             label="Approved Events" 
