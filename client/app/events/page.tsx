@@ -321,72 +321,43 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1">
-        <section className="relative w-full h-[500px] overflow-hidden">
+        <section className="relative w-full overflow-hidden">
+
           {/* Background with slow zoom animation */}
           <motion.div
             initial={{ scale: 1.2 }}
             animate={{ scale: 1 }}
             transition={{ duration: 10, ease: "easeOut" }}
-            className="absolute inset-0"
+            className="w-full"
           >
-            <div className="hidden md:block">
+            {/* Desktop Image */}
+            <div className="hidden md:block w-full">
               <Image
                 src="/images/HMF/hero-desktop.jpg"
                 alt="Hornbill Festival 2025"
                 width={1920}
                 height={1080}
-                title="Hornbill Festival 2025"
-
+                className="w-full h-auto"
               />
             </div>
-            <div className="md:hidden">
+
+            {/* Mobile Image */}
+            <div className="md:hidden w-full">
               <Image
                 src="/images/HMF/hero-mobile.jpg"
                 alt="Hornbill Festival 2025"
-                width={1920}
-                height={1080}
-                title="Hornbill Festival 2025"
-
+                width={1080}
+                height={1920}
+                className="w-full h-auto"
               />
             </div>
-
-
-
-
-
           </motion.div>
 
           {/* Text Overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
-            {/* <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1 }}
-              className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg"
-            >
-              Explore <span className="text-yellow-400">Exciting Events</span>
-            </motion.h1> */}
-
-            {/* <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="text-base sm:text-lg md:text-xl max-w-2xl text-gray-200 mb-6"
-            >
-              Discover, participate, and connect through amazing campus events, workshops,
-              and cultural programs that bring our community together.
-            </motion.p> */}
-
-            {/* <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.6 }}
-            >
-              <button className="bg-yellow-400 text-black font-semibold px-6 py-3 rounded-full shadow-lg hover:bg-yellow-300 transition duration-300">
-                Explore Now
-              </button>
-            </motion.div> */}
+            {/* Your text here */}
           </div>
+
         </section>
 
 
