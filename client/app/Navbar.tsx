@@ -116,6 +116,9 @@ export default function Navbar() {
               >
                 Events
               </Link>
+              <Link href="/HeliTaxii" className="hover:text-white transition">
+                HeliTaxi
+              </Link>
 
               <Link
                 href="/allArtists"
