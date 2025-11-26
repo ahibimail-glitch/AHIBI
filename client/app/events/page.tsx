@@ -321,7 +321,7 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1">
-        <section className="relative w-full h-[600px] overflow-hidden">
+        <section className="relative w-full h-[500px] overflow-hidden">
           {/* Background with slow zoom animation */}
           <motion.div
             initial={{ scale: 1.2 }}
