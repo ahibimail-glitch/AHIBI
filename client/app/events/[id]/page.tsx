@@ -475,6 +475,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const handleBooking = async () => {
     // clear any prior error shown in UI
     setBookingError(null);
+    // For HMF events, require country/state before booking
+    if (isHMFEvent && !isFormComplete) {
+      toast.error("Please select your country and state before booking");
+      return;
+    }
     if (selectedTickets.size === 0) {
       toast.error("Please select at least one ticket type");
       return;
@@ -1359,7 +1364,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   <h2 className="font-bold text-blue-900">
                     Please select your country before booking tickets
                   </h2>
-                  {hasSelectedTicket && (
+                  {hasSelectedTicket && isFormComplete && (
                     <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-lg">
                       <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
@@ -1754,7 +1759,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <Button
                             className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
                             onClick={handleBooking}
-                            disabled={isBooking || !acceptedTerms}
+                            disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
                           >
                             {isBooking ? (
                               <>
@@ -1809,7 +1814,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         <Button
                           className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
                           onClick={handleFreeBooking}
-                          disabled={isBooking || !acceptedTerms}
+                          disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
                         >
                           {isBooking ? (
                             <>
