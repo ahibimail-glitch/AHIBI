@@ -315,7 +315,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [selectedState, setSelectedState] = useState('');
 
   // HMF event IDs
-  const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf","6927db2d2cd1c48b94f5b9e5"];
+  const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
 
   // Check if current event is an HMF event
   const isHMFEvent = HMF_id.includes(params.id);
@@ -1509,7 +1509,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               <div className="text-left">
                                 <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
                                 <p className="text-xs text-gray-500">per ticket</p>
-                                
+
                               </div>
                             </div>
                           </CardHeader>
@@ -1537,7 +1537,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 </ul>
                               </div>
                             )}
-                            
+
                             <div className="mb-3">
                               <div className="flex items-center justify-between text-xs mb-1">
                                 <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
@@ -1564,24 +1564,24 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 ></div>
                               </div> */}
                             </div>
-                              <CardContent>
-                            {isHMFEvent && (
-                                  <div className="mt-2 text-[11px] sm:text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2">
-                                    <div className="flex items-center justify-between">
-                                      <span>Ticket price</span>
-                                      <span>₹{Math.max(0, (ticket.price || 0) - 50)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-1">
-                                      <span>Tourism sustainability fund</span>
-                                      <span>₹50</span>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-1 font-semibold text-gray-800">
-                                      <span>Total</span>
-                                      <span>₹{ticket.price}</span>
-                                    </div>
+                            <CardContent>
+                              {isHMFEvent && (
+                                <div className="mt-2 text-[11px] sm:text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2">
+                                  <div className="flex items-center justify-between">
+                                    <span>Ticket price</span>
+                                    <span>₹{Math.max(0, (ticket.price || 0) - 50)}</span>
                                   </div>
-                                )}
-                          </CardContent>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span>Tourism sustainability fund</span>
+                                    <span>₹50</span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1 font-semibold text-gray-800">
+                                    <span>Total</span>
+                                    <span>₹{ticket.price}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
                             {!isSoldOut && (
                               <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                                 <div className="flex items-center justify-between mb-2">
@@ -1650,7 +1650,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </div>
                             )}
                           </CardContent>
-                        
+
                         </Card>
                       );
                     })}
@@ -1765,7 +1765,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
               ) : (
                 <div className="py-6">
-                
+
                   {event.isFreeEvent && (
                     <Card className="border-2 border-green-500 bg-white">
                       <CardHeader className="p-4">
