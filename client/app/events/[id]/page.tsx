@@ -64,11 +64,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import HMFTermsContent from "@/components/HMFTermsContent";
 
 // App Components - Using dynamic imports to avoid SSR issues
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import TermsAndConditions from "@/components/AhibiFest/TermsAndConditons";
+const HFTermsPage = dynamic(() => import("@/app/HornbillFestival2025/terms&conditions/page"), { ssr: false });
 import FAQPage from "@/components/AhibiFest/FAQ";
 
 // Event Card Component (simplified for related events)
@@ -253,6 +255,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const handleFreeBooking = async () => {
     try {
       setBookingError(null);
+      // Require country/state selection for HMF events before proceeding
+      if (isHMFEvent && !isFormComplete) {
+        toast.error("Please select your country and state before booking");
+        return;
+      }
       if (!acceptedTerms) {
         setBookingError("Please accept the terms and conditions to proceed.");
         return;
@@ -310,14 +317,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
 
   // HMF event country selection state
-  const [selectedCountry, setSelectedCountry] = useState('India');
+  const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedState, setSelectedState] = useState('');
 
   // HMF event IDs
-  const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf"];
-
+  const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
+  const HF_id=["6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
   // Check if current event is an HMF event
   const isHMFEvent = HMF_id.includes(params.id);
+  const isHFEvent = HF_id.includes(params.id);
 
   // Debug logging
   console.log('Current event ID:', params.id);
@@ -373,6 +381,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     // Reset state when country changes
     setSelectedState('');
   }, [selectedCountry]);
+
+  // Ensure country/state are cleared on mount or revisit
+  useEffect(() => {
+    setSelectedCountry('');
+    setSelectedState('');
+  }, []);
 
   // Check if form is completely filled (for HMF require both country and state)
   const isFormComplete = !isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''));
@@ -463,6 +477,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const handleBooking = async () => {
     // clear any prior error shown in UI
     setBookingError(null);
+    // For HMF events, require country/state before booking
+    if (isHMFEvent && !isFormComplete) {
+      toast.error("Please select your country and state before booking");
+      return;
+    }
     if (selectedTickets.size === 0) {
       toast.error("Please select at least one ticket type");
       return;
@@ -1347,7 +1366,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   <h2 className="font-bold text-blue-900">
                     Please select your country before booking tickets
                   </h2>
-                  {hasSelectedTicket && (
+                  {hasSelectedTicket && isFormComplete && (
                     <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-lg">
                       <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
@@ -1366,7 +1385,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       <Select
                         value={selectedCountry}
                         onValueChange={setSelectedCountry}
-                        disabled={hasSelectedTicket}
+                        disabled={hasSelectedTicket && isFormComplete}
                       >
                         <SelectTrigger
                           className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${hasSelectedTicket ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
@@ -1391,7 +1410,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <Select
                             value={selectedState}
                             onValueChange={setSelectedState}
-                            disabled={hasSelectedTicket}
+                            disabled={hasSelectedTicket && isFormComplete}
                           >
                             <SelectTrigger
                               className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${hasSelectedTicket ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
@@ -1508,7 +1527,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               <div className="text-left">
                                 <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
                                 <p className="text-xs text-gray-500">per ticket</p>
-                                
+
                               </div>
                             </div>
                           </CardHeader>
@@ -1536,7 +1555,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 </ul>
                               </div>
                             )}
-                            
+
                             <div className="mb-3">
                               <div className="flex items-center justify-between text-xs mb-1">
                                 <span className={`font-semibold flex items-center gap-1 ${isSoldOut ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-green-600'
@@ -1563,24 +1582,24 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 ></div>
                               </div> */}
                             </div>
-                              <CardContent>
-                            {isHMFEvent && (
-                                  <div className="mt-2 text-[11px] sm:text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2">
-                                    <div className="flex items-center justify-between">
-                                      <span>Ticket price</span>
-                                      <span>₹{Math.max(0, (ticket.price || 0) - 50)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-1">
-                                      <span>Tourism sustainability tax</span>
-                                      <span>₹50</span>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-1 font-semibold text-gray-800">
-                                      <span>Total</span>
-                                      <span>₹{ticket.price}</span>
-                                    </div>
+                            <CardContent>
+                              {isHMFEvent && (
+                                <div className="mt-2 text-[11px] sm:text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-md p-2">
+                                  <div className="flex items-center justify-between">
+                                    <span>Ticket price</span>
+                                    <span>₹{Math.max(0, (ticket.price || 0) - 50)}</span>
                                   </div>
-                                )}
-                          </CardContent>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span>Tourism sustainability fund</span>
+                                    <span>₹50</span>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1 font-semibold text-gray-800">
+                                    <span>Total</span>
+                                    <span>₹{ticket.price}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
                             {!isSoldOut && (
                               <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
                                 <div className="flex items-center justify-between mb-2">
@@ -1594,13 +1613,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      if (!isFormComplete) {
-                                        const errorMessage = isHMFEvent
-                                          ? "Please select your country and state before selecting a ticket"
-                                          : "Please fill in all form fields before selecting a ticket";
-                                        toast.error(errorMessage);
-                                        return;
-                                      }
                                       if (quantity > 0) {
                                         const newQuantity = quantity - 1;
                                         if (newQuantity === 0) {
@@ -1626,6 +1638,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
+                                      if (!isFormComplete) {
+                                        const errorMessage = isHMFEvent
+                                          ? "Please select your country and state before selecting a ticket"
+                                          : "Please fill in all form fields before selecting a ticket";
+                                        toast.error(errorMessage);
+                                        return;
+                                      }
                                       const newQuantity = quantity + 1;
                                       if (newQuantity <= ticket.quantity - ticket.sold) {
                                         setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
@@ -1649,7 +1668,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                               </div>
                             )}
                           </CardContent>
-                        
+
                         </Card>
                       );
                     })}
@@ -1742,7 +1761,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <Button
                             className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
                             onClick={handleBooking}
-                            disabled={isBooking || !acceptedTerms}
+                            disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
                           >
                             {isBooking ? (
                               <>
@@ -1764,7 +1783,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 </div>
               ) : (
                 <div className="py-6">
-                
+
                   {event.isFreeEvent && (
                     <Card className="border-2 border-green-500 bg-white">
                       <CardHeader className="p-4">
@@ -1797,7 +1816,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         <Button
                           className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
                           onClick={handleFreeBooking}
-                          disabled={isBooking || !acceptedTerms}
+                          disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
                         >
                           {isBooking ? (
                             <>
@@ -1848,6 +1867,27 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
           </div>
         )}
+
+        {/* Terms Modal (HMF/HF) */}
+        <Dialog open={termsModalOpen && (isHMFEvent || isHFEvent)} onOpenChange={setTermsModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Terms & Conditions</DialogTitle>
+              {isHMFEvent && (
+                <DialogDescription>
+                  Hornbill Music Festival 2025
+                </DialogDescription>
+              )}
+            </DialogHeader>
+            {isHFEvent ? (
+              <div className="h-[70vh] overflow-y-auto">
+                <HFTermsPage />
+              </div>
+            ) : (
+              <HMFTermsContent />
+            )}
+          </DialogContent>
+        </Dialog>
 
       </div>
       <Footer />

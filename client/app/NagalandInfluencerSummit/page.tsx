@@ -7,6 +7,7 @@ import { Calendar, MapPin, Users, Star, Sparkles, ArrowRight, Trophy, Mic, Camer
 import { useState } from "react";
 import Footer from "../Footer";
 import Navbar from "../Navbar";
+
 export default function NagalandInfluencerSummit() {
     const [hoveredCard, setHoveredCard] = useState<number | null>(null);
     const [selectedCategory, setSelectedCategory] = useState(0);

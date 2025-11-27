@@ -57,6 +57,7 @@ import MelitaBookings from "./components/MelitaBookings";
 import FeaturedEvents from "./components/FeaturedEvents";
 import HmfTickets from "./components/HmfTickets";
 import MerchOrders from "./components/MerchOrders";
+import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -81,13 +82,13 @@ const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonPro
 // --- Main Admin Dashboard Component ---
 export default function AdminDashboard() {
   const router = useRouter();
-  
+
   // Redirect to login if not authenticated or missing required data
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("admin_token");
       const adminId = localStorage.getItem("admin_id");
-      
+
       if (!token || !adminId) {
         // Clear any partial/invalid auth data
         localStorage.removeItem("admin_token");
@@ -183,13 +184,15 @@ export default function AdminDashboard() {
         return <HmfTickets />;
       case "merch-orders":
         return <MerchOrders />;
+      case "helitaxii-leads":
+        return <HeliTaxiiLeads />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
   };
-  
+
   // Special full-width layout without sidebar for Annie Musical QR view
   if (activeView === "annie-musical-qr") {
     return (
@@ -259,7 +262,8 @@ export default function AdminDashboard() {
           </div>
           <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => setActiveView("hmf-tickets")} />
 
-        
+          <SidebarButton icon={Ticket} label="HeliTaxii Leads" active={activeView === "helitaxii-leads"} onClick={() => setActiveView("helitaxii-leads")} />
+
           <SidebarButton icon={Package} label="Merch Orders" active={activeView === "merch-orders"} onClick={() => setActiveView("merch-orders")} />
 
           <div className="pt-4 pb-2 px-2">
@@ -269,17 +273,17 @@ export default function AdminDashboard() {
           <SidebarButton icon={Music} label="Artists" active={activeView === "artist-approvals"} onClick={() => setActiveView("artist-approvals")} />
           <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => setActiveView("venue-approvals")} />
           <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => setActiveView("event-approvals")} />
-          <SidebarButton 
-            icon={CalendarCheck2} 
-            label="Approved Events" 
-            active={activeView === "approved-events"} 
-            onClick={() => setActiveView("approved-events")} 
+          <SidebarButton
+            icon={CalendarCheck2}
+            label="Approved Events"
+            active={activeView === "approved-events"}
+            onClick={() => setActiveView("approved-events")}
           />
-          <SidebarButton 
-            icon={Star} 
-            label="Featured Events" 
-            active={activeView === "featured-events"} 
-            onClick={() => setActiveView("featured-events")} 
+          <SidebarButton
+            icon={Star}
+            label="Featured Events"
+            active={activeView === "featured-events"}
+            onClick={() => setActiveView("featured-events")}
           />
 
           <div className="pt-4 pb-2 px-2">
@@ -287,7 +291,7 @@ export default function AdminDashboard() {
           </div>
           <SidebarButton icon={Users} label="NIS Registrations" active={activeView === "nis-registrations"} onClick={() => setActiveView("nis-registrations")} />
           <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => setActiveView("bikerbash")} />
-          
+
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>

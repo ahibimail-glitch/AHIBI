@@ -36,7 +36,16 @@ const CITIES = [
   "Silchar",
   "Tezpur",
 ];
-const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf"]
+const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94",
+  "6927f5f02cd1c48b94f5be37",
+  "6927f61d2cd1c48b94f5be3d",
+  "6927f66e2cd1c48b94f5be88",
+  "6927f69c2cd1c48b94f5be8c",
+  "6927f6cf2cd1c48b94f5be91",
+  "6927f7102cd1c48b94f5bedb",
+  "6927f73c2cd1c48b94f5bee0",
+  "6927f7a32cd1c48b94f5bf36",
+  "6927f7dd2cd1c48b94f5bf3b", "6927f84d2cd1c48b94f5bf48"]
 const GENRES = ['Music', 'Comedy', 'Theatre', 'Dance', 'Food', 'Art', 'Sports', 'Business', 'Education', 'Other'];
 
 // Format date for display
@@ -186,8 +195,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                           event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
                             event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
                               event._id === "691b0e57a9a25d4fec36f8ad" ? "/HornbillFestival2025/music-festival" :
+                                event._id === "6927fceb2cd1c48b94f5c367" ? "/HornbillFestival2025/daily-pass" :
 
-                                `/events/${event._id}`
+                                  `/events/${event._id}`
                       }>
                         View Details
                       </Link>
@@ -321,72 +331,43 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1">
-        <section className="relative w-full h-[700px] overflow-hidden">
+        <section className="relative w-full overflow-hidden">
+
           {/* Background with slow zoom animation */}
           <motion.div
             initial={{ scale: 1.2 }}
             animate={{ scale: 1 }}
             transition={{ duration: 10, ease: "easeOut" }}
-            className="absolute inset-0"
+            className="w-full"
           >
-            <div className="hidden md:block">
+            {/* Desktop Image */}
+            <div className="hidden md:block w-full">
               <Image
                 src="/images/HMF/hero-desktop.jpg"
                 alt="Hornbill Festival 2025"
                 width={1920}
                 height={1080}
-                title="Hornbill Festival 2025"
-
+                className="w-full h-auto"
               />
             </div>
-            <div className="md:hidden">
+
+            {/* Mobile Image */}
+            <div className="md:hidden w-full">
               <Image
                 src="/images/HMF/hero-mobile.jpg"
                 alt="Hornbill Festival 2025"
-                width={1920}
-                height={1080}
-                title="Hornbill Festival 2025"
-
+                width={1080}
+                height={1920}
+                className="w-full h-auto"
               />
             </div>
-
-
-
-
-
           </motion.div>
 
           {/* Text Overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
-            {/* <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1 }}
-              className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 drop-shadow-lg"
-            >
-              Explore <span className="text-yellow-400">Exciting Events</span>
-            </motion.h1> */}
-
-            {/* <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="text-base sm:text-lg md:text-xl max-w-2xl text-gray-200 mb-6"
-            >
-              Discover, participate, and connect through amazing campus events, workshops,
-              and cultural programs that bring our community together.
-            </motion.p> */}
-
-            {/* <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.6 }}
-            >
-              <button className="bg-yellow-400 text-black font-semibold px-6 py-3 rounded-full shadow-lg hover:bg-yellow-300 transition duration-300">
-                Explore Now
-              </button>
-            </motion.div> */}
+            {/* Your text here */}
           </div>
+
         </section>
 
 

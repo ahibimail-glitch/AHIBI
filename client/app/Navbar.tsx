@@ -47,6 +47,9 @@ export default function Navbar() {
             <Link href="/events" className="hover:text-white transition">
               Events
             </Link>
+            <Link href="/HeliTaxii" className="hover:text-white transition">
+              HeliTaxi
+            </Link>
 
             <Link href="/allArtists" className="hover:text-white transition">
               Artists
@@ -57,7 +60,7 @@ export default function Navbar() {
             <Link href="/allOrganizers" className="hover:text-white transition">
               Organizers
             </Link>
-          
+
             <Link href="/about" className="hover:text-white transition">
               About
             </Link>
@@ -113,7 +116,10 @@ export default function Navbar() {
               >
                 Events
               </Link>
-            
+              <Link href="/HeliTaxii" className="hover:text-white transition">
+                HeliTaxi
+              </Link>
+
               <Link
                 href="/allArtists"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -135,7 +141,7 @@ export default function Navbar() {
               >
                 Organizers
               </Link>
-              
+
               <Link
                 href="/about"
                 onClick={() => setIsMobileMenuOpen(false)}

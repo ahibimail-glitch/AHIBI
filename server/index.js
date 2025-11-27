@@ -31,6 +31,7 @@ const bikerBashRoutes = require('./routes/bikerBash.routes');
 const couponRoutes = require('./routes/coupon.routes');
 const aikoHallRoutes = require('./routes/aikoHall.routes');
 const melitaRoutes = require('./routes/melitaRoutes');
+const heliTaxiiRoutes = require('./routes/heliTaxii.routes');
 
 
 
@@ -134,6 +135,7 @@ app.use('/api/admin/bikerbash', bikerBashRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/aiko', aikoHallRoutes);
 app.use('/api/melita', melitaRoutes);
+app.use('/api/helitaxii', heliTaxiiRoutes);
 
 // Root route
 app.get('/', (req, res) => {
