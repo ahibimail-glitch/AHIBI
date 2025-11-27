@@ -36,7 +36,16 @@ const CITIES = [
   "Silchar",
   "Tezpur",
 ];
-const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf","6927db2d2cd1c48b94f5b9e5"]
+const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "/6927f5532cd1c48b94f5bd94",
+  "6927f5f02cd1c48b94f5be37",
+  "6927f61d2cd1c48b94f5be3d",
+  "6927f66e2cd1c48b94f5be88",
+  "6927f69c2cd1c48b94f5be8c",
+  "6927f6cf2cd1c48b94f5be91",
+  "6927f7102cd1c48b94f5bedb",
+  "6927f73c2cd1c48b94f5bee0",
+  "6927f7a32cd1c48b94f5bf36",
+  "6927f7dd2cd1c48b94f5bf3b"]
 const GENRES = ['Music', 'Comedy', 'Theatre', 'Dance', 'Food', 'Art', 'Sports', 'Business', 'Education', 'Other'];
 
 // Format date for display
@@ -186,9 +195,9 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                           event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
                             event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
                               event._id === "691b0e57a9a25d4fec36f8ad" ? "/HornbillFestival2025/music-festival" :
-                              event._id === "6927fceb2cd1c48b94f5c367" ? "/HornbillFestival2025" :
+                                event._id === "6927fceb2cd1c48b94f5c367" ? "/HornbillFestival2025/daily-pass" :
 
-                                `/events/${event._id}`
+                                  `/events/${event._id}`
                       }>
                         View Details
                       </Link>
