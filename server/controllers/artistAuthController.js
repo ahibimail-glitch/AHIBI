@@ -244,20 +244,133 @@ exports.updateArtistProfile = async (req, res) => {
     }
 
     // Update allowed fields
-    const { name, email, city, bio, genres, type, specialization, basePrice, experience, socialLinks, profilePic } = req.body;
+    const { 
+      name, 
+      stageName,
+      gender,
+      email, 
+      phone,
+      emergencyContact,
+      city, 
+      bio,
+      shortBio,
+      longBio,
+      genres, 
+      artistCategories,
+      type, 
+      specialization, 
+      basePrice, 
+      experience, 
+      socialLinks, 
+      profilePic,
+      coverImage,
+      profileImage,
+      performanceRegions,
+      eventTypes,
+      eventTypesOther,
+      audienceVibe,
+      performanceDurations,
+      performanceDurationOther,
+      performanceFormats,
+      performanceFormatsOther,
+      feeRange
+    } = req.body;
     
-    if (name) artist.name = name;
-    if (email) artist.email = email;
-    if (city) artist.city = city;
-    if (bio) artist.bio = bio;
-    if (genres) artist.genres = genres;
-    if (type || specialization) artist.type = type || specialization;
-    if (basePrice) artist.basePrice = basePrice;
-    if (experience) artist.experience = experience;
-    if (socialLinks) artist.socialLinks = socialLinks;
-    if (profilePic) artist.profilePic = profilePic;
+    console.log('Updating artist profile:', {
+      artistId: req.user.id,
+      fieldsReceived: Object.keys(req.body)
+    });
+    
+    // Helper function to check if value is not empty
+    const isValidValue = (value) => value !== undefined && value !== null && value !== '';
+    
+    if (isValidValue(name)) artist.name = name;
+    if (isValidValue(stageName)) artist.stageName = stageName;
+    if (isValidValue(gender)) artist.gender = gender;
+    if (isValidValue(email)) artist.email = email;
+    if (isValidValue(phone)) artist.phone = phone;
+    if (isValidValue(emergencyContact)) artist.emergencyContact = emergencyContact;
+    if (isValidValue(city)) artist.city = city;
+    if (isValidValue(bio)) artist.bio = bio;
+    if (isValidValue(shortBio)) artist.shortBio = shortBio;
+    if (isValidValue(longBio)) artist.longBio = longBio;
+    if (genres !== undefined && Array.isArray(genres)) artist.genres = genres;
+    if (artistCategories !== undefined && Array.isArray(artistCategories)) artist.artistCategories = artistCategories;
+    if (type !== undefined || specialization !== undefined) artist.type = type || specialization;
+    if (basePrice !== undefined && basePrice !== null && basePrice !== '') artist.basePrice = parseFloat(basePrice);
+    if (experience !== undefined) artist.experience = experience;
+    if (socialLinks !== undefined) {
+      if (typeof socialLinks === 'object') {
+        Object.keys(socialLinks).forEach(key => {
+          if (isValidValue(socialLinks[key])) {
+            artist.socialLinks[key] = socialLinks[key];
+          }
+        });
+      }
+    }
+    if (isValidValue(profilePic)) artist.profilePic = profilePic;
+    if (isValidValue(profileImage)) {
+      artist.profilePic = profileImage;
+      // Also update gallery if profileImage is set
+      if (!artist.gallery) artist.gallery = { photos: [], videos: [] };
+      // Mark existing profile images as false
+      artist.gallery.photos.forEach(photo => {
+        photo.isProfileImage = false;
+      });
+      // Find or add the profile image
+      const existingPhoto = artist.gallery.photos.find(p => p.url === profileImage);
+      if (existingPhoto) {
+        existingPhoto.isProfileImage = true;
+      } else {
+        artist.gallery.photos.push({
+          url: profileImage,
+          caption: 'Profile Image',
+          isProfileImage: true,
+          isCoverImage: false
+        });
+      }
+    }
+    if (isValidValue(coverImage)) {
+      // Update gallery cover image
+      if (!artist.gallery) artist.gallery = { photos: [], videos: [] };
+      // Mark existing cover images as false
+      artist.gallery.photos.forEach(photo => {
+        photo.isCoverImage = false;
+      });
+      // Find or add the cover image
+      const existingPhoto = artist.gallery.photos.find(p => p.url === coverImage);
+      if (existingPhoto) {
+        existingPhoto.isCoverImage = true;
+      } else {
+        artist.gallery.photos.push({
+          url: coverImage,
+          caption: 'Cover Image',
+          isProfileImage: false,
+          isCoverImage: true
+        });
+      }
+    }
+    if (performanceRegions !== undefined && Array.isArray(performanceRegions)) artist.performanceRegions = performanceRegions;
+    if (eventTypes !== undefined && Array.isArray(eventTypes)) artist.eventTypes = eventTypes;
+    if (isValidValue(eventTypesOther)) artist.eventTypesOther = eventTypesOther;
+    if (audienceVibe !== undefined && Array.isArray(audienceVibe)) artist.audienceVibe = audienceVibe;
+    if (performanceDurations !== undefined && Array.isArray(performanceDurations)) artist.performanceDurations = performanceDurations;
+    if (isValidValue(performanceDurationOther)) artist.performanceDurationOther = performanceDurationOther;
+    if (performanceFormats !== undefined && Array.isArray(performanceFormats)) artist.performanceFormats = performanceFormats;
+    if (isValidValue(performanceFormatsOther)) artist.performanceFormatsOther = performanceFormatsOther;
+    if (feeRange !== undefined && typeof feeRange === 'object') {
+      if (feeRange.min !== undefined && feeRange.min !== null && feeRange.min !== '') {
+        artist.feeRange = artist.feeRange || {};
+        artist.feeRange.min = parseFloat(feeRange.min);
+      }
+      if (feeRange.max !== undefined && feeRange.max !== null && feeRange.max !== '') {
+        artist.feeRange = artist.feeRange || {};
+        artist.feeRange.max = parseFloat(feeRange.max);
+      }
+    }
 
     const updatedArtist = await artist.save();
+    console.log('Artist profile updated successfully:', updatedArtist._id);
 
     return ApiResponse.success(res, 'Artist profile updated successfully', {
       artist: updatedArtist

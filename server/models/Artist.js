@@ -8,6 +8,15 @@ const ArtistSchema = new mongoose.Schema({
     required: [true, 'Name is required'],
     trim: true
   },
+  stageName: {
+    type: String,
+    trim: true
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other', 'prefer-not-to-say'],
+    trim: true
+  },
   email: {
     type: String,
     required: [true, 'Email is required'],
@@ -21,6 +30,10 @@ const ArtistSchema = new mongoose.Schema({
     trim: true,
     match: [/^\d{10}$/, 'Please add a valid 10 digit phone number']
   },
+  emergencyContact: {
+    type: String,
+    trim: true
+  },
   city: {
     type: String,
     required: [true, 'City is required']
@@ -29,6 +42,10 @@ const ArtistSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  performanceRegions: [{
+    type: String,
+    enum: ['within-state', 'northeast', 'pan-india', 'international']
+  }],
   status: {
     type: String,
     enum: ['active', 'pending', 'blocked', 'rejected'],
@@ -49,6 +66,14 @@ const ArtistSchema = new mongoose.Schema({
   bio: {
     type: String
   },
+  shortBio: {
+    type: String,
+    maxlength: 200
+  },
+  longBio: {
+    type: String,
+    maxlength: 2000
+  },
   genres: [{
     type: String
   }],
@@ -57,7 +82,43 @@ const ArtistSchema = new mongoose.Schema({
   }],
   type: {
     type: String,
-    enum: ['musician', 'singer', 'dj', 'comedian', 'dancer', 'performer', 'band', 'magician', 'speaker', 'other', 'Band', 'Solo', 'DJ', 'Orchestra', 'Comedian', 'Dancer', 'Other']
+    enum: ['musician', 'singer', 'dj', 'comedian', 'dancer', 'performer', 'band', 'magician', 'speaker', 'instrumentalist', 'host', 'orchestra', 'comedian', 'dancer', 'other']
+  },
+  artistCategories: [{
+    type: String
+  }],
+  eventTypes: [{
+    type: String,
+    enum: ['concerts', 'festivals', 'private-parties-weddings', 'cafes-restaurants', 'corporate-events', 'church-community-events', 'college-events', 'cultural', 'others']
+  }],
+  eventTypesOther: {
+    type: String
+  },
+  audienceVibe: [{
+    type: String,
+    enum: ['family-friendly', 'corporate-clean', 'party-nightlife', 'youth-campus-energy', 'cultural-traditional', 'luxury-premium-events']
+  }],
+  performanceDurations: [{
+    type: String,
+    enum: ['20-mins', '30-mins', '45-mins', '1-hour', '2-hours', '3-hours', 'full-day', 'other']
+  }],
+  performanceDurationOther: {
+    type: String
+  },
+  performanceFormats: [{
+    type: String,
+    enum: ['solo', 'group-band', 'duo', 'trio', 'dj-set', 'dj-live-percussion', 'host-dj', 'with-dancers', 'other']
+  }],
+  performanceFormatsOther: {
+    type: String
+  },
+  feeRange: {
+    min: {
+      type: Number
+    },
+    max: {
+      type: Number
+    }
   },
   experience: {
     type: String,
