@@ -64,6 +64,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import HMFTermsContent from "@/components/HMFTermsContent";
 
 // App Components - Using dynamic imports to avoid SSR issues
 import Navbar from "@/app/Navbar";
@@ -1848,6 +1849,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
           </div>
         )}
+
+        {/* HMF Terms Modal */}
+        <Dialog open={termsModalOpen && isHMFEvent} onOpenChange={setTermsModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Terms & Conditions</DialogTitle>
+              <DialogDescription>
+                Hornbill Music Festival 2025
+              </DialogDescription>
+            </DialogHeader>
+            <HMFTermsContent />
+          </DialogContent>
+        </Dialog>
 
       </div>
       <Footer />
