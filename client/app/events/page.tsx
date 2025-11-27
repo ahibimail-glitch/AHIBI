@@ -45,7 +45,7 @@ const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146
   "6927f7102cd1c48b94f5bedb",
   "6927f73c2cd1c48b94f5bee0",
   "6927f7a32cd1c48b94f5bf36",
-  "6927f7dd2cd1c48b94f5bf3b"]
+  "6927f7dd2cd1c48b94f5bf3b","6927f84d2cd1c48b94f5bf48"]
 const GENRES = ['Music', 'Comedy', 'Theatre', 'Dance', 'Food', 'Art', 'Sports', 'Business', 'Education', 'Other'];
 
 // Format date for display
