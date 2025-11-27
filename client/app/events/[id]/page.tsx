@@ -1571,7 +1571,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                       <span>₹{Math.max(0, (ticket.price || 0) - 50)}</span>
                                     </div>
                                     <div className="flex items-center justify-between mt-1">
-                                      <span>Tourism sustainability tax</span>
+                                      <span>Tourism sustainability fund</span>
                                       <span>₹50</span>
                                     </div>
                                     <div className="flex items-center justify-between mt-1 font-semibold text-gray-800">
