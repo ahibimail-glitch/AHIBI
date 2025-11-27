@@ -254,6 +254,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const handleFreeBooking = async () => {
     try {
       setBookingError(null);
+      // Require country/state selection for HMF events before proceeding
+      if (isHMFEvent && !isFormComplete) {
+        toast.error("Please select your country and state before booking");
+        return;
+      }
       if (!acceptedTerms) {
         setBookingError("Please accept the terms and conditions to proceed.");
         return;
@@ -311,7 +316,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
 
   // HMF event country selection state
-  const [selectedCountry, setSelectedCountry] = useState('India');
+  const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedState, setSelectedState] = useState('');
 
   // HMF event IDs
@@ -374,6 +379,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     // Reset state when country changes
     setSelectedState('');
   }, [selectedCountry]);
+
+  // Ensure country/state are cleared on mount or revisit
+  useEffect(() => {
+    setSelectedCountry('');
+    setSelectedState('');
+  }, []);
 
   // Check if form is completely filled (for HMF require both country and state)
   const isFormComplete = !isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''));
@@ -1367,7 +1378,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                       <Select
                         value={selectedCountry}
                         onValueChange={setSelectedCountry}
-                        disabled={hasSelectedTicket}
+                        disabled={hasSelectedTicket && isFormComplete}
                       >
                         <SelectTrigger
                           className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${hasSelectedTicket ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
@@ -1392,7 +1403,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <Select
                             value={selectedState}
                             onValueChange={setSelectedState}
-                            disabled={hasSelectedTicket}
+                            disabled={hasSelectedTicket && isFormComplete}
                           >
                             <SelectTrigger
                               className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${hasSelectedTicket ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''}`}
@@ -1595,13 +1606,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      if (!isFormComplete) {
-                                        const errorMessage = isHMFEvent
-                                          ? "Please select your country and state before selecting a ticket"
-                                          : "Please fill in all form fields before selecting a ticket";
-                                        toast.error(errorMessage);
-                                        return;
-                                      }
                                       if (quantity > 0) {
                                         const newQuantity = quantity - 1;
                                         if (newQuantity === 0) {
@@ -1627,6 +1631,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
+                                      if (!isFormComplete) {
+                                        const errorMessage = isHMFEvent
+                                          ? "Please select your country and state before selecting a ticket"
+                                          : "Please fill in all form fields before selecting a ticket";
+                                        toast.error(errorMessage);
+                                        return;
+                                      }
                                       const newQuantity = quantity + 1;
                                       if (newQuantity <= ticket.quantity - ticket.sold) {
                                         setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
