@@ -186,6 +186,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                           event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
                             event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
                               event._id === "691b0e57a9a25d4fec36f8ad" ? "/HornbillFestival2025/music-festival" :
+                              event._id === "6927fceb2cd1c48b94f5c367" ? "/HornbillFestival2025" :
 
                                 `/events/${event._id}`
                       }>

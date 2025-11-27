@@ -16,21 +16,23 @@ const HornbillFestival2025 = () => {
       description: "Experience the Hornbill Festival for a day. Access cultural programs, traditional morungs, and craft bazaars.",
       href: "/HornbillFestival2025/daily-pass",
       delay: 0.2,
+      highlight:true
     },
-    {
-      icon: Calendar,
-      title: "Festival Pass",
-      description: "Unlimited 10-day access to the Heritage Village with VIP entry to ceremonies and reserved seating.",
-      href: "/HornbillFestival2025/festival-pass",
-      delay: 0.4,
-      highlight: true,
-    },
+    // {
+    //   icon: Calendar,
+    //   title: "Festival Pass",
+    //   description: "Unlimited 10-day access to the Heritage Village with VIP entry to ceremonies and reserved seating.",
+    //   href: "/HornbillFestival2025/festival-pass",
+    //   delay: 0.4,
+    //   highlight: true,
+    // },
     {
       icon: Music,
       title: "Hornbill Music Festival",
       description: "Eight nights of live music and celebration. Experience performances from renowned artists and bands.",
       href: "/HornbillFestival2025/music-festival",
       delay: 0.6,
+      highlight:true
     },
   ];
 
@@ -76,7 +78,7 @@ const HornbillFestival2025 = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
             {ticketCategories.map((category, index) => (
               <Link key={index} href={category.href}>
                 <TicketCard
