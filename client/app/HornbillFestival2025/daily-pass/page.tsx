@@ -321,7 +321,7 @@ const MusicFestival = () => {
           <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl p-6 md:p-8 mb-8 gradient-card border border-border/30 shadow-card">
             <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-3">
               <span className="w-2 h-8 gradient-hero rounded-full" />
-              Music Festival Benefits
+               Festival Benefits
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
