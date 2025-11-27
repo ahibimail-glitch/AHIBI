@@ -1,14 +1,14 @@
 const HMFTermsContent = () => {
   return (
     <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-      <div className="text-center mb-8">
+      {/* <div className="text-center mb-8">
         <h1 className="text-2xl md:text-3xl font-bold mb-2 gradient-text">
           Terms & Conditions
         </h1>
         <p className="text-base text-muted-foreground">
           Hornbill Music Festival 2025
         </p>
-      </div>
+      </div> */}
 
       {/* Contact Info */}
       <div className="bg-muted/30 rounded-xl p-4 border border-border/20">

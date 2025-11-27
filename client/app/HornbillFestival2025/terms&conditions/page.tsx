@@ -5,18 +5,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const Terms = () => {
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
+            {/* <Navbar /> */}
 
             <main className="container mx-auto px-4 sm:px-6 pb-20">
                 <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-12">
+                    {/* <div className="text-center mb-12">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
                             Terms & Conditions
                         </h1>
                         <p className="text-lg text-muted-foreground">
                             Hornbill Festival (Heritage Village) 2025
                         </p>
-                    </div>
+                    </div> */}
 
                     <div className="gradient-card border border-border/30 rounded-2xl p-8 md:p-12 space-y-8">
                         {/* Contact Info */}
@@ -214,7 +214,7 @@ const Terms = () => {
                 </div>
             </main>
 
-            <Footer />
+            {/* <Footer /> */}
         </div>
     );
 };
