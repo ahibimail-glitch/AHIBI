@@ -22,6 +22,7 @@ interface Package {
     badgeVariant: 'premium' | 'luxury' | 'exclusive' | 'default';
     image: string;
     buttonText: string;
+    hasDiscount: boolean;
 }
 
 const packages: Package[] = [
@@ -29,7 +30,7 @@ const packages: Package[] = [
         id: 'shuttle-dimapur',
         name: 'Shuttle Services',
         subName: 'Kohima → Dimapur → Kohima',
-        price: 21599,
+        price: 26999,
         originalPrice: 26999,
         priceDetails: 'per seat (One-Way)',
         duration: '15 mins',
@@ -42,8 +43,8 @@ const packages: Package[] = [
         badgeText: 'Premium Transfer',
         badgeVariant: 'premium',
         image: "/images/HeliTaxii/package-kohima.jpg",
-
-        buttonText: 'Book Now'
+        buttonText: 'Book Now',
+        hasDiscount: false
     },
     {
         id: 'hornbill-slot1',
@@ -62,8 +63,8 @@ const packages: Package[] = [
         badgeText: 'Morning Slot',
         badgeVariant: 'exclusive',
         image: "/images/HeliTaxii/package-hornbill.jpg",
-
-        buttonText: 'Book Slot 1'
+        buttonText: 'Book Slot 1',
+        hasDiscount: true
     },
     {
         id: 'hornbill-slot2',
@@ -82,8 +83,8 @@ const packages: Package[] = [
         badgeText: 'Afternoon Slot',
         badgeVariant: 'exclusive',
         image: "/images/HeliTaxii/package-hornbill.jpg",
-
-        buttonText: 'Book Slot 2'
+        buttonText: 'Book Slot 2',
+        hasDiscount: true
     },
     {
         id: 'dzukou-slot1',
@@ -102,8 +103,8 @@ const packages: Package[] = [
         badgeText: 'Scenic Morning',
         badgeVariant: 'luxury',
         image: "/images/HeliTaxii/package-dzukou.jpg",
-
-        buttonText: 'Book Slot 1'
+        buttonText: 'Book Slot 1',
+        hasDiscount: true
     },
     {
         id: 'dzukou-slot2',
@@ -122,14 +123,14 @@ const packages: Package[] = [
         badgeText: 'Golden Hour',
         badgeVariant: 'luxury',
         image: "/images/HeliTaxii/package-dzukou.jpg",
-
-        buttonText: 'Book Slot 2'
+        buttonText: 'Book Slot 2',
+        hasDiscount: true
     },
     {
         id: 'shuttle-kigwema',
         name: 'Shuttle Services',
         subName: 'Kigwema Sector',
-        price: 5599,
+        price: 6999,
         originalPrice: 6999,
         priceDetails: 'per seat (Round Trip)',
         duration: '8-10 mins',
@@ -142,8 +143,8 @@ const packages: Package[] = [
         badgeText: 'Best Value',
         badgeVariant: 'default',
         image: "/images/HeliTaxii/package-kigwema.jpg",
-
-        buttonText: 'Book Now'
+        buttonText: 'Book Now',
+        hasDiscount: false
     }
 ];
 
@@ -294,14 +295,18 @@ const HelicopterBookingPage = () => {
                                     <div className="mt-2">
                                         {/* Price Display */}
                                         <div className="flex flex-col">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-muted-foreground line-through decoration-red-500/50">
-                                                    ₹{pkg.originalPrice.toLocaleString()}
-                                                </span>
-                                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200">
-                                                    20% OFF
-                                                </Badge>
-                                            </div>
+                                            {pkg.hasDiscount ? (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-muted-foreground line-through decoration-red-500/50">
+                                                        ₹{pkg.originalPrice.toLocaleString()}
+                                                    </span>
+                                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 hover:bg-red-100 border-red-200">
+                                                        20% OFF
+                                                    </Badge>
+                                                </div>
+                                            ) : (
+                                                <div className="h-[22px]"></div>
+                                            )}
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-2xl font-bold text-foreground">₹{pkg.price.toLocaleString()}</span>
                                             </div>
@@ -455,8 +460,13 @@ const HelicopterBookingPage = () => {
                     </div>
 
                     <div className="flex gap-6">
+                        <p className="hover:text-accent transition-colors">Direct booking? Call now</p>
+                        <p className="hover:text-accent transition-colors">+91 8530004309</p>
+                    </div>
+
+                    <div className="flex gap-6">
                         <a href="mailto:info@helitaxii.com" className="hover:text-accent transition-colors">info@helitaxii.com</a>
-                        <a href="tel:+919400399999" className="hover:text-accent transition-colors">+91-9400399999</a>
+                        <a href="tel:+919400399999" className="hover:text-accent transition-colors">+91 9400399999</a>
                     </div>
 
                     <div className="opacity-60 text-xs">
