@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 
+
 export default function FAQCard() {
   const [open, setOpen] = useState(false);
 
