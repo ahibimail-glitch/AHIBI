@@ -376,7 +376,7 @@ const HelicopterBookingPage = () => {
                                             Your Custom Helicopter Charter
                                         </h3>
                                         <p className="text-muted-foreground">
-                                            Choose your route, choose your time. Explore Nagaland on your own terms.
+                                            Choose your route, choose your time. Fly anywhere across Nagaland.
                                         </p>
                                     </div>
 
@@ -397,7 +397,7 @@ const HelicopterBookingPage = () => {
                                             <Users className="w-4 h-4 text-accent" /> Up to 5 passengers per flight
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <MapPin className="w-4 h-4 text-accent" /> Customisable aerial route accross Nagaland
+                                            <MapPin className="w-4 h-4 text-accent" /> Customisable aerial route across Nagaland
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <Check className="w-4 h-4 text-accent" /> Priority boarding & assistance
