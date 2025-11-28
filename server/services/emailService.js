@@ -435,7 +435,7 @@ class EmailService {
           </div>
 
           <div style="text-align: center; font-size: 12px; color: #666; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-            <p>If you have any questions, please contact support@ahibi.com</p>
+            <p>If you have any questions, please contact at 8794696995</p>
             <p>&copy; ${new Date().getFullYear()} Ahibi. All rights reserved.</p>
           </div>
         </div>

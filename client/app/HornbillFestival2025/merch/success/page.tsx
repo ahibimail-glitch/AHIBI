@@ -204,7 +204,7 @@ function MerchOrderSuccessInner() {
               {isPending && !isPaid &&
                 "Your payment is being processed. If this stays pending for a while, we'll notify you once it is confirmed."}
               {isFailed &&
-                "We could not confirm your payment. If money was deducted, please contact support with your payment details."}
+                "We could not confirm your payment. If money was deducted, please contact at 8794696995 with your payment details."}
             </p>
             {isPolling && (
               <p className="mt-2 text-sm text-muted-foreground">
