@@ -94,7 +94,7 @@ const MusicFestival = () => {
       icon: Users2,
       title: "10-Day General Pass",
       price: "₹1,350",
-      description: "Standing access for all 10 nights of the music festival",
+      description: "Entry to Hornbill Festival for 10 days",
       features: [
         // "All 8 nights standing access",
         // "Discounted food & beverages",
@@ -325,12 +325,15 @@ const MusicFestival = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                "Access to live performances by top artists",
-                "DJ nights and electronic music shows",
-                "Dedicated food courts with diverse cuisines",
-                "Festival merchandise and band merchandise booths",
-                "After-party zone access (with applicable passes)",
-                "Special discounts for Festival Pass holders"
+                "Access to cultural shows", 
+
+"Entry to morungs & cultural pavilions",
+
+"Access to traditional cuisines",
+
+"Craft & handloom stalls",
+
+"Traditional games & activities"
               ].map((benefit, index) => (
                 <motion.div
                   key={index}
