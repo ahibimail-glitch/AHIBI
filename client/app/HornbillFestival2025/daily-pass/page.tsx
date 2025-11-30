@@ -49,7 +49,7 @@ const MusicFestival = () => {
     {
       icon: Users2,
       title: "General (Standing)",
-      price: "₹200",
+      price: "₹150",
       description: "Standing area with direct crowd energy and stage view",
       features: [
         // "Standing area access",
@@ -93,7 +93,7 @@ const MusicFestival = () => {
     {
       icon: Users2,
       title: "10-Day General Pass",
-      price: "₹1,400",
+      price: "₹1,350",
       description: "Standing access for all 10 nights of the music festival",
       features: [
         // "All 8 nights standing access",
@@ -145,7 +145,7 @@ const MusicFestival = () => {
     if (!ticket) return;
 
     const ticketTypeName = ticketType === "festivalPass"
-      ? "8-Day Festival Pass"
+      ? "10-Day Festival Pass"
       : isDayHighProfile(selectedDay)
         ? "High-Profile Artist Day"
         : "Normal Day";
