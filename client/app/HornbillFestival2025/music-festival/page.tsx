@@ -45,9 +45,9 @@ const MusicFestival = () => {
   const normalDayTickets = [
     {
       icon: Users2,
-      title: "General (Standing)",
+      title: "Single Day Pass",
       price: "₹200",
-      description: "Standing area with direct crowd energy and stage view",
+      description: "Single day entry to Hornbill music festival.",
       features: [
         // "Standing area access",
         // "Front crowd energy",
