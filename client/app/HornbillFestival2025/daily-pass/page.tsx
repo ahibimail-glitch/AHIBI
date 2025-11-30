@@ -12,21 +12,20 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import DaySelectorHF from "../components/DayselectorHornbill";
 
-
-
 const MusicFestival = () => {
   const router = useRouter();
   const [selectedDay, setSelectedDay] = useState(1);
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-  const [ticketType, setTicketType] = useState<"normal" | "highProfile" | "festivalPass">("normal");
+  const [ticketType, setTicketType] = useState<
+    "normal" | "highProfile" | "festivalPass"
+  >("normal");
   const [acceptedTerms, setAcceptedTerms] = useState({
     musicFestival: false,
-    hornbillFestival: false
+    hornbillFestival: false,
   });
 
- 
   const daytoIdMap = {
-    1:"/events/6927f5532cd1c48b94f5bd94",
+    1: "/events/6927f5532cd1c48b94f5bd94",
     2: "/events/6927f5f02cd1c48b94f5be37",
     3: "/events/6927f61d2cd1c48b94f5be3d",
     4: "/events/6927f66e2cd1c48b94f5be88",
@@ -35,10 +34,10 @@ const MusicFestival = () => {
     7: "/events/6927f7102cd1c48b94f5bedb",
     8: "/events/6927f73c2cd1c48b94f5bee0",
     9: "/events/6927f7a32cd1c48b94f5bf36",
-    10:"/events/6927f7dd2cd1c48b94f5bf3b"
-  }
-  const freeDays=[0]
-  const normalDays=[1,2,3,4,5,6,7,8,9,10]
+    10: "/events/6927f7dd2cd1c48b94f5bf3b",
+  };
+  const freeDays = [0];
+  const normalDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const highProfileDays = [6, 7];
 
   const isDayFree = (day: number) => freeDays.includes(day);
@@ -57,8 +56,8 @@ const MusicFestival = () => {
         // "Access to food courts",
         // "Festival merchandise access"
       ],
-      highlight: true
-    }
+      highlight: true,
+    },
   ];
 
   const highProfileTickets = [
@@ -71,8 +70,8 @@ const MusicFestival = () => {
         "Standing area access",
         "Premium sound experience",
         "Extended show hours",
-        "Special merchandise booth"
-      ]
+        "Special merchandise booth",
+      ],
     },
     {
       icon: Music,
@@ -83,16 +82,16 @@ const MusicFestival = () => {
         "Premium seating",
         "Best stage visibility",
         "Exclusive entry lanes",
-        "VIP food court access"
+        "VIP food court access",
       ],
-      highlight: true
-    }
+      highlight: true,
+    },
   ];
 
   const festivalPasses = [
     {
       icon: Users2,
-      title: "10-Day General Pass",
+      title: "10-Day Festival Pass",
       price: "₹1,350",
       description: "Entry to Hornbill Festival for 10 days",
       features: [
@@ -101,8 +100,8 @@ const MusicFestival = () => {
         // "Priority re-entry",
         // "Festival merchandise discount"
       ],
-      highlight: true
-    }
+      highlight: true,
+    },
   ];
 
   const handleDaySelect = (day: number) => {
@@ -126,7 +125,9 @@ const MusicFestival = () => {
 
   const handleBooking = () => {
     if (isDayFree(selectedDay)) {
-      toast.success("This is a FREE entry day! No booking needed. Just come and enjoy!");
+      toast.success(
+        "This is a FREE entry day! No booking needed. Just come and enjoy!"
+      );
       return;
     }
 
@@ -141,12 +142,13 @@ const MusicFestival = () => {
     }
 
     const currentTickets = getCurrentTickets();
-    const ticket = currentTickets.find(t => t.title === selectedTicket);
+    const ticket = currentTickets.find((t) => t.title === selectedTicket);
     if (!ticket) return;
 
-    const ticketTypeName = ticketType === "festivalPass"
-      ? "10-Day Festival Pass"
-      : isDayHighProfile(selectedDay)
+    const ticketTypeName =
+      ticketType === "festivalPass"
+        ? "10-Day Festival Pass"
+        : isDayHighProfile(selectedDay)
         ? "High-Profile Artist Day"
         : "Normal Day";
 
@@ -158,7 +160,7 @@ const MusicFestival = () => {
     });
 
     if (ticketType !== "festivalPass" && selectedDay) {
-      params.append('day', selectedDay.toString());
+      params.append("day", selectedDay.toString());
     }
 
     router.push(`/HornbillFestival2025/booking?${params.toString()}`);
@@ -189,13 +191,16 @@ const MusicFestival = () => {
                   setTicketType("normal");
                   setSelectedTicket(null);
                 }}
-                className={`p-6 rounded-xl border-2 transition-all duration-300 ${ticketType !== "festivalPass"
-                  ? "gradient-hero text-white border-primary shadow-glow"
-                  : "gradient-card text-foreground border-border/30 hover:border-primary/50"
-                  }`}
+                className={`p-6 rounded-xl border-2 transition-all duration-300 ${
+                  ticketType !== "festivalPass"
+                    ? "gradient-hero text-white border-primary shadow-glow"
+                    : "gradient-card text-foreground border-border/30 hover:border-primary/50"
+                }`}
               >
                 <h4 className="text-xl font-bold mb-2">Daily Tickets</h4>
-                <p className="text-sm opacity-90">Choose a specific day to attend</p>
+                <p className="text-sm opacity-90">
+                  Choose a specific day to attend
+                </p>
               </motion.button>
 
               <motion.button
@@ -205,10 +210,11 @@ const MusicFestival = () => {
                   setTicketType("festivalPass");
                   setSelectedTicket(null);
                 }}
-                className={`p-6 rounded-xl border-2 transition-all duration-300 ${ticketType === "festivalPass"
-                  ? "gradient-hero text-white border-primary shadow-glow"
-                  : "gradient-card text-foreground border-border/30 hover:border-primary/50"
-                  }`}
+                className={`p-6 rounded-xl border-2 transition-all duration-300 ${
+                  ticketType === "festivalPass"
+                    ? "gradient-hero text-white border-primary shadow-glow"
+                    : "gradient-card text-foreground border-border/30 hover:border-primary/50"
+                }`}
               >
                 <h4 className="text-xl font-bold mb-2">10-Day Festival Pass</h4>
                 <p className="text-sm opacity-90">All 10 nights </p>
@@ -255,17 +261,22 @@ const MusicFestival = () => {
                   🎉 FREE ENTRY DAY! 🎉
                 </h3>
                 <p className="text-xl text-muted-foreground mb-6 leading-relaxed">
-                  Day {selectedDay} is completely FREE! No tickets required - just come and enjoy amazing live music performances!
+                  Day {selectedDay} is completely FREE! No tickets required -
+                  just come and enjoy amazing live music performances!
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                   <div className="gradient-card rounded-xl p-4 border border-border/30">
                     <p className="text-sm text-muted-foreground mb-1">Date</p>
                     <p className="text-lg font-bold text-foreground">
-                      {selectedDay === 1 ? "1st December 2024" : "10th December 2024"}
+                      {selectedDay === 1
+                        ? "1st December 2024"
+                        : "10th December 2024"}
                     </p>
                   </div>
                   <div className="gradient-card rounded-xl p-4 border border-border/30">
-                    <p className="text-sm text-muted-foreground mb-1">Entry Fee</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Entry Fee
+                    </p>
                     <p className="text-lg font-bold bg-gradient-to-r from-emerald-400 via-green-400 to-teal-400 bg-clip-text text-transparent">
                       ₹0 - FREE
                     </p>
@@ -280,7 +291,9 @@ const MusicFestival = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-3xl font-bold mb-8 text-center text-foreground"
               >
-                {ticketType === "festivalPass" ? "Select Your Pass" : "Select Your Ticket"}
+                {ticketType === "festivalPass"
+                  ? "Select Your Pass"
+                  : "Select Your Ticket"}
               </motion.h2>
 
               <div className=" mb-12 max-w-4xl mx-auto">
@@ -293,7 +306,9 @@ const MusicFestival = () => {
                         router.push("/events/6927f84d2cd1c48b94f5bf48");
                         return;
                       }
-                      const target = (daytoIdMap as Record<number, string>)[selectedDay];
+                      const target = (daytoIdMap as Record<number, string>)[
+                        selectedDay
+                      ];
                       if (target) {
                         router.push(target);
                       } else {
@@ -308,9 +323,13 @@ const MusicFestival = () => {
                       price={ticket.price}
                       description={ticket.description}
                       features={ticket.features}
-                      buttonText={selectedTicket === ticket.title ? "Selected" : "Select"}
+                      buttonText={
+                        selectedTicket === ticket.title ? "Selected" : "Select"
+                      }
                       delay={index * 0.1}
-                      highlight={ticket.highlight || selectedTicket === ticket.title}
+                      highlight={
+                        ticket.highlight || selectedTicket === ticket.title
+                      }
                     />
                   </div>
                 ))}
@@ -321,19 +340,19 @@ const MusicFestival = () => {
           <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl p-6 md:p-8 mb-8 gradient-card border border-border/30 shadow-card">
             <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-3">
               <span className="w-2 h-8 gradient-hero rounded-full" />
-               Festival Benefits
+              Festival Benefits
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                "Access to cultural shows", 
+                "Access to cultural shows",
 
-"Entry to morungs & cultural pavilions",
+                "Entry to morungs & cultural pavilions",
 
-"Access to traditional cuisines",
+                "Access to traditional cuisines",
 
-"Craft & handloom stalls",
+                "Craft & handloom stalls",
 
-"Traditional games & activities"
+                "Traditional games & activities",
               ].map((benefit, index) => (
                 <motion.div
                   key={index}
@@ -343,7 +362,9 @@ const MusicFestival = () => {
                   className="flex items-start space-x-3"
                 >
                   <span className="text-accent text-2xl mt-0.5">♪</span>
-                  <span className="text-muted-foreground leading-relaxed">{benefit}</span>
+                  <span className="text-muted-foreground leading-relaxed">
+                    {benefit}
+                  </span>
                 </motion.div>
               ))}
             </div>
@@ -434,6 +455,5 @@ const MusicFestival = () => {
     </div>
   );
 };
-
 
 export default MusicFestival;
