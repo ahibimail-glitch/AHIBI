@@ -239,11 +239,11 @@ const MusicFestival = () => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-10"
             >
-              <h3 className="text-2xl font-bold mb-6 text-center text-foreground flex items-center justify-center gap-3">
+              {/* <h3 className="text-2xl font-bold mb-6 text-center text-foreground flex items-center justify-center gap-3">
                 <span className="w-2 h-8 gradient-hero rounded-full" />
-                8-Day Festival Pass Options
+                10-Day Festival Pass Options
                 <span className="w-2 h-8 gradient-hero rounded-full" />
-              </h3>
+              </h3> */}
             </motion.div>
           )}
 
