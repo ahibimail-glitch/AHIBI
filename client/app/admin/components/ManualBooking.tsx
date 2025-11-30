@@ -263,9 +263,7 @@ const ManualBooking: React.FC = () => {
     e.preventDefault();
     if (!formData.event || !formData.user) return toast({ title: 'Missing Data', description: 'Select event and user', variant: 'destructive' });
     if (isHMFSelected) {
-      if (!formData.country || !formData.state) {
-        return toast({ title: 'Country/State required', description: 'For HMF events, please provide both country and state/province.', variant: 'destructive' });
-      }
+      // Country and state are now optional, only validate mode of payment
       if (!formData.modeOfPayment) {
         return toast({ title: 'Mode of Payment required', description: 'For HMF events, please select a mode of payment.', variant: 'destructive' });
       }
@@ -467,7 +465,7 @@ const ManualBooking: React.FC = () => {
                   {isHMFSelected && (
                     <>
                       <div>
-                        <Label htmlFor="country">Country <span className="text-red-500">(Mandatory)</span></Label>
+                        <Label htmlFor="country">Country <span className="text-gray-500">(Optional)</span></Label>
                         <Input 
                           id="country" 
                           name="country" 
@@ -480,7 +478,7 @@ const ManualBooking: React.FC = () => {
                       </div>
 
                       <div>
-                        <Label htmlFor="state">State / Province <span className="text-red-500">(Mandatory)</span></Label>
+                        <Label htmlFor="state">State / Province <span className="text-gray-500">(Optional)</span></Label>
                         <Input 
                           id="state" 
                           name="state" 
