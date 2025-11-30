@@ -48,7 +48,7 @@ const MusicFestival = () => {
   const normalDayTickets = [
     {
       icon: Users2,
-      title: "General (Standing)",
+      title: "Single Day Pass",
       price: "₹150",
       description: "Standing area with direct crowd energy and stage view",
       features: [
