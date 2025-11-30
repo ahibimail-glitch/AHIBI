@@ -50,7 +50,8 @@ const QrScanner = () => {
     const fetchEvents = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/events`); // Endpoint to get active events
+        // Fetch all events without pagination limit
+        const response = await fetch(`${apiUrl}/api/events?limit=10000`);
         if (!response.ok) {
           throw new Error('Failed to fetch events');
         }

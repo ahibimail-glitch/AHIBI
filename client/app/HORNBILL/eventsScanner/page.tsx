@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { QrCode, Upload, Search, CheckCircle, XCircle, AlertCircle, Clock, Camera, Smartphone } from "lucide-react";
 import axios from 'axios';
-import RealQrScanner from '../../admin/components/RealQrScanner';
+import RealQrScanner from '@/app/admin/components/RealQrScanner';
 import jsQR from 'jsqr';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -50,7 +50,8 @@ const QrScanner = () => {
     const fetchEvents = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/events`); // Endpoint to get active events
+        // Fetch all events without pagination limit
+        const response = await fetch(`${apiUrl}/api/events?limit=10000`);
         if (!response.ok) {
           throw new Error('Failed to fetch events');
         }
