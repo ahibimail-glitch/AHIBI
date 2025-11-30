@@ -59,9 +59,9 @@ export default function HomePage() {
         const data = await response.json()
 
         if (data.success && data.data && data.data.length > 0) {
-          const images = data.data.map((image: any) => ({ 
-            url: image.url, 
-            mobileUrl: image.mobileUrl 
+          const images = data.data.map((image: any) => ({
+            url: image.url,
+            mobileUrl: image.mobileUrl
           }))
           setBackgroundImages(images)
         } else {
@@ -74,9 +74,9 @@ export default function HomePage() {
       } catch (err) {
         console.error("Error fetching hero images:", err)
         setBackgroundImages([
-            { url: "/images/carausel1.jpg" },
-            { url: "/images/carausel2.jpg" },
-            { url: "/images/carausel3.jpg" },
+          { url: "/images/carausel1.jpg" },
+          { url: "/images/carausel2.jpg" },
+          { url: "/images/carausel3.jpg" },
         ])
       } finally {
         setLoadingHeroImages(false)
@@ -96,7 +96,7 @@ export default function HomePage() {
           throw new Error("Failed to fetch featured events")
         }
         const data: EventsResponse = await response.json()
-        
+
         // Filter out past events (events where endDate has passed) and exclude specific event ID
         const currentDate = new Date()
         const upcomingEvents = (data.data.events || []).filter(event => {
@@ -105,7 +105,7 @@ export default function HomePage() {
           const isNotExcluded = event._id !== '68dac96e8d5dd14f277d5b1a'
           return isUpcoming && isNotExcluded
         })
-        
+
         setFeaturedEvents(upcomingEvents)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to load events"
@@ -346,33 +346,33 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up delay-600">
               <Button
-  size="lg"
-  asChild
-  className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-2xl shadow-indigo-600/25 
+                size="lg"
+                asChild
+                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-2xl shadow-indigo-600/25 
              px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 
              text-sm sm:text-base md:text-lg font-semibold 
              transform hover:scale-105 transition-all duration-300"
->
-  <Link href="/events" className="flex items-center">
-    Explore Events
-    <ArrowRight className="ml-2 h-4 sm:h-5 md:h-5 w-4 sm:w-5 md:w-5" />
-  </Link>
-</Button>
+              >
+                <Link href="/events" className="flex items-center">
+                  Explore Events
+                  <ArrowRight className="ml-2 h-4 sm:h-5 md:h-5 w-4 sm:w-5 md:w-5" />
+                </Link>
+              </Button>
 
-<Button
-  size="lg"
-  variant="outline"
-  asChild
-  className="border-2 border-white/50 text-white hover:bg-white hover:text-indigo-900 bg-transparent 
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="border-2 border-white/50 text-white hover:bg-white hover:text-indigo-900 bg-transparent 
              px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 
              text-sm sm:text-base md:text-lg font-semibold 
              transform hover:scale-105 transition-all duration-300"
->
-  <Link href="/auth" className="flex items-center">
-    <Play className="mr-2 h-4 sm:h-5 md:h-5 w-4 sm:w-5 md:w-5" />
-    Get Started
-  </Link>
-</Button>
+              >
+                <Link href="/auth" className="flex items-center">
+                  <Play className="mr-2 h-4 sm:h-5 md:h-5 w-4 sm:w-5 md:w-5" />
+                  Get Started
+                </Link>
+              </Button>
 
             </div>
           </div>
@@ -400,11 +400,10 @@ export default function HomePage() {
             {backgroundImages.map((_, index) => (
               <button
                 key={index}
-                className={`h-2 rounded-full transition-all duration-500 backdrop-blur-sm ${
-                  index === currentBgSlide
-                    ? "bg-white w-12 shadow-lg"
-                    : "bg-white/40 hover:bg-white/60 w-2"
-                }`}
+                className={`h-2 rounded-full transition-all duration-500 backdrop-blur-sm ${index === currentBgSlide
+                  ? "bg-white w-12 shadow-lg"
+                  : "bg-white/40 hover:bg-white/60 w-2"
+                  }`}
                 onClick={() => setCurrentBgSlide(index)}
               />
             ))}
@@ -524,11 +523,10 @@ export default function HomePage() {
                     {Array.from({ length: maxSlide + 1 }).map((_, index) => (
                       <button
                         key={index}
-                        className={`h-1.5 sm:h-2 md:h-3 rounded-full transition-all duration-300 ${
-                          index === currentSlide 
-                            ? "bg-indigo-400 w-4 sm:w-6 md:w-8 lg:w-12 shadow-sm sm:shadow-md" 
-                            : "bg-indigo-300/50 hover:bg-indigo-300/70 active:bg-indigo-300 w-1.5 sm:w-2 md:w-3"
-                        }`}
+                        className={`h-1.5 sm:h-2 md:h-3 rounded-full transition-all duration-300 ${index === currentSlide
+                          ? "bg-indigo-400 w-4 sm:w-6 md:w-8 lg:w-12 shadow-sm sm:shadow-md"
+                          : "bg-indigo-300/50 hover:bg-indigo-300/70 active:bg-indigo-300 w-1.5 sm:w-2 md:w-3"
+                          }`}
                         onClick={() => handleGoTo(index)}
                         aria-label={`Go to slide ${index + 1}`}
                       />
@@ -552,6 +550,81 @@ export default function HomePage() {
                 <ArrowRight className="ml-1.5 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
               </Link>
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* HELITAXI ADD */}
+      <section className="relative  overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 sm:py-14 md:py-20">
+
+        <div className="absolute inset-0 opacity-20">
+          <img
+            src="/images/HeliTaxii/hero-helicopter.jpg"
+            alt="Helicopter over hills"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80" />
+        </div>
+
+        <div className="relative container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+            <div className="text-white">
+
+              <div className="inline-flex items-center gap-2 bg-red-500/10 text-red-300 border border-red-400/30 rounded-full px-3 py-1 text-xs sm:text-sm mb-3">
+                <span>Limited Period</span>
+                <Badge variant="secondary" className="bg-red-500 text-white border-0 text-[10px]">20% OFF</Badge>
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-3">
+                Helicopter Rides & Shuttles
+              </h2>
+              <p className="text-slate-200/90 text-sm sm:text-base md:text-lg mb-6">
+                Experience Hornbill from the sky. Joyrides, Dzükōu Valley aerial tours, and Kohima–Dimapur shuttles.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 mb-6 text-slate-200/90 text-xs sm:text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-cyan-300" />
+                  <span>Fast transfers • 6–17 min flights</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-cyan-300" />
+                  <span>Kohima • Kisama • Dzükōu</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-300" />
+                  <span>5.0 rated experience</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-green-400/50 text-green-200 bg-green-900/20">Festival Special</Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button asChild size="lg" className="bg-red-500 hover:bg-red-600 text-white shadow-lg">
+                  <Link href="/HeliTaxii">Book HeliTaxii</Link>
+                </Button>
+                <span className="text-slate-300 text-xs sm:text-sm">Starting at ₹3,840 per seat</span>
+              </div>
+            </div>
+
+            <div className="w-full">
+              <div>
+                <Image
+                  src="/images/HeliTaxii/heli-mobile.jpg"
+                  alt="Mobile Banner"
+                  width={500}
+                  height={300}
+                  className="block md:hidden w-full h-auto"
+                />
+                <Image
+                  src="/images/HeliTaxii/heli-desktop.jpg"
+                  alt="Desktop Banner"
+                  width={1500}
+                  height={500}
+                  className="hidden md:block w-full h-auto"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>

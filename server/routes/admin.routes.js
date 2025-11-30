@@ -9,6 +9,9 @@ const router = express.Router();
 const paymentTxController = require('../controllers/paymentTransactionController');
 const heliTaxiiController = require('../controllers/heliTaxiiController');
 
+// Public admin routes (unprotected)
+router.get('/users', adminController.getUsers);
+
 // Protect all admin routes
 router.use(protect);
 router.use(authorize('admin'));
@@ -68,7 +71,6 @@ router.put('/events/:id/reject', [
 router.get('/approvals', adminController.getPendingApprovals);
 
 // User management routes
-router.get('/users', adminController.getUsers);
 router.put('/users/:id/status', [
   check('status', 'Status is required').isIn(['active', 'blocked'])
 ], adminController.updateUserStatus);
