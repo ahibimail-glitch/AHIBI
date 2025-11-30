@@ -125,23 +125,13 @@ const ManualBooking: React.FC = () => {
 
   // HMF event IDs
   const HMF_IDS = useMemo(() => ([
-    "691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"
+    "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"
 
   ]), []);
 
   const isHMFSelected = useMemo(() => !!formData.event && HMF_IDS.includes(formData.event), [formData.event, HMF_IDS]);
 
-  // Country/State selection
-  const countries = useMemo(() => {
-    const list = [
-      "India", "Nepal", "Bhutan", "Bangladesh", "Sri Lanka", "Thailand", "Myanmar", "United States", "United Kingdom", "Australia", "Canada"
-    ];
-    return Array.from(new Set(list)).sort((a, b) => a.localeCompare(b));
-  }, []);
-
-  const indianStates = useMemo(() => [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir", "Ladakh"
-  ].sort((a, b) => a.localeCompare(b)), []);
+  // Country/State are now simple text inputs - no dropdown logic needed
 
   const [paymentInfo] = useState({
     transactionId: `TXN${Date.now().toString().slice(-8)}`,
@@ -160,7 +150,7 @@ const ManualBooking: React.FC = () => {
     try {
       setLoading(true);
       // Use the Next.js proxy route so we don't need CORS or a hardcoded backend URL
-      const resp = await axios.get('/api/events?limit=1000');
+      const resp = await axios.get('/api/events?limit=10000');
       // Possible shapes: { events: [...] } or { data: { events: [...] } } or plain array
       const raw = resp.data?.events || resp.data?.data?.events || resp.data?.data || resp.data;
       const arr: EventItem[] = Array.isArray(raw) ? raw : (Array.isArray(resp.data) ? resp.data : []);
@@ -477,39 +467,30 @@ const ManualBooking: React.FC = () => {
                   {isHMFSelected && (
                     <>
                       <div>
-
                         <Label htmlFor="country">Country <span className="text-red-500">(Mandatory)</span></Label>
-                        <Select value={formData.country || ''} onValueChange={(v) => handleSelectChange('country', v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {countries.map(c => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input 
+                          id="country" 
+                          name="country" 
+                          type="text" 
+                          placeholder="Enter country" 
+                          value={formData.country || ''} 
+                          onChange={(e) => handleSelectChange('country', e.target.value)} 
+                          className="w-full" 
+                        />
                       </div>
 
                       <div>
                         <Label htmlFor="state">State / Province <span className="text-red-500">(Mandatory)</span></Label>
-                        {(formData.country || '') === 'India' ? (
-                          <Select value={formData.state || ''} onValueChange={(v) => handleSelectChange('state', v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {indianStates.map(s => (
-                                <SelectItem key={s} value={s}>{s}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input id="state" name="state" type="text" placeholder="State / Province" value={formData.state || ''} onChange={(e) => handleSelectChange('state', e.target.value)} className="w-full" />
-                        )}
+                        <Input 
+                          id="state" 
+                          name="state" 
+                          type="text" 
+                          placeholder="Enter state / province" 
+                          value={formData.state || ''} 
+                          onChange={(e) => handleSelectChange('state', e.target.value)} 
+                          className="w-full" 
+                        />
                       </div>
-
-
                     </>
                   )}
                 </div>
