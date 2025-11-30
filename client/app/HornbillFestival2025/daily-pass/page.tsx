@@ -50,7 +50,7 @@ const MusicFestival = () => {
       icon: Users2,
       title: "Single Day Pass",
       price: "₹150",
-      description: "Standing area with direct crowd energy and stage view",
+      description: "Entry to Hornbill festival",
       features: [
         // "Standing area access",
         // "Front crowd energy",
