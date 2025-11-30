@@ -185,11 +185,32 @@ export default function MerchOrders() {
 
   const exportToExcel = () => {
     const data = [
-      ['Order ID', 'Date', 'Customer', 'Phone', 'Email', 'Items', 'Subtotal', 'Tax', 'Shipping', 'Total', 'Status']
+      [
+        'Order ID',
+        'Date',
+        'Customer',
+        'Phone',
+        'Email',
+        'Items',
+        'Subtotal',
+        'Tax',
+        'Shipping',
+        'Total',
+        'Status',
+        'Address Line 1',
+        'Address Line 2',
+        'City',
+        'State',
+        'Postal Code',
+        'Country'
+      ]
     ];
-
+  
     filteredOrders.forEach(order => {
-      const itemNames = order.items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+      const itemNames = order.items
+        .map(item => `${item.name} (x${item.quantity})`)
+        .join(', ');
+  
       data.push([
         order._id,
         new Date(order.createdAt).toLocaleDateString(),
@@ -201,24 +222,47 @@ export default function MerchOrders() {
         `₹${order.tax.toFixed(2)}`,
         `₹${order.shipping.toFixed(2)}`,
         `₹${order.total.toFixed(2)}`,
-        order.status.toUpperCase()
+        order.status.toUpperCase(),
+        order.shippingAddress.addressLine1,
+        order.shippingAddress.addressLine2 || '',
+        order.shippingAddress.city,
+        order.shippingAddress.state,
+        order.shippingAddress.postalCode,
+        order.shippingAddress.country
       ]);
     });
-    
+  
     const ws = XLSX.utils.aoa_to_sheet(data);
+  
+    // Adjust column widths
     const wscols = [
-      { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 25 },
-      { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
+      { wch: 25 }, // Order ID
+      { wch: 15 }, // Date
+      { wch: 20 }, // Customer
+      { wch: 15 }, // Phone
+      { wch: 25 }, // Email
+      { wch: 40 }, // Items
+      { wch: 12 }, // Subtotal
+      { wch: 12 }, // Tax
+      { wch: 12 }, // Shipping
+      { wch: 12 }, // Total
+      { wch: 12 }, // Status
+      { wch: 30 }, // Address Line 1
+      { wch: 30 }, // Address Line 2
+      { wch: 15 }, // City
+      { wch: 15 }, // State
+      { wch: 12 }, // Postal Code
+      { wch: 12 }, // Country
     ];
     ws['!cols'] = wscols;
-    
+  
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Merch Orders");
-    
+  
     const fileName = `merch-orders-export-${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
-
+  
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'paid':
