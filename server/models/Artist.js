@@ -74,9 +74,7 @@ const ArtistSchema = new mongoose.Schema({
     type: String,
     maxlength: 2000
   },
-  genres: [{
-    type: String
-  }],
+
   languages: [{
     type: String
   }],

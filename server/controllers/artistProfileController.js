@@ -349,7 +349,7 @@ exports.getApprovedArtists = async (req, res) => {
     const { 
       page = 1, 
       limit = 12, 
-      genre, 
+ 
       type, 
       city, 
       minPrice, 
@@ -363,9 +363,7 @@ exports.getApprovedArtists = async (req, res) => {
     };
 
     // Add filters
-    if (genre) {
-      query.genres = { $in: [genre] };
-    }
+
     
     if (type) {
       query.type = type;
@@ -382,7 +380,7 @@ exports.getApprovedArtists = async (req, res) => {
     }
 
     const artists = await Artist.find(query)
-      .select('name bio genres type basePrice city rating gallery.photos socialLinks')
+      .select('name bio type basePrice city rating gallery.photos socialLinks')
       .sort({ [sortBy]: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);

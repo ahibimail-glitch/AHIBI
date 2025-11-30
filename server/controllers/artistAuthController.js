@@ -21,7 +21,7 @@ exports.artistSignup = async (req, res) => {
     phone,
     city,
     bio,
-    genres,
+
     type,
     specialization,
     basePrice,
@@ -45,7 +45,7 @@ exports.artistSignup = async (req, res) => {
       phone,
       city,
       bio,
-      genres,
+
       type: type || specialization,
       basePrice,
       experience,
@@ -255,7 +255,7 @@ exports.updateArtistProfile = async (req, res) => {
       bio,
       shortBio,
       longBio,
-      genres, 
+ 
       artistCategories,
       type, 
       specialization, 
@@ -294,7 +294,7 @@ exports.updateArtistProfile = async (req, res) => {
     if (isValidValue(bio)) artist.bio = bio;
     if (isValidValue(shortBio)) artist.shortBio = shortBio;
     if (isValidValue(longBio)) artist.longBio = longBio;
-    if (genres !== undefined && Array.isArray(genres)) artist.genres = genres;
+
     if (artistCategories !== undefined && Array.isArray(artistCategories)) artist.artistCategories = artistCategories;
     if (type !== undefined || specialization !== undefined) artist.type = type || specialization;
     if (basePrice !== undefined && basePrice !== null && basePrice !== '') artist.basePrice = parseFloat(basePrice);

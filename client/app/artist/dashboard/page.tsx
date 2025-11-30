@@ -981,14 +981,14 @@ export default function ArtistDashboard() {
                       )}
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 mr-1" />
-                        {profile?.location || 'Location not set'}
+                        {profile?.city || 'Location not set'}
                       </div>
                       <div className="flex items-center">
                         <DollarSign className="h-4 w-4 mr-1" />
-                        Starting from ₹{profile?.basePrice || 'Not set'}
+                        Starting from ₹{profile?.feeRange?.min || 'Not set'}
                       </div>
                     </div>
-                    <p className="text-muted-foreground mb-3">{profile?.bio || 'No bio available'}</p>
+                    <p className="text-muted-foreground mb-3">{profile?.shortBio || 'No bio available'}</p>
                     <div className="flex flex-wrap gap-2">
                       {profile?.genres?.map((g) => (
                         <Badge key={g} variant="secondary">
