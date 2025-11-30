@@ -208,7 +208,8 @@ const ManualBooking: React.FC = () => {
       setLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const token = localStorage.getItem('admin_token');
-      const resp = await axios.get(`${apiUrl}/api/admin/users?limit=1000`, {
+      // Fetch all users without pagination limit
+      const resp = await axios.get(`${apiUrl}/api/admin/users?limit=10000`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = resp.data?.data?.users || resp.data?.users || resp.data?.data || resp.data;
