@@ -55,7 +55,8 @@ const QrScanner = () => {
         }
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/organizer/events`, {
+        // Fetch all events without pagination limit
+        const response = await fetch(`${apiUrl}/api/organizer/events?limit=10000`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

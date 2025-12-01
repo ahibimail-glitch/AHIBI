@@ -751,31 +751,37 @@ exports.getUsers = async (req, res) => {
       ];
     }
     
-    // Calculate pagination
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    
-    // Get users - if limit is 1000 or higher, return all users (no limit)
-    let query = User.find(filter)
-      .select('-otp -passwordResetToken -passwordResetExpires')
-      .sort({ createdAt: -1 });
-      
-    // Apply pagination only if limit is less than 1000
-    if (parseInt(limit, 10) < 1000) {
-      query = query.skip(skip).limit(parseInt(limit, 10));
-    }
-    
-    const users = await query;
+    // Parse limit and page
+    const parsedLimit = parseInt(limit, 10);
+    const parsedPage = parseInt(page, 10);
     
     // Get total count
     const total = await User.countDocuments(filter);
+    
+    // Get users - if limit is 10000 or higher, return all users (no limit)
+    let users;
+    if (parsedLimit >= 10000) {
+      users = await User.find(filter)
+        .select('-otp -passwordResetToken -passwordResetExpires')
+        .sort({ createdAt: -1 });
+    } else {
+      // Calculate pagination
+      const skip = (parsedPage - 1) * parsedLimit;
+      
+      users = await User.find(filter)
+        .select('-otp -passwordResetToken -passwordResetExpires')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit);
+    }
     
     return ApiResponse.success(res, 'Users retrieved successfully', {
       users,
       pagination: {
         total,
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10) < 1000 ? parseInt(limit, 10) : total,
-        pages: parseInt(limit, 10) < 1000 ? Math.ceil(total / parseInt(limit, 10)) : 1
+        page: parsedPage,
+        limit: parsedLimit >= 10000 ? total : parsedLimit,
+        pages: parsedLimit >= 10000 ? 1 : Math.ceil(total / parsedLimit)
       }
     });
   } catch (error) {

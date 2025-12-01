@@ -555,7 +555,7 @@ export default function HomePage() {
       </section>
 
       {/* HELITAXI ADD */}
-      <section className="relative  overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 sm:py-14 md:py-20">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 sm:py-14 md:py-20">
 
         <div className="absolute inset-0 opacity-20">
           <img

@@ -296,26 +296,38 @@ const getPublicEvents = async (req, res) => {
       ];
     }
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Parse limit and page
+    const parsedLimit = parseInt(limit);
+    const parsedPage = parseInt(page);
 
-    // Get events with pagination
-    const [events, total] = await Promise.all([
-      Event.find(query)
+    // Get total count
+    const total = await Event.countDocuments(query);
+
+    // If limit is very high (e.g., 10000), return all events without pagination
+    let events;
+    if (parsedLimit >= 10000) {
+      events = await Event.find(query)
+        .sort({ startDate: 1 }) // Sort by start date (ascending)
+        .lean();
+    } else {
+      // Calculate pagination
+      const skip = (parsedPage - 1) * parsedLimit;
+      
+      // Get events with pagination
+      events = await Event.find(query)
         .sort({ startDate: 1 }) // Sort by start date (ascending)
         .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      Event.countDocuments(query)
-    ]);
-    // console.log(events);
+        .limit(parsedLimit)
+        .lean();
+    }
+
     return ApiResponse.success(res, 'Events fetched successfully', {
       events,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / parseInt(limit))
+        page: parsedPage,
+        limit: parsedLimit >= 10000 ? total : parsedLimit,
+        pages: parsedLimit >= 10000 ? 1 : Math.ceil(total / parsedLimit)
       }
     });
   } catch (error) {
