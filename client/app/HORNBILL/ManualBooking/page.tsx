@@ -17,6 +17,7 @@ import { Ticket, CheckCircle, Download as DownloadIcon, Calendar, Clock, QrCode 
 import axios from 'axios';
 import InvoiceGenerator from '@/components/invoice-generator';
 
+
 interface TicketType {
   _id?: string;
   name: string;
