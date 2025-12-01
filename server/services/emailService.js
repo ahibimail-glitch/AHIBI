@@ -408,15 +408,39 @@ class EmailService {
                 <span>Tax:</span>
                 <span>₹${(order.tax || 0).toFixed(2)}</span>
               </div>
-              <div style="display: flex; justify-content: space-between; margin: 8px 0;">
-                <span>Shipping:</span>
-                <span>${(order.shipping || 0) === 0 ? 'FREE' : `₹${order.shipping.toFixed(2)}`}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; margin: 8px 0; padding-top: 12px; border-top: 2px solid #e0e0e0; font-size: 18px; font-weight: 600;">
-                <span>Total:</span>
-                <span style="color: #667eea;">₹${(order.total || 0).toFixed(2)}</span>
-              </div>
-            </div>
+            <div>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      margin: "8px 0",
+    }}
+  >
+    <span>Shipping:</span>
+    <span>
+      There may be additional shipping cost based on the location. Our team will
+      contact you before dispatch.
+    </span>
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      margin: "8px 0",
+      paddingTop: "12px",
+      borderTop: "2px solid #e0e0e0",
+      fontSize: "18px",
+      fontWeight: 600,
+    }}
+  >
+    <span>Total:</span>
+    <span style={{ color: "#667eea" }}>
+      ₹{(order.total || 0).toFixed(2)}
+    </span>
+  </div>
+</div>
+
 
             <div style="background: white; padding: 20px; border-radius: 8px;">
               <h3 style="color: #333; margin-top: 0; margin-bottom: 15px; font-size: 18px;">Shipping Address</h3>

@@ -592,10 +592,10 @@ const MerchCheckoutInner = () => {
               </div>
   
               <div className="flex justify-between">
-                <span>Shipping</span>
+               
                 <span>
                   {orderSummary.shipping === 0
-                    ? "Free"
+                    ? "There may be additional shipping cost based on the location. Our team will contact you before dispatch."
                     : formatCurrency(orderSummary.shipping)}
                 </span>
               </div>

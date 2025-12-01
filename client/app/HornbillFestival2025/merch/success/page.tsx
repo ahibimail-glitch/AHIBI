@@ -270,7 +270,7 @@ function MerchOrderSuccessInner() {
                   <span className="text-muted-foreground">Shipping</span>
                   <span>
                     {(order.shipping || 0) === 0 ? (
-                      <span className="text-green-600 font-semibold">FREE</span>
+                      <span className="text-green-600 font-semibold">Depends on location.</span>
                     ) : (
                       formatCurrency(order.shipping)
                     )}
