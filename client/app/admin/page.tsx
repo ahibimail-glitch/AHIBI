@@ -55,9 +55,11 @@ import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
 import FeaturedEvents from "./components/FeaturedEvents";
-import HmfTickets from "./components/HmfTickets";
+
 import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
+import HmfTickets from "./components/HmfTickets";
+import HFTickets from "./components/HFTickets";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -182,6 +184,8 @@ export default function AdminDashboard() {
         return <FeaturedEvents />;
       case "hmf-tickets":
         return <HmfTickets />;
+      case "hf-tickets":
+        return <HFTickets />;
       case "merch-orders":
         return <MerchOrders />;
       case "helitaxii-leads":
@@ -261,6 +265,7 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">HMF</h3>
           </div>
           <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => setActiveView("hmf-tickets")} />
+          <SidebarButton icon={Ticket} label="HF Tickets" active={activeView === "hf-tickets"} onClick={() => setActiveView("hf-tickets")} />
 
           <SidebarButton icon={Ticket} label="HeliTaxii Leads" active={activeView === "helitaxii-leads"} onClick={() => setActiveView("helitaxii-leads")} />
 
