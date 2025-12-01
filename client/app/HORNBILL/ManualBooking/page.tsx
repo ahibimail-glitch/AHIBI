@@ -554,19 +554,34 @@ const ManualBooking: React.FC = () => {
                   </div>
                 </div>
               </div>
-                 <div>
-                        <Label htmlFor="modeOfPayment">Mode of Payment <span className="text-red-500">(Mandatory)</span></Label>
-                        <Select value={formData.modeOfPayment || ''} onValueChange={(v) => handleSelectChange('modeOfPayment', v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select mode of payment" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Cash">Cash</SelectItem>
-                            <SelectItem value="Card">Card</SelectItem>
-                            <SelectItem value="UPI">UPI</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+              <div className="space-y-2">
+  <Label htmlFor="modeOfPayment">
+    Mode of Payment <span className="text-red-500">(Mandatory)</span>
+  </Label>
+
+  <div className="flex flex-wrap gap-3">
+    {["Cash", "Card", "UPI"].map((mode) => {
+      const isSelected = formData.modeOfPayment === mode;
+
+      return (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => handleSelectChange("modeOfPayment", mode)}
+          className={`
+            px-4 py-2 rounded-lg border transition-all text-sm
+            ${isSelected 
+              ? "bg-blue-600 text-white border-blue-600 shadow-md" 
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}
+          `}
+        >
+          {mode}
+        </button>
+      );
+    })}
+  </div>
+</div>
+
 
               <div className="bg-gray-50 p-4 rounded-md mt-4">
                 <h3 className="font-semibold mb-2">Order Summary</h3>
