@@ -26,6 +26,7 @@ interface Booking {
   country?: string;
   state?: string;
   modeOfPayment?: string;
+  visitorType?: string;
 }
 
 const HMF_IDS = [
@@ -54,6 +55,7 @@ export default function HmfTickets() {
   const [selectedSource, setSelectedSource] = useState<string>("all");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [selectedState, setSelectedState] = useState<string>("all");
+  const [selectedVisitorType, setSelectedVisitorType] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
@@ -128,6 +130,14 @@ export default function HmfTickets() {
     return Array.from(states).sort();
   }, [bookings]);
 
+  const uniqueVisitorTypes = useMemo(() => {
+    const types = new Set<string>();
+    bookings.forEach((b) => {
+      if (b.visitorType) types.add(b.visitorType);
+    });
+    return Array.from(types).sort();
+  }, [bookings]);
+
   const visible = useMemo(() => {
     let filtered = [...bookings];
 
@@ -180,6 +190,11 @@ export default function HmfTickets() {
       filtered = filtered.filter((b) => b.state === selectedState);
     }
 
+    // Visitor type filter
+    if (selectedVisitorType !== "all") {
+      filtered = filtered.filter((b) => b.visitorType === selectedVisitorType);
+    }
+
     // Date range filter
     if (startDate) {
       filtered = filtered.filter((b) => {
@@ -200,7 +215,7 @@ export default function HmfTickets() {
     }
 
     return filtered;
-  }, [bookings, search, selectedEvent, selectedTicketType, selectedStatus, selectedSource, selectedCountry, selectedState, startDate, endDate]);
+  }, [bookings, search, selectedEvent, selectedTicketType, selectedStatus, selectedSource, selectedCountry, selectedState, selectedVisitorType, startDate, endDate]);
 
   const handleExport = () => {
     const rows = visible.map((b) => ({
@@ -214,6 +229,7 @@ export default function HmfTickets() {
       Country: b.country || '',
       State: b.state || '',
       'Mode of Payment': b.paymentId ? 'Online' : (b.modeOfPayment || 'Manual'),
+      'Visitor Type': b.visitorType || '',
       Customer: b.user?.name || "",
       Email: b.user?.email || "",
       Phone: b.user?.phone || "",
@@ -233,6 +249,7 @@ export default function HmfTickets() {
     setSelectedSource("all");
     setSelectedCountry("all");
     setSelectedState("all");
+    setSelectedVisitorType("all");
     setStartDate("");
     setEndDate("");
   };
@@ -246,10 +263,11 @@ export default function HmfTickets() {
     if (selectedSource !== "all") count++;
     if (selectedCountry !== "all") count++;
     if (selectedState !== "all") count++;
+    if (selectedVisitorType !== "all") count++;
     if (startDate) count++;
     if (endDate) count++;
     return count;
-  }, [search, selectedEvent, selectedTicketType, selectedStatus, selectedSource, selectedCountry, selectedState, startDate, endDate]);
+  }, [search, selectedEvent, selectedTicketType, selectedStatus, selectedSource, selectedCountry, selectedState, selectedVisitorType, startDate, endDate]);
 
   return (
     <div className="space-y-4">
@@ -425,6 +443,24 @@ export default function HmfTickets() {
                         onChange={(e) => setEndDate(e.target.value)}
                       />
                     </div>
+
+                    {/* Visitor Type Filter */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Visitor Type</label>
+                      <Select value={selectedVisitorType} onValueChange={setSelectedVisitorType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Visitor Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Visitor Types</SelectItem>
+                          {uniqueVisitorTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -456,6 +492,7 @@ export default function HmfTickets() {
                     <TableHead>Country</TableHead>
                     <TableHead>State</TableHead>
                     <TableHead>Mode of Payment</TableHead>
+                    <TableHead>Visitor Type</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Booked At</TableHead>
                   </TableRow>
@@ -487,6 +524,13 @@ export default function HmfTickets() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {b.visitorType ? (
+                          <Badge variant="outline">{b.visitorType}</Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">{b.user?.name || "-"}</span>
                           <span className="text-xs text-gray-500">{b.user?.email || ""}</span>
@@ -498,7 +542,7 @@ export default function HmfTickets() {
                   ))}
                   {visible.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center text-sm text-gray-500">
+                      <TableCell colSpan={12} className="text-center text-sm text-gray-500">
                         {bookings.length === 0 ? "No bookings found for HMF events." : "No bookings match the selected filters."}
                       </TableCell>
                     </TableRow>

@@ -114,6 +114,7 @@ router.get("/bookings/all",  async (req, res) => {
           country: 1,
           state: 1,
           modeOfPayment: 1,
+          visitorType: 1,
           // keep ids for potential future use
           eventId: '$event',
           userId: '$user',

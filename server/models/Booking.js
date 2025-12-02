@@ -106,6 +106,11 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     enum: ['Cash', 'Card', 'UPI'],
   },
+  // Visitor type for manual bookings
+  visitorType: {
+    type: String,
+    enum: ['Local', 'Domestic', 'International'],
+  },
   parentBookingId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking'

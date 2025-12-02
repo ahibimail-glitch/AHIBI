@@ -11,6 +11,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Ticket, CheckCircle, Download as DownloadIcon, Calendar, Clock, QrCode } from "lucide-react";
@@ -63,6 +64,7 @@ interface BookingFormData {
   country?: string;
   state?: string;
   modeOfPayment?: string;
+  visitorType?: string;
 }
 
 const ManualBooking: React.FC = () => {
@@ -118,7 +120,8 @@ const ManualBooking: React.FC = () => {
     quantity: 1,
     price: 0,
     total: 0,
-    modeOfPayment: ""
+    modeOfPayment: "",
+    visitorType: ""
   });
 
   const [ticketItems, setTicketItems] = useState<TicketItem[]>([{ ticketType: "", quantity: 1, price: 0 }]);
@@ -220,8 +223,8 @@ const ManualBooking: React.FC = () => {
     setTicketTypes(ev?.ticketTypes || []);
     // Reset ticket items when event changes
     setTicketItems([{ ticketType: '', quantity: 1, price: 0 }]);
-    // Reset country/state/modeOfPayment when switching events
-    setFormData(prev => ({ ...prev, country: undefined, state: undefined, modeOfPayment: undefined }));
+    // Reset country/state/modeOfPayment/visitorType when switching events
+    setFormData(prev => ({ ...prev, country: undefined, state: undefined, modeOfPayment: undefined, visitorType: undefined }));
   };
 
   const handleSelectChange = (field: keyof BookingFormData, value: any) => {
@@ -262,11 +265,14 @@ const ManualBooking: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.event || !formData.user) return toast({ title: 'Missing Data', description: 'Select event and user', variant: 'destructive' });
+    if (!formData.modeOfPayment) {
+      return toast({ title: 'Mode of Payment required', description: 'Please select a mode of payment.', variant: 'destructive' });
+    }
+    if (!formData.visitorType) {
+      return toast({ title: 'Visitor Type required', description: 'Please select a visitor type (Local/Domestic/International).', variant: 'destructive' });
+    }
     if (isHMFSelected) {
-      // Country and state are now optional, only validate mode of payment
-      if (!formData.modeOfPayment) {
-        return toast({ title: 'Mode of Payment required', description: 'For HMF events, please select a mode of payment.', variant: 'destructive' });
-      }
+      // Country and state are now optional for HMF events
     }
 
     try {
@@ -286,6 +292,7 @@ const ManualBooking: React.FC = () => {
         ...(formData.country ? { country: formData.country } : {}),
         ...(formData.state ? { state: formData.state } : {}),
         ...(formData.modeOfPayment ? { modeOfPayment: formData.modeOfPayment } : {}),
+        ...(formData.visitorType ? { visitorType: formData.visitorType } : {}),
       };
 
       const resp = await axios.post(`${apiUrl}/api/bookings/admin-manual-booking`, payload, {
@@ -539,6 +546,24 @@ const ManualBooking: React.FC = () => {
                     <SelectItem value="UPI">UPI</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="visitorType">Visitor Type <span className="text-red-500">(Mandatory)</span></Label>
+                <RadioGroup value={formData.visitorType || ''} onValueChange={(v) => handleSelectChange('visitorType', v)} className="flex flex-col space-y-2 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Local" id="local" />
+                    <Label htmlFor="local" className="font-normal cursor-pointer">Local</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Domestic" id="domestic" />
+                    <Label htmlFor="domestic" className="font-normal cursor-pointer">Domestic</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="International" id="international" />
+                    <Label htmlFor="international" className="font-normal cursor-pointer">International</Label>
+                  </div>
+                </RadioGroup>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-md mt-4">

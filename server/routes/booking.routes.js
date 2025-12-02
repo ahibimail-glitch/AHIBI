@@ -751,8 +751,8 @@ router.post("/check-out", async (req, res) => {
 // @access  Private (Admin)
 router.post("/admin-manual-booking",  async (req, res) => {
   try {
-    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets, country, state, modeOfPayment } = req.body;
-    console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price, tickets });
+    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets, country, state, modeOfPayment, visitorType } = req.body;
+    console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price, tickets, visitorType });
 
     // Basic validation
     if (!event || !user) {
@@ -811,6 +811,8 @@ router.post("/admin-manual-booking",  async (req, res) => {
           ...(state && { state: state }),
           // Add mode of payment for manual HMF bookings
           ...(modeOfPayment && { modeOfPayment: modeOfPayment }),
+          // Add visitor type for manual bookings
+          ...(visitorType && { visitorType: visitorType }),
         });
 
         await newBooking.save();
