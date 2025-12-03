@@ -39,7 +39,7 @@ import Navbar from "../Navbar"
 
 export default function AboutPage() {
   const stats = [
-    { number: "₹1 Cr+", label: "Event Revenue Processed", icon: DollarSign, gradient: "from-green-500 to-emerald-500" },
+    { number: "₹1 Cr+", label: "Event Revenue Processed For Clients", icon: DollarSign, gradient: "from-green-500 to-emerald-500" },
     { number: "60,000+", label: "Tickets Sold", icon: Ticket, gradient: "from-blue-500 to-cyan-500" },
     { number: "50,000+", label: "Users Onboarded", icon: Users, gradient: "from-purple-500 to-pink-500" },
     { number: "36+", label: "Major Events Delivered", icon: Calendar, gradient: "from-orange-500 to-red-500" },
@@ -264,14 +264,14 @@ export default function AboutPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-        <Navbar/>
+        <Navbar />
       </header>
 
       {/* Hero Section */}
       <section className="py-20 md:py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-secondary/10" />
         <div className="container mx-auto px-4 text-center relative">
-         
+
           <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-primary via-purple-600 to-secondary bg-clip-text text-transparent leading-tight">
             Click. Book. Go.
           </h1>
@@ -406,7 +406,7 @@ export default function AboutPage() {
       </section>
 
       {/* Core Values */}
-      <section className="py-20">
+      {/* <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-6">What Drives Us</h2>
@@ -442,7 +442,7 @@ export default function AboutPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* What We Offer */}
       <section className="py-20 bg-white">
@@ -514,7 +514,7 @@ export default function AboutPage() {
                   <p className="text-muted-foreground mb-6 leading-relaxed">"{testimonial.content}"</p>
                   <div className="flex items-center space-x-4">
                     <img
-                      src={ "/images/testimonial.jpg"}
+                      src={"/images/testimonial.jpg"}
                       alt={testimonial.name}
                       className="h-12 w-12 rounded-full object-cover"
                     />
@@ -705,7 +705,7 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-     <Footer/>
+      <Footer />
     </div>
   )
 }
