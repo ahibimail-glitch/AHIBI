@@ -39,37 +39,39 @@ import Navbar from "../Navbar"
 
 export default function AboutPage() {
   const stats = [
-    { number: "30+", label: "Events Hosted", icon: Calendar, gradient: "from-blue-500 to-cyan-500" },
-    { number: "60,000+", label: "Tickets Sold", icon: Users, gradient: "from-purple-500 to-pink-500" },
-    { number: "50,000+", label: "Happy Users", icon: Star, gradient: "from-orange-500 to-red-500" },
+    { number: "₹1 Cr+", label: "Event Revenue Processed", icon: DollarSign, gradient: "from-green-500 to-emerald-500" },
+    { number: "60,000+", label: "Tickets Sold", icon: Ticket, gradient: "from-blue-500 to-cyan-500" },
+    { number: "50,000+", label: "Users Onboarded", icon: Users, gradient: "from-purple-500 to-pink-500" },
+    { number: "36+", label: "Major Events Delivered", icon: Calendar, gradient: "from-orange-500 to-red-500" },
+    { number: "90%+", label: "Organizer Retention", icon: TrendingUp, gradient: "from-indigo-500 to-purple-500" },
   ]
 
   const journey = [
     {
-      year: "2022",
-      title: "The Beginning",
-      description: "Founded in Dimapur, Nagaland with a vision to digitize Northeast India's event ecosystem",
+      year: "October 2024",
+      title: "Ahibi Launches",
+      description: "Ahibi launches with a simple idea: make events easier.",
       icon: Rocket,
       color: "bg-blue-500",
     },
     {
-      year: "2023",
-      title: "First Major Events",
-      description: "Successfully managed 15+ large-scale events across Nagaland and Assam",
+      year: "Late 2024 – Early 2025",
+      title: "Local Events Take Off",
+      description: "We start powering local events, concerts, and tournaments. Our ticketing and QR check-in systems take off.",
       icon: Trophy,
       color: "bg-green-500",
     },
     {
-      year: "2024",
-      title: "Platform Launch",
-      description: "Launched Ahibi 3.0 - the comprehensive event management ecosystem",
+      year: "Mid 2025",
+      title: "Platform Expansion",
+      description: "We expand into Ahibi Venue and Ahibi Organizer. Events, venues, and organizers now use one platform.",
       icon: Sparkles,
       color: "bg-purple-500",
     },
     {
-      year: "2025",
-      title: "Pan-India Expansion",
-      description: "Expanding to major cities across India with enhanced features and partnerships",
+      year: "Today",
+      title: "Powering Major Festivals",
+      description: "Ahibi is the digital backbone for major events like Hornbill Festival & Hornbill Music Festival.",
       icon: TrendingUp,
       color: "bg-orange-500",
     },
@@ -179,29 +181,29 @@ export default function AboutPage() {
 
   const testimonials = [
     {
-      name: "Priya Sharma",
-      role: "Independent Artist",
-      location: "Mumbai",
+      name: "Atemsü",
+      role: "Attendee",
+      location: "Kohima",
       content:
-        "Ahibi transformed my music career. I went from playing small gigs to headlining major events across India. The platform's booking system and artist tools are incredible.",
+        "Used Ahibi for the first time at the match. Honestly didn't expect it to be this smooth. Scanned my code and walked in. Very smooth at the gate.",
       rating: 5,
       image: "/placeholder.svg?height=60&width=60",
     },
     {
-      name: "Rajesh Kumar",
-      role: "Event Organizer",
-      location: "Delhi",
+      name: "Lemtila",
+      role: "Attendee",
+      location: "Dimapur",
       content:
-        "Managing events used to be a nightmare with multiple platforms and endless coordination. Ahibi brought everything under one roof. Our efficiency increased by 300%.",
+        "Bought my ticket online and I didn't have to chase anyone for updates. The whole thing felt organized. Even the entry was faster than usual.",
       rating: 5,
       image: "/placeholder.svg?height=60&width=60",
     },
     {
-      name: "Sarah Wilson",
-      role: "Venue Manager",
-      location: "Bangalore",
+      name: "Alobo Naga",
+      role: "Organizer • Annie the Musical",
+      location: "Dimapur",
       content:
-        "Our venue bookings doubled within 3 months of joining Ahibi. The automated scheduling and payment system saved us countless hours of manual work.",
+        "Annie was a sold-out show and Ahibi made the whole ticketing and entry flow smooth. Everything worked the way it should, so we could focus on the performance.",
       rating: 5,
       image: "/placeholder.svg?height=60&width=60",
     },
@@ -271,13 +273,13 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 text-center relative">
          
           <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-primary via-purple-600 to-secondary bg-clip-text text-transparent leading-tight">
-            Revolutionizing
-            <br />
-            Event Experiences
+            Click. Book. Go.
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-4xl mx-auto leading-relaxed">
-            We're building the future of events - where creators thrive, organizers succeed, and audiences discover
-            amazing experiences. Join the revolution.
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-4xl mx-auto leading-relaxed">
+            Events become simpler when organizers, venues, and artists connect on one platform.
+          </p>
+          <p className="text-2xl md:text-3xl font-semibold text-primary mb-12">
+            Ahibi brings it all together seamlessly.
           </p>
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
             <Button size="lg" className="px-8 py-4 text-lg" asChild>
@@ -299,25 +301,28 @@ export default function AboutPage() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">Trusted by Thousands</h2>
+            <h2 className="text-4xl font-bold mb-6">Why Trust Ahibi</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Our platform powers events across India, from intimate gatherings to massive festivals
+              Because we built everything from real ground experience — not theory.
+            </p>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto mt-4">
+              In about 1 year, Ahibi has powered major events across the state including the Nagaland Super League, Dr. T. Ao Trophy, TFC, WENN Bazaar, and AHIBI Fest featuring IYAZ.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {stats.map((stat, index) => (
               <div
                 key={index}
                 className="text-center group hover:scale-105 transition-all duration-500"
               >
-                <Card className="p-8 border border-indigo-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm hover:bg-white">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r ${stat.gradient} mb-6 shadow-lg`}>
-                    <stat.icon className="h-8 w-8 text-white" />
+                <Card className="p-6 border border-indigo-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm hover:bg-white">
+                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-r ${stat.gradient} mb-4 shadow-lg`}>
+                    <stat.icon className="h-7 w-7 text-white" />
                   </div>
-                  <div className={`text-5xl md:text-6xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-4`}>
+                  <div className={`text-4xl md:text-5xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-3`}>
                     {stat.number}
                   </div>
-                  <div className="text-xl font-semibold text-gray-600">{stat.label}</div>
+                  <div className="text-base font-semibold text-gray-600">{stat.label}</div>
                 </Card>
               </div>
             ))}
@@ -331,16 +336,14 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <Badge variant="outline" className="mb-6 px-4 py-2">
-                Our Mission
+                What is Ahibi?
               </Badge>
-              <h2 className="text-4xl font-bold mb-6">Empowering the Creative Economy</h2>
+              <h2 className="text-4xl font-bold mb-6">A Modern Event-Tech Platform</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                We believe every creator deserves a platform to shine, every organizer should have the tools to succeed,
-                and every audience member should discover experiences that move them.
+                Ahibi is a modern event-tech platform that helps you run better events.
               </p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Ahibi isn't just a platform - it's a movement to professionalize and democratize the event industry
-                across India.
+                We power ticketing, check-ins, payments, venues, and bookings — all in one place.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Badge variant="secondary" className="px-4 py-2">
@@ -359,11 +362,13 @@ export default function AboutPage() {
             </div>
             <Card className="border-0 shadow-2xl bg-gradient-to-br from-primary/10 via-white to-secondary/10">
               <CardContent className="p-8">
-                <Trophy className="h-16 w-16 text-primary mb-6" />
-                <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
+                <Target className="h-16 w-16 text-primary mb-6" />
+                <h3 className="text-2xl font-bold mb-4">Why We Exist</h3>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  To become India's leading event ecosystem where creativity meets opportunity, technology enables
-                  success, and every event creates lasting memories.
+                  Events are stressful when everything happens on calls and WhatsApp.
+                </p>
+                <p className="text-lg text-muted-foreground leading-relaxed mt-4">
+                  Ahibi was built to make events smoother, faster, and more organized.
                 </p>
               </CardContent>
             </Card>
@@ -443,9 +448,9 @@ export default function AboutPage() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">Built for Everyone</h2>
+            <h2 className="text-4xl font-bold mb-6">What We're Building</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Comprehensive solutions tailored for every stakeholder in the event ecosystem
+              Simple tools to help everyone in the event ecosystem
             </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -493,9 +498,9 @@ export default function AboutPage() {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">What Our Users Say</h2>
+            <h2 className="text-4xl font-bold mb-6">Reviews</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Real stories from real people who've transformed their event experiences with Ahibi
+              Real feedback from people who've experienced Ahibi
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -509,7 +514,7 @@ export default function AboutPage() {
                   <p className="text-muted-foreground mb-6 leading-relaxed">"{testimonial.content}"</p>
                   <div className="flex items-center space-x-4">
                     <img
-                      src={testimonial.image || "/placeholder.svg"}
+                      src={ "/images/testimonial.jpg"}
                       alt={testimonial.name}
                       className="h-12 w-12 rounded-full object-cover"
                     />
@@ -569,7 +574,7 @@ export default function AboutPage() {
       </section>
 
       {/* Team Section */}
-      <section className="py-20">
+      {/* <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-6">Meet Our Team</h2>
@@ -604,7 +609,7 @@ export default function AboutPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Call to Action */}
       <section className="py-20 bg-gradient-to-r from-primary to-purple-600  text-white">
