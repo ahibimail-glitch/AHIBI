@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Filter, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Filter, X, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,6 +60,7 @@ export default function HFTickets() {
   const [selectedVisitorType, setSelectedVisitorType] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -270,6 +271,37 @@ export default function HFTickets() {
     if (endDate) count++;
     return count;
   }, [search, selectedEvent, selectedTicketType, selectedStatus, selectedSource, selectedCountry, selectedState, selectedVisitorType, startDate, endDate]);
+
+  const handleDelete = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to delete this booking? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setDeletingId(bookingId);
+      const token = localStorage.getItem("admin_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const resp = await fetch(`${apiUrl}/api/admin/bookings/${bookingId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        throw new Error(errorData.message || "Failed to delete booking");
+      }
+
+      // Remove the booking from the local state
+      setBookings((prev) => prev.filter((b) => b._id !== bookingId));
+      alert("Booking deleted successfully");
+    } catch (e: any) {
+      alert(e?.message || "Failed to delete booking");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -497,6 +529,7 @@ export default function HFTickets() {
                     <TableHead>Visitor Type</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Booked At</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -540,11 +573,21 @@ export default function HFTickets() {
                         </div>
                       </TableCell>
                       <TableCell>{b.bookedAt ? format(new Date(b.bookedAt), "dd MMM yyyy, HH:mm") : "-"}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(b._id)}
+                          disabled={deletingId === b._id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {visible.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center text-sm text-gray-500">
+                      <TableCell colSpan={13} className="text-center text-sm text-gray-500">
                         {bookings.length === 0 ? "No bookings found for HF events." : "No bookings match the selected filters."}
                       </TableCell>
                     </TableRow>

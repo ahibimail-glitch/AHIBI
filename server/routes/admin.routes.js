@@ -189,6 +189,28 @@ router.get("/bookings/all",  async (req, res) => {
   }
 });
 
+// Delete booking
+router.delete("/bookings/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find and delete the booking
+    const booking = await Booking.findByIdAndDelete(id);
+    
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    
+    res.json({ 
+      message: "Booking deleted successfully",
+      deletedBooking: booking 
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // Payments: list and resolve paid but not booked
 router.get('/payments/paid-no-booking', paymentTxController.getPaidNoBooking);
 router.get('/payments/annie-failed-bookings', paymentTxController.getAnnieFailedBookings);
