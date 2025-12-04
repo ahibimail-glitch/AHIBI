@@ -363,7 +363,7 @@ const CTA = () => (
             <Link href="/venue/auth/signup">
             <Button size="lg" className="rounded-2xl px-8 bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">List your venue free</Button>
             </Link>
-            <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-white hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Contact support</Button>
+            <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-purple-600 hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Contact support</Button>
           </div>
         </div>
         <div className="rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm p-6">
