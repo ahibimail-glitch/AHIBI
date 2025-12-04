@@ -12,12 +12,12 @@ import Footer from "../Footer";
 import Navbar from "../Navbar";
 
 const features = [
-  { icon: Search, title: "Get Discovered", text: "Your venue appears in organizer searches with capacity, location, and facility filters." },
-  { icon: CalendarClock, title: "Smart Booking System", text: "Real-time availability calendar, instant booking confirmations, and automated reminders." },
-  { icon: Wallet, title: "Flexible Pricing", text: "Set hourly rates, full-day packages, cleaning fees, and security deposits with transparent pricing." },
-  { icon: Shield, title: "Secure Bookings", text: "Payment verification, cancellation policies, and booking protection in one platform." },
-  { icon: Sparkles, title: "Showcase Your Space", text: "Upload high-quality photos, virtual tours, and highlight your venue's unique features." },
-  { icon: SlidersHorizontal, title: "Management Dashboard", text: "Track bookings, manage availability, view analytics, and handle customer reviews effortlessly." },
+  { icon: Search, title: "Get Discovered", text: "Your venue becomes visible to families, planners, and organizers searching by location, capacity, and budget." },
+  { icon: CalendarClock, title: "Smart Booking System", text: "Real-time availability, instant confirmations, structured enquiries, and automated reminders — no more scattered WhatsApp messages." },
+  { icon: Wallet, title: "Flexible Pricing", text: "Set hourly rates, full-day packages, or custom options with transparent pricing. Free listing. No convenience fees." },
+  { icon: Shield, title: "Secure Bookings", text: "Verified payments, transparent cancellation policies, and booking protection in one trusted platform." },
+  { icon: Sparkles, title: "Showcase Your Space", text: "Upload high-quality photos, add 360° virtual tours, and highlight the best features of your venue." },
+  { icon: SlidersHorizontal, title: "Management Dashboard", text: "Track bookings, manage availability, view analytics, and respond to customers — all in one simple dashboard." },
 ];
 
 const categories = [
@@ -101,10 +101,10 @@ const Hero = () => (
       <div>
         <h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
           AHIBI Venue
-          <span className="block text-gray-600 text-3xl md:text-4xl mt-2">List. Get Booked. Earn. Grow.</span>
+          <span className="block text-gray-600 text-3xl md:text-4xl mt-2">Get discovered. Get booked.</span>
         </h1>
         <p className="mt-6 text-gray-600 md:text-xl leading-relaxed">
-          Showcase your venue with photos, facilities, and real-time availability. Event organizers find, compare, and book your space in minutes.
+          Showcase your venue with photos, facilities and real-time availability. Families, organizers, and event planners can now find, compare and book your venue in minutes.
         </p>
         <div className="mt-8 flex flex-wrap gap-4">
           <Link href="/venue/auth/signup">
@@ -217,8 +217,8 @@ const Hero = () => (
 const FeatureGrid = () => (
   <Section id="features">
     <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Built for venues, designed for success</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Everything organizers need to book. Everything venue owners need to manage effortlessly.</p>
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Built for venues, designed for every event.</h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Whether it’s a birthday, wedding, workshop, concert, or corporate event—AHIBI makes booking and managing venues effortless.</p>
     </div>
     <div className="grid gap-6 md:grid-cols-3">
       {features.map((f) => (
@@ -235,6 +235,39 @@ const FeatureGrid = () => (
         </Card>
       ))}
     </div>
+  </Section>
+);
+
+// Search section for discovery
+const SearchSection = () => (
+  <Section id="discover">
+    <div className="mb-8 text-center">
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Find the perfect venue for any event</h2>
+      <p className="mt-2 text-gray-600">Use smart filters to discover venues by location, capacity, budget and facilities</p>
+    </div>
+    <Card className="rounded-2xl shadow-2xl border-purple-200/50 bg-white/80 backdrop-blur-sm">
+      <CardContent className="space-y-4 pt-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <Input placeholder="City or Area" className="border-purple-200" />
+          <Input placeholder="Capacity (e.g., 100-500)" className="border-purple-200" />
+          <Input placeholder="Budget (e.g., ₹50k–₹1L)" className="border-purple-200" />
+          <Input placeholder="Facilities (Parking, AC, Stage)" className="border-purple-200" />
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="flex flex-wrap gap-2 text-sm text-gray-700">
+            {["Banquet Hall", "Auditorium", "Conference Room", "Open Air"].map((t) => (
+              <Badge key={t} variant="secondary" className="rounded-2xl">{t}</Badge>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-700"><Search className="h-4 w-4 mr-2" />Search</Button>
+            <Button className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" asChild>
+              <Link href="/allVenues/list">Book Your Venue</Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   </Section>
 );
 
@@ -357,6 +390,7 @@ export default function AhibiVenuePage() {
       <main>
         <Navbar />
         <Hero />
+        <SearchSection />
         <FeatureGrid />
         <HowItWorks />
         <Plans />
