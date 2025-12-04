@@ -153,7 +153,7 @@ const ManualBooking: React.FC = () => {
     try {
       setLoading(true);
       // Use the Next.js proxy route so we don't need CORS or a hardcoded backend URL
-      const resp = await axios.get('/api/events?limit=10000');
+      const resp = await axios.get('/api/events?limit=1000');
       // Possible shapes: { events: [...] } or { data: { events: [...] } } or plain array
       const raw = resp.data?.events || resp.data?.data?.events || resp.data?.data || resp.data;
       const arr: EventItem[] = Array.isArray(raw) ? raw : (Array.isArray(resp.data) ? resp.data : []);
