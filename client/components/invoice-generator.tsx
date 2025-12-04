@@ -209,7 +209,7 @@ const InvoiceCard: React.FC<{ data: InvoiceData; onDownload?: () => void }> = ({
                   <img src={qrUrl} alt="Invoice QR Code" width={180} height={180} className="mx-auto" />
                 </div>
                 <div className="mt-4 text-center">
-                  <p className="text-sm font-medium text-blue-700">Scan at Dimapur Hall Town</p>
+                  <p className="text-sm font-medium text-blue-700">Scan at {data.eventLocation || "Event Location"}</p>
                 </div>
               </div>
             ) : (
