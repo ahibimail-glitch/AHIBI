@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface User {
   id: string;
@@ -106,6 +107,21 @@ export default function Users({ searchQuery, setSearchQuery }: UsersProps) {
       )
     : users;
 
+  const handleExport = () => {
+    const exportData = filteredUsers.map((user) => ({
+      ID: user.id,
+      Name: user.name,
+      Email: user.email,
+      Mobile: user.mobile,
+      "Created On": user.createdOn,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Users");
+    XLSX.writeFile(wb, `users_${Date.now()}.xlsx`);
+  };
+
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
       <CardHeader>
@@ -121,6 +137,9 @@ export default function Users({ searchQuery, setSearchQuery }: UsersProps) {
                 className="pl-10 w-80"
               />
             </div>
+            <Button variant="outline" onClick={handleExport} disabled={filteredUsers.length === 0}>
+              <Download className="h-4 w-4 mr-2" /> Export
+            </Button>
             <Button>
               <Plus className="h-4 w-4 mr-2" /> Add User
             </Button>
