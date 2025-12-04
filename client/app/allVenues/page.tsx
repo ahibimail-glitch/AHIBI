@@ -390,7 +390,7 @@ export default function AhibiVenuePage() {
       <main>
         <Navbar />
         <Hero />
-        <SearchSection />
+        {/* <SearchSection /> */}
         <FeatureGrid />
         <HowItWorks />
         <Plans />
