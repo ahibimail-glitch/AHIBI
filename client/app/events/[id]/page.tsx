@@ -1048,6 +1048,87 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         </div>
       </div>
 
+      {/* HMF Day 6 Postponement Notice (only for event id 691b1066a9a25d4fec36f96c) */}
+    {params.id === "691b156ea9a25d4fec36fc8d" && (
+  <div className="bg-gradient-to-b from-yellow-50 to-white border-b border-yellow-200/60">
+    <div className="container mx-auto px-4 py-6">
+      <div className="rounded-xl p-5 sm:p-6 bg-white border border-yellow-300 shadow-md shadow-yellow-100/40">
+        <div className="flex items-start gap-4">
+          <div className="bg-yellow-100 rounded-full p-2.5 shadow-sm">
+            <Shield className="h-5 w-5 text-yellow-700" />
+          </div>
+
+          <div className="flex-1">
+            {/* Title */}
+            <p className="text-sm font-bold tracking-wide text-yellow-900 uppercase">
+              Important Notice · Ahibi.in
+            </p>
+
+            {/* Subheading */}
+            <h3 className="mt-1 text-base sm:text-lg font-semibold text-gray-900">
+              Hornbill Music Festival – Date Change Announcement
+            </h3>
+
+            {/* Message */}
+            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed">
+              The Day 6 show of the Hornbill Music Festival scheduled for{" "}
+              <span className="font-semibold text-gray-900">
+                6th December 2025
+              </span>{" "}
+              featuring <span className="font-semibold">Sanam</span> has been
+              <span className="font-semibold text-yellow-800"> postponed </span>
+              to <span className="font-semibold text-gray-900">
+                10th December 2025
+              </span>.
+              We sincerely apologize for the inconvenience and appreciate your
+              understanding.
+            </p>
+
+            {/* Contact */}
+            <div className="mt-4 text-sm text-gray-800 space-y-1.5">
+              <p className="font-semibold">For refund assistance:</p>
+              <p>
+                📧{" "}
+                <a
+                  href="mailto:connect@ahibi.in"
+                  className="text-indigo-700 font-medium hover:underline"
+                >
+                  connect@ahibi.in
+                </a>
+              </p>
+              <p className="space-x-2">
+                📞{" "}
+                <a href="tel:7005727288" className="hover:underline">
+                  7005727288
+                </a>
+                <a href="tel:8132887985" className="hover:underline">
+                  / 8132887985
+                </a>
+                <a href="tel:6909156531" className="hover:underline">
+                  / 6909156531
+                </a>
+              </p>
+            </div>
+
+            {/* Free Entry Info */}
+            <div className="mt-4 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm font-semibold text-green-800">
+                Good news! The rescheduled show on 10th December will be a
+                <span className="text-green-900"> non-ticketed event</span>.
+                Entry is <span className="font-bold">completely free</span>.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <p className="mt-3 text-xs text-gray-500 font-medium">— Team AHIBI</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+
       <div className="container mx-auto px-4 py-8 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
