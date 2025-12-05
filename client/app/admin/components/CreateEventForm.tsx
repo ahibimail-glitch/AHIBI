@@ -53,6 +53,11 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     category: "",
     image: "",
     isFreeEvent: false,
+    website: "",
+    facebook: "",
+    instagram: "",
+    twitter: "",
+    youtube: "",
   });
   
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
@@ -325,7 +330,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       } : {
         percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
         fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0
-      }
+      },
+      socialLinks: Object.fromEntries(
+        Object.entries({
+          website: eventData.website?.trim(),
+          facebook: eventData.facebook?.trim(),
+          instagram: eventData.instagram?.trim(),
+          twitter: eventData.twitter?.trim(),
+          youtube: eventData.youtube?.trim(),
+        }).filter(([_, v]) => !!v)
+      )
     };
 
     try {
@@ -557,6 +571,36 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </Select>
               </div>
             </div>
+            
+            {/* Social Links */}
+            <Card className="border border-border">
+              <CardHeader>
+                <CardTitle className="text-base">Social & Website Links (optional)</CardTitle>
+                <CardDescription>Add links to your event's official pages.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input id="website" value={eventData.website} onChange={handleChange} placeholder="https://example.com" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="instagram">Instagram</Label>
+                  <Input id="instagram" value={eventData.instagram} onChange={handleChange} placeholder="https://instagram.com/yourpage" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="facebook">Facebook</Label>
+                  <Input id="facebook" value={eventData.facebook} onChange={handleChange} placeholder="https://facebook.com/yourpage" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="twitter">X/Twitter</Label>
+                  <Input id="twitter" value={eventData.twitter} onChange={handleChange} placeholder="https://x.com/yourpage" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="youtube">YouTube</Label>
+                  <Input id="youtube" value={eventData.youtube} onChange={handleChange} placeholder="https://youtube.com/@yourchannel" />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Free Event Option */}
             <div className="flex items-center space-x-2">

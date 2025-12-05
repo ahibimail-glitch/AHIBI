@@ -171,6 +171,13 @@ const EventSchema = new mongoose.Schema({
   externalBookingUrl: {
     type: String
   },
+  socialLinks: {
+    website: { type: String },
+    facebook: { type: String },
+    instagram: { type: String },
+    twitter: { type: String },
+    youtube: { type: String }
+  },
   location: {
     address: {
       type: String,

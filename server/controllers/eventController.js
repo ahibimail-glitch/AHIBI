@@ -27,7 +27,8 @@ const createEvent = async (req, res) => {
       isFeatured = false,
       isFreeEvent = false,
       organizerInfo = {},
-      convenience = {}
+      convenience = {},
+      socialLinks = {}
     } = req.body;
 
     // Create event slug from title
@@ -106,7 +107,8 @@ const createEvent = async (req, res) => {
       },
       approvalStatus: 'approved',
       approvedBy: req.user.id,
-      approvedAt: new Date()
+      approvedAt: new Date(),
+      socialLinks: socialLinks || {}
     });
 
     await event.save();
@@ -855,7 +857,8 @@ const createOrganizerEvent = async (req, res) => {
       termsAndConditions = '',
       faqs = [],
       convenience = {},
-      isFreeEvent = false
+      isFreeEvent = false,
+      socialLinks = {}
     } = req.body;
 
     // Create event slug from title
@@ -901,7 +904,8 @@ const createOrganizerEvent = async (req, res) => {
         name: req.user.name
       },
       approvalStatus: 'pending',
-      convenience: isFreeEvent ? { percentage: 0, fixedAmount: 0 } : (convenience || {})
+      convenience: isFreeEvent ? { percentage: 0, fixedAmount: 0 } : (convenience || {}),
+      socialLinks: socialLinks || {}
     });
 
     await event.save();

@@ -17,6 +17,14 @@ export interface TicketType {
   benefits?: string[];
 }
 
+export interface SocialLinks {
+  website?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  youtube?: string;
+}
+
 export interface Event {
   _id: string;
   title: string;
@@ -37,6 +45,7 @@ export interface Event {
   totalTickets?: number;
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  socialLinks?: SocialLinks;
 }
 
 export interface EventsResponse {

@@ -27,6 +27,10 @@ import {
   Sparkles,
   Timer,
   Zap,
+  Globe,
+  Facebook,
+  Twitter,
+  Youtube,
 
 } from "lucide-react";
 import { format } from "date-fns";
@@ -173,6 +177,13 @@ interface Event {
   discounts: any[];
   reviews: any[];
   updatedAt: string;
+  socialLinks?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+  };
 }
 
 interface EventResponse extends Event { }
@@ -1418,6 +1429,45 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
 
 
+
+            {/* Social Links */}
+            {event.socialLinks && (
+              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Follow and Learn More</h2>
+                <div className="flex flex-wrap items-center gap-4">
+                  {event.socialLinks.website && (
+                    <a href={event.socialLinks.website.startsWith('http') ? event.socialLinks.website : `https://${event.socialLinks.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-700 hover:text-indigo-600">
+                      <Globe className="h-5 w-5" />
+                      <span className="text-sm">Website</span>
+                    </a>
+                  )}
+                  {event.socialLinks.instagram && (
+                    <a href={event.socialLinks.instagram.startsWith('http') ? event.socialLinks.instagram : `https://${event.socialLinks.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-pink-600 hover:text-pink-700">
+                      <Instagram className="h-5 w-5" />
+                      <span className="text-sm">Instagram</span>
+                    </a>
+                  )}
+                  {event.socialLinks.facebook && (
+                    <a href={event.socialLinks.facebook.startsWith('http') ? event.socialLinks.facebook : `https://${event.socialLinks.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
+                      <Facebook className="h-5 w-5" />
+                      <span className="text-sm">Facebook</span>
+                    </a>
+                  )}
+                  {event.socialLinks.twitter && (
+                    <a href={event.socialLinks.twitter.startsWith('http') ? event.socialLinks.twitter : `https://${event.socialLinks.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-800 hover:text-black">
+                      <Twitter className="h-5 w-5" />
+                      <span className="text-sm">X/Twitter</span>
+                    </a>
+                  )}
+                  {event.socialLinks.youtube && (
+                    <a href={event.socialLinks.youtube.startsWith('http') ? event.socialLinks.youtube : `https://${event.socialLinks.youtube}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-red-600 hover:text-red-700">
+                      <Youtube className="h-5 w-5" />
+                      <span className="text-sm">YouTube</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Tags */}
             {event.tags && event.tags.length > 0 && (
