@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
+import path from 'path';
 
 // Constants for the WhatsApp button
 const WHATSAPP_NUMBER = '+919862697765'; // Your WhatsApp number
@@ -15,7 +16,7 @@ export const FloatingWhatsAppButton = () => {
   const pathname = usePathname();
   
   // Don't show the WhatsApp button on Annie Musical page
-  if (pathname === '/annie-musical'||pathname === '/NagalandInfluencerSummit/register'||pathname === '/AhibiFestQRScanner'||pathname==="/admin/booking") {
+  if (pathname === '/annie-musical'||pathname === '/NagalandInfluencerSummit/register'||pathname === '/AhibiFestQRScanner'||pathname==="/admin/booking"||pathname==="/HORNBILL/ManualBooking"||pathname==="/HORNBILL/eventsScanner") {
     return null;
   }
   
