@@ -171,7 +171,39 @@ const MusicFestival = () => {
           title="Hornbill Music Festival"
           subtitle="Eight Nights of Live Music · Free Entry: 1st & 10th December"
         />
-
+        {/* Artist Line Up Section */}
+        <div className="bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl p-6 md:p-8 mb-8 gradient-card border border-border/30 shadow-card">
+          <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-3">
+            <span className="w-2 h-8 gradient-hero rounded-full" />
+            Artist Line Up
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="rounded-xl overflow-hidden shadow-lg mx-auto w-full md:max-w-[520px]"
+            >
+              <img
+                src="/images/HMF/hornbill-lineup-1.jpg"
+                alt="Hornbill Music Festival Artist Line Up - Days 1-5"
+                className="w-full h-auto object-cover"
+              />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="rounded-xl overflow-hidden shadow-lg mx-auto w-full md:max-w-[520px]"
+            >
+              <img
+                src="/images/HMF/hornbill-lineup-2.jpg"
+                alt="Hornbill Music Festival Artist Line Up - Days 6-10"
+                className="w-full h-auto object-cover"
+              />
+            </motion.div>
+          </div>
+        </div>
         <section className="py-12 md:py-16 container mx-auto px-4 sm:px-6">
           <div className="gradient-card rounded-2xl p-6 md:p-8 shadow-card border border-border/30 mb-10">
             <h3 className="text-2xl font-bold mb-6 text-foreground flex items-center gap-3">
@@ -212,6 +244,7 @@ const MusicFestival = () => {
               </motion.button>
             </div>
           </div>
+
 
           {ticketType !== "festivalPass" && (
             <DaySelector
@@ -343,84 +376,9 @@ const MusicFestival = () => {
             </div>
           </div>
 
-          {/* {(selectedTicket || isDayFree(selectedDay)) && ticketType !== "festivalPass" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="fixed bottom-0 left-0 right-0 glass-effect border-t border-border/50 p-6 shadow-premium z-40"
-            >
-              <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Selected:</p>
-                  <p className="text-lg font-bold text-foreground">
-                    {isDayFree(selectedDay)
-                      ? `Day ${selectedDay} - FREE Entry`
-                      : `Day ${selectedDay} - ${selectedTicket}`
-                    }
-                  </p>
-                </div>
-                <div className="w-full space-y-4">
-                  <div className="flex items-start space-x-2">
-                    <input
-                      type="checkbox"
-                      id="musicFestivalTerms"
-                      checked={acceptedTerms.musicFestival}
-                      onChange={(e) => setAcceptedTerms(prev => ({ ...prev, musicFestival: e.target.checked }))}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor="musicFestivalTerms" className="text-sm text-muted-foreground">
-                      I agree to the <a href="/HornbillFestival2025/music-festival/terms&conditions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Music Festival Terms & Conditions</a>
-                    </label>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <input
-                      type="checkbox"
-                      id="hornbillFestivalTerms"
-                      checked={acceptedTerms.hornbillFestival}
-                      onChange={(e) => setAcceptedTerms(prev => ({ ...prev, hornbillFestival: e.target.checked }))}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor="hornbillFestivalTerms" className="text-sm text-muted-foreground">
-                      I agree to the <a href="/HornbillFestival2025/terms&conditions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Hornbill Festival General Terms & Conditions</a>
-                    </label>
-                  </div>
-                  <Button
-                    onClick={handleBooking}
-                    size="lg"
-                    disabled={!acceptedTerms.musicFestival || !acceptedTerms.hornbillFestival}
-                    className={`${isDayFree(selectedDay)
-                        ? "bg-gradient-to-r from-emerald-400 via-green-400 to-teal-400"
-                        : "gradient-hero"
-                      } text-white hover:shadow-premium transition-all duration-300 px-8 py-6 text-lg font-bold rounded-xl shadow-glow w-full mt-4 ${!acceptedTerms.musicFestival || !acceptedTerms.hornbillFestival ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isDayFree(selectedDay) ? "FREE Entry - No Booking Needed ✓" : "Book Music Pass →"}
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )} */}
 
-          {/* {selectedTicket && ticketType === "festivalPass" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="fixed bottom-0 left-0 right-0 glass-effect border-t border-border/50 p-6 shadow-premium z-40"
-            >
-              <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Selected:</p>
-                  <p className="text-lg font-bold text-foreground">{selectedTicket}</p>
-                </div>
-                <Button
-                  onClick={handleBooking}
-                  size="lg"
-                  className="gradient-hero text-white hover:shadow-premium transition-all duration-300 px-8 py-6 text-lg font-bold rounded-xl shadow-glow w-full sm:w-auto"
-                >
-                  Book Festival Pass →
-                </Button>
-              </div>
-            </motion.div>
-          )} */}
+
+
         </section>
       </main>
 

@@ -303,8 +303,8 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
         description: eventData.description,
         banner: eventData.image,
         category: eventData.category,
-        startDate: eventData.startDate,
-        endDate: eventData.endDate,
+        startDate: new Date(eventData.startDate).toISOString(),
+        endDate: new Date(eventData.endDate).toISOString(),
         isFreeEvent: eventData.isFreeEvent,
         location: {
           address: eventData.venue,
