@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 // Constants for the WhatsApp button
-const WHATSAPP_NUMBER = '7005727288'; // Your WhatsApp number
+const WHATSAPP_NUMBER = '+919862697765'; // Your WhatsApp number
 const MESSAGE = encodeURIComponent('Hi, I need help with Ahibi.'); // Default message
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${MESSAGE}`;
 
