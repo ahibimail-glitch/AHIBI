@@ -29,6 +29,7 @@ export default function BookingSuccessPage() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [autoDownloaded, setAutoDownloaded] = useState(false);
 
   useEffect(() => {
     const fetchBookingData = async () => {
@@ -109,6 +110,58 @@ export default function BookingSuccessPage() {
 
     fetchBookingData();
   }, [router, params]);
+
+  useEffect(() => {
+    // After booking is loaded, auto-click the first ticket's Download button once
+    if (!loading && booking && !autoDownloaded) {
+      let attempts = 0;
+      const maxAttempts = 20; // ~10s with 500ms interval
+
+      const tryClick = () => {
+        attempts += 1;
+        try {
+          const tickets = document.querySelectorAll('#booking-ticket');
+          const firstTicket = tickets && tickets.length > 0 ? (tickets[0] as HTMLElement) : null;
+          if (!firstTicket) return false;
+
+          const buttons = firstTicket.querySelectorAll('button');
+          for (const btn of Array.from(buttons)) {
+            const text = (btn as HTMLButtonElement).textContent?.toLowerCase() || '';
+            if (text.includes('download')) {
+              (btn as HTMLButtonElement).click();
+              setAutoDownloaded(true);
+              return true;
+            }
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      };
+
+      if (tryClick()) return;
+
+      const interval = setInterval(() => {
+        if (tryClick() || attempts >= maxAttempts) {
+          clearInterval(interval);
+          if (observer) observer.disconnect();
+        }
+      }, 500);
+
+      const observer = new MutationObserver(() => {
+        if (tryClick()) {
+          clearInterval(interval);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        clearInterval(interval);
+        observer.disconnect();
+      };
+    }
+  }, [loading, booking, autoDownloaded]);
 
   if (loading) {
     return (
