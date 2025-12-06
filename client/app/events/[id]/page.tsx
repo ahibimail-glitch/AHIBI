@@ -333,7 +333,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   // HMF event IDs
   const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
-  const HF_id=["6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
+  const HF_id = ["6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
   // Check if current event is an HMF event
   const isHMFEvent = HMF_id.includes(params.id);
   const isHFEvent = HF_id.includes(params.id);
@@ -1059,8 +1059,64 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         </div>
       </div>
 
-      {/* HMF Day 6 Postponement Notice (only for event id 691b1066a9a25d4fec36f96c) */}
+      {/* HMF Day 6 Postponement Notice */}
+      {params.id === "691b156ea9a25d4fec36fc8d" && (
+        <div className="container mx-auto px-4">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-6 shadow-md relative overflow-hidden">
 
+            {/* Top Accent Bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 to-red-600" />
+
+            {/* Header */}
+            {/* <span className="text-red-600 text-xl">⚠️</span> */}
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-red-700 font-semibold text-lg tracking-wide">
+                Official Announcement – Hornbill Music Festival
+              </h3>
+            </div>
+
+            {/* Body */}
+            <p className="text-red-700 font-medium">
+              Day 6 Performance Cancellation – 6 December 2025
+            </p>
+
+            <p className="text-red-700 mt-3 leading-relaxed">
+              The Day 6 performance of the Hornbill Music Festival featuring
+              <span className="font-semibold"> Sanam </span> has been
+              <span className="font-semibold"> cancelled</span>.
+            </p>
+
+            <p className="text-red-700 mt-2 leading-relaxed">
+              All other scheduled festival performances and activities
+              will continue as planned.
+            </p>
+
+            <p className="text-red-700 mt-3 leading-relaxed">
+              We sincerely apologise for the inconvenience and appreciate
+              your understanding.
+            </p>
+
+            {/* Refund Box */}
+            <div className="mt-5 p-4 rounded-lg bg-white border border-red-200 shadow-sm">
+              <p className="text-red-700 font-semibold">Refund Information</p>
+              <p className="text-red-700 mt-1">
+                Ticket holders for the Sanam show are eligible for a full refund.
+              </p>
+
+              <p className="text-red-700 mt-3 font-medium">Contact for Refund:</p>
+              <p className="text-red-700 mt-1">📧 connect@ahibi.in</p>
+              <p className="text-red-700 mt-1">
+                📞 7005727288 / 8132887985 / 6909156531
+              </p>
+            </div>
+
+            {/* Footer */}
+            <p className="text-red-700 mt-4 text-sm">
+              — Team AHIBI
+            </p>
+          </div>
+        </div>
+      )}
 
 
       <div className="container mx-auto px-4 py-8 flex-1">
