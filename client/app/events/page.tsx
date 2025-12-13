@@ -343,7 +343,7 @@ export default function EventsPage() {
             {/* Desktop Image */}
             <div className="hidden md:block w-full">
               <Image
-                src="/images/HMF/hero-desktop.jpg"
+                src="/images/carausel1.jpg"
                 alt="Hornbill Festival 2025"
                 width={1920}
                 height={1080}
@@ -564,7 +564,7 @@ export default function EventsPage() {
         </section>
 
         {/* HELITAXI ADD */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 sm:py-14 md:py-20">
+        {/* <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 sm:py-14 md:py-20">
 
           <div className="absolute inset-0 opacity-20">
             <img
@@ -575,46 +575,9 @@ export default function EventsPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80" />
           </div>
 
-          <div className="relative container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-              <div className="text-white">
-
-                <div className="inline-flex items-center gap-2 bg-red-500/10 text-red-300 border border-red-400/30 rounded-full px-3 py-1 text-xs sm:text-sm mb-3">
-                  <span>Limited Period</span>
-                  <Badge variant="secondary" className="bg-red-500 text-white border-0 text-[10px]">20% OFF</Badge>
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-3">
-                  Helicopter Rides & Shuttles
-                </h2>
-                <p className="text-slate-200/90 text-sm sm:text-base md:text-lg mb-6">
-                  Experience Hornbill from the sky. Joyrides, Dzükōu Valley aerial tours, and Kohima–Dimapur shuttles.
-                </p>
-
-                <div className="grid grid-cols-2 gap-4 mb-6 text-slate-200/90 text-xs sm:text-sm">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-cyan-300" />
-                    <span>Fast transfers • 6–17 min flights</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-cyan-300" />
-                    <span>Kohima • Kisama • Dzükōu</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-yellow-300" />
-                    <span>5.0 rated experience</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="border-green-400/50 text-green-200 bg-green-900/20">Festival Special</Badge>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button asChild size="lg" className="bg-red-500 hover:bg-red-600 text-white shadow-lg">
-                    <Link href="/HeliTaxii">Book HeliTaxii</Link>
-                  </Button>
-                  <span className="text-slate-300 text-xs sm:text-sm">Starting at ₹3,840 per seat</span>
-                </div>
-              </div>
+          <div className="relative container mx-auto px-8">
+            <div >
+              
 
               <div className="w-full">
                 <div>
@@ -636,7 +599,7 @@ export default function EventsPage() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
         <section className="py-12">
           <div className="container mx-auto px-4">
