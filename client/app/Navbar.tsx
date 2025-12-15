@@ -38,7 +38,7 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8 text-[#1C1C1C] font-medium">
           <Link href="/events" className="hover:text-[#EF4F5F] transition">Events</Link>
-          <Link href="/HeliTaxii" className="hover:text-[#EF4F5F] transition">HeliTaxi</Link>
+          {/* <Link href="/HeliTaxii" className="hover:text-[#EF4F5F] transition">HeliTaxi</Link> */}
           <Link href="/allArtists" className="hover:text-[#EF4F5F] transition">Artists</Link>
           <Link href="/allVenues" className="hover:text-[#EF4F5F] transition">Venues</Link>
           <Link href="/allOrganizers" className="hover:text-[#EF4F5F] transition">Organizers</Link>
@@ -84,7 +84,7 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 shadow-sm px-6 py-4 flex flex-col space-y-4">
           <Link href="/events" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Events</Link>
-          <Link href="/HeliTaxii" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">HeliTaxi</Link>
+          {/* <Link href="/HeliTaxii" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">HeliTaxi</Link> */}
           <Link href="/allArtists" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Artists</Link>
           <Link href="/allVenues" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Venues</Link>
           <Link href="/allOrganizers" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Organizers</Link>
