@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="bg-white  py-1 mt-10">
+    <footer className="bg-white py-1 mt-10">
       <div className="max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
 
@@ -27,13 +27,13 @@ export default function Footer() {
             <h3 className="text-[#1C1C1C] font-semibold mb-4 text-lg">For Users</h3>
             <ul className="space-y-2 text-gray-600 text-sm">
               <li>
-                <Link href="/events" className="hover:text-[#EF4F5F] transition">Browse Events</Link>
+                <Link href="/events" className="hover:text-[#ff0e0e] transition">Browse Events</Link>
               </li>
               <li>
-                <Link href="/profile" className="hover:text-[#EF4F5F] transition">My Tickets</Link>
+                <Link href="/profile" className="hover:text-[#ff0e0e] transition">My Tickets</Link>
               </li>
               <li>
-                <Link href="mailto:connect@ahibi.in" className="hover:text-[#EF4F5F] transition">Support</Link>
+                <Link href="mailto:connect@ahibi.in" className="hover:text-[#ff0e0e] transition">Support</Link>
               </li>
             </ul>
           </div>
@@ -42,9 +42,9 @@ export default function Footer() {
           <div>
             <h3 className="text-[#1C1C1C] font-semibold mb-4 text-lg">For Partners</h3>
             <ul className="space-y-2 text-gray-600 text-sm">
-              <li><Link href="/organizer" className="hover:text-[#EF4F5F] transition">Organizers</Link></li>
-              <li><Link href="/artist" className="hover:text-[#EF4F5F] transition">Artists</Link></li>
-              <li><Link href="/venue" className="hover:text-[#EF4F5F] transition">Venues</Link></li>
+              <li><Link href="/organizer" className="hover:text-[#ff0e0e] transition">Organizers</Link></li>
+              <li><Link href="/artist" className="hover:text-[#ff0e0e] transition">Artists</Link></li>
+              <li><Link href="/venue" className="hover:text-[#ff0e0e] transition">Venues</Link></li>
             </ul>
           </div>
 
@@ -52,14 +52,14 @@ export default function Footer() {
           <div>
             <h3 className="text-[#1C1C1C] font-semibold mb-4 text-lg">Company</h3>
             <ul className="space-y-2 text-gray-600 text-sm">
-              <li><Link href="/about" className="hover:text-[#EF4F5F] transition">About</Link></li>
-              <li><Link href="mailto:connect@ahibi.in" className="hover:text-[#EF4F5F] transition">Contact</Link></li>
-              <li><Link href="/privacy" className="hover:text-[#EF4F5F] transition">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-[#EF4F5F] transition">Terms & Conditions</Link></li>
-              <li><Link href="/shipping" className="hover:text-[#EF4F5F] transition">Shipping Policy</Link></li>
-              <li><Link href="/refund" className="hover:text-[#EF4F5F] transition">Refund Policy</Link></li>
-              <li><Link href="/accessibility" className="hover:text-[#EF4F5F] transition">Accessibility</Link></li>
-              <li><Link href="/faq" className="hover:text-[#EF4F5F] transition">FAQs</Link></li>
+              <li><Link href="/about" className="hover:text-[#ff0e0e] transition">About</Link></li>
+              <li><Link href="mailto:connect@ahibi.in" className="hover:text-[#ff0e0e] transition">Contact</Link></li>
+              <li><Link href="/privacy" className="hover:text-[#ff0e0e] transition">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-[#ff0e0e] transition">Terms & Conditions</Link></li>
+              <li><Link href="/shipping" className="hover:text-[#ff0e0e] transition">Shipping Policy</Link></li>
+              <li><Link href="/refund" className="hover:text-[#ff0e0e] transition">Refund Policy</Link></li>
+              <li><Link href="/accessibility" className="hover:text-[#ff0e0e] transition">Accessibility</Link></li>
+              <li><Link href="/faq" className="hover:text-[#ff0e0e] transition">FAQs</Link></li>
             </ul>
           </div>
         </div>

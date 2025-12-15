@@ -320,22 +320,25 @@ export default function HomePage() {
       </div>
 
       {/* Hero Section - Clean Zomato/District style */}
-      <section className="relative py-16 overflow-hidden">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-8">
+      <section className="relative py-16 bg-white overflow-hidden">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
+
+          {/* Left Content */}
           <div className="w-full md:w-1/2 text-center md:text-left">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-[#1C1C1C] leading-tight">
-              Book Events.
+            <h1 className="text-4xl md:text-6xl font-extrabold text-[#121212] leading-tight">
+              Book <span className="text-[#ff0e0e]">Events.</span>
               <br /> Experience Life.
             </h1>
 
-            <p className="text-lg md:text-2xl text-[#3C3C3C] mt-4 font-medium max-w-xl">
-              Trusted event bookings across Nagaland. Discover concerts, festivals, workshops and more — all in one place.
+            <p className="text-lg md:text-2xl text-[#4A4A4A] mt-4 font-medium max-w-xl">
+              Trusted event bookings across Nagaland. Discover concerts, festivals,
+              workshops and more — all in one place.
             </p>
 
             <div className="flex gap-4 justify-center md:justify-start mt-8">
               <Button
                 asChild
-                className="bg-[#EF4F5F] hover:bg-[#d43f4f] text-white px-6 py-3 rounded-full font-semibold text-lg shadow-md"
+                className="bg-[#ff0e0e] hover:bg-[#e60000] text-white px-7 py-3 rounded-full font-semibold text-lg shadow-lg shadow-red-500/20"
               >
                 <Link href="/events">Explore Events</Link>
               </Button>
@@ -343,17 +346,20 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 asChild
-                className="border border-gray-300 text-[#1C1C1C] px-6 py-3 rounded-full font-semibold text-lg hover:bg-gray-50"
+                className="border border-gray-300 text-[#121212] px-7 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 hover:text-[#ff0e0e]"
               >
                 <Link href="/auth">Sign In</Link>
               </Button>
             </div>
 
-            <div className="mt-6 text-sm text-gray-500">No booking fees • Easy refunds • Secure payments</div>
+            <div className="mt-6 text-sm text-gray-500">
+              No booking fees • Easy refunds • Secure payments
+            </div>
           </div>
 
+          {/* Right Image */}
           <div className="w-full md:w-1/2">
-            <div className="rounded-2xl overflow-hidden shadow-md">
+            <div className="rounded-2xl overflow-hidden shadow-xl border border-gray-200">
               {loadingHeroImages ? (
                 <div className="w-full h-64 md:h-80 lg:h-96 bg-gray-100 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -364,32 +370,37 @@ export default function HomePage() {
                     src={backgroundImages[currentBgSlide].url}
                     alt={`Hero ${currentBgSlide + 1}`}
                     fill
-                    className="object-fill"
+                    className="object-cover"
                     priority
                   />
-                  <div className="absolute inset-0 bg-black/20" />
+                  {/* Very subtle overlay */}
+                  <div className="absolute inset-0 bg-black/10" />
                 </div>
               ) : (
                 <div className="w-full h-64 md:h-80 lg:h-96 bg-gray-100" />
               )}
             </div>
           </div>
+
         </div>
       </section>
 
-      {/* Featured Events Carousel */}
       <section className="py-12 bg-white">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 group">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-[#EF4F5F] font-medium mb-3 text-sm">
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-[#ff0e0e] font-medium mb-3 text-sm">
               <TrendingUp className="h-4 w-4 mr-2" />
               Featured Events
             </div>
 
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1C1C1C]">Discover What's Happening</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto mt-2">From intimate concerts to grand festivals, find events that match your vibe.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1C1C1C] transition-transform duration-300 group-hover:scale-[1.02] group-hover:text-[#ff0e0e]">
+              Discover What's Happening
+            </h2>
+            <div className="mx-auto mt-2 h-1 w-12 bg-[#ff0e0e] rounded-full transition-all duration-300 group-hover:w-24" />
+            <p className="text-gray-500 max-w-2xl mx-auto mt-2 transition-colors duration-300 group-hover:text-gray-700">
+              From intimate concerts to grand festivals, find events that match your vibe.
+            </p>
           </div>
-
           <div
             className="relative w-full mx-auto touch-pan-x"
             onMouseEnter={() => setIsAutoPlaying(false)}
@@ -449,7 +460,7 @@ export default function HomePage() {
 
                               <div className="mt-3">
                                 <Button
-                                  className="w-full bg-[#EF4F5F] hover:bg-[#d43f4f] text-white rounded-full font-semibold py-2 shadow"
+                                  className="w-full bg-[#ff0e0e] hover:bg-[#e60000] text-white rounded-full font-semibold py-2 shadow"
                                   asChild
                                 >
                                   <Link href={`/events/${event._id}`} className="flex items-center justify-center gap-2">
@@ -471,7 +482,7 @@ export default function HomePage() {
                     {Array.from({ length: maxSlide + 1 }).map((_, index) => (
                       <button
                         key={index}
-                        className={`h-2 w-2 rounded-full transition-all ${index === currentSlide ? "bg-[#EF4F5F] w-8" : "bg-gray-300"}`}
+                        className={`h-2 w-2 rounded-full transition-all ${index === currentSlide ? "bg-[#ff0e0e] w-8" : "bg-gray-300"}`}
                         onClick={() => handleGoTo(index)}
                         aria-label={`Go to slide ${index + 1}`}
                       />
@@ -486,7 +497,7 @@ export default function HomePage() {
             <Button
               variant="outline"
               asChild
-              className="border border-gray-300 text-[#1C1C1C] hover:bg-[#EF4F5F] hover:text-white rounded-full px-6 py-2"
+              className="border border-gray-300 text-[#1C1C1C] hover:bg-[#ff0e0e] hover:text-white rounded-full px-6 py-2"
             >
               <Link href="/events">View All Events</Link>
             </Button>
@@ -508,7 +519,7 @@ export default function HomePage() {
               <p className="text-gray-600 mb-6">Experience Hornbill from the sky. Joyrides, Dzükōu Valley aerial tours, and Kohima–Dimapur shuttles.</p>
 
               <div className="flex items-center gap-4">
-                <Button asChild size="lg" className="bg-[#EF4F5F] hover:bg-[#d43f4f] text-white rounded-full px-6 py-3 shadow">
+                <Button asChild size="lg" className="bg-[#ff0e0e] hover:bg-[#e60000] text-white rounded-full px-6 py-3 shadow">
                   <Link href="/HeliTaxii">Book HeliTaxii</Link>
                 </Button>
                 <span className="text-gray-500 text-sm">Starting at ₹3,840 per seat</span>
@@ -526,12 +537,13 @@ export default function HomePage() {
 
       {/* Stats Section */}
       <section className="py-20 bg-gradient-to-b from-white to-gray-50">
-        <div ref={statsRef} className="container mx-auto px-4">
+        <div ref={statsRef} className="container mx-auto px-4 group">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-extrabold">
+            <h2 className="text-3xl md:text-4xl font-extrabold transition-transform duration-300 group-hover:scale-[1.02] group-hover:text-[#ff0e0e]">
               The Ahibi Impact
             </h2>
-            <p className="text-gray-600 mt-2">
+            <div className="mx-auto mt-2 h-1 w-12 bg-[#ff0e0e] rounded-full transition-all duration-300 group-hover:w-24" />
+            <p className="text-gray-600 mt-2 transition-colors duration-300 group-hover:text-gray-800">
               Trusted by thousands across Nagaland
             </p>
           </div>
@@ -541,7 +553,7 @@ export default function HomePage() {
               <div key={index} className="text-center">
                 <div className="p-7 bg-white rounded-2xl shadow hover:shadow-xl transition group">
                   <div className="w-14 h-14 mx-auto flex items-center justify-center rounded-xl bg-gray-100">
-                    <stat.icon className="h-6 w-6 text-gray-700 group-hover:text-[#EF4F5F]" />
+                    <stat.icon className="h-6 w-6 text-gray-700 group-hover:text-[#ff0e0e]" />
                   </div>
 
                   <div className="text-4xl md:text-5xl font-black mt-4">

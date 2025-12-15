@@ -37,12 +37,12 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8 text-[#1C1C1C] font-medium">
-          <Link href="/events" className="hover:text-[#EF4F5F] transition">Events</Link>
-          {/* <Link href="/HeliTaxii" className="hover:text-[#EF4F5F] transition">HeliTaxi</Link> */}
-          <Link href="/allArtists" className="hover:text-[#EF4F5F] transition">Artists</Link>
-          <Link href="/allVenues" className="hover:text-[#EF4F5F] transition">Venues</Link>
-          <Link href="/allOrganizers" className="hover:text-[#EF4F5F] transition">Organizers</Link>
-          <Link href="/about" className="hover:text-[#EF4F5F] transition">About</Link>
+          <Link href="/events" className="hover:text-[#ff0e0e] transition">Events</Link>
+          {/* <Link href="/HeliTaxii" className="hover:text-[#ff0e0e] transition">HeliTaxi</Link> */}
+          <Link href="/allArtists" className="hover:text-[#ff0e0e] transition">Artists</Link>
+          <Link href="/allVenues" className="hover:text-[#ff0e0e] transition">Venues</Link>
+          <Link href="/allOrganizers" className="hover:text-[#ff0e0e] transition">Organizers</Link>
+          <Link href="/about" className="hover:text-[#ff0e0e] transition">About</Link>
         </div>
 
         {/* Desktop Buttons */}
@@ -58,13 +58,13 @@ export default function Navbar() {
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
-              className="bg-[#EF4F5F] hover:bg-[#d43f4f] text-white px-6 py-2 rounded-full font-medium shadow"
+              className="bg-[#ff0e0e] hover:bg-[#e60000] text-white px-6 py-2 rounded-full font-medium shadow"
             >
               Logout
             </button>
           ) : (
             <Link href="/auth">
-              <button className="bg-[#EF4F5F] hover:bg-[#d43f4f] text-white px-6 py-2 rounded-full font-medium shadow">
+              <button className="bg-[#ff0e0e] hover:bg-[#e60000] text-white px-6 py-2 rounded-full font-medium shadow">
                 Login
               </button>
             </Link>
@@ -83,12 +83,12 @@ export default function Navbar() {
       {/* Mobile Dropdown */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 shadow-sm px-6 py-4 flex flex-col space-y-4">
-          <Link href="/events" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Events</Link>
-          {/* <Link href="/HeliTaxii" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">HeliTaxi</Link> */}
-          <Link href="/allArtists" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Artists</Link>
-          <Link href="/allVenues" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Venues</Link>
-          <Link href="/allOrganizers" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">Organizers</Link>
-          <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#EF4F5F] transition">About</Link>
+          <Link href="/events" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#ff0e0e] transition">Events</Link>
+          {/* <Link href="/HeliTaxii" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#ff0e0e] transition">HeliTaxi</Link> */}
+          <Link href="/allArtists" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#ff0e0e] transition">Artists</Link>
+          <Link href="/allVenues" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#ff0e0e] transition">Venues</Link>
+          <Link href="/allOrganizers" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#ff0e0e] transition">Organizers</Link>
+          <Link href="/about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-[#ff0e0e] transition">About</Link>
 
           <div className="pt-4 border-t border-gray-200 flex flex-col space-y-3">
             {isLoggedIn && (
@@ -102,13 +102,13 @@ export default function Navbar() {
             {isLoggedIn ? (
               <button
                 onClick={handleLogout}
-                className="bg-[#EF4F5F] hover:bg-[#d43f4f] w-full text-white px-6 py-2 rounded-full font-medium shadow"
+                className="bg-[#ff0e0e] hover:bg-[#e60000] w-full text-white px-6 py-2 rounded-full font-medium shadow"
               >
                 Logout
               </button>
             ) : (
               <Link href="/auth" onClick={() => setIsMobileMenuOpen(false)}>
-                <button className="bg-[#EF4F5F] hover:bg-[#d43f4f] w-full text-white px-6 py-2 rounded-full font-medium shadow">
+                <button className="bg-[#ff0e0e] hover:bg-[#e60000] w-full text-white px-6 py-2 rounded-full font-medium shadow">
                   Login
                 </button>
               </Link>
