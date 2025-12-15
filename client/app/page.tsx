@@ -451,7 +451,7 @@ export default function HomePage() {
       </section>
 
       {/* HELITAXI ADD - cleaned */}
-      <section className="relative overflow-hidden py-10 bg-gray-50">
+      {/* <section className="relative overflow-hidden py-10 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div>
@@ -478,7 +478,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Stats Section */}
       <section className="py-24 bg-gradient-to-b from-white to-gray-50">
