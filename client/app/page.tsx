@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -41,12 +41,56 @@ export default function HomePage() {
   const [backgroundImages, setBackgroundImages] = useState<{ url: string; mobileUrl?: string }[]>([])
   const [loadingHeroImages, setLoadingHeroImages] = useState(true)
 
+  // Stats
   const stats = [
-    { number: "30+", label: "Events Hosted", icon: Calendar },
-    { number: "60,000+", label: "Tickets Sold", icon: Users },
-    { number: "50,000+", label: "Happy Users", icon: Star },
+    { value: 30, suffix: "+", label: "Events Hosted", icon: Calendar },
+    { value: 60000, suffix: "+", label: "Tickets Sold", icon: Users },
+    { value: 50000, suffix: "+", label: "Happy Users", icon: Star },
   ]
 
+  const statsRef = useRef<HTMLDivElement | null>(null)
+  const [statsInView, setStatsInView] = useState(false)
+  const [animatedStats, setAnimatedStats] = useState<number[]>(
+    stats.map(() => 0)
+  )
+
+  useEffect(() => {
+    const el = statsRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStatsInView(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.3 }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!statsInView) return
+
+    const duration = 1500
+    const start = performance.now()
+
+    const animate = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1)
+
+      setAnimatedStats(
+        stats.map((stat) => Math.floor(stat.value * progress))
+      )
+
+      if (progress < 1) requestAnimationFrame(animate)
+    }
+
+    requestAnimationFrame(animate)
+  }, [statsInView])
+  // ==================================================================
   // Fetch hero images from backend
   useEffect(() => {
     const fetchHeroImages = async () => {
@@ -481,73 +525,37 @@ export default function HomePage() {
       </section> */}
 
       {/* Stats Section */}
-  <section className="py-20 bg-gradient-to-b from-white to-gray-50">
-  <div className="container mx-auto px-4">
+      <section className="py-20 bg-gradient-to-b from-white to-gray-50">
+        <div ref={statsRef} className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-extrabold">
+              The Ahibi Impact
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Trusted by thousands across Nagaland
+            </p>
+          </div>
 
-    {/* Header */}
-    <div className="text-center mb-12">
-      <h2 className="text-3xl md:text-4xl font-extrabold text-[#1C1C1C] mb-3 tracking-tight">
-        The Ahibi Impact
-      </h2>
-      <p className="text-gray-600 max-w-2xl mx-auto text-base md:text-lg">
-        Trusted by thousands of organizers, artists and venues across Nagaland
-      </p>
-    </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="text-center">
+                <div className="p-7 bg-white rounded-2xl shadow hover:shadow-xl transition group">
+                  <div className="w-14 h-14 mx-auto flex items-center justify-center rounded-xl bg-gray-100">
+                    <stat.icon className="h-6 w-6 text-gray-700 group-hover:text-[#EF4F5F]" />
+                  </div>
 
-    {/* Stats Grid */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {stats.map((stat, index) => (
-        <div key={index} className="text-center">
-          <div
-            className="
-              relative p-7 rounded-2xl bg-white/70 backdrop-blur-md 
-              border border-gray-200 shadow-md 
-              hover:shadow-xl hover:-translate-y-1.5 
-              transition-all duration-300 group
-            "
-          >
-            {/* Icon Circle */}
-            <div
-              className="
-                w-14 h-14 mx-auto rounded-xl flex items-center justify-center 
-                bg-gradient-to-br from-gray-100 to-gray-200 
-                shadow-sm group-hover:shadow-md transition-all
-              "
-            >
-              <stat.icon className="h-6 w-6 text-gray-700 group-hover:text-[#EF4F5F] transition" />
-            </div>
+                  <div className="text-4xl md:text-5xl font-black mt-4">
+                    {animatedStats[index].toLocaleString("en-IN")}
+                    {stat.suffix}
+                  </div>
 
-            {/* Number */}
-            <div
-              className="
-                text-4xl md:text-5xl font-black text-[#1C1C1C] 
-                mt-4 mb-1 tracking-tight 
-                group-hover:text-[#EF4F5F] transition
-              "
-            >
-              {stat.number}
-            </div>
-
-            {/* Label */}
-            <div className="text-base text-gray-600 font-medium">
-              {stat.label}
-            </div>
-
-            {/* Glow Effect */}
-            <div
-              className="
-                absolute inset-0 rounded-2xl bg-gradient-to-br 
-                from-[#EF4F5F]/10 to-transparent opacity-0 
-                group-hover:opacity-100 blur-xl transition
-              "
-            ></div>
+                  <div className="text-gray-600 mt-1">{stat.label}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
-    </div>
-
-  </div>
-</section>
+      </section>
 
 
 
