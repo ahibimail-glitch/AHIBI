@@ -320,7 +320,7 @@ export default function HomePage() {
                     src={backgroundImages[currentBgSlide].url}
                     alt={`Hero ${currentBgSlide + 1}`}
                     fill
-                    className="object-cover"
+                    className="object-fill"
                     priority
                   />
                   <div className="absolute inset-0 bg-black/20" />
@@ -481,64 +481,74 @@ export default function HomePage() {
       </section> */}
 
       {/* Stats Section */}
-      <section className="py-24 bg-gradient-to-b from-white to-gray-50">
-        <div className="container mx-auto px-4">
+  <section className="py-20 bg-gradient-to-b from-white to-gray-50">
+  <div className="container mx-auto px-4">
 
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-[#1C1C1C] mb-4 tracking-tight">
-              The Ahibi Impact
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              Trusted by thousands of organizers, artists and venues across Nagaland
-            </p>
-          </div>
+    {/* Header */}
+    <div className="text-center mb-12">
+      <h2 className="text-3xl md:text-4xl font-extrabold text-[#1C1C1C] mb-3 tracking-tight">
+        The Ahibi Impact
+      </h2>
+      <p className="text-gray-600 max-w-2xl mx-auto text-base md:text-lg">
+        Trusted by thousands of organizers, artists and venues across Nagaland
+      </p>
+    </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div
-                  className="
-              relative p-10 rounded-3xl bg-white/70 backdrop-blur-md border border-gray-200 
-              shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group
+    {/* Stats Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {stats.map((stat, index) => (
+        <div key={index} className="text-center">
+          <div
+            className="
+              relative p-7 rounded-2xl bg-white/70 backdrop-blur-md 
+              border border-gray-200 shadow-md 
+              hover:shadow-xl hover:-translate-y-1.5 
+              transition-all duration-300 group
             "
-                >
-                  {/* Icon Circle */}
-                  <div className="
-              w-20 h-20 mx-auto rounded-2xl flex items-center justify-center 
-              bg-gradient-to-br from-gray-100 to-gray-200 
-              shadow-md group-hover:shadow-xl transition-all
-            ">
-                    <stat.icon className="h-8 w-8 text-gray-700 group-hover:text-[#EF4F5F] transition" />
-                  </div>
+          >
+            {/* Icon Circle */}
+            <div
+              className="
+                w-14 h-14 mx-auto rounded-xl flex items-center justify-center 
+                bg-gradient-to-br from-gray-100 to-gray-200 
+                shadow-sm group-hover:shadow-md transition-all
+              "
+            >
+              <stat.icon className="h-6 w-6 text-gray-700 group-hover:text-[#EF4F5F] transition" />
+            </div>
 
-                  {/* Number */}
-                  <div className="
-              text-5xl md:text-6xl font-black text-[#1C1C1C] mt-6 mb-2 
-              tracking-tight group-hover:text-[#EF4F5F] transition
-            ">
-                    {stat.number}
-                  </div>
+            {/* Number */}
+            <div
+              className="
+                text-4xl md:text-5xl font-black text-[#1C1C1C] 
+                mt-4 mb-1 tracking-tight 
+                group-hover:text-[#EF4F5F] transition
+              "
+            >
+              {stat.number}
+            </div>
 
-                  {/* Label */}
-                  <div className="text-lg text-gray-600 font-medium">
-                    {stat.label}
-                  </div>
+            {/* Label */}
+            <div className="text-base text-gray-600 font-medium">
+              {stat.label}
+            </div>
 
-                  {/* Glow Effect Behind Card */}
-                  <div className="
-              absolute inset-0 rounded-3xl bg-gradient-to-br 
-              from-[#EF4F5F]/10 to-transparent opacity-0 
-              group-hover:opacity-100 blur-2xl transition
-            "></div>
-                </div>
-              </div>
-            ))}
+            {/* Glow Effect */}
+            <div
+              className="
+                absolute inset-0 rounded-2xl bg-gradient-to-br 
+                from-[#EF4F5F]/10 to-transparent opacity-0 
+                group-hover:opacity-100 blur-xl transition
+              "
+            ></div>
           </div>
-
         </div>
-      </section>
+      ))}
+    </div>
+
+  </div>
+</section>
+
 
 
       <Footer />
