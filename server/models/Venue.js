@@ -624,7 +624,8 @@ VenueSchema.methods.setOtp = async function() {
   this.otp = await bcrypt.hash(otp, 10);
   this.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-  await this.save();
+  // Save without triggering full validation to avoid legacy records failing on new required fields
+  await this.save({ validateBeforeSave: false });
 
   return otp; // Return unhashed OTP to be sent via SMS
 };
@@ -644,7 +645,8 @@ VenueSchema.methods.verifyOtp = async function(enteredOtp) {
     // Clear OTP fields after successful verification
     this.otp = undefined;
     this.otpExpires = undefined;
-    await this.save();
+    // Save without full validation
+    await this.save({ validateBeforeSave: false });
   }
 
   return isMatch;
