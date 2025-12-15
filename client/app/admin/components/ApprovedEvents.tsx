@@ -490,6 +490,12 @@ export default function ApprovedEvents() {
       )
     : events;
 
+  const sortedFilteredEvents = [...filteredEvents].sort((a, b) => {
+    const aDate = new Date(a.startDate || a.createdAt).getTime();
+    const bDate = new Date(b.startDate || b.createdAt).getTime();
+    return bDate - aDate; // latest first
+  });
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div></div>;
   if (error) return <div className="text-center p-8"><p className="text-red-500">{error}</p><Button className="mt-4" onClick={() => window.location.reload()}>Retry</Button></div>;
 
@@ -539,7 +545,7 @@ export default function ApprovedEvents() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
+                  {sortedFilteredEvents.map((event) => (
                     <TableRow key={event._id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-3">

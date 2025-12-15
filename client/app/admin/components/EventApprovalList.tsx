@@ -425,9 +425,16 @@ export default function EventApprovalList() {
     );
   };
 
-  const pendingEvents = events.filter(event => event.status === 'pending');
-  const approvedEvents = events.filter(event => event.status === 'approved');
-  const rejectedEvents = events.filter(event => event.status === 'rejected');
+  const sortByLatest = (arr: Event[]) =>
+    [...arr].sort((a, b) => {
+      const aTime = new Date(a.startDate || a.createdAt).getTime();
+      const bTime = new Date(b.startDate || b.createdAt).getTime();
+      return bTime - aTime; // latest first
+    });
+
+  const pendingEvents = sortByLatest(events.filter(event => event.status === 'pending'));
+  const approvedEvents = sortByLatest(events.filter(event => event.status === 'approved'));
+  const rejectedEvents = sortByLatest(events.filter(event => event.status === 'rejected'));
 
   if (events.length === 0) {
     return (
