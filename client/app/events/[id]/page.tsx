@@ -234,6 +234,36 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [prohibitedItemsModalOpen, setProhibitedItemsModalOpen] = useState(false);
   const summaryRef = useRef<HTMLDivElement | null>(null);
 
+  // --- Booking intent persistence (survive auth redirect) ---
+  const bookingIntentKey = `booking_intent_${params.id}`;
+
+  const persistBookingIntent = () => {
+    try {
+      const tickets = Array.from(selectedTickets.values()).map(({ ticket, quantity }) => ({
+        ticketId: ticket._id,
+        name: ticket.name,
+        quantity,
+      }));
+      const payload = {
+        eventId: params.id,
+        tickets,
+        hmf: { country: selectedCountry, state: selectedState },
+        ts: Date.now(),
+      };
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(bookingIntentKey, JSON.stringify(payload));
+      }
+    } catch {}
+  };
+
+  const clearBookingIntent = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(bookingIntentKey);
+      }
+    } catch {}
+  };
+
   // Format date and time from ISO string
   const formatDateTime = (dateString: string) => {
     try {
@@ -278,6 +308,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       const token = localStorage.getItem("token");
       if (!token) {
         toast.info("Please login to RSVP");
+        // Persist selection before redirecting to auth
+        persistBookingIntent();
         router.push(`/auth?redirect=/events/${params.id}`);
         return;
       }
@@ -307,6 +339,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       if (bookingId) {
         try {
           localStorage.setItem('lastBookingId', bookingId);
+          clearBookingIntent();
           router.push(`/events/${bookingId}/bookings`);
         } catch {
           // fallback: stay on page
@@ -398,6 +431,38 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     setSelectedCountry('');
     setSelectedState('');
   }, []);
+
+  // Restore booking intent after returning from auth
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined' || !event) return;
+      const raw = sessionStorage.getItem(bookingIntentKey);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data?.eventId !== params.id) return;
+
+      // Restore HMF selections if present
+      if (data.hmf) {
+        if (data.hmf.country) setSelectedCountry(data.hmf.country);
+        if (data.hmf.state) setSelectedState(data.hmf.state);
+      }
+
+      // Rebuild selectedTickets map by matching IDs first, fallback by name
+      if (Array.isArray(data.tickets) && data.tickets.length > 0) {
+        const map = new Map<string, { ticket: TicketType; quantity: number }>();
+        for (const t of data.tickets) {
+          const match = event.ticketTypes.find(tt => tt._id === t.ticketId) ||
+                        event.ticketTypes.find(tt => tt.name === t.name);
+          if (match && t.quantity > 0) {
+            map.set(match._id, { ticket: match, quantity: t.quantity });
+          }
+        }
+        if (map.size > 0) {
+          setSelectedTickets(map);
+        }
+      }
+    } catch {}
+  }, [event]);
 
   // Check if form is completely filled (for HMF require both country and state)
   const isFormComplete = !isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''));
@@ -527,6 +592,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     const token = localStorage.getItem("token");
     if (!token || !user) {
       toast.error("You must be logged in to book tickets");
+      // Persist selection before redirecting to auth
+      persistBookingIntent();
       router.push("/auth?redirect=" + encodeURIComponent(window.location.pathname));
       return;
     }
@@ -641,6 +708,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           if (createdBookingIds.length > 0) {
             toast.success('Booking confirmed!');
             localStorage.setItem('lastBookingId', createdBookingIds[0]);
+            clearBookingIntent();
             router.push(`/events/${createdBookingIds[0]}/bookings`);
             return; // Stop further processing
           } else {
@@ -773,6 +841,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             if (verificationResponse.ok && verificationData.success) {
               toast.success("Booking confirmed!");
               localStorage.setItem('lastBookingId', verificationData.booking._id);
+              clearBookingIntent();
 
               // Log the navigation
               console.log(`Navigating to: /events/${verificationData.booking._id}/bookings`);
