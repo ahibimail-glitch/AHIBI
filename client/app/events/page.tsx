@@ -288,6 +288,12 @@ export default function EventsPage() {
     return eventDay < today;
   });
   const featuredEvents = events.filter((event: Event) => event.isFeatured);
+  // Sort past events by latest date first (use endDate if available, otherwise startDate)
+  const pastEventsSorted = [...pastEvents].sort((a: Event, b: Event) => {
+    const aDate = new Date(a.endDate || a.startDate).getTime();
+    const bDate = new Date(b.endDate || b.startDate).getTime();
+    return bDate - aDate; // descending: latest first
+  });
 
   if (isLoading) {
     return (
@@ -354,7 +360,7 @@ export default function EventsPage() {
             {/* Mobile Image */}
             <div className="md:hidden w-full">
               <Image
-                src="/images/HMF/hero-mobile.jpg"
+                src="/images/carausel1.jpg"
                 alt="Hornbill Festival 2025"
                 width={1080}
                 height={1920}
@@ -678,7 +684,7 @@ export default function EventsPage() {
                     <div className="h-1 w-24 bg-gradient-to-r from-gray-400 to-gray-600 mx-auto mt-2 rounded-full" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pastEvents.map((event, index) => (
+                    {pastEventsSorted.map((event, index) => (
                       <EventCard key={event._id} event={event} index={index} />
                     ))}
                   </div>
