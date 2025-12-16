@@ -333,11 +333,16 @@ exports.updateOwnerDetails = async (req, res) => {
       return ApiResponse.notFound(res, 'Venue not found');
     }
 
-    const { fullName, primaryContact, alternateContact, email, businessName, designation, businessRegistrationNumber, gstNumber } = req.body;
+    const { fullName, primaryContact, alternateContact, email, businessName, designation, businessRegistrationNumber, gstNumber, venueDescription } = req.body;
 
     // Validation
     if (designation && !designation.trim()) {
       return ApiResponse.badRequest(res, 'Designation is required');
+    }
+
+    // Update venue description if provided
+    if (venueDescription !== undefined) {
+      venue.description = venueDescription;
     }
 
     venue.ownerDetails = {
@@ -355,7 +360,8 @@ exports.updateOwnerDetails = async (req, res) => {
     await venue.save();
 
     return ApiResponse.success(res, 'Owner details updated successfully', {
-      ownerDetails: venue.ownerDetails
+      ownerDetails: venue.ownerDetails,
+      description: venue.description
     });
   } catch (error) {
     console.error('Update owner details error:', error);
@@ -424,6 +430,13 @@ exports.updateLocation = async (req, res) => {
 
     const { address, parking, accessibility } = req.body;
 
+    console.log('Update Location Request:', {
+      venueId: venue._id,
+      address,
+      parking,
+      accessibility
+    });
+
     // Validation
     if (parking?.carCapacity !== undefined && (isNaN(parking.carCapacity) || parking.carCapacity < 0)) {
       return ApiResponse.badRequest(res, 'Car parking capacity must be a valid number');
@@ -431,26 +444,31 @@ exports.updateLocation = async (req, res) => {
 
     if (address) {
       venue.address = {
-        ...venue.address,
+        ...venue.address.toObject ? venue.address.toObject() : venue.address,
         ...address
       };
+      console.log('Updated address:', venue.address);
     }
 
     if (parking) {
       venue.parking = {
-        ...venue.parking,
+        ...venue.parking.toObject ? venue.parking.toObject() : venue.parking,
         ...parking
       };
+      console.log('Updated parking:', venue.parking);
     }
 
     if (accessibility) {
       venue.accessibility = {
-        ...venue.accessibility,
+        ...venue.accessibility.toObject ? venue.accessibility.toObject() : venue.accessibility,
         ...accessibility
       };
+      console.log('Updated accessibility:', venue.accessibility);
     }
 
     await venue.save();
+
+    console.log('Location saved successfully');
 
     return ApiResponse.success(res, 'Location details updated successfully', {
       address: venue.address,
@@ -889,5 +907,163 @@ exports.deleteFaq = async (req, res) => {
   } catch (error) {
     console.error('Delete FAQ error:', error);
     return ApiResponse.serverError(res, 'Error deleting FAQ', error);
+  }
+};
+
+/**
+ * @desc    Get all blocked slots for a venue
+ * @route   GET /api/venue/blocked-slots
+ * @access  Private (Venue only)
+ */
+exports.getBlockedSlots = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+    return ApiResponse.success(res, 'Blocked slots retrieved successfully', {
+      blockedSlots: venue.blockedSlots || []
+    });
+  } catch (error) {
+    console.error('Get blocked slots error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving blocked slots', error);
+  }
+};
+
+/**
+ * @desc    Add a blocked slot (date/time unavailability)
+ * @route   POST /api/venue/blocked-slots
+ * @access  Private (Venue only)
+ */
+exports.addBlockedSlot = async (req, res) => {
+  try {
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const { date, isFullDayBlocked, timeSlots, reason, notes } = req.body;
+
+    // Validation
+    if (!date) {
+      return ApiResponse.badRequest(res, 'Date is required');
+    }
+
+    if (!isFullDayBlocked && (!timeSlots || timeSlots.length === 0)) {
+      return ApiResponse.badRequest(res, 'Time slots are required when not blocking full day');
+    }
+
+    // Validate time slots format
+    if (timeSlots && timeSlots.length > 0) {
+      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      for (const slot of timeSlots) {
+        if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
+          return ApiResponse.badRequest(res, 'Invalid time format. Use HH:MM (24-hour format)');
+        }
+      }
+    }
+
+    const blockedSlot = {
+      date: new Date(date),
+      isFullDayBlocked: isFullDayBlocked || false,
+      timeSlots: timeSlots || [],
+      reason: reason || 'offline_booking',
+      notes: notes || ''
+    };
+
+    if (!venue.blockedSlots) {
+      venue.blockedSlots = [];
+    }
+
+    venue.blockedSlots.push(blockedSlot);
+    await venue.save();
+
+    return ApiResponse.success(res, 'Blocked slot added successfully', {
+      blockedSlots: venue.blockedSlots
+    });
+  } catch (error) {
+    console.error('Add blocked slot error:', error);
+    return ApiResponse.serverError(res, 'Error adding blocked slot', error);
+  }
+};
+
+/**
+ * @desc    Update a blocked slot
+ * @route   PUT /api/venue/blocked-slots/:slotId
+ * @access  Private (Venue only)
+ */
+exports.updateBlockedSlot = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+    const { date, isFullDayBlocked, timeSlots, reason, notes } = req.body;
+
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const slot = (venue.blockedSlots || []).id(slotId);
+    if (!slot) {
+      return ApiResponse.notFound(res, 'Blocked slot not found');
+    }
+
+    // Validate time slots format if provided
+    if (timeSlots && timeSlots.length > 0) {
+      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      for (const timeSlot of timeSlots) {
+        if (!timeRegex.test(timeSlot.startTime) || !timeRegex.test(timeSlot.endTime)) {
+          return ApiResponse.badRequest(res, 'Invalid time format. Use HH:MM (24-hour format)');
+        }
+      }
+    }
+
+    if (date !== undefined) slot.date = new Date(date);
+    if (isFullDayBlocked !== undefined) slot.isFullDayBlocked = isFullDayBlocked;
+    if (timeSlots !== undefined) slot.timeSlots = timeSlots;
+    if (reason !== undefined) slot.reason = reason;
+    if (notes !== undefined) slot.notes = notes;
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Blocked slot updated successfully', {
+      blockedSlots: venue.blockedSlots
+    });
+  } catch (error) {
+    console.error('Update blocked slot error:', error);
+    return ApiResponse.serverError(res, 'Error updating blocked slot', error);
+  }
+};
+
+/**
+ * @desc    Delete a blocked slot
+ * @route   DELETE /api/venue/blocked-slots/:slotId
+ * @access  Private (Venue only)
+ */
+exports.deleteBlockedSlot = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+
+    const venue = await Venue.findById(req.user.id);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    const before = (venue.blockedSlots || []).length;
+    venue.blockedSlots = (venue.blockedSlots || []).filter(
+      slot => slot._id.toString() !== slotId
+    );
+
+    if (venue.blockedSlots.length === before) {
+      return ApiResponse.notFound(res, 'Blocked slot not found');
+    }
+
+    await venue.save();
+
+    return ApiResponse.success(res, 'Blocked slot deleted successfully', {
+      blockedSlots: venue.blockedSlots
+    });
+  } catch (error) {
+    console.error('Delete blocked slot error:', error);
+    return ApiResponse.serverError(res, 'Error deleting blocked slot', error);
   }
 };

@@ -412,6 +412,34 @@ const VenueSchema = new mongoose.Schema({
       type: String
     }
   }],
+  
+  // Blocked dates and time slots (for offline bookings/internal reservations)
+  blockedSlots: [{
+    date: {
+      type: Date,
+      required: true
+    },
+    isFullDayBlocked: {
+      type: Boolean,
+      default: false
+    },
+    timeSlots: [{
+      startTime: String, // Format: "HH:MM" (24-hour)
+      endTime: String,   // Format: "HH:MM" (24-hour)
+    }],
+    reason: {
+      type: String,
+      enum: ['offline_booking', 'internal_event', 'maintenance', 'holiday', 'other'],
+      default: 'offline_booking'
+    },
+    notes: {
+      type: String
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   terms: {
     cancellationPolicy: {
       type: String

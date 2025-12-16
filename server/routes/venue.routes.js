@@ -46,6 +46,12 @@ router.post('/faqs', protect, venueAuthController.createFaq);
 router.put('/faqs/:faqId', protect, venueAuthController.updateFaq);
 router.delete('/faqs/:faqId', protect, venueAuthController.deleteFaq);
 
+// Blocked slots management (for offline bookings/internal reservations)
+router.get('/blocked-slots', protect, venueAuthController.getBlockedSlots);
+router.post('/blocked-slots', protect, venueAuthController.addBlockedSlot);
+router.put('/blocked-slots/:slotId', protect, venueAuthController.updateBlockedSlot);
+router.delete('/blocked-slots/:slotId', protect, venueAuthController.deleteBlockedSlot);
+
 // Venue manager dashboard
 router.get('/manager/stats', protect, venueController.getVenueManagerStats);
 router.get('/manager/bookings', protect, venueController.getVenueManagerBookings);

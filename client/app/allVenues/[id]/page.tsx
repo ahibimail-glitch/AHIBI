@@ -197,6 +197,17 @@ interface VenueData {
       description?: string;
     };
   };
+  blockedSlots?: Array<{
+    _id?: string;
+    date: Date;
+    isFullDayBlocked: boolean;
+    timeSlots?: Array<{
+      startTime: string;
+      endTime: string;
+    }>;
+    reason: string;
+    notes?: string;
+  }>;
   documents?: {
     venueImages?: Array<{
       url: string;
@@ -334,6 +345,122 @@ const facilityIcons: { [key: string]: any } = {
   washrooms: Home,
 };
 
+// Portfolio Section Component
+function PortfolioSection({ venueData, displayImages }: { venueData: VenueData | null, displayImages: string[] }) {
+  const [showAllVenueImages, setShowAllVenueImages] = useState(false);
+  const [showAllMenuCards, setShowAllMenuCards] = useState(false);
+
+  const venueImages = venueData?.documents?.venueImages || venueData?.gallery || [];
+  const menuCards = venueData?.documents?.menuCards || [];
+  const videoTour = venueData?.documents?.venueVideoTour?.url;
+
+  const displayVenueImages = showAllVenueImages ? venueImages : venueImages.slice(0, 3);
+  const displayMenuCards = showAllMenuCards ? menuCards : menuCards.slice(0, 3);
+
+  return (
+    <div className="space-y-8">
+      {/* Venue Images Section */}
+      {venueImages.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Venue Images</h3>
+          <div className="grid grid-cols-3 gap-3">
+            {displayVenueImages.map((image: any, index: number) => (
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group">
+                <img
+                  src={image.url || image}
+                  alt={`${venueData?.name} ${index + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+          {venueImages.length > 3 && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => setShowAllVenueImages(!showAllVenueImages)}
+            >
+              {showAllVenueImages ? 'Show Less' : `View More (${venueImages.length - 3} more)`}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Menu Cards Section */}
+      {menuCards.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Menu</h3>
+          <div className="grid grid-cols-3 gap-3">
+            {displayMenuCards.map((menu: any, index: number) => (
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group">
+                {menu.url?.endsWith('.pdf') ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100 group-hover:bg-gray-200 transition-colors">
+                    <UtensilsCrossed className="h-16 w-16 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-600 text-center px-2">{menu.name || 'Menu Card'}</span>
+                  </div>
+                ) : (
+                  <img
+                    src={menu.url}
+                    alt={menu.name || `Menu ${index + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          {menuCards.length > 3 && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => setShowAllMenuCards(!showAllMenuCards)}
+            >
+              {showAllMenuCards ? 'Show Less' : `View More (${menuCards.length - 3} more)`}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Video Tour Section */}
+      {videoTour && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Video Tour</h3>
+          <div className="aspect-video rounded-lg overflow-hidden bg-gray-100">
+            <video
+              src={videoTour}
+              controls
+              className="w-full h-full object-cover"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback if no portfolio items */}
+      {venueImages.length === 0 && menuCards.length === 0 && !videoTour && displayImages.length > 0 && (
+        <div>
+          <div className="grid grid-cols-3 gap-3">
+            {displayImages.slice(0, 12).map((img, index) => (
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group">
+                <img
+                  src={img}
+                  alt={`${venueData?.name} ${index + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+          {displayImages.length > 12 && (
+            <Button variant="outline" className="mt-4">
+              View More
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function VenueDetailPage() {
   const params = useParams();
   const venueId = params.id as string;
@@ -354,6 +481,21 @@ export default function VenueDetailPage() {
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const LegendDot = ({
+    color,
+    label,
+  }: {
+    color: string
+    label: string
+  }) => {
+    return (
+      <div className="flex items-center gap-2">
+        <span className={`w-2.5 h-2.5 rounded-full ${color}`} />
+        <span className="text-gray-600">{label}</span>
+      </div>
+    )
+  }
+
 
   // Booking form state
   const [bookingForm, setBookingForm] = useState({
@@ -638,11 +780,24 @@ export default function VenueDetailPage() {
 
   const getUnavailableDates = () => {
     const unavailableDates: Date[] = [];
+
+    // Add confirmed bookings
     bookings.forEach(booking => {
-      if (booking.status === 'confirmed' || booking.status === 'pending') {
+      // Only mark dates as unavailable for confirmed bookings
+      if (booking.status === 'confirmed') {
         unavailableDates.push(new Date(booking.bookingDate));
       }
     });
+
+    // Add blocked dates (full day blocks)
+    if (venueData?.blockedSlots) {
+      venueData.blockedSlots.forEach((slot: any) => {
+        if (slot.isFullDayBlocked) {
+          unavailableDates.push(new Date(slot.date));
+        }
+      });
+    }
+
     return unavailableDates;
   };
 
@@ -925,22 +1080,7 @@ export default function VenueDetailPage() {
 
               {/* Portfolio Tab */}
               <TabsContent value="portfolio" className="mt-6">
-                <div className="grid grid-cols-3 gap-3">
-                  {displayImages.slice(0, 12).map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group">
-                      <img
-                        src={img}
-                        alt={`${venueData?.name} ${index + 1}`}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                  ))}
-                </div>
-                {displayImages.length > 12 && (
-                  <Button variant="outline" className="mt-4">
-                    View More
-                  </Button>
-                )}
+                <PortfolioSection venueData={venueData} displayImages={displayImages} />
               </TabsContent>
 
               {/* About Tab */}
@@ -1400,63 +1540,103 @@ export default function VenueDetailPage() {
 
           <div className="space-y-6">
             {/* Calendar */}
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl  top-6">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
-                  <CalendarIcon className="h-5 w-5 mr-2 text-purple-600" />
+
+            <Card className="bg-white border border-gray-200 shadow-lg  top-6">
+              <CardHeader className="pb-3 border-b border-gray-100">
+                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
+                  <CalendarIcon className="h-5 w-5 mr-2 text-indigo-600" />
                   Check Availability
                 </CardTitle>
-                <CardDescription className="text-gray-600">
-                  Select an available date for your booking
+                <CardDescription className="text-sm text-gray-500">
+                  Select a date to see booking availability
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg">
+
+              <CardContent className="space-y-4 pt-4">
+                {/* Calendar Wrapper */}
+                <div className="rounded-xl border border-gray-200 p-3 bg-gray-50">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     disabled={(date) => {
-                      // Only disable past dates, allow selection of dates with existing bookings
-                      return date < new Date(new Date().setHours(0, 0, 0, 0));
+                      if (date < new Date(new Date().setHours(0, 0, 0, 0))) {
+                        return true
+                      }
+
+                      const isFullyBlocked = venueData?.blockedSlots?.some((slot: any) => {
+                        const slotDate = new Date(slot.date)
+                        return (
+                          slotDate.toDateString() === date.toDateString() &&
+                          slot.isFullDayBlocked
+                        )
+                      })
+
+                      return isFullyBlocked || false
                     }}
                     modifiers={{
                       partiallyBooked: getPartiallyBookedDates(),
-                      past: date => date < new Date(new Date().setHours(0, 0, 0, 0)),
-                      available: date => {
-                        const isNotPast = date >= new Date(new Date().setHours(0, 0, 0, 0));
-                        const hasNoBookings = !getUnavailableDates().some(unavailableDate =>
-                          unavailableDate.toDateString() === date.toDateString()
-                        );
-                        return isNotPast && hasNoBookings;
-                      },
+                      fullyBlocked: (date) =>
+                        venueData?.blockedSlots?.some((slot: any) => {
+                          const slotDate = new Date(slot.date)
+                          return (
+                            slotDate.toDateString() === date.toDateString() &&
+                            slot.isFullDayBlocked
+                          )
+                        }) || false,
+
+                      partiallyBlocked: (date) =>
+                        venueData?.blockedSlots?.some((slot: any) => {
+                          const slotDate = new Date(slot.date)
+                          return (
+                            slotDate.toDateString() === date.toDateString() &&
+                            !slot.isFullDayBlocked
+                          )
+                        }) || false,
+
+                      past: (date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0)),
                     }}
                     modifiersClassNames={{
-                      partiallyBooked: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
-                      past: 'text-gray-400 cursor-not-allowed opacity-50',
-                      available: 'text-green-600 hover:bg-green-50',
-                      today: 'bg-blue-100 text-blue-800',
+                      available:
+                        "text-green-700 hover:bg-green-100 font-medium",
+
+                      partiallyBooked:
+                        "bg-amber-100 text-amber-800 hover:bg-amber-200",
+
+                      partiallyBlocked:
+                        "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
+
+                      fullyBlocked:
+                        "bg-red-100 text-red-700 line-through cursor-not-allowed opacity-80",
+
+                      past:
+                        "text-gray-400 cursor-not-allowed opacity-60",
+
+                      today:
+                        "border border-indigo-500 text-indigo-700 bg-indigo-50",
                     }}
-                    className="rounded-md"
+                    className="rounded-md bg-white"
                   />
                 </div>
 
-                <div className="flex items-center justify-center space-x-6 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600">Available</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    <span className="text-gray-600">Partially Booked</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                    <span className="text-gray-600">Past Dates</span>
-                  </div>
+                {/* Legend */}
+                <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
+                  <LegendDot color="bg-green-500" label="Available" />
+                  <LegendDot color="bg-amber-500" label="Partially Booked" />
+                  <LegendDot color="bg-yellow-500" label="Partially Blocked" />
+                  <LegendDot color="bg-red-500" label="Fully Blocked" />
+                  <LegendDot color="bg-gray-400" label="Past Dates" />
                 </div>
+
+                {/* Info Note */}
+                <p className="text-xs text-gray-500 text-center leading-relaxed">
+                  Blocked dates are unavailable for online booking due to
+                  offline reservations or venue maintenance.
+                </p>
               </CardContent>
             </Card>
+
 
             {/* Booking Section */}
             {selectedDate && (
@@ -1628,7 +1808,23 @@ export default function VenueDetailPage() {
                         </div>
                         <div>
                           <Label htmlFor="guestCount">Number of Guests *</Label>
-                          <Input id="guestCount" type="number" min="1" max={venueData?.capacity} value={bookingForm.guestCount} onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })} required />
+                          <Input
+                            id="guestCount"
+                            type="number"
+                            min={venueData?.capacityDetails?.minimumBookingCapacity || 1}
+                            max={venueData?.capacityDetails?.standingCapacity || venueData?.capacity || undefined}
+                            value={bookingForm.guestCount}
+                            onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })}
+                            required
+                          />
+                          {(venueData?.capacityDetails?.standingCapacity || venueData?.capacity > 0) && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {venueData?.capacityDetails?.minimumBookingCapacity && (
+                                <span>Minimum: {venueData.capacityDetails.minimumBookingCapacity} guests • </span>
+                              )}
+                              Maximum: {venueData?.capacityDetails?.standingCapacity || venueData?.capacity} guests
+                            </p>
+                          )}
                         </div>
                         <div>
                           <Label htmlFor="eventType">Event Type</Label>

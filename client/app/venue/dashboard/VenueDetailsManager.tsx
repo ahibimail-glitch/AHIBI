@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,9 +42,16 @@ import { FileUploadArea } from "@/components/ui/file-upload-area";
 interface VenueDetailsManagerProps {
   venueData: any;
   onUpdate: (section: string, data: any) => Promise<void>;
+  initialSection?: string | null;
+  onSectionChange?: () => void;
 }
 
-export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetailsManagerProps) {
+export default function VenueDetailsManager({ 
+  venueData, 
+  onUpdate, 
+  initialSection, 
+  onSectionChange 
+}: VenueDetailsManagerProps) {
   const [activeSection, setActiveSection] = useState("owner-details");
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
@@ -65,10 +72,57 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
     { id: "authorizations", label: "Authorizations", icon: Shield },
   ];
 
+  const getInitialEditData = (section: string) => {
+    switch (section) {
+      case "owner-details":
+        return {
+          ...venueData?.ownerDetails || {},
+          venueDescription: venueData?.description || ""
+        };
+      case "venue-classification":
+        return venueData?.venueClassification || {};
+      case "location":
+        return { 
+          address: venueData?.address || {}, 
+          parking: venueData?.parking || {},
+          accessibility: venueData?.accessibility || {}
+        };
+      case "capacity":
+        return venueData?.capacityDetails || {};
+      case "pricing":
+        return venueData?.pricing || {};
+      case "amenities":
+        return venueData?.amenities || {};
+      case "policies":
+        return venueData?.policies || {};
+      case "addon-services":
+        return venueData?.addOnServices || {};
+      case "documents":
+        return venueData?.documents || {};
+      case "authorizations":
+        return venueData?.authorizations || {};
+      default:
+        return {};
+    }
+  };
+
   const handleEdit = (section: string) => {
     setEditingSection(section);
     setEditData(getInitialEditData(section));
   };
+
+  // Handle initial section navigation
+  useEffect(() => {
+    if (initialSection) {
+      console.log('VenueDetailsManager received initialSection:', initialSection);
+      setActiveSection(initialSection);
+      setEditingSection(initialSection);
+      setEditData(getInitialEditData(initialSection));
+      if (onSectionChange) {
+        onSectionChange();
+      }
+    }
+  }, [initialSection]);
 
   const validateSection = (section: string, data: any) => {
     const errors: string[] = [];
@@ -145,37 +199,6 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
     setValidationErrors([]);
   };
 
-  const getInitialEditData = (section: string) => {
-    switch (section) {
-      case "owner-details":
-        return venueData?.ownerDetails || {};
-      case "venue-classification":
-        return venueData?.venueClassification || {};
-      case "location":
-        return { 
-          address: venueData?.address || {}, 
-          parking: venueData?.parking || {},
-          accessibility: venueData?.accessibility || {}
-        };
-      case "capacity":
-        return venueData?.capacityDetails || {};
-      case "pricing":
-        return venueData?.pricing || {};
-      case "amenities":
-        return venueData?.amenities || {};
-      case "policies":
-        return venueData?.policies || {};
-      case "addon-services":
-        return venueData?.addOnServices || {};
-      case "documents":
-        return venueData?.documents || {};
-      case "authorizations":
-        return venueData?.authorizations || {};
-      default:
-        return {};
-    }
-  };
-
   const ValidationErrorDisplay = () => {
     if (validationErrors.length === 0) return null;
     
@@ -211,6 +234,20 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
         {editingSection === "owner-details" ? (
           <div className="space-y-4">
             <ValidationErrorDisplay />
+            
+            {/* Venue Description - Full Width */}
+            <div>
+              <Label>Venue Description *</Label>
+              <Textarea
+                value={editData.venueDescription || ""}
+                onChange={(e) => setEditData({...editData, venueDescription: e.target.value})}
+                placeholder="Describe your venue, its unique features, ambiance, and what makes it special..."
+                rows={4}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">This description will be shown to customers on your venue listing page.</p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Full Name</Label>
@@ -287,6 +324,14 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
           </div>
         ) : (
           <div className="space-y-3">
+            {/* Venue Description - Full Width */}
+            <div>
+              <Label className="text-sm font-medium text-gray-500">Venue Description</Label>
+              <p className="text-sm mt-1 whitespace-pre-wrap">{venueData?.description || "Not provided"}</p>
+            </div>
+
+            <Separator className="my-4" />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium text-gray-500">Full Name</Label>
@@ -1978,7 +2023,7 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Venue Images</Label>
                     <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2009,6 +2054,31 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
                       )}
                     </div>
                   </div>
+
+                  {venueData?.documents?.menuCards?.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Menu Cards</Label>
+                      <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {venueData.documents.menuCards.map((menu: any, index: number) => (
+                          <div key={index} className="aspect-square rounded-lg overflow-hidden bg-gray-100 relative group">
+                            {menu.url.endsWith('.pdf') ? (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
+                                <FileText className="h-12 w-12 text-gray-400 mb-2" />
+                                <span className="text-xs text-gray-600 text-center px-2">{menu.name || 'Menu Card'}</span>
+                              </div>
+                            ) : (
+                              <img
+                                src={menu.url}
+                                alt={menu.name || `Menu ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Documents</Label>
                     <div className="mt-2 space-y-2">
@@ -2025,13 +2095,6 @@ export default function VenueDetailsManager({ venueData, onUpdate }: VenueDetail
                           <span className="text-sm">Rate Card</span>
                           <Badge variant="secondary" className="ml-auto">Uploaded</Badge>
                       </div>
-                      )}
-                      {venueData?.documents?.menuCards?.length > 0 && (
-                        <div className="flex items-center gap-2 p-2 border rounded">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">Menu Cards ({venueData.documents.menuCards.length} file(s))</span>
-                          <Badge variant="secondary" className="ml-auto">Uploaded</Badge>
-                    </div>
                       )}
                       {venueData?.documents?.venueVideoTour?.url && (
                         <div className="flex items-center gap-2 p-2 border rounded">

@@ -200,7 +200,34 @@ VenueBookingSchema.statics.getBookingsForDate = async function(venueId, bookingD
 
 // Static method to generate available time slots for a specific date
 VenueBookingSchema.statics.getAvailableTimeSlots = async function(venueId, bookingDate) {
+  const Venue = mongoose.model('Venue');
+  const venue = await Venue.findById(venueId);
+  
   const existingBookings = await this.getBookingsForDate(venueId, bookingDate);
+  
+  // Check for blocked slots on this date
+  const dateObj = new Date(bookingDate);
+  const blockedSlot = venue?.blockedSlots?.find(slot => {
+    const slotDate = new Date(slot.date);
+    return slotDate.toDateString() === dateObj.toDateString();
+  });
+  
+  // If full day is blocked, return all slots as unavailable
+  if (blockedSlot && blockedSlot.isFullDayBlocked) {
+    return {
+      date: bookingDate,
+      isFullDayBlocked: true,
+      blockedReason: blockedSlot.reason,
+      blockedNotes: blockedSlot.notes,
+      existingBookings: [],
+      timeSlots: [],
+      summary: {
+        totalSlots: 0,
+        availableSlots: 0,
+        bookedSlots: 0
+      }
+    };
+  }
   
   // Generate all possible time slots (30-minute intervals from 00:00 to 23:30)
   const allTimeSlots = [];
@@ -213,17 +240,31 @@ VenueBookingSchema.statics.getAvailableTimeSlots = async function(venueId, booki
   
   // Mark slots as available or booked
   const timeSlotStatus = allTimeSlots.map(timeSlot => {
+    // Check if slot is booked
     const isBooked = existingBookings.some(booking => {
       const bookingStart = booking.startTime;
       const bookingEnd = booking.endTime;
-      
-      // Check if this time slot falls within any existing booking
       return timeSlot >= bookingStart && timeSlot < bookingEnd;
     });
     
+    // Check if slot is blocked by venue owner
+    let isBlocked = false;
+    let blockReason = null;
+    if (blockedSlot && blockedSlot.timeSlots && blockedSlot.timeSlots.length > 0) {
+      isBlocked = blockedSlot.timeSlots.some(slot => {
+        return timeSlot >= slot.startTime && timeSlot < slot.endTime;
+      });
+      if (isBlocked) {
+        blockReason = blockedSlot.reason;
+      }
+    }
+    
     return {
       time: timeSlot,
-      available: !isBooked,
+      available: !isBooked && !isBlocked,
+      isBooked: isBooked,
+      isBlocked: isBlocked,
+      blockReason: blockReason,
       bookings: isBooked ? existingBookings.filter(booking => 
         timeSlot >= booking.startTime && timeSlot < booking.endTime
       ) : []
@@ -232,12 +273,14 @@ VenueBookingSchema.statics.getAvailableTimeSlots = async function(venueId, booki
   
   return {
     date: bookingDate,
+    isFullDayBlocked: false,
     existingBookings: existingBookings,
     timeSlots: timeSlotStatus,
     summary: {
       totalSlots: allTimeSlots.length,
       availableSlots: timeSlotStatus.filter(slot => slot.available).length,
-      bookedSlots: timeSlotStatus.filter(slot => !slot.available).length
+      bookedSlots: timeSlotStatus.filter(slot => !slot.available).length,
+      blockedSlots: timeSlotStatus.filter(slot => slot.isBlocked).length
     }
   };
 };

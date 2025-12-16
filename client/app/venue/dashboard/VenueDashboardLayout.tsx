@@ -46,12 +46,16 @@ import {
   Heart,
   Upload,
   Save,
-  X
+  X,
+  Ban,
+  Building
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useVenueAuth } from "@/hooks/useVenueAuth";
 import VenueDetailsManager from "./VenueDetailsManager";
+import BlockedSlotsManager from "./BlockedSlotsManager";
+import VenueCompletenessAlert from "./VenueCompletenessAlert";
 
 interface VenueDashboardLayoutProps {
   venueData: any;
@@ -71,6 +75,7 @@ export default function VenueDashboardLayout({
   const [activeTab, setActiveTab] = useState("bookings");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [venueDetailsSection, setVenueDetailsSection] = useState<string | null>(null);
   
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -116,14 +121,20 @@ export default function VenueDashboardLayout({
   const sidebarItems = [
     { id: "bookings", label: "Bookings", icon: Calendar },
     { id: "calendar", label: "Calendar", icon: Calendar },
+    { id: "blocked-slots", label: "Block Dates/Times", icon: Ban },
     // { id: "listing", label: "Listing Details", icon: Edit },
     { id: "earnings", label: "Earnings", icon: DollarSign },
     // { id: "settings", label: "Settings", icon: Settings },
-    { id: "venue-details", label: "Manage Venue Details", icon: FileText },
+    { id: "venue-details", label: "Manage Venue Details", icon: Building },
     { id: "faqs", label: "FAQs", icon: FileText },
   ];
 
   const filteredBookings = bookings.filter(booking => {
+    // Exclude pending bookings from dashboard
+    if (booking.status === 'pending') {
+      return false;
+    }
+    
     const matchesSearch = (booking.user?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (booking.user?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (booking.user?.phone || '').includes(searchTerm);
@@ -352,7 +363,8 @@ export default function VenueDashboardLayout({
   const getBookingsForDate = (date: Date) => {
     return bookings.filter(booking => {
       const bookingDate = new Date(booking.bookingDate);
-      return bookingDate.toDateString() === date.toDateString();
+      // Only show confirmed bookings in the calendar
+      return bookingDate.toDateString() === date.toDateString() && booking.status === 'confirmed';
     });
   };
 
@@ -461,6 +473,15 @@ export default function VenueDashboardLayout({
     );
   };
 
+  // Navigate to specific section in venue details
+  const handleNavigateToSection = (section: string) => {
+    console.log('Navigating to section:', section);
+    setActiveTab("venue-details");
+    setVenueDetailsSection(section);
+    // Scroll to top to see the section
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -489,18 +510,23 @@ export default function VenueDashboardLayout({
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
       confirmed: { color: 'bg-green-100 text-green-800', label: 'Confirmed' },
       rejected: { color: 'bg-red-100 text-red-800', label: 'Rejected' },
       cancelled: { color: 'bg-gray-100 text-gray-800', label: 'Cancelled' },
       completed: { color: 'bg-blue-100 text-blue-800', label: 'Completed' }
     };
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.confirmed;
     return <Badge className={config.color}>{config.label}</Badge>;
   };
 
   const renderBookingsContent = () => (
     <div className="space-y-6 p-6">
+      {/* Venue Completeness Alert */}
+      <VenueCompletenessAlert 
+        venueData={venueData}
+        onNavigateToSection={handleNavigateToSection}
+      />
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">All Bookings</h1>
@@ -522,17 +548,6 @@ export default function VenueDashboardLayout({
                 <p className="text-2xl font-bold">{stats?.totalBookings || 0}</p>
               </div>
               <Calendar className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold">{bookings.filter(b => b.status === 'pending').length}</p>
-              </div>
-              <Calendar className="h-8 w-8 text-yellow-500" />
             </div>
           </CardContent>
         </Card>
@@ -582,7 +597,6 @@ export default function VenueDashboardLayout({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
-                <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="rejected">Rejected</option>
                 <option value="cancelled">Cancelled</option>
@@ -691,30 +705,55 @@ export default function VenueDashboardLayout({
                 const dayBookings = getBookingsForDate(date);
                 const isToday = date.toDateString() === new Date().toDateString();
                 
+                // Check if date is blocked
+                const blockedSlot = venueData?.blockedSlots?.find((slot: any) => {
+                  const slotDate = new Date(slot.date);
+                  return slotDate.toDateString() === date.toDateString();
+                });
+                const isFullDayBlocked = blockedSlot?.isFullDayBlocked;
+                const hasPartialBlock = blockedSlot && !blockedSlot.isFullDayBlocked;
+                
                 return (
                   <div
                     key={day}
                     className={`p-2 h-24 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                      isToday ? 'bg-blue-50 border-blue-200' : 'border-gray-200'
+                      isToday ? 'bg-blue-50 border-blue-200' : 
+                      isFullDayBlocked ? 'bg-red-50 border-red-300' :
+                      hasPartialBlock ? 'bg-orange-50 border-orange-200' :
+                      'border-gray-200'
                     }`}
                   >
-                    <div className={`font-semibold ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                    <div className={`font-semibold ${
+                      isToday ? 'text-blue-600' : 
+                      isFullDayBlocked ? 'text-red-600' :
+                      hasPartialBlock ? 'text-orange-600' :
+                      'text-gray-900'
+                    }`}>
                       {day}
                     </div>
                     <div className="mt-1 space-y-1">
-                      {dayBookings.slice(0, 2).map((booking, idx) => (
+                      {isFullDayBlocked && (
+                        <div className="text-xs p-1 rounded bg-red-100 text-red-800 truncate">
+                          🚫 Blocked
+                        </div>
+                      )}
+                      {hasPartialBlock && (
+                        <div className="text-xs p-1 rounded bg-orange-100 text-orange-800 truncate">
+                          ⏰ Partial Block
+                        </div>
+                      )}
+                      {dayBookings.slice(0, isFullDayBlocked || hasPartialBlock ? 1 : 2).map((booking, idx) => (
                         <div
                           key={idx}
                           className={`text-xs p-1 rounded truncate ${
                             booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-800'
                           }`}
                         >
                           {booking.user?.name || 'Booking'}
                         </div>
                       ))}
-                      {dayBookings.length > 2 && (
+                      {dayBookings.length > 2 && !isFullDayBlocked && !hasPartialBlock && (
                         <div className="text-xs text-gray-500">
                           +{dayBookings.length - 2} more
                         </div>
@@ -730,25 +769,28 @@ export default function VenueDashboardLayout({
         {/* Booking Legend */}
         <Card>
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-3">Booking Status Legend</h3>
+            <h3 className="font-semibold mb-3">Calendar Legend</h3>
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-                <span className="text-sm">Confirmed</span>
+                <span className="text-sm">Confirmed Bookings</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-100 border border-yellow-200 rounded"></div>
-                <span className="text-sm">Pending</span>
+                <div className="w-4 h-4 bg-red-50 border border-red-300 rounded"></div>
+                <span className="text-sm">Fully Blocked</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
-                <span className="text-sm">Rejected</span>
+                <div className="w-4 h-4 bg-orange-50 border border-orange-200 rounded"></div>
+                <span className="text-sm">Partially Blocked</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
                 <span className="text-sm">Today</span>
               </div>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Note: Only confirmed bookings are shown. Blocked dates prevent online bookings.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -761,6 +803,8 @@ export default function VenueDashboardLayout({
         return renderBookingsContent();
       case "calendar":
         return renderCalendarContent();
+      case "blocked-slots":
+        return <BlockedSlotsManager venueId={venueData._id} />;
       case "faqs":
         return renderFaqsContent();
       case "listing":
@@ -1088,8 +1132,8 @@ export default function VenueDashboardLayout({
                       <span className="font-semibold">{bookings.filter(b => b.status === 'confirmed').length}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm">Pending Bookings</span>
-                      <span className="font-semibold">{bookings.filter(b => b.status === 'pending').length}</span>
+                      <span className="text-sm">Completed Bookings</span>
+                      <span className="font-semibold">{bookings.filter(b => b.status === 'completed').length}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Conversion Rate</span>
@@ -1344,6 +1388,8 @@ export default function VenueDashboardLayout({
           <VenueDetailsManager 
             venueData={venueData}
             onUpdate={onSectionUpdate}
+            initialSection={venueDetailsSection}
+            onSectionChange={() => setVenueDetailsSection(null)}
           />
         );
       default:
