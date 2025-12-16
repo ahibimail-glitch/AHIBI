@@ -125,6 +125,7 @@ interface VenueData {
   pricing: {
     basePrice: number;
     hourlyRate?: number;
+    halfDayRate?: number;
     fullDayRate?: number;
     cleaningFee?: number;
     securityDeposit?: number;
@@ -501,10 +502,76 @@ export default function VenueDetailPage() {
   const [bookingForm, setBookingForm] = useState({
     startTime: "",
     endTime: "",
-    guestCount: "",
     eventType: "",
     specialRequirements: ""
   });
+
+  // Estimated pricing state
+  const [estimatedPrice, setEstimatedPrice] = useState<number>(0);
+  const [fullDaySelected, setFullDaySelected] = useState<boolean>(false);
+
+  // Helper: compute duration in hours between start and end (handles overnight)
+  const getDurationHours = (start: string, end: string): number => {
+    if (!start || !end) return 0;
+    const startDate = new Date(`2000-01-01T${start}:00`);
+    const endDate = new Date(`2000-01-01T${end}:00`);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+    if (endDate <= startDate) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+    return (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+  };
+
+  // Helper: compute estimated price per rules
+  const computeEstimatedPrice = (): number => {
+    if (!venueData) return 0;
+    const base = venueData.pricing?.basePrice || 0;
+    const hourly = venueData.pricing?.hourlyRate || 0;
+    const halfDay = venueData.pricing?.halfDayRate;
+    const fullDay = venueData.pricing?.fullDayRate;
+    const cleaning = venueData.pricing?.cleaningFee || 0;
+
+    const dur = fullDaySelected ? 24 : getDurationHours(bookingForm.startTime, bookingForm.endTime);
+    if (dur <= 0) return 0;
+
+    let variable = 0;
+    if (fullDaySelected && typeof fullDay === 'number') {
+      variable = fullDay;
+    } else if (dur > 12) {
+      if (typeof halfDay === 'number' && halfDay > 0) {
+        variable = halfDay;
+      } else {
+        const derivedHalf = Math.min(
+          typeof fullDay === 'number' ? fullDay / 2 : Number.POSITIVE_INFINITY,
+          hourly > 0 ? hourly * 12 : Number.POSITIVE_INFINITY
+        );
+        variable = Number.isFinite(derivedHalf) ? derivedHalf : (hourly > 0 ? hourly * 12 : 0);
+      }
+    } else {
+      variable = hourly * dur;
+    }
+
+    const total = base + variable + cleaning;
+    return Math.max(0, Math.round(total));
+  };
+
+  useEffect(() => {
+    setEstimatedPrice(computeEstimatedPrice());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingForm.startTime, bookingForm.endTime, fullDaySelected, venueData]);
+
+  // Helper: get Half Day Rate for display (explicit or derived)
+  const getHalfDayRate = () => {
+    const hourly = venueData?.pricing?.hourlyRate;
+    const fullDay = venueData?.pricing?.fullDayRate;
+    const half = venueData?.pricing?.halfDayRate;
+    if (typeof half === 'number' && half > 0) return half;
+    const candidates: number[] = [];
+    if (typeof fullDay === 'number' && fullDay > 0) candidates.push(fullDay / 2);
+    if (typeof hourly === 'number' && hourly > 0) candidates.push(hourly * 12);
+    if (candidates.length === 0) return undefined;
+    return Math.min(...candidates);
+  };
 
   // Review form state
   const [newReview, setNewReview] = useState<{ rating: number; comment: string }>({ rating: 0, comment: "" });
@@ -828,18 +895,21 @@ export default function VenueDetailPage() {
       setFormError('Please select a booking date.');
       return;
     }
-    if (!bookingForm.startTime || !bookingForm.endTime) {
-      setFormError('Please select both start and end times.');
+    if (!fullDaySelected && !bookingForm.startTime) {
+      setFormError('Please select a start time.');
       return;
     }
-    if (bookingForm.startTime >= bookingForm.endTime) {
-      setFormError('End time must be after start time.');
-      return;
+    if (!fullDaySelected) {
+      if (!bookingForm.endTime) {
+        setFormError('Please select an end time.');
+        return;
+      }
+      if (bookingForm.startTime >= bookingForm.endTime) {
+        setFormError('End time must be after start time.');
+        return;
+      }
     }
-    if (!bookingForm.guestCount || parseInt(bookingForm.guestCount) <= 0) {
-      setFormError('Please enter a valid number of guests.');
-      return;
-    }
+    // guestCount will be auto-populated below
 
     // Safety check: ensure we have a valid venue ID
     if (!resolvedVenueId) {
@@ -852,6 +922,11 @@ export default function VenueDetailPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      // Auto guest count: minimumBookingCapacity or 1
+      const autoGuestCount = venueData?.capacityDetails?.minimumBookingCapacity && venueData.capacityDetails.minimumBookingCapacity > 0
+        ? venueData.capacityDetails.minimumBookingCapacity
+        : 1;
+
       const orderResponse = await fetch(`${apiUrl}/api/venue/${resolvedVenueId}/bookings/create-order`, {
         method: 'POST',
         headers: {
@@ -860,11 +935,15 @@ export default function VenueDetailPage() {
         },
         body: JSON.stringify({
           bookingDate: toYYYYMMDD(selectedDate),
-          startTime: bookingForm.startTime,
-          endTime: bookingForm.endTime,
-          guestCount: parseInt(bookingForm.guestCount),
+          startTime: fullDaySelected ? '00:00' : bookingForm.startTime,
+          endTime: fullDaySelected ? '23:00' : bookingForm.endTime,
+          guestCount: autoGuestCount,
           eventType: bookingForm.eventType,
           specialRequirements: bookingForm.specialRequirements,
+          pricingHint: {
+            estimatedPrice,
+            fullDaySelected,
+          }
         }),
       });
 
@@ -1333,6 +1412,13 @@ export default function VenueDetailPage() {
                           <span className="font-semibold">₹ {venueData.pricing.hourlyRate.toLocaleString('en-IN')}/hour</span>
                         </div>
                       )}
+                      {/* Half Day Rate (explicit or derived) */}
+                      {getHalfDayRate() !== undefined && (
+                        <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                          <span className="text-gray-700">Half Day Rate</span>
+                          <span className="font-semibold">₹ {getHalfDayRate()!.toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
                       {venueData?.pricing.fullDayRate && (
                         <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                           <span className="text-gray-700">Full Day Rate</span>
@@ -1754,16 +1840,17 @@ export default function VenueDetailPage() {
                             <Select
                               onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })}
                               value={bookingForm.startTime}
+                              disabled={fullDaySelected}
                             >
                               <SelectTrigger id="startTime">
-                                <SelectValue placeholder="Select start time" />
+                                <SelectValue placeholder={fullDaySelected ? "Set to 12:00 AM" : "Select start time"} />
                               </SelectTrigger>
                               <SelectContent>
                                 {getAvailableTimeOptions().map((time) => (
                                   <SelectItem
                                     key={time.value}
                                     value={time.value}
-                                    disabled={time.disabled}
+                                    disabled={time.disabled || fullDaySelected}
                                     className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
                                   >
                                     <div className="flex items-center justify-between w-full">
@@ -1782,16 +1869,17 @@ export default function VenueDetailPage() {
                             <Select
                               onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })}
                               value={bookingForm.endTime}
+                              disabled={fullDaySelected}
                             >
                               <SelectTrigger id="endTime">
-                                <SelectValue placeholder="Select end time" />
+                                <SelectValue placeholder={fullDaySelected ? "Disabled for full-day" : "Select end time"} />
                               </SelectTrigger>
                               <SelectContent>
                                 {getAvailableTimeOptions().map((time) => (
                                   <SelectItem
                                     key={time.value}
                                     value={time.value}
-                                    disabled={time.disabled}
+                                    disabled={time.disabled || fullDaySelected}
                                     className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
                                   >
                                     <div className="flex items-center justify-between w-full">
@@ -1804,28 +1892,28 @@ export default function VenueDetailPage() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            <p className="text-xs text-gray-500 mt-1">{fullDaySelected ? 'Full day selected – end time not required' : 'Select an end time after the start time'}</p>
                           </div>
                         </div>
-                        <div>
-                          <Label htmlFor="guestCount">Number of Guests *</Label>
-                          <Input
-                            id="guestCount"
-                            type="number"
-                            min={venueData?.capacityDetails?.minimumBookingCapacity || 1}
-                            max={venueData?.capacityDetails?.standingCapacity || venueData?.capacity || undefined}
-                            value={bookingForm.guestCount}
-                            onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })}
-                            required
+
+                        {/* Full Day Toggle */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="fullDay"
+                            type="checkbox"
+                            checked={fullDaySelected}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFullDaySelected(checked);
+                              if (checked) {
+                                setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' }));
+                              }
+                            }}
+                            className="h-4 w-4"
                           />
-                          {(venueData?.capacityDetails?.standingCapacity || venueData?.capacity > 0) && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {venueData?.capacityDetails?.minimumBookingCapacity && (
-                                <span>Minimum: {venueData.capacityDetails.minimumBookingCapacity} guests • </span>
-                              )}
-                              Maximum: {venueData?.capacityDetails?.standingCapacity || venueData?.capacity} guests
-                            </p>
-                          )}
+                          <Label htmlFor="fullDay">Full Day Booking</Label>
                         </div>
+                        
                         <div>
                           <Label htmlFor="eventType">Event Type</Label>
                           <Input id="eventType" value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="e.g., Wedding, Conference, Party" />
@@ -1833,6 +1921,17 @@ export default function VenueDetailPage() {
                         <div>
                           <Label htmlFor="specialRequirements">Special Requirements</Label>
                           <Textarea id="specialRequirements" value={bookingForm.specialRequirements} onChange={(e) => setBookingForm({ ...bookingForm, specialRequirements: e.target.value })} placeholder="Any special requests or requirements..." />
+                        </div>
+
+                        {/* Estimated Price Summary */}
+                        <div className="bg-gray-50 border rounded p-3 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-700 font-medium">Estimated Price</span>
+                            <span className="text-gray-900 font-semibold">₹ {estimatedPrice.toLocaleString('en-IN')}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Pricing = Base + {fullDaySelected ? 'Full-day' : (getDurationHours(bookingForm.startTime, bookingForm.endTime) > 12 ? 'Half-day (derived)' : 'Hourly × duration')} {venueData?.pricing?.cleaningFee ? '+ Cleaning fee' : ''}
+                          </p>
                         </div>
 
                         {formError && (

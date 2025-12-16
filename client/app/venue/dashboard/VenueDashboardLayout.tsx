@@ -742,6 +742,7 @@ export default function VenueDashboardLayout({
                           ⏰ Partial Block
                         </div>
                       )}
+                      {/* Show up to two items: prioritize blocks indicator and first booking with time */}
                       {dayBookings.slice(0, isFullDayBlocked || hasPartialBlock ? 1 : 2).map((booking, idx) => (
                         <div
                           key={idx}
@@ -750,7 +751,14 @@ export default function VenueDashboardLayout({
                             'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {booking.user?.name || 'Booking'}
+                          {`${booking.startTime || ''}${booking.startTime ? ' - ' : ''}${booking.endTime || ''}`}
+                          {` ${booking.user?.name ? `• ${booking.user.name}` : ''}`}
+                        </div>
+                      ))}
+                      {/* Show partial block time ranges if any */}
+                      {hasPartialBlock && Array.isArray(blockedSlot?.timeSlots) && blockedSlot.timeSlots.slice(0, 2 - Math.min(dayBookings.length, 2)).map((ts: any, i: number) => (
+                        <div key={`blk-${i}`} className="text-xs p-1 rounded bg-orange-100 text-orange-800 truncate">
+                          {`${ts.startTime} - ${ts.endTime}`}
                         </div>
                       ))}
                       {dayBookings.length > 2 && !isFullDayBlocked && !hasPartialBlock && (
@@ -804,7 +812,7 @@ export default function VenueDashboardLayout({
       case "calendar":
         return renderCalendarContent();
       case "blocked-slots":
-        return <BlockedSlotsManager venueId={venueData._id} />;
+        return <BlockedSlotsManager venueId={venueData._id} bookings={bookings} />;
       case "faqs":
         return renderFaqsContent();
       case "listing":

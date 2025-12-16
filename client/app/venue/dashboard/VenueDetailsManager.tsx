@@ -1190,6 +1190,28 @@ export default function VenueDetailsManager({
                       <p className="text-sm">₹{venueData?.pricing?.hourlyRate || "Not set"}</p>
                     </div>
                     <div>
+                      <Label className="text-sm font-medium text-gray-500">Half Day Rate</Label>
+                      {(() => {
+                        const half = venueData?.pricing?.halfDayRate;
+                        const hourly = venueData?.pricing?.hourlyRate;
+                        const full = venueData?.pricing?.fullDayRate;
+                        let value: number | undefined = undefined;
+                        let derived = false;
+                        if (typeof half === 'number' && half > 0) {
+                          value = half;
+                        } else {
+                          const cands: number[] = [];
+                          if (typeof full === 'number' && full > 0) cands.push(full / 2);
+                          if (typeof hourly === 'number' && hourly > 0) cands.push(hourly * 12);
+                          if (cands.length > 0) {
+                            value = Math.min(...cands);
+                            derived = true;
+                          }
+                        }
+                        return <p className="text-sm">{value !== undefined ? `₹${value}` + (derived ? ' (derived)' : '') : 'Not set'}</p>;
+                      })()}
+                    </div>
+                    <div>
                       <Label className="text-sm font-medium text-gray-500">Full Day Rate</Label>
                       <p className="text-sm">₹{venueData?.pricing?.fullDayRate || "Not set"}</p>
                     </div>

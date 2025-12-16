@@ -336,6 +336,9 @@ const VenueSchema = new mongoose.Schema({
     hourlyRate: {
       type: Number
     },
+    halfDayRate: {
+      type: Number
+    },
     fullDayRate: {
       type: Number
     },

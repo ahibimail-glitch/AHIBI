@@ -45,9 +45,16 @@ interface BlockedSlot {
 
 interface BlockedSlotsManagerProps {
   venueId: string;
+  bookings?: Array<{
+    bookingDate: string | Date;
+    startTime: string;
+    endTime: string;
+    status: string;
+    _id?: string;
+  }>;
 }
 
-const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId }) => {
+const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, bookings = [] }) => {
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,6 +68,40 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId }) =>
   const [notes, setNotes] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+  // Helpers
+  const toMinutes = (hhmm: string) => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  };
+  const rangesOverlap = (a: { start: number; end: number }, b: { start: number; end: number }) => {
+    return a.start < b.end && b.start < a.end;
+  };
+
+  const isSameDay = (d1: Date, d2: Date) => d1.toDateString() === d2.toDateString();
+
+  const getUnavailableRangesForDate = (date: Date) => {
+    const dayStr = date.toDateString();
+    // Confirmed bookings on this date
+    const bookingRanges = bookings
+      .filter(b => b.status === 'confirmed' && new Date(b.bookingDate).toDateString() === dayStr)
+      .map(b => ({ start: toMinutes(b.startTime), end: toMinutes(b.endTime), source: 'booking' as const }));
+
+    // Existing blocks on this date
+    const blockForDay = blockedSlots.find(s => isSameDay(new Date(s.date), date));
+    const blockRanges: Array<{ start: number; end: number; source: 'block' }> = [];
+    if (blockForDay) {
+      if (blockForDay.isFullDayBlocked) {
+        blockRanges.push({ start: 0, end: 24 * 60, source: 'block' });
+      } else if (Array.isArray(blockForDay.timeSlots)) {
+        blockForDay.timeSlots.forEach(ts => {
+          blockRanges.push({ start: toMinutes(ts.startTime), end: toMinutes(ts.endTime), source: 'block' });
+        });
+      }
+    }
+
+    return { bookingRanges, blockRanges };
+  };
 
   useEffect(() => {
     fetchBlockedSlots();
@@ -109,6 +150,32 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId }) =>
     if (!isFullDay && timeSlots.length === 0) {
       toast.error('Please add at least one time slot or block the full day');
       return;
+    }
+
+    // Validate against existing bookings and blocks for the selected date
+    const { bookingRanges, blockRanges } = getUnavailableRangesForDate(selectedDate);
+    const existingRanges = [...bookingRanges, ...blockRanges];
+
+    if (isFullDay) {
+      if (existingRanges.length > 0) {
+        toast.error('Cannot block full day: There are existing bookings or blocks on this date.');
+        return;
+      }
+    } else {
+      // Validate each proposed timeslot
+      for (const ts of timeSlots) {
+        const proposed = { start: toMinutes(ts.startTime), end: toMinutes(ts.endTime) };
+        if (proposed.start >= proposed.end) {
+          toast.error('Each time slot must have start time before end time.');
+          return;
+        }
+        for (const ex of existingRanges) {
+          if (rangesOverlap(proposed, { start: (ex as any).start, end: (ex as any).end })) {
+            toast.error('Selected time overlaps with an existing booking or blocked time.');
+            return;
+          }
+        }
+      }
     }
 
     try {
@@ -259,6 +326,32 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId }) =>
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 />
               </div>
+
+              {/* Unavailable ranges indicator for the selected date */}
+              {selectedDate && (
+                <div className="rounded-md border p-3 bg-muted/40">
+                  <div className="text-sm font-medium mb-2">Unavailable on {format(selectedDate, 'EEE, MMM d, yyyy')}</div>
+                  {(() => {
+                    const { bookingRanges, blockRanges } = getUnavailableRangesForDate(selectedDate);
+                    const any = bookingRanges.length + blockRanges.length > 0;
+                    if (!any) return <div className="text-xs text-gray-500">No existing bookings or blocks.</div>;
+                    return (
+                      <div className="flex flex-col gap-1">
+                        {bookingRanges.map((r, idx) => (
+                          <div key={`ubk-${idx}`} className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 w-fit">
+                            Booking: {`${String(Math.floor(r.start/60)).padStart(2,'0')}:${String(r.start%60).padStart(2,'0')}`} - {`${String(Math.floor(r.end/60)).padStart(2,'0')}:${String(r.end%60).padStart(2,'0')}`}
+                          </div>
+                        ))}
+                        {blockRanges.map((r, idx) => (
+                          <div key={`ublk-${idx}`} className="text-xs px-2 py-1 rounded bg-orange-100 text-orange-800 w-fit">
+                            Blocked: {`${String(Math.floor(r.start/60)).padStart(2,'0')}:${String(r.start%60).padStart(2,'0')}`} - {`${String(Math.floor(r.end/60)).padStart(2,'0')}:${String(r.end%60).padStart(2,'0')}`}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               <div className="flex items-center space-x-2">
                 <Checkbox

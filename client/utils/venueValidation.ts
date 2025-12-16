@@ -79,6 +79,29 @@ export function checkVenueCompleteness(venueData: any): VenueCompletenessResult 
     });
   }
 
+  // Capacity requirements (Critical)
+  if (!venueData?.capacityDetails?.minimumBookingCapacity || venueData.capacityDetails.minimumBookingCapacity === 0) {
+    missingFields.push({
+      section: 'capacity',
+      sectionLabel: 'Capacity & Booking',
+      field: 'capacityDetails.minimumBookingCapacity',
+      fieldLabel: 'Minimum Booking Capacity',
+      severity: 'critical'
+    });
+  }
+
+  const hasMaxCapacity = (venueData?.capacityDetails?.standingCapacity && venueData.capacityDetails.standingCapacity > 0)
+    || (venueData?.capacity && venueData.capacity > 0);
+  if (!hasMaxCapacity) {
+    missingFields.push({
+      section: 'capacity',
+      sectionLabel: 'Capacity & Booking',
+      field: 'capacityDetails.standingCapacity',
+      fieldLabel: 'Maximum Capacity',
+      severity: 'critical'
+    });
+  }
+
   // Important fields - highly recommended for better listing
   if (!venueData?.documents?.venueImages || venueData.documents.venueImages.length === 0) {
     if (!venueData?.gallery || venueData.gallery.length === 0) {
@@ -98,20 +121,8 @@ export function checkVenueCompleteness(venueData: any): VenueCompletenessResult 
       sectionLabel: 'Pricing & Payment',
       field: 'pricing.basePrice',
       fieldLabel: 'Base Price',
-      severity: 'important'
+      severity: 'critical'
     });
-  }
-
-  if (!venueData?.capacityDetails?.standingCapacity || venueData.capacityDetails.standingCapacity === 0) {
-    if (!venueData?.capacity || venueData.capacity === 0) {
-      missingFields.push({
-        section: 'capacity',
-        sectionLabel: 'Capacity & Booking',
-        field: 'capacity',
-        fieldLabel: 'Venue Capacity',
-        severity: 'important'
-      });
-    }
   }
 
   if (!venueData?.venueClassification?.venueTypes || venueData.venueClassification.venueTypes.length === 0) {
@@ -186,7 +197,7 @@ export function checkVenueCompleteness(venueData: any): VenueCompletenessResult 
   }
 
   // Calculate completion percentage
-  const totalFields = 16; // Total important fields to track
+  const totalFields = 17; // Updated total important/critical fields to track
   const filledFields = totalFields - missingFields.length;
   const completionPercentage = Math.round((filledFields / totalFields) * 100);
 

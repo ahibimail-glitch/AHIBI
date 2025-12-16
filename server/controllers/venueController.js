@@ -198,7 +198,7 @@ exports.createBookingOrder = async (req, res) => {
   }
   
   try {
-    const { bookingDate, startTime, endTime, guestCount, eventType, specialRequirements } = req.body;
+    const { bookingDate, startTime, endTime, guestCount, eventType, specialRequirements, pricingHint } = req.body;
     
     console.log('Creating booking order for venue ID:', req.params.id);
     console.log('ObjectId validation - isValid:', mongoose.Types.ObjectId.isValid(req.params.id));
@@ -235,16 +235,37 @@ exports.createBookingOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'Venue is not available for the selected date and time');
     }
     
-    // Calculate duration and pricing
+    // Calculate duration and pricing (server-authoritative)
     const start = new Date(`2000-01-01T${startTime}:00`);
     const end = new Date(`2000-01-01T${endTime}:00`);
     if (end <= start) {
       end.setDate(end.getDate() + 1);
     }
     const durationHours = (end - start) / (1000 * 60 * 60);
-    
-    const basePrice = venue.pricing.hourlyRate || venue.pricing.basePrice;
-    const totalAmount = Math.round(basePrice * durationHours);
+
+    const base = Number(venue.pricing?.basePrice) || 0;
+    const hourly = Number(venue.pricing?.hourlyRate) || 0;
+    const halfDay = Number(venue.pricing?.halfDayRate) || 0;
+    const fullDay = Number(venue.pricing?.fullDayRate) || 0;
+    const cleaning = Number(venue.pricing?.cleaningFee) || 0;
+    const fullDaySelected = Boolean(pricingHint?.fullDaySelected);
+
+    let variable = 0;
+    if (fullDaySelected && fullDay > 0) {
+      variable = fullDay;
+    } else if (durationHours > 12) {
+      if (halfDay > 0) {
+        variable = halfDay;
+      } else {
+        const candidates = [];
+        if (fullDay > 0) candidates.push(fullDay / 2);
+        if (hourly > 0) candidates.push(hourly * 12);
+        variable = candidates.length > 0 ? Math.min(...candidates) : (hourly > 0 ? hourly * 12 : 0);
+      }
+    } else {
+      variable = hourly * durationHours;
+    }
+    const totalAmount = Math.max(0, Math.round(base + variable + cleaning));
     
     // Create Razorpay order
     // Generate shorter receipt (max 40 chars): use last 8 chars of venue ID + timestamp suffix
@@ -268,33 +289,10 @@ exports.createBookingOrder = async (req, res) => {
       }
     });
     
-    // Create pending booking
-    const booking = await VenueBooking.create({
-      venue: venue._id,
-      user: req.user.id,
-      bookingDate,
-      startTime,
-      endTime,
-      duration: durationHours,
-      guestCount,
-      eventType,
-      specialRequirements,
-      status: 'pending',
-      pricing: {
-        basePrice,
-        totalAmount,
-        paymentStatus: 'pending'
-      },
-      paymentDetails: {
-        razorpayOrderId: razorpayOrder.id
-      }
-    });
-    
     return ApiResponse.success(res, 'Order created successfully', {
       orderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      bookingId: booking._id,
       notes: razorpayOrder.notes
     });
     
@@ -324,23 +322,63 @@ exports.verifyPayment = async (req, res) => {
       return ApiResponse.badRequest(res, 'Invalid payment signature');
     }
     
-    // Update booking
-    const booking = await VenueBooking.findById(bookingId)
-      .populate('venue', 'name email phone')
-      .populate('user', 'name email phone');
-    
-    if (!booking) {
-      return ApiResponse.notFound(res, 'Booking not found');
+    let booking;
+    if (bookingId) {
+      // Existing pending booking flow (backward compatibility)
+      booking = await VenueBooking.findById(bookingId)
+        .populate('venue', 'name email phone')
+        .populate('user', 'name email phone');
+      if (!booking) {
+        return ApiResponse.notFound(res, 'Booking not found');
+      }
+      booking.status = 'confirmed';
+      booking.pricing.paymentStatus = 'paid';
+      booking.paymentDetails.paymentId = razorpay_payment_id;
+      booking.paymentDetails.signature = razorpay_signature;
+      booking.confirmedAt = Date.now();
+      await booking.save();
+    } else {
+      // New flow: create booking after successful payment
+      const order = await razorpay.orders.fetch(razorpay_order_id);
+      const notes = order?.notes || {};
+      const venueId = notes.venueId;
+      const userId = req.user.id;
+      const bookingDate = notes.bookingDate;
+      const startTime = notes.startTime;
+      const endTime = notes.endTime;
+      const guestCount = Number(notes.guestCount) || 1;
+      const durationHours = Number(notes.durationHours) || 0;
+
+      const venue = await Venue.findById(venueId);
+      if (!venue) {
+        return ApiResponse.notFound(res, 'Venue not found for order');
+      }
+
+      const totalAmount = Math.round(order.amount / 100);
+
+      booking = await VenueBooking.create({
+        venue: venue._id,
+        user: userId,
+        bookingDate,
+        startTime,
+        endTime,
+        duration: durationHours,
+        guestCount,
+        status: 'confirmed',
+        pricing: {
+          basePrice: Number(venue.pricing?.basePrice) || 0,
+          totalAmount,
+          paymentStatus: 'paid'
+        },
+        paymentDetails: {
+          razorpayOrderId: razorpay_order_id,
+          paymentId: razorpay_payment_id,
+          signature: razorpay_signature
+        },
+        confirmedAt: Date.now()
+      });
     }
-    
-    booking.status = 'confirmed';
-    booking.pricing.paymentStatus = 'paid';
-    booking.paymentDetails.paymentId = razorpay_payment_id;
-    booking.paymentDetails.signature = razorpay_signature;
-    booking.confirmedAt = Date.now();
-    
-    await booking.save();
-    
+
     // Update venue statistics
     await Venue.findByIdAndUpdate(booking.venue._id, {
       $inc: {
@@ -348,10 +386,8 @@ exports.verifyPayment = async (req, res) => {
         totalEarnings: booking.pricing.totalAmount
       }
     });
-    
-    return ApiResponse.success(res, 'Payment verified and booking confirmed', {
-      booking
-    });
+
+    return ApiResponse.success(res, 'Payment verified and booking confirmed', { booking });
     
   } catch (error) {
     console.error('Verify payment error:', error);
