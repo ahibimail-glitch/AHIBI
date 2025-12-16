@@ -12,15 +12,8 @@ const router = express.Router();
 router.post('/auth/send-otp', [
   check('phone', 'Phone number is required').matches(/^\d{10}$/),
   check('mode', 'Mode must be signup or login').isIn(['signup', 'login']),
-  // Conditional validation for signup
-  check('name', 'Venue name is required').if(check('mode').equals('signup')).notEmpty(),
-  check('email', 'Please include a valid email').if(check('mode').equals('signup')).isEmail(),
-  check('description', 'Description is required').if(check('mode').equals('signup')).notEmpty(),
-  check('address.street', 'Street address is required').if(check('mode').equals('signup')).notEmpty(),
-  check('address.city', 'City is required').if(check('mode').equals('signup')).notEmpty(),
-  check('address.state', 'State is required').if(check('mode').equals('signup')).notEmpty(),
-  check('address.pincode', 'Valid pincode is required').if(check('mode').equals('signup')).matches(/^\d{6}$/),
-  check('contactInfo.phone', 'Contact phone is required').if(check('mode').equals('signup')).matches(/^\d{10}$/)
+  // Minimal validation for signup; remaining details will be captured later in admin panel
+  check('email', 'Please include a valid email').if(check('mode').equals('signup')).isEmail().optional({ nullable: true })
 ], venueAuthController.sendVenueOtp);
 
 router.post('/auth/verify-otp', [

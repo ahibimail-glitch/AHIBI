@@ -32,22 +32,7 @@ export default function VenueSignupPage() {
     email: "",
     phone: "",
     venueName: "",
-    venueType: "",
-    capacity: "",
-    description: "",
     agreeToTerms: false,
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      pincode: "",
-    },
-    contactInfo: {
-      email: "",
-    },
-    pricing: {
-      basePrice: "",
-    },
   });
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
@@ -66,8 +51,10 @@ export default function VenueSignupPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...signupData,
-          contactInfo: { email: signupData.email, phone: signupData.phone },
+          name: signupData.name,
+          email: signupData.email,
+          phone: signupData.phone,
+          venueName: signupData.venueName,
           mode: 'signup'
         }),
       });
@@ -225,64 +212,6 @@ export default function VenueSignupPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="street" className="text-gray-200">
-                    Street Address *
-                  </Label>
-                  <Input
-                    id="street"
-                    placeholder="Street"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    value={signupData.address.street}
-                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, street: e.target.value } })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-gray-200">
-                    City *
-                  </Label>
-                  <Input
-                    id="city"
-                    placeholder="City"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    value={signupData.address.city}
-                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, city: e.target.value } })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="state" className="text-gray-200">
-                    State *
-                  </Label>
-                  <Input
-                    id="state"
-                    placeholder="State"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    value={signupData.address.state}
-                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, state: e.target.value } })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pincode" className="text-gray-200">
-                    Pincode *
-                  </Label>
-                  <Input
-                    id="pincode"
-                    placeholder="Pincode"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    value={signupData.address.pincode}
-                    onChange={(e) => setSignupData({ ...signupData, address: { ...signupData.address, pincode: e.target.value } })}
-                    required
-                  />
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="venueName" className="text-gray-200">
                   Venue Name *
@@ -300,84 +229,6 @@ export default function VenueSignupPage() {
                       })
                     }
                     className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-gray-200">
-                  Venue Description *
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Tell us about your venue..."
-                  className="bg-gray-800 border-gray-600 text-white min-h-[100px]"
-                  value={signupData.description}
-                  onChange={(e) => setSignupData({ ...signupData, description: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="venueType" className="text-gray-200">
-                  Venue Type *
-                </Label>
-                <Select
-                  value={signupData.venueType}
-                  onValueChange={(value) =>
-                    setSignupData({ ...signupData, venueType: value })
-                  }
-                  required
-                >
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select venue type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    <SelectItem value="banquet-hall">Banquet Hall</SelectItem>
-                    <SelectItem value="conference-center">
-                      Conference Center
-                    </SelectItem>
-                    <SelectItem value="outdoor-venue">Outdoor Venue</SelectItem>
-                    <SelectItem value="restaurant">Restaurant</SelectItem>
-                    <SelectItem value="hotel">Hotel</SelectItem>
-                    <SelectItem value="auditorium">Auditorium</SelectItem>
-                    <SelectItem value="club">Club/Lounge</SelectItem>
-                    <SelectItem value="community-hall">
-                      Community Hall
-                    </SelectItem>
-                    <SelectItem value="resort">Resort</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="capacity" className="text-gray-200">
-                    Capacity (Guests) *
-                  </Label>
-                  <Input
-                    id="capacity"
-                    type="number"
-                    placeholder="e.g., 150"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    value={signupData.capacity}
-                    onChange={(e) => setSignupData({ ...signupData, capacity: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="basePrice" className="text-gray-200">
-                    Base Price (₹) *
-                  </Label>
-                  <Input
-                    id="basePrice"
-                    type="number"
-                    placeholder="e.g., 50000"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    value={signupData.pricing.basePrice}
-                    onChange={(e) => setSignupData({ ...signupData, pricing: { ...signupData.pricing, basePrice: e.target.value } })}
                     required
                   />
                 </div>
@@ -495,22 +346,7 @@ export default function VenueSignupPage() {
                     <strong>Phone:</strong> +91 {signupData.phone}
                   </p>
                   <p>
-                    <strong>City:</strong> {signupData.address.city}
-                  </p>
-                  <p>
                     <strong>Venue:</strong> {signupData.venueName}
-                  </p>
-                  <p>
-                    <strong>Description:</strong> {signupData.description}
-                  </p>
-                  <p>
-                    <strong>Type:</strong> {signupData.venueType}
-                  </p>
-                  <p>
-                    <strong>Capacity:</strong> {signupData.capacity} guests
-                  </p>
-                  <p>
-                    <strong>Base Price:</strong> ₹{signupData.pricing.basePrice}
                   </p>
                 </div>
               </div>

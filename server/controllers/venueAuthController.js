@@ -200,17 +200,44 @@ exports.verifyVenueOtp = async (req, res) => {
         }
       };
 
-      // Merge all data with defaults
+      // Provide minimal defaults so initial signup doesn't require full details
+      const minimalDefaults = {
+        description: signupData.description || 'To be updated',
+        address: {
+          street: signupData.address?.street || 'Not Provided',
+          city: signupData.address?.city || 'Unknown',
+          state: signupData.address?.state || 'Unknown',
+          pincode: signupData.address?.pincode || '000000',
+          landmark: signupData.address?.landmark || '',
+          googleMapsLink: signupData.address?.googleMapsLink || '',
+          directions: signupData.address?.directions || ''
+        },
+        location: signupData.location || { type: 'Point', coordinates: [] },
+        capacity: Number(signupData.capacity) || 0,
+        contactInfo: {
+          phone: signupData.contactInfo?.phone || signupData.phone || phone,
+          email: signupData.contactInfo?.email || signupData.email || ownerEmail,
+          website: signupData.contactInfo?.website || ''
+        }
+      };
+
+      // Merge all data with defaults and ensure top-level fields exist
       const venueData = {
-        ...signupData,
+        name: signupData.venueName || signupData.name || 'New Venue',
+        email: ownerEmail,
+        phone: signupData.phone || phone,
+        approvalStatus: 'pending',
         ownerDetails,
         venueClassification,
         parking,
         capacityDetails,
-        pricing
+        pricing,
+        ...minimalDefaults
       };
 
-      const venue = await Venue.create(venueData);
+      // Save without running full validation; details will be updated later in admin panel
+      const venue = new Venue(venueData);
+      await venue.save({ validateBeforeSave: false });
 
       return ApiResponse.success(res, 'Venue account created successfully. Pending admin approval.', {
         venue: {
