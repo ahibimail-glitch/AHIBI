@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Script from "next/script";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -314,6 +315,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         return;
       }
       setIsBooking(true);
+
+    if (typeof window !== 'undefined' && (window as any).fbq && event && event._id === '69303656ca38d79b1c9e4202') {
+      try {
+        (window as any).fbq('track', 'InitiateCheckout');
+      } catch {}
+    }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const res = await fetch(`${apiUrl}/api/bookings`, {
         method: 'POST',
@@ -1108,6 +1115,28 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
+
+      {params.id === '69303656ca38d79b1c9e4202' && (
+        <>
+          <Script id="meta-pixel-base" strategy="afterInteractive">
+            {`
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '844675348311797');
+              fbq('track', 'PageView');
+            `}
+          </Script>
+          <noscript>
+            <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=844675348311797&ev=PageView&noscript=1" alt="" />
+          </noscript>
+        </>
+      )}
 
       {/* Premium Information Banner */}
       <div className="bg-white border-b border-gray-100">

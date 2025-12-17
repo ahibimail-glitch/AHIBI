@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Script from 'next/script';
 import { motion } from 'framer-motion';
 import { CheckCircle, ArrowLeft, Download } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
@@ -163,6 +164,22 @@ export default function BookingSuccessPage() {
     }
   }, [loading, booking, autoDownloaded]);
 
+  // Fire Meta Pixel Purchase for Nasquerade on success page
+  useEffect(() => {
+    if (loading || !booking) return;
+    try {
+      const ev = booking.event;
+      const evId = typeof ev === 'string' ? ev : ev?._id;
+      if (evId === '69303656ca38d79b1c9e4202' && typeof window !== 'undefined' && (window as any).fbq) {
+        const value = (booking as any).total || (booking as any).price || 0;
+        (window as any).fbq('track', 'Purchase', {
+          value,
+          currency: 'INR',
+        });
+      }
+    } catch {}
+  }, [loading, booking]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -233,6 +250,24 @@ export default function BookingSuccessPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Meta Pixel for Nasquerade */}
+      <Script id="meta-pixel-base-success" strategy="afterInteractive">
+        {`
+          !function(f,b,e,v,n,t,s)
+          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+          n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];
+          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '844675348311797');
+          fbq('track', 'PageView');
+        `}
+      </Script>
+      <noscript>
+        <img height="1" width="1" style={{ display: 'none' }} src="https://www.facebook.com/tr?id=844675348311797&ev=PageView&noscript=1" alt="" />
+      </noscript>
       <div className="container mx-auto px-4 max-w-4xl">
         <Card className="w-full p-8 mb-8">
           <div className="text-center">

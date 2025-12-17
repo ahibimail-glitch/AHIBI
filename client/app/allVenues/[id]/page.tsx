@@ -1054,145 +1054,210 @@ export default function VenueDetailPage() {
   const displayImages = extractVenueImages(venueData);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
       {isVerifying && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-[100]">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white"></div>
-          <p className="text-white text-lg mt-4">Verifying payment, please wait...</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100]">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600"></div>
+            <p className="text-gray-800 text-lg mt-4 font-medium">Verifying payment...</p>
+            <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
+          </div>
         </div>
       )}
 
       {/* Navbar Section */}
       <Navbar />
 
-      {/* Main Content Section - Matching Reference Design */}
-      <div className="container mx-auto px-4 py-6">
+      {/* Main Content Section - Premium Light Theme */}
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Panel - Main Image and Venue Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Main Large Image */}
-            <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] rounded-lg overflow-hidden">
+            <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[550px] rounded-2xl overflow-hidden shadow-2xl group">
               {displayImages.length > 0 ? (
                 <>
                   <img
                     src={displayImages[currentImageIndex % displayImages.length]}
                     alt={venueData?.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
+                  {/* Image Overlay Gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Image Counter Badge */}
+                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    {currentImageIndex + 1} / {displayImages.length}
+                  </div>
+
                   {displayImages.length > 1 && (
                     <>
                       <button
                         onClick={prevImage}
-                        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 sm:p-2 shadow-lg"
+                        className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 sm:p-3 shadow-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+                        aria-label="Previous image"
                       >
-                        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
                       </button>
                       <button
                         onClick={nextImage}
-                        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-1.5 sm:p-2 shadow-lg"
+                        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 sm:p-3 shadow-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+                        aria-label="Next image"
                       >
-                        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
                       </button>
                     </>
                   )}
                 </>
               ) : (
-                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-500">
-                  No images available
+                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-400">
+                  <ImageIcon className="h-16 w-16 mb-3" />
+                  <p className="text-lg font-medium">No images available</p>
                 </div>
               )}
             </div>
 
             {/* Venue Header Section */}
-            <div className="space-y-4">
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-6">
               <div>
-                <h1 className="text-3xl font-semibold text-gray-900">{venueData?.name}</h1>
-                <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin className="h-4 w-4" />
-                  <span>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 leading-tight">
+                  {venueData?.name}
+                </h1>
+                <div className="flex items-start gap-2 text-gray-600">
+                  <MapPin className="h-5 w-5 mt-0.5 text-purple-600 flex-shrink-0" />
+                  <span className="text-base sm:text-lg">
                     {venueData?.address.street}, {venueData?.address.city}, {venueData?.address.state}
                   </span>
                 </div>
               </div>
 
-              {/* Rating and Reviews */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded">
-                    <span className="font-semibold">{(venueData?.rating.average ?? 5.0).toFixed(1)}</span>
-                    <Star className="h-4 w-4 fill-white" />
+              {/* Rating and Stats */}
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl shadow-md">
+                    <Star className="h-5 w-5 fill-white" />
+                    <span className="font-bold text-lg">{(venueData?.rating.average ?? 5.0).toFixed(1)}</span>
                   </div>
-                  <span className="text-sm text-gray-600">{(venueData?.rating.count ?? 6)} Reviews</span>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{(venueData?.rating.count ?? 6)} Reviews</p>
+                    <p className="text-xs text-gray-500">Verified ratings</p>
+                  </div>
+                </div>
+
+                <div className="h-10 w-px bg-gray-300 hidden sm:block"></div>
+
+                <div className="flex items-center gap-2">
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <Users className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Up to {venueData?.capacity}</p>
+                    <p className="text-xs text-gray-500">Guest capacity</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Award className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{venueData?.totalBookings || 0}+ Bookings</p>
+                    <p className="text-xs text-gray-500">Successfully hosted</p>
+                  </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* <Button className="bg-green-600 hover:bg-green-700 text-white">
-                  Get Quote
-                </Button> */}
-                <Button variant="outline" className="border-pink-600 text-pink-600 hover:bg-pink-50">
-                  View Photos
+              <div className="flex items-center gap-3 flex-wrap pt-2">
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6">
+                  <Bookmark className="h-4 w-4 mr-2" />
+                  Save Venue
                 </Button>
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
-                  Share & Reviews
+                <Button variant="outline" className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 px-6">
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  View Gallery
+                </Button>
+                <Button variant="outline" className="border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 px-6">
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share
                 </Button>
               </div>
             </div>
 
             {/* Tabs Section */}
-            <Tabs defaultValue="portfolio" className="w-full">
-              <TabsList className="border-b border-gray-200 bg-transparent h-auto p-0 w-full justify-start">
-                <TabsTrigger value="portfolio" className="px-6 py-3 data-[state=active]:border-b-2 data-[state=active]:border-pink-600 data-[state=active]:text-pink-600 rounded-none">
+            <Tabs defaultValue="portfolio" className="w-full bg-white rounded-2xl shadow-lg overflow-hidden">
+              <TabsList className="border-b-2 border-gray-100 bg-gradient-to-r from-gray-50 to-white h-auto p-0 w-full justify-start">
+                <TabsTrigger
+                  value="portfolio"
+                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                >
                   Portfolio
                 </TabsTrigger>
-                <TabsTrigger value="about" className="px-6 py-3 data-[state=active]:border-b-2 data-[state=active]:border-pink-600 data-[state=active]:text-pink-600 rounded-none">
+                <TabsTrigger
+                  value="about"
+                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                >
                   About
                 </TabsTrigger>
-                <TabsTrigger value="reviews" className="px-6 py-3 data-[state=active]:border-b-2 data-[state=active]:border-pink-600 data-[state=active]:text-pink-600 rounded-none">
+                <TabsTrigger
+                  value="reviews"
+                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                >
                   Reviews
                 </TabsTrigger>
-                <TabsTrigger value="faq" className="px-6 py-3 data-[state=active]:border-b-2 data-[state=active]:border-pink-600 data-[state=active]:text-pink-600 rounded-none">
+                <TabsTrigger
+                  value="faq"
+                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                >
                   FAQ
                 </TabsTrigger>
               </TabsList>
 
               {/* Portfolio Tab */}
-              <TabsContent value="portfolio" className="mt-6">
+              <TabsContent value="portfolio" className="p-6 sm:p-8">
                 <PortfolioSection venueData={venueData} displayImages={displayImages} />
               </TabsContent>
 
               {/* About Tab */}
-              <TabsContent value="about" className="mt-6">
+              <TabsContent value="about" className="p-6 sm:p-8">
                 <div className="space-y-8">
                   {/* About the Venue */}
-                  <div>
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 flex items-center gap-3">
+                      <Building2 className="h-7 w-7 text-purple-600" />
                       About {venueData?.name}
                     </h2>
-                    <p className="text-gray-700 leading-relaxed">{venueData?.description || "This beautiful venue offers a perfect setting for your special events."}</p>
+                    <p className="text-gray-700 leading-relaxed text-base sm:text-lg">{venueData?.description || "This beautiful venue offers a perfect setting for your special events."}</p>
                   </div>
 
                   {/* Venue Classification */}
                   {venueData?.venueClassification && (
-                    <div className="bg-gray-50 p-6 rounded-lg">
-                      <h3 className="font-semibold text-lg mb-4 text-gray-900">Venue Type & Classification</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Venue Type</p>
+                    <div className="bg-white border-2 border-gray-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
+                      <h3 className="font-bold text-xl mb-5 text-gray-900 flex items-center gap-2">
+                        <Award className="h-6 w-6 text-purple-600" />
+                        Venue Type & Classification
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Venue Type</p>
                           <div className="flex flex-wrap gap-2">
                             {venueData.venueClassification.venueTypes?.map((type, idx) => (
-                              <Badge key={idx} variant="secondary">{type?.replace?.(/_/g, ' ') || 'N/A'}</Badge>
+                              <Badge key={idx} className="bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1 text-sm font-medium">
+                                {type?.replace?.(/_/g, ' ') || 'N/A'}
+                              </Badge>
                             ))}
                           </div>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Setting</p>
-                          <Badge className="bg-blue-100 text-blue-800">{venueData.venueClassification.indoorOutdoor}</Badge>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Setting</p>
+                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1.5 text-sm font-medium">
+                            {venueData.venueClassification.indoorOutdoor}
+                          </Badge>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Operation</p>
-                          <Badge className="bg-green-100 text-green-800">
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Operation</p>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200 px-3 py-1.5 text-sm font-medium">
                             {venueData.venueClassification.operationMode?.replace?.(/_/g, ' ') || 'N/A'}
                           </Badge>
                         </div>
@@ -1202,52 +1267,68 @@ export default function VenueDetailPage() {
 
                   {/* Capacity Details */}
                   <div>
-                    <h3 className="font-semibold text-lg mb-4 text-gray-900">Capacity Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="border rounded-lg p-4">
-                        <Users className="h-8 w-8 text-purple-600 mb-2" />
-                        <p className="text-sm text-gray-600">Standing Capacity</p>
-                        <p className="text-2xl font-bold text-gray-900">{venueData?.capacityDetails?.standingCapacity || venueData?.capacity}</p>
+                    <h3 className="font-bold text-xl mb-5 text-gray-900 flex items-center gap-2">
+                      <Users className="h-6 w-6 text-purple-600" />
+                      Capacity Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                        <div className="bg-purple-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 shadow-md">
+                          <Users className="h-7 w-7 text-white" />
+                        </div>
+                        <p className="text-sm font-medium text-purple-700 mb-1 uppercase tracking-wide">Standing Capacity</p>
+                        <p className="text-3xl font-bold text-gray-900">{venueData?.capacityDetails?.standingCapacity || venueData?.capacity}</p>
                       </div>
                       {venueData?.capacityDetails?.seatingCapacity?.theatreStyle && (
-                        <div className="border rounded-lg p-4">
-                          <Users className="h-8 w-8 text-blue-600 mb-2" />
-                          <p className="text-sm text-gray-600">Theatre Style Seating</p>
-                          <p className="text-2xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.theatreStyle}</p>
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                          <div className="bg-blue-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 shadow-md">
+                            <Users className="h-7 w-7 text-white" />
+                          </div>
+                          <p className="text-sm font-medium text-blue-700 mb-1 uppercase tracking-wide">Theatre Style</p>
+                          <p className="text-3xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.theatreStyle}</p>
                         </div>
                       )}
                       {venueData?.capacityDetails?.seatingCapacity?.roundTable && (
-                        <div className="border rounded-lg p-4">
-                          <Users className="h-8 w-8 text-green-600 mb-2" />
-                          <p className="text-sm text-gray-600">Round Table Seating</p>
-                          <p className="text-2xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.roundTable}</p>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                          <div className="bg-green-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 shadow-md">
+                            <Users className="h-7 w-7 text-white" />
+                          </div>
+                          <p className="text-sm font-medium text-green-700 mb-1 uppercase tracking-wide">Round Table</p>
+                          <p className="text-3xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.roundTable}</p>
                         </div>
                       )}
                     </div>
                     {venueData?.capacityDetails?.minimumBookingCapacity && (
-                      <p className="text-sm text-gray-600 mt-3">Minimum booking capacity: {venueData.capacityDetails.minimumBookingCapacity} guests</p>
+                      <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <p className="text-sm font-medium text-amber-800">
+                          <span className="font-bold">Minimum booking:</span> {venueData.capacityDetails.minimumBookingCapacity} guests required
+                        </p>
+                      </div>
                     )}
                   </div>
 
                   {/* Amenities & Facilities */}
                   <div>
-                    <h3 className="font-semibold text-lg mb-4 text-gray-900">Amenities & Facilities</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <h3 className="font-bold text-xl mb-5 text-gray-900 flex items-center gap-2">
+                      <Check className="h-6 w-6 text-purple-600" />
+                      Amenities & Facilities
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {venueData?.amenities && Object.entries(venueData.amenities)
                         .filter(([_, value]) => value.available)
                         .map(([key, value]) => {
                           const IconComponent = facilityIcons[key] || Check;
                           return (
-                            <div key={key} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                              <div className="p-2 bg-green-100 rounded-lg shrink-0">
-                                <IconComponent className="h-5 w-5 text-green-600" />
+                            <div key={key} className="flex items-start gap-4 p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md transition-all duration-300">
+                              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl shrink-0 shadow-sm">
+                                <IconComponent className="h-6 w-6 text-green-700" />
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 break-words">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-gray-900 break-words leading-tight">
                                   {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
                                 </p>
                                 {value.description && (
-                                  <p className="text-xs text-gray-600 mt-1 break-words">{value.description}</p>
+                                  <p className="text-xs text-gray-600 mt-1.5 break-words leading-relaxed">{value.description}</p>
                                 )}
                               </div>
                             </div>
@@ -1258,11 +1339,11 @@ export default function VenueDetailPage() {
                         .map(([key]) => {
                           const IconComponent = facilityIcons[key] || Check;
                           return (
-                            <div key={key} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                              <div className="p-2 bg-green-100 rounded-lg">
-                                <IconComponent className="h-5 w-5 text-green-600" />
+                            <div key={key} className="flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md transition-all duration-300">
+                              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl shadow-sm">
+                                <IconComponent className="h-6 w-6 text-green-700" />
                               </div>
-                              <span className="text-sm font-medium text-gray-900">
+                              <span className="text-sm font-semibold text-gray-900">
                                 {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
                               </span>
                             </div>
@@ -1396,47 +1477,50 @@ export default function VenueDetailPage() {
                   )}
 
                   {/* Pricing Details */}
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6">
-                    <h3 className="font-semibold text-lg mb-4 text-gray-900 flex items-center gap-2">
-                      <IndianRupee className="h-5 w-5 text-purple-600" />
+                  <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 rounded-2xl p-8 shadow-2xl text-white">
+                    <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                        <IndianRupee className="h-6 w-6" />
+                      </div>
                       Pricing Information
                     </h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                        <span className="text-gray-700">Base Price</span>
-                        <span className="font-semibold text-lg">₹ {(venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                        <span className="text-purple-100 font-medium">Base Price</span>
+                        <span className="font-bold text-2xl">₹ {(venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
                       </div>
                       {venueData?.pricing.hourlyRate && (
-                        <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                          <span className="text-gray-700">Hourly Rate</span>
-                          <span className="font-semibold">₹ {venueData.pricing.hourlyRate.toLocaleString('en-IN')}/hour</span>
+                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                          <span className="text-purple-100 font-medium">Hourly Rate</span>
+                          <span className="font-bold text-xl">₹ {venueData.pricing.hourlyRate.toLocaleString('en-IN')}<span className="text-sm font-normal">/hour</span></span>
                         </div>
                       )}
-                      {/* Half Day Rate (explicit or derived) */}
                       {getHalfDayRate() !== undefined && (
-                        <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                          <span className="text-gray-700">Half Day Rate</span>
-                          <span className="font-semibold">₹ {getHalfDayRate()!.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                          <span className="text-purple-100 font-medium">Half Day Rate</span>
+                          <span className="font-bold text-xl">₹ {getHalfDayRate()!.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {venueData?.pricing.fullDayRate && (
-                        <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                          <span className="text-gray-700">Full Day Rate</span>
-                          <span className="font-semibold">₹ {venueData.pricing.fullDayRate.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                          <span className="text-purple-100 font-medium">Full Day Rate</span>
+                          <span className="font-bold text-xl">₹ {venueData.pricing.fullDayRate.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {venueData?.pricing.securityDeposit && (
-                        <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                          <span className="text-gray-700">Security Deposit</span>
-                          <span className="font-semibold">₹ {venueData.pricing.securityDeposit.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
+                          <span className="text-purple-100 font-medium">Security Deposit</span>
+                          <span className="font-bold text-xl">₹ {venueData.pricing.securityDeposit.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {venueData?.pricing.rentalIncludes && venueData.pricing.rentalIncludes.length > 0 && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-gray-900 mb-2">Rental Includes:</p>
+                        <div className="mt-6 pt-4 border-t border-white/20">
+                          <p className="text-sm font-semibold text-purple-100 mb-3 uppercase tracking-wide">Rental Includes:</p>
                           <div className="flex flex-wrap gap-2">
                             {venueData.pricing.rentalIncludes?.map((item, idx) => (
-                              <Badge key={idx} variant="secondary">{item?.replace?.(/_/g, ' ') || 'N/A'}</Badge>
+                              <Badge key={idx} className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border-white/30 px-3 py-1">
+                                {item?.replace?.(/_/g, ' ') || 'N/A'}
+                              </Badge>
                             ))}
                           </div>
                         </div>
@@ -1475,7 +1559,7 @@ export default function VenueDetailPage() {
               </TabsContent>
 
               {/* Reviews Tab */}
-              <TabsContent value="reviews" className="mt-6">
+              <TabsContent value="reviews" className="p-6 sm:p-8">
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <h2 className="text-2xl font-semibold text-gray-900">
@@ -1594,7 +1678,7 @@ export default function VenueDetailPage() {
               </TabsContent>
 
               {/* FAQ Tab */}
-              <TabsContent value="faq" className="mt-6">
+              <TabsContent value="faq" className="p-6 sm:p-8">
                 <div className="space-y-4">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                     FAQ about {venueData?.name}
@@ -1627,13 +1711,15 @@ export default function VenueDetailPage() {
           <div className="space-y-6">
             {/* Calendar */}
 
-            <Card className="bg-white border border-gray-200 shadow-lg  top-6">
-              <CardHeader className="pb-3 border-b border-gray-100">
-                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
-                  <CalendarIcon className="h-5 w-5 mr-2 text-indigo-600" />
+            <Card className="bg-white border-2 border-purple-100 shadow-xl rounded-2xl overflow-hidden top-6">
+              <CardHeader className="pb-4 border-b-2 border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="bg-purple-600 p-2 rounded-lg">
+                    <CalendarIcon className="h-5 w-5 text-white" />
+                  </div>
                   Check Availability
                 </CardTitle>
-                <CardDescription className="text-sm text-gray-500">
+                <CardDescription className="text-sm text-gray-600 font-medium mt-2">
                   Select a date to see booking availability
                 </CardDescription>
               </CardHeader>
@@ -1685,16 +1771,16 @@ export default function VenueDetailPage() {
                     }}
                     modifiersClassNames={{
                       available:
-                        "text-green-700 hover:bg-green-100 font-medium",
+                        "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-medium",
 
                       partiallyBooked:
-                        "bg-amber-100 text-amber-800 hover:bg-amber-200",
+                        "bg-amber-200 text-amber-900 hover:bg-amber-300",
 
                       partiallyBlocked:
-                        "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
+                        "bg-yellow-200 text-yellow-900 hover:bg-yellow-300",
 
                       fullyBlocked:
-                        "bg-red-100 text-red-700 line-through cursor-not-allowed opacity-80",
+                        "bg-red-300 text-red-900 line-through cursor-not-allowed opacity-90",
 
                       past:
                         "text-gray-400 cursor-not-allowed opacity-60",
@@ -1708,7 +1794,7 @@ export default function VenueDetailPage() {
 
                 {/* Legend */}
                 <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
-                  <LegendDot color="bg-green-500" label="Available" />
+                  <LegendDot color="bg-emerald-500" label="Available" />
                   <LegendDot color="bg-amber-500" label="Partially Booked" />
                   <LegendDot color="bg-yellow-500" label="Partially Blocked" />
                   <LegendDot color="bg-red-500" label="Fully Blocked" />
@@ -1726,31 +1812,49 @@ export default function VenueDetailPage() {
 
             {/* Booking Section */}
             {selectedDate && (
-              <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-800">Book {venueData?.name}</CardTitle>
-                  <CardDescription className="text-purple-600 font-medium">
-                    Selected Date: {format(selectedDate, 'PPP')}
+              <Card className="bg-white border-2 border-purple-100 shadow-xl rounded-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-gray-100">
+                  <CardTitle className="text-2xl font-bold text-gray-900">Book {venueData?.name}</CardTitle>
+                  <CardDescription className="text-purple-700 font-semibold text-base mt-2 flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    {format(selectedDate, 'PPP')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {bookingSuccess ? (
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                      <h3 className="text-2xl font-bold text-gray-800">Booking Confirmed!</h3>
-                      <p className="text-gray-600 mt-2 mb-6">Your invoice has been generated.</p>
+                    <div className="text-center p-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl">
+                      <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                        <CheckCircle className="h-12 w-12 text-green-600" />
+                      </div>
+                      <h3 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
+                      <p className="text-gray-600 text-lg mb-8">Your invoice has been generated successfully.</p>
 
-                      <div className="text-left space-y-2 text-gray-700 mb-6 bg-white p-4 rounded-md border">
-                        <p><strong>Booking ID:</strong> {finalBookingDetails?._id}</p>
-                        <p><strong>Date:</strong> {format(new Date(finalBookingDetails?.bookingDate), 'PPP')}</p>
-                        <p><strong>Time:</strong> {finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</p>
-                        <p><strong>Guests:</strong> {finalBookingDetails?.guestCount}</p>
-                        <p><strong>Total Paid:</strong> ₹{finalBookingDetails?.pricing?.totalAmount}</p>
+                      <div className="text-left space-y-3 text-gray-700 mb-8 bg-white p-6 rounded-xl border-2 border-green-200 shadow-md">
+                        <div className="flex justify-between items-center pb-3 border-b">
+                          <span className="font-medium text-gray-600">Booking ID:</span>
+                          <span className="font-bold text-gray-900">{finalBookingDetails?._id}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b">
+                          <span className="font-medium text-gray-600">Date:</span>
+                          <span className="font-bold text-gray-900">{format(new Date(finalBookingDetails?.bookingDate), 'PPP')}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b">
+                          <span className="font-medium text-gray-600">Time:</span>
+                          <span className="font-bold text-gray-900">{finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b">
+                          <span className="font-medium text-gray-600">Guests:</span>
+                          <span className="font-bold text-gray-900">{finalBookingDetails?.guestCount}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="font-semibold text-gray-700 text-lg">Total Paid:</span>
+                          <span className="font-bold text-green-600 text-2xl">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span>
+                        </div>
                       </div>
 
                       <Button
                         onClick={handleDownloadInvoice}
-                        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 text-lg"
                       >
                         <Download className="h-5 w-5 mr-2" />
                         Download Invoice
@@ -1758,81 +1862,6 @@ export default function VenueDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {/* Availability Summary */}
-                      {/* {availabilityData && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
-                          <h4 className="font-semibold text-gray-800 mb-2">Availability Summary</h4>
-                          <div className="grid grid-cols-3 gap-4 text-sm">
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-green-600">{availabilityData.summary.availableSlots}</div>
-                              <div className="text-gray-600">Available Slots</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-red-600">{availabilityData.summary.bookedSlots}</div>
-                              <div className="text-gray-600">Booked Slots</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-blue-600">{availabilityData.existingBookings.length}</div>
-                              <div className="text-gray-600">Total Bookings</div>
-                            </div>
-                          </div>
-                        </div>
-                      )} */}
-
-                      {/* Time Slot Visual Display */}
-                      {/* {availabilityData && (
-                        <div className="bg-white p-4 rounded-lg border">
-                          <h4 className="font-semibold text-gray-800 mb-3">Time Slot Availability</h4>
-                          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1 text-xs">
-                            {availabilityData.timeSlots.filter((_, index) => index % 2 === 0).map((slot, index) => (
-                              <div
-                                key={slot.time}
-                                className={`p-2 rounded text-center cursor-pointer transition-all ${
-                                  slot.available 
-                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                    : 'bg-red-100 text-red-800'
-                                }`}
-                                title={slot.available ? `Available at ${formatTimeForDisplay(slot.time)}` : `Booked at ${formatTimeForDisplay(slot.time)}`}
-                              >
-                                {formatTimeForDisplay(slot.time)}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex items-center justify-center space-x-6 mt-3 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                              <span className="text-gray-600">Available</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-                              <span className="text-gray-600">Booked</span>
-                            </div>
-                          </div>
-                        </div>
-                      )} */}
-
-                      {/* Existing Bookings Display */}
-                      {/* {availabilityData && availabilityData.existingBookings.length > 0 && (
-                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                          <h4 className="font-semibold text-gray-800 mb-3">Existing Bookings for This Date</h4>
-                          <div className="space-y-2">
-                            {availabilityData.existingBookings.map((booking, index) => (
-                              <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
-                                <div className="flex items-center space-x-3">
-                                  <Clock className="h-4 w-4 text-orange-500" />
-                                  <span className="font-medium">
-                                    {formatTimeForDisplay(booking.startTime)} - {formatTimeForDisplay(booking.endTime)}
-                                  </span>
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  {booking.eventType} • {booking.guestCount} guests
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )} */}
-
                       <form onSubmit={handleBookingSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -1913,7 +1942,7 @@ export default function VenueDetailPage() {
                           />
                           <Label htmlFor="fullDay">Full Day Booking</Label>
                         </div>
-                        
+
                         <div>
                           <Label htmlFor="eventType">Event Type</Label>
                           <Input id="eventType" value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="e.g., Wedding, Conference, Party" />
@@ -1940,8 +1969,22 @@ export default function VenueDetailPage() {
                           </div>
                         )}
 
-                        <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3" disabled={submitting || authLoading}>
-                          {submitting ? 'Processing...' : 'Book and Pay Now'}
+                        <Button
+                          type="submit"
+                          className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 hover:from-purple-700 hover:via-purple-600 hover:to-pink-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                          disabled={submitting || authLoading}
+                        >
+                          {submitting ? (
+                            <>
+                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <IndianRupee className="h-5 w-5 mr-2" />
+                              Book and Pay Now
+                            </>
+                          )}
                         </Button>
                       </form>
                     </div>
@@ -1951,13 +1994,17 @@ export default function VenueDetailPage() {
             )}
 
             {!selectedDate && (
-              <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="pt-8 pb-8">
-                  <div className="text-center text-gray-500">
-                    <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-8 rounded-2xl">
-                      <CalendarIcon className="h-16 w-16 mx-auto mb-4 text-purple-400" />
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">Select a Date</h3>
-                      <p className="text-gray-600">Choose an available date from the calendar above to start your booking process</p>
+              <Card className="bg-white border-2 border-purple-100 shadow-xl rounded-2xl overflow-hidden">
+                <CardContent className="p-8">
+                  <div className="text-center">
+                    <div className="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-10 rounded-2xl">
+                      <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                        <CalendarIcon className="h-10 w-10 text-purple-600" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-3">Select a Date</h3>
+                      <p className="text-gray-600 text-base leading-relaxed max-w-sm mx-auto">
+                        Choose an available date from the calendar above to start your booking process
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -1965,22 +2012,32 @@ export default function VenueDetailPage() {
             )}
 
             {/* Contact Card */}
-            <Card className="bg-gradient-to-br from-purple-500 to-pink-600 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-4">Need Help?</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <Phone className="h-5 w-5 mr-3" />
-                    <span className="text-sm">{venueData?.contactInfo.phone}</span>
+            <Card className="bg-gradient-to-br from-purple-600 via-purple-500 to-pink-600 text-white border-0 shadow-2xl rounded-2xl overflow-hidden">
+              <CardContent className="p-8">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
+                  <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                    <MessageCircle className="h-6 w-6" />
+                    Need Help?
+                  </h3>
+                  <p className="text-purple-100 text-sm">We're here to assist you</p>
+                </div>
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <span className="text-base font-medium">{venueData?.contactInfo.phone}</span>
                   </div>
                   {venueData?.contactInfo.email && (
-                    <div className="flex items-center">
-                      <Mail className="h-5 w-5 mr-3" />
-                      <span className="text-sm">{venueData.contactInfo.email}</span>
+                    <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-4 rounded-xl">
+                      <div className="bg-white/20 p-2 rounded-lg">
+                        <Mail className="h-5 w-5" />
+                      </div>
+                      <span className="text-base font-medium break-all">{venueData.contactInfo.email}</span>
                     </div>
                   )}
                 </div>
-                <Button className="w-full mt-4 bg-white text-purple-600 hover:bg-gray-100 font-semibold">
+                <Button className="w-full bg-white text-purple-600 hover:bg-gray-50 font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                   Contact Us
                 </Button>
               </CardContent>
@@ -2092,499 +2149,3 @@ export default function VenueDetailPage() {
     </div>
   );
 }
-//                 <CardTitle className="text-xl font-semibold text-gray-900">About</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <p className="text-gray-700 leading-relaxed">{venueData?.description}</p>
-//               </CardContent>
-//             </Card>
-
-//             {/* Venue Spaces */}
-//             <Card className="border shadow-sm">
-//               <CardHeader>
-//                 <CardTitle className="text-xl font-semibold text-gray-900">Venue Spaces</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="space-y-4">
-//                   <div className="border-b pb-4">
-//                     <div className="flex justify-between items-start mb-2">
-//                       <div>
-//                         <h4 className="font-semibold text-gray-900">Main Hall</h4>
-//                         <p className="text-sm text-gray-600">Banquet Hall</p>
-//                       </div>
-//                       <div className="text-right">
-//                         <div className="text-sm text-gray-600">Capacity</div>
-//                         <div className="font-semibold">{venueData?.capacity} guests</div>
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Address */}
-//             <Card className="border shadow-sm">
-//               <CardHeader>
-//                 <CardTitle className="text-xl font-semibold text-gray-900">Address</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="flex items-start gap-3">
-//                   <MapPin className="h-5 w-5 text-gray-600 mt-1" />
-//                   <div>
-//                     <p className="text-gray-700">
-//                       {venueData?.address.street}, {venueData?.address.city}, {venueData?.address.state} - {venueData?.address.pincode}
-//                     </p>
-//                     {venueData?.address.landmark && (
-//                       <p className="text-sm text-gray-600 mt-1">Landmark: {venueData.address.landmark}</p>
-//                     )}
-//                   </div>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Amenities */}
-//             <Card className="border shadow-sm">
-//               <CardHeader>
-//                 <CardTitle className="text-xl font-semibold text-gray-900">Amenities</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                   {Object.entries((venueData?.facilities ?? {}) as Record<string, boolean>)
-//                     .filter(([_, value]) => value)
-//                     .map(([key]) => {
-//                       const IconComponent = facilityIcons[key as keyof typeof facilityIcons] || Check;
-//                       return (
-//                         <div key={key} className="flex items-center gap-2">
-//                           <div className="p-2 bg-green-100 rounded-lg">
-//                             <IconComponent className="h-4 w-4 text-green-600" />
-//                           </div>
-//                           <span className="text-gray-700 text-sm">
-//                             {key.replace(/([A-Z])/g, ' $1').trim()}
-//                           </span>
-//                         </div>
-//                       );
-//                     })}
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Pricing Details */}
-//             <Card className="border shadow-sm">
-//               <CardHeader>
-//                 <CardTitle className="text-xl font-semibold text-gray-900">Pricing</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="space-y-3">
-//                   <div className="flex justify-between items-center pb-3 border-b">
-//                     <span className="text-gray-700">Venue Rental (per function)</span>
-//                     <span className="font-semibold">₹ {(venueData?.pricing.hourlyRate || venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
-//                   </div>
-//                   <div className="flex justify-between items-center pb-3 border-b">
-//                     <span className="text-gray-700">Veg Price (per plate)</span>
-//                     <span className="font-semibold">₹ 800</span>
-//                   </div>
-//                   <div className="flex justify-between items-center pb-3 border-b">
-//                     <span className="text-gray-700">Non-Veg Price (per plate)</span>
-//                     <span className="font-semibold">₹ 1,000</span>
-//                   </div>
-//                   {venueData?.pricing.securityDeposit && (
-//                     <div className="flex justify-between items-center pb-3 border-b">
-//                       <span className="text-gray-700">Security Deposit</span>
-//                       <span className="font-semibold">₹ {venueData.pricing.securityDeposit.toLocaleString('en-IN')}</span>
-//                     </div>
-//                   )}
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Terms & Conditions */}
-//             {venueData?.terms && (venueData.terms.cancellationPolicy || venueData.terms.additionalRules) && (
-//               <Card className="border shadow-sm">
-//                 <CardHeader>
-//                   <CardTitle className="text-xl font-semibold text-gray-900">Terms & Policies</CardTitle>
-//                 </CardHeader>
-//                 <CardContent className="space-y-4">
-//                   {venueData?.terms.cancellationPolicy && (
-//                     <div>
-//                       <h4 className="font-semibold text-gray-900 mb-2">Cancellation Policy</h4>
-//                       <p className="text-gray-700 text-sm">{venueData.terms.cancellationPolicy}</p>
-//                     </div>
-//                   )}
-//                   {venueData?.terms.additionalRules && (
-//                     <div>
-//                       <h4 className="font-semibold text-gray-900 mb-2">Additional Rules</h4>
-//                       <p className="text-gray-700 text-sm">{venueData.terms.additionalRules}</p>
-//                     </div>
-//                   )}
-//                 </CardContent>
-//               </Card>
-//             )}
-
-//             {/* Reviews Section */}
-//             <Card className="border shadow-sm">
-//               <CardHeader>
-//                 <div className="flex items-center justify-between">
-//                   <CardTitle className="text-xl font-semibold text-gray-900">Reviews</CardTitle>
-//                   <div className="flex items-center gap-2">
-//                     <Star className="h-5 w-5 text-pink-600 fill-pink-600" />
-//                     <span className="font-semibold text-lg">{venueData?.rating.average || 5.0}</span>
-//                     <span className="text-gray-600">({venueData?.rating.count || 6} reviews)</span>
-//                   </div>
-//                 </div>
-//               </CardHeader>
-//               <CardContent>
-//                 <div className="space-y-6">
-//                   {/* Sample Review 1 */}
-//                   <div className="border-b pb-6">
-//                     <div className="flex items-start gap-4">
-//                       <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
-//                         <span className="text-pink-600 font-semibold">A</span>
-//                       </div>
-//                       <div className="flex-1">
-//                         <div className="flex items-center justify-between mb-2">
-//                           <div>
-//                             <h4 className="font-semibold text-gray-900">Amit Kumar</h4>
-//                             <div className="flex items-center gap-1 mt-1">
-//                               {[1, 2, 3, 4, 5].map((star) => (
-//                                 <Star key={star} className="h-4 w-4 text-pink-600 fill-pink-600" />
-//                               ))}
-//                             </div>
-//                           </div>
-//                           <span className="text-sm text-gray-500">2 weeks ago</span>
-//                         </div>
-//                         <p className="text-gray-700 text-sm">
-//                           Excellent venue for our wedding reception. The staff was very professional and the ambiance was perfect. Highly recommended!
-//                         </p>
-//                       </div>
-//                     </div>
-//                   </div>
-
-//                   {/* Sample Review 2 */}
-//                   <div className="border-b pb-6">
-//                     <div className="flex items-start gap-4">
-//                       <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-//                         <span className="text-blue-600 font-semibold">P</span>
-//                       </div>
-//                       <div className="flex-1">
-//                         <div className="flex items-center justify-between mb-2">
-//                           <div>
-//                             <h4 className="font-semibold text-gray-900">Priya Sharma</h4>
-//                             <div className="flex items-center gap-1 mt-1">
-//                               {[1, 2, 3, 4].map((star) => (
-//                                 <Star key={star} className="h-4 w-4 text-pink-600 fill-pink-600" />
-//                               ))}
-//                               <Star className="h-4 w-4 text-gray-300" />
-//                             </div>
-//                           </div>
-//                           <span className="text-sm text-gray-500">1 month ago</span>
-//                         </div>
-//                         <p className="text-gray-700 text-sm">
-//                           Great location and beautiful interiors. The catering service was good. Would definitely consider for future events.
-//                         </p>
-//                       </div>
-//                     </div>
-//                   </div>
-
-//                   <Button variant="outline" className="w-full">
-//                     <MessageCircle className="h-4 w-4 mr-2" />
-//                     Write a Review
-//                   </Button>
-//                 </div>
-//               </CardContent>
-//             </Card>
-//           </div>
-
-//           {/* Booking Sidebar */}
-//           <div className="space-y-6">
-//             {/* Pricing Summary Card */}
-//             <Card className="border shadow-lg  top-6">
-//               <CardHeader className="pb-4">
-//                 <CardTitle className="text-xl font-semibold text-gray-900">Book this Venue</CardTitle>
-//                 <div className="mt-2">
-//                   <div className="text-2xl font-bold text-gray-900">
-//                     ₹ {(venueData?.pricing.hourlyRate || venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}
-//                   </div>
-//                   <div className="text-sm text-gray-600">per function</div>
-//                 </div>
-//               </CardHeader>
-//               <CardContent className="space-y-4">
-//                 <div className="space-y-3">
-//                   <div className="flex items-center justify-between text-sm">
-//                     <span className="text-gray-600">Capacity</span>
-//                     <span className="font-semibold">{venueData?.capacity} guests</span>
-//                   </div>
-//                   <div className="flex items-center justify-between text-sm">
-//                     <span className="text-gray-600">Veg Price</span>
-//                     <span className="font-semibold">₹ 800/plate</span>
-//                   </div>
-//                   <div className="flex items-center justify-between text-sm">
-//                     <span className="text-gray-600">Non-Veg Price</span>
-//                     <span className="font-semibold">₹ 1,000/plate</span>
-//                   </div>
-//                 </div>
-//                 <div className="border-t pt-4">
-//                   <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white">
-//                     <Phone className="h-4 w-4 mr-2" />
-//                     Contact Venue
-//                   </Button>
-//                   <Button variant="outline" className="w-full mt-2">
-//                     <CalendarIcon className="h-4 w-4 mr-2" />
-//                     Check Availability
-//                   </Button>
-//                 </div>
-//               </CardContent>
-//             </Card>
-
-//             {/* Calendar Card */}
-//             <Card className="border shadow-sm">
-//               <CardHeader className="pb-4">
-//                 <CardTitle className="text-lg font-semibold text-gray-900">Select Date</CardTitle>
-//               </CardHeader>
-//               <CardContent className="space-y-4">
-//                 <Calendar
-//                   mode="single"
-//                   selected={selectedDate}
-//                   onSelect={setSelectedDate}
-//                   disabled={(date) => {
-//                     return date < new Date(new Date().setHours(0, 0, 0, 0));
-//                   }}
-//                   className="rounded-md border"
-//                 />
-//               </CardContent>
-//             </Card>
-
-//             {/* Booking Section */}
-//             {selectedDate && (
-//               <Card className="border shadow-sm">
-//                 <CardHeader>
-//                   <CardTitle className="text-lg font-semibold text-gray-900">Booking Details</CardTitle>
-//                   <CardDescription className="text-gray-600">
-//                     {format(selectedDate, 'PPP')}
-//                   </CardDescription>
-//                 </CardHeader>
-//                 <CardContent>
-//                   {bookingSuccess ? (
-//                     <div className="text-center p-4 bg-green-50 rounded-lg">
-//                       <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-//                       <h3 className="text-2xl font-bold text-gray-800">Booking Confirmed!</h3>
-//                       <p className="text-gray-600 mt-2 mb-6">Your invoice has been generated.</p>
-
-//                       <div className="text-left space-y-2 text-gray-700 mb-6 bg-white p-4 rounded-md border">
-//                         <p><strong>Booking ID:</strong> {finalBookingDetails?._id}</p>
-//                         <p><strong>Date:</strong> {format(new Date(finalBookingDetails?.bookingDate), 'PPP')}</p>
-//                         <p><strong>Time:</strong> {finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</p>
-//                         <p><strong>Guests:</strong> {finalBookingDetails?.guestCount}</p>
-//                         <p><strong>Total Paid:</strong> ₹{finalBookingDetails?.pricing?.totalAmount}</p>
-//                       </div>
-
-//                       <Button
-//                         onClick={handleDownloadInvoice}
-//                         className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-//                       >
-//                         <Download className="h-5 w-5 mr-2" />
-//                         Download Invoice
-//                       </Button>
-//                     </div>
-//                   ) : (
-//                     <div className="space-y-6">
-//                       {/* Availability Summary */}
-//                       {/* {availabilityData && (
-//                         <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg">
-//                           <h4 className="font-semibold text-gray-800 mb-2">Availability Summary</h4>
-//                           <div className="grid grid-cols-3 gap-4 text-sm">
-//                             <div className="text-center">
-//                               <div className="text-2xl font-bold text-green-600">{availabilityData.summary.availableSlots}</div>
-//                               <div className="text-gray-600">Available Slots</div>
-//                             </div>
-//                             <div className="text-center">
-//                               <div className="text-2xl font-bold text-red-600">{availabilityData.summary.bookedSlots}</div>
-//                               <div className="text-gray-600">Booked Slots</div>
-//                             </div>
-//                             <div className="text-center">
-//                               <div className="text-2xl font-bold text-blue-600">{availabilityData.existingBookings.length}</div>
-//                               <div className="text-gray-600">Total Bookings</div>
-//                             </div>
-//                           </div>
-//                         </div>
-//                       )} */}
-
-//                       {/* Time Slot Visual Display */}
-//                       {/* {availabilityData && (
-//                         <div className="bg-white p-4 rounded-lg border">
-//                           <h4 className="font-semibold text-gray-800 mb-3">Time Slot Availability</h4>
-//                           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-1 text-xs">
-//                             {availabilityData.timeSlots.filter((_, index) => index % 2 === 0).map((slot, index) => (
-//                               <div
-//                                 key={slot.time}
-//                                 className={`p-2 rounded text-center cursor-pointer transition-all ${
-//                                   slot.available 
-//                                     ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-//                                     : 'bg-red-100 text-red-800'
-//                                 }`}
-//                                 title={slot.available ? `Available at ${formatTimeForDisplay(slot.time)}` : `Booked at ${formatTimeForDisplay(slot.time)}`}
-//                               >
-//                                 {formatTimeForDisplay(slot.time)}
-//                               </div>
-//                             ))}
-//                           </div>
-//                           <div className="flex items-center justify-center space-x-6 mt-3 text-sm">
-//                             <div className="flex items-center space-x-2">
-//                               <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-//                               <span className="text-gray-600">Available</span>
-//                             </div>
-//                             <div className="flex items-center space-x-2">
-//                               <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-//                               <span className="text-gray-600">Booked</span>
-//                             </div>
-//                           </div>
-//                         </div>
-//                       )} */}
-
-//                       {/* Existing Bookings Display */}
-//                       {/* {availabilityData && availabilityData.existingBookings.length > 0 && (
-//                         <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-//                           <h4 className="font-semibold text-gray-800 mb-3">Existing Bookings for This Date</h4>
-//                           <div className="space-y-2">
-//                             {availabilityData.existingBookings.map((booking, index) => (
-//                               <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
-//                                 <div className="flex items-center space-x-3">
-//                                   <Clock className="h-4 w-4 text-orange-500" />
-//                                   <span className="font-medium">
-//                                     {formatTimeForDisplay(booking.startTime)} - {formatTimeForDisplay(booking.endTime)}
-//                                   </span>
-//                                 </div>
-//                                 <div className="text-sm text-gray-600">
-//                                   {booking.eventType} • {booking.guestCount} guests
-//                                 </div>
-//                               </div>
-//                             ))}
-//                           </div>
-//                         </div>
-//                       )} */}
-
-//                       <form onSubmit={handleBookingSubmit} className="space-y-4">
-//                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                           <div>
-//                             <Label htmlFor="startTime">Start Time *</Label>
-//                             <Select
-//                               onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })}
-//                               value={bookingForm.startTime}
-//                             >
-//                               <SelectTrigger id="startTime">
-//                                 <SelectValue placeholder="Select start time" />
-//                               </SelectTrigger>
-//                               <SelectContent>
-//                                 {getAvailableTimeOptions().map((time) => (
-//                                   <SelectItem
-//                                     key={time.value}
-//                                     value={time.value}
-//                                     disabled={time.disabled}
-//                                     className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-//                                   >
-//                                     <div className="flex items-center justify-between w-full">
-//                                       <span>{time.label}</span>
-//                                       {time.disabled && (
-//                                         <span className="text-red-500 text-xs ml-2">Booked</span>
-//                                       )}
-//                                     </div>
-//                                   </SelectItem>
-//                                 ))}
-//                               </SelectContent>
-//                             </Select>
-//                           </div>
-//                           <div>
-//                             <Label htmlFor="endTime">End Time *</Label>
-//                             <Select
-//                               onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })}
-//                               value={bookingForm.endTime}
-//                             >
-//                               <SelectTrigger id="endTime">
-//                                 <SelectValue placeholder="Select end time" />
-//                               </SelectTrigger>
-//                               <SelectContent>
-//                                 {getAvailableTimeOptions().map((time) => (
-//                                   <SelectItem
-//                                     key={time.value}
-//                                     value={time.value}
-//                                     disabled={time.disabled}
-//                                     className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-//                                   >
-//                                     <div className="flex items-center justify-between w-full">
-//                                       <span>{time.label}</span>
-//                                       {time.disabled && (
-//                                         <span className="text-red-500 text-xs ml-2">Booked</span>
-//                                       )}
-//                                     </div>
-//                                   </SelectItem>
-//                                 ))}
-//                               </SelectContent>
-//                             </Select>
-//                           </div>
-//                         </div>
-//                         <div>
-//                           <Label htmlFor="guestCount">Number of Guests *</Label>
-//                           <Input id="guestCount" type="number" min="1" max={venueData?.capacity} value={bookingForm.guestCount} onChange={(e) => setBookingForm({ ...bookingForm, guestCount: e.target.value })} required />
-//                         </div>
-//                         <div>
-//                           <Label htmlFor="eventType">Event Type</Label>
-//                           <Input id="eventType" value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="e.g., Wedding, Conference, Party" />
-//                         </div>
-//                         <div>
-//                           <Label htmlFor="specialRequirements">Special Requirements</Label>
-//                           <Textarea id="specialRequirements" value={bookingForm.specialRequirements} onChange={(e) => setBookingForm({ ...bookingForm, specialRequirements: e.target.value })} placeholder="Any special requests or requirements..." />
-//                         </div>
-
-//                         {formError && (
-//                           <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg">
-//                             <span className="font-medium">Error:</span> {formError}
-//                           </div>
-//                         )}
-
-//                         <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3" disabled={submitting || authLoading}>
-//                           {submitting ? 'Processing...' : 'Book and Pay Now'}
-//                         </Button>
-//                       </form>
-//                     </div>
-//                   )}
-//                 </CardContent>
-//               </Card>
-//             )}
-
-//             {/* Contact Information */}
-//             <Card className="border shadow-sm bg-gray-50">
-//               <CardHeader>
-//                 <CardTitle className="text-lg font-semibold text-gray-900">Contact Information</CardTitle>
-//               </CardHeader>
-//               <CardContent className="space-y-3">
-//                 <div className="flex items-center gap-3">
-//                   <div className="p-2 bg-white rounded-lg">
-//                     <Phone className="h-5 w-5 text-pink-600" />
-//                   </div>
-//                   <div>
-//                     <div className="text-sm text-gray-600">Phone</div>
-//                     <div className="font-medium">{venueData?.contactInfo.phone}</div>
-//                   </div>
-//                 </div>
-//                 {venueData?.contactInfo.email && (
-//                   <div className="flex items-center gap-3">
-//                     <div className="p-2 bg-white rounded-lg">
-//                       <Mail className="h-5 w-5 text-pink-600" />
-//                     </div>
-//                     <div>
-//                       <div className="text-sm text-gray-600">Email</div>
-//                       <div className="font-medium text-sm">{venueData.contactInfo.email}</div>
-//                     </div>
-//                   </div>
-//                 )}
-//               </CardContent>
-//             </Card>
-//           </div>
-//         </div>
-//       </div>
-
-
-//       <Footer />
-//     </div>
-//     </div>
-//   );
-// }
