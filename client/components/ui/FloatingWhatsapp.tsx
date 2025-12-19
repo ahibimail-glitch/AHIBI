@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import path from 'path';
 
 // Constants for the WhatsApp button
-const WHATSAPP_NUMBER = '+919862697765'; // Your WhatsApp number
+const WHATSAPP_NUMBER = '+919383047671'; // Your WhatsApp number
 const MESSAGE = encodeURIComponent('Hi, I need help with Ahibi.'); // Default message
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${MESSAGE}`;
 
