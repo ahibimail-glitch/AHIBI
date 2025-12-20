@@ -123,6 +123,13 @@ router.post("/", auth.protect, async (req, res) => {
       return res.status(404).json({ message: "Event not found" });
     }
 
+    // Enforce booking cutoff (bookingEndTime overrides endDate)
+    const now = new Date();
+    const cutoff = isEvent.bookingEndTime ? new Date(isEvent.bookingEndTime) : (isEvent.endDate ? new Date(isEvent.endDate) : null);
+    if (cutoff && !isNaN(cutoff.getTime()) && now > cutoff) {
+      return res.status(400).json({ message: "Bookings are closed for this event." });
+    }
+
     // Determine if this is a free/RSVP booking
     const isFree = !!isEvent.isFreeEvent;
 
@@ -762,6 +769,13 @@ router.post("/admin-manual-booking",  async (req, res) => {
     const eventDoc = await Event.findById(event);
     if (!eventDoc) {
       return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Enforce booking cutoff (bookingEndTime overrides endDate)
+    const now = new Date();
+    const cutoff = eventDoc.bookingEndTime ? new Date(eventDoc.bookingEndTime) : (eventDoc.endDate ? new Date(eventDoc.endDate) : null);
+    if (cutoff && !isNaN(cutoff.getTime()) && now > cutoff) {
+      return res.status(400).json({ message: 'Bookings are closed for this event.' });
     }
 
     // Normalize tickets input: prefer tickets array, fallback to single ticket payload

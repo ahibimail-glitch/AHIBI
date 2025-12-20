@@ -34,6 +34,23 @@ exports.createOrder = async (req, res) => {
   try {
     const { amount, currency, receipt, bookingDetails, coupon } = req.body;
 
+    // Enforce booking cutoff (bookingEndTime overrides endDate)
+    try {
+      const eventId = bookingDetails?.event?._id;
+      if (eventId) {
+        const eventDoc = await Event.findById(eventId).select('endDate bookingEndTime');
+        if (eventDoc) {
+          const now = new Date();
+          const cutoff = eventDoc.bookingEndTime ? new Date(eventDoc.bookingEndTime) : (eventDoc.endDate ? new Date(eventDoc.endDate) : null);
+          if (cutoff && !isNaN(cutoff.getTime()) && now > cutoff) {
+            return res.status(400).json({ message: 'Bookings are closed for this event.' });
+          }
+        }
+      }
+    } catch (e) {
+      // If event lookup fails, do not block order creation here
+    }
+
     // Recompute server-side total from bookingDetails to avoid tampering
     let computedTotal = 0;
     if (Array.isArray(bookingDetails?.tickets)) {
@@ -190,6 +207,26 @@ exports.verifyPayment = async (req, res) => {
         status: 'processing',
       });
       await tx.save();
+    }
+
+    // Enforce booking cutoff (bookingEndTime overrides endDate)
+    try {
+      const eventId = bookingDetails?.event?._id;
+      if (eventId) {
+        const eventDoc = await Event.findById(eventId).select('endDate bookingEndTime');
+        if (eventDoc) {
+          const now = new Date();
+          const cutoff = eventDoc.bookingEndTime ? new Date(eventDoc.bookingEndTime) : (eventDoc.endDate ? new Date(eventDoc.endDate) : null);
+          if (cutoff && !isNaN(cutoff.getTime()) && now > cutoff) {
+            tx.status = 'paid_no_booking';
+            tx.errorMessage = 'Bookings are closed for this event.';
+            await tx.save();
+            return res.status(400).json({ success: false, message: 'Bookings are closed for this event.' });
+          }
+        }
+      }
+    } catch (e) {
+      // ignore and continue
     }
 
     // Payment is verified, now create individual bookings for each ticket

@@ -159,6 +159,7 @@ interface Event {
   artists: any[];
   startDate: string;
   endDate: string;
+  bookingEndTime?: string | null;
   category: string;
   tags: string[];
   ticketTypes: TicketType[];
@@ -297,6 +298,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const handleFreeBooking = async () => {
     try {
       setBookingError(null);
+      if (isBookingClosed) {
+        const msg = "Bookings are closed for this event.";
+        setBookingError(msg);
+        toast.error(msg);
+        return;
+      }
       // Require country/state selection for HMF events before proceeding
       if (isHMFEvent && !isFormComplete) {
         toast.error("Please select your country and state before booking");
@@ -474,6 +481,21 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   // Check if form is completely filled (for HMF require both country and state)
   const isFormComplete = !isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''));
 
+  // Booking cutoff logic (bookingEndTime overrides endDate)
+  const bookingCutoff = (() => {
+    if (!event) return null;
+    const raw = event.bookingEndTime || event.endDate;
+    if (!raw) return null;
+    const dt = new Date(raw);
+    if (isNaN(dt.getTime())) return null;
+    return dt;
+  })();
+
+  const isBookingClosed = (() => {
+    if (!bookingCutoff) return false;
+    return new Date() > bookingCutoff;
+  })();
+
   // Check if any ticket is selected
   const hasSelectedTicket = selectedTickets.size > 0;
 
@@ -560,6 +582,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const handleBooking = async () => {
     // clear any prior error shown in UI
     setBookingError(null);
+    if (isBookingClosed) {
+      const msg = "Bookings are closed for this event.";
+      setBookingError(msg);
+      toast.error(msg);
+      return;
+    }
     // For HMF events, require country/state before booking
     if (isHMFEvent && !isFormComplete) {
       toast.error("Please select your country and state before booking");
@@ -1046,6 +1074,38 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               >
                 Try Again
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/events')}
+                className="w-full border-gray-300 text-gray-900 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                Browse All Events
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/')}
+                className="w-full border-gray-300 text-gray-900 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                Go to Homepage
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isBookingClosed) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-4 sm:p-6">
+          <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XCircle className="h-7 w-7 text-red-500" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Bookings Closed</h2>
+            <p className="text-gray-600 mb-6 text-sm">Bookings are closed for this event.</p>
+            <div className="space-y-3">
               <Button
                 variant="outline"
                 onClick={() => router.push('/events')}
@@ -1969,7 +2029,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                           <Button
                             className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50"
                             onClick={handleBooking}
-                            disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
+                            disabled={isBooking || isBookingClosed || !acceptedTerms || (isHMFEvent && !isFormComplete)}
                           >
                             {isBooking ? (
                               <>
@@ -2024,7 +2084,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         <Button
                           className="w-full h-10 sm:h-12 text-sm sm:text-base font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
                           onClick={handleFreeBooking}
-                          disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
+                          disabled={isBooking || isBookingClosed || !acceptedTerms || (isHMFEvent && !isFormComplete)}
                         >
                           {isBooking ? (
                             <>

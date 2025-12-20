@@ -60,6 +60,7 @@ import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
 import HmfTickets from "./components/HmfTickets";
 import HFTickets from "./components/HFTickets";
+import ScheduleEvent from "./components/ScheduleEvent";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -190,6 +191,8 @@ export default function AdminDashboard() {
         return <MerchOrders />;
       case "helitaxii-leads":
         return <HeliTaxiiLeads />;
+      case "schedule-event":
+        return <ScheduleEvent />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -246,6 +249,8 @@ export default function AdminDashboard() {
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => setActiveView("users")} />
           <SidebarButton icon={ListOrdered} label="FC25 Players" active={activeView === "fc25-players"} onClick={() => setActiveView("fc25-players")} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
+          <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => setActiveView("schedule-event")} />
+
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
           <div className="pt-4 pb-2 px-2">

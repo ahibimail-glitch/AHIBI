@@ -539,7 +539,7 @@ exports.getEventById = async (req, res) => {
     const event = await Event.findById(req.params.id)
       .populate('organizer', 'name email phone companyName')
       .populate('venue', 'name address contactInfo')
-      .select('_id title description category startDate endDate status createdAt updatedAt location ticketTypes maxAttendees images rejectionReason');
+      .select('_id title description banner category startDate endDate bookingEndTime status createdAt updatedAt location ticketTypes maxAttendees images rejectionReason');
     
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');

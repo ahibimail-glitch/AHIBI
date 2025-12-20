@@ -93,6 +93,10 @@ const EventSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Event end date is required']
   },
+  bookingEndTime: {
+    type: Date,
+    default: null
+  },
   category: {
     type: String,
     required: [true, 'Event category is required'],

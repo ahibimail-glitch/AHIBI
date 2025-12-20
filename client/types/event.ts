@@ -34,6 +34,7 @@ export interface Event {
   category: string;
   startDate: string | Date;
   endDate: string | Date;
+  bookingEndTime?: string | Date | null;
   location: Location;
   ticketTypes: TicketType[];
   status: string;

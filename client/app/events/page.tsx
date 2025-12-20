@@ -83,6 +83,14 @@ interface EventCardProps {
 
 const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
   const isPastEvent = new Date(event.endDate) < new Date();
+  const bookingCutoff = (() => {
+    const raw = (event as any).bookingEndTime || event.endDate;
+    if (!raw) return null;
+    const dt = new Date(raw);
+    if (isNaN(dt.getTime())) return null;
+    return dt;
+  })();
+  const isBookingClosed = bookingCutoff ? new Date() > bookingCutoff : false;
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -136,6 +144,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                 {event.category}
               </Badge>
             </div>
+          
             <div className="absolute bottom-0 left-0 right-0 p-6">
               <h3 id={`event-title-${event._id}`} className="text-xl md:text-2xl font-bold text-white mb-2 line-clamp-2">
                 {event.title}
@@ -182,6 +191,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                     className="bg-gray-200 text-gray-500 cursor-not-allowed"
                   >
                     Past Event
+                  </Button>
+                ) : isBookingClosed ? (
+                  <Button
+                    size="sm"
+                    disabled
+                    className="bg-red-100 text-red-700 cursor-not-allowed border border-red-200"
+                  >
+                    Bookings Closed
                   </Button>
                 ) : (
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
