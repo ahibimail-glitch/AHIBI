@@ -28,6 +28,8 @@ import {
   Plus,
   Bike,
   Package,
+  Menu,
+  X,
 } from "lucide-react";
 
 // Import child components
@@ -103,6 +105,7 @@ export default function AdminDashboard() {
 
   const [activeView, setActiveView] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // --- Mock Data (replace with API calls) ---
   const stats = [
@@ -208,13 +211,13 @@ export default function AdminDashboard() {
           <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
               </div>
-              <div className="flex items-center space-x-3 md:space-x-4">
-                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+              <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                <Badge variant="secondary" className="hidden sm:flex bg-green-100 text-green-800 border-green-200">
                   <Activity className="h-3 w-3 mr-1" /> System Healthy
                 </Badge>
-                <Button variant="outline" size="icon"><Bell className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10"><Bell className="h-3 w-3 sm:h-4 sm:w-4" /></Button>
               </div>
             </div>
           </div>
@@ -231,119 +234,147 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* --- Sidebar --- */}
-      <aside className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-10 overflow-y-auto">
-        <div className="flex items-center space-x-3 mb-6 px-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-            <Shield className="h-5 w-5 text-white" />
+      <aside className={`w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0`}>
+        <div className="flex items-center justify-between mb-6 px-2">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Ahibi Admin</h2>
+              <p className="text-xs text-gray-600">Control Center</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Ahibi Admin</h2>
-            <p className="text-xs text-gray-600">Control Center</p>
-          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
         <nav className="flex flex-col space-y-2">
-          <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => setActiveView("dashboard")} />
-          <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => setActiveView("bookings")} />
-          <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => setActiveView("users")} />
-          <SidebarButton icon={ListOrdered} label="FC25 Players" active={activeView === "fc25-players"} onClick={() => setActiveView("fc25-players")} />
-          <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => setActiveView("qr-scanner")} />
-          <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => setActiveView("schedule-event")} />
+          <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => { setActiveView("dashboard"); setSidebarOpen(false); }} />
+          <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
+          <SidebarButton icon={ListOrdered} label="FC25 Players" active={activeView === "fc25-players"} onClick={() => { setActiveView("fc25-players"); setSidebarOpen(false); }} />
+          <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => { setActiveView("schedule-event"); setSidebarOpen(false); }} />
 
-          <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => router.push("/admin/booking")} />
-          <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => setActiveView("failed-payments")} />
+          <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Annie</h3>
           </div>
-          <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => setActiveView("annie-musical-bookings")} />
-          <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => setActiveView("annie-manual-booking")} />
-          {/* <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => setActiveView("annie-failed-bookings")} /> */}
-          <SidebarButton icon={QrCode} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => setActiveView("annie-musical-qr")} />
+          <SidebarButton icon={Ticket} label="Annie Musical Bookings" active={activeView === "annie-musical-bookings"} onClick={() => { setActiveView("annie-musical-bookings"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Plus} label="Annie Manual Booking" active={activeView === "annie-manual-booking"} onClick={() => { setActiveView("annie-manual-booking"); setSidebarOpen(false); }} />
+          {/* <SidebarButton icon={DollarSign} label="Annie Failed Bookings" active={activeView === "annie-failed-bookings"} onClick={() => { setActiveView("annie-failed-bookings"); setSidebarOpen(false); }} /> */}
+          <SidebarButton icon={QrCode} label="Annie Musical QR" active={activeView === "annie-musical-qr"} onClick={() => { setActiveView("annie-musical-qr"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Melita</h3>
           </div>
-          <SidebarButton icon={Ticket} label="Melita Bookings" active={activeView === "melita-bookings"} onClick={() => setActiveView("melita-bookings")} />
+          <SidebarButton icon={Ticket} label="Melita Bookings" active={activeView === "melita-bookings"} onClick={() => { setActiveView("melita-bookings"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">HMF</h3>
           </div>
-          <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => setActiveView("hmf-tickets")} />
-          <SidebarButton icon={Ticket} label="HF Tickets" active={activeView === "hf-tickets"} onClick={() => setActiveView("hf-tickets")} />
+          <SidebarButton icon={Ticket} label="HMF Tickets" active={activeView === "hmf-tickets"} onClick={() => { setActiveView("hmf-tickets"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Ticket} label="HF Tickets" active={activeView === "hf-tickets"} onClick={() => { setActiveView("hf-tickets"); setSidebarOpen(false); }} />
 
-          <SidebarButton icon={Ticket} label="HeliTaxii Leads" active={activeView === "helitaxii-leads"} onClick={() => setActiveView("helitaxii-leads")} />
+          <SidebarButton icon={Ticket} label="HeliTaxii Leads" active={activeView === "helitaxii-leads"} onClick={() => { setActiveView("helitaxii-leads"); setSidebarOpen(false); }} />
 
-          <SidebarButton icon={Package} label="Merch Orders" active={activeView === "merch-orders"} onClick={() => setActiveView("merch-orders")} />
+          <SidebarButton icon={Package} label="Merch Orders" active={activeView === "merch-orders"} onClick={() => { setActiveView("merch-orders"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
           </div>
-          <SidebarButton icon={UserCheck} label="Organizers" active={activeView === "organizer-approvals"} onClick={() => setActiveView("organizer-approvals")} />
-          <SidebarButton icon={Music} label="Artists" active={activeView === "artist-approvals"} onClick={() => setActiveView("artist-approvals")} />
-          <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => setActiveView("venue-approvals")} />
-          <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => setActiveView("event-approvals")} />
+          <SidebarButton icon={UserCheck} label="Organizers" active={activeView === "organizer-approvals"} onClick={() => { setActiveView("organizer-approvals"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Music} label="Artists" active={activeView === "artist-approvals"} onClick={() => { setActiveView("artist-approvals"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => { setActiveView("venue-approvals"); setSidebarOpen(false); }} />
+          <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => { setActiveView("event-approvals"); setSidebarOpen(false); }} />
           <SidebarButton
             icon={CalendarCheck2}
             label="Approved Events"
             active={activeView === "approved-events"}
-            onClick={() => setActiveView("approved-events")}
+            onClick={() => { setActiveView("approved-events"); setSidebarOpen(false); }}
           />
           <SidebarButton
             icon={Star}
             label="Featured Events"
             active={activeView === "featured-events"}
-            onClick={() => setActiveView("featured-events")}
+            onClick={() => { setActiveView("featured-events"); setSidebarOpen(false); }}
           />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Events & Programs</h3>
           </div>
-          <SidebarButton icon={Users} label="NIS Registrations" active={activeView === "nis-registrations"} onClick={() => setActiveView("nis-registrations")} />
-          <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => setActiveView("bikerbash")} />
+          <SidebarButton icon={Users} label="NIS Registrations" active={activeView === "nis-registrations"} onClick={() => { setActiveView("nis-registrations"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Bike} label="BikerBash" active={activeView === "bikerbash"} onClick={() => { setActiveView("bikerbash"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
-          <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => setActiveView("coupons")} />
-          {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => setActiveView("aiko-hall")} /> */}
-          <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => setActiveView("create-event")} />
-          <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => setActiveView("hero-images")} />
-          <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => setActiveView("analytics")} />
-          <SidebarButton icon={Settings} label="Settings" active={activeView === "settings"} onClick={() => setActiveView("settings")} />
-          <SidebarButton icon={Shield} label="System Health" active={activeView === "system"} onClick={() => setActiveView("system")} />
+          <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => { setActiveView("coupons"); setSidebarOpen(false); }} />
+          {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => { setActiveView("aiko-hall"); setSidebarOpen(false); }} /> */}
+          <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => { setActiveView("create-event"); setSidebarOpen(false); }} />
+          <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => { setActiveView("hero-images"); setSidebarOpen(false); }} />
+          <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => { setActiveView("analytics"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Settings} label="Settings" active={activeView === "settings"} onClick={() => { setActiveView("settings"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Shield} label="System Health" active={activeView === "system"} onClick={() => { setActiveView("system"); setSidebarOpen(false); }} />
         </nav>
 
-        <div className="mt-auto">
+        <div className="mt-auto pt-4">
           <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <h4 className="font-bold text-blue-800">Need Help?</h4>
+            <CardContent className="pt-4 pb-4">
+              <h4 className="font-bold text-blue-800 text-sm">Need Help?</h4>
               <p className="text-xs text-blue-700 mt-1">Check our documentation or contact support.</p>
-              <Button size="sm" className="w-full mt-3 bg-blue-600 hover:bg-blue-700">Get Support</Button>
+              <Button size="sm" className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-xs">Get Support</Button>
             </CardContent>
           </Card>
         </div>
       </aside>
 
       {/* --- Main Content --- */}
-      <main className="flex-1 ml-64 bg-gradient-to-br from-gray-50 to-blue-50">
-        <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
-          <div className="container mx-auto px-6 py-4">
+      <main className="flex-1 lg:ml-64 bg-gradient-to-br from-gray-50 to-blue-50">
+        <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-30">
+          <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
+              <div className="flex items-center space-x-3">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="lg:hidden h-8 w-8 sm:h-10 sm:w-10"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+                <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
               </div>
-              <div className="flex items-center space-x-4">
-                <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <Badge variant="secondary" className="hidden sm:flex bg-green-100 text-green-800 border-green-200">
                   <Activity className="h-3 w-3 mr-1" /> System Healthy
                 </Badge>
-                <Button variant="outline" size="icon"><Bell className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10"><Bell className="h-3 w-3 sm:h-4 sm:w-4" /></Button>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 md:p-8">
           {renderContent()}
         </div>
       </main>
