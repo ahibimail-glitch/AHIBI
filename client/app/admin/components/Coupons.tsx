@@ -58,17 +58,26 @@ export default function Coupons() {
         setIsLoading(true);
         const response = await axios.get(`/api/events`);
         const { data } = response;
+        let allEvents: EventSummary[] = [];
+        
         if (data && data.success && data.data && Array.isArray(data.data.events)) {
-          setEvents(data.data.events);
+          allEvents = data.data.events;
         } else if (Array.isArray(data)) {
-          setEvents(data);
+          allEvents = data;
         } else if (data && Array.isArray(data.events)) {
-          setEvents(data.events);
+          allEvents = data.events;
         } else if (data && data.data && Array.isArray(data.data)) {
-          setEvents(data.data);
-        } else {
-          setEvents([]);
+          allEvents = data.data;
         }
+        
+        const currentTime = new Date();
+        const upcomingEvents = allEvents.filter((event: any) => {
+          if (!event.endDate) return false;
+          const eventEndDate = new Date(event.endDate);
+          return eventEndDate > currentTime;
+        });
+        
+        setEvents(upcomingEvents);
       } catch (error) {
         console.error(error);
         setEvents([]);
