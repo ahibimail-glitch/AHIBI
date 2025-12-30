@@ -56,9 +56,11 @@ export default function Coupons() {
     const fetchEvents = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(`/api/events`);
+        const response = await axios.get(`/api/events`, {
+          params: { limit: 10000 }
+        });
         const { data } = response;
-        let allEvents: EventSummary[] = [];
+        let allEvents: any[] = [];
         
         if (data && data.success && data.data && Array.isArray(data.data.events)) {
           allEvents = data.data.events;
@@ -72,14 +74,26 @@ export default function Coupons() {
         
         const currentTime = new Date();
         const upcomingEvents = allEvents.filter((event: any) => {
-          if (!event.endDate) return false;
+          if (!event.endDate) {
+            console.log('Event missing endDate:', event.title);
+            return false;
+          }
           const eventEndDate = new Date(event.endDate);
-          return eventEndDate > currentTime;
+          const isUpcoming = eventEndDate > currentTime;
+          
+          if (!isUpcoming) {
+            console.log('Past event filtered:', event.title, 'endDate:', eventEndDate, 'current:', currentTime);
+          }
+          
+          return isUpcoming;
         });
+        
+        console.log('Total events fetched:', allEvents.length);
+        console.log('Upcoming events:', upcomingEvents.length);
         
         setEvents(upcomingEvents);
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching events:', error);
         setEvents([]);
       } finally {
         setIsLoading(false);
