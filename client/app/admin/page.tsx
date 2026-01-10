@@ -306,6 +306,13 @@ export default function AdminDashboard() {
           <SidebarButton icon={Music} label="Artists" active={activeView === "artist-approvals"} onClick={() => { setActiveView("artist-approvals"); setSidebarOpen(false); }} />
           <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => { setActiveView("venue-approvals"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => { setActiveView("event-approvals"); setSidebarOpen(false); }} />
+          {/* Sports Integration */}
+          <SidebarButton
+            icon={UserCheck}
+            label="Sports Partners"
+            active={false}
+            onClick={() => { router.push('/admin/sports/partners'); setSidebarOpen(false); }}
+          />
           <SidebarButton
             icon={CalendarCheck2}
             label="Approved Events"

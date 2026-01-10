@@ -4,6 +4,7 @@ const Admin = require('../models/Admin');
 const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
 const Venue = require('../models/Venue');
+const ArenaPartner = require('../models/ArenaPartner');
 
 /**
  * Middleware to protect routes requiring authentication
@@ -45,6 +46,7 @@ exports.protect = async (req, res, next) => {
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
+      const isArenaPartnerRoute = req.originalUrl.startsWith('/api/arena-partner');
       
       // Check if this is a venue management route (only venue users should access these)
       const isVenueManagerRoute = req.originalUrl.includes('/manager/') || 
@@ -52,13 +54,19 @@ exports.protect = async (req, res, next) => {
                                   req.originalUrl.includes('/details/') ||
                                   req.originalUrl.includes('/auth/');
       
-      console.log('Route detection - Admin:', isAdminRoute, 'Organizer:', isOrganizerRoute, 'Artist:', isArtistRoute, 'Venue:', isVenueRoute);
+      console.log('Route detection - Admin:', isAdminRoute, 'Organizer:', isOrganizerRoute, 'Artist:', isArtistRoute, 'Venue:', isVenueRoute, 'Arena Partner:', isArenaPartnerRoute);
       console.log('Venue manager route:', isVenueManagerRoute, 'Token role:', decoded.role);
       
       let user;
       
       // Use token role as primary determinant, with route as secondary check
-      if (decoded.role === 'admin' || isAdminRoute) {
+      // Strict role checking - prevent cross-role access
+      if (isArenaPartnerRoute && decoded.role !== 'arenaPartner') {
+        console.log('AUTH FAILED: Non-arena partner trying to access arena partner route');
+        return res.status(403).json({ success: false, message: 'Arena partner access required' });
+      }
+      
+      if (decoded.role === 'admin' && isAdminRoute) {
         console.log('Looking for Admin with ID:', decoded.id);
         user = await Admin.findById(decoded.id);
         if (!user) {
@@ -90,6 +98,14 @@ exports.protect = async (req, res, next) => {
           return res.status(404).json({ success: false, message: 'Venue not found' });
         }
         user.role = 'venue';
+      } else if (decoded.role === 'arenaPartner' || isArenaPartnerRoute) {
+        console.log('Looking for Arena Partner with ID:', decoded.id);
+        user = await ArenaPartner.findById(decoded.id);
+        if (!user) {
+          console.log('AUTH FAILED: Arena partner not found');
+          return res.status(404).json({ success: false, message: 'Arena partner not found' });
+        }
+        user.role = 'arenaPartner';
       } else {
         // Default to User model for regular users (including venue bookings by users)
         console.log('Looking for User with ID:', decoded.id);
@@ -187,6 +203,7 @@ exports.optionalAuth = async (req, res, next) => {
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
+      const isArenaPartnerRoute = req.originalUrl.startsWith('/api/arena-partner');
       const isVenueManagerRoute =
         req.originalUrl.includes('/manager/') ||
         req.originalUrl.includes('/profile') ||
@@ -207,6 +224,9 @@ exports.optionalAuth = async (req, res, next) => {
       } else if (decoded.role === 'venue' || decoded.type === 'venue' || (isVenueRoute && isVenueManagerRoute)) {
         user = await Venue.findById(decoded.id);
         if (user) user.role = 'venue';
+      } else if (decoded.role === 'arenaPartner' || isArenaPartnerRoute) {
+        user = await ArenaPartner.findById(decoded.id);
+        if (user) user.role = 'arenaPartner';
       } else {
         user = await User.findById(decoded.id);
       }

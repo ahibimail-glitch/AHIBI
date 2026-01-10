@@ -6,6 +6,7 @@ import "./globals.css"
 import FloatingWhatsapp from "@/components/ui/FloatingWhatsapp"
 import { VenueAuthProvider } from "@/hooks/useVenueAuth"
 import { Toaster } from "@/components/ui/sonner"
+import { Toaster as HotToaster } from "react-hot-toast"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -83,6 +84,7 @@ export default function RootLayout({
           </noscript>
         </VenueAuthProvider>
         <Toaster />
+        <HotToaster position="top-right" />
       </body>
     </html>
   )
