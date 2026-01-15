@@ -106,75 +106,36 @@ const Hero = () => (
         <p className="mt-6 text-gray-600 md:text-xl leading-relaxed">
           Showcase your venue with photos, facilities and real-time availability. Families, organizers, and event planners can now find, compare and book your venue in minutes.
         </p>
-        <div className="mt-8 flex flex-wrap gap-4">
-          <Link href="/venue/auth/signup">
-          <Button size="lg" className="rounded-2xl px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-            List Your Venue
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+        <div className="mt-8 flex flex-nowrap gap-3 md:gap-6">
+          <Link href="/venue/auth/signup" className="flex-1">
+            <Button
+              size="lg"
+              className="w-full rounded-2xl px-4 md:px-8 text-sm md:text-base
+                 bg-gradient-to-r from-purple-600 to-pink-600
+                 hover:from-purple-700 hover:to-pink-700
+                 shadow-lg hover:shadow-xl
+                 transform hover:scale-105 transition-all duration-300"
+            >
+              List Your Venue
+              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+            </Button>
           </Link>
-          <Link href="/venue/auth/login">
-          <Button size="lg" className="rounded-2xl px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
-            Venue Login
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+
+          <Link href="/venue/auth/login" className="flex-1">
+            <Button
+              size="lg"
+              className="w-full rounded-2xl px-4 md:px-8 text-sm md:text-base
+                 bg-gradient-to-r from-purple-600 to-pink-600
+                 hover:from-purple-700 hover:to-pink-700
+                 shadow-lg hover:shadow-xl
+                 transform hover:scale-105 transition-all duration-300"
+            >
+              Venue Login
+              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+            </Button>
           </Link>
-          {/* <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="lg" className="rounded-2xl px-6">Preview form</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>venue onboarding snapshot</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <Input placeholder="Venue name" />
-                  <Input placeholder="City / Base" />
-                  <Input placeholder="Phone" />
-                  <Input placeholder="Email" />
-                </div>
-                <Tabs defaultValue="style">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="style">Style</TabsTrigger>
-                    <TabsTrigger value="fees">Fees</TabsTrigger>
-                    <TabsTrigger value="rider">Rider</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="style" className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        "Weddings",
-                        "Corporate",
-                        "Clubs",
-                        "College",
-                        "Cultural",
-                        "Festivals",
-                      ].map((t) => (
-                        <Badge key={t} variant="secondary" className="rounded-2xl">{t}</Badge>
-                      ))}
-                    </div>
-                    <Textarea placeholder="Short bio (1–2 lines)" />
-                  </TabsContent>
-                  <TabsContent value="fees" className="space-y-3">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Input placeholder="Fee range (e.g., ₹50k–₹1L)" />
-                      <Input placeholder="Advance % (e.g., 50%)" />
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Input placeholder="Payment mode (UPI/Bank/GST)" />
-                      <Input placeholder="Peak-day pricing? (Yes/No)" />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="rider" className="space-y-3">
-                    <Textarea placeholder="Key tech needs (mics, channels, stage size)" />
-                    <Input placeholder="Soundcheck time (e.g., 60 min)" />
-                  </TabsContent>
-                </Tabs>
-                <Button className="rounded-2xl">Looks good</Button>
-              </div>
-            </DialogContent>
-          </Dialog> */}
         </div>
+
         <div className="mt-8 flex items-center gap-6 text-sm text-gray-600">
           <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Instant bookings</div>
           <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Secure payments</div>
@@ -361,7 +322,7 @@ const CTA = () => (
           <p className="mt-4 text-purple-100 md:text-xl">Join AHIBI Venue and let your space shine. Professional listings. Instant bookings. Better revenue.</p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link href="/venue/auth/signup">
-            <Button size="lg" className="rounded-2xl px-8 bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">List your venue free</Button>
+              <Button size="lg" className="rounded-2xl px-8 bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">List your venue free</Button>
             </Link>
             <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-purple-600 hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Contact support</Button>
           </div>

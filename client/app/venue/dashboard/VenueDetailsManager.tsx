@@ -2233,9 +2233,35 @@ export default function VenueDetailsManager({
   };
 
   return (
-    <div className="flex h-screen   bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
+      {/* Mobile pills nav */}
+      <div className="md:hidden bg-white border-b">
+        <div className="px-4 py-3 overflow-x-auto">
+          <div className="flex gap-2">
+            {sidebarItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm border transition-colors ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-white text-gray-700 border-gray-200'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-sm border-r">
+      <div className="hidden md:block w-64 bg-white shadow-sm border-r">
         <div className="p-6 border-b">
           <h2 className="text-lg font-semibold">Venue Details</h2>
           <p className="text-sm text-gray-500">Manage your venue information</p>
@@ -2250,8 +2276,8 @@ export default function VenueDetailsManager({
                     onClick={() => setActiveSection(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
                       activeSection === item.id
-                        ? "bg-blue-50 text-blue-700 border border-blue-200"
-                        : "text-gray-600 hover:bg-gray-50"
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -2266,16 +2292,15 @@ export default function VenueDetailsManager({
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
+        <div className="p-4 sm:p-5 md:p-6">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">
               {sidebarItems.find(item => item.id === activeSection)?.label}
             </h1>
-            <p className="text-gray-600">
-              View and edit your venue {activeSection.replace("-", " ")} information
+            <p className="text-gray-600 text-sm md:text-base">
+              View and edit your venue {activeSection.replace('-', ' ')} information
             </p>
           </div>
-          
           {renderSectionContent()}
         </div>
       </div>

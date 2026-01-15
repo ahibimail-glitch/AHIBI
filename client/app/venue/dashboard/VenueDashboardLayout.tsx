@@ -48,7 +48,8 @@ import {
   Save,
   X,
   Ban,
-  Building
+  Building,
+  Menu
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -104,6 +105,7 @@ export default function VenueDashboardLayout({
   });
   
   const [savingSettings, setSavingSettings] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // FAQs state
   const [faqs, setFaqs] = useState<Array<{ _id?: string; question: string; answer: string; isActive?: boolean; order?: number }>>([]);
   const [faqLoading, setFaqLoading] = useState(false);
@@ -1406,9 +1408,80 @@ export default function VenueDashboardLayout({
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full flex-col md:flex-row">
+      {/* Mobile Header with Hamburger */}
+      <div className="md:hidden sticky top-0 z-30 bg-white border-b">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <button
+            aria-label="Open menu"
+            className="p-2 rounded-md border border-gray-200 hover:bg-gray-50"
+            onClick={() => setMobileSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+              {venueData?.name?.charAt(0) || 'V'}
+            </div>
+            <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{venueData?.name || 'Venue'}</span>
+          </div>
+          <div className="w-8" />
+        </div>
+      </div>
+
+      {/* Mobile Sidebar Drawer */}
+      {mobileSidebarOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl border-r flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-base font-bold">
+                  {venueData?.name?.charAt(0) || 'V'}
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">{venueData?.name || 'Venue Name'}</h2>
+                  <p className="text-xs text-gray-500">{venueData?.address?.city || 'City'}</p>
+                </div>
+              </div>
+              <button
+                aria-label="Close menu"
+                className="p-2 rounded-md hover:bg-gray-50"
+                onClick={() => setMobileSidebarOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="p-3 overflow-y-auto">
+              <ul className="space-y-1">
+                {sidebarItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => { setActiveTab(item.id); setMobileSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
+                          isActive ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </div>
+        </>
+      )}
+
       {/* Left Sidebar */}
-      <div className="w-64 bg-white shadow-sm border-r">
+      <div className="hidden md:block w-64 bg-white shadow-sm border-r">
         <div className="p-6 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-lg font-bold">
