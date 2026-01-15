@@ -121,6 +121,44 @@ exports.searchVenues = async (req, res) => {
       venues.sort((a, b) => (b.statistics?.totalBookings || 0) - (a.statistics?.totalBookings || 0));
     }
 
+    // Compute minimum court price per venue for display purposes
+    try {
+      const venueIds = venues.map(v => v._id);
+      if (venueIds.length > 0) {
+        const courts = await Court.find({
+          venue: { $in: venueIds },
+          status: 'active'
+        }).select('venue pricing');
+
+        const minPriceMap = new Map();
+        courts.forEach(court => {
+          const prices = [
+            court.pricing?.weekday?.offPeak?.pricePerHour,
+            court.pricing?.weekday?.peak?.pricePerHour,
+            court.pricing?.weekend?.offPeak?.pricePerHour,
+            court.pricing?.weekend?.peak?.pricePerHour
+          ].filter(p => typeof p === 'number');
+
+          if (prices.length > 0) {
+            const minForCourt = Math.min(...prices);
+            const key = court.venue.toString();
+            const existing = minPriceMap.get(key);
+            if (existing === undefined || minForCourt < existing) {
+              minPriceMap.set(key, minForCourt);
+            }
+          }
+        });
+
+        // attach to venues (venues are lean objects)
+        venues = venues.map(v => ({
+          ...v,
+          minCourtPrice: minPriceMap.get(v._id.toString())
+        }));
+      }
+    } catch (e) {
+      // non-fatal: if price computation fails, proceed without it
+    }
+
     return ApiResponse.success(res, 'Venues retrieved successfully', {
       venues,
       count: venues.length

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Upload, X, ImageIcon, Video, File, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,8 +11,9 @@ interface FileUploadAreaProps {
   maxSize?: number;
   onUpload: (files: File[]) => Promise<void>;
   uploading?: boolean;
-  existingFiles?: Array<{ url: string; name?: string; caption?: string }>;
+  existingFiles?: Array<{ url: string; name?: string; caption?: string; isCover?: boolean }>;
   onRemove?: (index: number) => void;
+  onSetCover?: (index: number) => void;
   type?: "image" | "video" | "document";
 }
 
@@ -24,11 +25,18 @@ export function FileUploadArea({
   uploading = false,
   existingFiles = [],
   onRemove,
+  onSetCover,
   type = "image"
 }: FileUploadAreaProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [renderKey, setRenderKey] = useState(0);
+
+  // Force re-render when existingFiles change to update cover badges
+  useEffect(() => {
+    setRenderKey(prev => prev + 1);
+  }, [existingFiles]);
 
   const handleFileSelect = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -146,7 +154,7 @@ export function FileUploadArea({
           )}>
             {existingFiles.map((file, index) => (
               <div
-                key={index}
+                key={`${index}-${renderKey}-${file.isCover}`}
                 className={cn(
                   "relative group rounded-lg overflow-hidden border",
                   type === "image" ? "aspect-square" : "p-4"
@@ -194,6 +202,27 @@ export function FileUploadArea({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                )}
+                {onSetCover && type === "image" && (
+                  <div className="absolute bottom-2 left-2">
+                    {file.isCover ? (
+                      <div className="bg-orange-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                        Cover
+                      </div>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs h-6 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSetCover(index);
+                        }}
+                      >
+                        Set as Cover
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { arenaPartnerAuth } from '@/lib/api/sports';
 import { toast } from 'react-hot-toast';
@@ -19,6 +19,22 @@ export default function ArenaPartnerAuth() {
         email: '',
         businessName: '',
     });
+
+    // Clear any existing auth tokens when visiting the auth page
+    useEffect(() => {
+        try {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('arenaPartnerToken');
+            localStorage.removeItem('token');
+
+            // Also remove from sessionStorage if used anywhere
+            sessionStorage.removeItem('admin_token');
+            sessionStorage.removeItem('arenaPartnerToken');
+            sessionStorage.removeItem('token');
+        } catch (e) {
+            // no-op
+        }
+    }, []);
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();

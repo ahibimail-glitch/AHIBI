@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { arenaPartnerVenues } from '@/lib/api/sports';
 import { toast } from 'react-hot-toast';
+import { FileUploadArea } from '@/components/ui/file-upload-area';
 
 const ALL_SPORTS = [
   'cricket',
@@ -20,6 +21,8 @@ const ALL_SPORTS = [
 export default function CreateVenuePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [venueImage, setVenueImage] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('arenaPartnerToken');
@@ -72,6 +75,44 @@ export default function CreateVenuePage() {
     });
   };
 
+  const handleImageUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', files[0]);
+      formData.append('folder', 'venues');
+      formData.append('documentType', 'image');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setVenueImage(data.url);
+        toast.success('Image uploaded successfully');
+      } else {
+        throw new Error(data.error || 'Upload failed');
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setVenueImage('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -102,7 +143,18 @@ export default function CreateVenuePage() {
 
     setLoading(true);
     try {
-      await arenaPartnerVenues.create(form);
+      const venueData = {
+        ...form,
+        gallery: {
+          images: venueImage ? [{
+            url: venueImage,
+            isMain: true,
+            caption: form.venueName
+          }] : []
+        }
+      };
+      
+      await arenaPartnerVenues.create(venueData);
       toast.success('Venue created and submitted for review');
       router.replace('/arena-partner/venues');
     } catch (err: any) {
@@ -122,6 +174,22 @@ export default function CreateVenuePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+          {/* Venue Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Venue Image</label>
+            <p className="text-xs text-gray-500 mb-3">Add a high-quality photo of your venue. This will be displayed on the sports listing page.</p>
+            <FileUploadArea
+              type="image"
+              multiple={false}
+              maxSize={10 * 1024 * 1024}
+              onUpload={handleImageUpload}
+              uploading={uploading}
+              existingFiles={venueImage ? [{ url: venueImage, name: 'Venue Image' }] : []}
+              onRemove={removeImage}
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            />
+          </div>
+
           {/* Basic Info */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Venue Name</label>
