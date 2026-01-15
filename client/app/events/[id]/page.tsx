@@ -1793,8 +1793,21 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                                 </div>
                               </div>
                               <div className="text-left">
-                                <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
-                                <p className="text-xs text-gray-500">per ticket</p>
+                                {event._id === '6967a23fa07b45b14aa701f6' && ticket.price === 1599 ? (
+                                  <>
+                                    <div className="flex items-baseline gap-2">
+                                      <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                                      <span className="text-sm text-gray-500 line-through">₹1799</span>
+                                    </div>
+                                    <p className="text-xs text-green-600">Discounted price</p>
+                                    <p className="text-xs text-gray-500">per ticket</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-lg sm:text-xl font-semibold text-indigo-600">₹{ticket.price}</span>
+                                    <p className="text-xs text-gray-500">per ticket</p>
+                                  </>
+                                )}
 
                               </div>
                             </div>
