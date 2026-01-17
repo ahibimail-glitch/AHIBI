@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { arenaPartnerVenues, arenaPartnerCourts } from '@/lib/api/sports';
 import Link from 'next/link';
 import { Plus, Edit, Trash2, MapPin, Activity } from 'lucide-react';
 
-export default function CourtsManagementPage() {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+function CourtsManagementPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const venueIdParam = searchParams.get('venueId');
@@ -293,5 +296,17 @@ export default function CourtsManagementPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CourtsManagementPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      </div>
+    }>
+      <CourtsManagementPageContent />
+    </Suspense>
   );
 }

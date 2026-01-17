@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { FileUploadArea } from '@/components/ui/file-upload-area';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 const SPORTS = [
   'cricket', 'football', 'basketball', 'badminton', 'tennis',
   'volleyball', 'table_tennis', 'squash', 'swimming', 'gym',

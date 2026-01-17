@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { arenaPartnerCourts, arenaPartnerVenues } from '@/lib/api/sports';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { FileUploadArea } from '@/components/ui/file-upload-area';
 import { toast } from 'react-hot-toast';
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
 const SPORTS = [
   'cricket', 'football', 'basketball', 'badminton', 'tennis',
@@ -17,7 +20,7 @@ const SPORTS = [
 
 const SURFACE_TYPES = ['grass', 'turf', 'concrete', 'wood', 'clay', 'synthetic', 'tiles', 'mat', 'other'];
 
-export default function CreateCourtPage() {
+function CreateCourtPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const venueIdParam = searchParams.get('venueId');
@@ -686,5 +689,17 @@ export default function CreateCourtPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateCourtPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      </div>
+    }>
+      <CreateCourtPageContent />
+    </Suspense>
   );
 }
