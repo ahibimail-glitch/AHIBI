@@ -14,8 +14,8 @@ export const getApiUrl = (path: string): string => {
   // Use NEXT_PUBLIC_API_URL from environment variables or default to local development URL
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   
-  // Combine base URL with path
-  return `${baseUrl}/${cleanPath}`;
+  // Combine base URL with /api prefix and path
+  return `${baseUrl}/api/${cleanPath}`;
 };
 
 /**

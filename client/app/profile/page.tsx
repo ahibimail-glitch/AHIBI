@@ -50,6 +50,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
+import { getApiUrl } from "@/config";
 
 interface UserProfile {
   name: string;
@@ -85,7 +86,39 @@ export default function ProfilePage() {
     bookingType: string;
   }
 
+  interface SportsBooking {
+    _id: string;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    numberOfPlayers: number;
+    status: string;
+    pricing: {
+      totalAmount: number;
+    };
+    venue: {
+      _id: string;
+      venueName: string;
+      address: {
+        city: string;
+        state: string;
+      };
+      gallery?: {
+        images?: Array<{ url: string }>;
+      };
+    };
+    court: {
+      _id: string;
+      courtName: string;
+      sportType: string;
+    };
+    createdAt: string;
+  }
+
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
+  const [sportsBookings, setSportsBookings] = useState<SportsBooking[]>([]);
+  const [bookingType, setBookingType] = useState<'events' | 'sports'>('events');
 
   // Fetch user profile from backend
   React.useEffect(() => {
@@ -141,11 +174,32 @@ export default function ProfilePage() {
       } catch (e) {
         setError("Network error. Please try again.");
       }
-      setLoading(false);
+    };
+
+    const fetchSportsBookings = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(getApiUrl("/sports/my-bookings"), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setSportsBookings(data.data.bookings || []);
+        } else {
+          console.error("Failed to fetch sports bookings:", data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching sports bookings:", err);
+      }
     };
 
     fetchProfile();
     fetchUserBookings();
+    fetchSportsBookings();
   }, []);
 
   const [preferences, setPreferences] = useState({
@@ -386,18 +440,22 @@ export default function ProfilePage() {
                 {/* Quick Stats */}
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{userBookings.length}</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {userBookings.length + sportsBookings.length}
+                    </div>
                     <div className="text-xs text-gray-500">Total Bookings</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {userBookings.filter(b => b.paymentStatus === "completed" || b.paymentStatus === "paid").length}
+                      {userBookings.filter(b => b.paymentStatus === "completed" || b.paymentStatus === "paid").length +
+                       sportsBookings.filter(b => b.status === "completed").length}
                     </div>
                     <div className="text-xs text-gray-500">Completed</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      ₹{userBookings.reduce((sum, booking) => sum + booking.total, 0).toLocaleString()}
+                      ₹{(userBookings.reduce((sum, booking) => sum + booking.total, 0) +
+                         sportsBookings.reduce((sum, booking) => sum + booking.pricing.totalAmount, 0)).toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500">Total Spent</div>
                   </div>
@@ -435,98 +493,212 @@ export default function ProfilePage() {
                   <div>
                     <CardTitle className="text-xl font-bold text-gray-900">My Bookings</CardTitle>
                     <CardDescription className="text-gray-600">
-                      All your event bookings and tickets
+                      All your event bookings and sports court reservations
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {userBookings.length} bookings
+                    {userBookings.length + sportsBookings.length} bookings
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
+                {/* Toggle Buttons */}
+                <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg">
+                  <button
+                    onClick={() => setBookingType('events')}
+                    className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                      bookingType === 'events'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Ticket className="h-4 w-4 inline mr-2" />
+                    Event Bookings ({userBookings.length})
+                  </button>
+                  <button
+                    onClick={() => setBookingType('sports')}
+                    className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
+                      bookingType === 'sports'
+                        ? 'bg-white text-orange-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Calendar className="h-4 w-4 inline mr-2" />
+                    Sports Bookings ({sportsBookings.length})
+                  </button>
+                </div>
                 <div className="space-y-4">
-                  {userBookings && userBookings.length > 0 ? (
-                    userBookings.map((booking, index) => (
-                      <div
-                        key={booking._id}
-                        className="group relative bg-gradient-to-r from-white to-gray-50/50 border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                          <div className="flex items-start space-x-4">
-                            <div className="relative">
-                              <Image
-                                src={booking.event?.banner || "/placeholder.jpg"}
-                                alt={booking.event?.title || "Event"}
-                                width={120}
-                                height={80}
-                                className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg object-cover shadow-sm ring-2 ring-white"
-                              />
-                              {/* <div className="absolute -top-2 -left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                                #{index + 1}
-                              </div> */}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
-                                {booking.event?.title || "Event"}
-                              </h3>
-                              <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 mr-1" />
-                                  {new Date(booking.bookedAt).toLocaleDateString('en-IN', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })}
+                  {bookingType === 'events' ? (
+                    <>
+                      {userBookings && userBookings.length > 0 ? (
+                        userBookings.map((booking, index) => (
+                          <div
+                            key={booking._id}
+                            className="group relative bg-gradient-to-r from-white to-gray-50/50 border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
+                          >
+                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                              <div className="flex items-start space-x-4">
+                                <div className="relative">
+                                  <Image
+                                    src={booking.event?.banner || "/placeholder.jpg"}
+                                    alt={booking.event?.title || "Event"}
+                                    width={120}
+                                    height={80}
+                                    className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg object-cover shadow-sm ring-2 ring-white"
+                                  />
                                 </div>
-                                <div className="flex items-center">
-                                  <Ticket className="h-4 w-4 mr-1" />
-                                  {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                                    {booking.event?.title || "Event"}
+                                  </h3>
+                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
+                                    <div className="flex items-center">
+                                      <Calendar className="h-4 w-4 mr-1" />
+                                      {new Date(booking.bookedAt).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Ticket className="h-4 w-4 mr-1" />
+                                      {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {getStatusIcon(booking.paymentStatus)}
+                                    <Badge
+                                      className={`${getStatusColor(booking.paymentStatus)} border font-medium px-3 py-1`}
+                                    >
+                                      {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                                    </Badge>
+                                    {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' && (
+                                      <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium px-3 py-1">
+                                        <Clock className="h-3 w-3 mr-1 inline animate-pulse" />
+                                        Payment Processing
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                {getStatusIcon(booking.paymentStatus)}
-                                <Badge
-                                  className={`${getStatusColor(booking.paymentStatus)} border font-medium px-3 py-1`}
-                                >
-                                  {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
-                                </Badge>
-                                {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' && (
-                                  <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium px-3 py-1">
-                                    <Clock className="h-3 w-3 mr-1 inline animate-pulse" />
-                                    Payment Processing
-                                  </Badge>
-                                )}
+                              
+                              <div className="text-right lg:ml-6">
+                                <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.total.toLocaleString()}</p>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  {(booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed')||(booking.bookingType !== 'ahibi-fest' && booking.paymentStatus === 'completed') ? (      
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      onClick={() => handleViewTicket(booking)}
+                                      className="hover:bg-blue-50 hover:border-blue-300"
+                                    >
+                                      View Ticket
+                                    </Button>
+                                  ):null}
+                                </div>
                               </div>
                             </div>
                           </div>
-                          
-                          <div className="text-right lg:ml-6">
-                            <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.total.toLocaleString()}</p>
-                            <div className="flex flex-col sm:flex-row gap-2">
-                              {(booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed')||(booking.bookingType !== 'ahibi-fest' && booking.paymentStatus === 'completed') ? (      
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => handleViewTicket(booking)}
-                                  className="hover:bg-blue-50 hover:border-blue-300"
-                              >
-                                View Ticket
-                              </Button>
-                            ):null}
-                            </div>
-                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-12">
+                          <Ticket className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No event bookings found</h3>
+                          <p className="text-gray-500 mb-6">You haven't booked any events yet</p>
+                          <Button asChild>
+                            <Link href="/events">Explore Events</Link>
+                          </Button>
                         </div>
-                      </div>
-                    ))
+                      )}
+                    </>
                   ) : (
-                    <div className="text-center py-12">
-                      <Ticket className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
-                      <p className="text-gray-500 mb-6">You haven't booked any events yet</p>
-                      <Button asChild>
-                        <Link href="/events">Explore Events</Link>
-                      </Button>
-                    </div>
+                    <>
+                      {sportsBookings && sportsBookings.length > 0 ? (
+                        sportsBookings.map((booking) => (
+                          <div
+                            key={booking._id}
+                            className="group relative bg-gradient-to-r from-orange-50 to-white border border-orange-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-orange-300"
+                          >
+                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                              <div className="flex items-start space-x-4">
+                                <div className="relative">
+                                  <div className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-bold shadow-sm ring-2 ring-white">
+                                    {booking.court.sportType === 'cricket' ? '🏏' :
+                                     booking.court.sportType === 'football' ? '⚽' :
+                                     booking.court.sportType === 'basketball' ? '🏀' :
+                                     booking.court.sportType === 'badminton' ? '🏸' :
+                                     booking.court.sportType === 'tennis' ? '🎾' :
+                                     booking.court.sportType === 'volleyball' ? '🏐' :
+                                     booking.court.sportType === 'table_tennis' ? '🏓' :
+                                     booking.court.sportType === 'swimming' ? '🏊' :
+                                     booking.court.sportType === 'gym' ? '💪' :
+                                     booking.court.sportType === 'yoga' ? '🧘' :
+                                     '🏟️'}
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                                    {booking.venue.venueName}
+                                  </h3>
+                                  <p className="text-sm text-gray-600 mb-2">
+                                    {booking.court.courtName} • {booking.court.sportType.toUpperCase()}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
+                                    <div className="flex items-center">
+                                      <Calendar className="h-4 w-4 mr-1" />
+                                      {new Date(booking.bookingDate).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Clock className="h-4 w-4 mr-1" />
+                                      {booking.startTime} - {booking.endTime}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <MapPin className="h-4 w-4 mr-1" />
+                                      {booking.venue.address.city}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {getStatusIcon(booking.status)}
+                                    <Badge
+                                      className={`${getStatusColor(booking.status)} border font-medium px-3 py-1`}
+                                    >
+                                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="text-right lg:ml-6">
+                                <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.pricing.totalAmount.toLocaleString()}</p>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => router.push(`/sports/bookings/${booking._id}`)}
+                                    className="hover:bg-orange-50 hover:border-orange-300"
+                                  >
+                                    View Details
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-12">
+                          <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No sports bookings found</h3>
+                          <p className="text-gray-500 mb-6">You haven't booked any sports courts yet</p>
+                          <Button asChild>
+                            <Link href="/sports">Browse Venues</Link>
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>

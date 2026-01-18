@@ -8,6 +8,9 @@ router.get('/venues', sportsBookingController.searchVenues);
 router.get('/venues/:id', sportsBookingController.getVenueDetails);
 router.get('/venues/:id/courts', sportsBookingController.getAvailableCourts);
 
+// ============ COURT ROUTES (PUBLIC) ============
+router.get('/courts/:courtId', sportsBookingController.getCourtDetails);
+
 // ============ SLOT AVAILABILITY ROUTES (PUBLIC) ============
 router.get('/courts/:courtId/slots', sportsBookingController.getAvailableSlots);
 

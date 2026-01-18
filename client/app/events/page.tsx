@@ -349,15 +349,18 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-gray-50 scroll-smooth">
       <Navbar />
       <main className="flex-1">
-        {/* Hero Section - Events Page Unique Style */}
-        <section className="relative py-16 bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-hidden">
-          <div className="container mx-auto px-6 max-w-6xl flex flex-col md:flex-row items-center gap-8">
+        {/* Hero Section - Events Page Purple Theme */}
+        <section className="relative py-16 px-14 bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-hidden">
+          <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
 
             {/* Left Content */}
             <div className="w-full md:w-1/2 text-center md:text-left">
               <h1 className="text-4xl md:text-6xl font-extrabold text-[#1a1a2e] leading-tight">
-                Discover <span className="text-[#6366f1]">Amazing</span>
-                <br />Events, <span className="text-[#8b5cf6]">Anytime.</span>
+                <span className="whitespace-nowrap">
+                  Discover <span className="text-[#6366f1]">Amazing</span>
+                </span>
+                <br />
+                Events, <span className="text-[#8b5cf6]">Anytime.</span>
               </h1>
 
               <p className="text-lg md:text-2xl text-[#64748b] mt-4 font-medium max-w-xl">
@@ -372,23 +375,22 @@ export default function EventsPage() {
                   <Link href="#events">Browse Events</Link>
                 </Button>
 
-
+                <Button
+                  variant="outline"
+                  asChild
+                  className="border border-gray-300 text-[#1a1a2e] px-7 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 hover:text-[#6366f1]"
+                >
+                  <Link href="/auth">Sign Up</Link>
+                </Button>
               </div>
 
-              <div className="mt-6 text-sm text-[#64748b] flex items-center justify-center md:justify-start gap-4">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Instant Booking
-                </span>
-                <span>•</span>
-                <span>Best Prices</span>
-                <span>•</span>
-                <span>24/7 Support</span>
+              <div className="mt-6 text-sm text-[#64748b]">
+                No booking fees • Easy refunds • Secure payments
               </div>
             </div>
 
             {/* Right Image */}
-            <div className="w-full md:w-1/2">
+            <div className="w-full">
               <div className="rounded-3xl overflow-hidden shadow-2xl border-2 border-[#e2e8f0] relative group">
                 {loadingHeroImages ? (
                   <div className="aspect-video bg-gradient-to-br from-[#f1f5f9] to-[#e2e8f0] flex items-center justify-center">
@@ -403,7 +405,6 @@ export default function EventsPage() {
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                       priority
                     />
-                    {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#6366f1]/20 via-transparent to-[#8b5cf6]/10" />
                   </div>
                 ) : (
@@ -414,6 +415,7 @@ export default function EventsPage() {
 
           </div>
         </section>
+
 
 
 

@@ -205,6 +205,29 @@ exports.getVenueDetails = async (req, res) => {
 };
 
 /**
+ * @desc    Get court details by ID
+ * @route   GET /api/sports/courts/:courtId
+ * @access  Public
+ */
+exports.getCourtDetails = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.courtId).populate('venue');
+
+    if (!court) {
+      return ApiResponse.notFound(res, 'Court not found');
+    }
+
+    return ApiResponse.success(res, 'Court details retrieved successfully', {
+      court
+    });
+
+  } catch (error) {
+    console.error('Get court details error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving court details', error);
+  }
+};
+
+/**
  * @desc    Get available courts for a venue
  * @route   GET /api/sports/venues/:id/courts
  * @access  Public

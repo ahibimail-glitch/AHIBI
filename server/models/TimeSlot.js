@@ -210,9 +210,18 @@ TimeSlotSchema.statics.generateSlotsForDate = async function(courtId, date) {
   const dayName = days[dateObj.getDay()];
   
   // Get venue operating hours for this day
-  const operatingHours = court.venue.operatingHours[dayName];
+  let operatingHours = court.venue?.operatingHours?.[dayName];
   
-  if (!operatingHours || operatingHours.closed) {
+  // If no operating hours are set, use default hours (6:00 - 23:00)
+  if (!operatingHours || !operatingHours.open || !operatingHours.close) {
+    operatingHours = {
+      open: '06:00',
+      close: '23:00',
+      closed: false
+    };
+  }
+  
+  if (operatingHours.closed) {
     return [];
   }
   

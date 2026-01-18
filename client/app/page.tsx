@@ -320,7 +320,7 @@ export default function HomePage() {
       </div>
 
       {/* Hero Section - Clean Zomato/District style */}
-      <section className="relative py-16 bg-white overflow-hidden">
+      <section className="relative py-16 px-14 bg-white overflow-hidden">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
 
           {/* Left Content */}
@@ -429,36 +429,32 @@ export default function HomePage() {
                     style={{ transform: `translateX(-${currentSlide * (100 / slidesPerView)}%)` }}
                   >
                     {featuredEvents.map((event, index) => (
-                      <div key={event._id} className="flex-shrink-0 px-2" style={{ width: `${100 / slidesPerView}%` }}>
+                      <div key={event._id} className="flex-shrink-0 px-2 py-2" style={{ width: `${100 / slidesPerView}%` }}>
                         <Card className="relative h-full rounded-3xl overflow-hidden border border-gray-100 shadow-md hover:shadow-xl transition-all bg-white">
-                          <AspectRatio ratio={16 / 9} className="relative">
-                            <Image
-                              src={event.banner || "/placeholder.svg?height=600&width=800&query=event%20venue"}
-                              alt={event.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-700"
-                              sizes="(max-width: 640px) 100vw, (max-width: 768px) 90vw, (max-width: 1024px) 80vw, 1200px"
-                              priority={index === 0}
-                            />
-
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-
-                            <div className="absolute bottom-0 left-0 right-0 text-white p-4 space-y-2">
-                              <h3 className="text-lg md:text-xl font-bold text-white leading-tight line-clamp-1">{event.title}</h3>
-
-                              <div className="flex items-center justify-between text-sm text-white/90">
+                          <div className="flex flex-col h-full">
+                            <AspectRatio ratio={16 / 9} className="relative">
+                              <Image
+                                src={event.banner || "/placeholder.svg?height=600&width=800&query=event%20venue"}
+                                alt={event.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                sizes="(max-width: 640px) 100vw, (max-width: 768px) 90vw, (max-width: 1024px) 80vw, 1200px"
+                                priority={index === 0}
+                              />
+                            </AspectRatio>
+                            <div className="p-4 space-y-3 flex-1 flex flex-col">
+                              <h3 className="text-lg md:text-xl font-bold text-[#1C1C1C] leading-tight line-clamp-2">{event.title}</h3>
+                              <div className="flex items-center justify-between text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-4 w-4" />
                                   <span>{new Date(event.startDate).toLocaleDateString()}</span>
                                 </div>
-
                                 <div className="flex items-center gap-2">
                                   <MapPin className="h-4 w-4" />
                                   <span className="truncate">{event.location.city}</span>
                                 </div>
                               </div>
-
-                              <div className="mt-3">
+                              <div className="mt-auto">
                                 <Button
                                   className="w-full bg-[#ff0e0e] hover:bg-[#e60000] text-white rounded-full font-semibold py-2 shadow"
                                   asChild
@@ -470,7 +466,7 @@ export default function HomePage() {
                                 </Button>
                               </div>
                             </div>
-                          </AspectRatio>
+                          </div>
                         </Card>
                       </div>
                     ))}
@@ -505,36 +501,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* HELITAXI ADD - cleaned */}
-      {/* <section className="relative overflow-hidden py-10 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-red-50 text-red-600 rounded-full px-3 py-1 text-sm mb-3">
-                <span>Limited Period</span>
-                <Badge variant="secondary" className="bg-red-500 text-white border-0 text-[10px]">20% OFF</Badge>
-              </div>
-
-              <h2 className="text-3xl md:text-4xl font-extrabold text-[#1C1C1C] mb-3">Helicopter Rides & Shuttles</h2>
-              <p className="text-gray-600 mb-6">Experience Hornbill from the sky. Joyrides, Dzükōu Valley aerial tours, and Kohima–Dimapur shuttles.</p>
-
-              <div className="flex items-center gap-4">
-                <Button asChild size="lg" className="bg-[#ff0e0e] hover:bg-[#e60000] text-white rounded-full px-6 py-3 shadow">
-                  <Link href="/HeliTaxii">Book HeliTaxii</Link>
-                </Button>
-                <span className="text-gray-500 text-sm">Starting at ₹3,840 per seat</span>
-              </div>
-            </div>
-
-            <div className="w-full">
-              <div className="rounded-2xl overflow-hidden shadow-md">
-                <Image src="/images/HeliTaxii/heli-desktop.jpg" alt="Desktop Banner" width={1500} height={500} className="w-full h-auto object-cover" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
       {/* Stats Section */}
       <section className="py-20 bg-gradient-to-b from-white to-gray-50">
         <div ref={statsRef} className="container mx-auto px-4 group">
@@ -568,8 +534,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-
 
       <Footer />
     </div>
