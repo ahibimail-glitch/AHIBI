@@ -36,16 +36,7 @@ const CITIES = [
   "Silchar",
   "Tezpur",
 ];
-const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94",
-  "6927f5f02cd1c48b94f5be37",
-  "6927f61d2cd1c48b94f5be3d",
-  "6927f66e2cd1c48b94f5be88",
-  "6927f69c2cd1c48b94f5be8c",
-  "6927f6cf2cd1c48b94f5be91",
-  "6927f7102cd1c48b94f5bedb",
-  "6927f73c2cd1c48b94f5bee0",
-  "6927f7a32cd1c48b94f5bf36",
-  "6927f7dd2cd1c48b94f5bf3b", "6927f84d2cd1c48b94f5bf48","69300d88ca38d79b1c9e1e2f"];
+
 const GENRES = ['Music', 'Comedy', 'Theatre', 'Dance', 'Food', 'Art', 'Sports', 'Business', 'Education', 'Other'];
 
 // Format date for display
@@ -119,7 +110,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={index < 3}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-50"></div>
+            <div className="absolute inset-0 transition-opacity duration-300 group-hover:opacity-50"></div>
             <div className="absolute top-4 right-4 flex gap-2">
               {event.isFeatured && (
                 <motion.div
@@ -144,21 +135,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                 {event.category}
               </Badge>
             </div>
-          
-            <div className="absolute bottom-0 left-0 right-0 p-6">
-              <h3 id={`event-title-${event._id}`} className="text-xl md:text-2xl font-bold text-white mb-2 line-clamp-2">
-                {event.title}
-              </h3>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 0.8 }}
-                className="h-px bg-gradient-to-r from-blue-400 to-purple-400"
-              />
-            </div>
+
+
           </AspectRatio>
         </div>
         <CardContent className="p-6 flex-1 flex flex-col bg-white">
+          <h3 id={`event-title-${event._id}`} className="text-xl md:text-2xl font-bold text-[#ff0e0e] mb-4 line-clamp-2">
+            {event.title}
+          </h3>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
@@ -208,13 +192,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-6 py-2 rounded-full shadow-md"
                     >
                       <Link href={
-                        event._id === "6899cb7215438afd622a7646" ? "/events/FC25" :
-                          event._id === "68bfd326f3f63bc4934ff5ef" ? "/annie-musical/details" :
-                            event._id === "691761e039a9643fb980297f" ? "/Zunheboto" :
-                              event._id === "691b0e57a9a25d4fec36f8ad" ? "/HornbillFestival2025/music-festival" :
-                                event._id === "6927fceb2cd1c48b94f5c367" ? "/HornbillFestival2025/daily-pass" :
-
-                                  `/events/${event._id}`
+                        `/events/${event._id}`
                       }>
                         View Details
                       </Link>
@@ -238,6 +216,9 @@ export default function EventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [backgroundImages, setBackgroundImages] = useState<{ url: string }[]>([]);
+  const [currentBgSlide, setCurrentBgSlide] = useState(0);
+  const [loadingHeroImages, setLoadingHeroImages] = useState(true);
 
   const currentDate = new Date();
 
@@ -248,10 +229,7 @@ export default function EventsPage() {
 
         if (!response.ok) throw new Error('Failed to fetch events');
         const data: EventsResponse = await response.json();
-        const filteredEvents = (data.data.events || []).filter(
-          (event) => event._id !== '68dac96e8d5dd14f277d5b1a' && event._id !== '6917510439a9643fb98027c0' && event._id !== '69176d6839a9643fb9802ad1' && event._id !== '69176cdf39a9643fb9802a5d' && !HMF_id.includes(event._id)
-        );
-        setEvents(filteredEvents);
+        setEvents(data.data.events);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
         console.error('Error fetching events:', errorMessage);
@@ -262,6 +240,23 @@ export default function EventsPage() {
     };
 
     fetchEvents();
+  }, []);
+
+  // Hero background images slideshow
+  useEffect(() => {
+    const heroImages = [
+      { url: "/images/carausel1.jpg" },
+      { url: "/images/carausel2.jpg" },
+      { url: "/images/carausel3.jpg" }
+    ];
+    setBackgroundImages(heroImages);
+    setLoadingHeroImages(false);
+
+    const interval = setInterval(() => {
+      setCurrentBgSlide((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const resetFilters = () => {
@@ -351,46 +346,73 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 scroll-smooth">
       <Navbar />
       <main className="flex-1">
-        <section className="relative w-full overflow-hidden">
+        {/* Hero Section - Events Page Unique Style */}
+        <section className="relative py-16 bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-hidden">
+          <div className="container mx-auto px-6 max-w-6xl flex flex-col md:flex-row items-center gap-8">
 
-          {/* Background with slow zoom animation */}
-          <motion.div
-            initial={{ scale: 1.2 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 10, ease: "easeOut" }}
-            className="w-full"
-          >
-            {/* Desktop Image */}
-            <div className="hidden md:block w-full">
-              <Image
-                src="/images/carausel1.jpg"
-                alt="Hornbill Festival 2025"
-                width={1920}
-                height={1080}
-                className="w-full h-auto"
-              />
+            {/* Left Content */}
+            <div className="w-full md:w-1/2 text-center md:text-left">
+              <h1 className="text-4xl md:text-6xl font-extrabold text-[#1a1a2e] leading-tight">
+                Discover <span className="text-[#6366f1]">Amazing</span>
+                <br />Events, <span className="text-[#8b5cf6]">Anytime.</span>
+              </h1>
+
+              <p className="text-lg md:text-2xl text-[#64748b] mt-4 font-medium max-w-xl">
+                Your gateway to unforgettable experiences. From music festivals to cultural celebrations, find and book your next adventure.
+              </p>
+
+              <div className="flex gap-4 justify-center md:justify-start mt-8">
+                <Button
+                  asChild
+                  className="bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] hover:from-[#5558e3] hover:to-[#7c3aed] text-white px-7 py-3 rounded-full font-semibold text-lg shadow-lg shadow-purple-500/20"
+                >
+                  <Link href="#events">Browse Events</Link>
+                </Button>
+
+
+              </div>
+
+              <div className="mt-6 text-sm text-[#64748b] flex items-center justify-center md:justify-start gap-4">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Instant Booking
+                </span>
+                <span>•</span>
+                <span>Best Prices</span>
+                <span>•</span>
+                <span>24/7 Support</span>
+              </div>
             </div>
 
-            {/* Mobile Image */}
-            <div className="md:hidden w-full">
-              <Image
-                src="/images/carausel1.jpg"
-                alt="Hornbill Festival 2025"
-                width={1080}
-                height={1920}
-                className="w-full h-auto"
-              />
+            {/* Right Image */}
+            <div className="w-full md:w-1/2">
+              <div className="rounded-3xl overflow-hidden shadow-2xl border-2 border-[#e2e8f0] relative group">
+                {loadingHeroImages ? (
+                  <div className="aspect-video bg-gradient-to-br from-[#f1f5f9] to-[#e2e8f0] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#6366f1]" />
+                  </div>
+                ) : backgroundImages.length > 0 ? (
+                  <div className="relative aspect-video">
+                    <Image
+                      src={backgroundImages[currentBgSlide].url}
+                      alt={`Events Gallery ${currentBgSlide + 1}`}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      priority
+                    />
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#6366f1]/20 via-transparent to-[#8b5cf6]/10" />
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-gradient-to-br from-[#f1f5f9] to-[#e2e8f0]" />
+                )}
+              </div>
             </div>
-          </motion.div>
 
-          {/* Text Overlay */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
-            {/* Your text here */}
           </div>
-
         </section>
 
 
@@ -586,67 +608,12 @@ export default function EventsPage() {
           </div>
         </section>
 
-        {/* HELITAXI ADD */}
-        {/* <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-10 sm:py-14 md:py-20">
 
-          <div className="absolute inset-0 opacity-20">
-            <img
-              src="/images/HeliTaxii/hero-helicopter.jpg"
-              alt="Helicopter over hills"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-slate-900/60 to-slate-900/80" />
-          </div>
 
-          <div className="relative container mx-auto px-8">
-            <div >
-              
-
-              <div className="w-full">
-                <div>
-                  <Image
-                    src="/images/HeliTaxii/heli-mobile.jpg"
-                    alt="Mobile Banner"
-                    width={500}
-                    height={300}
-                    className="block md:hidden w-full h-auto"
-                  />
-                  <Image
-                    src="/images/HeliTaxii/heli-desktop.jpg"
-                    alt="Desktop Banner"
-                    width={1500}
-                    height={500}
-                    className="hidden md:block w-full h-auto"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section> */}
-
-        <section className="py-12">
+        <section id="events" className="py-12">
           <div className="container mx-auto px-4">
             <AnimatePresence>
-              {/* {featuredEvents.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="mb-16"
-                >
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
-                      Featured Events
-                    </h2>
-                    <div className="h-1 w-24 bg-gradient-to-r from-yellow-400 to-orange-400 mx-auto mt-2 rounded-full" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {featuredEvents.map((event, index) => (
-                      <EventCard key={event._id} event={event} index={index} />
-                    ))}
-                  </div>
-                </motion.div>
-              )} */}
+
               {currentEvents.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0 }}
