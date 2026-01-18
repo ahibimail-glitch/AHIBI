@@ -350,7 +350,7 @@ export default function EventsPage() {
       <Navbar />
       <main className="flex-1">
         {/* Hero Section - Events Page Purple Theme */}
-        <section className="relative py-16 px-14 bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-hidden">
+        <section className="relative py-16  bg-gradient-to-br from-purple-50 via-white to-blue-50 overflow-hidden">
           <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
 
             {/* Left Content */}
@@ -375,13 +375,6 @@ export default function EventsPage() {
                   <Link href="#events">Browse Events</Link>
                 </Button>
 
-                <Button
-                  variant="outline"
-                  asChild
-                  className="border border-gray-300 text-[#1a1a2e] px-7 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 hover:text-[#6366f1]"
-                >
-                  <Link href="/auth">Sign Up</Link>
-                </Button>
               </div>
 
               <div className="mt-6 text-sm text-[#64748b]">
