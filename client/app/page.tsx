@@ -327,7 +327,7 @@ export default function HomePage() {
           <div className="w-full md:w-1/2 text-center md:text-left">
             <h1 className="text-4xl md:text-6xl font-extrabold text-[#121212] leading-tight">
               Book <span className="text-[#ff0e0e]">Events.</span>
-              <br /> Experience Life.
+              <br /> Experience  <span className="text-[#ff0e0e]">Life.</span>
             </h1>
 
             <p className="text-lg md:text-2xl text-[#4A4A4A] mt-4 font-medium max-w-xl">
