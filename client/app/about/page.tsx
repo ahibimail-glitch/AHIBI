@@ -39,11 +39,11 @@ import Navbar from "../Navbar"
 
 export default function AboutPage() {
   const stats = [
-    { number: "₹1 Cr+", label: "Event Revenue Processed For Clients", icon: DollarSign, gradient: "from-green-500 to-emerald-500" },
-    { number: "60,000+", label: "Tickets Sold", icon: Ticket, gradient: "from-blue-500 to-cyan-500" },
-    { number: "50,000+", label: "Users Onboarded", icon: Users, gradient: "from-purple-500 to-pink-500" },
-    { number: "36+", label: "Major Events Delivered", icon: Calendar, gradient: "from-orange-500 to-red-500" },
-    { number: "90%+", label: "Organizer Retention", icon: TrendingUp, gradient: "from-indigo-500 to-purple-500" },
+    { number: "₹3 Cr+", label: "Event Revenue Processed For Clients", icon: DollarSign, gradient: "from-green-500 to-emerald-500" },
+    { number: "2,00,000+", label: "Tickets Sold", icon: Ticket, gradient: "from-blue-500 to-cyan-500" },
+    { number: "80,000+", label: "Users Onboarded", icon: Users, gradient: "from-purple-500 to-pink-500" },
+    { number: "60+", label: "Major Events Delivered", icon: Calendar, gradient: "from-orange-500 to-red-500" },
+    // { number: "90%+", label: "Organizer Retention", icon: TrendingUp, gradient: "from-indigo-500 to-purple-500" },
   ]
 
   const journey = [
@@ -309,7 +309,7 @@ export default function AboutPage() {
               In about 1 year, Ahibi has powered major events across the state including the Nagaland Super League, Dr. T. Ao Trophy, TFC, WENN Bazaar, and AHIBI Fest featuring IYAZ.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => (
               <div
                 key={index}

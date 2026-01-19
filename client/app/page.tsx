@@ -43,9 +43,9 @@ export default function HomePage() {
 
   // Stats
   const stats = [
-    { value: 30, suffix: "+", label: "Events Hosted", icon: Calendar },
-    { value: 60000, suffix: "+", label: "Tickets Sold", icon: Users },
-    { value: 50000, suffix: "+", label: "Happy Users", icon: Star },
+    { value: 60, suffix: "+", label: "Events Hosted", icon: Calendar },
+    { value: 200000, suffix: "+", label: "Tickets Sold", icon: Users },
+    { value: 80000, suffix: "+", label: "Happy Users", icon: Star },
   ]
 
   const statsRef = useRef<HTMLDivElement | null>(null)
