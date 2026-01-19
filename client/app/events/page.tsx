@@ -131,7 +131,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
             </div>
             <div className="absolute top-4 left-4">
               <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 text-xs font-semibold shadow-md">
-                <Sparkles className="h-3 w-3 mr-1" />
+                {/* <Sparkles className="h-3 w-3 mr-1" /> */}
                 {event.category}
               </Badge>
             </div>
