@@ -327,7 +327,28 @@ exports.getAvailableSlots = async (req, res) => {
       slots = await TimeSlot.generateSlotsForDate(court._id, date);
     }
 
-    // Filter only available slots
+    // Recalculate prices (in case pricing rules were updated after slots were generated).
+    // Only update slots that are not booked.
+    try {
+      const updates = [];
+      for (const slot of slots) {
+        if (slot.status === 'booked') continue;
+        const computedPrice = court.getPricing(date, slot.startTime);
+        if (typeof computedPrice === 'number' && Number.isFinite(computedPrice) && slot.price !== computedPrice) {
+          slot.price = computedPrice;
+          updates.push(slot.save());
+        }
+      }
+      if (updates.length > 0) {
+        await Promise.all(updates);
+      }
+    } catch (e) {
+      // Non-fatal: if price refresh fails, continue returning slots.
+      console.error('Slot price refresh error:', e);
+    }
+
+    // Provide availableCount for convenience, but return ALL slots so the UI
+    // can show booked/held/blocked slots as disabled.
     const availableSlots = slots.filter(slot => slot.status === 'available');
 
     return ApiResponse.success(res, 'Available slots retrieved successfully', {
@@ -337,7 +358,7 @@ exports.getAvailableSlots = async (req, res) => {
         name: court.courtName,
         sportType: court.sportType
       },
-      slots: availableSlots,
+      slots,
       totalSlots: slots.length,
       availableCount: availableSlots.length
     });
@@ -837,17 +858,6 @@ exports.addVenueReview = async (req, res) => {
       return ApiResponse.badRequest(res, 'Overall rating is required');
     }
 
-    // Check if user has a completed booking at this venue
-    const hasBooking = await SportsBooking.findOne({
-      user: req.user.id,
-      venue: req.params.id,
-      status: 'completed'
-    });
-
-    if (!hasBooking) {
-      return ApiResponse.forbidden(res, 'You can only review venues where you have completed bookings');
-    }
-
     const venue = await SportsVenue.findById(req.params.id);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
@@ -864,7 +874,6 @@ exports.addVenueReview = async (req, res) => {
 
     venue.reviews.push({
       user: req.user.id,
-      booking: hasBooking._id,
       ratings,
       comment,
       images: images || [],

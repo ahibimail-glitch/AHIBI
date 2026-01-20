@@ -12,10 +12,26 @@ const api = axios.create({
 
 // Add token to requests (admin > arenaPartner > user)
 api.interceptors.request.use((config) => {
-  const token =
-    localStorage.getItem('admin_token') ||
-    localStorage.getItem('arenaPartnerToken') ||
-    localStorage.getItem('token');
+  // Pick token based on route prefix to avoid sending the wrong-role token.
+  // Example bug: having admin_token in storage would override a user token
+  // and cause "User not found" on user-protected routes.
+  const url = (config.url || '').toString();
+
+  let token: string | null = null;
+  if (url.startsWith('/api/admin')) {
+    token = localStorage.getItem('admin_token');
+  } else if (url.startsWith('/api/arena-partner')) {
+    token = localStorage.getItem('arenaPartnerToken');
+  } else if (url.startsWith('/api/organizer')) {
+    token = localStorage.getItem('organizer_token') || localStorage.getItem('token');
+  } else if (url.startsWith('/api/artist')) {
+    token = localStorage.getItem('artist_token') || localStorage.getItem('token');
+  } else if (url.startsWith('/api/venue')) {
+    token = localStorage.getItem('venue_token') || localStorage.getItem('token');
+  } else {
+    token = localStorage.getItem('token');
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -129,6 +145,9 @@ export const sportsApi = {
 
   getAvailableCourts: (venueId: string, params?: any) =>
     api.get(`/api/sports/venues/${venueId}/courts`, { params }),
+
+  // Court Details
+  getCourtDetails: (courtId: string) => api.get(`/api/sports/courts/${courtId}`),
 
   // Slot Availability
   getAvailableSlots: (courtId: string, date: string) =>

@@ -17,6 +17,12 @@ export default function VenueDetailPage() {
   const [venue, setVenue] = useState<any>(null);
   const [courts, setCourts] = useState<any[]>([]);
   const [selectedSport, setSelectedSport] = useState<string>('all');
+  const [activeSection, setActiveSection] = useState<'about' | 'courts' | 'gallery' | 'reviews' | 'facilities'>('courts');
+
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   // Map Date.getDay() to our operatingHours keys
   const dayKeyMap: any = {
@@ -49,6 +55,35 @@ export default function VenueDetailPage() {
     }
   };
 
+  const handleSubmitReview = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push(`/auth?redirect=/sports/venues/${venueId}`);
+      return;
+    }
+
+    if (!reviewForm.rating || reviewForm.rating < 1 || reviewForm.rating > 5) {
+      alert('Please select a rating between 1 and 5');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      await sportsApi.addReview(venueId, {
+        ratings: { overall: reviewForm.rating },
+        comment: reviewForm.comment,
+      });
+      setReviewForm({ rating: 5, comment: '' });
+      await fetchVenueDetails();
+      setActiveSection('reviews');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to submit review';
+      alert(msg);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   const getSportIcon = (sportType: string) => {
     const icons: any = {
       cricket: '🏏',
@@ -74,8 +109,8 @@ export default function VenueDetailPage() {
     return icons[sportType] || '🏟️';
   };
 
-  const filteredCourts = selectedSport === 'all' 
-    ? courts 
+  const filteredCourts = selectedSport === 'all'
+    ? courts
     : courts.filter(court => court.sportType === selectedSport);
 
   const uniqueSports = Array.from(new Set(courts.map(c => c.sportType)));
@@ -113,19 +148,20 @@ export default function VenueDetailPage() {
         {(() => {
           const cover = venue.gallery?.images?.find((img: any) => img.isMain) || venue.gallery?.images?.[0];
           return cover?.url ? (
-          <Image
-            src={cover.url}
-            alt={venue.venueName}
-            fill
-            className="object-cover opacity-60"
-          />) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Activity className="w-32 h-32 text-white/20" />
-          </div>
-        );})()}
-        
+            <Image
+              src={cover.url}
+              alt={venue.venueName}
+              fill
+              className="object-cover opacity-60"
+            />) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Activity className="w-32 h-32 text-white/20" />
+            </div>
+          );
+        })()}
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        
+
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-3 mb-4">
@@ -138,11 +174,11 @@ export default function VenueDetailPage() {
                 {venue.sportsSupported?.length || 0} Sports Available
               </span>
             </div>
-            
+
             <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tight">
               {venue.venueName}
             </h1>
-            
+
             <div className="flex flex-wrap items-center gap-6 text-white/90">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
@@ -151,7 +187,12 @@ export default function VenueDetailPage() {
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 fill-orange-400 text-orange-400" />
                 <span className="font-bold">{venue.rating?.overall?.toFixed(1) || 'New'}</span>
-                <span className="text-white/60">({venue.rating?.totalReviews || 0} reviews)</span>
+                {(() => {
+                  const count = (venue.reviews?.length ?? venue.rating?.totalReviews ?? 0) as number;
+                  return (
+                    <span className="text-white/60">({count} {count === 1 ? 'review' : 'reviews'})</span>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -163,139 +204,236 @@ export default function VenueDetailPage() {
         <div className="grid lg:grid-cols-3 gap-12">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* About Section */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">About This Venue</h2>
-              <p className="text-slate-600 leading-relaxed">
-                {venue.description || 'A premium sports facility offering world-class amenities and professional-grade courts for athletes of all levels.'}
-              </p>
+            <div className="bg-white  rounded-3xl p-2">
+              <div
+                className="
+      grid grid-cols-3 gap-2
+      sm:flex sm:items-center sm:gap-2 sm:overflow-x-auto
+    "
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('about')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold whitespace-nowrap transition-colors border ${activeSection === 'about'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                >
+                  About
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('courts')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold whitespace-nowrap transition-colors border ${activeSection === 'courts'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                >
+                  Courts
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('gallery')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold whitespace-nowrap transition-colors border ${activeSection === 'gallery'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                >
+                  Gallery
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('reviews')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold whitespace-nowrap transition-colors border ${activeSection === 'reviews'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                >
+                  Reviews
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('facilities')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-semibold whitespace-nowrap transition-colors border ${activeSection === 'facilities'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'text-slate-700 border-slate-300 hover:bg-slate-100'
+                    }`}
+                >
+                  Facilities
+                </button>
+              </div>
             </div>
 
-            {/* Courts Section */}
-            <div className="bg-white border border-slate-200 rounded-3xl p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Available Courts ({filteredCourts.length})
-                </h2>
-                
-                {uniqueSports.length > 1 && (
-                  <select
-                    value={selectedSport}
-                    onChange={(e) => setSelectedSport(e.target.value)}
-                    className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  >
-                    <option value="all">All Sports</option>
-                    {uniqueSports.map((sport) => (
-                      <option key={sport} value={sport}>
-                        {sport.replace('_', ' ').toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
 
-              {filteredCourts.length === 0 ? (
-                <div className="text-center py-12">
-                  <Activity className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">No courts available</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredCourts.map((court) => (
-                    <div
-                      key={court._id}
-                      className="border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all group cursor-pointer"
-                      onClick={() => router.push(`/sports/courts/${court._id}/booking`)}
+            {/* About Section */}
+            {activeSection === 'about' && (
+              <div className="bg-white border border-slate-200 rounded-3xl p-8">
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">About This Venue</h2>
+                <p className="text-slate-600 leading-relaxed">
+                  {venue.description || 'A premium sports facility offering world-class amenities and professional-grade courts for athletes of all levels.'}
+                </p>
+              </div>
+            )}
+
+            {/* ================= COURTS ================= */}
+            {activeSection === 'courts' && (
+              <section className="space-y-10">
+
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+                    Available Courts <span className="text-slate-400">({filteredCourts.length})</span>
+                  </h2>
+
+                  {uniqueSports.length > 1 && (
+                    <select
+                      value={selectedSport}
+                      onChange={(e) => setSelectedSport(e.target.value)}
+                      className="filter-pill"
                     >
-                      {/* Court Image */}
-                      <div className="h-48 bg-slate-100 relative">
-                        {(() => {
-                          const coverImage = court.images?.find((img: any) => img.isMain) || court.images?.[0];
-                          return coverImage?.url ? (
-                            <img 
-                              src={coverImage.url} 
-                              alt={court.courtName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                              <div className="text-center">
-                                <div className="text-5xl mb-2">{getSportIcon(court.sportType)}</div>
-                                <p className="text-sm text-slate-400">No Image Available</p>
+                      <option value="all">All Sports</option>
+                      {uniqueSports.map((sport) => (
+                        <option key={sport} value={sport}>
+                          {sport.replace('_', ' ').toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Empty State */}
+                {filteredCourts.length === 0 ? (
+                  <div className="py-20 text-center border border-black/10 rounded-2xl">
+                    <Activity className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-600 text-sm">
+                      No courts available for this sport.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {filteredCourts.map((court) => (
+                      <div
+                        key={court._id}
+                        onClick={() =>
+                          router.push(`/sports/courts/${court._id}/booking`)
+                        }
+                        className="
+              group cursor-pointer
+              border border-black/10 rounded-2xl overflow-hidden
+              hover:-translate-y-1 hover:border-black/20
+              transition-all
+            "
+                      >
+                        {/* Image */}
+                        <div className="relative h-48 bg-slate-100">
+                          {(() => {
+                            const cover =
+                              court.images?.find((i: any) => i.isMain) ||
+                              court.images?.[0];
+                            return cover?.url ? (
+                              <img
+                                src={cover.url}
+                                alt={court.courtName}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                <span className="text-5xl">
+                                  {getSportIcon(court.sportType)}
+                                </span>
                               </div>
+                            );
+                          })()}
+
+                          {/* Status */}
+                          <span className="
+                absolute top-3 right-3
+                text-xs font-semibold
+                px-3 py-1 rounded-full
+                bg-white/90 backdrop-blur
+                border border-black/10
+              ">
+                            {court.status}
+                          </span>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-5 space-y-4">
+                          {/* Title */}
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">
+                              {getSportIcon(court.sportType)}
+                            </span>
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-900">
+                                {court.courtName}
+                              </h3>
+                              {court.courtNumber && (
+                                <p className="text-xs text-slate-500">
+                                  Court #{court.courtNumber}
+                                </p>
+                              )}
                             </div>
-                          );
-                        })()}
-                      </div>
-                      
-                      <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="text-4xl">{getSportIcon(court.sportType)}</div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
-                              {court.courtName}
-                            </h3>
-                            {court.courtNumber && (
-                              <p className="text-xs text-slate-500">Court #{court.courtNumber}</p>
+                          </div>
+
+                          {/* Meta */}
+                          <div className="grid grid-cols-2 gap-y-2 text-sm">
+                            <p className="text-slate-500">Sport</p>
+                            <p className="font-medium capitalize">
+                              {court.sportType.replace('_', ' ')}
+                            </p>
+
+                            <p className="text-slate-500">Capacity</p>
+                            <p className="font-medium">
+                              {court.capacity?.players || 'N/A'} players
+                            </p>
+
+                            <p className="text-slate-500">Surface</p>
+                            <p className="font-medium capitalize">
+                              {court.specifications?.surfaceType || 'Standard'}
+                            </p>
+
+                            {court.specifications?.indoor !== undefined && (
+                              <>
+                                <p className="text-slate-500">Type</p>
+                                <p className="font-medium">
+                                  {court.specifications.indoor ? 'Indoor' : 'Outdoor'}
+                                </p>
+                              </>
                             )}
                           </div>
-                        </div>
-                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                          {court.status}
-                        </span>
-                      </div>
 
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">Sport Type</span>
-                          <span className="font-semibold text-slate-900 capitalize">
-                            {court.sportType.replace('_', ' ')}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">Capacity</span>
-                          <span className="font-semibold text-slate-900">
-                            {court.capacity?.players || 'N/A'} players
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">Surface</span>
-                          <span className="font-semibold text-slate-900 capitalize">
-                            {court.specifications?.surfaceType || 'Standard'}
-                          </span>
-                        </div>
-                        {court.specifications?.indoor !== undefined && (
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600">Type</span>
-                            <span className="font-semibold text-slate-900">
-                              {court.specifications.indoor ? 'Indoor' : 'Outdoor'}
+                          {/* Footer */}
+                          <div className="pt-4 border-t border-black/10 flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-slate-500 mb-1">
+                                Starting from
+                              </p>
+                              <p className="text-xl font-bold text-slate-900">
+                                ₹{court.pricing?.weekday?.offPeak?.pricePerHour || 'N/A'}
+                                <span className="text-sm font-normal text-slate-500"> /hr</span>
+                              </p>
+                            </div>
+
+                            <span className="text-sm font-semibold flex items-center gap-1">
+                              Book <ChevronRight className="w-4 h-4" />
                             </span>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-slate-500 mb-1">Starting from</p>
-                          <p className="text-2xl font-bold text-orange-600">
-                            ₹{court.pricing?.weekday?.offPeak?.pricePerHour || 'N/A'}
-                            <span className="text-sm text-slate-500 font-normal">/hr</span>
-                          </p>
                         </div>
-                        <button className="px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors flex items-center gap-2 text-sm font-medium group-hover:gap-3">
-                          Book Now <ChevronRight className="w-4 h-4" />
-                        </button>
                       </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
 
             {/* Facilities Section */}
-            {venue.facilities && (
+            {activeSection === 'facilities' && venue.facilities && (
               <div className="bg-white border border-slate-200 rounded-3xl p-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-6">Facilities & Amenities</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -318,19 +456,215 @@ export default function VenueDetailPage() {
               </div>
             )}
             {/* Gallery */}
-            {venue.gallery?.images?.length > 0 && (
+            {activeSection === 'gallery' && venue.gallery?.images?.length > 0 && (
               <div className="bg-white border border-slate-200 rounded-3xl p-8">
-                <h2 className="text-2xl font-bold text-slate-900 mb-6">Venue Photos</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Venue Photos</h2>
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">Click on any image to view it in full size</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {venue.gallery.images.map((img: any, idx: number) => (
-                    <div key={idx} className="relative w-full h-40 rounded-xl overflow-hidden">
+                    <button
+                      key={idx}
+                      className="relative w-full h-40 rounded-xl overflow-hidden focus:outline-none"
+                      onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }}
+                      aria-label={`Open image ${idx + 1}`}
+                    >
                       <img src={img.url} alt={img.caption || `Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
-        
+
+            {lightboxOpen && venue.gallery?.images?.length > 0 && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" role="dialog" aria-modal="true">
+                <div className="absolute inset-0" onClick={() => setLightboxOpen(false)} />
+                <div className="relative z-10 max-w-5xl w-[92vw]">
+                  <div className="relative bg-transparent rounded-xl overflow-hidden">
+                    <img
+                      src={venue.gallery.images[lightboxIndex]?.url}
+                      alt={venue.gallery.images[lightboxIndex]?.caption || `Photo ${lightboxIndex + 1}`}
+                      className="w-full h-auto max-h-[80vh] object-contain"
+                    />
+                    <button
+                      onClick={() => setLightboxOpen(false)}
+                      className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-sm font-semibold hover:bg-white"
+                      aria-label="Close"
+                    >
+                      Close
+                    </button>
+                    {venue.gallery.images.length > 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + venue.gallery.images.length) % venue.gallery.images.length); }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-sm font-semibold hover:bg-white"
+                        aria-label="Previous image"
+                      >
+                        Prev
+                      </button>
+                    )}
+                    {venue.gallery.images.length > 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % venue.gallery.images.length); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-full bg-white/90 text-slate-900 text-sm font-semibold hover:bg-white"
+                        aria-label="Next image"
+                      >
+                        Next
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'reviews' && (
+              <section className="space-y-12">
+
+                {/* ===== Header ===== */}
+                <div>
+                  <h2 className="text-3xl font-bold tracking-tight text-slate-900">Reviews</h2>
+                  {(() => {
+                    const count = (venue.reviews?.length ?? venue.rating?.totalReviews ?? 0) as number;
+                    const ratingVal = venue.rating?.overall;
+                    const ratingText = typeof ratingVal === 'number' ? ratingVal.toFixed(1) : 'New';
+                    return (
+                      <p className="text-sm text-slate-600 mt-2">
+                        {count} {count === 1 ? 'review' : 'reviews'} · {ratingText} overall rating
+                      </p>
+                    );
+                  })()}
+                </div>
+
+                {/* ===== Write Review ===== */}
+                <div className="border border-black/10 rounded-2xl p-6 md:p-8">
+                  <h3 className="text-xl font-semibold mb-6">Write a review</h3>
+
+                  <div className="space-y-6">
+
+                    {/* Rating */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Your rating
+                      </label>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() =>
+                              setReviewForm((p) => ({ ...p, rating: r }))
+                            }
+                            className="p-1 focus:outline-none"
+                          >
+                            <Star
+                              className={`w-6 h-6 transition ${r <= reviewForm.rating
+                                ? 'fill-black text-black'
+                                : 'text-slate-300'
+                                }`}
+                            />
+                          </button>
+                        ))}
+                        <span className="ml-3 text-sm text-slate-600">
+                          {reviewForm.rating}/5
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Comment */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Your experience
+                      </label>
+                      <textarea
+                        value={reviewForm.comment}
+                        onChange={(e) =>
+                          setReviewForm((p) => ({ ...p, comment: e.target.value }))
+                        }
+                        rows={4}
+                        className="w-full px-4 py-3 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
+                        placeholder="What did you like or dislike about this venue?"
+                      />
+                    </div>
+
+                    {/* Submit */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleSubmitReview}
+                        disabled={submittingReview}
+                        className="px-6 py-3 rounded-full bg-black text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition"
+                      >
+                        {submittingReview ? 'Submitting…' : 'Submit review'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ===== Reviews List ===== */}
+
+                {Array.isArray(venue.reviews) && venue.reviews.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {venue.reviews
+                      .slice()
+                      .reverse()
+                      .map((r: any, idx: number) => {
+                        const name = r.user?.name || 'Anonymous User';
+                        const parts = name.trim().split(' ');
+                        const initials =
+                          parts.length >= 2
+                            ? `${parts[0][0]}${parts[parts.length - 1][0]}`
+                            : parts[0][0];
+
+                        return (
+                          <div
+                            key={r._id || idx}
+                            className="border border-black/10 rounded-2xl p-6 bg-white"
+                          >
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center gap-4">
+                                {/* Avatar */}
+                                <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center font-semibold text-sm">
+                                  {initials.toUpperCase()}
+                                </div>
+
+                                {/* Name + Date */}
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {name}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {r.createdAt
+                                      ? new Date(r.createdAt).toLocaleDateString()
+                                      : ''}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Rating */}
+                              <div className="flex items-center gap-1 text-sm font-semibold">
+                                <Star className="w-4 h-4 fill-black text-black" />
+                                {r.ratings?.overall ?? '-'}
+                              </div>
+                            </div>
+
+                            {/* Comment */}
+                            {r.comment && (
+                              <p className="text-sm text-slate-700 leading-relaxed">
+                                {r.comment}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600">
+                    No reviews yet. Be the first to share your experience.
+                  </p>
+                )}
+
+              </section>
+            )}
+
+
           </div>
 
           {/* Right Column - Sidebar */}
@@ -381,7 +715,7 @@ export default function VenueDetailPage() {
                   </span>
                 </div>
                 <div className="space-y-1 text-xs text-slate-600">
-                  {(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const).map((day) => (
+                  {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => (
                     <div key={day} className="flex items-center justify-between">
                       <span className="capitalize">{day}</span>
                       <span>

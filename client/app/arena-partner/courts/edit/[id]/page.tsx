@@ -305,6 +305,13 @@ export default function EditCourtPage() {
               <h1 className="text-2xl font-bold text-gray-900">Edit Court</h1>
               <p className="text-sm text-gray-600">Update court details and pricing</p>
             </div>
+            <div className="flex-1" />
+            <Link
+              href={`/arena-partner/courts/${courtId}/calendar`}
+              className="px-4 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
+            >
+              View Calendar
+            </Link>
           </div>
         </div>
       </header>

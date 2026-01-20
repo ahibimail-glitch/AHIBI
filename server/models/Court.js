@@ -242,16 +242,38 @@ CourtSchema.methods.getPricing = function(date, startTime) {
   
   const pricingCategory = isWeekend ? this.pricing.weekend : this.pricing.weekday;
   
-  // Determine peak or off-peak based on time
-  const timeStr = startTime.replace(':', '');
-  const peakStart = pricingCategory.peak.timeRange?.start?.replace(':', '') || '0000';
-  const peakEnd = pricingCategory.peak.timeRange?.end?.replace(':', '') || '2359';
-  
-  if (timeStr >= peakStart && timeStr <= peakEnd) {
-    return pricingCategory.peak.pricePerHour;
-  } else {
+  // Determine peak or off-peak based on time (robust parsing)
+  const toMinutes = (t) => {
+    if (!t || typeof t !== 'string') return null;
+    const s = t.trim();
+    const parts = s.split(':');
+    if (parts.length < 2) return null;
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  };
+
+  const slotStartMin = toMinutes(startTime);
+  const peakStartMin = toMinutes(pricingCategory?.peak?.timeRange?.start);
+  const peakEndMin = toMinutes(pricingCategory?.peak?.timeRange?.end);
+
+  // If we cannot parse time ranges, fall back safely
+  if (slotStartMin === null || peakStartMin === null || peakEndMin === null) {
     return pricingCategory.offPeak.pricePerHour;
   }
+
+  // Treat peak range as [start, end) in minutes. If end < start, assume it crosses midnight.
+  const isInPeakRange = (() => {
+    if (peakEndMin === peakStartMin) return true;
+    if (peakEndMin > peakStartMin) {
+      return slotStartMin >= peakStartMin && slotStartMin < peakEndMin;
+    }
+    // crosses midnight (e.g. 20:00 - 02:00)
+    return slotStartMin >= peakStartMin || slotStartMin < peakEndMin;
+  })();
+
+  return isInPeakRange ? pricingCategory.peak.pricePerHour : pricingCategory.offPeak.pricePerHour;
 };
 
 // Indexes for efficient querying
