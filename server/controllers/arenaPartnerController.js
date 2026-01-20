@@ -118,7 +118,8 @@ exports.updateVenue = async (req, res) => {
       'venueName', 'description', 'tagline', 'sportsSupported',
       'address', 'location', 'googleMapsLink', 'contactInfo',
       'operatingHours', 'facilities', 'equipmentRental',
-      'coachingAvailable', 'coaches', 'gallery', 'rules'
+      'coachingAvailable', 'coaches', 'gallery', 'rules',
+      'paymentSettings'
     ];
 
     allowedFields.forEach(field => {
@@ -133,6 +134,9 @@ exports.updateVenue = async (req, res) => {
         }
         if (field === 'operatingHours') {
           venue.markModified('operatingHours');
+        }
+        if (field === 'paymentSettings') {
+          venue.markModified('paymentSettings');
         }
       }
     });
@@ -688,6 +692,10 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const partnerId = req.user.id;
 
+    // Get partner details for advance payment percentage
+    const partner = await ArenaPartner.findById(partnerId);
+    const advancePaymentPercent = partner?.paymentSettings?.advancePaymentPercent || 10;
+
     // Total venues
     const totalVenues = await SportsVenue.countDocuments({
       arenaPartner: partnerId,
@@ -754,7 +762,8 @@ exports.getDashboardStats = async (req, res) => {
         totalCourts,
         todayBookings,
         monthlyRevenue: revenue.totalRevenue,
-        monthlyEarnings: revenue.arenaEarnings
+        monthlyEarnings: revenue.arenaEarnings,
+        advancePaymentPercent
       },
       upcomingBookings
     });

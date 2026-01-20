@@ -141,6 +141,16 @@ const ArenaPartnerSchema = new mongoose.Schema({
       default: false
     }
   },
+
+  // Payment Settings (for booking-time advance/partial payment)
+  paymentSettings: {
+    advancePaymentPercent: {
+      type: Number,
+      default: 10,
+      min: 1,
+      max: 100
+    }
+  },
   
   // Statistics
   statistics: {

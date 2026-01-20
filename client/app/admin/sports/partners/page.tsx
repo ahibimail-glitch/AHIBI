@@ -12,6 +12,12 @@ type Partner = {
   email: string;
   phone: string;
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  paymentSettings?: {
+    advancePaymentPercent?: number;
+  };
+  commissionSettings?: {
+    commissionRate?: number;
+  };
   businessDetails?: { businessName?: string };
   createdAt?: string;
 };
@@ -21,9 +27,9 @@ export default function SportsAdminPartnersPage() {
   const [loading, setLoading] = useState(true);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [status, setStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [commissionEdit, setCommissionEdit] = useState<Record<string, string>>({});
+  const [advancePaymentEdit, setAdvancePaymentEdit] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // Guard: ensure admin token exists
@@ -107,19 +113,19 @@ export default function SportsAdminPartnersPage() {
   };
 
   const updateCommission = async (id: string) => {
-    const valueStr = commissionEdit[id];
+    const valueStr = advancePaymentEdit[id];
     const value = Number(valueStr);
-    if (Number.isNaN(value) || value < 0 || value > 100) {
-      toast.error('Enter a valid commission (0-100)');
+    if (Number.isNaN(value) || value < 1 || value > 100) {
+      toast.error('Enter a valid advance payment percent (1-100)');
       return;
     }
     setActionLoading(id + ':commission');
     try {
-      await adminSportsApi.updateCommission(id, value);
-      toast.success('Commission updated');
+      await adminSportsApi.updateAdvancePaymentPercent(id, value);
+      toast.success('Advance payment percent updated');
       await fetchPartners();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to update commission');
+      toast.error(err?.response?.data?.message || 'Failed to update advance payment percent');
     } finally {
       setActionLoading(null);
     }
@@ -172,7 +178,7 @@ export default function SportsAdminPartnersPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Contact</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Business</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Advance % (Booking)</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
@@ -212,9 +218,11 @@ export default function SportsAdminPartnersPage() {
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
-                            placeholder="%"
-                            value={commissionEdit[p._id] ?? ''}
-                            onChange={(e) => setCommissionEdit((s) => ({ ...s, [p._id]: e.target.value }))}
+                            min={1}
+                            max={100}
+                            placeholder="10"
+                            value={advancePaymentEdit[p._id] ?? String(p.paymentSettings?.advancePaymentPercent ?? 10)}
+                            onChange={(e) => setAdvancePaymentEdit((s) => ({ ...s, [p._id]: e.target.value }))}
                             className="w-24 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
                           />
                           <button

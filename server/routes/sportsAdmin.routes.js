@@ -14,6 +14,7 @@ router.put('/arena-partners/:id/approve', sportsAdminController.approveArenaPart
 router.put('/arena-partners/:id/reject', sportsAdminController.rejectArenaPartner);
 router.put('/arena-partners/:id/suspend', sportsAdminController.suspendArenaPartner);
 router.put('/arena-partners/:id/commission', sportsAdminController.updateCommissionRate);
+router.put('/arena-partners/:id/advance-payment', sportsAdminController.updateAdvancePaymentPercent);
 
 // Partner specific routes for management dashboard
 router.get('/arena-partners/:id/venues', sportsAdminController.getPartnerVenues);

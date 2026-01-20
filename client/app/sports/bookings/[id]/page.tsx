@@ -136,8 +136,6 @@ Players: ${booking.numberOfPlayers}
 PAYMENT DETAILS
 ---------------
 Court Charges: ₹${booking.pricing.baseAmount}
-Platform Fee: ₹${booking.pricing.platformFee}
-GST (18%): ₹${booking.pricing.taxes}
 Total Amount: ₹${booking.pricing.totalAmount}
 
 Payment ID: ${booking.payment.razorpayPaymentId}
@@ -337,20 +335,6 @@ Thank you for booking with AHIBI Sports!
                   <span>₹{booking.pricing.equipmentRental}</span>
                 </div>
               )}
-              {booking.pricing.coachingFee > 0 && (
-                <div className="flex justify-between text-gray-700">
-                  <span>Coaching Fee</span>
-                  <span>₹{booking.pricing.coachingFee}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-gray-700">
-                <span>Platform Fee</span>
-                <span>₹{booking.pricing.platformFee}</span>
-              </div>
-              <div className="flex justify-between text-gray-700">
-                <span>GST (18%)</span>
-                <span>₹{booking.pricing.taxes}</span>
-              </div>
               {booking.pricing.discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount</span>

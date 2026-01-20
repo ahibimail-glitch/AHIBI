@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Calendar, Clock, Users, MapPin, IndianRupee, CheckCircle, XCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,15 @@ interface Court {
       city: string;
       state: string;
       pincode: string;
+    };
+    operatingHours?: {
+      monday?: { open?: string; close?: string; closed?: boolean };
+      tuesday?: { open?: string; close?: string; closed?: boolean };
+      wednesday?: { open?: string; close?: string; closed?: boolean };
+      thursday?: { open?: string; close?: string; closed?: boolean };
+      friday?: { open?: string; close?: string; closed?: boolean };
+      saturday?: { open?: string; close?: string; closed?: boolean };
+      sunday?: { open?: string; close?: string; closed?: boolean };
     };
   };
   images: Array<{ url: string; caption: string; isMain: boolean }>;
@@ -106,6 +115,14 @@ export default function CourtBookingPage() {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [error, setError] = useState("");
 
+  const [previewAdvancePaymentPercent, setPreviewAdvancePaymentPercent] = useState<number>(10);
+
+  const [paymentSummary, setPaymentSummary] = useState<{
+    advancePaymentPercent: number;
+    payableAmount: number;
+    totalAmount: number;
+  } | null>(null);
+
   // Fetch court details
   useEffect(() => {
     const fetchCourtDetails = async () => {
@@ -116,6 +133,7 @@ export default function CourtBookingPage() {
 
         if (data.success && data.data.court) {
           setCourt(data.data.court);
+          setPreviewAdvancePaymentPercent(Number(data.data.advancePaymentPercent) || 10);
         } else {
           setError("Court not found");
         }
@@ -131,6 +149,40 @@ export default function CourtBookingPage() {
       fetchCourtDetails();
     }
   }, [courtId]);
+
+  const getDayKeyForDate = (date: Date) => {
+    const days: Array<
+      "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday"
+    > = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+    return days[date.getDay()];
+  };
+
+  const operatingHoursForSelectedDate = useMemo(() => {
+    if (!court?.venue?.operatingHours) return null;
+
+    const dayKey = getDayKeyForDate(selectedDate);
+    const hours = (court.venue.operatingHours as any)[dayKey];
+
+    if (!hours || hours.closed) return null;
+
+    return {
+      open: hours.open || "06:00",
+      close: hours.close || "23:00",
+    };
+  }, [court, selectedDate]);
+
+  const slotsWithinOperatingHours = useMemo(() => {
+    if (!operatingHoursForSelectedDate) return availableSlots;
+
+    const { open, close } = operatingHoursForSelectedDate;
+
+    return availableSlots.filter((slot) => {
+      // Keep a small safety net to ensure we never show slots outside venue hours,
+      // even if they were accidentally generated server-side.
+      return slot.startTime >= open && slot.endTime <= close;
+    });
+  }, [availableSlots, operatingHoursForSelectedDate]);
 
   // Fetch available slots when date changes
   useEffect(() => {
@@ -221,9 +273,9 @@ export default function CourtBookingPage() {
 
   const calculateTotalPrice = () => {
     const baseAmount = selectedSlots.reduce((sum, slot) => sum + slot.price, 0);
-    const platformFee = Math.round(baseAmount * 0.02);
-    const taxes = Math.round(baseAmount * 0.18);
-    const totalAmount = baseAmount + platformFee + taxes;
+    const platformFee = 0;
+    const taxes = 0;
+    const totalAmount = baseAmount;
 
     return { baseAmount, platformFee, taxes, totalAmount };
   };
@@ -313,6 +365,12 @@ export default function CourtBookingPage() {
       if (!orderData.success) {
         throw new Error(orderData.message || "Failed to create order");
       }
+
+      setPaymentSummary({
+        advancePaymentPercent: Number(orderData.data?.pricing?.advancePaymentPercent) || 10,
+        payableAmount: Number(orderData.data?.pricing?.payableAmount) || Math.round(Number(orderData.data?.amount || 0) / 100),
+        totalAmount: Number(orderData.data?.pricing?.totalAmount) || pricing.totalAmount,
+      });
 
       // Step 3: Load Razorpay
       const scriptLoaded = await loadRazorpayScript();
@@ -414,6 +472,9 @@ export default function CourtBookingPage() {
 
   const pricing = calculateTotalPrice();
   const selectedDuration = selectedSlots.reduce((sum, slot) => sum + slot.duration, 0);
+
+  const advancePaymentPercent = paymentSummary?.advancePaymentPercent ?? previewAdvancePaymentPercent ?? 10;
+  const payNowAmount = paymentSummary?.payableAmount ?? Math.max(0, Math.round((pricing.totalAmount * advancePaymentPercent) / 100));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 py-8 px-4">
@@ -580,23 +641,33 @@ export default function CourtBookingPage() {
 
                 {/* Time Slots */}
                 <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-orange-500" />
-                    Available Time Slots
-                  </h2>
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-orange-500" />
+                      Available Time Slots
+                    </h2>
+                    {operatingHoursForSelectedDate && (
+                      <div className="text-xs text-gray-600 bg-gray-50 px-3 py-1 rounded-full border border-dashed border-gray-200">
+                        Venue hours:{" "}
+                        <span className="font-semibold">
+                          {operatingHoursForSelectedDate.open} - {operatingHoursForSelectedDate.close}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
                   {slotsLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
                     </div>
-                  ) : availableSlots.length === 0 ? (
+                  ) : slotsWithinOperatingHours.length === 0 ? (
                     <div className="text-center py-12">
                       <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-gray-600">No slots available for this date</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {availableSlots.map((slot) => {
+                      {slotsWithinOperatingHours.map((slot) => {
                         const isSelected = selectedSlots.some((s) => s._id === slot._id);
                         const isAvailable = slot.status === "available";
 
@@ -793,17 +864,16 @@ export default function CourtBookingPage() {
                     <span>Court Charges</span>
                     <span>₹{pricing.baseAmount}</span>
                   </div>
-                  <div className="flex justify-between text-gray-700">
-                    <span>Platform Fee (2%)</span>
-                    <span>₹{pricing.platformFee}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-700">
-                    <span>GST (18%)</span>
-                    <span>₹{pricing.taxes}</span>
-                  </div>
                   <div className="border-t pt-3 flex justify-between text-lg font-bold text-gray-800">
                     <span>Total Amount</span>
                     <span>₹{pricing.totalAmount}</span>
+                  </div>
+                </div>
+
+                <div className="bg-orange-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Advance to pay now ({advancePaymentPercent}%)</span>
+                    <span className="font-bold">₹{payNowAmount}</span>
                   </div>
                 </div>
 
@@ -853,7 +923,7 @@ export default function CourtBookingPage() {
                     ) : (
                       <>
                         <CheckCircle className="w-5 h-5" />
-                        Pay ₹{pricing.totalAmount}
+                        Pay ₹{payNowAmount}
                       </>
                     )}
                   </button>

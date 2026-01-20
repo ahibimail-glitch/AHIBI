@@ -215,14 +215,26 @@ exports.getVenueDetails = async (req, res) => {
  */
 exports.getCourtDetails = async (req, res) => {
   try {
-    const court = await Court.findById(req.params.courtId).populate('venue');
+    const court = await Court.findById(req.params.courtId)
+      .populate('venue')
+      .populate('arenaPartner', 'paymentSettings');
 
     if (!court) {
       return ApiResponse.notFound(res, 'Court not found');
     }
 
+    const venueAdvancePaymentPercentRaw = Number(court.venue?.paymentSettings?.advancePaymentPercent);
+    const partnerAdvancePaymentPercentRaw = Number(court.arenaPartner?.paymentSettings?.advancePaymentPercent);
+
+    const chosenAdvancePaymentPercentRaw = Number.isFinite(partnerAdvancePaymentPercentRaw)
+      ? partnerAdvancePaymentPercentRaw
+      : (Number.isFinite(venueAdvancePaymentPercentRaw) ? venueAdvancePaymentPercentRaw : 10);
+
+    const advancePaymentPercent = Math.min(100, Math.max(1, Math.round(chosenAdvancePaymentPercentRaw)));
+
     return ApiResponse.success(res, 'Court details retrieved successfully', {
-      court
+      court,
+      advancePaymentPercent
     });
 
   } catch (error) {
@@ -463,12 +475,24 @@ exports.createBookingOrder = async (req, res) => {
     }
 
     const subtotal = baseAmount + equipmentCost + coachingCost;
-    const platformFee = Math.round(subtotal * 0.02); // 2% platform fee
-    const taxes = Math.round(subtotal * 0.18); // 18% GST
-    const totalAmount = subtotal + platformFee + taxes;
+    const platformFee = 0;
+    const taxes = 0;
+    const totalAmount = subtotal;
 
-    // Get arena partner commission rate
+    // Get arena partner (needed for both: advance payment fallback + platform commission)
     const arenaPartner = await ArenaPartner.findById(venue.arenaPartner);
+
+    const venueAdvancePaymentPercentRaw = Number(venue.paymentSettings?.advancePaymentPercent);
+    const partnerAdvancePaymentPercentRaw = Number(arenaPartner?.paymentSettings?.advancePaymentPercent);
+
+    // Partner-level setting should apply by default; venue-level can be used as an override.
+    const chosenAdvancePaymentPercentRaw = Number.isFinite(partnerAdvancePaymentPercentRaw)
+      ? partnerAdvancePaymentPercentRaw
+      : (Number.isFinite(venueAdvancePaymentPercentRaw) ? venueAdvancePaymentPercentRaw : 10);
+
+    const advancePaymentPercent = Math.min(100, Math.max(1, Math.round(chosenAdvancePaymentPercentRaw)));
+    const payableAmount = Math.max(0, Math.round((totalAmount * advancePaymentPercent) / 100));
+
     const commissionRate = arenaPartner?.commissionSettings?.commissionRate || 15;
     const platformCommission = Math.round((baseAmount * commissionRate) / 100);
     const arenaEarnings = baseAmount - platformCommission;
@@ -477,7 +501,7 @@ exports.createBookingOrder = async (req, res) => {
     const receipt = `SPT_${Date.now()}_${req.user.id.toString().slice(-6)}`;
     
     const razorpayOrder = await razorpay.orders.create({
-      amount: totalAmount * 100, // Convert to paise
+      amount: payableAmount * 100, // Convert to paise
       currency: 'INR',
       receipt: receipt,
       notes: {
@@ -487,6 +511,9 @@ exports.createBookingOrder = async (req, res) => {
         userId: req.user.id,
         numberOfPlayers,
         baseAmount,
+        totalAmount,
+        payableAmount,
+        advancePaymentPercent,
         platformCommission,
         arenaEarnings
       }
@@ -503,7 +530,9 @@ exports.createBookingOrder = async (req, res) => {
         subtotal,
         platformFee,
         taxes,
-        totalAmount
+        totalAmount,
+        advancePaymentPercent,
+        payableAmount
       },
       slots: slots.map(s => ({
         id: s._id,
@@ -556,6 +585,9 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
     const slotIds = notes.slotIds.split(',');
     const numberOfPlayers = parseInt(notes.numberOfPlayers) || 1;
     const baseAmount = parseInt(notes.baseAmount) || 0;
+    const totalAmountFromNotes = parseInt(notes.totalAmount) || 0;
+    const payableAmountFromNotes = parseInt(notes.payableAmount) || 0;
+    const advancePaymentPercentFromNotes = parseInt(notes.advancePaymentPercent) || 0;
     const platformCommission = parseInt(notes.platformCommission) || 0;
     const arenaEarnings = parseInt(notes.arenaEarnings) || 0;
 
@@ -580,10 +612,15 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
     }
     const duration = (end - start) / (1000 * 60);
 
-    const totalAmount = Math.round(order.amount / 100);
+    const paidAmount = Math.round(order.amount / 100);
 
     // Get venue details
     const venue = await SportsVenue.findById(venueId);
+
+    // Defensive check: ensure Razorpay order amount matches computed payable amount
+    if (payableAmountFromNotes > 0 && paidAmount !== payableAmountFromNotes) {
+      return ApiResponse.badRequest(res, 'Payment amount mismatch');
+    }
     
     // Create booking
     const booking = await SportsBooking.create({
@@ -607,9 +644,9 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
         baseAmount,
         equipmentRental: equipmentRental ? equipmentRental.reduce((sum, item) => sum + (item.price * item.quantity), 0) : 0,
         coachingFee: coaching?.price || 0,
-        taxes: Math.round(baseAmount * 0.18),
-        platformFee: Math.round(baseAmount * 0.02),
-        totalAmount,
+        taxes: 0,
+        platformFee: 0,
+        totalAmount: totalAmountFromNotes > 0 ? totalAmountFromNotes : paidAmount,
         platformCommission,
         arenaEarnings
       },
@@ -617,6 +654,8 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
         razorpaySignature: razorpay_signature,
+        amountPaid: paidAmount,
+        advancePaymentPercent: advancePaymentPercentFromNotes,
         paymentMethod: 'online',
         paymentStatus: 'completed',
         paidAt: Date.now()
@@ -636,14 +675,14 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
     await SportsVenue.findByIdAndUpdate(venueId, {
       $inc: {
         'statistics.totalBookings': 1,
-        'statistics.totalRevenue': totalAmount
+        'statistics.totalRevenue': totalAmountFromNotes > 0 ? totalAmountFromNotes : paidAmount
       }
     });
 
     await Court.findByIdAndUpdate(courtId, {
       $inc: {
         'statistics.totalBookings': 1,
-        'statistics.totalRevenue': totalAmount
+        'statistics.totalRevenue': totalAmountFromNotes > 0 ? totalAmountFromNotes : paidAmount
       }
     });
 

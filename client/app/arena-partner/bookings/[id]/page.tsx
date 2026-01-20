@@ -74,6 +74,8 @@ interface ArenaPartnerBookingDetail {
     paymentStatus: string;
     paidAt: string;
     transactionId?: string;
+    amountPaid?: number;
+    advancePaymentPercent?: number;
   };
   contactDetails?: {
     name: string;
@@ -101,6 +103,19 @@ export default function ArenaPartnerBookingDetail() {
   const [booking, setBooking] = useState<ArenaPartnerBookingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const getPaymentBadgeClass = (paymentStatus: string) => {
+    if (paymentStatus === 'completed') {
+      return 'bg-green-100 text-green-700 border-green-200';
+    }
+    if (paymentStatus === 'failed') {
+      return 'bg-red-100 text-red-700 border-red-200';
+    }
+    if (paymentStatus === 'refunded') {
+      return 'bg-purple-100 text-purple-700 border-purple-200';
+    }
+    return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  };
 
   useEffect(() => {
     const bookingId = window.location.pathname.split('/').pop();
@@ -412,10 +427,10 @@ ${booking.specialRequests ? `║  Special Requests: ${booking.specialRequests.pa
                     <Badge className={`${getStatusColor(booking.status)} border font-medium`}>
                       {booking.status.replace('_', ' ').toUpperCase()}
                     </Badge>
-                    <Badge 
-                      variant={booking.payment.paymentStatus === 'completed' ? 'default' : 'secondary'}
-                    >
-                      {booking.payment.paymentStatus === 'completed' ? 'Paid' : 'Unpaid'}
+                    <Badge className={`${getPaymentBadgeClass(booking.payment.paymentStatus)} border`}>
+                      {booking.payment.paymentStatus === 'completed'
+                        ? 'Paid'
+                        : booking.payment.paymentStatus.toUpperCase()}
                     </Badge>
                   </div>
                 </div>
@@ -621,19 +636,31 @@ ${booking.specialRequests ? `║  Special Requests: ${booking.specialRequests.pa
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Base Amount</span>
                     <span className="font-medium">₹{booking.pricing.baseAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Platform Fee</span>
+                    <span className="text-gray-600">Platform Commission</span>
                     <span className="font-medium">₹{booking.pricing.platformCommission.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold pt-2 border-t">
                     <span>Total Amount</span>
                     <span>₹{booking.pricing.totalAmount.toLocaleString()}</span>
                   </div>
+                  {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && (
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Paid now ({booking.payment.advancePaymentPercent || 0}%)</span>
+                      <span className="font-medium">₹{booking.payment.amountPaid.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && booking.payment.amountPaid < booking.pricing.totalAmount && (
+                    <div className="flex justify-between text-sm font-semibold text-orange-700">
+                      <span>Remaining to be paid</span>
+                      <span>₹{Math.max(0, booking.pricing.totalAmount - booking.payment.amountPaid).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-green-600 font-bold">
                     <span>Your Earnings</span>
                     <span>₹{booking.pricing.arenaEarnings.toLocaleString()}</span>

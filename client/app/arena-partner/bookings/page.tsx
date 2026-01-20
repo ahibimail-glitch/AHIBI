@@ -66,6 +66,8 @@ interface ArenaPartnerBooking {
     paymentMethod: string;
     paymentStatus: string;
     paidAt: string;
+    amountPaid?: number;
+    advancePaymentPercent?: number;
   };
   contactDetails?: {
     name: string;
@@ -282,6 +284,19 @@ export default function ArenaPartnerBookings() {
       default:
         return <AlertCircle className="h-4 w-4 text-gray-600" />;
     }
+  };
+
+  const getPaymentBadgeClass = (paymentStatus: string) => {
+    if (paymentStatus === 'completed') {
+      return 'bg-green-100 text-green-700 border-green-200';
+    }
+    if (paymentStatus === 'failed') {
+      return 'bg-red-100 text-red-700 border-red-200';
+    }
+    if (paymentStatus === 'refunded') {
+      return 'bg-purple-100 text-purple-700 border-purple-200';
+    }
+    return 'bg-yellow-100 text-yellow-800 border-yellow-200';
   };
 
   const filteredBookings = bookings.filter(booking => {
@@ -560,11 +575,8 @@ export default function ArenaPartnerBookings() {
                               <Badge className={`${getStatusColor(booking.status)} border`}>
                                 {booking.status.replace('_', ' ').toUpperCase()}
                               </Badge>
-                              <Badge 
-                                variant={booking.payment.paymentStatus === 'completed' ? 'default' : 'secondary'}
-                                className="text-xs"
-                              >
-                                {booking.payment.paymentStatus === 'completed' ? 'Paid' : 'Unpaid'}
+                              <Badge className={`${getPaymentBadgeClass(booking.payment.paymentStatus)} border text-xs`}>
+                                {booking.payment.paymentStatus === 'completed' ? 'Paid' : booking.payment.paymentStatus.toUpperCase()}
                               </Badge>
                             </div>
                           </div>
@@ -581,6 +593,16 @@ export default function ArenaPartnerBookings() {
                           <p className="text-xs text-gray-500">
                             Total: ₹{booking.pricing.totalAmount.toLocaleString()}
                           </p>
+                          {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && (
+                            <p className="text-xs text-gray-500">
+                              Paid earlier: ({booking.payment.advancePaymentPercent || 0}%): ₹{booking.payment.amountPaid.toLocaleString()}
+                            </p>
+                          )}
+                          {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && booking.payment.amountPaid < booking.pricing.totalAmount && booking.status !== 'completed' && (
+                            <p className="text-l font-medium text-orange-700">
+                              Amount to be paid: ₹{Math.max(0, booking.pricing.totalAmount - booking.payment.amountPaid).toLocaleString()}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex flex-col gap-2">

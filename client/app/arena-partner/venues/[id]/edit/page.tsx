@@ -41,6 +41,9 @@ export default function EditVenuePage() {
     venueName: '',
     description: '',
     tagline: '',
+    paymentSettings: {
+      advancePaymentPercent: 10,
+    },
     address: {
       street: '',
       area: '',
@@ -97,6 +100,9 @@ export default function EditVenuePage() {
         venueName: venue.venueName || '',
         description: venue.description || '',
         tagline: venue.tagline || '',
+        paymentSettings: {
+          advancePaymentPercent: Number(venue.paymentSettings?.advancePaymentPercent) || 10,
+        },
         address: venue.address || {
           street: '',
           area: '',
@@ -301,6 +307,26 @@ export default function EditVenuePage() {
               value={form.venueName}
               onChange={(e) => setForm({ ...form, venueName: e.target.value })}
               placeholder="e.g., Ahibi Sports Arena"
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Advance Payment %</label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={(form as any).paymentSettings?.advancePaymentPercent ?? 10}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  paymentSettings: {
+                    advancePaymentPercent: Math.min(100, Math.max(1, Number(e.target.value) || 10)),
+                  },
+                })
+              }
               className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
               required
             />
