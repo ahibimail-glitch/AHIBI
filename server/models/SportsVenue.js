@@ -72,20 +72,6 @@ const SportsVenueSchema = new mongoose.Schema({
     }
   },
   
-  // GPS Coordinates for distance-based discovery
-  location: {
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      index: '2dsphere',
-      required: true
-    }
-  },
-  
   // Google Maps Integration
   googleMapsLink: {
     type: String,
@@ -397,6 +383,6 @@ SportsVenueSchema.index({ approvalStatus: 1 });
 SportsVenueSchema.index({ 'address.city': 1 });
 SportsVenueSchema.index({ sportsSupported: 1 });
 SportsVenueSchema.index({ 'rating.overall': -1 });
-SportsVenueSchema.index({ location: '2dsphere' });
+
 
 module.exports = mongoose.model('SportsVenue', SportsVenueSchema);

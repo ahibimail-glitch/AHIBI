@@ -124,6 +124,16 @@ exports.updateVenue = async (req, res) => {
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         venue[field] = req.body[field];
+        // Ensure Mongoose tracks deep changes for nested structures
+        if (field === 'gallery') {
+          venue.markModified('gallery');
+        }
+        if (field === 'facilities') {
+          venue.markModified('facilities');
+        }
+        if (field === 'operatingHours') {
+          venue.markModified('operatingHours');
+        }
       }
     });
 

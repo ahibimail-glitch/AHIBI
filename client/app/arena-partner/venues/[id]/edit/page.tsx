@@ -24,7 +24,7 @@ export default function EditVenuePage() {
   const venueId = params.id as string;
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [venueImage, setVenueImage] = useState<string>('');
+  const [venueImages, setVenueImages] = useState<{ url: string; isMain?: boolean; name?: string }[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
@@ -49,9 +49,7 @@ export default function EditVenuePage() {
       pincode: '',
       landmark: '',
     },
-    location: {
-      coordinates: [0, 0], // [longitude, latitude]
-    },
+    googleMapsLink: '',
     contactInfo: {
       primaryPhone: '',
       secondaryPhone: '',
@@ -59,6 +57,28 @@ export default function EditVenuePage() {
       whatsappNumber: '',
     },
     sportsSupported: [] as string[],
+    operatingHours: {
+      monday: { open: '06:00', close: '23:00', closed: false },
+      tuesday: { open: '06:00', close: '23:00', closed: false },
+      wednesday: { open: '06:00', close: '23:00', closed: false },
+      thursday: { open: '06:00', close: '23:00', closed: false },
+      friday: { open: '06:00', close: '23:00', closed: false },
+      saturday: { open: '06:00', close: '23:00', closed: false },
+      sunday: { open: '06:00', close: '23:00', closed: false },
+    } as any,
+    facilities: {
+      parking: { available: false, capacity: undefined, twoWheeler: false, fourWheeler: false, free: false },
+      washrooms: { available: false, count: undefined },
+      changingRooms: { available: false, count: undefined, lockers: false },
+      showers: { available: false },
+      drinkingWater: { available: false },
+      firstAid: { available: false },
+      cafeteria: { available: false },
+      wifi: { available: false },
+      floodlights: { available: false },
+      seating: { available: false, capacity: undefined },
+      wheelchairAccess: { available: false },
+    } as any,
     rules: {
       cancellationPolicy: '',
       refundPolicy: '',
@@ -85,7 +105,7 @@ export default function EditVenuePage() {
           pincode: '',
           landmark: '',
         },
-        location: venue.location || { coordinates: [0, 0] },
+        googleMapsLink: venue.googleMapsLink || '',
         contactInfo: venue.contactInfo || {
           primaryPhone: '',
           secondaryPhone: '',
@@ -93,6 +113,16 @@ export default function EditVenuePage() {
           whatsappNumber: '',
         },
         sportsSupported: venue.sportsSupported || [],
+        operatingHours: venue.operatingHours || {
+          monday: { open: '06:00', close: '23:00', closed: false },
+          tuesday: { open: '06:00', close: '23:00', closed: false },
+          wednesday: { open: '06:00', close: '23:00', closed: false },
+          thursday: { open: '06:00', close: '23:00', closed: false },
+          friday: { open: '06:00', close: '23:00', closed: false },
+          saturday: { open: '06:00', close: '23:00', closed: false },
+          sunday: { open: '06:00', close: '23:00', closed: false },
+        },
+        facilities: venue.facilities || (form as any).facilities,
         rules: venue.rules || {
           cancellationPolicy: '',
           refundPolicy: '',
@@ -101,10 +131,7 @@ export default function EditVenuePage() {
           additionalRules: '',
         },
       });
-      
-      if (venue.gallery?.images?.[0]?.url) {
-        setVenueImage(venue.gallery.images[0].url);
-      }
+      setVenueImages(Array.isArray(venue.gallery?.images) ? venue.gallery.images : []);
     } catch (err: any) {
       toast.error('Failed to fetch venue details');
       router.back();
@@ -126,41 +153,56 @@ export default function EditVenuePage() {
   };
 
   const handleImageUpload = async (files: File[]) => {
-    if (files.length === 0) return;
-    
+    if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', files[0]);
-      formData.append('folder', 'venues');
-      formData.append('documentType', 'image');
+      const uploaded: { url: string; isMain?: boolean; name?: string }[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'venues');
+        formData.append('documentType', 'image');
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error('Upload failed');
+        const data = await response.json();
+        if (data?.success && data?.url) {
+          uploaded.push({ url: data.url, isMain: false, name: file.name });
+        } else {
+          throw new Error(data?.error || 'Upload failed');
+        }
+      }
+      setVenueImages((prev) => {
+        const next = [...prev, ...uploaded];
+        if (!next.some((i) => i.isMain) && next[0]) next[0].isMain = true;
+        return [...next];
       });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setVenueImage(data.url);
-        toast.success('Image uploaded successfully');
-      } else {
-        throw new Error(data.error || 'Upload failed');
-      }
+      toast.success('Image(s) uploaded successfully');
     } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload image');
+      toast.error(error?.message || 'Failed to upload image');
     } finally {
       setUploading(false);
     }
   };
 
-  const removeImage = () => {
-    setVenueImage('');
+  const removeImageByIndex = (index: number) => {
+    setVenueImages((prev) => {
+      const next = [...prev];
+      next.splice(index, 1);
+      if (next.length > 0 && !next.some((i) => i.isMain)) {
+        next[0].isMain = true;
+      }
+      return next;
+    });
+  };
+
+  const setCoverByIndex = (index: number) => {
+    setVenueImages((prev) => prev.map((i, idx) => ({ ...i, isMain: idx === index })));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,12 +238,12 @@ export default function EditVenuePage() {
       const venueData = {
         ...form,
         gallery: {
-          images: venueImage ? [{
-            url: venueImage,
-            isMain: true,
-            caption: form.venueName
-          }] : []
-        }
+          images: (venueImages || []).map((img, idx) => ({
+            url: img.url,
+            isMain: img.isMain ?? idx === 0,
+            caption: form.venueName,
+          })),
+        },
       };
       
       await arenaPartnerVenues.update(venueId, venueData);
@@ -235,18 +277,19 @@ export default function EditVenuePage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          {/* Venue Image */}
+          {/* Venue Images */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Venue Image</label>
-            <p className="text-xs text-gray-500 mb-3">Update your venue photo. This will be displayed on the sports listing page.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Venue Images</label>
+            <p className="text-xs text-gray-500 mb-3">Upload multiple photos and select a cover image. PNG, JPG, GIF, WebP up to 10MB.</p>
             <FileUploadArea
               type="image"
-              multiple={false}
+              multiple={true}
               maxSize={10 * 1024 * 1024}
               onUpload={handleImageUpload}
               uploading={uploading}
-              existingFiles={venueImage ? [{ url: venueImage, name: 'Venue Image' }] : []}
-              onRemove={removeImage}
+              existingFiles={((venueImages as any[]) || []).map((img: any) => ({ url: img.url, name: img.name || 'Venue Image', isCover: !!img.isMain }))}
+              onRemove={(index) => removeImageByIndex(index)}
+              onSetCover={(index) => setCoverByIndex(index)}
               accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
             />
           </div>
@@ -340,6 +383,307 @@ export default function EditVenuePage() {
                 placeholder="Landmark (optional)"
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
               />
+              <input
+                type="email"
+                value={form.contactInfo.email}
+                onChange={(e) => setForm({ ...form, contactInfo: { ...form.contactInfo, email: e.target.value } })}
+                placeholder="Contact email (optional)"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+              />
+              <input
+                type="url"
+                value={(form as any).googleMapsLink}
+                onChange={(e) => setForm({ ...(form as any), googleMapsLink: e.target.value })}
+                placeholder="Google Maps URL (optional)"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none md:col-span-2"
+              />
+            </div>
+          </div>
+
+          {/* Rules & Policies */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Rules & Policies</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cancellation Policy *</label>
+                <textarea
+                  value={form.rules.cancellationPolicy}
+                  onChange={(e) => setForm({ ...form, rules: { ...form.rules, cancellationPolicy: e.target.value } })}
+                  placeholder="e.g., Cancellations must be made at least 24 hours before booking time for full refund"
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Refund Policy *</label>
+                <textarea
+                  value={form.rules.refundPolicy}
+                  onChange={(e) => setForm({ ...form, rules: { ...form.rules, refundPolicy: e.target.value } })}
+                  placeholder="e.g., Full refund for cancellations made 24 hours in advance, 50% refund for cancellations made 12-24 hours in advance"
+                  rows={3}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Dress Code (optional)</label>
+                <input
+                  type="text"
+                  value={form.rules.dresscode}
+                  onChange={(e) => setForm({ ...form, rules: { ...form.rules, dresscode: e.target.value } })}
+                  placeholder="e.g., Sports attire and non-marking shoes required"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Age Restrictions (optional)</label>
+                <input
+                  type="text"
+                  value={form.rules.ageRestrictions}
+                  onChange={(e) => setForm({ ...form, rules: { ...form.rules, ageRestrictions: e.target.value } })}
+                  placeholder="e.g., Suitable for ages 12 and above"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Additional Rules (optional)</label>
+                <textarea
+                  value={form.rules.additionalRules}
+                  onChange={(e) => setForm({ ...form, rules: { ...form.rules, additionalRules: e.target.value } })}
+                  placeholder="Any additional rules or guidelines"
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Operating Hours */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Operating Hours</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const).map((day) => (
+                <div key={day} className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="capitalize font-medium">{day}</span>
+                    <label className="text-sm inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={Boolean((form as any).operatingHours?.[day]?.closed)}
+                        onChange={(e) => setForm((prev) => ({
+                          ...prev,
+                          operatingHours: {
+                            ...(prev as any).operatingHours,
+                            [day]: { ...((prev as any).operatingHours?.[day] || {}), closed: e.target.checked },
+                          }
+                        }))}
+                      />
+                      Closed
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="time"
+                      value={((form as any).operatingHours?.[day]?.open) || '06:00'}
+                      disabled={Boolean((form as any).operatingHours?.[day]?.closed)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        operatingHours: {
+                          ...(prev as any).operatingHours,
+                          [day]: { ...((prev as any).operatingHours?.[day] || {}), open: e.target.value },
+                        }
+                      }))}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                    />
+                    <span className="text-sm text-gray-500">to</span>
+                    <input
+                      type="time"
+                      value={((form as any).operatingHours?.[day]?.close) || '23:00'}
+                      disabled={Boolean((form as any).operatingHours?.[day]?.closed)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        operatingHours: {
+                          ...(prev as any).operatingHours,
+                          [day]: { ...((prev as any).operatingHours?.[day] || {}), close: e.target.value },
+                        }
+                      }))}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Facilities & Amenities */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Facilities & Amenities</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Parking */}
+              <div className="border rounded-lg p-3">
+                <label className="inline-flex items-center gap-2 text-sm font-medium mb-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean((form as any).facilities?.parking?.available)}
+                    onChange={(e) => setForm((prev) => ({
+                      ...prev,
+                      facilities: { ...(prev as any).facilities, parking: { ...((prev as any).facilities?.parking || {}), available: e.target.checked } }
+                    }))}
+                  />
+                  Parking available
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <input
+                    type="number"
+                    placeholder="Capacity"
+                    value={(form as any).facilities?.parking?.capacity || ''}
+                    onChange={(e) => setForm((prev) => ({
+                      ...prev,
+                      facilities: { ...(prev as any).facilities, parking: { ...((prev as any).facilities?.parking || {}), capacity: Number(e.target.value) } }
+                    }))}
+                    className="px-3 py-2 rounded-lg border border-gray-300"
+                  />
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean((form as any).facilities?.parking?.twoWheeler)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        facilities: { ...(prev as any).facilities, parking: { ...((prev as any).facilities?.parking || {}), twoWheeler: e.target.checked } }
+                      }))}
+                    />
+                    2-Wheeler
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean((form as any).facilities?.parking?.fourWheeler)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        facilities: { ...(prev as any).facilities, parking: { ...((prev as any).facilities?.parking || {}), fourWheeler: e.target.checked } }
+                      }))}
+                    />
+                    4-Wheeler
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean((form as any).facilities?.parking?.free)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        facilities: { ...(prev as any).facilities, parking: { ...((prev as any).facilities?.parking || {}), free: e.target.checked } }
+                      }))}
+                    />
+                    Free
+                  </label>
+                </div>
+              </div>
+
+              {/* Washrooms */}
+              <div className="border rounded-lg p-3">
+                <label className="inline-flex items-center gap-2 text-sm font-medium mb-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean((form as any).facilities?.washrooms?.available)}
+                    onChange={(e) => setForm((prev) => ({
+                      ...prev,
+                      facilities: { ...(prev as any).facilities, washrooms: { ...((prev as any).facilities?.washrooms || {}), available: e.target.checked } }
+                    }))}
+                  />
+                  Washrooms
+                </label>
+                <input
+                  type="number"
+                  placeholder="Count"
+                  value={(form as any).facilities?.washrooms?.count || ''}
+                  onChange={(e) => setForm((prev) => ({
+                    ...prev,
+                    facilities: { ...(prev as any).facilities, washrooms: { ...((prev as any).facilities?.washrooms || {}), count: Number(e.target.value) } }
+                  }))}
+                  className="px-3 py-2 rounded-lg border border-gray-300 w-full"
+                />
+              </div>
+
+              {/* Changing Rooms */}
+              <div className="border rounded-lg p-3">
+                <label className="inline-flex items-center gap-2 text-sm font-medium mb-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean((form as any).facilities?.changingRooms?.available)}
+                    onChange={(e) => setForm((prev) => ({
+                      ...prev,
+                      facilities: { ...(prev as any).facilities, changingRooms: { ...((prev as any).facilities?.changingRooms || {}), available: e.target.checked } }
+                    }))}
+                  />
+                  Changing Rooms
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    placeholder="Count"
+                    value={(form as any).facilities?.changingRooms?.count || ''}
+                    onChange={(e) => setForm((prev) => ({
+                      ...prev,
+                      facilities: { ...(prev as any).facilities, changingRooms: { ...((prev as any).facilities?.changingRooms || {}), count: Number(e.target.value) } }
+                    }))}
+                    className="px-3 py-2 rounded-lg border border-gray-300"
+                  />
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean((form as any).facilities?.changingRooms?.lockers)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        facilities: { ...(prev as any).facilities, changingRooms: { ...((prev as any).facilities?.changingRooms || {}), lockers: e.target.checked } }
+                      }))}
+                    />
+                    Lockers
+                  </label>
+                </div>
+              </div>
+
+              {/* Simple toggles */}
+              {(['showers','drinkingWater','firstAid','cafeteria','wifi','floodlights','wheelchairAccess'] as const).map((key) => (
+                <div key={key} className="border rounded-lg p-3">
+                  <label className="inline-flex items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={Boolean((form as any).facilities?.[key]?.available)}
+                      onChange={(e) => setForm((prev) => ({
+                        ...prev,
+                        facilities: { ...(prev as any).facilities, [key]: { ...((prev as any).facilities?.[key] || {}), available: e.target.checked } }
+                      }))}
+                    />
+                    {String(key).replace(/([A-Z])/g, ' $1')}
+                  </label>
+                </div>
+              ))}
+
+              {/* Seating */}
+              <div className="border rounded-lg p-3">
+                <label className="inline-flex items-center gap-2 text-sm font-medium mb-2">
+                  <input
+                    type="checkbox"
+                    checked={Boolean((form as any).facilities?.seating?.available)}
+                    onChange={(e) => setForm((prev) => ({
+                      ...prev,
+                      facilities: { ...(prev as any).facilities, seating: { ...((prev as any).facilities?.seating || {}), available: e.target.checked } }
+                    }))}
+                  />
+                  Seating
+                </label>
+                <input
+                  type="number"
+                  placeholder="Capacity"
+                  value={(form as any).facilities?.seating?.capacity || ''}
+                  onChange={(e) => setForm((prev) => ({
+                    ...prev,
+                    facilities: { ...(prev as any).facilities, seating: { ...((prev as any).facilities?.seating || {}), capacity: Number(e.target.value) } }
+                  }))}
+                  className="px-3 py-2 rounded-lg border border-gray-300 w-full"
+                />
+              </div>
             </div>
           </div>
 

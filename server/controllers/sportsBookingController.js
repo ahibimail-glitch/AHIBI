@@ -50,19 +50,7 @@ exports.searchVenues = async (req, res) => {
       query['address.city'] = new RegExp(city, 'i');
     }
 
-    // Location-based search
-    if (latitude && longitude) {
-      const maxDist = maxDistance ? parseInt(maxDistance) : 10000; // Default 10km
-      query.location = {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
-          },
-          $maxDistance: maxDist
-        }
-      };
-    }
+    // Note: Location-based geo search disabled as 'location' field is removed. Using city filter or other params instead.
 
     // Rating filter
     if (rating) {
@@ -80,6 +68,22 @@ exports.searchVenues = async (req, res) => {
     let venues = await SportsVenue.find(query)
       .select('-reviews')
       .lean();
+
+    // Ensure cover image (isMain) appears first for each venue's gallery
+    try {
+      venues = venues.map(v => {
+        if (v?.gallery?.images && Array.isArray(v.gallery.images) && v.gallery.images.length > 0) {
+          v.gallery.images = [...v.gallery.images].sort((a, b) => {
+            const ai = a?.isMain ? 1 : 0;
+            const bi = b?.isMain ? 1 : 0;
+            return bi - ai; // put isMain=true first
+          });
+        }
+        return v;
+      });
+    } catch (_) {
+      // non-fatal; continue without sorting if structure differs
+    }
 
     // Price filter (requires checking courts)
     if (minPrice || maxPrice) {

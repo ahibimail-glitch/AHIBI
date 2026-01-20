@@ -18,6 +18,18 @@ export default function VenueDetailPage() {
   const [courts, setCourts] = useState<any[]>([]);
   const [selectedSport, setSelectedSport] = useState<string>('all');
 
+  // Map Date.getDay() to our operatingHours keys
+  const dayKeyMap: any = {
+    0: 'sunday',
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+  };
+  const todayKey = dayKeyMap[new Date().getDay()];
+
   useEffect(() => {
     if (venueId) {
       fetchVenueDetails();
@@ -98,18 +110,19 @@ export default function VenueDetailPage() {
 
       {/* Hero Section with Venue Image */}
       <section className="relative h-[50vh] md:h-[60vh] bg-gradient-to-br from-slate-900 to-slate-800">
-        {venue.gallery?.images?.[0]?.url ? (
+        {(() => {
+          const cover = venue.gallery?.images?.find((img: any) => img.isMain) || venue.gallery?.images?.[0];
+          return cover?.url ? (
           <Image
-            src={venue.gallery.images[0].url}
+            src={cover.url}
             alt={venue.venueName}
             fill
             className="object-cover opacity-60"
-          />
-        ) : (
+          />) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <Activity className="w-32 h-32 text-white/20" />
           </div>
-        )}
+        );})()}
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         
@@ -304,6 +317,20 @@ export default function VenueDetailPage() {
                 </div>
               </div>
             )}
+            {/* Gallery */}
+            {venue.gallery?.images?.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-3xl p-8">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">Venue Photos</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {venue.gallery.images.map((img: any, idx: number) => (
+                    <div key={idx} className="relative w-full h-40 rounded-xl overflow-hidden">
+                      <img src={img.url} alt={img.caption || `Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+        
           </div>
 
           {/* Right Column - Sidebar */}
@@ -312,12 +339,12 @@ export default function VenueDetailPage() {
             <div className="bg-white border border-slate-200 rounded-3xl p-6 sticky top-8">
               <h3 className="text-lg font-bold text-slate-900 mb-4">Contact Information</h3>
               <div className="space-y-4">
-                {venue.contactInfo?.phone && (
+                {venue.contactInfo?.primaryPhone && (
                   <div className="flex items-start gap-3">
                     <Phone className="w-5 h-5 text-orange-600 mt-0.5" />
                     <div>
                       <p className="text-xs text-slate-500 mb-1">Phone</p>
-                      <p className="text-sm font-medium text-slate-900">{venue.contactInfo.phone}</p>
+                      <p className="text-sm font-medium text-slate-900">{venue.contactInfo.primaryPhone}</p>
                     </div>
                   </div>
                 )}
@@ -345,11 +372,25 @@ export default function VenueDetailPage() {
 
               <div className="mt-6 pt-6 border-t border-slate-100">
                 <h4 className="text-sm font-bold text-slate-900 mb-3">Operating Hours</h4>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                   <Clock className="w-4 h-4 text-orange-600" />
                   <span>
-                    {venue.operatingHours?.weekday?.open || '06:00'} - {venue.operatingHours?.weekday?.close || '23:00'}
+                    {venue?.operatingHours?.[todayKey]?.closed
+                      ? 'Closed today'
+                      : `${venue?.operatingHours?.[todayKey]?.open || '06:00'} - ${venue?.operatingHours?.[todayKey]?.close || '23:00'}`}
                   </span>
+                </div>
+                <div className="space-y-1 text-xs text-slate-600">
+                  {(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const).map((day) => (
+                    <div key={day} className="flex items-center justify-between">
+                      <span className="capitalize">{day}</span>
+                      <span>
+                        {venue?.operatingHours?.[day]?.closed
+                          ? 'Closed'
+                          : `${venue?.operatingHours?.[day]?.open || '06:00'} - ${venue?.operatingHours?.[day]?.close || '23:00'}`}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
