@@ -47,6 +47,11 @@ export default function SportsDiscoveryPage() {
     }
   }
 
+  const scrollToExplore = () => {
+    const el = document.getElementById('explore');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="bg-white text-slate-900">
       <Navbar />
@@ -54,33 +59,50 @@ export default function SportsDiscoveryPage() {
       {/* ================= HERO ================= */}
       <section className="relative h-[100vh] w-full">
         <Image
-          src="https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?q=80&w=2400&auto=format&fit=crop
-"
+          src="https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?q=80&w=2400&auto=format&fit=crop"
           alt="Sports"
           fill
           priority
           className="object-cover"
         />
 
-        <div className="absolute inset-0 bg-black/30" />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-black/40" />
 
-        <div className="absolute bottom-20 left-6 md:left-20 max-w-3xl">
-          <h1 className="text-white text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
+        {/* Content */}
+        <div className="absolute bottom-24 left-6 md:left-20 max-w-3xl">
+          <h1 className="text-white text-4xl sm:text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
             SPORTS FOR <br /> EVERY PASSION
           </h1>
 
-          <p className="text-white/80 mt-6 max-w-md">
+          <p className="text-white/80 mt-6 max-w-md text-base md:text-lg">
             Discover top-notch sports facilities designed to support every passion and lifestyle.
           </p>
 
-          <button className="mt-8 px-8 py-4 rounded-full bg-white text-black font-semibold hover:scale-105 transition">
-            Get Started
-          </button>
+          {/* CTA Buttons */}
+          <div className="mt-8 flex items-center gap-4">
+            <Link href="/arena-partner/auth">
+              <button className="px-6 py-3 rounded-full bg-white text-black font-semibold hover:scale-105 transition">
+                Sign up
+              </button>
+            </Link>
+
+            {/* <Link href="/arena-partner/auth">
+              <button className="px-6 py-3 rounded-full border border-white/60 text-white font-semibold hover:bg-white hover:text-black transition">
+                Login
+              </button>
+            </Link> */}
+
+            <button onClick={scrollToExplore} className="px-6 py-3 rounded-full border border-white/60 text-white font-semibold hover:bg-white hover:text-black transition">
+              Explore
+            </button>
+          </div>
         </div>
       </section>
 
+
       {/* ================= FILTER BAR ================= */}
-      <section className="sticky top-[60px] z-40 bg-white border-b">
+      <section id="explore" className="sticky top-[60px] z-40 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex gap-3 overflow-x-auto">
           <select
             className="filter-pill"
@@ -102,7 +124,7 @@ export default function SportsDiscoveryPage() {
             onChange={(e) => setFilters({ ...filters, city: e.target.value })}
           />
 
-          <input
+          {/* <input
             type="number"
             className="filter-pill w-24"
             placeholder="Min ₹"
@@ -116,7 +138,7 @@ export default function SportsDiscoveryPage() {
             placeholder="Max ₹"
             value={filters.maxPrice}
             onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-          />
+          /> */}
 
           <select
             className="filter-pill"
@@ -140,9 +162,7 @@ export default function SportsDiscoveryPage() {
 
       {/* ================= RESULTS ================= */}
       <section className="max-w-7xl mx-auto px-4 py-4">
-        <h2 className="text-4xl font-bold mb-12 tracking-tight">
-          Experience The Best in Courts, Fields and More
-        </h2>
+
 
         {loading ? (
           <div className="grid md:grid-cols-3 gap-10">

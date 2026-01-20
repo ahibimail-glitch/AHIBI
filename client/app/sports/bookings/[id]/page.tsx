@@ -167,22 +167,22 @@ Thank you for booking with AHIBI Sports!
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-900" />
       </div>
     );
   }
 
   if (error || !booking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Booking Not Found</h2>
-          <p className="text-gray-600 mb-6">{error || "The booking you're looking for doesn't exist."}</p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Booking Not Found</h2>
+          <p className="text-slate-600 mb-6">{error || "The booking you're looking for doesn't exist."}</p>
           <button
             onClick={() => router.push("/sports")}
-            className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors"
           >
             Back to Sports
           </button>
@@ -192,14 +192,14 @@ Thank you for booking with AHIBI Sports!
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Success Banner */}
         {isSuccess && (
-          <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-6 mb-6 text-center">
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-6 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Booking Confirmed!</h1>
-            <p className="text-gray-600">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Booking Confirmed!</h1>
+            <p className="text-slate-600">
               Your court has been successfully booked. Check your email and SMS for confirmation details.
             </p>
           </div>
