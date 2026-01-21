@@ -51,6 +51,7 @@ import {
   Building,
   Menu
 } from "lucide-react";
+import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useVenueAuth } from "@/hooks/useVenueAuth";
@@ -1531,7 +1532,11 @@ export default function VenueDashboardLayout({
 
       {/* Right Content Area */}
       <div className="flex-1 overflow-auto">
-        <div className="">
+        <div className="p-6">
+          {/* Kaki Marketing Banner */}
+          <div className="mb-6">
+            <KakiMarketingBanner platform="venue" />
+          </div>
           {renderContent()}
         </div>
       </div>

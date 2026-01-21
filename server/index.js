@@ -35,6 +35,7 @@ const heliTaxiiRoutes = require('./routes/heliTaxii.routes');
 const arenaPartnerRoutes = require('./routes/arenaPartner.routes');
 const sportsRoutes = require('./routes/sports.routes');
 const sportsAdminRoutes = require('./routes/sportsAdmin.routes');
+const systemConfigRoutes = require('./routes/systemConfig.routes');
 
 // Create Express app
 const app = express();
@@ -140,6 +141,7 @@ app.use('/api/helitaxii', heliTaxiiRoutes);
 app.use('/api/arena-partner', arenaPartnerRoutes);
 app.use('/api/sports', sportsRoutes);
 app.use('/api/admin/sports', sportsAdminRoutes);
+app.use('/api/system', systemConfigRoutes);
 
 // Root route
 app.get('/', (req, res) => {

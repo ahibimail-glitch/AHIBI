@@ -63,6 +63,7 @@ import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
 import HmfTickets from "./components/HmfTickets";
 import HFTickets from "./components/HFTickets";
 import ScheduleEvent from "./components/ScheduleEvent";
+import KakiMarketingSettings from "./components/KakiMarketingSettings";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -196,6 +197,8 @@ export default function AdminDashboard() {
         return <HeliTaxiiLeads />;
       case "schedule-event":
         return <ScheduleEvent />;
+      case "kaki-marketing":
+        return <KakiMarketingSettings />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -342,6 +345,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => { setActiveView("analytics"); setSidebarOpen(false); }} />
           <SidebarButton icon={Settings} label="Settings" active={activeView === "settings"} onClick={() => { setActiveView("settings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Shield} label="System Health" active={activeView === "system"} onClick={() => { setActiveView("system"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Building2} label="Kaki Marketing" active={activeView === "kaki-marketing"} onClick={() => { setActiveView("kaki-marketing"); setSidebarOpen(false); }} />
         </nav>
 
         <div className="mt-auto pt-4">

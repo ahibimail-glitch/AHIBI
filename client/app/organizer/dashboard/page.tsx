@@ -38,6 +38,7 @@ import ArtistBookingCalendar from "@/components/organizer/ArtistBookingCalendar"
 import BookingManagement from "@/components/organizer/BookingManagement"
 import QrScanner from "../components/QRScanner"
 import ScheduleEvent from "../components/ScheduleEvent"
+import KakiMarketingBanner from "@/components/KakiMarketingBanner"
 
 interface OrganizerUser {
   id: string
@@ -274,6 +275,10 @@ export default function OrganizerDashboard() {
         </header> */}
 
         <div className="p-8">
+          {/* Kaki Marketing Banner */}
+          <div className="mb-8">
+            <KakiMarketingBanner platform="organizer" />
+          </div>
           {renderContent()}
         </div>
       </main>

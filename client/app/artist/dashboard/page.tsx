@@ -58,6 +58,7 @@ import GalleryManager from "@/components/artist/GalleryManager";
 import AccoladesManager from "@/components/artist/AccoladesManager";
 import TermsManager from "@/components/artist/TermsManager";
 import AvailabilityCalendar from "@/components/artist/AvailabilityCalendar";
+import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 
 interface ArtistUser {
   _id: string;
@@ -1769,6 +1770,10 @@ export default function ArtistDashboard() {
       {/* --- Main Content --- */}
       <main className="flex-1 ml-64 bg-gradient-to-br from-pink-50 to-purple-50">
         <div className="p-8">
+          {/* Kaki Marketing Banner */}
+          <div className="mb-6">
+            <KakiMarketingBanner platform="artist" />
+          </div>
           {renderContent()}
         </div>
       </main>

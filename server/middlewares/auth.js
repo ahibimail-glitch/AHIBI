@@ -42,7 +42,7 @@ exports.protect = async (req, res, next) => {
       console.log('Token decoded successfully. User ID:', decoded.id, 'Role:', decoded.role);
 
       // Determine which model to use based on the token role primarily, not just the route
-      const isAdminRoute = req.originalUrl.startsWith('/api/admin');
+      const isAdminRoute = req.originalUrl.startsWith('/api/admin') || req.originalUrl.startsWith('/api/system');
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
@@ -70,9 +70,15 @@ exports.protect = async (req, res, next) => {
         console.log('Looking for Admin with ID:', decoded.id);
         user = await Admin.findById(decoded.id);
         if (!user) {
-          console.log('AUTH FAILED: Admin not found');
+          console.log('AUTH FAILED: Admin not found. Checking if any admins exist...');
+          const adminCount = await Admin.countDocuments();
+          console.log('Total admins in database:', adminCount);
+          if (adminCount === 0) {
+            console.log('No admins found in database. You may need to create an admin user first.');
+          }
           return res.status(404).json({ success: false, message: 'Admin not found' });
         }
+        console.log('Admin found:', user.username);
         user.role = 'admin';
       } else if (decoded.role === 'organizer' || isOrganizerRoute) {
         console.log('Looking for Organizer with ID:', decoded.id);
@@ -199,7 +205,7 @@ exports.optionalAuth = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const isAdminRoute = req.originalUrl.startsWith('/api/admin');
+      const isAdminRoute = req.originalUrl.startsWith('/api/admin') || req.originalUrl.startsWith('/api/system');
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { arenaPartnerDashboard } from '@/lib/api/sports';
 import Link from 'next/link';
+import KakiMarketingBanner from '@/components/KakiMarketingBanner';
 
 export default function ArenaPartnerDashboard() {
   const router = useRouter();
@@ -67,6 +68,11 @@ export default function ArenaPartnerDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Kaki Marketing Banner */}
+        <div className="mb-8">
+          <KakiMarketingBanner platform="arenaPartner" />
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
