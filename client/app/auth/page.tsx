@@ -65,6 +65,7 @@ function AuthPageContent() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +132,12 @@ function AuthPageContent() {
       }
       
       localStorage.setItem("token", data.data.token);
+      if (rememberMe) {
+        // Set token to expire in 30 days
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+      }
       // Redirect to the original page or home
       window.location.href = redirectUrl;
     } catch (err) {
@@ -157,6 +164,12 @@ function AuthPageContent() {
       
       // Password set successfully, redirect to original page or home
       localStorage.setItem("token", currentToken);
+      if (rememberMe) {
+        // Set token to expire in 30 days
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+      }
       setShowPasswordSetupModal(false);
       window.location.href = redirectUrl;
     } catch (err) {
@@ -369,6 +382,12 @@ function AuthPageContent() {
       }
       
       localStorage.setItem("token", data.data.token);
+      if (rememberMe) {
+        // Set token to expire in 30 days
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+      }
       window.location.href = redirectUrl;
     } catch (err) {
       setError("Network error. Please try again.");
@@ -516,6 +535,16 @@ function AuthPageContent() {
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                </div>
+                <div className="flex items-center space-x-2 mt-4">
+                  <Checkbox
+                    id="remember"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  />
+                  <Label htmlFor="remember" className="text-sm text-white">
+                    Remember me for 30 days
+                  </Label>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Logging in..." : "Login"}
