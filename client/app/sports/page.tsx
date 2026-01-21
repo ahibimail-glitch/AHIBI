@@ -1,251 +1,351 @@
-'use client';
+import React from "react";
+import Link from "next/link";
+import Navbar from "../Navbar";
+import Footer from "../Footer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Check,
+    Search,
+    CalendarClock,
+    Shield,
+    ArrowRight,
+    MapPin,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { MapPin, Star, ChevronRight, Search } from 'lucide-react';
-import Navbar from '../Navbar';
-import Footer from '../Footer';
-import { sportsApi } from '@/lib/api/sports';
+/* ----------------------------- */
+/* Shared Section Wrapper */
+/* ----------------------------- */
+const Section = ({
+    children,
+    id,
+    muted,
+}: {
+    children: React.ReactNode;
+    id?: string;
+    muted?: boolean;
+}) => (
+    <section
+        id={id}
+        className={`py-20 md:py-28 ${muted ? "bg-slate-50/70" : "bg-white"
+            }`}
+    >
+        <div className="mx-auto max-w-7xl px-5 md:px-8">{children}</div>
+    </section>
+);
 
-const SPORTS = [
-  'Cricket',
-  'Football',
-  'Basketball',
-  'Badminton',
-  'Tennis',
-  'Swimming',
-];
+/* ----------------------------- */
+/* Hero */
+/* ----------------------------- */
+const Hero = () => (
+    <Section>
+        <div className="grid items-center gap-14 md:grid-cols-2">
+            {/* Left */}
+            <div>
+                <h1 className="text-4xl md:text-6xl xl:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
+                    AHIBI Sports
+                </h1>
+                <p className="mt-4 text-xl md:text-2xl text-slate-600 font-medium">
+                    Book Sports Facilities. List Your Ground.
+                </p>
 
-export default function SportsDiscoveryPage() {
-  const [venues, setVenues] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+                <p className="mt-6 max-w-xl text-slate-600 md:text-lg leading-relaxed">
+                    Discover and book verified sports courts instantly — or list your
+                    facility and manage bookings effortlessly.
+                </p>
 
-  const [filters, setFilters] = useState({
-    sport: '',
-    city: '',
-    minPrice: '',
-    maxPrice: '',
-    rating: '',
-  });
-
-  useEffect(() => {
-    fetchVenues();
-  }, [filters]);
-
-  async function fetchVenues() {
-    setLoading(true);
-    try {
-      const params: any = {};
-      Object.entries(filters).forEach(([k, v]) => v && (params[k] = v));
-      const res = await sportsApi.searchVenues(params);
-      setVenues(res.data.data.venues);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const scrollToExplore = () => {
-    const el = document.getElementById('explore');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  return (
-    <div className="bg-white text-slate-900">
-      <Navbar />
-
-      {/* ================= HERO ================= */}
-      <section className="relative h-[100vh] w-full">
-        <Image
-          src="https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?q=80&w=2400&auto=format&fit=crop"
-          alt="Sports"
-          fill
-          priority
-          className="object-cover"
-        />
-
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/40" />
-
-        {/* Content */}
-        <div className="absolute bottom-24 left-6 md:left-20 max-w-3xl">
-          <h1 className="text-white text-4xl sm:text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
-            SPORTS FOR <br /> EVERY PASSION
-          </h1>
-
-          <p className="text-white/80 mt-6 max-w-md text-base md:text-lg">
-            Discover top-notch sports facilities designed to support every passion and lifestyle.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="mt-8 flex items-center gap-4">
-            <Link href="/arena-partner/auth">
-              <button className="px-6 py-3 rounded-full bg-white text-black font-semibold hover:scale-105 transition">
-                Sign up
-              </button>
-            </Link>
-
-            {/* <Link href="/arena-partner/auth">
-              <button className="px-6 py-3 rounded-full border border-white/60 text-white font-semibold hover:bg-white hover:text-black transition">
-                Login
-              </button>
-            </Link> */}
-
-            <button onClick={scrollToExplore} className="px-6 py-3 rounded-full border border-white/60 text-white font-semibold hover:bg-white hover:text-black transition">
-              Explore
-            </button>
-          </div>
-        </div>
-      </section>
-
-
-      {/* ================= FILTER BAR ================= */}
-      <section id="explore" className="sticky top-[60px] z-40 bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex gap-3 overflow-x-auto">
-          <select
-            className="filter-pill"
-            value={filters.sport}
-            onChange={(e) => setFilters({ ...filters, sport: e.target.value })}
-          >
-            <option value="">All Sports</option>
-            {SPORTS.map((s) => (
-              <option key={s} value={s.toLowerCase()}>
-                {s}
-              </option>
-            ))}
-          </select>
-
-          <input
-            className="filter-pill"
-            placeholder="Location"
-            value={filters.city}
-            onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-          />
-
-          {/* <input
-            type="number"
-            className="filter-pill w-24"
-            placeholder="Min ₹"
-            value={filters.minPrice}
-            onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-          />
-
-          <input
-            type="number"
-            className="filter-pill w-24"
-            placeholder="Max ₹"
-            value={filters.maxPrice}
-            onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-          /> */}
-
-          <select
-            className="filter-pill"
-            value={filters.rating}
-            onChange={(e) => setFilters({ ...filters, rating: e.target.value })}
-          >
-            <option value="">Any Rating</option>
-            <option value="4">4★ & above</option>
-            <option value="3">3★ & above</option>
-          </select>
-
-          <button
-            onClick={fetchVenues}
-            className="ml-auto px-6 py-2 rounded-full bg-black text-white flex items-center gap-2"
-          >
-            <Search className="w-4 h-4" />
-            Search
-          </button>
-        </div>
-      </section>
-
-      {/* ================= RESULTS ================= */}
-      <section className="max-w-7xl mx-auto px-4 py-4">
-
-
-        {loading ? (
-          <div className="grid md:grid-cols-3 gap-10">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="h-80 rounded-2xl bg-slate-100 animate-pulse"
-              />
-            ))}
-          </div>
-        ) : venues.length === 0 ? (
-          <div className="text-center py-32 border border-dashed rounded-2xl">
-            <Search className="mx-auto w-10 h-10 text-slate-300 mb-4" />
-            <p className="text-slate-600 font-semibold">No venues found</p>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-3 gap-10">
-            {venues.map((venue) => (
-              <Link
-                key={venue._id}
-                href={`/sports/venues/${venue._id}`}
-                className="group block border border-black/10 rounded-2xl p-3 hover:border-black/20 transition"
-              >
-
-                <div className="relative h-72 rounded-2xl overflow-hidden">
-                  <Image
-                    src={
-                      venue.gallery?.images?.[0]?.url ||
-                      '/images/sports-venue.jpg'
-                    }
-                    alt={venue.venueName}
-                    fill
-                    className="object-cover group-hover:scale-105 transition"
-                  />
+                <div className="mt-10 flex flex-wrap gap-4">
+                    <Link href="/arena-partner/auth">
+                        <Button
+                            size="lg"
+                            variant="outline"
+                            className="rounded-full px-8 border-black/20 text-slate-900 hover:bg-black hover:text-white transition"
+                        >
+                            List Your Facility
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </Link>
                 </div>
 
-                <div className="mt-4 space-y-2">
-                  <h3 className="text-xl font-semibold">
-                    {venue.venueName}
-                  </h3>
+                <div className="mt-8 flex flex-wrap gap-6 text-sm text-slate-600">
+                    <span className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-black" /> Book by the hour
+                    </span>
+                    <span className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-black" /> Live availability
+                    </span>
+                </div>
+            </div>
 
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <MapPin className="w-4 h-4" />
-                    {venue.address?.city}, {venue.address?.state}
-                  </p>
+            {/* Right – Search Card */}
+            <div className="w-full">
+                <Card className="rounded-3xl border border-black/10 shadow-2xl bg-white/80 backdrop-blur">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-bold text-slate-900">
+                            Quick search
+                        </CardTitle>
+                    </CardHeader>
 
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex items-center gap-1 text-sm font-semibold">
-                      <Star className="w-4 h-4 text-black fill-black" />
-                      {venue.rating?.overall?.toFixed(1) || 'New'}
-                      {typeof venue.rating?.totalReviews === 'number' && venue.rating.totalReviews > 0 && (
-                        <span className="text-slate-500 font-medium">({venue.rating.totalReviews})</span>
-                      )}
+                    <CardContent className="space-y-5">
+                        <div className="flex gap-3">
+                            <Input
+                                placeholder="Search sport or facility"
+                                className="rounded-full"
+                            />
+                            <Button className="rounded-full bg-black text-white hover:bg-black/90">
+                                <Search className="h-4 w-4" />
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {[
+                                "Football",
+                                "Badminton",
+                                "Tennis",
+                                "Basketball",
+                                "Cricket",
+                                "Volleyball",
+                                "Table Tennis",
+                                "Swimming",
+                            ].map((label) => (
+                                <div
+                                    key={label}
+                                    className="rounded-full border border-black/10 bg-slate-50 px-3 py-2 text-sm text-slate-700 text-center hover:bg-slate-100 transition"
+                                >
+                                    {label}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-full border bg-slate-50 px-4 py-2 text-sm">
+                                <MapPin className="inline h-4 w-4 mr-2" />
+                                Dimapur
+                            </div>
+                            <div className="rounded-full border bg-slate-50 px-4 py-2 text-sm">
+                                <CalendarClock className="inline h-4 w-4 mr-2" />
+                                Today
+                            </div>
+                            <div className="rounded-full border bg-slate-50 px-4 py-2 text-sm">
+                                <CalendarClock className="inline h-4 w-4 mr-2" />
+                                Evening
+                            </div>
+                        </div>
+
+                        <Button
+                            asChild
+                            className="w-full rounded-full bg-black text-white hover:bg-black/90"
+                        >
+                            <Link href="/sports/list">Explore facilities</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
+/* Facilities */
+/* ----------------------------- */
+const Facilities = () => (
+    <Section id="facilities" muted>
+        <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+                What You Can Book
+            </h2>
+            <p className="mt-3 text-slate-600">
+                Flexible hourly bookings across multiple sports.
+            </p>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3">
+            {[
+                "Futsal & Football Grounds",
+                "Badminton Courts",
+                "Tennis Courts",
+                "Basketball Courts",
+                "Cricket Nets & Grounds",
+                "Volleyball Courts",
+                "Table Tennis",
+                "Swimming Pools",
+            ].map((item) => (
+                <Card
+                    key={item}
+                    className="rounded-2xl border border-black/10 hover:shadow-lg transition"
+                >
+                    <CardContent className="p-6 font-medium text-slate-800">
+                        {item}
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
+/* How It Works */
+/* ----------------------------- */
+const HowItWorks = () => (
+    <Section>
+        <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+                How It Works
+            </h2>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-4">
+            {[
+                "Search by sport & location",
+                "Check live availability",
+                "Book securely online",
+                "No calls. No confusion.",
+            ].map((step) => (
+                <Card
+                    key={step}
+                    className="rounded-2xl border border-black/10 hover:shadow-md transition"
+                >
+                    <CardContent className="p-6 text-center font-medium">
+                        {step}
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
+/* For Players */
+/* ----------------------------- */
+const ForPlayers = () => (
+    <Section muted>
+        <div className="text-center mb-10">
+            <h3 className="text-2xl md:text-4xl font-extrabold">
+                For Players & Teams
+            </h3>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+            {[
+                "Real-time bookings",
+                "Transparent pricing",
+                "Verified facilities",
+                "Secure payments",
+            ].map((t) => (
+                <Card key={t} className="rounded-2xl border hover:shadow-md transition">
+                    <CardContent className="p-5 font-medium text-center">
+                        {t}
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
+/* For Owners */
+/* ----------------------------- */
+const ForOwners = () => (
+    <Section>
+        <div className="text-center mb-10">
+            <h3 className="text-2xl md:text-4xl font-extrabold">
+                For Venue Owners & Organizers
+            </h3>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+            {[
+                "List your facility",
+                "Manage bookings",
+                "Accept online payments",
+                "Host tournaments & events",
+            ].map((t) => (
+                <Card key={t} className="rounded-2xl border hover:shadow-md transition">
+                    <CardContent className="p-5 font-medium text-center">
+                        {t}
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
+/* CTA */
+/* ----------------------------- */
+const CTA = () => (
+    <Section>
+        <div className="rounded-3xl bg-black p-10 md:p-14 text-white shadow-2xl">
+            <div className="grid md:grid-cols-2 gap-10 items-center">
+                <div>
+                    <h3 className="text-3xl md:text-5xl font-extrabold">
+                        Get Started with AHiBi
+                    </h3>
+                    <p className="mt-4 text-white/80 md:text-lg">
+                        Book facilities or grow your sports venue — all in one place.
+                    </p>
+
+                    <div className="mt-8 flex flex-wrap gap-4">
+                        <Link href="/sports/list">
+                            <Button size="lg" className="rounded-full bg-white text-black hover:bg-black hover:text-white hover:border"  >
+                                Explore Facilities
+                            </Button>
+                        </Link>
+                        <Link href="/arena-partner/auth">
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                className="rounded-full border-white text-black hover:bg-black hover:text-white"
+                            >
+                                List Your Facility
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl bg-white/10 p-6 backdrop-blur border border-white/20">
+                    <div className="flex items-center gap-2 text-sm mb-6">
+                        <Shield className="h-5 w-5" />
+                        Secure. Verified. Trusted.
                     </div>
 
-                    <span className="text-sm font-semibold flex items-center gap-1">
-                      View Details <ChevronRight className="w-4 h-4" />
-                    </span>
-                  </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                        {[
+                            "Real-time bookings",
+                            "Transparent pricing",
+                            "Verified facilities",
+                            "Secure payments",
+                        ].map((f) => (
+                            <div
+                                key={f}
+                                className="rounded-xl border border-white/20 bg-white/10 p-3"
+                            >
+                                <Check className="inline h-4 w-4 mr-2" />
+                                {f}
+                            </div>
+                        ))}
+                    </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+            </div>
+        </div>
+    </Section>
+);
 
-      <Footer />
-
-      {/* ================= STYLES ================= */}
-      <style jsx global>{`
-        body {
-          font-family: Inter, system-ui, sans-serif;
-        }
-
-        .filter-pill {
-          padding: 0.5rem 1rem;
-          border-radius: 9999px;
-          border: 1px solid #d1d5db;
-          font-size: 0.875rem;
-          background: white;
-          font-weight: 500;
-        }
-      `}</style>
-    </div>
-  );
+/* ----------------------------- */
+/* Page */
+/* ----------------------------- */
+export default function SportsPage() {
+    return (
+        <div className="min-h-screen bg-white text-slate-900">
+            <Navbar />
+            <Hero />
+            <Facilities />
+            <HowItWorks />
+            <ForPlayers />
+            <ForOwners />
+            <CTA />
+            <Footer />
+        </div>
+    );
 }

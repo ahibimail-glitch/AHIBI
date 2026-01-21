@@ -12,12 +12,10 @@ import Footer from "../Footer";
 import Navbar from "../Navbar";
 
 const features = [
-  { icon: Search, title: "Get Discovered", text: "Your venue becomes visible to families, planners, and organizers searching by location, capacity, and budget." },
-  { icon: CalendarClock, title: "Smart Booking System", text: "Real-time availability, instant confirmations, structured enquiries, and automated reminders — no more scattered WhatsApp messages." },
-  { icon: Wallet, title: "Flexible Pricing", text: "Set hourly rates, full-day packages, or custom options with transparent pricing. Free listing. No convenience fees." },
-  { icon: Shield, title: "Secure Bookings", text: "Verified payments, transparent cancellation policies, and booking protection in one trusted platform." },
-  { icon: Sparkles, title: "Showcase Your Space", text: "Upload high-quality photos, add 360° virtual tours, and highlight the best features of your venue." },
-  { icon: SlidersHorizontal, title: "Management Dashboard", text: "Track bookings, manage availability, view analytics, and respond to customers — all in one simple dashboard." },
+  { icon: Search, title: "Get Discovered", text: "Appear in searches by location, capacity, and budget." },
+  { icon: CalendarClock, title: "Online Bookings", text: "Real-time availability with instant confirmations." },
+  { icon: Wallet, title: "Flexible Pricing", text: "Hourly, full-day, or custom pricing — you decide." },
+  { icon: SlidersHorizontal, title: "Simple Dashboard", text: "Manage bookings, availability, and payments from one place." },
 ];
 
 const categories = [
@@ -100,11 +98,11 @@ const Hero = () => (
     <div className="grid items-center gap-10 md:grid-cols-2">
       <div>
         <h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
-          AHIBI Venue
+          AHIBI Venues
           <span className="block text-gray-600 text-3xl md:text-4xl mt-2">Get discovered. Get booked.</span>
         </h1>
         <p className="mt-6 text-gray-600 md:text-xl leading-relaxed">
-          Showcase your venue with photos, facilities and real-time availability. Families, organizers, and event planners can now find, compare and book your venue in minutes.
+          Built for venue owners to manage listings and bookings online.
         </p>
         <div className="mt-8 flex flex-nowrap gap-3 md:gap-6">
           <Link href="/venue/auth/signup" className="flex-1">
@@ -139,7 +137,7 @@ const Hero = () => (
         <div className="mt-8 flex items-center gap-6 text-sm text-gray-600">
           <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Instant bookings</div>
           <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Secure payments</div>
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Real-time calendar</div>
+          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Live availability</div>
         </div>
       </div>
 
@@ -175,11 +173,19 @@ const Hero = () => (
   </Section>
 );
 
+const OrganizerNote = () => (
+  <Section>
+    <div className="text-center">
+      <p className="text-gray-700 md:text-lg">Venues can also host events, workshops, and ticketed experiences through AHiBi Organizer.</p>
+    </div>
+  </Section>
+);
+
 const FeatureGrid = () => (
   <Section id="features">
     <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Built for venues, designed for every event.</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Whether it’s a birthday, wedding, workshop, concert, or corporate event—AHIBI makes booking and managing venues effortless.</p>
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Why venues choose AHiBi</h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Built for venue owners. Simple for organizers. AHIBI helps venue owners list, manage, and book their spaces online — while making it easy for organizers to find the right venue.</p>
     </div>
     <div className="grid gap-6 md:grid-cols-3">
       {features.map((f) => (
@@ -242,15 +248,15 @@ const HowItWorks = () => (
       {[{
         step: 1,
         title: "List your venue",
-        text: "Add photos, facilities, capacity, pricing, and set your availability calendar.",
+        text: "Add photos, details, pricing, and availability.",
       }, {
         step: 2,
         title: "Get bookings",
-        text: "Organizers filter by location, capacity, facilities, and book your venue with secure payments.",
+        text: "Organizers discover and book your venue online.",
       }, {
         step: 3,
         title: "Host & earn",
-        text: "AHIBI handles payments, reviews, and bookings so you focus on providing great experiences.",
+        text: "We handle bookings and payments. You focus on hosting.",
       }].map((s) => (
         <Card key={s.step} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
           <CardHeader>
@@ -318,13 +324,15 @@ const CTA = () => (
     <div className="rounded-3xl bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 p-8 md:p-12 shadow-2xl">
       <div className="grid items-center gap-8 md:grid-cols-2">
         <div>
-          <h3 className="text-3xl font-bold md:text-5xl text-white">Ready to maximize your venue bookings?</h3>
-          <p className="mt-4 text-purple-100 md:text-xl">Join AHIBI Venue and let your space shine. Professional listings. Instant bookings. Better revenue.</p>
+          <h3 className="text-3xl font-bold md:text-5xl text-white">Ready to list your venue?</h3>
+          <p className="mt-4 text-purple-100 md:text-xl">Start accepting bookings online with AHiBi.</p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link href="/venue/auth/signup">
               <Button size="lg" className="rounded-2xl px-8 bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">List your venue free</Button>
             </Link>
-            <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-purple-600 hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Contact support</Button>
+            <Link href="/venue/auth/login">
+              <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-purple-600 hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Venue Login</Button>
+            </Link>
           </div>
         </div>
         <div className="rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm p-6">
@@ -354,6 +362,7 @@ export default function AhibiVenuePage() {
         {/* <SearchSection /> */}
         <FeatureGrid />
         <HowItWorks />
+        <OrganizerNote />
         <Plans />
         <FAQ />
         <CTA />
