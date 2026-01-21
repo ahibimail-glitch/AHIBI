@@ -356,6 +356,78 @@ function CreateCourtPageContent() {
             </div>
           </div>
 
+          {/* Specifications */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Specifications</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="maintenance">Under Maintenance</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Dimensions</label>
+                <div className="grid grid-cols-3 gap-4">
+                  <input
+                    type="number"
+                    value={formData.specifications.dimensions.length}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        specifications: {
+                          ...formData.specifications,
+                          dimensions: { ...formData.specifications.dimensions, length: e.target.value },
+                        },
+                      })
+                    }
+                    placeholder="Length"
+                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  />
+                  <input
+                    type="number"
+                    value={formData.specifications.dimensions.width}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        specifications: {
+                          ...formData.specifications,
+                          dimensions: { ...formData.specifications.dimensions, width: e.target.value },
+                        },
+                      })
+                    }
+                    placeholder="Width"
+                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  />
+                  <select
+                    value={formData.specifications.dimensions.unit}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        specifications: {
+                          ...formData.specifications,
+                          dimensions: { ...formData.specifications.dimensions, unit: e.target.value },
+                        },
+                      })
+                    }
+                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  >
+                    <option value="meters">Meters</option>
+                    <option value="feet">Feet</option>
+                    <option value="yards">Yards</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Capacity */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-4">Capacity</h2>
@@ -433,6 +505,49 @@ function CreateCourtPageContent() {
                       placeholder="e.g., 500"
                       required
                     />
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="time"
+                        value={formData.pricing.weekday.offPeak.timeRange.start}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekday: {
+                                ...formData.pricing.weekday,
+                                offPeak: {
+                                  ...formData.pricing.weekday.offPeak,
+                                  timeRange: { ...formData.pricing.weekday.offPeak.timeRange, start: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                      <span className="self-center text-sm text-gray-500">to</span>
+                      <input
+                        type="time"
+                        value={formData.pricing.weekday.offPeak.timeRange.end}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekday: {
+                                ...formData.pricing.weekday,
+                                offPeak: {
+                                  ...formData.pricing.weekday.offPeak,
+                                  timeRange: { ...formData.pricing.weekday.offPeak.timeRange, end: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -461,6 +576,49 @@ function CreateCourtPageContent() {
                       placeholder="e.g., 800"
                       required
                     />
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="time"
+                        value={formData.pricing.weekday.peak.timeRange.start}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekday: {
+                                ...formData.pricing.weekday,
+                                peak: {
+                                  ...formData.pricing.weekday.peak,
+                                  timeRange: { ...formData.pricing.weekday.peak.timeRange, start: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                      <span className="self-center text-sm text-gray-500">to</span>
+                      <input
+                        type="time"
+                        value={formData.pricing.weekday.peak.timeRange.end}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekday: {
+                                ...formData.pricing.weekday,
+                                peak: {
+                                  ...formData.pricing.weekday.peak,
+                                  timeRange: { ...formData.pricing.weekday.peak.timeRange, end: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -494,6 +652,49 @@ function CreateCourtPageContent() {
                       placeholder="e.g., 700"
                       required
                     />
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="time"
+                        value={formData.pricing.weekend.offPeak.timeRange.start}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekend: {
+                                ...formData.pricing.weekend,
+                                offPeak: {
+                                  ...formData.pricing.weekend.offPeak,
+                                  timeRange: { ...formData.pricing.weekend.offPeak.timeRange, start: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                      <span className="self-center text-sm text-gray-500">to</span>
+                      <input
+                        type="time"
+                        value={formData.pricing.weekend.offPeak.timeRange.end}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekend: {
+                                ...formData.pricing.weekend,
+                                offPeak: {
+                                  ...formData.pricing.weekend.offPeak,
+                                  timeRange: { ...formData.pricing.weekend.offPeak.timeRange, end: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -522,6 +723,49 @@ function CreateCourtPageContent() {
                       placeholder="e.g., 1000"
                       required
                     />
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="time"
+                        value={formData.pricing.weekend.peak.timeRange.start}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekend: {
+                                ...formData.pricing.weekend,
+                                peak: {
+                                  ...formData.pricing.weekend.peak,
+                                  timeRange: { ...formData.pricing.weekend.peak.timeRange, start: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                      <span className="self-center text-sm text-gray-500">to</span>
+                      <input
+                        type="time"
+                        value={formData.pricing.weekend.peak.timeRange.end}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            pricing: {
+                              ...formData.pricing,
+                              weekend: {
+                                ...formData.pricing.weekend,
+                                peak: {
+                                  ...formData.pricing.weekend.peak,
+                                  timeRange: { ...formData.pricing.weekend.peak.timeRange, end: e.target.value },
+                                },
+                              },
+                            },
+                          })
+                        }
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

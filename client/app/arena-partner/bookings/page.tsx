@@ -3,17 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  Filter, 
-  Search, 
-  Download, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Filter,
+  Search,
+  Download,
+  Eye,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   IndianRupee,
   ChevronRight,
@@ -89,6 +89,7 @@ export default function ArenaPartnerBookings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [venueFilter, setVenueFilter] = useState('all');
+  const [courtFilter, setCourtFilter] = useState('all');
   const [venues, setVenues] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -113,7 +114,7 @@ export default function ArenaPartnerBookings() {
     try {
       setLoading(true);
       const token = localStorage.getItem('arenaPartnerToken');
-      
+
       const response = await fetch(getApiUrl('/arena-partner/bookings'), {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -122,7 +123,7 @@ export default function ArenaPartnerBookings() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setBookings(data.data.bookings || []);
         calculateStats(data.data.bookings || []);
@@ -139,7 +140,7 @@ export default function ArenaPartnerBookings() {
   const fetchVenues = async () => {
     try {
       const token = localStorage.getItem('arenaPartnerToken');
-      
+
       const response = await fetch(getApiUrl('/arena-partner/venues'), {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -148,7 +149,7 @@ export default function ArenaPartnerBookings() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         setVenues(data.data.venues || []);
       }
@@ -160,7 +161,7 @@ export default function ArenaPartnerBookings() {
   const calculateStats = (bookingsList: ArenaPartnerBooking[]) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const todayBookings = bookingsList.filter(booking => {
       const bookingDate = new Date(booking.bookingDate);
       return bookingDate.toDateString() === today.toDateString();
@@ -182,7 +183,7 @@ export default function ArenaPartnerBookings() {
   const handleCheckIn = async (bookingId: string) => {
     try {
       const token = localStorage.getItem('arenaPartnerToken');
-      
+
       const response = await fetch(getApiUrl(`/arena-partner/bookings/${bookingId}/check-in`), {
         method: 'POST',
         headers: {
@@ -192,7 +193,7 @@ export default function ArenaPartnerBookings() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         fetchBookings(); // Refresh the list
       } else {
@@ -206,7 +207,7 @@ export default function ArenaPartnerBookings() {
   const handleComplete = async (bookingId: string) => {
     try {
       const token = localStorage.getItem('arenaPartnerToken');
-      
+
       const response = await fetch(getApiUrl(`/arena-partner/bookings/${bookingId}/complete`), {
         method: 'POST',
         headers: {
@@ -216,7 +217,7 @@ export default function ArenaPartnerBookings() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         fetchBookings(); // Refresh the list
       } else {
@@ -299,8 +300,17 @@ export default function ArenaPartnerBookings() {
     return 'bg-yellow-100 text-yellow-800 border-yellow-200';
   };
 
+  // Build unique courts list for filter options (respecting selected venue if any)
+  const uniqueCourts = Array.from(
+    new Map(
+      bookings
+        .filter(b => venueFilter === 'all' || b.venue._id === venueFilter)
+        .map(b => [b.court._id, { id: b.court._id, name: `${b.court.courtName} (${b.court.sportType.toUpperCase()})` }])
+    ).values()
+  );
+
   const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = 
+    const matchesSearch =
       booking.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.user?.phone?.includes(searchTerm) ||
@@ -311,8 +321,9 @@ export default function ArenaPartnerBookings() {
 
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     const matchesVenue = venueFilter === 'all' || booking.venue._id === venueFilter;
+    const matchesCourt = courtFilter === 'all' || booking.court._id === courtFilter;
 
-    return matchesSearch && matchesStatus && matchesVenue;
+    return matchesSearch && matchesStatus && matchesVenue && matchesCourt;
   });
 
   if (loading) {
@@ -335,7 +346,7 @@ export default function ArenaPartnerBookings() {
               </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">Bookings Management</h1>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Bookings Management</h1>
             </div>
           </div>
         </div>
@@ -416,7 +427,7 @@ export default function ArenaPartnerBookings() {
         </div>
 
         {/* Filters */}
-        <Card className="bg-white border-0 shadow-sm mb-6">
+        <Card className="bg-white border-0 shadow-sm mb-6 sticky top-[60px] z-30">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
@@ -430,7 +441,7 @@ export default function ArenaPartnerBookings() {
                   />
                 </div>
               </div>
-              
+
               <div className="w-full lg:w-48">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
@@ -463,6 +474,22 @@ export default function ArenaPartnerBookings() {
                 </Select>
               </div>
 
+              <div className="w-full lg:w-56">
+                <Select value={courtFilter} onValueChange={setCourtFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by court" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courts</SelectItem>
+                    {uniqueCourts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button onClick={fetchBookings} variant="outline" className="w-full lg:w-auto">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
@@ -479,8 +506,8 @@ export default function ArenaPartnerBookings() {
                 <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
                 <p className="text-gray-500">
-                  {searchTerm || statusFilter !== 'all' || venueFilter !== 'all' 
-                    ? 'Try adjusting your filters' 
+                  {searchTerm || statusFilter !== 'all' || venueFilter !== 'all'
+                    ? 'Try adjusting your filters'
                     : 'You haven\'t received any bookings yet'}
                 </p>
               </div>
@@ -489,7 +516,7 @@ export default function ArenaPartnerBookings() {
                 {filteredBookings.map((booking) => (
                   <div
                     key={booking._id}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                    className="border border-gray-200 rounded-xl p-6 bg-white hover:shadow-md transition-shadow"
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                       {/* Left Section - Booking Details */}
@@ -553,18 +580,18 @@ export default function ArenaPartnerBookings() {
                                   </div>
                                 </div>
                               ) : booking.contactDetails ? (
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
-                                  <div className="flex items-center">
-                                    <User className="h-4 w-4 mr-1" />
-                                    {booking.contactDetails.name}
+                                <div className="flex flex-col gap-1 text-sm text-gray-600">
+                                  <div className="text-violet-500 font-bold uppercase text-base">MANUAL BOOKING</div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex items-center">
+                                      <User className="h-4 w-4 mr-1" />
+                                      {booking.contactDetails.name}
+                                    </div>
+                                    <div className="flex items-center">
+                                      <Phone className="h-4 w-4 mr-1" />
+                                      {booking.contactDetails.phone}
+                                    </div>
                                   </div>
-                                  <div className="flex items-center">
-                                    <Phone className="h-4 w-4 mr-1" />
-                                    {booking.contactDetails.phone}
-                                  </div>
-                                  <Badge variant="secondary" className="text-xs">
-                                    Walk-in
-                                  </Badge>
                                 </div>
                               ) : null}
                             </div>
@@ -584,15 +611,11 @@ export default function ArenaPartnerBookings() {
                       </div>
 
                       {/* Right Section - Price and Actions */}
-                      <div className="lg:text-right">
+                      <div className="lg:text-right min-w-[220px]">
                         <div className="mb-4">
-                          <p className="text-sm text-gray-600">Your Earnings</p>
-                          <p className="text-2xl font-bold text-gray-900">
-                            ₹{booking.pricing.arenaEarnings.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Total: ₹{booking.pricing.totalAmount.toLocaleString()}
-                          </p>
+                          <p className="text-lg font-semibold text-gray-900">Total: ₹{booking.pricing.totalAmount.toLocaleString()}</p>
+
+
                           {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && (
                             <p className="text-xs text-gray-500">
                               Paid earlier: ({booking.payment.advancePaymentPercent || 0}%): ₹{booking.payment.amountPaid.toLocaleString()}
@@ -615,7 +638,7 @@ export default function ArenaPartnerBookings() {
                               Check In
                             </Button>
                           )}
-                          
+
                           {booking.status === 'checked_in' && (
                             <Button
                               size="sm"

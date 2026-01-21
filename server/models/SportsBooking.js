@@ -5,7 +5,6 @@ const SportsBookingSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User is required']
   },
   
   // Venue & Court References
@@ -36,8 +35,7 @@ const SportsBookingSchema = new mongoose.Schema({
   // Time Slots
   slots: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'TimeSlot',
-    required: true
+    ref: 'TimeSlot'
   }],
   
   // Consolidated Time Range

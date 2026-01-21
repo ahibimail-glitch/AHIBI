@@ -673,6 +673,37 @@ exports.createWalkInBooking = async (req, res) => {
       confirmedAt: Date.now()
     });
 
+    // Ensure timeslots reflect the booking so it shows in public availability
+    try {
+      // Generate any missing slots for that date
+      await TimeSlot.generateSlotsForDate(courtId, bookingDate);
+
+      // Find slots that fall within the booked time range
+      const dateOnly = new Date(bookingDate);
+      const bookedSlots = await TimeSlot.find({
+        court: courtId,
+        date: dateOnly,
+        startTime: { $gte: startTime },
+        endTime: { $lte: endTime },
+      });
+
+      // If no discrete slots match, still proceed; otherwise mark them as booked
+      if (bookedSlots.length > 0) {
+        const slotIds = bookedSlots.map(s => s._id);
+        await TimeSlot.updateMany(
+          { _id: { $in: slotIds } },
+          { $set: { status: 'booked', booking: booking._id } }
+        );
+
+        // attach slot ids to booking for linkage
+        booking.slots = slotIds;
+        await booking.save();
+      }
+    } catch (slotErr) {
+      console.error('Walk-in booking: failed to update timeslots', slotErr);
+      // Non-fatal: booking created, but slots not updated
+    }
+
     return ApiResponse.success(res, 'Walk-in booking created successfully', { booking });
 
   } catch (error) {

@@ -69,6 +69,20 @@ export default function CourtCalendarPage() {
   const [error, setError] = useState<string>("");
   const [weekSlots, setWeekSlots] = useState<Record<string, SlotItem[]>>({});
   const [court, setCourt] = useState<CourtDetails | null>(null);
+  // Multi-slot selection (contiguous within a day)
+  const [selectedForBooking, setSelectedForBooking] = useState<{
+    date: string;
+    slots: SlotItem[];
+  } | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    numberOfPlayers: 2,
+    paymentMethod: "cash" as "cash" | "upi" | "wallet" | "online",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const weekDays = useMemo(() => {
     // Build a 7-day range starting at anchorDate (Mon-Sun or Today + next 6 days)
@@ -158,6 +172,62 @@ export default function CourtCalendarPage() {
     return slots.filter((s) => s.startTime >= (open as string) && s.endTime <= (close as string));
   };
 
+  const computeRange = (slots: SlotItem[]) => {
+    if (!slots || slots.length === 0) return { start: "", end: "" };
+    const sorted = [...slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return { start: sorted[0].startTime, end: sorted[sorted.length - 1].endTime };
+  };
+
+  const areContiguous = (slots: SlotItem[]) => {
+    if (slots.length <= 1) return true;
+    const sorted = [...slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i].endTime !== sorted[i + 1].startTime) return false;
+    }
+    return true;
+  };
+
+  const submitWalkIn = async () => {
+    if (!selectedForBooking || !court) return;
+    setSubmitting(true);
+    setSubmitMsg(null);
+    try {
+      const token = localStorage.getItem("arenaPartnerToken");
+      const { start, end } = computeRange(selectedForBooking.slots);
+      const res = await fetch("/api/arena-partner/bookings/walk-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({
+          venueId: court.venue?._id,
+          courtId: courtId,
+          bookingDate: selectedForBooking.date,
+          startTime: start,
+          endTime: end,
+          numberOfPlayers: Number(form.numberOfPlayers) || 1,
+          contactDetails: {
+            name: form.name,
+            phone: form.phone,
+            email: form.email || undefined,
+          },
+          paymentMethod: form.paymentMethod,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to create booking");
+      setSubmitMsg({ type: "success", text: "Booking created successfully" });
+      setSelectedForBooking(null);
+      setForm({ name: "", phone: "", email: "", numberOfPlayers: 2, paymentMethod: "cash" });
+      await fetchWeek();
+    } catch (e: any) {
+      setSubmitMsg({ type: "error", text: e?.message || "Error creating booking" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -212,6 +282,101 @@ export default function CourtCalendarPage() {
           <div className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3">{error}</div>
         )}
 
+        {/* Manual booking form (inline) */}
+        {selectedForBooking && (
+          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-sm text-gray-500">Create walk-in booking</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {new Date(selectedForBooking.date).toLocaleDateString()} · {computeRange(selectedForBooking.slots).start} - {computeRange(selectedForBooking.slots).end}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedForBooking(null)}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+            {!areContiguous(selectedForBooking.slots) && (
+              <div className="mt-3 text-sm text-red-700">Please select contiguous slots only.</div>
+            )}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Name</label>
+                <input
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Customer name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Phone</label>
+                <input
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="Contact number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Email (optional)</label>
+                <input
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="Email address"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Number of players</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={form.numberOfPlayers}
+                  onChange={(e) => setForm((f) => ({ ...f, numberOfPlayers: Number(e.target.value) }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Payment method</label>
+                <select
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                  value={form.paymentMethod}
+                  onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value as any }))}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI</option>
+                  <option value="wallet">Wallet</option>
+                  <option value="online">Online</option>
+                </select>
+              </div>
+            </div>
+            {submitMsg && (
+              <div className={`mt-4 text-sm ${submitMsg.type === "success" ? "text-green-700" : "text-red-700"}`}>
+                {submitMsg.text}
+              </div>
+            )}
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={submitWalkIn}
+                disabled={submitting || !form.name || !form.phone || !areContiguous(selectedForBooking.slots)}
+                className="px-4 py-2 rounded-lg bg-orange-600 text-white disabled:opacity-50"
+              >
+                {submitting ? "Creating..." : "Create booking"}
+              </button>
+              <button
+                onClick={() => setSelectedForBooking(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Week columns */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {weekDays.map((day) => {
@@ -242,29 +407,69 @@ export default function CourtCalendarPage() {
                   ) : filtered.length === 0 ? (
                     <div className="text-sm text-gray-500">No slots</div>
                   ) : (
-                    filtered.map((slot) => (
-                      <div
-                        key={slot._id}
-                        className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${
-                          slot.status === "available"
-                            ? "bg-green-50 border-green-100"
-                            : slot.status === "booked"
-                            ? "bg-red-50 border-red-100"
-                            : slot.status === "held"
-                            ? "bg-yellow-50 border-yellow-100"
-                            : "bg-gray-50 border-gray-100"
-                        }`}
-                        title={`${slot.startTime} - ${slot.endTime}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-gray-800">
-                            {slot.startTime} - {slot.endTime}
-                          </span>
-                          <span className="text-gray-500">₹{slot.price}</span>
+                    filtered.map((slot) => {
+                      const isSelected =
+                        selectedForBooking?.date === key &&
+                        selectedForBooking?.slots?.some((s) => s._id === slot._id);
+                      const canSelect = slot.status === "available";
+                      return (
+                        <div
+                          key={slot._id}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm cursor-pointer ${
+                            slot.status === "available"
+                              ? "bg-green-50 border-green-100"
+                              : slot.status === "booked"
+                              ? "bg-red-50 border-red-100"
+                              : slot.status === "held"
+                              ? "bg-yellow-50 border-yellow-100"
+                              : "bg-gray-50 border-gray-100"
+                          } ${isSelected ? "ring-2 ring-orange-500" : ""}`}
+                          title={`${slot.startTime} - ${slot.endTime}`}
+                          onClick={() => {
+                            if (!canSelect) return;
+                            setSubmitMsg(null);
+                            setSelectedForBooking((prev) => {
+                              if (!prev || prev.date !== key) {
+                                return { date: key, slots: [slot] };
+                              }
+                              const exists = prev.slots.find((s) => s._id === slot._id);
+                              let nextSlots = exists
+                                ? prev.slots.filter((s) => s._id !== slot._id)
+                                : [...prev.slots, slot];
+                              // Validate contiguous; if not contiguous, do not add and show message
+                              if (!exists) {
+                                const sorted = [...nextSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+                                let ok = true;
+                                for (let i = 0; i < sorted.length - 1; i++) {
+                                  if (sorted[i].endTime !== sorted[i + 1].startTime) { ok = false; break; }
+                                }
+                                if (!ok) {
+                                  setSubmitMsg({ type: "error", text: "Please select contiguous slots" });
+                                  // revert adding
+                                  nextSlots = prev.slots;
+                                }
+                              }
+                              return { date: key, slots: nextSlots };
+                            });
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-gray-800">
+                              {slot.startTime} - {slot.endTime}
+                            </span>
+                            <span className="text-gray-500">₹{slot.price}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {statusBadge(slot.status)}
+                            {slot.status === "available" && (
+                              <span className="ml-2 px-2 py-1 rounded-md bg-orange-100 text-orange-800 text-xs">
+                                {isSelected ? "Selected" : "Tap to select"}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div>{statusBadge(slot.status)}</div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
