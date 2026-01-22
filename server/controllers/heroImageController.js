@@ -98,13 +98,21 @@ exports.uploadImage = async (req, res) => {
 // Get all hero images
 exports.getAllImages = async (req, res) => {
   try {
-    // Get query parameters for sorting
-    const { active } = req.query;
+    // Get query parameters for sorting and filtering
+    const { active, type } = req.query;
     
     // Build filter object
     const filter = {};
     if (active !== undefined) {
       filter.active = active === 'true';
+    }
+    
+    // Add type filtering - check if title or description contains the type
+    if (type) {
+      filter.$or = [
+        { title: { $regex: type, $options: 'i' } },
+        { description: { $regex: type, $options: 'i' } }
+      ];
     }
 
     // Get all hero images sorted by order

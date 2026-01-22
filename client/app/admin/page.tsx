@@ -46,6 +46,7 @@ import Analytics from "./components/Analytics";
 import SettingsComponent from "./components/Settings";
 import ApprovedEvents from "./components/ApprovedEvents";
 import HeroImages from "./components/HeroImages";
+import EventsHeroImages from "./components/EventsHeroImages";
 import FC25Players from "./components/FC25Players";
 import FailedPayments from "./components/FailedPayments";
 import AnnieMusicalBookings from "./components/AnnieMusicalBookings";
@@ -163,6 +164,8 @@ export default function AdminDashboard() {
         return <System />;
       case "hero-images":
         return <HeroImages />;
+      case "events-hero-images":
+        return <EventsHeroImages />;
       case "qr-scanner":
         router.push("/admin/scan");
         return null;
@@ -342,6 +345,7 @@ export default function AdminDashboard() {
           {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => { setActiveView("aiko-hall"); setSidebarOpen(false); }} /> */}
           <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => { setActiveView("create-event"); setSidebarOpen(false); }} />
           <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => { setActiveView("hero-images"); setSidebarOpen(false); }} />
+          <SidebarButton icon={ImageIcon} label="Events Hero Images" active={activeView === "events-hero-images"} onClick={() => { setActiveView("events-hero-images"); setSidebarOpen(false); }} />
           <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => { setActiveView("analytics"); setSidebarOpen(false); }} />
           <SidebarButton icon={Settings} label="Settings" active={activeView === "settings"} onClick={() => { setActiveView("settings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Shield} label="System Health" active={activeView === "system"} onClick={() => { setActiveView("system"); setSidebarOpen(false); }} />

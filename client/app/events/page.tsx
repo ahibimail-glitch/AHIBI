@@ -244,20 +244,57 @@ export default function EventsPage() {
 
   // Hero background images slideshow
   useEffect(() => {
-    const heroImages = [
-      { url: "/images/carausel1.jpg" },
-      { url: "/images/carausel2.jpg" },
-      { url: "/images/carausel3.jpg" }
-    ];
-    setBackgroundImages(heroImages);
-    setLoadingHeroImages(false);
+    const fetchHeroImages = async () => {
+      try {
+        setLoadingHeroImages(true);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images?active=true`);
+        if (response.ok) {
+          const data = await response.json();
+          // Filter for events-related images or use all active images if no events-specific images exist
+          const eventsImages = data.data.filter((img: any) => 
+            img.title?.toLowerCase().includes('events') || 
+            img.description?.toLowerCase().includes('events') ||
+            img.type === 'events'
+          );
+          
+          // If no events-specific images, use all active images
+          const heroImages = eventsImages.length > 0 ? eventsImages : data.data;
+          setBackgroundImages(heroImages);
+        } else {
+          // Fallback to hardcoded images if API fails
+          const fallbackImages = [
+            { url: "/images/carausel1.jpg" },
+            { url: "/images/carausel2.jpg" },
+            { url: "/images/carausel3.jpg" }
+          ];
+          setBackgroundImages(fallbackImages);
+        }
+      } catch (error) {
+        console.error('Error fetching hero images:', error);
+        // Fallback to hardcoded images
+        const fallbackImages = [
+          { url: "/images/carausel1.jpg" },
+          { url: "/images/carausel2.jpg" },
+          { url: "/images/carausel3.jpg" }
+        ];
+        setBackgroundImages(fallbackImages);
+      } finally {
+        setLoadingHeroImages(false);
+      }
+    };
 
-    const interval = setInterval(() => {
-      setCurrentBgSlide((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
+    fetchHeroImages();
   }, []);
+
+  useEffect(() => {
+    if (backgroundImages.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length);
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [backgroundImages]);
 
   const resetFilters = () => {
     setSearchQuery("");
