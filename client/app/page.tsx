@@ -1,22 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useEffect, useMemo, useState, useRef, type ReactNode, type TouchEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import {
-  Users,
-  Calendar,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  Clock,
-  Loader2,
-  Star,
-  TrendingUp,
-  Play,
-} from "lucide-react"
+import { ArrowRight, Calendar, ChevronRight, Clock, Loader2, MapPin, Star, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import Navbar from "./Navbar"
@@ -24,104 +11,225 @@ import Footer from "./Footer"
 import type { EventsResponse, Event } from "@/types/event"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 
+type PublicArtist = {
+  _id: string
+  name?: string
+  city?: string
+  gallery?: { photos?: Array<{ url?: string; isProfileImage?: boolean }> }
+  profilePic?: string
+}
+
+type PublicVenue = {
+  _id: string
+  name?: string
+  address?: { city?: string; state?: string }
+  documents?: { venueImages?: Array<{ url?: string; isMain?: boolean }> }
+  gallery?: Array<{ url?: string }>
+}
+
+const FALLBACK_IMAGES = {
+  event: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80",
+  artist: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
+  venue: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80",
+  sports: "https://images.unsplash.com/photo-1461896836934-fb8d8f0b8c58?w=800&q=80",
+  organizer: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&q=80",
+  default: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
+}
+
+const VENUE_FALLBACKS = [
+  "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+  "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=800&q=80",
+  "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=800&q=80",
+  "https://images.unsplash.com/photo-1496307653780-42ee777d4833?w=800&q=80",
+  "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&q=80",
+  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&q=80",
+]
+
+const resolveImageUrl = (url?: string, fallbackType: keyof typeof FALLBACK_IMAGES = "default") => {
+  if (!url) return FALLBACK_IMAGES[fallbackType]
+  if (url.startsWith("http://") || url.startsWith("https://")) return url
+  const base = process.env.NEXT_PUBLIC_API_URL || ""
+  if (!base) return url
+  if (url.startsWith("/")) return `${base}${url}`
+  return `${base}/${url}`
+}
+
+const getArtistImage = (artist: PublicArtist) => {
+  const profilePhoto = artist.gallery?.photos?.find((p) => p?.isProfileImage)?.url
+  const anyPhoto = artist.gallery?.photos?.[0]?.url
+  return resolveImageUrl(profilePhoto || anyPhoto || artist.profilePic, "artist")
+}
+
+const getVenueImage = (venue: PublicVenue, idx?: number) => {
+  const main = venue.documents?.venueImages?.find((i) => i?.isMain)?.url
+  const anyDoc = venue.documents?.venueImages?.[0]?.url
+  const anyGallery = venue.gallery?.[0]?.url
+  const chosen = main || anyDoc || anyGallery
+  if (chosen) return resolveImageUrl(chosen, "venue")
+  if (typeof idx === "number" && VENUE_FALLBACKS.length > 0) return VENUE_FALLBACKS[idx % VENUE_FALLBACKS.length]
+  return FALLBACK_IMAGES.venue
+}
+
+const getEventImage = (event?: Event) => resolveImageUrl(event?.banner, "event")
+
+const Section = ({
+  title,
+  subtitle,
+  children,
+  href,
+}: {
+  title: string
+  subtitle?: string
+  children: ReactNode
+  href?: string
+}) => (
+  <section className="mt-8">
+    <div className="flex items-center justify-between px-4 mb-3">
+      <div>
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+      </div>
+      {href && (
+        <Link href={href} className="flex items-center text-sm text-red-500 font-medium">
+          See all <ChevronRight className="h-4 w-4 ml-1" />
+        </Link>
+      )}
+    </div>
+    <div className="flex gap-4 overflow-x-auto px-4 pb-2 scrollbar-hide">{children}</div>
+  </section>
+)
+
 export default function HomePage() {
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [events, setEvents] = useState<Event[]>([])
   const [featuredEvents, setFeaturedEvents] = useState<Event[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [venues, setVenues] = useState<PublicVenue[]>([])
+  const [artists, setArtists] = useState<PublicArtist[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [currentSlide, setCurrentSlide] = useState(0)
   const [slidesPerView, setSlidesPerView] = useState(1)
-  const [maxSlide, setMaxSlide] = useState(0)
-  const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const touchStartXRef = useRef<number | null>(null)
+  const touchDeltaXRef = useRef(0)
 
-  // Background carousel state
-  const [currentBgSlide, setCurrentBgSlide] = useState(0)
-  const [isBgAutoPlaying, setIsBgAutoPlaying] = useState(true)
-  const [backgroundImages, setBackgroundImages] = useState<{ url: string; mobileUrl?: string }[]>([])
-  const [loadingHeroImages, setLoadingHeroImages] = useState(true)
-
-  // Stats
-  const stats = [
-    { value: 60, suffix: "+", label: "Events Hosted", icon: Calendar },
-    { value: 200000, suffix: "+", label: "Tickets Sold", icon: Users },
-    { value: 80000, suffix: "+", label: "Happy Users", icon: Star },
-  ]
-
+  const stats = useMemo(
+    () => [
+      { value: 60, suffix: "+", label: "Events Hosted", icon: Calendar },
+      { value: 200000, suffix: "+", label: "Tickets Sold", icon: Users },
+      { value: 80000, suffix: "+", label: "Happy Users", icon: Star },
+    ],
+    []
+  )
   const statsRef = useRef<HTMLDivElement | null>(null)
   const [statsInView, setStatsInView] = useState(false)
-  const [animatedStats, setAnimatedStats] = useState<number[]>(
-    stats.map(() => 0)
-  )
+  const [animatedStats, setAnimatedStats] = useState<number[]>(() => stats.map(() => 0))
 
   useEffect(() => {
     const el = statsRef.current
     if (!el) return
+    if (statsInView) return
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
+      (entries) => {
+        const entry = entries[0]
+        if (entry?.isIntersecting) {
           setStatsInView(true)
-          observer.disconnect()
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.35 }
     )
 
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [statsInView])
 
   useEffect(() => {
     if (!statsInView) return
 
-    const duration = 1500
+    const targets = stats.map((s) => s.value)
+    const durationMs = 1200
     const start = performance.now()
 
-    const animate = (now: number) => {
-      const progress = Math.min((now - start) / duration, 1)
-
-      setAnimatedStats(
-        stats.map((stat) => Math.floor(stat.value * progress))
-      )
-
-      if (progress < 1) requestAnimationFrame(animate)
+    let raf = 0
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setAnimatedStats(targets.map((v) => Math.round(v * eased)))
+      if (t < 1) raf = requestAnimationFrame(tick)
     }
 
-    requestAnimationFrame(animate)
-  }, [statsInView])
-  // ==================================================================
-  // Fetch hero images from backend
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [statsInView, stats])
+
+  const [currentBgSlide, setCurrentBgSlide] = useState(0)
+  const [backgroundImages, setBackgroundImages] = useState<Array<{ url: string; mobileUrl?: string }>>([])
+  const [loadingHeroImages, setLoadingHeroImages] = useState(true)
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      setLoading(true)
+      try {
+        const [eventsRes, venuesRes, artistsRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=30`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/venue`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/artist/public?limit=12`),
+        ])
+
+        if (eventsRes.ok) {
+          const data: EventsResponse = await eventsRes.json()
+          const currentDate = new Date()
+          const normalized = (data.data?.events || []).filter((event) => {
+            const eventEndDate = new Date(event.endDate || event.startDate)
+            const isUpcoming = eventEndDate >= currentDate
+            const isNotExcluded = event._id !== "68dac96e8d5dd14f277d5b1a"
+            return isUpcoming && isNotExcluded
+          })
+          setEvents(normalized)
+        }
+
+        if (venuesRes.ok) {
+          const data = await venuesRes.json()
+          setVenues(data?.data?.venues || [])
+        }
+
+        if (artistsRes.ok) {
+          const data = await artistsRes.json()
+          setArtists(data?.data?.artists || [])
+        }
+      } catch {
+        setEvents([])
+        setVenues([])
+        setArtists([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchHomeData()
+  }, [])
+
   useEffect(() => {
     const fetchHeroImages = async () => {
       setLoadingHeroImages(true)
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images?active=true`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch hero images")
-        }
+        if (!response.ok) throw new Error("Failed to fetch hero images")
         const data = await response.json()
 
-        if (data.success && data.data && data.data.length > 0) {
-          const images = data.data.map((image: any) => ({
-            url: image.url,
-            mobileUrl: image.mobileUrl,
+        if (data?.success && Array.isArray(data?.data) && data.data.length > 0) {
+          const images = data.data.map((img: any) => ({
+            url: resolveImageUrl(img?.url),
+            mobileUrl: img?.mobileUrl ? resolveImageUrl(img.mobileUrl) : undefined,
           }))
           setBackgroundImages(images)
         } else {
-          setBackgroundImages([
-            { url: "/images/carausel1.jpg" },
-            { url: "/images/carausel2.jpg" },
-            { url: "/images/carausel3.jpg" },
-          ])
+          setBackgroundImages([{ url: "/images/carausel1.jpg" }, { url: "/images/carausel2.jpg" }, { url: "/images/carausel3.jpg" }])
         }
-      } catch (err) {
-        console.error("Error fetching hero images:", err)
-        setBackgroundImages([
-          { url: "/images/carausel1.jpg" },
-          { url: "/images/carausel2.jpg" },
-          { url: "/images/carausel3.jpg" },
-        ])
+      } catch {
+        setBackgroundImages([{ url: "/images/carausel1.jpg" }, { url: "/images/carausel2.jpg" }, { url: "/images/carausel3.jpg" }])
       } finally {
         setLoadingHeroImages(false)
       }
@@ -131,257 +239,204 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    if (backgroundImages.length <= 1) return
+    const interval = setInterval(() => {
+      setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [backgroundImages.length])
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?isFeatured=true&limit=5`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?isFeatured=true&limit=10`)
         if (!response.ok) {
-          throw new Error("Failed to fetch featured events")
+          setFeaturedEvents([])
+          setError("Failed to fetch featured events")
+          return
         }
         const data: EventsResponse = await response.json()
-
         const currentDate = new Date()
-        const upcomingEvents = (data.data.events || []).filter((event) => {
+        const normalized = (data.data?.events || []).filter((event) => {
           const eventEndDate = new Date(event.endDate || event.startDate)
           const isUpcoming = eventEndDate >= currentDate
           const isNotExcluded = event._id !== "68dac96e8d5dd14f277d5b1a"
           return isUpcoming && isNotExcluded
         })
-
-        setFeaturedEvents(upcomingEvents)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Failed to load events"
-        console.error("Error fetching events:", errorMessage)
-        setError(errorMessage)
+        setFeaturedEvents(normalized)
+      } catch {
+        setFeaturedEvents([])
+        setError("Failed to fetch featured events")
       } finally {
         setIsLoading(false)
       }
     }
-
-    fetchEvents()
+    fetchFeatured()
   }, [])
 
-  // Set slides per view based on screen size and number of events
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setSlidesPerView(1)
-      } else if (featuredEvents.length === 1) {
-        setSlidesPerView(1)
-      } else if (featuredEvents.length === 2) {
-        setSlidesPerView(2)
-      } else {
-        let view = 1
-        if (window.innerWidth >= 1280) view = Math.min(3, featuredEvents.length)
-        else if (window.innerWidth >= 768) view = Math.min(2, featuredEvents.length)
-        setSlidesPerView(view)
-      }
+    const update = () => {
+      const w = window.innerWidth
+      if (w >= 1024) setSlidesPerView(3)
+      else if (w >= 768) setSlidesPerView(2)
+      else setSlidesPerView(1)
     }
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [featuredEvents.length])
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
+  }, [])
+
+  const maxSlide = useMemo(() => {
+    if (featuredEvents.length <= slidesPerView) return 0
+    return Math.max(0, featuredEvents.length - slidesPerView)
+  }, [featuredEvents.length, slidesPerView])
 
   useEffect(() => {
-    const newMaxSlide = Math.max(0, featuredEvents.length - slidesPerView)
-    setMaxSlide(newMaxSlide)
-    setCurrentSlide((prev) => Math.min(prev, newMaxSlide))
-  }, [slidesPerView, featuredEvents.length])
-
-  // Background carousel logic
-  const nextBgSlide = useCallback(() => {
-    if (backgroundImages.length === 0) return
-    setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length)
-  }, [backgroundImages.length])
-
-  const prevBgSlide = useCallback(() => {
-    if (backgroundImages.length === 0) return
-    setCurrentBgSlide((prev) => (prev - 1 + backgroundImages.length) % backgroundImages.length)
-  }, [backgroundImages.length])
+    if (!isAutoPlaying) return
+    if (featuredEvents.length <= slidesPerView) return
+    const id = window.setInterval(() => {
+      setCurrentSlide((prev) => (prev >= maxSlide ? 0 : prev + 1))
+    }, 5000)
+    return () => window.clearInterval(id)
+  }, [isAutoPlaying, featuredEvents.length, slidesPerView, maxSlide])
 
   useEffect(() => {
-    if (!isBgAutoPlaying || backgroundImages.length === 0) return
+    setCurrentSlide((prev) => Math.min(prev, maxSlide))
+  }, [maxSlide])
 
-    const interval = setInterval(nextBgSlide, 4000)
-
-    return () => clearInterval(interval)
-  }, [isBgAutoPlaying, nextBgSlide, backgroundImages.length])
-
-  // Featured events carousel logic
-  const nextSlide = useCallback(() => {
-    if (featuredEvents.length === 0) return
-    setCurrentSlide((prev) => (prev >= maxSlide ? 0 : prev + 1))
-  }, [featuredEvents.length, maxSlide])
-
-  const prevSlide = () => {
-    if (featuredEvents.length === 0) return
-    setCurrentSlide((prev) => (prev <= 0 ? maxSlide : prev - 1))
+  const handleGoTo = (idx: number) => {
+    const next = Math.min(Math.max(0, idx), maxSlide)
+    setCurrentSlide(next)
   }
 
-  const goToSlide = (index: number) => {
-    setCurrentSlide(index)
+  const handleTouchStart = (e: TouchEvent) => {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null
+    touchDeltaXRef.current = 0
   }
 
-  const handleNext = () => {
-    nextSlide()
-    setIsAutoPlaying(false)
-    setTimeout(() => setIsAutoPlaying(true), 10000)
-  }
-
-  const handlePrev = () => {
-    prevSlide()
-    setIsAutoPlaying(false)
-    setTimeout(() => setIsAutoPlaying(true), 10000)
-  }
-
-  const handleGoTo = (index: number) => {
-    goToSlide(index)
-    setIsAutoPlaying(false)
-    setTimeout(() => setIsAutoPlaying(true), 10000)
-  }
-
-  const handleBgNext = () => {
-    nextBgSlide()
-    setIsBgAutoPlaying(false)
-    setTimeout(() => setIsBgAutoPlaying(true), 10000)
-  }
-
-  const handleBgPrev = () => {
-    prevBgSlide()
-    setIsBgAutoPlaying(false)
-    setTimeout(() => setIsBgAutoPlaying(true), 10000)
-  }
-
-  // Touch handling for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX)
-  }
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX)
+  const handleTouchMove = (e: TouchEvent) => {
+    const startX = touchStartXRef.current
+    const currentX = e.touches[0]?.clientX
+    if (startX == null || currentX == null) return
+    touchDeltaXRef.current = currentX - startX
   }
 
   const handleTouchEnd = () => {
-    if (touchStart !== null && touchEnd !== null) {
-      const distance = touchStart - touchEnd
-      const isSwipe = Math.abs(distance) > 50
-
-      if (isSwipe) {
-        if (distance > 0) {
-          handleNext()
-        } else {
-          handlePrev()
-        }
-      }
+    const dx = touchDeltaXRef.current
+    const threshold = 40
+    if (dx > threshold) {
+      handleGoTo(currentSlide - 1)
+    } else if (dx < -threshold) {
+      handleGoTo(currentSlide + 1)
     }
-    setTouchStart(null)
-    setTouchEnd(null)
+    touchStartXRef.current = null
+    touchDeltaXRef.current = 0
   }
 
-  const handleBgTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX)
-  }
+  const offeringTiles = useMemo(() => {
+  return [
+    {
+      label: "Events",
+      href: "/events",
+      image:
+        "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
+      count: events.length,
+    },
+    {
+      label: "Sports",
+      href: "/sports",
+      image:
+        "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
+      count: events.filter((e) =>
+        (e.category || "").toLowerCase().includes("sport")
+      ).length,
+    },
+    {
+      label: "Artists",
+      href: "/allArtists",
+      image:
+        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
+      count: artists.length,
+    },
+    {
+      label: "Venues",
+      href: "/allVenues",
+      image:
+        "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&q=80",
+      count: venues.length,
+    },
+    {
+      label: "Organizers",
+      href: "/allOrganizers",
+      image:
+        "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+      count: null,
+    },
+  ]
+}, [events, artists, venues])
 
-  const handleBgTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX)
-  }
 
-  const handleBgTouchEnd = () => {
-    if (touchStart !== null && touchEnd !== null) {
-      const distance = touchStart - touchEnd
-      const isSwipe = Math.abs(distance) > 50
+  const topEvents = useMemo(() => events.slice(0, 8), [events])
+  const comedyEvents = useMemo(
+    () => events.filter((e) => (e.category || "").toLowerCase().includes("comedy")).slice(0, 8),
+    [events]
+  )
+  const sportsEvents = useMemo(
+    () => events.filter((e) => (e.category || "").toLowerCase().includes("sport")).slice(0, 8),
+    [events]
+  )
 
-      if (isSwipe) {
-        if (distance > 0) {
-          handleBgNext()
-        } else {
-          handleBgPrev()
-        }
-      }
-    }
-    setTouchStart(null)
-    setTouchEnd(null)
-  }
-
-  useEffect(() => {
-    if (!isAutoPlaying || featuredEvents.length === 0) return
-
-    const interval = setInterval(nextSlide, 5000)
-
-    return () => clearInterval(interval)
-  }, [isAutoPlaying, featuredEvents.length, nextSlide])
 
   return (
-    <div className="min-h-screen overflow-hidden bg-white">
-      {/* Navbar */}
-      <div className="sticky top-0 z-30 bg-white shadow-sm">
-        <Navbar />
-      </div>
+    <div className="min-h-screen bg-white">
+      <Navbar />
 
-      {/* Hero Section - Clean Zomato/District style */}
-      <section className="relative py-16 bg-white overflow-hidden">
+
+
+      <section className="relative py-10 bg-white overflow-hidden">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
-
-          {/* Left Content */}
           <div className="w-full md:w-1/2 text-center md:text-left">
             <h1 className="text-4xl md:text-6xl font-extrabold text-[#121212] leading-tight">
               Book <span className="text-[#ff0e0e]">Events.</span>
-              <br /> Experience  <span className="text-[#ff0e0e]">Life.</span>
+              <br /> Experience <span className="text-[#ff0e0e]">Life.</span>
             </h1>
 
             <p className="text-lg md:text-2xl text-[#4A4A4A] mt-4 font-medium max-w-xl">
-              Trusted event bookings across Nagaland. Discover concerts, festivals,
-              workshops and more — all in one place.
+              Trusted event bookings across Nagaland. Discover concerts, festivals, workshops and more — all in one place.
             </p>
 
             <div className="flex gap-4 justify-center md:justify-start mt-8">
-              <Button
-                asChild
-                className="bg-[#ff0e0e] hover:bg-[#e60000] text-white px-7 py-3 rounded-full font-semibold text-lg shadow-lg shadow-red-500/20"
-              >
+              <Button asChild className="bg-[#ff0e0e] hover:bg-[#e60000] text-white px-7 py-3 rounded-full font-semibold text-lg shadow-lg shadow-red-500/20">
                 <Link href="/events">Explore Events</Link>
               </Button>
-
-              <Button
-                variant="outline"
-                asChild
-                className="border border-gray-300 text-[#121212] px-7 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 hover:text-[#ff0e0e]"
-              >
+              <Button variant="outline" asChild className="border border-gray-300 text-[#121212] px-7 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 hover:text-[#ff0e0e]">
                 <Link href="/auth">Sign In</Link>
               </Button>
             </div>
 
-            <div className="mt-6 text-sm text-gray-500">
-              No booking fees • Easy refunds • Secure payments
-            </div>
+            <div className="mt-6 text-sm text-gray-500">No booking fees • Easy refunds • Secure payments</div>
           </div>
 
-          {/* Right Image */}
           <div className="w-full md:w-1/2">
             <div className="rounded-2xl overflow-hidden shadow-xl border border-gray-200">
               {loadingHeroImages ? (
-                <div className="w-full h-64 md:h-80 lg:h-96 bg-gray-100 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                </div>
-              ) : backgroundImages.length > 0 ? (
+                <div className="w-full h-64 md:h-80 lg:h-96 bg-gray-100" />
+              ) : (
                 <div className="relative w-full h-64 md:h-80 lg:h-96">
                   <Image
-                    src={backgroundImages[currentBgSlide].url}
+                    src={backgroundImages[currentBgSlide]?.mobileUrl || backgroundImages[currentBgSlide]?.url || "/images/carausel2.jpg"}
                     alt={`Hero ${currentBgSlide + 1}`}
                     fill
                     className="object-cover"
                     priority
                   />
-                  {/* Very subtle overlay */}
                   <div className="absolute inset-0 bg-black/10" />
                 </div>
-              ) : (
-                <div className="w-full h-64 md:h-80 lg:h-96 bg-gray-100" />
               )}
             </div>
           </div>
-
         </div>
       </section>
 
@@ -501,7 +556,149 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      <section className="px-4 mt-6">
+        <div className="text-left mb-4">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">What We Offer</h2>
+          <p className="text-sm text-gray-500">Discover everything Ahibi has for you</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {offeringTiles.map((item) => (
+            <Link key={item.label} href={item.href}>
+              <Card className="relative h-32 md:h-40 lg:h-48 rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-shadow">
+                <Image src={item.image} alt={item.label} fill className="object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute bottom-3 left-3 text-white">
+                  <div className="font-bold text-base md:text-lg">{item.label}</div>
+                  {item.count !== null && item.count > 0 && (
+                    <div className="text-xs opacity-90">{item.count} available</div>
+                  )}
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <Section title="Explore Venues" subtitle="Popular venues & landmarks" href="/allVenues/list">
+        {(venues.length > 0 ? venues.slice(0, 10) : Array.from({ length: 6 })).map((venue: any, idx: number) => {
+          const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
+          const img = getVenueImage(venue || ({} as PublicVenue), idx)
+          return (
+            <Card key={venue?._id || idx} className="relative min-w-[160px] md:min-w-[200px] lg:min-w-[240px] h-44 md:h-52 lg:h-60 rounded-xl overflow-hidden">
+              <Image src={img} alt={placeName} fill className="object-cover" />
+              <div className="absolute inset-0 bg-black/30" />
+              <div className="absolute bottom-2 left-2 text-white font-semibold">{placeName}</div>
+            </Card>
+          )
+        })}
+      </Section>
+
+      <Section
+        title="Explore Artists"
+        subtitle="Performers & creators"
+        href="/allArtists/list"
+      >
+        {artists.length > 0 ? (
+          artists.slice(0, 10).map((artist: any) => (
+            <Link
+              key={artist._id}
+              href={`/allArtistS/list/${artist._id}`}
+              className="flex flex-col items-center 
+          min-w-[120px] md:min-w-[160px] lg:min-w-[220px]
+          hover:scale-105 transition-transform duration-300"
+            >
+              <div
+                className="relative 
+            h-28 w-28 
+            md:h-36 md:w-36 
+            lg:h-56 lg:w-56 
+            rounded-full overflow-hidden 
+            border-2 border-gray-200"
+              >
+                <Image
+                  src={getArtistImage(artist)}
+                  alt={artist.name || 'Artist'}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              <p className="text-sm md:text-base mt-3 text-center font-medium line-clamp-2">
+                {artist.name || 'Artist'}
+              </p>
+            </Link>
+          ))
+        ) : (
+          [
+            {
+              type: 'Singer',
+              img: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200&q=80',
+            },
+            {
+              type: 'Band',
+              img: 'https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=200&q=80',
+            },
+            {
+              type: 'Comedian',
+              img: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=200&q=80',
+            },
+            {
+              type: 'Dancer',
+              img: 'https://images.unsplash.com/photo-1547153760-18fc86324498?w=200&q=80',
+            },
+            {
+              type: 'Musician',
+              img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&q=80',
+            },
+            {
+              type: 'Host',
+              img: 'https://images.unsplash.com/photo-1559523161-0fc0d8b38a7a?w=200&q=80',
+            },
+            {
+              type: 'Performer',
+              img: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&q=80',
+            },
+          ].map((item, idx) => (
+            <div
+              key={idx}
+              className="flex flex-col items-center 
+          min-w-[120px] md:min-w-[160px] lg:min-w-[220px]"
+            >
+              <div
+                className="relative 
+            h-24 w-24 
+            md:h-32 md:w-32 
+            lg:h-40 lg:w-40 
+            rounded-full overflow-hidden 
+            border-2 border-gray-200"
+              >
+                <Image
+                  src={item.img}
+                  alt={item.type}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              <p className="text-sm mt-3 text-center font-medium">
+                {item.type}
+              </p>
+            </div>
+          ))
+        )}
+      </Section>
+
+
+      <div className="px-4 my-12">
+        <Card className="p-6 text-center rounded-2xl bg-gradient-to-r from-red-500 to-red-600 text-white">
+          <h3 className="text-lg font-bold">Discover experiences around you</h3>
+          <p className="text-sm mt-1 opacity-90">Concerts, comedy, sports & more</p>
+          <Button asChild className="mt-4 bg-white text-red-600 hover:bg-gray-100 rounded-full" disabled={loading}>
+            <Link href="/events">Explore now</Link>
+          </Button>
+        </Card>
+      </div>
+
       <section className="py-20 bg-gradient-to-b from-white to-gray-50">
         <div ref={statsRef} className="container mx-auto px-4 group">
           <div className="text-center mb-12">
@@ -534,7 +731,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       <Footer />
     </div>
   )
