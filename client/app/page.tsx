@@ -689,15 +689,7 @@ export default function HomePage() {
       </Section>
 
 
-      <div className="px-4 my-12">
-        <Card className="p-6 text-center rounded-2xl bg-gradient-to-r from-red-500 to-red-600 text-white">
-          <h3 className="text-lg font-bold">Discover experiences around you</h3>
-          <p className="text-sm mt-1 opacity-90">Concerts, comedy, sports & more</p>
-          <Button asChild className="mt-4 bg-white text-red-600 hover:bg-gray-100 rounded-full" disabled={loading}>
-            <Link href="/events">Explore now</Link>
-          </Button>
-        </Card>
-      </div>
+  
 
       <section className="py-20 bg-gradient-to-b from-white to-gray-50">
         <div ref={statsRef} className="container mx-auto px-4 group">
