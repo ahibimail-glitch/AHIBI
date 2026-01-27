@@ -253,20 +253,22 @@ export const uploadFile = async (file: File): Promise<UploadResponse> => {
     const formData = new FormData();
     formData.append('photo', file);
 
-    const response = await fetch(getApiUrl('api/upload'), {
+    const response = await fetch(getApiUrl('upload'), {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
       let message = 'Failed to upload file';
-      try {
-        const error = await response.json();
-        message = error.message || message;
-      } catch (_e) {
-        // Non-JSON error response
-        const text = await response.text();
-        if (text) message = text;
+
+      const errorText = await response.text();
+      if (errorText) {
+        try {
+          const parsed = JSON.parse(errorText) as { message?: string };
+          message = parsed.message || message;
+        } catch {
+          message = errorText;
+        }
       }
       throw new Error(message);
     }
@@ -296,19 +298,22 @@ export const uploadMultipleFiles = async (files: File[]): Promise<UploadResponse
       formData.append('photos', file);
     });
 
-    const response = await fetch(getApiUrl('api/upload/multiple'), {
+    const response = await fetch(getApiUrl('upload/multiple'), {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
       let message = 'Failed to upload files';
-      try {
-        const error = await response.json();
-        message = error.message || message;
-      } catch (_e) {
-        const text = await response.text();
-        if (text) message = text;
+
+      const errorText = await response.text();
+      if (errorText) {
+        try {
+          const parsed = JSON.parse(errorText) as { message?: string };
+          message = parsed.message || message;
+        } catch {
+          message = errorText;
+        }
       }
       throw new Error(message);
     }
