@@ -166,6 +166,7 @@ interface Event {
   ticketTypes: TicketType[];
   location: EventLocation;
   convenience: ConvenienceFee;
+  termsAndConditions?: string;
   rating: EventRating;
   paymentStatus: PaymentStatus;
   totalTickets: number;
