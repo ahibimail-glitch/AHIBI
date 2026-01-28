@@ -448,51 +448,66 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className="bg-black py-10 sm:py-14">
-        <div className="container mx-auto px-3 sm:px-4">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">Events</h2>
-            <p className="mt-3 text-sm sm:text-base text-white/80">DO-IT-YOURSELF event listing platform</p>
-            <p className="mt-2 text-xs sm:text-sm text-white/60">Make your events live in under 5 minutes</p>
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <Button asChild variant="link" className="text-blue-400 hover:text-blue-300">
-                <Link href="/events">View Events</Link>
-              </Button>
-              <Button asChild variant="link" className="text-blue-400 hover:text-blue-300">
-                <Link href="/organizer/dashboard">Create Events</Link>
-              </Button>
-            </div>
-          </div>
+    <section className="bg-gray-50 py-10 sm:py-14">
+  <div className="container mx-auto px-3 sm:px-4">
+    <div className="mx-auto max-w-2xl text-center">
+      <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
+        Events
+      </h2>
+      <p className="mt-3 text-sm sm:text-base text-gray-600">
+        DO-IT-YOURSELF event listing platform
+      </p>
+      <p className="mt-2 text-xs sm:text-sm text-gray-500">
+        Make your events live in under 5 minutes
+      </p>
 
-          <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
-            {isLoading ? (
-              [...Array(3)].map((_, i) => (
-                <div key={i} className="bg-white/10 rounded-lg aspect-[2/3] animate-pulse w-44 sm:w-56 flex-none" />
-              ))
-            ) : error ? (
-              <div className="text-center text-sm text-red-400 w-full">{error}</div>
-            ) : featuredEvents.length === 0 ? (
-              <div className="text-center text-sm text-white/60 w-full">No events available</div>
-            ) : (
-              featuredEvents.slice(0, 3).map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-shadow hover:shadow-lg w-44 sm:w-56 flex-none">
-                    <div className="relative aspect-[2/3] overflow-hidden">
-                      <Image
-                        src={event.banner || "/placeholder.svg"}
-                        alt={event.title}
-                        fill
-                        sizes="50vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                  </Card>
-                </Link>
-              ))
-            )}
-          </div>
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
+          <Link href="/events">View Events</Link>
+        </Button>
+        <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
+          <Link href="/organizer/auth/login">Create Events</Link>
+        </Button>
+      </div>
+    </div>
+
+    <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
+      {isLoading ? (
+        [...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="rounded-lg aspect-[2/3] animate-pulse w-44 sm:w-56 flex-none bg-gray-200"
+          />
+        ))
+      ) : error ? (
+        <div className="text-center text-sm text-red-500 w-full">
+          {error}
         </div>
-      </section>
+      ) : featuredEvents.length === 0 ? (
+        <div className="text-center text-sm text-gray-500 w-full">
+          No events available
+        </div>
+      ) : (
+        featuredEvents.slice(0, 3).map((event) => (
+          <Link key={event._id} href={`/events/${event._id}`}>
+            <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg w-44 sm:w-56 flex-none">
+              <div className="relative aspect-[2/3] overflow-hidden">
+                <Image
+                  src={event.banner || "/placeholder.svg"}
+                  alt={event.title}
+                  fill
+                  sizes="50vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            </Card>
+          </Link>
+        ))
+      )}
+    </div>
+  </div>
+</section>
+
 
       {/* Featured Events Section */}
       <section className="py-4 sm:py-6 md:py-8 bg-white">
@@ -691,17 +706,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
-      
-
-
-
-
-
-
-
-
-
 
       {/* Explore Categories */}
       <section className="py-4 sm:py-6 md:py-8 bg-white">
