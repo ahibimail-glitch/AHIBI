@@ -124,7 +124,7 @@ export default function Navbar() {
               }`}
           >
             <Ticket className="h-6 w-6" />
-            <span className="text-[10px] font-medium">Live Events</span>
+            <span className="text-[10px] font-medium">Sports</span>
           </Link>
 
           {/* Profile */}

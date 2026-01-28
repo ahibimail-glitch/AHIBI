@@ -116,7 +116,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
               </Badge>
             </div>
           )}
-          {/* <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" /> */}
         </div>
 
         <CardContent className="p-4">
