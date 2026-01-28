@@ -85,53 +85,48 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative"
-      role="article"
-      aria-labelledby={`event-title-${event._id}`}
-    >
-      <div className="absolute -inset-1 bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 rounded-2xl blur-lg opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+  <motion.div
+  initial={{ opacity: 0, y: 12 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.35, delay: index * 0.05 }}
+  className="relative w-full"
+  role="article"
+  aria-labelledby={`event-title-${event._id}`}
+>
+  <Card className="w-full overflow-hidden rounded-lg bg-white border border-gray-200">
+    
+    {/* POSTER IMAGE */}
+    <div className="relative aspect-[2/3] w-full overflow-hidden">
+      <img
+        src={event.banner || "/placeholder.svg"}
+        alt={event.title}
+        loading={index < 8 ? "eager" : "lazy"}
+        className="w-full h-full object-cover"
+      />
 
-      <Card
-        className="relative overflow-hidden bg-white border border-gray-200 rounded-xl transition-all duration-300 hover:shadow-xl"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+      {event.isFeatured && (
+        <span className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded">
+          PROMOTED
+        </span>
+      )}
+    </div>
+
+    {/* TEXT */}
+    <div className="px-1.5 pt-2 pb-1.5">
+      <h3
+        id={`event-title-${event._id}`}
+        className="text-[12px] font-medium text-gray-900 leading-tight line-clamp-2"
       >
-        <div className="relative aspect-square sm:aspect-[3/4] lg:aspect-[2/3] overflow-hidden">
-          <Image
-            src={event.banner || "/placeholder.svg"}
-            alt={event.title}
-            fill
-            className="object-contain transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 20vw"
-            priority={index < 10}
-          />
-          {event.isFeatured && (
-            <div className="absolute top-2 right-2">
-              <Badge className="bg-white/90 text-gray-900 border border-gray-200 text-[10px] px-2 py-0.5">
-                Featured
-              </Badge>
-            </div>
-          )}
-          {/* <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" /> */}
-        </div>
+        {event.title}
+      </h3>
 
-        <CardContent className="p-3 sm:p-4">
-          <h3 id={`event-title-${event._id}`} className="font-semibold text-sm sm:text-base text-gray-900 line-clamp-2">
-            {event.title}
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1">
-            {event.location?.city ? `${event.location.city}` : ' '}
-          </p>
-          <p className="text-xs sm:text-sm text-gray-500 mt-2">
-            {getLowestPrice(event.ticketTypes)} onwards
-          </p>
-        </CardContent>
-      </Card>
-    </motion.div>
+      <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
+        {event.location?.city || ""}
+      </p>
+    </div>
+  </Card>
+</motion.div>
+
   );
 };
 

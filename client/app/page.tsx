@@ -346,55 +346,59 @@ export default function HomePage() {
   }
 
   const offeringTiles = useMemo(() => {
-  return [
-    {
-      label: "Events",
-      href: "/events",
-      image:
-        "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
-      count: events.length,
-    },
-    {
-      label: "Sports",
-      href: "/sports",
-      image:
-        "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
-      count: events.filter((e) =>
-        (e.category || "").toLowerCase().includes("sport")
-      ).length,
-    },
-    {
-      label: "Artists",
-      href: "/allArtists",
-      image:
-        "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
-      count: artists.length,
-    },
-    {
-      label: "Venues",
-      href: "/allVenues",
-      image:
-        "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&q=80",
-      count: venues.length,
-    },
-    {
-      label: "Organizers",
-      href: "/allOrganizers",
-      image:
-        "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
-      count: null,
-    },
-  ]
-}, [events, artists, venues])
+    return [
+      {
+        label: "Events",
+        href: "/events",
+        image:
+          "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
+        count: events.length,
+      },
+      {
+        label: "Sports",
+        href: "/sports",
+        image:
+          "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
+        count: events.filter((e) =>
+          (e.category || "").toLowerCase().includes("sport")
+        ).length,
+      },
+      {
+        label: "Artists",
+        href: "/allArtists",
+        image:
+          "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80",
+        count: artists.length,
+      },
+      {
+        label: "Venues",
+        href: "/allVenues",
+        image:
+          "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&q=80",
+        count: venues.length,
+      },
+      {
+        label: "Organizers",
+        href: "/allOrganizers",
+        image:
+          "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80",
+        count: null,
+      },
+    ]
+  }, [events, artists, venues])
 
 
   const topEvents = useMemo(() => events.slice(0, 8), [events])
+  const musicEvents = useMemo(
+    () => (events ?? []).filter((e) => String(e?.category ?? "").toLowerCase().includes("music")).slice(0, 8),
+    [events]
+  )
   const comedyEvents = useMemo(
-    () => events.filter((e) => (e.category || "").toLowerCase().includes("comedy")).slice(0, 8),
+    () => (events ?? []).filter((e) => String(e?.category ?? "").toLowerCase().includes("comedy")).slice(0, 8),
     [events]
   )
   const sportsEvents = useMemo(
-    () => events.filter((e) => (e.category || "").toLowerCase().includes("sport")).slice(0, 8),
+    () => (events ?? []).filter((e) => String(e?.category ?? "").toLowerCase().includes("sport")).slice(0, 8),
     [events]
   )
 
@@ -412,9 +416,8 @@ export default function HomePage() {
             {backgroundImages.map((image, index) => (
               <div
                 key={index}
-                className={`absolute inset-0 transition-opacity duration-700 ${
-                  index === currentBgSlide ? "opacity-100" : "opacity-0"
-                }`}
+                className={`absolute inset-0 transition-opacity duration-700 ${index === currentBgSlide ? "opacity-100" : "opacity-0"
+                  }`}
               >
                 <Image
                   src={(isMobileViewport && image.mobileUrl ? image.mobileUrl : image.url) || "/images/carausel1.jpg"}
@@ -426,7 +429,7 @@ export default function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               </div>
             ))}
-            
+
             {/* Carousel Indicators */}
             {backgroundImages.length > 1 && (
               <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10">
@@ -434,9 +437,8 @@ export default function HomePage() {
                   <button
                     key={index}
                     onClick={() => setCurrentBgSlide(index)}
-                    className={`h-1 rounded-full transition-all ${
-                      index === currentBgSlide ? "bg-white w-6" : "bg-white/50 w-1"
-                    }`}
+                    className={`h-1 rounded-full transition-all ${index === currentBgSlide ? "bg-white w-6" : "bg-white/50 w-1"
+                      }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
                 ))}
@@ -446,42 +448,108 @@ export default function HomePage() {
         )}
       </section>
 
+      <section className="bg-black py-10 sm:py-14">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">Events</h2>
+            <p className="mt-3 text-sm sm:text-base text-white/80">DO-IT-YOURSELF event listing platform</p>
+            <p className="mt-2 text-xs sm:text-sm text-white/60">Make your events live in under 5 minutes</p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <Button asChild variant="link" className="text-blue-400 hover:text-blue-300">
+                <Link href="/events">View Events</Link>
+              </Button>
+              <Button asChild variant="link" className="text-blue-400 hover:text-blue-300">
+                <Link href="/organizer/dashboard">Create Events</Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
+            {isLoading ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white/10 rounded-lg aspect-[2/3] animate-pulse w-44 sm:w-56 flex-none" />
+              ))
+            ) : error ? (
+              <div className="text-center text-sm text-red-400 w-full">{error}</div>
+            ) : featuredEvents.length === 0 ? (
+              <div className="text-center text-sm text-white/60 w-full">No events available</div>
+            ) : (
+              featuredEvents.slice(0, 3).map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-shadow hover:shadow-lg w-44 sm:w-56 flex-none">
+                    <div className="relative aspect-[2/3] overflow-hidden">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        sizes="50vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                  </Card>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Featured Events Section */}
       <section className="py-4 sm:py-6 md:py-8 bg-white">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Recommended Events</h2>
-            <Link href="/events" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
+              Recommended Events
+            </h2>
+            <Link
+              href="/events"
+              className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+            >
               See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
             </Link>
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+            /* SKELETONS */
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-200 rounded-md h-48 sm:h-64 md:h-72 lg:h-80 animate-pulse" />
+                <div
+                  key={i}
+                  className="bg-gray-200 rounded-lg aspect-[2/3] animate-pulse"
+                />
               ))}
             </div>
           ) : error ? (
             <div className="text-center py-6 text-red-500 text-sm">{error}</div>
           ) : featuredEvents.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 text-sm">No featured events available</div>
+            <div className="text-center py-6 text-gray-500 text-sm">
+              No featured events available
+            </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+            /* EVENTS GRID */
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {featuredEvents.slice(0, 10).map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
-                    <div className="relative aspect-[2/3]">
+                  <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
+                    {/* POSTER */}
+                    <div className="relative aspect-[2/3] overflow-hidden">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
-                        className="object-contain group-hover:scale-105 transition-transform duration-300"
+                        sizes="50vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </div>
-                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
-                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
-                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.category}</p>
+
+                    {/* TEXT */}
+                    <div className="px-2 pt-2 pb-1.5">
+                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                        {event.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                        {event.category}
+                      </p>
                     </div>
                   </Card>
                 </Link>
@@ -491,74 +559,42 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Top Events Section */}
-      <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
-        <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">The Best Of Live Events</h2>
-            <Link href="/events" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
-              See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-700 rounded-md h-48 sm:h-64 md:h-72 lg:h-80 animate-pulse" />
-              ))}
-            </div>
-          ) : topEvents.length === 0 ? (
-            <div className="text-center py-6 text-gray-400 text-sm">No events available</div>
-          ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-              {topEvents.map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
-                    <div className="relative aspect-[2/3]">
-                      <Image
-                        src={event.banner || "/placeholder.svg"}
-                        alt={event.title}
-                        fill
-                        className="object-contain group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
-                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
-                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.location.city}</p>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Comedy Events Section */}
-      {comedyEvents.length > 0 && (
-        <section className="py-4 sm:py-6 md:py-8 bg-white">
+      {/* Music Events Section */}
+      {musicEvents.length > 0 && (
+        <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Laughter Therapy</h2>
-              <Link href="/events?category=comedy" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                Music Events
+              </h2>
+              <Link
+                href="/events"
+                className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+              >
                 See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-              {comedyEvents.map((event) => (
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {musicEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
-                    <div className="relative aspect-[2/3]">
+                  <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
+                    <div className="relative aspect-[2/3] overflow-hidden">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="50vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </div>
-                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
-                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
-                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.location.city}</p>
+                    <div className="px-2 pt-2 pb-1.5">
+                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                        {event.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                        {event.location?.city}
+                      </p>
                     </div>
                   </Card>
                 </Link>
@@ -567,32 +603,42 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
       {/* Sports Events Section */}
       {sportsEvents.length > 0 && (
         <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">Sports Events</h2>
-              <Link href="/sports" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                Sports Events
+              </h2>
+              <Link
+                href="/sports"
+                className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+              >
                 See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {sportsEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
-                    <div className="relative aspect-[2/3]">
+                  <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
+                    <div className="relative aspect-[2/3] overflow-hidden">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="50vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </div>
-                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
-                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
-                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.location.city}</p>
+                    <div className="px-2 pt-2 pb-1.5">
+                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                        {event.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                        {event.location?.city}
+                      </p>
                     </div>
                   </Card>
                 </Link>
@@ -601,6 +647,61 @@ export default function HomePage() {
           </div>
         </section>
       )}
+      {/* Comedy Events Section */}
+      {comedyEvents.length > 0 && (
+        <section className="py-4 sm:py-6 md:py-8 bg-white">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
+                Laughter Therapy
+              </h2>
+              <Link
+                href="/events?category=comedy"
+                className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+              >
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {comedyEvents.map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
+                    <div className="relative aspect-[2/3] overflow-hidden">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        sizes="50vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="px-2 pt-2 pb-1.5">
+                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                        {event.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                        {event.location?.city}
+                      </p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      
+
+
+
+
+
+
+
+
+
 
       {/* Explore Categories */}
       <section className="py-4 sm:py-6 md:py-8 bg-white">
