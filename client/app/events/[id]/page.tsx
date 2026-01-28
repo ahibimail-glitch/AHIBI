@@ -1301,17 +1301,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             {/* Event Info */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                <div className="w-full sm:w-44 md:w-52 flex-shrink-0">
-                  <div className="relative w-full aspect-[2/3] rounded-lg overflow-hidden border border-gray-200">
-                    <Image
-                      src={event.banner || "/placeholder.svg"}
-                      alt={event.title}
-                      fill
-                      className="object-contain"
-                      sizes="(max-width: 640px) 60vw, 240px"
-                    />
-                  </div>
-                </div>
+                
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
