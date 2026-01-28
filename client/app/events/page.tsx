@@ -49,6 +49,22 @@ const formatDate = (dateString: string | Date): string => {
   });
 };
 
+ // Format weekday + date for compact display
+ const formatDayDate = (dateString: string | Date): string => {
+   const date = new Date(dateString);
+   if (isNaN(date.getTime())) return '';
+   const dayDate = date.toLocaleDateString('en-US', {
+     weekday: 'short',
+     month: 'short',
+     day: 'numeric',
+   });
+   const time = date.toLocaleTimeString('en-US', {
+     hour: '2-digit',
+     minute: '2-digit',
+   });
+   return `${dayDate} • ${time}`;
+ };
+
 // Format time for display
 const formatTime = (dateString: string | Date): string => {
   const date = new Date(dateString);
@@ -111,6 +127,13 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       )}
     </div>
 
+      {!!formatDayDate(event.startDate) && (
+        <div className="mt-1">
+          <span className="block w-full  bg-black px-1.5 py-0.5 text-center text-[10px] font-medium text-white">
+            {formatDayDate(event.startDate)}
+          </span>
+        </div>
+      )}
     {/* TEXT */}
     <div className="px-1.5 pt-2 pb-1.5">
       <h3
@@ -119,6 +142,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       >
         {event.title}
       </h3>
+
 
       <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
         {event.location?.city || ""}
@@ -353,19 +377,8 @@ export default function EventsPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="border border-gray-200 rounded-md p-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900">Date</p>
-                        <Button variant="ghost" size="sm" className="text-xs" onClick={() => {}}>
-                          Clear
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        <Button variant="outline" className="h-8 text-xs justify-center">Today</Button>
-                        <Button variant="outline" className="h-8 text-xs justify-center">Tomorrow</Button>
-                        <Button variant="outline" className="h-8 text-xs justify-center">This Weekend</Button>
-                      </div>
-                    </div>
+                 
+                     
 
                     <div className="border border-gray-200 rounded-md p-3">
                       <p className="text-sm font-medium text-gray-900 mb-2">Search</p>
@@ -456,7 +469,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Live Events</h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                         {currentEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
@@ -471,7 +484,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Upcoming Events</h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                         {upcomingEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
@@ -486,7 +499,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Past Events</h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
                         {pastEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
