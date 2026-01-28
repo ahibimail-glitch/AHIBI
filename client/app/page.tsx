@@ -448,65 +448,65 @@ export default function HomePage() {
         )}
       </section>
 
-    <section className="bg-gray-50 py-10 sm:py-14">
-  <div className="container mx-auto px-3 sm:px-4">
-    <div className="mx-auto max-w-2xl text-center">
-      <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
-        Events
-      </h2>
-      <p className="mt-3 text-sm sm:text-base text-gray-600">
-        DO-IT-YOURSELF event listing platform
-      </p>
-      <p className="mt-2 text-xs sm:text-sm text-gray-500">
-        Make your events live in under 5 minutes
-      </p>
+      <section className="bg-gray-50 py-10 sm:py-14">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
+              Events
+            </h2>
+            <p className="mt-3 text-sm sm:text-base text-gray-600">
+              DO-IT-YOURSELF event listing platform
+            </p>
+            <p className="mt-2 text-xs sm:text-sm text-gray-500">
+              Make your events live in under 5 minutes
+            </p>
 
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
-          <Link href="/events">View Events</Link>
-        </Button>
-        <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
-          <Link href="/organizer/auth/login">Create Events</Link>
-        </Button>
-      </div>
-    </div>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
+                <Link href="/events">View Events</Link>
+              </Button>
+              <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
+                <Link href="/organizer/auth/login">Create Events</Link>
+              </Button>
+            </div>
+          </div>
 
-    <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
-      {isLoading ? (
-        [...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="rounded-lg aspect-[2/3] animate-pulse w-44 sm:w-56 flex-none bg-gray-200"
-          />
-        ))
-      ) : error ? (
-        <div className="text-center text-sm text-red-500 w-full">
-          {error}
-        </div>
-      ) : featuredEvents.length === 0 ? (
-        <div className="text-center text-sm text-gray-500 w-full">
-          No events available
-        </div>
-      ) : (
-        featuredEvents.slice(0, 3).map((event) => (
-          <Link key={event._id} href={`/events/${event._id}`}>
-            <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg w-44 sm:w-56 flex-none">
-              <div className="relative aspect-[2/3] overflow-hidden">
-                <Image
-                  src={event.banner || "/placeholder.svg"}
-                  alt={event.title}
-                  fill
-                  sizes="50vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+          <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
+            {isLoading ? (
+              [...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg aspect-[2/3] animate-pulse w-44 sm:w-56 flex-none bg-gray-200"
                 />
+              ))
+            ) : error ? (
+              <div className="text-center text-sm text-red-500 w-full">
+                {error}
               </div>
-            </Card>
-          </Link>
-        ))
-      )}
-    </div>
-  </div>
-</section>
+            ) : featuredEvents.length === 0 ? (
+              <div className="text-center text-sm text-gray-500 w-full">
+                No events available
+              </div>
+            ) : (
+              featuredEvents.slice(0, 3).map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg w-44 sm:w-56 flex-none">
+                    <div className="relative aspect-[2/3] overflow-hidden">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        sizes="50vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                  </Card>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
 
 
       {/* Featured Events Section */}
@@ -706,22 +706,24 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
       {/* Explore Categories */}
-      <section className="py-4 sm:py-6 md:py-8 bg-white">
+      <section className="py-6 sm:py-8 md:py-10 bg-white">
         <div className="container mx-auto px-3 sm:px-4">
-          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C] mb-3 sm:mb-4">Explore More</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C] mb-4">Explore More</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
             {offeringTiles.map((item) => (
               <Link key={item.label} href={item.href}>
-                <Card className="relative h-24 sm:h-32 md:h-36 lg:h-40 rounded-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow border-0">
-                  <Image src={item.image} alt={item.label} fill className="object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                  <div className="absolute bottom-2 left-2 text-white">
-                    <div className="font-bold text-xs sm:text-sm md:text-base">{item.label}</div>
-                    {item.count !== null && item.count > 0 && (
-                      <div className="text-[9px] sm:text-[10px] md:text-xs opacity-90">{item.count} available</div>
-                    )}
+                <Card className="relative rounded-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 border-0 transform hover:-translate-y-1">
+                  {/* Force a tall poster aspect ratio and responsive heights */}
+                  <div className="w-full aspect-[2/3] sm:aspect-[3/4] md:aspect-[2/3]">
+                    <Image src={item.image} alt={item.label} fill className="object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                    <div className="absolute bottom-3 left-3 text-white">
+                      <div className="font-bold text-sm sm:text-base md:text-lg">{item.label}</div>
+                      {item.count !== null && item.count > 0 && (
+                        <div className="text-[10px] sm:text-xs md:text-sm opacity-90">{item.count} available</div>
+                      )}
+                    </div>
                   </div>
                 </Card>
               </Link>
@@ -730,9 +732,10 @@ export default function HomePage() {
         </div>
       </section>
 
+
       {/* Venues Section */}
       {venues.length > 0 && (
-        <section className="py-4 sm:py-6 md:py-8 bg-[#f5f5f5]">
+        <section className="py-6 sm:py-8 md:py-10 bg-[#f5f5f5]">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Popular Venues</h2>
@@ -740,15 +743,21 @@ export default function HomePage() {
                 See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
-            <div className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-3 scrollbar-hide">
+
+            <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 scrollbar-hide">
               {venues.slice(0, 10).map((venue: any, idx: number) => {
                 const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
                 const img = getVenueImage(venue, idx)
                 return (
-                  <Card key={venue?._id || idx} className="relative min-w-[140px] sm:min-w-[180px] md:min-w-[200px] h-32 sm:h-40 md:h-48 rounded-md overflow-hidden border-0 shadow-sm hover:shadow-lg transition-shadow cursor-pointer flex-shrink-0">
+                  <Card
+                    key={venue?._id || idx}
+                    className="relative min-w-[200px] sm:min-w-[240px] md:min-w-[300px] lg:min-w-[360px] h-[320px] sm:h-[420px] md:h-[480px] rounded-xl overflow-hidden border-0 shadow-sm hover:shadow-2xl transition-shadow cursor-pointer flex-shrink-0"
+                  >
                     <Image src={img} alt={placeName} fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-2 left-2 text-white font-semibold text-xs sm:text-sm">{placeName}</div>
+                    <div className="absolute bottom-3 left-3 text-white font-semibold text-sm sm:text-base md:text-lg">
+                      {placeName}
+                    </div>
                   </Card>
                 )
               })}
@@ -757,9 +766,10 @@ export default function HomePage() {
         </section>
       )}
 
+
       {/* Artists Section */}
       {artists.length > 0 && (
-        <section className="py-4 sm:py-6 md:py-8 bg-white">
+        <section className="py-6 sm:py-8 md:py-10 bg-white">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Featured Artists</h2>
@@ -767,14 +777,15 @@ export default function HomePage() {
                 See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
               </Link>
             </div>
-            <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 scrollbar-hide">
+
+            <div className="flex gap-4 sm:gap-6 md:gap-8 overflow-x-auto pb-3 scrollbar-hide">
               {artists.slice(0, 10).map((artist: any) => (
                 <Link
                   key={artist._id}
                   href={`/allArtistS/list/${artist._id}`}
-                  className="flex flex-col items-center min-w-[90px] sm:min-w-[110px] md:min-w-[140px] hover:scale-105 transition-transform duration-300 flex-shrink-0"
+                  className="flex flex-col items-center min-w-[140px] sm:min-w-[160px] md:min-w-[200px] hover:scale-105 transition-transform duration-300 flex-shrink-0"
                 >
-                  <div className="relative h-20 w-20 sm:h-24 sm:w-24 md:h-32 md:w-32 rounded-full overflow-hidden border-2 border-gray-200">
+                  <div className="relative h-36 w-36 sm:h-44 sm:w-44 md:h-56 md:w-56 rounded-2xl overflow-hidden border-2 border-gray-200">
                     <Image
                       src={getArtistImage(artist)}
                       alt={artist.name || 'Artist'}
@@ -782,7 +793,7 @@ export default function HomePage() {
                       className="object-cover"
                     />
                   </div>
-                  <p className="text-[10px] sm:text-xs md:text-sm mt-2 text-center font-medium line-clamp-2 w-full">
+                  <p className="text-[11px] sm:text-xs md:text-sm mt-2 text-center font-medium line-clamp-2 w-full">
                     {artist.name || 'Artist'}
                   </p>
                 </Link>
@@ -791,6 +802,7 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
       <Footer />
     </div>
   )
