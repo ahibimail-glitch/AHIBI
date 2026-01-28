@@ -66,6 +66,7 @@ interface Event {
   _id: string;
   title: string;
   description: string;
+  termsAndConditions?: string;
   category: string;
   startDate: string;
   endDate: string;
@@ -80,6 +81,14 @@ interface Event {
   status: string;
   createdAt: string;
   banner?: string;
+  coverImage?: string;
+  socialLinks?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+  };
   ticketTypes: TicketType[];
   organizer?: string;
   convenience?: {
@@ -108,6 +117,8 @@ export default function ApprovedEvents() {
   const [editError, setEditError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
   // Delete event state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -115,6 +126,7 @@ export default function ApprovedEvents() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchApprovedEvents = async () => {
@@ -126,7 +138,6 @@ export default function ApprovedEvents() {
           window.location.href = "/admin/login";
           return;
         }
-
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         const res = await fetch(`${apiUrl}/api/admin/events?status=${viewStatus}`, {
           method: 'GET',
@@ -255,6 +266,28 @@ export default function ApprovedEvents() {
         convenienceFixedAmount: eventCopy.convenience.convenienceFixedAmount || eventCopy.convenience.fixedAmount || 0
       };
     }
+
+    if (!eventCopy.termsAndConditions) {
+      eventCopy.termsAndConditions = '';
+    }
+
+    if (!eventCopy.socialLinks) {
+      eventCopy.socialLinks = {
+        website: '',
+        facebook: '',
+        instagram: '',
+        twitter: '',
+        youtube: '',
+      };
+    } else {
+      eventCopy.socialLinks = {
+        website: eventCopy.socialLinks.website || '',
+        facebook: eventCopy.socialLinks.facebook || '',
+        instagram: eventCopy.socialLinks.instagram || '',
+        twitter: eventCopy.socialLinks.twitter || '',
+        youtube: eventCopy.socialLinks.youtube || '',
+      };
+    }
     
     // Mark free flag
     eventCopy.isFreeEvent = !!eventCopy.isFreeEvent;
@@ -293,6 +326,7 @@ export default function ApprovedEvents() {
     console.log('Event data for editing:', eventCopy); // Debug log
     setEditingEvent(eventCopy);
     setImagePreview(event.banner || null);
+    setCoverPreview(eventCopy.coverImage || null);
     setIsEditDialogOpen(true);
     setEditError(null);
   };
@@ -321,6 +355,33 @@ export default function ApprovedEvents() {
       setEditError(err instanceof Error ? err.message : 'Failed to upload image');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleCoverImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !editingEvent) return;
+
+    const file = e.target.files[0];
+    const validationError = validateFile(file);
+    if (validationError) {
+      setEditError(validationError);
+      return;
+    }
+
+    try {
+      setIsUploadingCover(true);
+      setEditError(null);
+      const preview = await createImagePreview(file);
+      setCoverPreview(preview);
+      const uploadResponse = await uploadFile(file);
+      if (uploadResponse.status !== 'success' || !uploadResponse.data?.photo?.url) {
+        throw new Error(uploadResponse.message || 'Failed to upload image');
+      }
+      setEditingEvent({ ...editingEvent, coverImage: uploadResponse.data.photo.url });
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to upload image');
+    } finally {
+      setIsUploadingCover(false);
     }
   };
 
@@ -612,6 +673,17 @@ export default function ApprovedEvents() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Event Cover</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-48 h-27 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                      {coverPreview ? <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" /> : <span className="text-xs text-muted-foreground">No Image</span>}
+                    </div>
+                    <input type="file" ref={coverInputRef} onChange={handleCoverImageChange} className="hidden" accept="image/jpeg,image/png,image/webp" />
+                    <Button type="button" variant="outline" onClick={() => coverInputRef.current?.click()} disabled={isUploadingCover}><Upload className="mr-2 h-4 w-4" />{isUploadingCover ? 'Uploading...' : 'Change Image'}</Button>
+                  </div>
+                </div>
+
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -647,6 +719,37 @@ export default function ApprovedEvents() {
                   </div>
                 </div>
                 <div className="space-y-2"><Label htmlFor="description">Description</Label><Textarea id="description" value={editingEvent.description} onChange={(e) => handleEventInputChange('description', e.target.value)} /></div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="termsAndConditions">Terms & Conditions</Label>
+                  <Textarea id="termsAndConditions" value={editingEvent.termsAndConditions || ''} onChange={(e) => handleEventInputChange('termsAndConditions', e.target.value)} />
+                </div>
+
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h4 className="font-medium">Social & Website Links</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Website</Label>
+                      <Input id="website" value={editingEvent.socialLinks?.website || ''} onChange={(e) => handleEventInputChange('socialLinks.website', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="instagram">Instagram</Label>
+                      <Input id="instagram" value={editingEvent.socialLinks?.instagram || ''} onChange={(e) => handleEventInputChange('socialLinks.instagram', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="facebook">Facebook</Label>
+                      <Input id="facebook" value={editingEvent.socialLinks?.facebook || ''} onChange={(e) => handleEventInputChange('socialLinks.facebook', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="twitter">X/Twitter</Label>
+                      <Input id="twitter" value={editingEvent.socialLinks?.twitter || ''} onChange={(e) => handleEventInputChange('socialLinks.twitter', e.target.value)} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="youtube">YouTube</Label>
+                      <Input id="youtube" value={editingEvent.socialLinks?.youtube || ''} onChange={(e) => handleEventInputChange('socialLinks.youtube', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
 
                 {/* Dates */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -38,6 +38,7 @@ interface Event {
   title: string;
   description: string;
   banner: string;
+  coverImage?: string;
   gallery: Array<{ url: string; caption: string }>;
   category: string;
   startDate: string;
@@ -70,6 +71,13 @@ interface Event {
   status: string;
   approvalStatus: string;
   isFreeEvent?: boolean;
+  socialLinks?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+  };
 }
 
 interface EditEventFormProps {
@@ -94,6 +102,12 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
     endDate: "",
     category: "",
     image: "",
+    coverImage: "",
+    website: "",
+    facebook: "",
+    instagram: "",
+    twitter: "",
+    youtube: "",
     isFreeEvent: false,
   });
 
@@ -101,9 +115,18 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
   const [termsAndConditions, setTermsAndConditions] = useState("");
   const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const [fees, setFees] = useState({
+    includeConvenience: true,
+    conveniencePercentage: 5,
+    convenienceFixedAmount: 0,
+  });
 
   // Fetch event data on component mount
   useEffect(() => {
@@ -149,6 +172,12 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
         endDate: new Date(new Date(event.endDate).getTime() - new Date(event.endDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16),
         category: event.category,
         image: event.banner,
+        coverImage: event.coverImage || "",
+        website: event.socialLinks?.website || "",
+        facebook: event.socialLinks?.facebook || "",
+        instagram: event.socialLinks?.instagram || "",
+        twitter: event.socialLinks?.twitter || "",
+        youtube: event.socialLinks?.youtube || "",
         isFreeEvent: !!event.isFreeEvent,
       });
 
@@ -164,11 +193,49 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
       setTermsAndConditions(event.termsAndConditions || "");
       setFaqs(event.faqs || []);
       setImagePreview(event.banner);
+      setCoverPreview(event.coverImage || null);
+      setFees({
+        includeConvenience: (event as any)?.convenience?.percentage !== 0 || (event as any)?.convenience?.fixedAmount !== 0,
+        conveniencePercentage: (event as any)?.convenience?.percentage ?? 5,
+        convenienceFixedAmount: (event as any)?.convenience?.fixedAmount ?? 0,
+      });
     } catch (err) {
       console.error('Error fetching event data:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch event data');
     } finally {
       setIsLoadingEvent(false);
+    }
+  };
+
+  const handleCoverImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      setIsUploadingCover(true);
+      setError(null);
+
+      const preview = await createImagePreview(file);
+      setCoverPreview(preview);
+
+      const uploadedUrl = await uploadFile(file);
+      setEventData(prev => ({
+        ...prev,
+        coverImage: uploadedUrl.status === 'success' && uploadedUrl.data?.photo?.url ? uploadedUrl.data.photo.url : prev.coverImage
+      }));
+
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploadingCover(false);
     }
   };
 
@@ -302,6 +369,7 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
         title: eventData.title,
         description: eventData.description,
         banner: eventData.image,
+        coverImage: eventData.coverImage,
         category: eventData.category,
         startDate: new Date(eventData.startDate).toISOString(),
         endDate: new Date(eventData.endDate).toISOString(),
@@ -325,9 +393,21 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           capacity: parseInt(ticket.capacity),
           benefits: ticket.benefits.filter(benefit => benefit.trim() !== '')
         })),
-        ...(eventData.isFreeEvent ? { convenience: { percentage: 0, fixedAmount: 0 } } : {}),
+        convenience: eventData.isFreeEvent ? { percentage: 0, fixedAmount: 0 } : {
+          percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
+          fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0,
+        },
         termsAndConditions,
-        faqs: faqs.filter(faq => faq.question.trim() !== '' && faq.answer.trim() !== '')
+        faqs: faqs.filter(faq => faq.question.trim() !== '' && faq.answer.trim() !== ''),
+        socialLinks: Object.fromEntries(
+          Object.entries({
+            website: eventData.website?.trim(),
+            facebook: eventData.facebook?.trim(),
+            instagram: eventData.instagram?.trim(),
+            twitter: eventData.twitter?.trim(),
+            youtube: eventData.youtube?.trim(),
+          }).filter(([_, v]) => !!v)
+        )
       };
 
       const response = await fetch(`${apiUrl}/api/organizer/events/${eventId}`, {
@@ -588,6 +668,70 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           </CardContent>
         </Card>
 
+        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle>Event Cover</CardTitle>
+            <CardDescription>Upload a wide cover image for your event</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="coverImage">Cover Image</Label>
+              <Input
+                id="coverImage"
+                type="file"
+                accept="image/*"
+                onChange={handleCoverImageChange}
+                ref={coverInputRef}
+                disabled={isUploadingCover}
+              />
+              {isUploadingCover && (
+                <div className="flex items-center space-x-2 mt-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-gray-600">Uploading...</span>
+                </div>
+              )}
+            </div>
+            {coverPreview && (
+              <div className="mt-4">
+                <img
+                  src={coverPreview}
+                  alt="Event cover preview"
+                  className="w-full max-w-md h-48 object-cover rounded-lg"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+          <CardHeader>
+            <CardTitle>Social & Website Links</CardTitle>
+            <CardDescription>Add links to your event's official pages</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input id="website" value={eventData.website} onChange={(e) => setEventData({ ...eventData, website: e.target.value })} placeholder="https://example.com" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input id="instagram" value={eventData.instagram} onChange={(e) => setEventData({ ...eventData, instagram: e.target.value })} placeholder="https://instagram.com/yourpage" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="facebook">Facebook</Label>
+              <Input id="facebook" value={eventData.facebook} onChange={(e) => setEventData({ ...eventData, facebook: e.target.value })} placeholder="https://facebook.com/yourpage" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="twitter">X/Twitter</Label>
+              <Input id="twitter" value={eventData.twitter} onChange={(e) => setEventData({ ...eventData, twitter: e.target.value })} placeholder="https://x.com/yourpage" />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="youtube">YouTube</Label>
+              <Input id="youtube" value={eventData.youtube} onChange={(e) => setEventData({ ...eventData, youtube: e.target.value })} placeholder="https://youtube.com/@yourchannel" />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Free/RSVP Option */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
           <CardHeader>
@@ -722,24 +866,56 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
                   </div>
                 </div>
               ))}
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addTicketType}
-                className="w-full"
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Ticket Type
+              <Button type="button" variant="outline" onClick={addTicketType} className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Another Ticket Type
               </Button>
             </CardContent>
-          </Card>)}
+          </Card>
+        )}
 
-        {/* Error Display */}
-        {error && (
-          <Card className="bg-red-50 border-red-200">
-            <CardContent className="pt-6">
-              <p className="text-red-800">{error}</p>
+        {!eventData.isFreeEvent && (
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Fee Configuration</CardTitle>
+              <CardDescription>Optional platform/convenience fee settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeConvenience"
+                  checked={fees.includeConvenience}
+                  onCheckedChange={(checked) => setFees(prev => ({ ...prev, includeConvenience: !!checked }))}
+                />
+                <Label htmlFor="includeConvenience" className="text-sm font-medium">Include Convenience Fee</Label>
+              </div>
+              {fees.includeConvenience && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
+                    <Input
+                      id="conveniencePercentage"
+                      type="number"
+                      value={fees.conveniencePercentage}
+                      onChange={(e) => setFees(prev => ({ ...prev, conveniencePercentage: parseFloat(e.target.value) || 0 }))}
+                      min="0"
+                      max="100"
+                      step="0.1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="convenienceFixedAmount">Convenience Fixed Amount</Label>
+                    <Input
+                      id="convenienceFixedAmount"
+                      type="number"
+                      value={fees.convenienceFixedAmount}
+                      onChange={(e) => setFees(prev => ({ ...prev, convenienceFixedAmount: parseFloat(e.target.value) || 0 }))}
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

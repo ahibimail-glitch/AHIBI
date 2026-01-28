@@ -30,6 +30,7 @@ export interface Event {
   title: string;
   description: string;
   banner: string;
+  coverImage?: string;
   gallery?: Array<{ url: string; caption?: string }>;
   category: string;
   startDate: string | Date;

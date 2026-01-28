@@ -311,9 +311,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-          <Navbar />
-        </header>
+        <Navbar />
         <div className="flex justify-center items-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -324,9 +322,7 @@ export default function ProfilePage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-          <Navbar />
-        </header>
+        <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -343,9 +339,7 @@ export default function ProfilePage() {
   if (!profileData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50">
-          <Navbar />
-        </header>
+        <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <p className="text-gray-600 text-lg">No profile data found.</p>
@@ -357,11 +351,9 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-50 shadow-sm">
-        <Navbar />
-      </header>
+      <Navbar />
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="container mx-auto px-4 py-6 max-w-7xl pb-24 md:pb-6">
         {/* Enhanced Profile Header */}
         <Card className="mb-8 shadow-lg border-0 bg-gradient-to-r from-white via-white to-blue-50/30">
           <CardContent className="p-6 md:p-8">

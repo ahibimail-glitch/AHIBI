@@ -167,6 +167,7 @@ export default function HomePage() {
   const [currentBgSlide, setCurrentBgSlide] = useState(0)
   const [backgroundImages, setBackgroundImages] = useState<Array<{ url: string; mobileUrl?: string }>>([])
   const [loadingHeroImages, setLoadingHeroImages] = useState(true)
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
 
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -209,6 +210,15 @@ export default function HomePage() {
     }
 
     fetchHomeData()
+  }, [])
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobileViewport(window.innerWidth < 640)
+    }
+    updateViewport()
+    window.addEventListener('resize', updateViewport)
+    return () => window.removeEventListener('resize', updateViewport)
   }, [])
 
   useEffect(() => {
@@ -390,339 +400,292 @@ export default function HomePage() {
 
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#f5f5f5]">
       <Navbar />
 
-
-
-      <section className="relative py-10 bg-white overflow-hidden">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-10">
-          <div className="w-full md:w-1/2 text-center md:text-left">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-[#121212] leading-tight">
-              Book <span className="text-[#ff0e0e]">Events.</span>
-              <br /> Experience <span className="text-[#ff0e0e]">Life.</span>
-            </h1>
-
-            <p className="text-lg md:text-2xl text-[#4A4A4A] mt-4 font-medium max-w-xl">
-              Trusted event bookings across Nagaland. Discover concerts, festivals, workshops and more — all in one place.
-            </p>
-
-            <div className="flex gap-4 justify-center md:justify-start mt-8">
-              <Button asChild className="bg-[#ff0e0e] hover:bg-[#e60000] text-white px-7 py-3 rounded-full font-semibold text-lg shadow-lg shadow-red-500/20">
-                <Link href="/events">Explore Events</Link>
-              </Button>
-              <Button variant="outline" asChild className="border border-gray-300 text-[#121212] px-7 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 hover:text-[#ff0e0e]">
-                <Link href="/auth">Sign In</Link>
-              </Button>
-            </div>
-
-            <div className="mt-6 text-sm text-gray-500">No booking fees • Easy refunds • Secure payments</div>
-          </div>
-
-          <div className="w-full md:w-1/2">
-            <div className="rounded-2xl overflow-hidden shadow-xl border border-gray-200">
-              {loadingHeroImages ? (
-                <div className="w-full h-64 md:h-80 lg:h-96 bg-gray-100" />
-              ) : (
-                <div className="relative w-full h-64 md:h-80 lg:h-96">
-                  <Image
-                    src={backgroundImages[currentBgSlide]?.mobileUrl || backgroundImages[currentBgSlide]?.url || "/images/carausel2.jpg"}
-                    alt={`Hero ${currentBgSlide + 1}`}
-                    fill
-                    className="object-cover"
-                    priority
+      {/* Hero Carousel Banner */}
+      <section className="relative w-full bg-white ">
+        {loadingHeroImages ? (
+          <div className="w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse" />
+        ) : (
+          <div className="relative w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] overflow-hidden">
+            {backgroundImages.map((image, index) => (
+              <div
+                key={index}
+                className={`absolute inset-0 transition-opacity duration-700 ${
+                  index === currentBgSlide ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Image
+                  src={(isMobileViewport && image.mobileUrl ? image.mobileUrl : image.url) || "/images/carausel1.jpg"}
+                  alt={`Banner ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  priority={index === 0}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              </div>
+            ))}
+            
+            {/* Carousel Indicators */}
+            {backgroundImages.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10">
+                {backgroundImages.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentBgSlide(index)}
+                    className={`h-1 rounded-full transition-all ${
+                      index === currentBgSlide ? "bg-white w-6" : "bg-white/50 w-1"
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
                   />
-                  <div className="absolute inset-0 bg-black/10" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-4 group">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-[#ff0e0e] font-medium mb-3 text-sm">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Featured Events
-            </div>
-
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1C1C1C] transition-transform duration-300 group-hover:scale-[1.02] group-hover:text-[#ff0e0e]">
-              Discover What's Happening
-            </h2>
-            <div className="mx-auto mt-2 h-1 w-12 bg-[#ff0e0e] rounded-full transition-all duration-300 group-hover:w-24" />
-            <p className="text-gray-500 max-w-2xl mx-auto mt-2 transition-colors duration-300 group-hover:text-gray-700">
-              From intimate concerts to grand festivals, find events that match your vibe.
-            </p>
-          </div>
-          <div
-            className="relative w-full mx-auto touch-pan-x"
-            onMouseEnter={() => setIsAutoPlaying(false)}
-            onMouseLeave={() => setIsAutoPlaying(true)}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            {isLoading ? (
-              <div className="flex justify-center items-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                ))}
               </div>
-            ) : error ? (
-              <div className="h-48 flex items-center justify-center text-red-500">
-                <div className="bg-red-50 border border-red-100 rounded-lg p-4">{error}</div>
-              </div>
-            ) : featuredEvents.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-gray-600">
-                <div className="bg-gray-50 border border-gray-100 rounded-lg p-4">No featured events available at the moment.</div>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-hidden rounded-3xl">
-                  <div
-                    className="flex transition-transform duration-700 ease-out"
-                    style={{ transform: `translateX(-${currentSlide * (100 / slidesPerView)}%)` }}
-                  >
-                    {featuredEvents.map((event, index) => (
-                      <div key={event._id} className="flex-shrink-0 px-2 py-2" style={{ width: `${100 / slidesPerView}%` }}>
-                        <Card className="relative h-full rounded-3xl overflow-hidden border border-gray-100 shadow-md hover:shadow-xl transition-all bg-white">
-                          <div className="flex flex-col h-full">
-                            <AspectRatio ratio={16 / 9} className="relative">
-                              <Image
-                                src={event.banner || "/placeholder.svg?height=600&width=800&query=event%20venue"}
-                                alt={event.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-700"
-                                sizes="(max-width: 640px) 100vw, (max-width: 768px) 90vw, (max-width: 1024px) 80vw, 1200px"
-                                priority={index === 0}
-                              />
-                            </AspectRatio>
-                            <div className="p-4 space-y-3 flex-1 flex flex-col">
-                              <h3 className="text-lg md:text-xl font-bold text-[#1C1C1C] leading-tight line-clamp-2">{event.title}</h3>
-                              <div className="flex items-center justify-between text-sm text-gray-600">
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{new Date(event.startDate).toLocaleDateString()}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4" />
-                                  <span className="truncate">{event.location.city}</span>
-                                </div>
-                              </div>
-                              <div className="mt-auto">
-                                <Button
-                                  className="w-full bg-[#ff0e0e] hover:bg-[#e60000] text-white rounded-full font-semibold py-2 shadow"
-                                  asChild
-                                >
-                                  <Link href={`/events/${event._id}`} className="flex items-center justify-center gap-2">
-                                    <span>Book Now</span>
-                                    <ArrowRight className="h-4 w-4" />
-                                  </Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {featuredEvents.length > slidesPerView && (
-                  <div className="flex justify-center mt-4 gap-2">
-                    {Array.from({ length: maxSlide + 1 }).map((_, index) => (
-                      <button
-                        key={index}
-                        className={`h-2 w-2 rounded-full transition-all ${index === currentSlide ? "bg-[#ff0e0e] w-8" : "bg-gray-300"}`}
-                        onClick={() => handleGoTo(index)}
-                        aria-label={`Go to slide ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
             )}
           </div>
-
-          <div className="text-center mt-6">
-            <Button
-              variant="outline"
-              asChild
-              className="border border-gray-300 text-[#1C1C1C] hover:bg-[#ff0e0e] hover:text-white rounded-full px-6 py-2"
-            >
-              <Link href="/events">View All Events</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 mt-6">
-        <div className="text-left mb-4">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900">What We Offer</h2>
-          <p className="text-sm text-gray-500">Discover everything Ahibi has for you</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {offeringTiles.map((item) => (
-            <Link key={item.label} href={item.href}>
-              <Card className="relative h-32 md:h-40 lg:h-48 rounded-xl overflow-hidden cursor-pointer hover:shadow-lg transition-shadow">
-                <Image src={item.image} alt={item.label} fill className="object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                <div className="absolute bottom-3 left-3 text-white">
-                  <div className="font-bold text-base md:text-lg">{item.label}</div>
-                  {item.count !== null && item.count > 0 && (
-                    <div className="text-xs opacity-90">{item.count} available</div>
-                  )}
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <Section title="Explore Venues" subtitle="Popular venues & landmarks" href="/allVenues/list">
-        {(venues.length > 0 ? venues.slice(0, 10) : Array.from({ length: 6 })).map((venue: any, idx: number) => {
-          const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
-          const img = getVenueImage(venue || ({} as PublicVenue), idx)
-          return (
-            <Card key={venue?._id || idx} className="relative min-w-[160px] md:min-w-[200px] lg:min-w-[240px] h-44 md:h-52 lg:h-60 rounded-xl overflow-hidden">
-              <Image src={img} alt={placeName} fill className="object-cover" />
-              <div className="absolute inset-0 bg-black/30" />
-              <div className="absolute bottom-2 left-2 text-white font-semibold">{placeName}</div>
-            </Card>
-          )
-        })}
-      </Section>
-
-      <Section
-        title="Explore Artists"
-        subtitle="Performers & creators"
-        href="/allArtists/list"
-      >
-        {artists.length > 0 ? (
-          artists.slice(0, 10).map((artist: any) => (
-            <Link
-              key={artist._id}
-              href={`/allArtistS/list/${artist._id}`}
-              className="flex flex-col items-center 
-          min-w-[120px] md:min-w-[160px] lg:min-w-[220px]
-          hover:scale-105 transition-transform duration-300"
-            >
-              <div
-                className="relative 
-            h-28 w-28 
-            md:h-36 md:w-36 
-            lg:h-56 lg:w-56 
-            rounded-full overflow-hidden 
-            border-2 border-gray-200"
-              >
-                <Image
-                  src={getArtistImage(artist)}
-                  alt={artist.name || 'Artist'}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              <p className="text-sm md:text-base mt-3 text-center font-medium line-clamp-2">
-                {artist.name || 'Artist'}
-              </p>
-            </Link>
-          ))
-        ) : (
-          [
-            {
-              type: 'Singer',
-              img: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=200&q=80',
-            },
-            {
-              type: 'Band',
-              img: 'https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=200&q=80',
-            },
-            {
-              type: 'Comedian',
-              img: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=200&q=80',
-            },
-            {
-              type: 'Dancer',
-              img: 'https://images.unsplash.com/photo-1547153760-18fc86324498?w=200&q=80',
-            },
-            {
-              type: 'Musician',
-              img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&q=80',
-            },
-            {
-              type: 'Host',
-              img: 'https://images.unsplash.com/photo-1559523161-0fc0d8b38a7a?w=200&q=80',
-            },
-            {
-              type: 'Performer',
-              img: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&q=80',
-            },
-          ].map((item, idx) => (
-            <div
-              key={idx}
-              className="flex flex-col items-center 
-          min-w-[120px] md:min-w-[160px] lg:min-w-[220px]"
-            >
-              <div
-                className="relative 
-            h-24 w-24 
-            md:h-32 md:w-32 
-            lg:h-40 lg:w-40 
-            rounded-full overflow-hidden 
-            border-2 border-gray-200"
-              >
-                <Image
-                  src={item.img}
-                  alt={item.type}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              <p className="text-sm mt-3 text-center font-medium">
-                {item.type}
-              </p>
-            </div>
-          ))
         )}
-      </Section>
+      </section>
 
-
-  
-
-      <section className="py-20 bg-gradient-to-b from-white to-gray-50">
-        <div ref={statsRef} className="container mx-auto px-4 group">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-extrabold transition-transform duration-300 group-hover:scale-[1.02] group-hover:text-[#ff0e0e]">
-              The Ahibi Impact
-            </h2>
-            <div className="mx-auto mt-2 h-1 w-12 bg-[#ff0e0e] rounded-full transition-all duration-300 group-hover:w-24" />
-            <p className="text-gray-600 mt-2 transition-colors duration-300 group-hover:text-gray-800">
-              Trusted by thousands across Nagaland
-            </p>
+      {/* Featured Events Section */}
+      <section className="py-4 sm:py-6 md:py-8 bg-white">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Recommended Events</h2>
+            <Link href="/events" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+              See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="p-7 bg-white rounded-2xl shadow hover:shadow-xl transition group">
-                  <div className="w-14 h-14 mx-auto flex items-center justify-center rounded-xl bg-gray-100">
-                    <stat.icon className="h-6 w-6 text-gray-700 group-hover:text-[#ff0e0e]" />
-                  </div>
+          {isLoading ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-gray-200 rounded-md h-48 sm:h-64 md:h-72 lg:h-80 animate-pulse" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-6 text-red-500 text-sm">{error}</div>
+          ) : featuredEvents.length === 0 ? (
+            <div className="text-center py-6 text-gray-500 text-sm">No featured events available</div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+              {featuredEvents.slice(0, 10).map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
+                    <div className="relative aspect-[2/3]">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
+                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
+                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.category}</p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
-                  <div className="text-4xl md:text-5xl font-black mt-4">
-                    {animatedStats[index].toLocaleString("en-IN")}
-                    {stat.suffix}
-                  </div>
+      {/* Top Events Section */}
+      <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">The Best Of Live Events</h2>
+            <Link href="/events" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+              See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Link>
+          </div>
 
-                  <div className="text-gray-600 mt-1">{stat.label}</div>
-                </div>
-              </div>
+          {loading ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-gray-700 rounded-md h-48 sm:h-64 md:h-72 lg:h-80 animate-pulse" />
+              ))}
+            </div>
+          ) : topEvents.length === 0 ? (
+            <div className="text-center py-6 text-gray-400 text-sm">No events available</div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+              {topEvents.map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
+                    <div className="relative aspect-[2/3]">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
+                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
+                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.location.city}</p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Comedy Events Section */}
+      {comedyEvents.length > 0 && (
+        <section className="py-4 sm:py-6 md:py-8 bg-white">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Laughter Therapy</h2>
+              <Link href="/events?category=comedy" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+              {comedyEvents.map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
+                    <div className="relative aspect-[2/3]">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
+                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
+                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.location.city}</p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Sports Events Section */}
+      {sportsEvents.length > 0 && (
+        <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">Sports Events</h2>
+              <Link href="/sports" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+              {sportsEvents.map((event) => (
+                <Link key={event._id} href={`/events/${event._id}`}>
+                  <Card className="group overflow-hidden rounded-md border-0 shadow-sm hover:shadow-lg transition-all cursor-pointer">
+                    <div className="relative aspect-[2/3]">
+                      <Image
+                        src={event.banner || "/placeholder.svg"}
+                        alt={event.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="p-1.5 sm:p-2 md:p-3 bg-white">
+                      <h3 className="font-semibold text-[10px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">{event.title}</h3>
+                      <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">{event.location.city}</p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Explore Categories */}
+      <section className="py-4 sm:py-6 md:py-8 bg-white">
+        <div className="container mx-auto px-3 sm:px-4">
+          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C] mb-3 sm:mb-4">Explore More</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
+            {offeringTiles.map((item) => (
+              <Link key={item.label} href={item.href}>
+                <Card className="relative h-24 sm:h-32 md:h-36 lg:h-40 rounded-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow border-0">
+                  <Image src={item.image} alt={item.label} fill className="object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                  <div className="absolute bottom-2 left-2 text-white">
+                    <div className="font-bold text-xs sm:text-sm md:text-base">{item.label}</div>
+                    {item.count !== null && item.count > 0 && (
+                      <div className="text-[9px] sm:text-[10px] md:text-xs opacity-90">{item.count} available</div>
+                    )}
+                  </div>
+                </Card>
+              </Link>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Venues Section */}
+      {venues.length > 0 && (
+        <section className="py-4 sm:py-6 md:py-8 bg-[#f5f5f5]">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Popular Venues</h2>
+              <Link href="/allVenues/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+            <div className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-3 scrollbar-hide">
+              {venues.slice(0, 10).map((venue: any, idx: number) => {
+                const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
+                const img = getVenueImage(venue, idx)
+                return (
+                  <Card key={venue?._id || idx} className="relative min-w-[140px] sm:min-w-[180px] md:min-w-[200px] h-32 sm:h-40 md:h-48 rounded-md overflow-hidden border-0 shadow-sm hover:shadow-lg transition-shadow cursor-pointer flex-shrink-0">
+                    <Image src={img} alt={placeName} fill className="object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-2 left-2 text-white font-semibold text-xs sm:text-sm">{placeName}</div>
+                  </Card>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Artists Section */}
+      {artists.length > 0 && (
+        <section className="py-4 sm:py-6 md:py-8 bg-white">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Featured Artists</h2>
+              <Link href="/allArtists/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+            <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 scrollbar-hide">
+              {artists.slice(0, 10).map((artist: any) => (
+                <Link
+                  key={artist._id}
+                  href={`/allArtistS/list/${artist._id}`}
+                  className="flex flex-col items-center min-w-[90px] sm:min-w-[110px] md:min-w-[140px] hover:scale-105 transition-transform duration-300 flex-shrink-0"
+                >
+                  <div className="relative h-20 w-20 sm:h-24 sm:w-24 md:h-32 md:w-32 rounded-full overflow-hidden border-2 border-gray-200">
+                    <Image
+                      src={getArtistImage(artist)}
+                      alt={artist.name || 'Artist'}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <p className="text-[10px] sm:text-xs md:text-sm mt-2 text-center font-medium line-clamp-2 w-full">
+                    {artist.name || 'Artist'}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       <Footer />
     </div>
   )

@@ -50,6 +50,10 @@ const EventSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Event banner image is required']
   },
+  coverImage: {
+    type: String,
+    default: ''
+  },
   gallery: [{
     url: {
       type: String

@@ -43,6 +43,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const [eventData, setEventData] = useState({
     eventName: "",
     description: "",
+    termsAndConditions: "",
     venue: "",
     city: "",
     state: "",
@@ -51,7 +52,8 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     startDate: "",
     endDate: "",
     category: "",
-    image: "",
+    posterImage: "",
+    coverImage: "",
     isFreeEvent: false,
     website: "",
     facebook: "",
@@ -79,66 +81,67 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     includeConvenience: true
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [isUploadingPoster, setIsUploadingPoster] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const posterInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-
-    const file = e.target.files[0];
-
-    // Validate file
+  const uploadAndSetImage = async (
+    file: File,
+    kind: 'poster' | 'cover'
+  ) => {
     const validationError = validateFile(file);
     if (validationError) {
       setError(validationError);
       return;
     }
 
+    const setUploading = kind === 'poster' ? setIsUploadingPoster : setIsUploadingCover;
+    const setPreview = kind === 'poster' ? setPosterPreview : setCoverPreview;
+    const inputRef = kind === 'poster' ? posterInputRef : coverInputRef;
+
     try {
-      setIsUploading(true);
+      setUploading(true);
       setError(null);
 
-      // Create preview
       const preview = await createImagePreview(file);
-      setImagePreview(preview);
+      setPreview(preview);
 
-      // Upload the file
-      console.log('Starting file upload...');
       const uploadResponse = await uploadFile(file);
-      console.log('Upload response:', uploadResponse);
-
       if (uploadResponse.status !== 'success') {
-        console.error('Upload failed:', uploadResponse.message);
         throw new Error(uploadResponse.message || 'Failed to upload image');
       }
 
-      // Log the full response for debugging
-      console.log('Upload successful, response data:', uploadResponse.data);
-
       if (!uploadResponse.data?.photo?.url) {
-        console.error('Invalid response format - missing photo URL:', uploadResponse);
         throw new Error('Invalid response from server - missing photo URL');
       }
 
-      // Update event data with image URL
       const imageUrl = uploadResponse.data.photo.url;
-      console.log('Setting image URL:', imageUrl);
       setEventData(prev => ({
         ...prev,
-        image: imageUrl
+        ...(kind === 'poster' ? { posterImage: imageUrl } : { coverImage: imageUrl })
       }));
-
     } catch (err) {
-      console.error('Error uploading image:', err);
       setError(err instanceof Error ? err.message : 'Failed to upload image');
-      setImagePreview(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      setPreview(null);
+      if (inputRef.current) {
+        inputRef.current.value = '';
       }
     } finally {
-      setIsUploading(false);
+      setUploading(false);
     }
+  };
+
+  const handlePosterChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    await uploadAndSetImage(e.target.files[0], 'poster');
+  };
+
+  const handleCoverChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    await uploadAndSetImage(e.target.files[0], 'cover');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -241,8 +244,8 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     e.preventDefault();
 
     // Validate required fields including image
-    if (!eventData.image) {
-      setError('Please upload an event image');
+    if (!eventData.posterImage || !eventData.coverImage) {
+      setError('Please upload both event poster and cover images');
       return;
     }
 
@@ -314,7 +317,9 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     const payload = {
       title: eventData.eventName,
       description: eventData.description,
-      banner: eventData.image,
+      termsAndConditions: eventData.termsAndConditions,
+      banner: eventData.posterImage,
+      coverImage: eventData.coverImage,
       category: categoryMap[eventData.category.toLowerCase()] || 'Other',
       startDate: new Date(eventData.startDate).toISOString(),
       endDate: new Date(eventData.endDate).toISOString(),
@@ -426,47 +431,92 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Image Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="eventImage">Event Image *</Label>
-              <div className="flex items-center gap-4">
-                <div className="relative w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Event preview"
-                      className="w-full h-full object-cover"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="eventPoster">Event Poster (2:3) *</Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-32 h-48 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                    {posterPreview ? (
+                      <img
+                        src={posterPreview}
+                        alt="Event poster preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">
+                        <span>No image</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      id="eventPoster"
+                      type="file"
+                      ref={posterInputRef}
+                      onChange={handlePosterChange}
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingPoster}
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-500">
-                      <span>No image</span>
-                    </div>
-                  )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => posterInputRef.current?.click()}
+                      disabled={isUploadingPoster}
+                    >
+                      {isUploadingPoster ? 'Uploading...' : 'Upload Poster'}
+                    </Button>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Recommended: 1000×1500 (2:3)
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      JPG, PNG or WebP. Max 10MB
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <input
-                    id="eventImage"
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                    accept="image/*"
-                    className="hidden"
-                    disabled={isUploading}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload Image'}
-                  </Button>
-                  <p className="text-sm text-gray-500 mt-2">
-                    JPG, PNG or WebP. Max 10MB
-                  </p>
-                  <p className="text-sm text-red-500 mt-2">
-                    Image Size: 16:9 ratio (width:16 and height :9)
-                  </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="eventCover">Event Cover (16:9) *</Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-48 h-28 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                    {coverPreview ? (
+                      <img
+                        src={coverPreview}
+                        alt="Event cover preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">
+                        <span>No image</span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      id="eventCover"
+                      type="file"
+                      ref={coverInputRef}
+                      onChange={handleCoverChange}
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingCover}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => coverInputRef.current?.click()}
+                      disabled={isUploadingCover}
+                    >
+                      {isUploadingCover ? 'Uploading...' : 'Upload Cover'}
+                    </Button>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Recommended: 1920×1080 (16:9)
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      JPG, PNG or WebP. Max 10MB
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -550,6 +600,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="termsAndConditions">Terms & Conditions (optional)</Label>
+              <Textarea
+                id="termsAndConditions"
+                value={eventData.termsAndConditions}
+                onChange={handleChange}
+                placeholder="Add terms & conditions for attendees (optional)..."
+              />
+            </div>
+
             {/* Date and Category */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
@@ -627,20 +687,19 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </CardContent>
             </Card>
 
-            {/* Free Event Option */
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isFreeEvent"
-                  checked={eventData.isFreeEvent}
-                  onCheckedChange={(checked) =>
-                    setEventData(prev => ({ ...prev, isFreeEvent: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="isFreeEvent" className="text-sm font-medium">
-                  This is a Free/RSVP Event
-                </Label>
-              </div>
-            }
+            {/* Free Event Option */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isFreeEvent"
+                checked={eventData.isFreeEvent}
+                onCheckedChange={(checked) =>
+                  setEventData(prev => ({ ...prev, isFreeEvent: checked as boolean }))
+                }
+              />
+              <Label htmlFor="isFreeEvent" className="text-sm font-medium">
+                This is a Free/RSVP Event
+              </Label>
+            </div>
             {/* Ticket Types Section - Only for paid events */}
             {!eventData.isFreeEvent && (
               <div className="space-y-4">
@@ -872,7 +931,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             <div className="flex justify-end pt-6">
               <Button
                 type="submit"
-                disabled={isLoading || isUploading}
+                disabled={isLoading || isUploadingPoster || isUploadingCover}
                 className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 transition-opacity"
               >
                 {isLoading ? (

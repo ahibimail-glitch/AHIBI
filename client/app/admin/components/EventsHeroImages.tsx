@@ -309,7 +309,7 @@ export default function EventsHeroImages() {
                        
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        Recommended: 1920x1080px. Max: 5MB.
+                        Recommended: 2560x900px (wide banner). Minimum: 1920px wide. Max: 5MB.
                     </p>
                 </div>
                 <div>
@@ -321,9 +321,16 @@ export default function EventsHeroImages() {
                         onChange={handleMobileFileChange}
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        Recommended: 750x1334px. Max: 2MB.
+                        Recommended: 1080x540px (wide banner). Minimum: 1080px wide. Max: 2MB.
                     </p>
                 </div>
+            </div>
+
+            <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+              <p className="font-medium text-gray-700">Events Hero Image Tips</p>
+              <p className="mt-1">
+                The events page hero uses a fixed-height banner with <span className="font-mono">object-cover</span>, so edges may crop on different screens. Keep key text/logos centered.
+              </p>
             </div>
             
             <div>

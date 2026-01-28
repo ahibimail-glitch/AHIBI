@@ -5,6 +5,8 @@ const validateEvent = [
   check('title', 'Title is required').not().isEmpty().trim(),
   check('description', 'Description is required').not().isEmpty(),
   check('banner', 'Banner image URL is required').not().isEmpty(),
+  check('coverImage', 'Cover image URL is required').optional().not().isEmpty(),
+  check('termsAndConditions', 'Terms and conditions must be a string').optional().isString(),
   check('category', 'Category is required').not().isEmpty(),
   
   // Date and time validation

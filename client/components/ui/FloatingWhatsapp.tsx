@@ -26,7 +26,7 @@ export const FloatingWhatsAppButton = () => {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with us on WhatsApp"
-      className="group fixed bottom-6 right-6 z-50 flex items-center bg-[#25D366] rounded-full shadow-lg cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl"
+      className="group fixed bottom-16 right-6 z-50 flex items-center bg-[#25D366] rounded-full shadow-md cursor-pointer transition-all duration-300 ease-in-out hover:shadow-xl"
     >
       {/* Main button circle - always visible */}
       <div className="flex items-center justify-center w-16 h-16 rounded-full">

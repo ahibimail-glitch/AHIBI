@@ -154,6 +154,7 @@ interface Event {
   title: string;
   description: string;
   banner: string;
+  coverImage?: string;
   gallery: string[];
   organizer: EventOrganizer | null;
   artists: any[];
@@ -1173,7 +1174,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-[#f5f5f5]">
       <Navbar />
 
       {params.id === '69303656ca38d79b1c9e4202' && (
@@ -1277,7 +1278,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       )}
 
 
-      <div className="container mx-auto px-4 py-8 flex-1">
+      <div className="container mx-auto px-4 py-6 sm:py-8 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -1285,47 +1286,88 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <div className="relative rounded-xl overflow-hidden shadow-lg">
               <AspectRatio ratio={16 / 9}>
                 <Image
-                  src={event.banner || "/placeholder.svg"}
+                  src={event.coverImage || event.banner || "/placeholder.svg"}
                   alt={event.title}
                   fill
-                  className="object-cover transition-transform duration-300 hover:scale-105"
+                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                <div className="absolute bottom-4 left-4">
-                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">{event.title}</h1>
-                  <p className="text-xs sm:text-sm text-gray-200 mt-1">{event.category}</p>
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
               </AspectRatio>
             </div>
 
             {/* Event Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
-                <div className="bg-indigo-100 rounded-full p-2">
-                  <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 sm:p-5">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                <div className="w-full sm:w-44 md:w-52 flex-shrink-0">
+                  <div className="relative w-full aspect-[2/3] rounded-lg overflow-hidden border border-gray-200">
+                    <Image
+                      src={event.banner || "/placeholder.svg"}
+                      alt={event.title}
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 640px) 60vw, 240px"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs uppercase text-gray-500">Date</p>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {startDateTime.date}
-                    {endDateTime && (
-                      <>
-                        <span className="mx-1">→</span>
-                        <span>{endDateTime.date}</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-sm flex items-center gap-3">
-                <div className="bg-purple-100 rounded-full p-2">
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase text-gray-500">Time</p>
-                  <p className="text-sm font-semibold text-gray-900">{timeRange}</p>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h1 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight line-clamp-2">{event.title}</h1>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-1">{event.category}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" aria-label="Share">
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" aria-label="Favorite">
+                        <Heart className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-indigo-50 rounded-full p-2">
+                        <CalendarIcon className="h-4 w-4 text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase text-gray-500">Date</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {startDateTime.date}
+                          {endDateTime && (
+                            <>
+                              <span className="mx-1">→</span>
+                              <span>{endDateTime.date}</span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-purple-50 rounded-full p-2">
+                        <Clock className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] uppercase text-gray-500">Time</p>
+                        <p className="text-sm font-semibold text-gray-900">{timeRange}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 sm:col-span-2">
+                      <div className="bg-emerald-50 rounded-full p-2">
+                        <MapPin className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] uppercase text-gray-500">Venue</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{event.location?.address}</p>
+                        <p className="text-xs text-gray-600 truncate">
+                          {[event.location?.city, event.location?.state].filter(Boolean).join(", ")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1339,6 +1381,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                 {event.description}
               </p>
+
+              {/* Terms & Conditions */}
+              {event.termsAndConditions && event.termsAndConditions.trim() && (
+                <div className="mt-6 border-t border-gray-200 pt-6">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">
+                    Terms & Conditions
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+                    {event.termsAndConditions}
+                  </p>
+                </div>
+              )}
               {/*CONCERT SCHEDULE FOR NIS  */}
               {params.id === '68e3b8037e8e587e70ed9371' && (
                 <div className="mt-6 border-t border-gray-200 pt-6">
@@ -1569,41 +1623,43 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             {/* Social Links */}
             {event.socialLinks && (
-              <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Follow and Learn More</h2>
-                <div className="flex flex-wrap items-center gap-4">
-                  {event.socialLinks.website && (
-                    <a href={event.socialLinks.website.startsWith('http') ? event.socialLinks.website : `https://${event.socialLinks.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-700 hover:text-indigo-600">
-                      <Globe className="h-5 w-5" />
-                      <span className="text-sm">Website</span>
-                    </a>
-                  )}
-                  {event.socialLinks.instagram && (
-                    <a href={event.socialLinks.instagram.startsWith('http') ? event.socialLinks.instagram : `https://${event.socialLinks.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-pink-600 hover:text-pink-700">
-                      <Instagram className="h-5 w-5" />
-                      <span className="text-sm">Instagram</span>
-                    </a>
-                  )}
-                  {event.socialLinks.facebook && (
-                    <a href={event.socialLinks.facebook.startsWith('http') ? event.socialLinks.facebook : `https://${event.socialLinks.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
-                      <Facebook className="h-5 w-5" />
-                      <span className="text-sm">Facebook</span>
-                    </a>
-                  )}
-                  {event.socialLinks.twitter && (
-                    <a href={event.socialLinks.twitter.startsWith('http') ? event.socialLinks.twitter : `https://${event.socialLinks.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-800 hover:text-black">
-                      <Twitter className="h-5 w-5" />
-                      <span className="text-sm">X/Twitter</span>
-                    </a>
-                  )}
-                  {event.socialLinks.youtube && (
-                    <a href={event.socialLinks.youtube.startsWith('http') ? event.socialLinks.youtube : `https://${event.socialLinks.youtube}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-red-600 hover:text-red-700">
-                      <Youtube className="h-5 w-5" />
-                      <span className="text-sm">YouTube</span>
-                    </a>
-                  )}
+              Object.values(event.socialLinks).some(link => link && link.trim() !== '') && (
+                <div className="bg-white rounded-lg p-4 sm:p-6 shadow-md border border-gray-100">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Follow and Learn More</h2>
+                  <div className="flex flex-wrap items-center gap-4">
+                    {event.socialLinks.website && (
+                      <a href={event.socialLinks.website.startsWith('http') ? event.socialLinks.website : `https://${event.socialLinks.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-700 hover:text-indigo-600">
+                        <Globe className="h-5 w-5" />
+                        <span className="text-sm">Website</span>
+                      </a>
+                    )}
+                    {event.socialLinks.instagram && (
+                      <a href={event.socialLinks.instagram.startsWith('http') ? event.socialLinks.instagram : `https://${event.socialLinks.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-pink-600 hover:text-pink-700">
+                        <Instagram className="h-5 w-5" />
+                        <span className="text-sm">Instagram</span>
+                      </a>
+                    )}
+                    {event.socialLinks.facebook && (
+                      <a href={event.socialLinks.facebook.startsWith('http') ? event.socialLinks.facebook : `https://${event.socialLinks.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
+                        <Facebook className="h-5 w-5" />
+                        <span className="text-sm">Facebook</span>
+                      </a>
+                    )}
+                    {event.socialLinks.twitter && (
+                      <a href={event.socialLinks.twitter.startsWith('http') ? event.socialLinks.twitter : `https://${event.socialLinks.twitter}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-800 hover:text-black">
+                        <Twitter className="h-5 w-5" />
+                        <span className="text-sm">X/Twitter</span>
+                      </a>
+                    )}
+                    {event.socialLinks.youtube && (
+                      <a href={event.socialLinks.youtube.startsWith('http') ? event.socialLinks.youtube : `https://${event.socialLinks.youtube}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-red-600 hover:text-red-700">
+                        <Youtube className="h-5 w-5" />
+                        <span className="text-sm">YouTube</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )
             )}
 
             {/* Tags */}
@@ -1626,7 +1682,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
             {/* Contact Form - only for HMF events */}
             {isHMFEvent && (
               <div className="bg-white rounded-xl p-4 sm:p-6 shadow-md border border-gray-100">
