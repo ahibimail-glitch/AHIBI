@@ -476,7 +476,7 @@ export default function HomePage() {
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                     <div className="p-1.5 sm:p-2 md:p-3 bg-white">
@@ -519,7 +519,7 @@ export default function HomePage() {
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                     <div className="p-1.5 sm:p-2 md:p-3 bg-white">

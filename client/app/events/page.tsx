@@ -100,7 +100,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <div className="relative aspect-[2/3] overflow-hidden">
+        <div className="relative aspect-square sm:aspect-[3/4] lg:aspect-[2/3] overflow-hidden">
           <Image
             src={event.banner || "/placeholder.svg"}
             alt={event.title}
@@ -116,15 +116,13 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
               </Badge>
             </div>
           )}
+          {/* <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" /> */}
         </div>
 
-        <CardContent className="p-4">
+        <CardContent className="p-3 sm:p-4">
           <h3 id={`event-title-${event._id}`} className="font-semibold text-sm sm:text-base text-gray-900 line-clamp-2">
             {event.title}
           </h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1 line-clamp-1">
-            {(event.location?.address || '').trim() || ' '}
-          </p>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5 line-clamp-1">
             {event.location?.city ? `${event.location.city}` : ' '}
           </p>
@@ -463,7 +461,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Live Events</h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                         {currentEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
@@ -478,7 +476,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Upcoming Events</h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                         {upcomingEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
@@ -493,7 +491,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Past Events</h2>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                         {pastEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
