@@ -877,7 +877,7 @@ export default function HomePage() {
                   href={`/artist/profile/${artist._id}`}
                   className="flex flex-col items-center min-w-[140px] sm:min-w-[160px] md:min-w-[200px] hover:scale-105 transition-transform duration-300 flex-shrink-0"
                 >
-                  <div className="relative h-36 w-36 sm:h-44 sm:w-44 md:h-56 md:w-56 rounded-2xl overflow-hidden border-2 border-gray-200">
+                  <div className="relative h-36 w-36 sm:h-44 sm:w-44 md:h-56 md:w-56 rounded-full overflow-hidden border-2 border-gray-200 ring-2 ring-white shadow-sm">
                     <Image
                       src={getArtistImage(artist)}
                       alt={artist.name || 'Artist'}

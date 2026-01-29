@@ -534,28 +534,45 @@ export default function VenueDetailPage() {
     const halfDay = venueData.pricing?.halfDayRate;
     const fullDay = venueData.pricing?.fullDayRate;
     const cleaning = venueData.pricing?.cleaningFee || 0;
+    const securityDeposit = venueData.pricing?.securityDeposit || 0;
 
     const dur = fullDaySelected ? 24 : getDurationHours(bookingForm.startTime, bookingForm.endTime);
     if (dur <= 0) return 0;
 
     let variable = 0;
-    if (fullDaySelected && typeof fullDay === 'number') {
-      variable = fullDay;
-    } else if (dur > 12) {
+    let includeBase = false;
+
+    // Rules:
+    // - < 12 hours: security + base + hourly * duration
+    // - half day: security + halfDayRate
+    // - full day: security + fullDayRate
+    if (fullDaySelected) {
+      if (typeof fullDay === 'number' && fullDay > 0) {
+        variable = fullDay;
+      } else {
+        variable = hourly > 0 ? hourly * 24 : 0;
+      }
+    } else if (dur >= 12) {
       if (typeof halfDay === 'number' && halfDay > 0) {
         variable = halfDay;
       } else {
-        const derivedHalf = Math.min(
-          typeof fullDay === 'number' ? fullDay / 2 : Number.POSITIVE_INFINITY,
-          hourly > 0 ? hourly * 12 : Number.POSITIVE_INFINITY
-        );
-        variable = Number.isFinite(derivedHalf) ? derivedHalf : (hourly > 0 ? hourly * 12 : 0);
+        // Per rule: for half-day bookings, do NOT fall back to hourly.
+        // Only use explicit half-day or a derived half-day from full-day.
+        const derivedHalf =
+          typeof fullDay === 'number' && fullDay > 0 ? fullDay / 2 : 0;
+        variable = Math.max(0, derivedHalf);
       }
     } else {
+      includeBase = true;
       variable = hourly * dur;
     }
 
-    const total = base + variable + cleaning;
+    const total =
+      securityDeposit +
+      (includeBase ? base : 0) +
+      variable +
+      cleaning;
+
     return Math.max(0, Math.round(total));
   };
 
@@ -1236,7 +1253,11 @@ export default function VenueDetailPage() {
                           <span className="text-2xl font-bold text-purple-700">₹{estimatedPrice.toLocaleString('en-IN')}</span>
                         </div>
                         <p className="text-xs text-gray-500">
-                          {fullDaySelected ? 'Full day rate' : `${getDurationHours(bookingForm.startTime, bookingForm.endTime) || 0} hrs × hourly rate`}
+                          {fullDaySelected
+                            ? `Full day rate + security deposit${venueData?.pricing?.cleaningFee ? ' + cleaning' : ''}`
+                            : (getDurationHours(bookingForm.startTime, bookingForm.endTime) || 0) >= 12
+                              ? `Half day rate + security deposit${venueData?.pricing?.cleaningFee ? ' + cleaning' : ''}`
+                              : `${getDurationHours(bookingForm.startTime, bookingForm.endTime) || 0} hrs × hourly rate + base price + security deposit${venueData?.pricing?.cleaningFee ? ' + cleaning' : ''}`}
                         </p>
                       </div>
                       {formError && <div className="p-3 text-sm text-red-700 bg-red-50 rounded-lg">{formError}</div>}

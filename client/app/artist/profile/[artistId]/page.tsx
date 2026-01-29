@@ -113,6 +113,23 @@ export default function PublicArtistProfile() {
     setIsOrganizerLoggedIn(!!token);
   };
 
+  const normalizeImageUrl = (url?: string) => {
+    if (!url) return url;
+    const trimmed = url.trim();
+
+    const driveMatch = trimmed.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)\//i);
+    if (driveMatch?.[1]) {
+      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+    }
+
+    const driveOpenMatch = trimmed.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/i);
+    if (driveOpenMatch?.[1]) {
+      return `https://drive.google.com/uc?export=view&id=${driveOpenMatch[1]}`;
+    }
+
+    return trimmed;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400 flex items-center justify-center">
@@ -138,8 +155,8 @@ export default function PublicArtistProfile() {
     );
   }
 
-  const coverImage = artist.gallery?.photos?.find(photo => photo.isCoverImage)?.url || "/images/carausel1.jpg";
-  const profileImage = artist.gallery?.photos?.find(photo => photo.isProfileImage)?.url || artist.profilePic;
+  const coverImage = normalizeImageUrl(artist.gallery?.photos?.find(photo => photo.isCoverImage)?.url) || "/images/carausel1.jpg";
+  const profileImage = normalizeImageUrl(artist.gallery?.photos?.find(photo => photo.isProfileImage)?.url) || normalizeImageUrl(artist.profilePic);
 
   return (
     <div className="min-h-screen bg-background">
@@ -221,12 +238,12 @@ export default function PublicArtistProfile() {
               </div>
               
               <div className="flex flex-wrap gap-2">
-                {artist.genres.map((genre) => (
+                {(artist.genres ?? []).map((genre) => (
                   <Badge key={genre} variant="secondary" className="bg-pink-100 text-pink-800">
                     {genre}
                   </Badge>
                 ))}
-                {artist.languages.map((lang) => (
+                {(artist.languages ?? []).map((lang) => (
                   <Badge key={lang} variant="outline" className="border-pink-300 text-pink-700">
                     {lang}
                   </Badge>
@@ -292,7 +309,7 @@ export default function PublicArtistProfile() {
                       {artist.gallery.photos.map((photo, index) => (
                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
                           <Image
-                            src={photo.url}
+                            src={normalizeImageUrl(photo.url) || "/placeholder.svg"}
                             alt={photo.caption || `Photo ${index + 1}`}
                             fill
                             className="object-cover hover:scale-105 transition-transform cursor-pointer"
@@ -319,7 +336,7 @@ export default function PublicArtistProfile() {
                         <div key={index} className="space-y-2">
                           <div className="relative aspect-video rounded-lg overflow-hidden">
                             <Image
-                              src={video.thumbnail}
+                              src={normalizeImageUrl(video.thumbnail) || "/placeholder.svg"}
                               alt={video.caption || `Video ${index + 1}`}
                               fill
                               className="object-cover"
