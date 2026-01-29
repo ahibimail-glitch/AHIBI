@@ -5,10 +5,11 @@ const nextConfig = {
     domains: ['placehold.co', 'res.cloudinary.com', 'images.unsplash.com', 'ld9yt1pcwrcddoux.public.blob.vercel-storage.com', 'drive.google.com', 'lh3.googleusercontent.com'],
   },
   async rewrites() {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5000'
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
+        destination: `${apiBase}/api/:path*`,
       },
     ]
   },

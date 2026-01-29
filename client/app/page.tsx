@@ -191,9 +191,9 @@ export default function HomePage() {
       setLoading(true)
       try {
         const [eventsRes, venuesRes, artistsRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=30`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/venue`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/artist/public?limit=12`),
+          fetch(`/api/events?limit=30`),
+          fetch(`/api/venue`),
+          fetch(`/api/artist/public?limit=12`),
         ])
 
         if (eventsRes.ok) {
@@ -218,9 +218,7 @@ export default function HomePage() {
           setArtists(data?.data?.artists || [])
         }
       } catch {
-        setEvents([])
-        setVenues([])
-        setArtists([])
+        setError("Failed to load home data")
       } finally {
         setLoading(false)
       }
@@ -242,7 +240,7 @@ export default function HomePage() {
     const fetchHeroImages = async () => {
       setLoadingHeroImages(true)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images?active=true`)
+        const response = await fetch(`/api/hero-images?active=true`)
         if (!response.ok) throw new Error("Failed to fetch hero images")
         const data = await response.json()
 
@@ -278,7 +276,7 @@ export default function HomePage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?isFeatured=true&limit=10`)
+        const response = await fetch(`/api/events?isFeatured=true&limit=10`)
         if (!response.ok) {
           setFeaturedEvents([])
           setError("Failed to fetch featured events")

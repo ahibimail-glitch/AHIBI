@@ -113,16 +113,8 @@ export default function ArtistsListPage() {
       if (selectedGenre !== 'all') params.append('genre', selectedGenre);
       if (selectedLocation !== 'all') params.append('city', selectedLocation);
       params.append('sortBy', sortBy === 'rating' ? 'rating.average' : sortBy);
-      
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!baseUrl) {
-        toast.error('Missing NEXT_PUBLIC_API_URL');
-        setArtists([]);
-        setPagination({ current: 1, pages: 1, total: 0 });
-        return;
-      }
 
-      const response = await fetch(`${baseUrl}/api/artist/public?${params}`);
+      const response = await fetch(`/api/artist/public?${params}`);
       const data = await response.json();
       
       if (data.success) {
