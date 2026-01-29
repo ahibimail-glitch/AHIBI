@@ -221,16 +221,16 @@ export default function PublicArtistProfile() {
               </div>
               
               <div className="flex flex-wrap gap-2">
-                {artist.genres.map((genre) => (
+                {artist.genres?.map((genre) => (
                   <Badge key={genre} variant="secondary" className="bg-pink-100 text-pink-800">
                     {genre}
                   </Badge>
-                ))}
-                {artist.languages.map((lang) => (
+                )) || <span className="text-sm text-gray-500">No genres listed</span>}
+                {artist.languages?.map((lang) => (
                   <Badge key={lang} variant="outline" className="border-pink-300 text-pink-700">
                     {lang}
                   </Badge>
-                ))}
+                )) || <span className="text-sm text-gray-500">No languages listed</span>}
               </div>
             </div>
           </div>

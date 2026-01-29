@@ -322,7 +322,7 @@ exports.getPublicArtistProfile = async (req, res) => {
     const artist = await Artist.findOne({
       _id: artistId,
       approvalStatus: 'approved',
-      status: 'active'
+      status: { $in: ['active', 'pending'] }
     }).select('-otp -createdAt -updatedAt');
 
     if (!artist) {
