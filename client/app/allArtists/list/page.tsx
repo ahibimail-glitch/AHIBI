@@ -84,23 +84,6 @@ export default function ArtistsListPage() {
     total: 0
   })
 
-  const normalizeImageUrl = (url?: string) => {
-    if (!url) return url;
-    const trimmed = url.trim();
-
-    const driveMatch = trimmed.match(/https?:\/\/drive\.google\.com\/file\/d\/([^/]+)\//i);
-    if (driveMatch?.[1]) {
-      return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    }
-
-    const driveOpenMatch = trimmed.match(/https?:\/\/drive\.google\.com\/open\?id=([^&]+)/i);
-    if (driveOpenMatch?.[1]) {
-      return `https://drive.google.com/uc?export=view&id=${driveOpenMatch[1]}`;
-    }
-
-    return trimmed;
-  };
-
   useEffect(() => {
     fetchArtists();
   }, [selectedGenre, selectedLocation, sortBy]);
@@ -113,7 +96,7 @@ export default function ArtistsListPage() {
       if (selectedGenre !== 'all') params.append('genre', selectedGenre);
       if (selectedLocation !== 'all') params.append('city', selectedLocation);
       params.append('sortBy', sortBy === 'rating' ? 'rating.average' : sortBy);
-
+      
       const response = await fetch(`/api/artist/public?${params}`);
       const data = await response.json();
       
@@ -303,7 +286,7 @@ export default function ArtistsListPage() {
                   {/* Enhanced Image Header */}
                   <div className="relative overflow-hidden h-48">
                     <Image
-                      src={normalizeImageUrl(artist.gallery?.photos?.find(p => p.isProfileImage)?.url) || "/placeholder.svg"}
+                      src={artist.gallery?.photos?.find(p => p.isProfileImage)?.url || "/placeholder.svg"}
                       alt={`${artist.name}`}
                       width={600}
                       height={300}
@@ -344,7 +327,7 @@ export default function ArtistsListPage() {
                     <div className="absolute bottom-0 left-0 right-0 p-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-14 h-14 border-3 border-white shadow-xl ring-2 ring-purple-400/50">
-                          <AvatarImage src={normalizeImageUrl(artist.gallery?.photos?.find(p => p.isProfileImage)?.url) || "/placeholder.svg"} />
+                          <AvatarImage src={artist.gallery?.photos?.find(p => p.isProfileImage)?.url || "/placeholder.svg"} />
                           <AvatarFallback className="bg-gradient-to-br from-purple-400 to-pink-400 text-white font-bold">
                             {artist.name.split(" ").map((n) => n[0]).join("")}
                           </AvatarFallback>

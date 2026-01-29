@@ -321,7 +321,8 @@ exports.getPublicArtistProfile = async (req, res) => {
     
     const artist = await Artist.findOne({
       _id: artistId,
-      approvalStatus: 'approved'
+      approvalStatus: 'approved',
+      status: 'active'
     }).select('-otp -createdAt -updatedAt');
 
     if (!artist) {
@@ -357,7 +358,8 @@ exports.getApprovedArtists = async (req, res) => {
     } = req.query;
 
     const query = {
-      approvalStatus: 'approved'
+      approvalStatus: 'approved',
+      status: { $in: ['active', 'pending'] }
     };
 
     // Add filters
