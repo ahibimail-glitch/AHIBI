@@ -101,55 +101,50 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-  <motion.div
-  initial={{ opacity: 0, y: 12 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.35, delay: index * 0.05 }}
-  className="relative w-full"
-  role="article"
-  aria-labelledby={`event-title-${event._id}`}
->
-  <Card className="w-full overflow-hidden rounded-lg bg-white border border-gray-200">
-    
-    {/* POSTER IMAGE */}
-    <div className="relative aspect-[2/3] w-full overflow-hidden">
-      <img
-        src={event.banner || "/placeholder.svg"}
-        alt={event.title}
-        loading={index < 8 ? "eager" : "lazy"}
-        className="w-full h-full object-cover"
-      />
-
-      {event.isFeatured && (
-        <span className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded">
-          PROMOTED
-        </span>
-      )}
-    </div>
-
-      {!!formatDayDate(event.startDate) && (
-        <div className="mt-1">
-          <span className="block w-full  bg-black px-1.5 py-0.5 text-center text-[10px] font-medium text-white">
-            {formatDayDate(event.startDate)}
-          </span>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: index * 0.05 }}
+      className="relative w-full"
+      role="article"
+      aria-labelledby={`event-title-${event._id}`}
+    >
+      <Card className="w-full overflow-hidden rounded-xl bg-white border-0 shadow-none">
+        
+        {/* POSTER IMAGE */}
+        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl">
+          <img
+            src={event.banner || "/placeholder.svg"}
+            alt={event.title}
+            loading={index < 8 ? "eager" : "lazy"}
+            className="w-full h-full object-cover rounded-xl"
+          />
+          {/* DATE & TIME STRIP */}
+          {!!formatDayDate(event.startDate) && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+              <p className="text-[10px] text-white text-center font-medium truncate">
+                {formatDayDate(event.startDate)}
+              </p>
+            </div>
+          )}
         </div>
-      )}
-    {/* TEXT */}
-    <div className="px-1.5 pt-2 pb-1.5">
-      <h3
-        id={`event-title-${event._id}`}
-        className="text-[12px] font-medium text-gray-900 leading-tight line-clamp-2"
-      >
-        {event.title}
-      </h3>
 
+        {/* TEXT */}
+        <div className="px-1 pt-2 pb-1">
+          <h3
+            id={`event-title-${event._id}`}
+            className="text-[14px] font-semibold text-gray-900 leading-snug line-clamp-1"
+          >
+            {event.title}
+          </h3>
 
-      <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
-        {event.location?.city || ""}
-      </p>
-    </div>
-  </Card>
-</motion.div>
+          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-1">
+            {event.category || "Event"}{event.location?.city ? ` | ${event.location.city}` : ""}
+          </p>
+        </div>
+
+      </Card>
+    </motion.div>
 
   );
 };
@@ -438,15 +433,26 @@ export default function EventsPage() {
                       Events in {selectedCity === 'all' ? 'India' : selectedCity}
                     </h1>
                   </div>
-                  <div className="lg:hidden">
-                    <Button
-                      variant="outline"
-                      className="bg-white border-gray-300 rounded-full text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
-                      onClick={() => setIsFilterOpen(true)}
-                    >
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filters
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    {hasActiveFilters && (
+                      <Button
+                        variant="ghost"
+                        className="h-9 px-3 rounded-full text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
+                        onClick={resetFilters}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                    <div className="lg:hidden">
+                      <Button
+                        variant="outline"
+                        className="bg-white border-gray-300 rounded-full text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
+                        onClick={() => setIsFilterOpen(true)}
+                      >
+                        <Filter className="h-4 w-4 mr-2" />
+                        Filters
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -469,7 +475,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Live Events</h2>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                         {currentEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
@@ -484,7 +490,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Upcoming Events</h2>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                         {upcomingEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
@@ -499,7 +505,7 @@ export default function EventsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Past Events</h2>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
                         {pastEventsSorted.map((event, index) => (
                           <Link key={event._id} href={`/events/${event._id}`} className="block">
                             <EventCard event={event} index={index} />
