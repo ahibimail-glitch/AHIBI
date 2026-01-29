@@ -72,6 +72,22 @@ const getVenueImage = (venue: PublicVenue, idx?: number) => {
 
 const getEventImage = (event?: Event) => resolveImageUrl(event?.banner, "event")
 
+const formatDayDate = (dateString?: string | Date) => {
+  if (!dateString) return ""
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return ""
+  const dayDate = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+  return `${dayDate} • ${time}`
+}
+
 const Section = ({
   title,
   subtitle,
@@ -520,11 +536,11 @@ export default function HomePage() {
 
                 {/* CTA */}
                 <div className="mt-8">
-                <Link href="/allOrganizers">
-                  <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-                    GET STARTED
-                  </button>
-                </Link>
+                  <Link href="/allOrganizers">
+                    <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+                      GET STARTED
+                    </button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -583,35 +599,42 @@ export default function HomePage() {
                   <div className="sm:hidden -mx-3 px-3 overflow-x-auto" ref={featuredMobileCarouselRef}>
                     <div className="flex gap-3 snap-x snap-mandatory">
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
-  {featuredEvents.slice(0, 10).map((event) => (
-    <Link key={event._id} href={`/events/${event._id}`}>
-      <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        
-        {/* Poster */}
-        <div className="relative aspect-[2/3]">
-          <Image
-            src={event.banner || "/placeholder.svg"}
-            alt={event.title}
-            fill
-            sizes="(max-width: 640px) 50vw, 20vw"
-            className="object-cover"
-          />
-        </div>
+                        {featuredEvents.slice(0, 10).map((event) => (
+                          <Link key={event._id} href={`/events/${event._id}`}>
+                            <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
 
-        {/* Text */}
-        <div className="px-2 pt-2 pb-2">
-          <h3 className="text-[13px] font-semibold line-clamp-1 text-gray-900">
-            {event.title}
-          </h3>
-          <p className="text-[11px] text-gray-500 mt-0.5">
-            {event.category}
-          </p>
-        </div>
+                              {/* Poster */}
+                              <div className="relative aspect-[2/3]">
+                                <Image
+                                  src={event.banner || "/placeholder.svg"}
+                                  alt={event.title}
+                                  fill
+                                  sizes="(max-width: 640px) 50vw, 20vw"
+                                  className="object-cover"
+                                />
+                                {!!formatDayDate((event as any)?.startDate) && (
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+                                    <p className="text-[10px] text-white text-center font-medium truncate">
+                                      {formatDayDate((event as any)?.startDate)}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
 
-      </Card>
-    </Link>
-  ))}
-</div>
+                              {/* Text */}
+                              <div className="px-2 pt-2 pb-2">
+                                <h3 className="text-[13px] font-semibold line-clamp-1 text-gray-900">
+                                  {event.title}
+                                </h3>
+                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                  {event.category}
+                                </p>
+                              </div>
+
+                            </Card>
+                          </Link>
+                        ))}
+                      </div>
 
                     </div>
                   </div>
@@ -629,6 +652,13 @@ export default function HomePage() {
                               sizes="50vw"
                               className="object-cover transition-transform duration-300 group-hover:scale-105"
                             />
+                            {!!formatDayDate((event as any)?.startDate) && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+                                <p className="text-[10px] text-white text-center font-medium truncate">
+                                  {formatDayDate((event as any)?.startDate)}
+                                </p>
+                              </div>
+                            )}
                           </div>
 
                           {/* TEXT */}
@@ -679,6 +709,13 @@ export default function HomePage() {
                         sizes="50vw"
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
+                      {!!formatDayDate((event as any)?.startDate) && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+                          <p className="text-[10px] text-white text-center font-medium truncate">
+                            {formatDayDate((event as any)?.startDate)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="px-2 pt-2 pb-1.5">
                       <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
@@ -695,6 +732,7 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
       {/* Sports Events Section */}
       {sportsEvents.length > 0 && (
         <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
@@ -783,6 +821,81 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+       {/* Venues Section */}
+      {venues.length > 0 && (
+        <section className="py-6 sm:py-8 md:py-10 bg-[#f5f5f5]">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Popular Venues</h2>
+              <Link href="/allVenues/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+
+            <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 scrollbar-hide">
+              {venues.slice(0, 10).map((venue: any, idx: number) => {
+                const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
+                const img = getVenueImage(venue, idx)
+                return (
+                  <Link
+                    key={venue?._id || idx}
+                    href={venue?._id ? `/allVenues/${venue._id}` : "/allVenues"}
+                    className="block"
+                  >
+                    <Card className="relative min-w-[200px] sm:min-w-[240px] md:min-w-[300px] lg:min-w-[360px] h-[320px] sm:h-[420px] md:h-[480px] rounded-xl overflow-hidden border-0 shadow-sm hover:shadow-2xl transition-shadow cursor-pointer flex-shrink-0">
+                      <Image src={img} alt={placeName} fill className="object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-3 left-3 text-white font-semibold text-sm sm:text-base md:text-lg">
+                        {placeName}
+                      </div>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+
+      {/* Artists Section */}
+      {artists.length > 0 && (
+        <section className="py-6 sm:py-8 md:py-10 bg-white">
+          <div className="container mx-auto px-3 sm:px-4">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Featured Artists</h2>
+              <Link href="/allArtists/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
+                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Link>
+            </div>
+
+            <div className="flex gap-4 sm:gap-6 md:gap-8 overflow-x-auto pb-3 scrollbar-hide">
+              {artists.slice(0, 10).map((artist: any) => (
+                <Link
+                  key={artist._id}
+                  href={`/artist/profile/${artist._id}`}
+                  className="flex flex-col items-center min-w-[140px] sm:min-w-[160px] md:min-w-[200px] hover:scale-105 transition-transform duration-300 flex-shrink-0"
+                >
+                  <div className="relative h-36 w-36 sm:h-44 sm:w-44 md:h-56 md:w-56 rounded-2xl overflow-hidden border-2 border-gray-200">
+                    <Image
+                      src={getArtistImage(artist)}
+                      alt={artist.name || 'Artist'}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <p className="text-[11px] sm:text-xs md:text-sm mt-2 text-center font-medium line-clamp-2 w-full">
+                    {artist.name || 'Artist'}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+
       {/* Explore Categories */}
       <section className="py-6 sm:py-8 md:py-10 bg-white">
         <div className="container mx-auto px-3 sm:px-4">
@@ -808,77 +921,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-
-      {/* Venues Section */}
-      {venues.length > 0 && (
-        <section className="py-6 sm:py-8 md:py-10 bg-[#f5f5f5]">
-          <div className="container mx-auto px-3 sm:px-4">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Popular Venues</h2>
-              <Link href="/allVenues/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
-                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Link>
-            </div>
-
-            <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 scrollbar-hide">
-              {venues.slice(0, 10).map((venue: any, idx: number) => {
-                const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
-                const img = getVenueImage(venue, idx)
-                return (
-                  <Card
-                    key={venue?._id || idx}
-                    className="relative min-w-[200px] sm:min-w-[240px] md:min-w-[300px] lg:min-w-[360px] h-[320px] sm:h-[420px] md:h-[480px] rounded-xl overflow-hidden border-0 shadow-sm hover:shadow-2xl transition-shadow cursor-pointer flex-shrink-0"
-                  >
-                    <Image src={img} alt={placeName} fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-3 left-3 text-white font-semibold text-sm sm:text-base md:text-lg">
-                      {placeName}
-                    </div>
-                  </Card>
-                )
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-
-      {/* Artists Section */}
-      {artists.length > 0 && (
-        <section className="py-6 sm:py-8 md:py-10 bg-white">
-          <div className="container mx-auto px-3 sm:px-4">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Featured Artists</h2>
-              <Link href="/allArtists/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
-                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Link>
-            </div>
-
-            <div className="flex gap-4 sm:gap-6 md:gap-8 overflow-x-auto pb-3 scrollbar-hide">
-              {artists.slice(0, 10).map((artist: any) => (
-                <Link
-                  key={artist._id}
-                  href={`/allArtistS/list/${artist._id}`}
-                  className="flex flex-col items-center min-w-[140px] sm:min-w-[160px] md:min-w-[200px] hover:scale-105 transition-transform duration-300 flex-shrink-0"
-                >
-                  <div className="relative h-36 w-36 sm:h-44 sm:w-44 md:h-56 md:w-56 rounded-2xl overflow-hidden border-2 border-gray-200">
-                    <Image
-                      src={getArtistImage(artist)}
-                      alt={artist.name || 'Artist'}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <p className="text-[11px] sm:text-xs md:text-sm mt-2 text-center font-medium line-clamp-2 w-full">
-                    {artist.name || 'Artist'}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       <Footer />
     </div>

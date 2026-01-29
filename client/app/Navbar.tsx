@@ -96,7 +96,7 @@ export default function Navbar() {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg">
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-5 h-16">
           {/* Home */}
           <Link
             href="/"
@@ -115,6 +115,15 @@ export default function Navbar() {
           >
             <Film className="h-6 w-6" />
             <span className="text-[10px] font-medium">Events</span>
+          </Link>
+          {/* Venues  */}
+          <Link
+            href="/allVenues"
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${isActive("/allVenues") || pathname?.startsWith("/allVenues") ? "text-[#ff0e0e]" : "text-gray-600"
+              }`}
+          >
+            <Film className="h-6 w-6" />
+            <span className="text-[10px] font-medium">Venues</span>
           </Link>
 
           {/* Live Events (Sports) */}
