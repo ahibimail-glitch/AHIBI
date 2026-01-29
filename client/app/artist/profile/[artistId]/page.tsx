@@ -320,7 +320,7 @@ export default function PublicArtistProfile() {
             <div className="flex-1 pt-1 sm:pt-8 lg:pt-12">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
+                  <h1 className="mt-8 text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
                     {artist.name}
                   </h1>
                   <p className="text-base sm:text-lg text-gray-600 mb-3">{artist.type}</p>
@@ -349,7 +349,7 @@ export default function PublicArtistProfile() {
                 
                 {/* Desktop CTA - Hidden on Mobile */}
                 <div className="hidden lg:flex flex-col items-end gap-2">
-                  <div className="text-right mb-2">
+                  <div className="text-right mt-8 mb-2">
                     <p className="text-sm text-gray-500">Starting from</p>
                     <p className="text-2xl font-bold text-gray-900">{hasStartingPrice ? `₹${startingPriceLabel}` : startingPriceLabel}</p>
                   </div>
