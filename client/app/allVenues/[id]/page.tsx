@@ -1148,27 +1148,74 @@ export default function VenueDetailPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label className="text-xs">Start Time *</Label>
-                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })} value={bookingForm.startTime} disabled={fullDaySelected}>
-                            <SelectTrigger className="h-10"><SelectValue placeholder="Start" /></SelectTrigger>
-                            <SelectContent>
+                          <Select
+                            value={bookingForm.startTime}
+                            onValueChange={(value) =>
+                              setBookingForm({ ...bookingForm, startTime: value })
+                            }
+                            disabled={fullDaySelected}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Start" />
+                            </SelectTrigger>
+
+                            <SelectContent
+                              position="popper"
+                              side="bottom"
+                              align="start"
+                              sideOffset={6}
+                              avoidCollisions
+                              className="max-h-[50vh] overflow-y-auto z-[600]"
+                            >
                               {getAvailableTimeOptions().map((time) => (
-                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected}>{time.label}</SelectItem>
+                                <SelectItem
+                                  key={time.value}
+                                  value={time.value}
+                                  disabled={time.disabled || fullDaySelected}
+                                >
+                                  {time.label}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+
                         </div>
                         <div>
                           <Label className="text-xs">End Time *</Label>
-                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })} value={bookingForm.endTime} disabled={fullDaySelected}>
-                            <SelectTrigger className="h-10"><SelectValue placeholder="End" /></SelectTrigger>
-                            <SelectContent>
+
+                          <Select
+                            value={bookingForm.endTime}
+                            onValueChange={(value) =>
+                              setBookingForm({ ...bookingForm, endTime: value })
+                            }
+                            disabled={fullDaySelected}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="End" />
+                            </SelectTrigger>
+
+                            <SelectContent
+                              position="popper"
+                              side="bottom"
+                              align="start"
+                              sideOffset={6}
+                              avoidCollisions
+                              className="max-h-[50vh] overflow-y-auto z-[600]"
+                            >
                               {getAvailableTimeOptions().map((time) => (
-                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected}>{time.label}</SelectItem>
+                                <SelectItem
+                                  key={time.value}
+                                  value={time.value}
+                                  disabled={time.disabled || fullDaySelected}
+                                >
+                                  {time.label}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
+
                       <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
                         <input id="fullDayMobile" type="checkbox" checked={fullDaySelected} onChange={(e) => { setFullDaySelected(e.target.checked); if (e.target.checked) setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' })); }} className="h-4 w-4" />
                         <Label htmlFor="fullDayMobile" className="text-sm">Book Full Day</Label>
@@ -1218,7 +1265,7 @@ export default function VenueDetailPage() {
           {/* Left Panel - Main Image and Venue Details */}
           <div className="lg:col-span-2 space-y-0 lg:space-y-6">
             {/* Hero Image - Full Width on Mobile with Swipe */}
-            <div 
+            <div
               className="relative w-full h-[280px] sm:h-[350px] lg:h-[500px] lg:rounded-2xl overflow-hidden shadow-lg group"
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
@@ -1236,7 +1283,7 @@ export default function VenueDetailPage() {
 
                   {/* Top Actions - Floating */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-                    <button 
+                    <button
                       onClick={() => router.back()}
                       className="lg:hidden bg-black/40 backdrop-blur-md text-white p-2.5 rounded-full"
                     >
@@ -1356,7 +1403,7 @@ export default function VenueDetailPage() {
                     <span className="text-sm font-normal text-gray-500">/hr</span>
                   </p>
                 </div>
-                <Button 
+                <Button
                   onClick={() => setShowMobileBooking(true)}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg"
                 >
@@ -2165,7 +2212,7 @@ export default function VenueDetailPage() {
               <span className="text-xs font-normal text-gray-500">/hr</span>
             </p>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowMobileBooking(true)}
             className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg flex-shrink-0"
           >
