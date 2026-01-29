@@ -468,6 +468,10 @@ export default function VenueDetailPage() {
   const [venueData, setVenueData] = useState<VenueData | null>(null);
   const [resolvedVenueId, setResolvedVenueId] = useState<string | null>(null);
   const [similarVenues, setSimilarVenues] = useState<VenueData[]>([]);
+  const [showMobileBooking, setShowMobileBooking] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
@@ -576,6 +580,26 @@ export default function VenueDetailPage() {
   // Review form state
   const [newReview, setNewReview] = useState<{ rating: number; comment: string }>({ rating: 0, comment: "" });
   const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Touch swipe handlers for mobile gallery
+  const minSwipeDistance = 50;
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  const onTouchMove = (e: React.TouchEvent) => setTouchEnd(e.targetTouches[0].clientX);
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const images = extractVenueImages(venueData);
+    if (Math.abs(distance) > minSwipeDistance) {
+      if (distance > 0 && images.length > 0) {
+        setActiveImageIndex((prev) => (prev + 1) % images.length);
+      } else if (images.length > 0) {
+        setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
+      }
+    }
+  };
 
   const handleSubmitReview = async () => {
     if (!user) {
@@ -1054,13 +1078,133 @@ export default function VenueDetailPage() {
   const displayImages = extractVenueImages(venueData);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
       {isVerifying && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100]">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600"></div>
-            <p className="text-gray-800 text-lg mt-4 font-medium">Verifying payment...</p>
+          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl flex flex-col items-center mx-4">
+            <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-purple-200 border-t-purple-600"></div>
+            <p className="text-gray-800 text-base sm:text-lg mt-4 font-medium">Verifying payment...</p>
             <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Booking Bottom Sheet */}
+      {showMobileBooking && (
+        <div className="fixed inset-0 z-[90] lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileBooking(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
+            <div className="sticky top-0 bg-white pt-3 pb-2 px-4 border-b z-10">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900">Book {venueData?.name}</h3>
+                <button onClick={() => setShowMobileBooking(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4 space-y-4 pb-8">
+              {bookingSuccess ? (
+                <div className="text-center py-6">
+                  <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-10 w-10 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
+                  <div className="text-left space-y-2 text-sm bg-green-50 p-4 rounded-xl mt-4 mb-4">
+                    <div className="flex justify-between"><span className="text-gray-500">Date:</span><span className="font-medium">{finalBookingDetails?.bookingDate && format(new Date(finalBookingDetails.bookingDate), 'PP')}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Time:</span><span className="font-medium">{finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</span></div>
+                    <div className="flex justify-between pt-2 border-t border-green-200"><span className="font-medium">Total Paid:</span><span className="font-bold text-green-600 text-lg">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span></div>
+                  </div>
+                  <Button onClick={() => { handleDownloadInvoice(); setShowMobileBooking(false); }} className="w-full bg-green-600 hover:bg-green-700">
+                    <Download className="h-4 w-4 mr-2" />Download Invoice
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Step 1: Select Date */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-purple-600" />
+                      Select Date
+                    </h4>
+                    <div className="border border-gray-200 rounded-xl p-2 bg-gray-50">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (venueData?.blockedSlots?.some((slot: any) => new Date(slot.date).toDateString() === date.toDateString() && slot.isFullDayBlocked) || false)}
+                        className="rounded-md bg-white w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Step 2: Select Time */}
+                  {selectedDate && (
+                    <div className="space-y-3 pt-2">
+                      <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-purple-600" />
+                        Select Time for {format(selectedDate, 'PP')}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Start Time *</Label>
+                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })} value={bookingForm.startTime} disabled={fullDaySelected}>
+                            <SelectTrigger className="h-10"><SelectValue placeholder="Start" /></SelectTrigger>
+                            <SelectContent>
+                              {getAvailableTimeOptions().map((time) => (
+                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected}>{time.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">End Time *</Label>
+                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })} value={bookingForm.endTime} disabled={fullDaySelected}>
+                            <SelectTrigger className="h-10"><SelectValue placeholder="End" /></SelectTrigger>
+                            <SelectContent>
+                              {getAvailableTimeOptions().map((time) => (
+                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected}>{time.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
+                        <input id="fullDayMobile" type="checkbox" checked={fullDaySelected} onChange={(e) => { setFullDaySelected(e.target.checked); if (e.target.checked) setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' })); }} className="h-4 w-4" />
+                        <Label htmlFor="fullDayMobile" className="text-sm">Book Full Day</Label>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Event Type (Optional)</Label>
+                        <Input value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="Wedding, Party, Conference..." className="h-10" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Price Summary & Book Button */}
+                  {selectedDate && (
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-gray-600">Estimated Total</span>
+                          <span className="text-2xl font-bold text-purple-700">₹{estimatedPrice.toLocaleString('en-IN')}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {fullDaySelected ? 'Full day rate' : `${getDurationHours(bookingForm.startTime, bookingForm.endTime) || 0} hrs × hourly rate`}
+                        </p>
+                      </div>
+                      {formError && <div className="p-3 text-sm text-red-700 bg-red-50 rounded-lg">{formError}</div>}
+                      <Button
+                        onClick={handleBookingSubmit}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl text-base"
+                        disabled={submitting || authLoading || !bookingForm.startTime || (!fullDaySelected && !bookingForm.endTime)}
+                      >
+                        {submitting ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Processing...</> : <><IndianRupee className="h-5 w-5 mr-2" />Book & Pay ₹{estimatedPrice.toLocaleString('en-IN')}</>}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1068,269 +1212,305 @@ export default function VenueDetailPage() {
       {/* Navbar Section */}
       <Navbar />
 
-      {/* Main Content Section - Premium Light Theme */}
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Section - Mobile First Design */}
+      <div className="lg:container lg:mx-auto lg:px-4 lg:py-6 lg:max-w-7xl">
+        <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-6">
           {/* Left Panel - Main Image and Venue Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Main Large Image */}
-            <div className="relative w-full h-[300px] sm:h-[400px] lg:h-[550px] rounded-2xl overflow-hidden shadow-2xl group">
+          <div className="lg:col-span-2 space-y-0 lg:space-y-6">
+            {/* Hero Image - Full Width on Mobile with Swipe */}
+            <div 
+              className="relative w-full h-[280px] sm:h-[350px] lg:h-[500px] lg:rounded-2xl overflow-hidden shadow-lg group"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
               {displayImages.length > 0 ? (
                 <>
                   <img
-                    src={displayImages[currentImageIndex % displayImages.length]}
+                    src={displayImages[activeImageIndex % displayImages.length]}
                     alt={venueData?.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-500"
                   />
-                  {/* Image Overlay Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
 
-                  {/* Image Counter Badge */}
-                  <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    {currentImageIndex + 1} / {displayImages.length}
+                  {/* Top Actions - Floating */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
+                    <button 
+                      onClick={() => router.back()}
+                      className="lg:hidden bg-black/40 backdrop-blur-md text-white p-2.5 rounded-full"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button className="bg-black/40 backdrop-blur-md text-white p-2.5 rounded-full">
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                      <button className="bg-black/40 backdrop-blur-md text-white p-2.5 rounded-full">
+                        <Bookmark className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Image Counter - Bottom Right */}
+                  <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    {activeImageIndex + 1}/{displayImages.length}
+                  </div>
+
+                  {/* Swipe Dots Indicator - Mobile */}
+                  {displayImages.length > 1 && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 lg:hidden">
+                      {displayImages.slice(0, Math.min(displayImages.length, 5)).map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveImageIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all ${activeImageIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
+                        />
+                      ))}
+                      {displayImages.length > 5 && (
+                        <span className="text-white/70 text-xs ml-1">+{displayImages.length - 5}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Desktop Navigation Arrows */}
                   {displayImages.length > 1 && (
                     <>
                       <button
                         onClick={prevImage}
-                        className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 sm:p-3 shadow-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm"
-                        aria-label="Previous image"
+                        className="hidden lg:flex absolute left-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-3 shadow-xl transition-all hover:scale-110"
                       >
-                        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
+                        <ChevronLeft className="h-5 w-5 text-gray-800" />
                       </button>
                       <button
                         onClick={nextImage}
-                        className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-2 sm:p-3 shadow-xl transition-all duration-300 hover:scale-110 backdrop-blur-sm"
-                        aria-label="Next image"
+                        className="hidden lg:flex absolute right-4 top-1/2 -translate-y-1/2 bg-white/95 hover:bg-white rounded-full p-3 shadow-xl transition-all hover:scale-110"
                       >
-                        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-800" />
+                        <ChevronRight className="h-5 w-5 text-gray-800" />
                       </button>
                     </>
                   )}
                 </>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center text-gray-400">
-                  <ImageIcon className="h-16 w-16 mb-3" />
-                  <p className="text-lg font-medium">No images available</p>
+                  <ImageIcon className="h-12 w-12 mb-2" />
+                  <p className="text-sm font-medium">No images available</p>
                 </div>
               )}
             </div>
 
-            {/* Venue Header Section */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 space-y-6">
+            {/* Venue Header - Compact Mobile Card */}
+            <div className="bg-white lg:rounded-2xl lg:shadow-lg p-4 sm:p-6 space-y-4">
+              {/* Name & Location */}
               <div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 leading-tight">
+                <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-gray-900 leading-tight">
                   {venueData?.name}
                 </h1>
-                <div className="flex items-start gap-2 text-gray-600">
-                  <MapPin className="h-5 w-5 mt-0.5 text-purple-600 flex-shrink-0" />
-                  <span className="text-base sm:text-lg">
-                    {venueData?.address.street}, {venueData?.address.city}, {venueData?.address.state}
+                <div className="flex items-center gap-1.5 mt-1.5 text-gray-500">
+                  <MapPin className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                  <span className="text-sm line-clamp-1">
+                    {venueData?.address.street}, {venueData?.address.city}
                   </span>
                 </div>
               </div>
 
-              {/* Rating and Stats */}
-              <div className="flex items-center gap-6 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-xl shadow-md">
-                    <Star className="h-5 w-5 fill-white" />
-                    <span className="font-bold text-lg">{(venueData?.rating.average ?? 5.0).toFixed(1)}</span>
+              {/* Quick Stats - Horizontal Scroll on Mobile */}
+              <div className="flex items-center gap-3 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 lg:flex-wrap scrollbar-hide">
+                {/* Rating Chip */}
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 px-3 py-2 rounded-xl flex-shrink-0">
+                  <div className="flex items-center gap-1 text-green-700">
+                    <Star className="h-4 w-4 fill-green-600 text-green-600" />
+                    <span className="font-bold text-sm">{(venueData?.rating.average ?? 5.0).toFixed(1)}</span>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{(venueData?.rating.count ?? 6)} Reviews</p>
-                    <p className="text-xs text-gray-500">Verified ratings</p>
-                  </div>
+                  <span className="text-xs text-green-600">({venueData?.rating.count ?? 0} reviews)</span>
                 </div>
 
-                <div className="h-10 w-px bg-gray-300 hidden sm:block"></div>
-
-                <div className="flex items-center gap-2">
-                  <div className="bg-purple-100 p-2 rounded-lg">
-                    <Users className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Up to {venueData?.capacity}</p>
-                    <p className="text-xs text-gray-500">Guest capacity</p>
-                  </div>
+                {/* Capacity Chip */}
+                <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 px-3 py-2 rounded-xl flex-shrink-0">
+                  <Users className="h-4 w-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-700">{venueData?.capacity} guests</span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <Award className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{venueData?.totalBookings || 0}+ Bookings</p>
-                    <p className="text-xs text-gray-500">Successfully hosted</p>
-                  </div>
+                {/* Bookings Chip */}
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-xl flex-shrink-0">
+                  <Award className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700">{venueData?.totalBookings || 0}+ booked</span>
                 </div>
+
+                {/* Venue Type Chip */}
+                {venueData?.venueClassification?.indoorOutdoor && (
+                  <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-3 py-2 rounded-xl flex-shrink-0">
+                    <Home className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-700">{venueData.venueClassification.indoorOutdoor}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 flex-wrap pt-2">
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6">
+              {/* Price Display - Mobile Prominent */}
+              <div className="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100 lg:hidden">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Starting from</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    ₹{(venueData?.pricing.hourlyRate || venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}
+                    <span className="text-sm font-normal text-gray-500">/hr</span>
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setShowMobileBooking(true)}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg"
+                >
+                  Book Now
+                </Button>
+              </div>
+
+              {/* Desktop Action Buttons */}
+              <div className="hidden lg:flex items-center gap-3 pt-2">
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all px-6">
                   <Bookmark className="h-4 w-4 mr-2" />
                   Save Venue
                 </Button>
-                <Button variant="outline" className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 px-6">
+                <Button variant="outline" className="border-2 border-purple-200 text-purple-700 hover:bg-purple-50 px-6">
                   <ImageIcon className="h-4 w-4 mr-2" />
                   View Gallery
                 </Button>
-                <Button variant="outline" className="border-2 border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 px-6">
+                <Button variant="outline" className="border-2 border-gray-200 text-gray-700 hover:bg-gray-50 px-6">
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
                 </Button>
               </div>
             </div>
 
-            {/* Tabs Section */}
-            <Tabs defaultValue="portfolio" className="w-full bg-white rounded-2xl shadow-lg overflow-hidden">
-              <TabsList className="border-b-2 border-gray-100 bg-gradient-to-r from-gray-50 to-white h-auto p-0 w-full justify-start">
-                <TabsTrigger
-                  value="portfolio"
-                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
-                >
-                  Portfolio
-                </TabsTrigger>
+            {/* Tabs Section - Mobile Optimized */}
+            <Tabs defaultValue="about" className="w-full bg-white lg:rounded-2xl lg:shadow-lg overflow-hidden">
+              <TabsList className="border-b border-gray-200 bg-white h-auto p-0 w-full justify-start overflow-x-auto scrollbar-hide">
                 <TabsTrigger
                   value="about"
-                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                  className="px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-transparent rounded-none font-medium transition-all flex-shrink-0"
                 >
                   About
                 </TabsTrigger>
                 <TabsTrigger
+                  value="portfolio"
+                  className="px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-transparent rounded-none font-medium transition-all flex-shrink-0"
+                >
+                  Photos
+                </TabsTrigger>
+                <TabsTrigger
                   value="reviews"
-                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                  className="px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-transparent rounded-none font-medium transition-all flex-shrink-0"
                 >
                   Reviews
                 </TabsTrigger>
                 <TabsTrigger
                   value="faq"
-                  className="px-6 py-4 data-[state=active]:border-b-4 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-purple-50/50 rounded-none font-semibold transition-all duration-300 hover:bg-gray-50"
+                  className="px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-transparent rounded-none font-medium transition-all flex-shrink-0"
                 >
                   FAQ
                 </TabsTrigger>
               </TabsList>
 
               {/* Portfolio Tab */}
-              <TabsContent value="portfolio" className="p-6 sm:p-8">
+              <TabsContent value="portfolio" className="p-4 sm:p-6">
                 <PortfolioSection venueData={venueData} displayImages={displayImages} />
               </TabsContent>
 
               {/* About Tab */}
-              <TabsContent value="about" className="p-6 sm:p-8">
-                <div className="space-y-8">
+              <TabsContent value="about" className="p-4 sm:p-6">
+                <div className="space-y-5 sm:space-y-6">
                   {/* About the Venue */}
-                  <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-                      <Building2 className="h-7 w-7 text-purple-600" />
-                      About {venueData?.name}
+                  <div className="bg-gradient-to-br from-purple-50/50 to-blue-50/50 rounded-xl p-4 sm:p-5 border border-purple-100/50">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-purple-600" />
+                      About this venue
                     </h2>
-                    <p className="text-gray-700 leading-relaxed text-base sm:text-lg">{venueData?.description || "This beautiful venue offers a perfect setting for your special events."}</p>
+                    <p className="text-gray-600 leading-relaxed text-sm sm:text-base">{venueData?.description || "This beautiful venue offers a perfect setting for your special events."}</p>
                   </div>
 
-                  {/* Venue Classification */}
+                  {/* Venue Classification - Compact Mobile Grid */}
                   {venueData?.venueClassification && (
-                    <div className="bg-white border-2 border-gray-100 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                      <h3 className="font-bold text-xl mb-5 text-gray-900 flex items-center gap-2">
-                        <Award className="h-6 w-6 text-purple-600" />
-                        Venue Type & Classification
+                    <div className="bg-white border border-gray-100 p-4 sm:p-5 rounded-xl">
+                      <h3 className="font-semibold text-base sm:text-lg mb-3 text-gray-900 flex items-center gap-2">
+                        <Award className="h-5 w-5 text-purple-600" />
+                        Venue Type
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Venue Type</p>
-                          <div className="flex flex-wrap gap-2">
-                            {venueData.venueClassification.venueTypes?.map((type, idx) => (
-                              <Badge key={idx} className="bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1 text-sm font-medium">
-                                {type?.replace?.(/_/g, ' ') || 'N/A'}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Setting</p>
-                          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 px-3 py-1.5 text-sm font-medium">
-                            {venueData.venueClassification.indoorOutdoor}
+                      <div className="flex flex-wrap gap-2">
+                        {venueData.venueClassification.venueTypes?.map((type, idx) => (
+                          <Badge key={idx} className="bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 text-xs sm:text-sm font-medium">
+                            {type?.replace?.(/_/g, ' ') || 'N/A'}
                           </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Operation</p>
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-200 px-3 py-1.5 text-sm font-medium">
-                            {venueData.venueClassification.operationMode?.replace?.(/_/g, ' ') || 'N/A'}
-                          </Badge>
-                        </div>
+                        ))}
+                        <Badge className="bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 text-xs sm:text-sm font-medium">
+                          {venueData.venueClassification.indoorOutdoor}
+                        </Badge>
+                        <Badge className="bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 text-xs sm:text-sm font-medium">
+                          {venueData.venueClassification.operationMode?.replace?.(/_/g, ' ') || 'N/A'}
+                        </Badge>
                       </div>
                     </div>
                   )}
 
-                  {/* Capacity Details */}
+                  {/* Capacity Details - Compact Mobile Cards */}
                   <div>
-                    <h3 className="font-bold text-xl mb-5 text-gray-900 flex items-center gap-2">
-                      <Users className="h-6 w-6 text-purple-600" />
-                      Capacity Information
+                    <h3 className="font-semibold text-base sm:text-lg mb-3 text-gray-900 flex items-center gap-2">
+                      <Users className="h-5 w-5 text-purple-600" />
+                      Capacity
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                        <div className="bg-purple-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 shadow-md">
-                          <Users className="h-7 w-7 text-white" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 sm:p-4">
+                        <div className="bg-purple-600 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center mb-2">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                         </div>
-                        <p className="text-sm font-medium text-purple-700 mb-1 uppercase tracking-wide">Standing Capacity</p>
-                        <p className="text-3xl font-bold text-gray-900">{venueData?.capacityDetails?.standingCapacity || venueData?.capacity}</p>
+                        <p className="text-xs text-purple-600 font-medium">Standing</p>
+                        <p className="text-lg sm:text-xl font-bold text-gray-900">{venueData?.capacityDetails?.standingCapacity || venueData?.capacity}</p>
                       </div>
                       {venueData?.capacityDetails?.seatingCapacity?.theatreStyle && (
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                          <div className="bg-blue-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 shadow-md">
-                            <Users className="h-7 w-7 text-white" />
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 sm:p-4">
+                          <div className="bg-blue-600 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center mb-2">
+                            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                           </div>
-                          <p className="text-sm font-medium text-blue-700 mb-1 uppercase tracking-wide">Theatre Style</p>
-                          <p className="text-3xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.theatreStyle}</p>
+                          <p className="text-xs text-blue-600 font-medium">Theatre</p>
+                          <p className="text-lg sm:text-xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.theatreStyle}</p>
                         </div>
                       )}
                       {venueData?.capacityDetails?.seatingCapacity?.roundTable && (
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                          <div className="bg-green-600 w-14 h-14 rounded-xl flex items-center justify-center mb-4 shadow-md">
-                            <Users className="h-7 w-7 text-white" />
+                        <div className="bg-green-50 border border-green-100 rounded-xl p-3 sm:p-4">
+                          <div className="bg-green-600 w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center mb-2">
+                            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                           </div>
-                          <p className="text-sm font-medium text-green-700 mb-1 uppercase tracking-wide">Round Table</p>
-                          <p className="text-3xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.roundTable}</p>
+                          <p className="text-xs text-green-600 font-medium">Round Table</p>
+                          <p className="text-lg sm:text-xl font-bold text-gray-900">{venueData.capacityDetails.seatingCapacity.roundTable}</p>
                         </div>
                       )}
                     </div>
                     {venueData?.capacityDetails?.minimumBookingCapacity && (
-                      <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <p className="text-sm font-medium text-amber-800">
-                          <span className="font-bold">Minimum booking:</span> {venueData.capacityDetails.minimumBookingCapacity} guests required
+                      <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <p className="text-xs sm:text-sm font-medium text-amber-800">
+                          <span className="font-semibold">Min booking:</span> {venueData.capacityDetails.minimumBookingCapacity} guests
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Amenities & Facilities */}
+                  {/* Amenities & Facilities - Compact Grid */}
                   <div>
-                    <h3 className="font-bold text-xl mb-5 text-gray-900 flex items-center gap-2">
-                      <Check className="h-6 w-6 text-purple-600" />
-                      Amenities & Facilities
+                    <h3 className="font-semibold text-base sm:text-lg mb-3 text-gray-900 flex items-center gap-2">
+                      <Check className="h-5 w-5 text-purple-600" />
+                      Amenities
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                       {venueData?.amenities && Object.entries(venueData.amenities)
                         .filter(([_, value]) => value.available)
                         .map(([key, value]) => {
                           const IconComponent = facilityIcons[key] || Check;
                           return (
-                            <div key={key} className="flex items-start gap-4 p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md transition-all duration-300">
-                              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl shrink-0 shadow-sm">
-                                <IconComponent className="h-6 w-6 text-green-700" />
+                            <div key={key} className="flex items-center gap-2 p-2.5 sm:p-3 bg-gray-50 border border-gray-100 rounded-lg">
+                              <div className="p-1.5 bg-green-100 rounded-lg shrink-0">
+                                <IconComponent className="h-4 w-4 text-green-600" />
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-gray-900 break-words leading-tight">
-                                  {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
-                                </p>
-                                {value.description && (
-                                  <p className="text-xs text-gray-600 mt-1.5 break-words leading-relaxed">{value.description}</p>
-                                )}
-                              </div>
+                              <span className="text-xs sm:text-sm font-medium text-gray-700 truncate">
+                                {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
+                              </span>
                             </div>
                           );
                         })}
@@ -1339,11 +1519,11 @@ export default function VenueDetailPage() {
                         .map(([key]) => {
                           const IconComponent = facilityIcons[key] || Check;
                           return (
-                            <div key={key} className="flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-md transition-all duration-300">
-                              <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl shadow-sm">
-                                <IconComponent className="h-6 w-6 text-green-700" />
+                            <div key={key} className="flex items-center gap-2 p-2.5 sm:p-3 bg-gray-50 border border-gray-100 rounded-lg">
+                              <div className="p-1.5 bg-green-100 rounded-lg shrink-0">
+                                <IconComponent className="h-4 w-4 text-green-600" />
                               </div>
-                              <span className="text-sm font-semibold text-gray-900">
+                              <span className="text-xs sm:text-sm font-medium text-gray-700 truncate">
                                 {key?.replace?.(/([A-Z])/g, ' $1').trim() || 'N/A'}
                               </span>
                             </div>
@@ -1352,43 +1532,40 @@ export default function VenueDetailPage() {
                     </div>
                   </div>
 
-                  {/* Parking & Accessibility */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Parking & Accessibility - Compact */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {venueData?.parking && (
-                      <div className="border rounded-lg p-6">
-                        <h3 className="font-semibold text-lg mb-4 text-gray-900 flex items-center gap-2">
-                          <Car className="h-5 w-5 text-purple-600" />
-                          Parking Facilities
+                      <div className="border border-gray-100 rounded-xl p-3 sm:p-4">
+                        <h3 className="font-semibold text-sm sm:text-base mb-2 text-gray-900 flex items-center gap-2">
+                          <Car className="h-4 w-4 text-purple-600" />
+                          Parking
                         </h3>
-                        <div className="space-y-2">
-                          <p className="text-gray-700">Car Parking: <span className="font-semibold">{venueData.parking.carCapacity} vehicles</span></p>
-                          <p className="text-gray-700">Two Wheeler: <span className="font-semibold">{venueData.parking.twoWheelerAvailable ? 'Available' : 'Not Available'}</span></p>
+                        <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                          <p>Car: <span className="font-medium text-gray-900">{venueData.parking.carCapacity} vehicles</span></p>
+                          <p>Two Wheeler: <span className="font-medium text-gray-900">{venueData.parking.twoWheelerAvailable ? 'Yes' : 'No'}</span></p>
                         </div>
                       </div>
                     )}
                     {venueData?.accessibility && (
-                      <div className="border rounded-lg p-6">
-                        <h3 className="font-semibold text-lg mb-4 text-gray-900 flex items-center gap-2">
-                          <Accessibility className="h-5 w-5 text-blue-600" />
+                      <div className="border border-gray-100 rounded-xl p-3 sm:p-4">
+                        <h3 className="font-semibold text-sm sm:text-base mb-2 text-gray-900 flex items-center gap-2">
+                          <Accessibility className="h-4 w-4 text-blue-600" />
                           Accessibility
                         </h3>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            {venueData.accessibility.wheelchairAccess ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-600" />}
-                            <span className="text-gray-700">Wheelchair Access</span>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+                            {venueData.accessibility.wheelchairAccess ? <Check className="h-3.5 w-3.5 text-green-600" /> : <X className="h-3.5 w-3.5 text-red-500" />}
+                            <span className="text-gray-600">Wheelchair Access</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {venueData.accessibility.liftElevator ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-600" />}
-                            <span className="text-gray-700">Lift/Elevator</span>
+                          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+                            {venueData.accessibility.liftElevator ? <Check className="h-3.5 w-3.5 text-green-600" /> : <X className="h-3.5 w-3.5 text-red-500" />}
+                            <span className="text-gray-600">Lift/Elevator</span>
                           </div>
                           {venueData.accessibility.nearbyTransport && (
-                            <div className="mt-3">
-                              <p className="text-sm font-medium text-gray-900 mb-2">Nearby Transport:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {venueData.accessibility.nearbyTransport.airport && <Badge variant="outline">Airport</Badge>}
-                                {venueData.accessibility.nearbyTransport.railwayStation && <Badge variant="outline">Railway Station</Badge>}
-                                {venueData.accessibility.nearbyTransport.taxiService && <Badge variant="outline">Taxi Service</Badge>}
-                              </div>
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {venueData.accessibility.nearbyTransport.airport && <Badge variant="outline" className="text-xs py-0.5">Airport</Badge>}
+                              {venueData.accessibility.nearbyTransport.railwayStation && <Badge variant="outline" className="text-xs py-0.5">Railway</Badge>}
+                              {venueData.accessibility.nearbyTransport.taxiService && <Badge variant="outline" className="text-xs py-0.5">Taxi</Badge>}
                             </div>
                           )}
                         </div>
@@ -1396,129 +1573,115 @@ export default function VenueDetailPage() {
                     )}
                   </div>
 
-                  {/* Policies */}
+                  {/* Policies - Compact */}
                   {venueData?.policies && (
-                    <div className="border rounded-lg p-6">
-                      <h3 className="font-semibold text-lg mb-4 text-gray-900">Venue Policies</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border border-gray-100 rounded-xl p-3 sm:p-4">
+                      <h3 className="font-semibold text-sm sm:text-base mb-3 text-gray-900">Policies</h3>
+                      <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm">
                         {venueData.policies.operatingHours && (
                           <div>
-                            <p className="text-sm font-medium text-gray-900 mb-1">Operating Hours</p>
-                            <p className="text-gray-700">{venueData.policies.operatingHours.startTime} - {venueData.policies.operatingHours.endTime}</p>
+                            <p className="text-gray-500 mb-0.5">Hours</p>
+                            <p className="font-medium text-gray-900">{venueData.policies.operatingHours.startTime} - {venueData.policies.operatingHours.endTime}</p>
                           </div>
                         )}
                         {venueData.policies.smokingPolicy && (
                           <div>
-                            <p className="text-sm font-medium text-gray-900 mb-1">Smoking Policy</p>
-                            <p className="text-gray-700 capitalize">
-                              {venueData.policies.smokingPolicy?.replace?.(/_/g, ' ') || 'Not specified'}
-                            </p>
+                            <p className="text-gray-500 mb-0.5">Smoking</p>
+                            <p className="font-medium text-gray-900 capitalize">{venueData.policies.smokingPolicy?.replace?.(/_/g, ' ')}</p>
                           </div>
                         )}
                         {venueData.policies.alcoholServingPermission !== undefined && (
                           <div>
-                            <p className="text-sm font-medium text-gray-900 mb-1">Alcohol Permission</p>
-                            <p className="text-gray-700">{venueData.policies.alcoholServingPermission ? 'Allowed' : 'Not Allowed'}</p>
+                            <p className="text-gray-500 mb-0.5">Alcohol</p>
+                            <p className="font-medium text-gray-900">{venueData.policies.alcoholServingPermission ? 'Allowed' : 'Not Allowed'}</p>
                           </div>
                         )}
                         {venueData.policies.noiseRestrictions && (
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 mb-1">Noise Restrictions</p>
-                            <p className="text-gray-700">{venueData.policies.noiseRestrictions}</p>
+                          <div className="col-span-2">
+                            <p className="text-gray-500 mb-0.5">Noise</p>
+                            <p className="font-medium text-gray-900">{venueData.policies.noiseRestrictions}</p>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Add-on Services */}
+                  {/* Add-on Services - Compact */}
                   {venueData?.addOnServices && (
                     <div>
-                      <h3 className="font-semibold text-lg mb-4 text-gray-900">Add-on Services</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <h3 className="font-semibold text-sm sm:text-base mb-3 text-gray-900">Add-on Services</h3>
+                      <div className="flex flex-wrap gap-2">
                         {venueData.addOnServices.cateringPackages?.available && (
-                          <div className="border rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <UtensilsCrossed className="h-5 w-5 text-orange-600" />
-                              <h4 className="font-semibold text-gray-900">Catering Packages</h4>
-                            </div>
-                            <p className="text-sm text-gray-600">Available</p>
+                          <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1.5">
+                            <UtensilsCrossed className="h-3.5 w-3.5 text-orange-600" />
+                            <span className="text-xs sm:text-sm font-medium text-orange-700">Catering</span>
                           </div>
                         )}
                         {venueData.addOnServices.eventManagementServices?.available && (
-                          <div className="border rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Award className="h-5 w-5 text-purple-600" />
-                              <h4 className="font-semibold text-gray-900">Event Management</h4>
-                            </div>
-                            <p className="text-sm text-gray-600">{venueData.addOnServices.eventManagementServices.description || 'Available'}</p>
+                          <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-lg px-2.5 py-1.5">
+                            <Award className="h-3.5 w-3.5 text-purple-600" />
+                            <span className="text-xs sm:text-sm font-medium text-purple-700">Event Mgmt</span>
                           </div>
                         )}
                         {venueData.addOnServices.photographyDecorPackages?.available && (
-                          <div className="border rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Gift className="h-5 w-5 text-pink-600" />
-                              <h4 className="font-semibold text-gray-900">Photography & Decor</h4>
-                            </div>
-                            <p className="text-sm text-gray-600">{venueData.addOnServices.photographyDecorPackages.description || 'Available'}</p>
+                          <div className="flex items-center gap-1.5 bg-pink-50 border border-pink-200 rounded-lg px-2.5 py-1.5">
+                            <Gift className="h-3.5 w-3.5 text-pink-600" />
+                            <span className="text-xs sm:text-sm font-medium text-pink-700">Photo & Decor</span>
                           </div>
                         )}
                         {venueData.addOnServices.accommodationBundle?.available && (
-                          <div className="border rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Home className="h-5 w-5 text-blue-600" />
-                              <h4 className="font-semibold text-gray-900">Accommodation</h4>
-                            </div>
-                            <p className="text-sm text-gray-600">{venueData.addOnServices.accommodationBundle.description || 'Available'}</p>
+                          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5">
+                            <Home className="h-3.5 w-3.5 text-blue-600" />
+                            <span className="text-xs sm:text-sm font-medium text-blue-700">Stay</span>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* Pricing Details */}
-                  <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 rounded-2xl p-8 shadow-2xl text-white">
-                    <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                        <IndianRupee className="h-6 w-6" />
+                  {/* Pricing Details - Mobile Optimized */}
+                  <div className="bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 rounded-xl p-4 sm:p-6 text-white">
+                    <h3 className="font-bold text-base sm:text-lg mb-4 flex items-center gap-2">
+                      <div className="bg-white/20 p-1.5 rounded-lg">
+                        <IndianRupee className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
-                      Pricing Information
+                      Pricing
                     </h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                        <span className="text-purple-100 font-medium">Base Price</span>
-                        <span className="font-bold text-2xl">₹ {(venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
+                    <div className="space-y-2.5 sm:space-y-3">
+                      <div className="flex justify-between items-center pb-2.5 border-b border-white/20">
+                        <span className="text-purple-100 text-sm">Base Price</span>
+                        <span className="font-bold text-lg sm:text-xl">₹{(venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
                       </div>
                       {venueData?.pricing.hourlyRate && (
-                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                          <span className="text-purple-100 font-medium">Hourly Rate</span>
-                          <span className="font-bold text-xl">₹ {venueData.pricing.hourlyRate.toLocaleString('en-IN')}<span className="text-sm font-normal">/hour</span></span>
+                        <div className="flex justify-between items-center pb-2.5 border-b border-white/20">
+                          <span className="text-purple-100 text-sm">Hourly</span>
+                          <span className="font-bold text-base sm:text-lg">₹{venueData.pricing.hourlyRate.toLocaleString('en-IN')}<span className="text-xs font-normal">/hr</span></span>
                         </div>
                       )}
                       {getHalfDayRate() !== undefined && (
-                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                          <span className="text-purple-100 font-medium">Half Day Rate</span>
-                          <span className="font-bold text-xl">₹ {getHalfDayRate()!.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between items-center pb-2.5 border-b border-white/20">
+                          <span className="text-purple-100 text-sm">Half Day</span>
+                          <span className="font-bold text-base sm:text-lg">₹{getHalfDayRate()!.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {venueData?.pricing.fullDayRate && (
-                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                          <span className="text-purple-100 font-medium">Full Day Rate</span>
-                          <span className="font-bold text-xl">₹ {venueData.pricing.fullDayRate.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between items-center pb-2.5 border-b border-white/20">
+                          <span className="text-purple-100 text-sm">Full Day</span>
+                          <span className="font-bold text-base sm:text-lg">₹{venueData.pricing.fullDayRate.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {venueData?.pricing.securityDeposit && (
-                        <div className="flex justify-between items-center pb-4 border-b border-white/20">
-                          <span className="text-purple-100 font-medium">Security Deposit</span>
-                          <span className="font-bold text-xl">₹ {venueData.pricing.securityDeposit.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between items-center pb-2.5 border-b border-white/20">
+                          <span className="text-purple-100 text-sm">Security Deposit</span>
+                          <span className="font-bold text-base sm:text-lg">₹{venueData.pricing.securityDeposit.toLocaleString('en-IN')}</span>
                         </div>
                       )}
                       {venueData?.pricing.rentalIncludes && venueData.pricing.rentalIncludes.length > 0 && (
-                        <div className="mt-6 pt-4 border-t border-white/20">
-                          <p className="text-sm font-semibold text-purple-100 mb-3 uppercase tracking-wide">Rental Includes:</p>
-                          <div className="flex flex-wrap gap-2">
+                        <div className="pt-2">
+                          <p className="text-xs text-purple-200 mb-2">Includes:</p>
+                          <div className="flex flex-wrap gap-1.5">
                             {venueData.pricing.rentalIncludes?.map((item, idx) => (
-                              <Badge key={idx} className="bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border-white/30 px-3 py-1">
+                              <Badge key={idx} className="bg-white/20 text-white text-xs px-2 py-0.5">
                                 {item?.replace?.(/_/g, ' ') || 'N/A'}
                               </Badge>
                             ))}
@@ -1528,29 +1691,27 @@ export default function VenueDetailPage() {
                     </div>
                   </div>
 
-                  {/* Terms & Conditions */}
+                  {/* Terms & Conditions - Compact */}
                   {(venueData?.terms?.cancellationPolicy || venueData?.terms?.additionalRules || venueData?.pricing?.cancellationPolicy) && (
-                    <div className="border-l-4 border-orange-500 bg-orange-50 p-6 rounded-r-lg">
-                      <h3 className="font-semibold text-lg mb-4 text-gray-900">Terms & Conditions</h3>
-                      <div className="space-y-3">
+                    <div className="border-l-3 border-orange-400 bg-orange-50 p-3 sm:p-4 rounded-r-lg">
+                      <h3 className="font-semibold text-sm sm:text-base mb-2 text-gray-900">Terms</h3>
+                      <div className="space-y-2 text-xs sm:text-sm text-gray-600">
                         {(venueData.terms?.cancellationPolicy || venueData.pricing?.cancellationPolicy) && (
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Cancellation Policy</h4>
-                            <p className="text-sm text-gray-700">
-                              {venueData.terms?.cancellationPolicy ||
-                                (venueData.pricing?.cancellationPolicy?.refundable
-                                  ? `Refundable within ${venueData.pricing.cancellationPolicy.timeFrame || 'specified time'}. ${venueData.pricing.cancellationPolicy.deductionPercentage ? `${venueData.pricing.cancellationPolicy.deductionPercentage}% deduction applies.` : ''}`
-                                  : 'Non-refundable'
-                                )
-                              }
-                            </p>
-                          </div>
+                          <p>
+                            <span className="font-medium text-gray-700">Cancellation:</span>{' '}
+                            {venueData.terms?.cancellationPolicy ||
+                              (venueData.pricing?.cancellationPolicy?.refundable
+                                ? `Refundable within ${venueData.pricing.cancellationPolicy.timeFrame || 'specified time'}`
+                                : 'Non-refundable'
+                              )
+                            }
+                          </p>
                         )}
                         {venueData.terms?.additionalRules && (
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-1">Additional Rules</h4>
-                            <p className="text-sm text-gray-700">{venueData.terms.additionalRules}</p>
-                          </div>
+                          <p>
+                            <span className="font-medium text-gray-700">Rules:</span>{' '}
+                            {venueData.terms.additionalRules}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1558,29 +1719,26 @@ export default function VenueDetailPage() {
                 </div>
               </TabsContent>
 
-              {/* Reviews Tab */}
-              <TabsContent value="reviews" className="p-6 sm:p-8">
-                <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <h2 className="text-2xl font-semibold text-gray-900">
-                      Reviews for {venueData?.name} ({(venueData?.rating.count ?? 0)})
-                    </h2>
-                  </div>
+              {/* Reviews Tab - Mobile Optimized */}
+              <TabsContent value="reviews" className="p-4 sm:p-6">
+                <div className="space-y-4 sm:space-y-5">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                    Reviews ({(venueData?.rating.count ?? 0)})
+                  </h2>
 
-                  {/* Write Review (only for logged-in users) */}
+                  {/* Write Review - Compact Mobile */}
                   {user ? (
-                    <div className="bg-white border rounded-lg p-4 space-y-3">
-                      <h3 className="font-semibold text-gray-900">Write a Review</h3>
-                      <div className="flex items-center gap-2">
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 sm:p-4 space-y-2.5">
+                      <p className="text-sm font-medium text-gray-700">Rate this venue</p>
+                      <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
                             type="button"
                             onClick={() => setNewReview({ ...newReview, rating: star })}
-                            className={`p-1 rounded ${newReview.rating >= star ? 'text-pink-600' : 'text-gray-300'}`}
-                            aria-label={`Rate ${star} star`}
+                            className="p-0.5"
                           >
-                            <Star className={`h-6 w-6 ${newReview.rating >= star ? 'fill-pink-600' : ''}`} />
+                            <Star className={`h-7 w-7 sm:h-8 sm:w-8 ${newReview.rating >= star ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                           </button>
                         ))}
                       </div>
@@ -1588,119 +1746,115 @@ export default function VenueDetailPage() {
                         placeholder="Share your experience..."
                         value={newReview.comment}
                         onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                        rows={3}
+                        rows={2}
+                        className="text-sm"
                       />
-                      <div className="flex gap-2 justify-end">
-                        <Button onClick={handleSubmitReview} disabled={submittingReview} className="bg-pink-600 hover:bg-pink-700 text-white">
-                          {submittingReview ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                          Submit Review
-                        </Button>
-                      </div>
+                      <Button onClick={handleSubmitReview} disabled={submittingReview} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto">
+                        {submittingReview && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                        Submit
+                      </Button>
                     </div>
                   ) : (
-                    <div className="bg-gray-50 border rounded-lg p-4 text-gray-600">
-                      Please login to write a review.
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm text-gray-500 text-center">
+                      <button onClick={() => router.push(createAuthRedirectUrl())} className="text-purple-600 font-medium">Login</button> to write a review
                     </div>
                   )}
 
-                  {/* Rating Distribution */}
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                      <div className="text-center">
-                        <div className="text-5xl font-bold text-gray-900">{(venueData?.rating.average ?? 0).toFixed(1)}</div>
-                        <div className="flex items-center gap-1 mt-2 justify-center">
+                  {/* Rating Summary - Compact */}
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 sm:p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center flex-shrink-0">
+                        <div className="text-3xl sm:text-4xl font-bold text-gray-900">{(venueData?.rating.average ?? 0).toFixed(1)}</div>
+                        <div className="flex items-center gap-0.5 mt-1 justify-center">
                           {[1, 2, 3, 4, 5].map((star) => (
-                            <Star key={star} className={`h-5 w-5 ${star <= (venueData?.rating.average ?? 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                            <Star key={star} className={`h-3.5 w-3.5 ${star <= (venueData?.rating.average ?? 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
                           ))}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{venueData?.rating.count ?? 0} reviews</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{venueData?.rating.count ?? 0} reviews</p>
                       </div>
-                      <div className="flex-1 w-full">
-                        <div className="space-y-2">
-                          {[5, 4, 3, 2, 1].map((rating) => {
-                            const percentage = venueData?.rating.count ? ((venueData.reviews?.filter(r => r.rating === rating).length || 0) / venueData.rating.count) * 100 : 0;
-                            return (
-                              <div key={rating} className="flex items-center gap-3">
-                                <span className="text-sm text-gray-600 w-12">{rating} star</span>
-                                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                  <div className="bg-yellow-400 h-2 rounded-full transition-all" style={{ width: `${percentage}%` }}></div>
-                                </div>
-                                <span className="text-sm text-gray-600 w-12 text-right">{percentage.toFixed(0)}%</span>
+                      <div className="flex-1 space-y-1">
+                        {[5, 4, 3, 2, 1].map((rating) => {
+                          const percentage = venueData?.rating.count ? ((venueData.reviews?.filter(r => r.rating === rating).length || 0) / venueData.rating.count) * 100 : 0;
+                          return (
+                            <div key={rating} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 w-3">{rating}</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                                <div className="bg-yellow-400 h-1.5 rounded-full" style={{ width: `${percentage}%` }}></div>
                               </div>
-                            );
-                          })}
-                        </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
 
-                  {/* Individual Reviews */}
-                  <div className="space-y-6">
+                  {/* Individual Reviews - Compact */}
+                  <div className="space-y-3">
                     {venueData?.reviews && venueData.reviews.length > 0 ? (
                       venueData.reviews.map((review, index) => (
-                        <div key={index} className="border-b pb-6 last:border-b-0">
-                          <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-purple-100 rounded-full flex items-center justify-center shrink-0">
-                              <span className="text-pink-600 font-semibold text-lg">
+                        <div key={index} className="bg-white border border-gray-100 rounded-xl p-3 sm:p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center shrink-0">
+                              <span className="text-purple-600 font-semibold text-sm">
                                 {(review as any).userName?.charAt(0).toUpperCase() || review.user?.name?.charAt(0).toUpperCase() || 'U'}
                               </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                <div>
-                                  <h4 className="font-semibold text-gray-900">{(review as any).userName || review.user?.name || 'Anonymous'}</h4>
-                                  <div className="flex items-center gap-1 mt-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star key={star} className={`h-4 w-4 ${star <= review.rating ? 'text-pink-600 fill-pink-600' : 'text-gray-300'}`} />
-                                    ))}
-                                  </div>
-                                </div>
-                                <span className="text-sm text-gray-500">
-                                  {new Date(review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              <div className="flex items-center justify-between gap-2">
+                                <h4 className="font-medium text-sm text-gray-900">{(review as any).userName || review.user?.name || 'Anonymous'}</h4>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </span>
                               </div>
-                              <p className="text-gray-700 text-sm mt-2 break-words">
-                                {review.comment}
-                              </p>
+                              <div className="flex items-center gap-0.5 mt-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                                ))}
+                              </div>
+                              {review.comment && (
+                                <p className="text-gray-600 text-xs sm:text-sm mt-2 leading-relaxed">
+                                  {review.comment}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-12 bg-gray-50 rounded-lg">
-                        <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 text-lg font-medium">No reviews yet</p>
-                        <p className="text-gray-500 text-sm mt-2">Be the first to review this venue!</p>
+                      <div className="text-center py-8 bg-gray-50 rounded-xl">
+                        <MessageCircle className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">No reviews yet</p>
+                        <p className="text-gray-400 text-xs mt-1">Be the first to review!</p>
                       </div>
                     )}
                   </div>
                 </div>
               </TabsContent>
 
-              {/* FAQ Tab */}
-              <TabsContent value="faq" className="p-6 sm:p-8">
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                    FAQ about {venueData?.name}
+              {/* FAQ Tab - Mobile Optimized */}
+              <TabsContent value="faq" className="p-4 sm:p-6">
+                <div className="space-y-3">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+                    FAQs
                   </h2>
                   {venueData?.faqs && venueData.faqs.length > 0 ? (
-                    <Accordion type="multiple" className="w-full">
+                    <Accordion type="multiple" className="w-full space-y-2">
                       {venueData.faqs
                         .filter((f) => f.isActive !== false)
                         .slice()
                         .sort((a, b) => (a.order || 0) - (b.order || 0))
                         .map((f, idx) => (
-                          <AccordionItem key={f._id || idx} value={(f._id || String(idx)) as string}>
-                            <AccordionTrigger>{f.question}</AccordionTrigger>
-                            <AccordionContent>
+                          <AccordionItem key={f._id || idx} value={(f._id || String(idx)) as string} className="border border-gray-100 rounded-xl px-3 sm:px-4 data-[state=open]:bg-gray-50">
+                            <AccordionTrigger className="text-sm sm:text-base font-medium text-left py-3 hover:no-underline">{f.question}</AccordionTrigger>
+                            <AccordionContent className="text-xs sm:text-sm text-gray-600 pb-3">
                               {f.answer}
                             </AccordionContent>
                           </AccordionItem>
                         ))}
                     </Accordion>
                   ) : (
-                    <div className="bg-gray-50 border rounded-lg p-6 text-gray-600">
-                      No FAQs added by this venue yet.
+                    <div className="bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-500">
+                      No FAQs available
                     </div>
                   )}
                 </div>
@@ -1708,25 +1862,22 @@ export default function VenueDetailPage() {
             </Tabs>
           </div>
 
-          <div className="space-y-6">
-            {/* Calendar */}
-
-            <Card className="bg-white border-2 border-purple-100 shadow-xl rounded-2xl overflow-hidden top-6">
-              <CardHeader className="pb-4 border-b-2 border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
-                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <div className="bg-purple-600 p-2 rounded-lg">
-                    <CalendarIcon className="h-5 w-5 text-white" />
+          {/* Right Sidebar - Hidden on Mobile, Sticky on Desktop */}
+          <div className="hidden lg:block lg:space-y-4 lg:sticky lg:top-4">
+            {/* Calendar Card */}
+            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
+              <CardHeader className="pb-3 border-b border-gray-100 bg-gradient-to-r from-purple-50/50 to-pink-50/50 p-4">
+                <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <div className="bg-purple-600 p-1.5 rounded-lg">
+                    <CalendarIcon className="h-4 w-4 text-white" />
                   </div>
                   Check Availability
                 </CardTitle>
-                <CardDescription className="text-sm text-gray-600 font-medium mt-2">
-                  Select a date to see booking availability
-                </CardDescription>
               </CardHeader>
 
-              <CardContent className="space-y-4 pt-4">
+              <CardContent className="space-y-3 p-4">
                 {/* Calendar Wrapper */}
-                <div className="rounded-xl border border-gray-200 p-3 bg-gray-50">
+                <div className="rounded-lg border border-gray-200 p-2 bg-gray-50">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
@@ -1792,253 +1943,155 @@ export default function VenueDetailPage() {
                   />
                 </div>
 
-                {/* Legend */}
-                <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
+                {/* Legend - Compact */}
+                <div className="grid grid-cols-2 gap-1.5 text-[10px] text-gray-500">
                   <LegendDot color="bg-emerald-500" label="Available" />
-                  <LegendDot color="bg-amber-500" label="Partially Booked" />
-                  <LegendDot color="bg-yellow-500" label="Partially Blocked" />
-                  <LegendDot color="bg-red-500" label="Fully Blocked" />
-                  <LegendDot color="bg-gray-400" label="Past Dates" />
+                  <LegendDot color="bg-amber-500" label="Partial" />
+                  <LegendDot color="bg-red-500" label="Blocked" />
+                  <LegendDot color="bg-gray-400" label="Past" />
                 </div>
-
-                {/* Info Note */}
-                <p className="text-xs text-gray-500 text-center leading-relaxed">
-                  Blocked dates are unavailable for online booking due to
-                  offline reservations or venue maintenance.
-                </p>
               </CardContent>
             </Card>
 
-
             {/* Booking Section */}
             {selectedDate && (
-              <Card className="bg-white border-2 border-purple-100 shadow-xl rounded-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-gray-100">
-                  <CardTitle className="text-2xl font-bold text-gray-900">Book {venueData?.name}</CardTitle>
-                  <CardDescription className="text-purple-700 font-semibold text-base mt-2 flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" />
+              <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-purple-50/50 to-pink-50/50 border-b border-gray-100 p-4">
+                  <CardTitle className="text-base font-bold text-gray-900">Book Venue</CardTitle>
+                  <CardDescription className="text-purple-600 font-medium text-sm mt-1 flex items-center gap-1.5">
+                    <CalendarIcon className="h-3.5 w-3.5" />
                     {format(selectedDate, 'PPP')}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4">
                   {bookingSuccess ? (
-                    <div className="text-center p-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl">
-                      <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                        <CheckCircle className="h-12 w-12 text-green-600" />
+                    <div className="text-center py-4">
+                      <div className="bg-green-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <CheckCircle className="h-8 w-8 text-green-600" />
                       </div>
-                      <h3 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
-                      <p className="text-gray-600 text-lg mb-8">Your invoice has been generated successfully.</p>
-
-                      <div className="text-left space-y-3 text-gray-700 mb-8 bg-white p-6 rounded-xl border-2 border-green-200 shadow-md">
-                        <div className="flex justify-between items-center pb-3 border-b">
-                          <span className="font-medium text-gray-600">Booking ID:</span>
-                          <span className="font-bold text-gray-900">{finalBookingDetails?._id}</span>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Booking Confirmed!</h3>
+                      <div className="text-left space-y-2 text-sm bg-green-50 p-3 rounded-lg mt-3 mb-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Date:</span>
+                          <span className="font-medium">{format(new Date(finalBookingDetails?.bookingDate), 'PP')}</span>
                         </div>
-                        <div className="flex justify-between items-center pb-3 border-b">
-                          <span className="font-medium text-gray-600">Date:</span>
-                          <span className="font-bold text-gray-900">{format(new Date(finalBookingDetails?.bookingDate), 'PPP')}</span>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Time:</span>
+                          <span className="font-medium">{finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</span>
                         </div>
-                        <div className="flex justify-between items-center pb-3 border-b">
-                          <span className="font-medium text-gray-600">Time:</span>
-                          <span className="font-bold text-gray-900">{finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</span>
-                        </div>
-                        <div className="flex justify-between items-center pb-3 border-b">
-                          <span className="font-medium text-gray-600">Guests:</span>
-                          <span className="font-bold text-gray-900">{finalBookingDetails?.guestCount}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2">
-                          <span className="font-semibold text-gray-700 text-lg">Total Paid:</span>
-                          <span className="font-bold text-green-600 text-2xl">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span>
+                        <div className="flex justify-between pt-1 border-t border-green-200">
+                          <span className="font-medium">Total:</span>
+                          <span className="font-bold text-green-600">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span>
                         </div>
                       </div>
-
-                      <Button
-                        onClick={handleDownloadInvoice}
-                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300 text-lg"
-                      >
-                        <Download className="h-5 w-5 mr-2" />
+                      <Button onClick={handleDownloadInvoice} size="sm" className="w-full bg-green-600 hover:bg-green-700">
+                        <Download className="h-4 w-4 mr-1.5" />
                         Download Invoice
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                      <form onSubmit={handleBookingSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="startTime">Start Time *</Label>
-                            <Select
-                              onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })}
-                              value={bookingForm.startTime}
-                              disabled={fullDaySelected}
-                            >
-                              <SelectTrigger id="startTime">
-                                <SelectValue placeholder={fullDaySelected ? "Set to 12:00 AM" : "Select start time"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getAvailableTimeOptions().map((time) => (
-                                  <SelectItem
-                                    key={time.value}
-                                    value={time.value}
-                                    disabled={time.disabled || fullDaySelected}
-                                    className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                                  >
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>{time.label}</span>
-                                      {time.disabled && (
-                                        <span className="text-red-500 text-xs ml-2">Booked</span>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="endTime">End Time *</Label>
-                            <Select
-                              onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })}
-                              value={bookingForm.endTime}
-                              disabled={fullDaySelected}
-                            >
-                              <SelectTrigger id="endTime">
-                                <SelectValue placeholder={fullDaySelected ? "Disabled for full-day" : "Select end time"} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getAvailableTimeOptions().map((time) => (
-                                  <SelectItem
-                                    key={time.value}
-                                    value={time.value}
-                                    disabled={time.disabled || fullDaySelected}
-                                    className={time.disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                                  >
-                                    <div className="flex items-center justify-between w-full">
-                                      <span>{time.label}</span>
-                                      {time.disabled && (
-                                        <span className="text-red-500 text-xs ml-2">Booked</span>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-gray-500 mt-1">{fullDaySelected ? 'Full day selected – end time not required' : 'Select an end time after the start time'}</p>
-                          </div>
-                        </div>
-
-                        {/* Full Day Toggle */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            id="fullDay"
-                            type="checkbox"
-                            checked={fullDaySelected}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setFullDaySelected(checked);
-                              if (checked) {
-                                setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' }));
-                              }
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <Label htmlFor="fullDay">Full Day Booking</Label>
-                        </div>
-
+                    <form onSubmit={handleBookingSubmit} className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <Label htmlFor="eventType">Event Type</Label>
-                          <Input id="eventType" value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="e.g., Wedding, Conference, Party" />
+                          <Label htmlFor="startTime" className="text-xs">Start *</Label>
+                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })} value={bookingForm.startTime} disabled={fullDaySelected}>
+                            <SelectTrigger id="startTime" className="h-9 text-sm">
+                              <SelectValue placeholder="Start" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getAvailableTimeOptions().map((time) => (
+                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected} className="text-sm">
+                                  {time.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
-                          <Label htmlFor="specialRequirements">Special Requirements</Label>
-                          <Textarea id="specialRequirements" value={bookingForm.specialRequirements} onChange={(e) => setBookingForm({ ...bookingForm, specialRequirements: e.target.value })} placeholder="Any special requests or requirements..." />
+                          <Label htmlFor="endTime" className="text-xs">End *</Label>
+                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })} value={bookingForm.endTime} disabled={fullDaySelected}>
+                            <SelectTrigger id="endTime" className="h-9 text-sm">
+                              <SelectValue placeholder="End" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getAvailableTimeOptions().map((time) => (
+                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected} className="text-sm">
+                                  {time.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
+                      </div>
 
-                        {/* Estimated Price Summary */}
-                        <div className="bg-gray-50 border rounded p-3 text-sm">
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-700 font-medium">Estimated Price</span>
-                            <span className="text-gray-900 font-semibold">₹ {estimatedPrice.toLocaleString('en-IN')}</span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Pricing = Base + {fullDaySelected ? 'Full-day' : (getDurationHours(bookingForm.startTime, bookingForm.endTime) > 12 ? 'Half-day (derived)' : 'Hourly × duration')} {venueData?.pricing?.cleaningFee ? '+ Cleaning fee' : ''}
-                          </p>
+                      <div className="flex items-center gap-2">
+                        <input id="fullDay" type="checkbox" checked={fullDaySelected} onChange={(e) => { setFullDaySelected(e.target.checked); if (e.target.checked) setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' })); }} className="h-3.5 w-3.5" />
+                        <Label htmlFor="fullDay" className="text-xs font-normal">Full Day</Label>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="eventType" className="text-xs">Event Type</Label>
+                        <Input id="eventType" value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="Wedding, Party, etc." className="h-9 text-sm" />
+                      </div>
+
+                      {/* Price Summary */}
+                      <div className="bg-purple-50 border border-purple-100 rounded-lg p-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-600">Estimated</span>
+                          <span className="font-bold text-purple-700">₹{estimatedPrice.toLocaleString('en-IN')}</span>
                         </div>
+                      </div>
 
-                        {formError && (
-                          <div className="p-3 text-sm text-red-700 bg-red-100 rounded-lg">
-                            <span className="font-medium">Error:</span> {formError}
-                          </div>
-                        )}
+                      {formError && (
+                        <div className="p-2 text-xs text-red-700 bg-red-50 rounded-lg">{formError}</div>
+                      )}
 
-                        <Button
-                          type="submit"
-                          className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-pink-600 hover:from-purple-700 hover:via-purple-600 hover:to-pink-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-                          disabled={submitting || authLoading}
-                        >
-                          {submitting ? (
-                            <>
-                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <IndianRupee className="h-5 w-5 mr-2" />
-                              Book and Pay Now
-                            </>
-                          )}
-                        </Button>
-                      </form>
-                    </div>
+                      <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-2.5 rounded-lg" disabled={submitting || authLoading}>
+                        {submitting ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Processing...</> : <><IndianRupee className="h-4 w-4 mr-1" />Book & Pay</>}
+                      </Button>
+                    </form>
                   )}
                 </CardContent>
               </Card>
             )}
 
             {!selectedDate && (
-              <Card className="bg-white border-2 border-purple-100 shadow-xl rounded-2xl overflow-hidden">
-                <CardContent className="p-8">
-                  <div className="text-center">
-                    <div className="bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-10 rounded-2xl">
-                      <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                        <CalendarIcon className="h-10 w-10 text-purple-600" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">Select a Date</h3>
-                      <p className="text-gray-600 text-base leading-relaxed max-w-sm mx-auto">
-                        Choose an available date from the calendar above to start your booking process
-                      </p>
+              <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="text-center py-4">
+                    <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <CalendarIcon className="h-6 w-6 text-purple-600" />
                     </div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Select a Date</h3>
+                    <p className="text-xs text-gray-500">
+                      Choose a date to book
+                    </p>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Contact Card */}
-            <Card className="bg-gradient-to-br from-purple-600 via-purple-500 to-pink-600 text-white border-0 shadow-2xl rounded-2xl overflow-hidden">
-              <CardContent className="p-8">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
-                  <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                    <MessageCircle className="h-6 w-6" />
-                    Need Help?
-                  </h3>
-                  <p className="text-purple-100 text-sm">We're here to assist you</p>
-                </div>
-                <div className="space-y-4 mb-6">
-                  <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                    <div className="bg-white/20 p-2 rounded-lg">
-                      <Phone className="h-5 w-5" />
-                    </div>
-                    <span className="text-base font-medium">{venueData?.contactInfo.phone}</span>
+            {/* Contact Card - Compact */}
+            <Card className="bg-gradient-to-br from-purple-600 to-pink-600 text-white border-0 shadow-lg rounded-xl overflow-hidden">
+              <CardContent className="p-4">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-1.5">
+                  <MessageCircle className="h-4 w-4" />
+                  Need Help?
+                </h3>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-lg">
+                    <Phone className="h-4 w-4" />
+                    <span className="text-sm">{venueData?.contactInfo.phone}</span>
                   </div>
                   {venueData?.contactInfo.email && (
-                    <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm p-4 rounded-xl">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Mail className="h-5 w-5" />
-                      </div>
-                      <span className="text-base font-medium break-all">{venueData.contactInfo.email}</span>
+                    <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-lg">
+                      <Mail className="h-4 w-4" />
+                      <span className="text-xs break-all">{venueData.contactInfo.email}</span>
                     </div>
                   )}
                 </div>
-                <Button className="w-full bg-white text-purple-600 hover:bg-gray-50 font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                  Contact Us
+                <Button size="sm" className="w-full bg-white text-purple-600 hover:bg-gray-50 font-semibold">
+                  Contact
                 </Button>
               </CardContent>
             </Card>
@@ -2047,102 +2100,79 @@ export default function VenueDetailPage() {
 
         </div>
 
-        {/* Similar Venues Section */}
+        {/* Similar Venues Section - Mobile Optimized */}
         {similarVenues.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-              Browse Similar Venues in {venueData?.address.city}
+          <div className="mt-6 sm:mt-10 px-4 lg:px-0">
+            <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">
+              Similar Venues in {venueData?.address.city}
             </h2>
-            <Carousel className="w-full">
-              <CarouselContent>
-                {similarVenues.map((venue) => {
-                  const venueImage = getPrimaryVenueImage(venue);
-
-                  return (
-                    <CarouselItem key={venue._id} className="md:basis-1/2 lg:basis-1/4">
-                      <Card
-                        className="border hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => router.push(`/allVenues/${venue._id}`)}
-                      >
-                        <div className="relative h-48 rounded-t-lg overflow-hidden">
-                          {venueImage ? (
-                            <img
-                              src={venueImage}
-                              alt={venue.name}
-                              className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-500 text-sm">
-                              No image
-                            </div>
-                          )}
-                          {venue.venueClassification?.indoorOutdoor && (
-                            <Badge className="absolute top-2 right-2 bg-white/90 text-gray-900">
-                              {venue.venueClassification.indoorOutdoor}
-                            </Badge>
-                          )}
-                        </div>
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold text-gray-900 mb-1 truncate" title={venue.name}>
-                            {venue.name}
-                          </h3>
-                          <div className="flex items-center gap-1 mb-2">
-                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-sm text-gray-600">
-                              {venue.rating?.average ? venue.rating.average.toFixed(1) : '5.0'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              ({venue.rating?.count || 0})
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 mb-2">
-                            <MapPin className="h-3 w-3 text-gray-500" />
-                            <p className="text-sm text-gray-600 truncate">
-                              {venue.address.city}, {venue.address.state}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 mb-2">
-                            <Users className="h-3 w-3 text-gray-500" />
-                            <p className="text-sm text-gray-600">
-                              Up to {venue.capacity} guests
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                            <p className="text-sm font-semibold text-gray-900">
-                              ₹ {(venue.pricing.hourlyRate || venue.pricing.basePrice || 0).toLocaleString('en-IN')}
-                            </p>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(`/allVenues/${venue._id}`);
-                              }}
-                            >
-                              View Details
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </CarouselItem>
-                  );
-                })}
-              </CarouselContent>
-              <CarouselPrevious className="hidden md:flex" />
-              <CarouselNext className="hidden md:flex" />
-            </Carousel>
-            <div className="text-center mt-6">
+            <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible">
+              {similarVenues.map((venue) => {
+                const venueImage = getPrimaryVenueImage(venue);
+                return (
+                  <div
+                    key={venue._id}
+                    className="flex-shrink-0 w-[200px] sm:w-[220px] lg:w-full bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => router.push(`/allVenues/${venue._id}`)}
+                  >
+                    <div className="relative h-28 sm:h-32 lg:h-36 overflow-hidden">
+                      {venueImage ? (
+                        <img src={venueImage} alt={venue.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs">No image</div>
+                      )}
+                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                        <span className="text-xs font-medium">{venue.rating?.average?.toFixed(1) || '5.0'}</span>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm text-gray-900 truncate">{venue.name}</h3>
+                      <div className="flex items-center gap-1 mt-1 text-gray-500">
+                        <MapPin className="h-3 w-3" />
+                        <span className="text-xs truncate">{venue.address.city}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                        <span className="text-sm font-bold text-gray-900">₹{(venue.pricing.hourlyRate || venue.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
+                        <span className="text-xs text-gray-500">{venue.capacity} guests</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-center mt-4 lg:mt-6">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => router.push(`/allVenues/list?city=${venueData?.address.city}`)}
-                className="px-8"
+                className="text-sm"
               >
-                View All Venues in {venueData?.address.city}
+                View All in {venueData?.address.city}
               </Button>
             </div>
           </div>
         )}
+      </div>
+
+      {/* Sticky Bottom Bar - Mobile Only */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 lg:hidden z-50 safe-area-inset-bottom">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-500">Starting from</p>
+            <p className="text-lg font-bold text-gray-900">
+              ₹{(venueData?.pricing.hourlyRate || venueData?.pricing.basePrice || 0).toLocaleString('en-IN')}
+              <span className="text-xs font-normal text-gray-500">/hr</span>
+            </p>
+          </div>
+          <Button 
+            onClick={() => setShowMobileBooking(true)}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg flex-shrink-0"
+          >
+            <CalendarIcon className="h-4 w-4 mr-1.5" />
+            Book Now
+          </Button>
+        </div>
       </div>
 
       <Footer />
