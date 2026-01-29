@@ -113,6 +113,7 @@ export default function HomePage() {
   const [slidesPerView, setSlidesPerView] = useState(1)
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
+  const featuredMobileCarouselRef = useRef<HTMLDivElement | null>(null)
 
   const stats = useMemo(
     () => [
@@ -387,7 +388,6 @@ export default function HomePage() {
     ]
   }, [events, artists, venues])
 
-
   const topEvents = useMemo(() => events.slice(0, 8), [events])
   const musicEvents = useMemo(
     () => (events ?? []).filter((e) => String(e?.category ?? "").toLowerCase().includes("music")).slice(0, 8),
@@ -402,6 +402,41 @@ export default function HomePage() {
     [events]
   )
 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const el = featuredMobileCarouselRef.current
+    if (!el) return
+    if (isLoading) return
+    if (error) return
+    if (featuredEvents.length <= 1) return
+
+    const isMobile = window.matchMedia("(max-width: 639px)").matches
+    if (!isMobile) return
+
+    const gapPx = 12
+    const getStep = () => {
+      const track = el.firstElementChild as HTMLElement | null
+      const firstCard = (track?.firstElementChild as HTMLElement | null) ?? null
+      if (!firstCard) return 0
+      return firstCard.offsetWidth + gapPx
+    }
+
+    const id = window.setInterval(() => {
+      const step = getStep()
+      if (!step) return
+
+      const maxScrollLeft = el.scrollWidth - el.clientWidth
+      const atEnd = el.scrollLeft >= maxScrollLeft - 4
+
+      if (atEnd) {
+        el.scrollTo({ left: 0, behavior: "smooth" })
+      } else {
+        el.scrollBy({ left: step, behavior: "smooth" })
+      }
+    }, 3500)
+
+    return () => window.clearInterval(id)
+  }, [featuredEvents.length, isLoading, error])
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
@@ -448,129 +483,170 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className="bg-gray-50 py-10 sm:py-14">
+      <section className=" py-8 sm:py-12 bg-white">
         <div className="container mx-auto px-3 sm:px-4">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">
-              Events
-            </h2>
-            <p className="mt-3 text-sm sm:text-base text-gray-600">
-              DO-IT-YOURSELF event listing platform
-            </p>
-            <p className="mt-2 text-xs sm:text-sm text-gray-500">
-              Make your events live in under 5 minutes
-            </p>
 
-            <div className="mt-6 flex items-center justify-center gap-3">
-              <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
-                <Link href="/events">View Events</Link>
-              </Button>
-              <Button asChild variant="link" className="text-blue-600 hover:text-blue-700">
-                <Link href="/organizer/auth/login">Create Events</Link>
-              </Button>
-            </div>
-          </div>
+          {/* HERO CARD */}
+          <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+            {/* dotted background */}
+            <div
+              className="absolute inset-0 opacity-60"
+              style={{
+                backgroundImage:
+                  "radial-gradient(#e6cfc7 1px, transparent 1px)",
+                backgroundSize: "18px 18px",
+              }}
+            />
 
-          <div className="mt-8 flex gap-4 overflow-x-auto pb-2">
-            {isLoading ? (
-              [...Array(3)].map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg aspect-[2/3] animate-pulse w-44 sm:w-56 flex-none bg-gray-200"
-                />
-              ))
-            ) : error ? (
-              <div className="text-center text-sm text-red-500 w-full">
-                {error}
-              </div>
-            ) : featuredEvents.length === 0 ? (
-              <div className="text-center text-sm text-gray-500 w-full">
-                No events available
-              </div>
-            ) : (
-              featuredEvents.slice(0, 3).map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg w-44 sm:w-56 flex-none">
-                    <div className="relative aspect-[2/3] overflow-hidden">
-                      <Image
-                        src={event.banner || "/placeholder.svg"}
-                        alt={event.title}
-                        fill
-                        sizes="50vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                  </Card>
+            <div className="relative z-10 container mx-auto px-4">
+              <div className="mx-auto max-w-2xl text-center">
+
+                {/* badge */}
+                <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+                  EVENTS
+                </div>
+
+                {/* heading */}
+                <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+                  Post your own{" "}
+                  <span className="text-red-600">listings</span>
+                </h1>
+
+                {/* subtext */}
+                <p className="mt-4 text-sm sm:text-base text-gray-600">
+                  Fast setup. Live in under{" "}
+                  <span className="font-semibold text-gray-900">5 minutes.</span>
+                </p>
+
+                {/* CTA */}
+                <div className="mt-8">
+                <Link href="/allOrganizers">
+                  <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+                    GET STARTED
+                  </button>
                 </Link>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-
-
-      {/* Featured Events Section */}
-      <section className="py-4 sm:py-6 md:py-8 bg-white">
-        <div className="container mx-auto px-3 sm:px-4">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
-              Recommended Events
-            </h2>
-            <Link
-              href="/events"
-              className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
-            >
-              See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Link>
-          </div>
-
-          {isLoading ? (
-            /* SKELETONS */
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-gray-200 rounded-lg aspect-[2/3] animate-pulse"
-                />
-              ))}
+                </div>
+              </div>
             </div>
-          ) : error ? (
-            <div className="text-center py-6 text-red-500 text-sm">{error}</div>
-          ) : featuredEvents.length === 0 ? (
-            <div className="text-center py-6 text-gray-500 text-sm">
-              No featured events available
-            </div>
-          ) : (
-            /* EVENTS GRID */
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {featuredEvents.slice(0, 10).map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
-                    {/* POSTER */}
-                    <div className="relative aspect-[2/3] overflow-hidden">
-                      <Image
-                        src={event.banner || "/placeholder.svg"}
-                        alt={event.title}
-                        fill
-                        sizes="50vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
+          </section>
 
-                    {/* TEXT */}
-                    <div className="px-2 pt-2 pb-1.5">
-                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
-                        {event.title}
-                      </h3>
-                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
-                        {event.category}
-                      </p>
-                    </div>
-                  </Card>
+
+
+
+          {/* Featured Events Section */}
+          <section className="py-4 sm:py-6 md:py-8 ">
+            <div className="container mx-auto px-3 sm:px-4">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
+                  Recommended Events
+                </h2>
+                <Link
+                  href="/events"
+                  className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+                >
+                  See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Link>
-              ))}
+              </div>
+
+              {isLoading ? (
+                /* SKELETONS */
+                <>
+                  <div className="sm:hidden -mx-3 px-3 overflow-x-auto">
+                    <div className="flex gap-3 snap-x snap-mandatory">
+                      {[...Array(6)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="shrink-0 w-[78%] max-w-[320px] bg-gray-200 rounded-lg aspect-[2/3] animate-pulse snap-center"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {[...Array(6)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="bg-gray-200 rounded-lg aspect-[2/3] animate-pulse"
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : error ? (
+                <div className="text-center py-6 text-red-500 text-sm">{error}</div>
+              ) : featuredEvents.length === 0 ? (
+                <div className="text-center py-6 text-gray-500 text-sm">
+                  No featured events available
+                </div>
+              ) : (
+                /* EVENTS GRID */
+                <>
+                  <div className="sm:hidden -mx-3 px-3 overflow-x-auto" ref={featuredMobileCarouselRef}>
+                    <div className="flex gap-3 snap-x snap-mandatory">
+                      {featuredEvents.slice(0, 10).map((event) => (
+                        <Link
+                          key={event._id}
+                          href={`/events/${event._id}`}
+                          className="shrink-0 w-[78%] max-w-[320px] snap-center"
+                        >
+                          <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
+                            {/* POSTER */}
+                            <div className="relative aspect-[2/3] overflow-hidden">
+                              <Image
+                                src={event.banner || "/placeholder.svg"}
+                                alt={event.title}
+                                fill
+                                sizes="80vw"
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            </div>
+
+                            {/* TEXT */}
+                            <div className="px-2 pt-2 pb-1.5">
+                              <h3 className="font-medium text-[12px] line-clamp-1 text-gray-900">
+                                {event.title}
+                              </h3>
+                              <p className="text-[11px] text-gray-500 mt-0.5">
+                                {event.category}
+                              </p>
+                            </div>
+                          </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="hidden sm:grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                    {featuredEvents.slice(0, 10).map((event) => (
+                      <Link key={event._id} href={`/events/${event._id}`}>
+                        <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
+                          {/* POSTER */}
+                          <div className="relative aspect-[2/3] overflow-hidden">
+                            <Image
+                              src={event.banner || "/placeholder.svg"}
+                              alt={event.title}
+                              fill
+                              sizes="50vw"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          </div>
+
+                          {/* TEXT */}
+                          <div className="px-2 pt-2 pb-1.5">
+                            <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                              {event.title}
+                            </h3>
+                            <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                              {event.category}
+                            </p>
+                          </div>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </section>
         </div>
       </section>
 
