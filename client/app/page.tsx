@@ -582,36 +582,37 @@ export default function HomePage() {
                 <>
                   <div className="sm:hidden -mx-3 px-3 overflow-x-auto" ref={featuredMobileCarouselRef}>
                     <div className="flex gap-3 snap-x snap-mandatory">
-                      {featuredEvents.slice(0, 10).map((event) => (
-                        <Link
-                          key={event._id}
-                          href={`/events/${event._id}`}
-                          className="shrink-0 w-[78%] max-w-[320px] snap-center"
-                        >
-                          <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
-                            {/* POSTER */}
-                            <div className="relative aspect-[2/3] overflow-hidden">
-                              <Image
-                                src={event.banner || "/placeholder.svg"}
-                                alt={event.title}
-                                fill
-                                sizes="80vw"
-                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                              />
-                            </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+  {featuredEvents.slice(0, 10).map((event) => (
+    <Link key={event._id} href={`/events/${event._id}`}>
+      <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        
+        {/* Poster */}
+        <div className="relative aspect-[2/3]">
+          <Image
+            src={event.banner || "/placeholder.svg"}
+            alt={event.title}
+            fill
+            sizes="(max-width: 640px) 50vw, 20vw"
+            className="object-cover"
+          />
+        </div>
 
-                            {/* TEXT */}
-                            <div className="px-2 pt-2 pb-1.5">
-                              <h3 className="font-medium text-[12px] line-clamp-1 text-gray-900">
-                                {event.title}
-                              </h3>
-                              <p className="text-[11px] text-gray-500 mt-0.5">
-                                {event.category}
-                              </p>
-                            </div>
-                          </Card>
-                        </Link>
-                      ))}
+        {/* Text */}
+        <div className="px-2 pt-2 pb-2">
+          <h3 className="text-[13px] font-semibold line-clamp-1 text-gray-900">
+            {event.title}
+          </h3>
+          <p className="text-[11px] text-gray-500 mt-0.5">
+            {event.category}
+          </p>
+        </div>
+
+      </Card>
+    </Link>
+  ))}
+</div>
+
                     </div>
                   </div>
 
