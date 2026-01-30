@@ -6,293 +6,565 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, CalendarClock, Sparkles, Wallet, Music, Mic, Headphones, MapPin, Shield, Star, ArrowRight, Search, SlidersHorizontal } from "lucide-react";
+import { Check, CalendarClock, Sparkles, Wallet, Music, Mic, Headphones, MapPin, Shield, Star, ArrowRight, Search, SlidersHorizontal, Users, Building2, Calendar, Heart, ChevronRight, TrendingUp, Clock, DollarSign, BarChart3, Zap, Target } from "lucide-react";
 import Link from "next/link";
 import Footer from "../Footer";
 import Navbar from "../Navbar";
 
 const features = [
-  { icon: Search, title: "Get Discovered", text: "Appear in searches by location, capacity, and budget." },
-  { icon: CalendarClock, title: "Online Bookings", text: "Real-time availability with instant confirmations." },
-  { icon: Wallet, title: "Flexible Pricing", text: "Hourly, full-day, or custom pricing — you decide." },
-  { icon: SlidersHorizontal, title: "Simple Dashboard", text: "Manage bookings, availability, and payments from one place." },
+  { icon: Search, title: "Get Discovered", text: "Reach thousands of event organizers searching for the perfect venue." },
+  { icon: CalendarClock, title: "Real-Time Bookings", text: "Automated scheduling with instant confirmations and calendar sync." },
+  { icon: Wallet, title: "Smart Pricing", text: "Set dynamic pricing by hour, day, or custom packages." },
+  { icon: BarChart3, title: "Analytics Dashboard", text: "Track bookings, revenue, and customer insights in one place." },
 ];
 
-const categories = [
-  { icon: Music, label: "Concert Hall" },
-  { icon: Headphones, label: "Banquet Hall" },
-  { icon: Mic, label: "Conference Room" },
-  { icon: Star, label: "Event Space" },
+const venueTypes = [
+  { icon: Building2, label: "Banquet Halls" },
+  { icon: Music, label: "Concert Venues" },
+  { icon: Mic, label: "Conference Rooms" },
+  { icon: Users, label: "Event Spaces" },
+  { icon: Sparkles, label: "Party Halls" },
+  { icon: Calendar, label: "Meeting Rooms" },
+];
+
+const popularVenues = [
+  {
+    name: "Grand Convention Center",
+    location: "Guwahati, Assam",
+    capacity: "500-1000 guests",
+    price: "₹75,000/day",
+    rating: 4.8,
+    reviews: 234,
+    type: "Corporate Events",
+    image: "https://images.pexels.com/photos/1884583/pexels-photo-1884583.jpeg"
+  },
+  {
+    name: "Skyview Banquet Hall",
+    location: "Dimapur, Nagaland",
+    capacity: "200-500 guests",
+    price: "₹50,000/day",
+    rating: 4.6,
+    reviews: 156,
+    type: "Social Events",
+    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=300&fit=crop"
+  },
+  {
+    name: "Elite Conference Hub",
+    location: "Shillong, Meghalaya",
+    capacity: "50-200 guests",
+    price: "₹15,000/day",
+    rating: 4.9,
+    reviews: 298,
+    type: "Business Meetings",
+    image: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=400&h=300&fit=crop"
+  },
+];
+
+const eventCategories = [
+  { 
+    title: "Corporate Events", 
+    count: "2000+ venues", 
+    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop", 
+    color: "bg-blue-50",
+    description: "Conferences, seminars, team building"
+  },
+  { 
+    title: "Social Gatherings", 
+    count: "1500+ venues", 
+    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop", 
+    color: "bg-purple-50",
+    description: "Parties, celebrations, receptions"
+  },
+  { 
+    title: "Workshops & Training", 
+    count: "800+ venues", 
+    image: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=300&h=200&fit=crop", 
+    color: "bg-green-50",
+    description: "Classes, seminars, skill development"
+  },
+  { 
+    title: "Entertainment Events", 
+    count: "1200+ venues", 
+    image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300&h=200&fit=crop", 
+    color: "bg-orange-50",
+    description: "Concerts, shows, performances"
+  },
+];
+
+const whyJoin = [
+  {
+    icon: TrendingUp,
+    title: "Increase Revenue",
+    description: "Fill empty slots and maximize your venue's earning potential with our smart booking system.",
+    stat: "40% avg. revenue increase"
+  },
+  {
+    icon: Clock,
+    title: "Save Time",
+    description: "Automate booking management, payments, and customer communication. Focus on what matters.",
+    stat: "15 hrs saved weekly"
+  },
+  {
+    icon: Target,
+    title: "Reach More Customers",
+    description: "Get discovered by thousands of event organizers actively searching for venues like yours.",
+    stat: "5000+ monthly visitors"
+  },
+  {
+    icon: Shield,
+    title: "Secure & Reliable",
+    description: "Protected payments, verified bookings, and comprehensive insurance coverage for peace of mind.",
+    stat: "100% payment guarantee"
+  },
+];
+
+const howToJoin = [
+  {
+    step: 1,
+    title: "Create Your Account",
+    description: "Sign up in under 2 minutes with your basic venue information. It's completely free to start.",
+    duration: "2 minutes",
+    icon: Users
+  },
+  {
+    step: 2,
+    title: "Complete Your Profile",
+    description: "Add photos, amenities, pricing, and availability. Our team helps you optimize your listing.",
+    duration: "15 minutes",
+    icon: Building2
+  },
+  {
+    step: 3,
+    title: "Go Live & Get Bookings",
+    description: "Once approved, your venue appears in search results. Start receiving booking requests instantly.",
+    duration: "24 hours",
+    icon: Zap
+  },
+  {
+    step: 4,
+    title: "Manage & Grow",
+    description: "Use our dashboard to manage bookings, track revenue, and grow your business with insights.",
+    duration: "Ongoing",
+    icon: BarChart3
+  },
+];
+
+const benefits = [
+  { text: "No upfront costs or setup fees", icon: DollarSign },
+  { text: "Instant booking confirmations", icon: Zap },
+  { text: "Secure payment processing", icon: Shield },
+  { text: "24/7 customer support", icon: Clock },
+  { text: "Marketing & promotion included", icon: TrendingUp },
+  { text: "Easy calendar management", icon: Calendar },
 ];
 
 const faqs = [
   {
-    q: "Who can list their venue on AHIBI?",
-    a: "Event halls, banquet spaces, conference rooms, outdoor venues, auditoriums, and any space suitable for events — if you host events, you belong here.",
+    q: "What types of venues can join AHIBI?",
+    a: "Any venue that hosts events! This includes banquet halls, conference rooms, party venues, outdoor spaces, auditoriums, meeting rooms, theaters, sports facilities, and more. If people can gather and hold events at your location, you're welcome to join.",
   },
   {
-    q: "How does the booking process work?",
-    a: "Customers find your venue via filters (capacity, location, facilities). They select dates and times, make secure payments through Razorpay, and receive instant confirmation.",
+    q: "How much does it cost to list my venue?",
+    a: "Creating an account and listing your venue is completely free. We only earn when you earn - a small commission is taken from successful bookings. No hidden fees, no monthly charges, no surprises.",
   },
   {
-    q: "What facilities should I highlight?",
-    a: "List all amenities: parking, AC, WiFi, sound system, lighting, catering, stage, power backup, accessibility features, and any unique offerings that make your venue stand out.",
+    q: "How do I get paid?",
+    a: "Payments are processed securely through Razorpay. When a booking is confirmed and the event is completed, funds are automatically transferred to your registered bank account within 3-5 business days. You can track all transactions in your dashboard.",
   },
   {
-    q: "How are payments handled?",
-    a: "All payments are processed securely through Razorpay. You set your pricing (hourly/daily rates, cleaning fees, deposits), and funds are transferred after successful bookings.",
+    q: "Can I control my availability and pricing?",
+    a: "Absolutely! You have full control over your calendar, pricing, and booking rules. Set different rates for weekdays/weekends, peak seasons, or specific time slots. Block dates when you're unavailable. Update anytime.",
   },
   {
-    q: "Is there a review system?",
-    a: "Yes. Verified customers can rate and review your venue post-event. Positive reviews increase your visibility and attract more bookings.",
+    q: "What if I need to cancel a booking?",
+    a: "While we encourage honoring confirmed bookings, we understand emergencies happen. You can cancel bookings through your dashboard. Cancellation policies and any applicable penalties are clearly outlined in your vendor agreement.",
+  },
+  {
+    q: "How long does verification take?",
+    a: "Most venue applications are reviewed and approved within 24-48 hours. We verify ownership, check facility details, and ensure quality standards. You'll receive an email once your venue is live and ready to accept bookings.",
   },
 ];
 
 const tiers = [
   {
     name: "Starter",
-    tag: "Begin",
-    price: "Free",
+    tag: "Free Forever",
+    price: "₹0/month",
+    commission: "8% per booking",
     bullets: [
-      "Public venue listing & search visibility",
+      "Public venue listing",
       "Basic booking management",
-      "Photo gallery (up to 10 images)",
-      "Customer reviews & ratings",
+      "Up to 10 photos",
+      "Email support",
+      "Customer reviews",
+      "Standard search visibility"
     ],
-    cta: "List your venue",
+    cta: "Start Free",
+    popular: false
   },
   {
-    name: "Pro",
-    tag: "Grow",
-    price: "Best for active venues",
+    name: "Professional",
+    tag: "Most Popular",
+    price: "₹2,999/month",
+    commission: "5% per booking",
     bullets: [
-      "Priority placement in searches",
-      "Unlimited photo & video uploads",
-      "Advanced calendar & availability",
-      "Analytics & booking insights",
+      "Everything in Starter",
+      "Priority search placement",
+      "Unlimited photos & videos",
+      "Advanced analytics",
+      "Promotional features",
+      "Priority support"
     ],
     cta: "Upgrade to Pro",
+    popular: true
   },
   {
-    name: "Premium",
-    tag: "Scale",
-    price: "For venue chains",
+    name: "Enterprise",
+    tag: "For Venue Chains",
+    price: "Custom Pricing",
+    commission: "3% per booking",
     bullets: [
+      "Everything in Professional",
       "Multi-venue management",
-      "Custom branding & pages",
+      "Custom branding",
       "Dedicated account manager",
-      "Priority support & marketing",
+      "API access",
+      "White-label options"
     ],
-    cta: "Contact sales",
+    cta: "Contact Sales",
+    popular: false
   },
 ];
 
-const Section = ({ children, id }: { children: React.ReactNode; id?: string }) => (
-  <section id={id} className="py-16 md:py-24">
-    <div className="mx-auto max-w-6xl px-4">{children}</div>
+const Section = ({ children, id, className = "" }: { children: React.ReactNode; id?: string; className?: string }) => (
+  <section id={id} className={`py-8 md:py-16 lg:py-20 ${className}`}>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
   </section>
 );
 
 const Hero = () => (
-  <Section>
-    <div className="grid items-center gap-10 md:grid-cols-2">
-      <div>
-        <h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
-          AHIBI Venues
-          <span className="block text-gray-600 text-3xl md:text-4xl mt-2">Get discovered. Get booked.</span>
+  <div className="relative h-[450px] md:h-[550px] lg:h-[650px] overflow-hidden">
+    {/* Background Image */}
+    <div className="absolute inset-0">
+      <img 
+        src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=1600&h=900&fit=crop" 
+        alt="Event venue"
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70"></div>
+    </div>
+    
+    {/* Content */}
+    <div className="relative h-full flex items-center justify-center">
+      <div className="text-center px-4 max-w-5xl mx-auto">
+        
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 drop-shadow-2xl leading-tight">
+          Turn Your Venue Into a<br className="hidden sm:block" />
+          <span className="text-pink-400">Profitable Business</span>
         </h1>
-        <p className="mt-6 text-gray-600 md:text-xl leading-relaxed">
-          Built for venue owners to manage listings and bookings online.
+        <p className="text-lg md:text-xl lg:text-2xl text-white/95 mb-8 md:mb-10 max-w-3xl mx-auto drop-shadow-lg">
+          List your space. Get discovered. Accept bookings online. <br className="hidden md:block" />
+          Start earning more from your venue today.
         </p>
-        <div className="mt-8 flex flex-nowrap gap-3 md:gap-6">
-          <Link href="/venue/auth/signup" className="flex-1">
-            <Button
-              size="lg"
-              className="w-full rounded-2xl px-4 md:px-8 text-sm md:text-base
-                 bg-gradient-to-r from-purple-600 to-pink-600
-                 hover:from-purple-700 hover:to-pink-700
-                 shadow-lg hover:shadow-xl
-                 transform hover:scale-105 transition-all duration-300"
-            >
-              List Your Venue
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+        
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
+          <Link href="/venue/auth/signup" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white px-8 md:px-10 py-6 text-base md:text-lg font-semibold shadow-2xl">
+              List Your Venue Free
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
-
-          <Link href="/venue/auth/login" className="flex-1">
-            <Button
-              size="lg"
-              className="w-full rounded-2xl px-4 md:px-8 text-sm md:text-base
-                 bg-gradient-to-r from-purple-600 to-pink-600
-                 hover:from-purple-700 hover:to-pink-700
-                 shadow-lg hover:shadow-xl
-                 transform hover:scale-105 transition-all duration-300"
-            >
-              Venue Login
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+          <Link href="#how-to-join" className="w-full sm:w-auto">
+            <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 md:px-10 py-6 text-base md:text-lg font-semibold backdrop-blur-sm bg-white/10">
+              See How It Works
             </Button>
           </Link>
         </div>
 
-        <div className="mt-8 flex items-center gap-6 text-sm text-gray-600">
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Instant bookings</div>
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Secure payments</div>
-          <div className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-600" /> Live availability</div>
+        <div className="mt-8 md:mt-10 flex flex-wrap justify-center items-center gap-4 md:gap-8 text-sm md:text-base text-white/90">
+          <div className="flex items-center gap-2">
+            <Check className="h-5 w-5 text-pink-400" />
+            <span>Free to start</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="h-5 w-5 text-pink-400" />
+            <span>No setup fees</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Check className="h-5 w-5 text-pink-400" />
+            <span>Live in 24 hours</span>
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+);
 
-      <div className="md:justify-self-end">
-        <Card className="rounded-2xl shadow-2xl border-purple-200/50 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-gray-800">Search snapshot for event organizers</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Input placeholder="Search venue, city, capacity" className="flex-1 border-purple-200" />
-              <Button variant="secondary" className="rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-700"><Search className="h-4 w-4" /></Button>
+const PopularVenuesList = () => (
+  <Section className="bg-gray-50">
+    <div className="flex items-center justify-between mb-6 md:mb-8">
+      <div>
+        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Featured Venues</h2>
+        <p className="text-gray-600 text-sm md:text-base">Successful venues already earning on AHiBi</p>
+      </div>
+      <Link href="/allVenues/list">
+      <Button variant="link" className="text-pink-600 hover:text-pink-700 hidden md:flex">
+        View all <ChevronRight className="h-4 w-4 ml-1" />
+      </Button>
+      </Link>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      {popularVenues.map((venue, index) => (
+        <Card key={index} className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group">
+          <div className="aspect-[4/3] overflow-hidden relative">
+            <img 
+              src={venue.image} 
+              alt={venue.name}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            />
+            <Badge className="absolute top-3 left-3 bg-pink-600 hover:bg-pink-700 text-white border-0">
+              {venue.type}
+            </Badge>
+          </div>
+          <CardContent className="p-4 md:p-5">
+            <h3 className="font-semibold text-lg md:text-xl text-gray-900 mb-2">{venue.name}</h3>
+            <p className="text-sm text-gray-600 mb-3 flex items-center">
+              <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+              {venue.location}
+            </p>
+            <div className="flex items-center justify-between text-sm mb-3">
+              <span className="text-gray-600 flex items-center">
+                <Users className="h-4 w-4 mr-1 flex-shrink-0" />
+                {venue.capacity}
+              </span>
+              <span className="font-semibold text-pink-600 text-base">{venue.price}</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {categories.map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-2 rounded-2xl border border-purple-200 bg-purple-50/50 p-2 text-sm text-gray-700 hover:bg-purple-100 transition-colors">
-                  <Icon className="h-4 w-4 text-purple-600" /> {label}
-                </div>
-              ))}
+            <div className="flex items-center text-sm border-t pt-3">
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
+              <span className="font-medium">{venue.rating}</span>
+              <span className="text-gray-500 ml-1">({venue.reviews} reviews)</span>
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3 text-sm text-gray-700"><MapPin className="mr-2 inline h-4 w-4 text-purple-600" /> Dimapur</div>
-              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3 text-sm text-gray-700"><Wallet className="mr-2 inline h-4 w-4 text-purple-600" /> ₹50k–₹1L</div>
-              <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-3 text-sm text-gray-700"><CalendarClock className="mr-2 inline h-4 w-4 text-purple-600" /> Nov–Dec</div>
-            </div>
-            <Button className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300" asChild>
-              <Link href="/allVenues/list">Explore venues</Link>
-            </Button>
           </CardContent>
-        </Card>
-      </div>
-    </div>
-  </Section>
-);
-
-const OrganizerNote = () => (
-  <Section>
-    <div className="text-center">
-      <p className="text-gray-700 md:text-lg">Venues can also host events, workshops, and ticketed experiences through AHiBi Organizer.</p>
-    </div>
-  </Section>
-);
-
-const FeatureGrid = () => (
-  <Section id="features">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Why venues choose AHiBi</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Built for venue owners. Simple for organizers. AHIBI helps venue owners list, manage, and book their spaces online — while making it easy for organizers to find the right venue.</p>
-    </div>
-    <div className="grid gap-6 md:grid-cols-3">
-      {features.map((f) => (
-        <Card key={f.title} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600">
-                <f.icon className="h-5 w-5 text-white" />
-              </div>
-              <CardTitle className="text-lg font-bold text-gray-800">{f.title}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="text-gray-600">{f.text}</CardContent>
         </Card>
       ))}
     </div>
   </Section>
 );
 
-// Search section for discovery
-const SearchSection = () => (
-  <Section id="discover">
-    <div className="mb-8 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Find the perfect venue for any event</h2>
-      <p className="mt-2 text-gray-600">Use smart filters to discover venues by location, capacity, budget and facilities</p>
+const WhyJoinSection = () => (
+  <Section id="why-join">
+    <div className="text-center mb-10 md:mb-12">
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+        Why Venue Owners Choose AHiBi
+      </h2>
+      <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
+        Join thousands of venue owners who are growing their business with our platform
+      </p>
     </div>
-    <Card className="rounded-2xl shadow-2xl border-purple-200/50 bg-white/80 backdrop-blur-sm">
-      <CardContent className="space-y-4 pt-6">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <Input placeholder="City or Area" className="border-purple-200" />
-          <Input placeholder="Capacity (e.g., 100-500)" className="border-purple-200" />
-          <Input placeholder="Budget (e.g., ₹50k–₹1L)" className="border-purple-200" />
-          <Input placeholder="Facilities (Parking, AC, Stage)" className="border-purple-200" />
-        </div>
-        <div className="flex justify-between items-center">
-          <div className="flex flex-wrap gap-2 text-sm text-gray-700">
-            {["Banquet Hall", "Auditorium", "Conference Room", "Open Air"].map((t) => (
-              <Badge key={t} variant="secondary" className="rounded-2xl">{t}</Badge>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" className="rounded-2xl bg-purple-100 hover:bg-purple-200 text-purple-700"><Search className="h-4 w-4 mr-2" />Search</Button>
-            <Button className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" asChild>
-              <Link href="/allVenues/list">Book Your Venue</Link>
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      {whyJoin.map((item, index) => (
+        <Card key={index} className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex items-start gap-4 md:gap-6">
+              <div className="p-3 md:p-4 rounded-xl bg-pink-100 group-hover:bg-pink-600 transition-colors duration-300 flex-shrink-0">
+                <item.icon className="h-6 w-6 md:h-8 md:w-8 text-pink-600 group-hover:text-white transition-colors duration-300" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-gray-600 mb-4 text-sm md:text-base">{item.description}</p>
+                <Badge variant="secondary" className="bg-pink-100 text-pink-700 border-0 text-sm">
+                  {item.stat}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   </Section>
 );
 
-const HowItWorks = () => (
-  <Section id="how">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">How it works</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Three simple steps to start earning from your venue.</p>
+const HowToJoinSection = () => (
+  <Section id="how-to-join" className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
+    <div className="text-center mb-10 md:mb-16">
+      <Badge className="mb-4 bg-pink-600 hover:bg-pink-700 text-white border-0 px-4 py-1.5">
+        Simple Process
+      </Badge>
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+        How to Join AHiBi
+      </h2>
+      <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
+        Get your venue listed and start accepting bookings in just 4 easy steps
+      </p>
     </div>
-    <div className="grid gap-6 md:grid-cols-3">
-      {[{
-        step: 1,
-        title: "List your venue",
-        text: "Add photos, details, pricing, and availability.",
-      }, {
-        step: 2,
-        title: "Get bookings",
-        text: "Organizers discover and book your venue online.",
-      }, {
-        step: 3,
-        title: "Host & earn",
-        text: "We handle bookings and payments. You focus on hosting.",
-      }].map((s) => (
-        <Card key={s.step} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <Badge className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">Step {s.step}</Badge>
-            <CardTitle className="mt-3 text-xl font-bold text-gray-800">{s.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-gray-600">{s.text}</CardContent>
+
+    <div className="max-w-5xl mx-auto">
+      {howToJoin.map((item, index) => (
+        <div key={index} className="relative mb-8 md:mb-12 last:mb-0">
+          {/* Connection Line */}
+          {index < howToJoin.length - 1 && (
+            <div className="absolute left-6 md:left-8 top-20 md:top-24 w-0.5 h-full bg-gradient-to-b from-pink-300 to-purple-300 -z-10"></div>
+          )}
+          
+          <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+            <CardContent className="p-6 md:p-8">
+              <div className="flex flex-col md:flex-row items-start gap-6">
+                {/* Step Number */}
+                <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-pink-600 to-purple-600 flex items-center justify-center text-white text-xl md:text-2xl font-bold shadow-lg">
+                      {item.step}
+                    </div>
+                  </div>
+                  <div className="md:hidden flex-1">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">{item.title}</h3>
+                    <Badge variant="secondary" className="bg-pink-100 text-pink-700 border-0 text-xs">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {item.duration}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 w-full">
+                  <div className="hidden md:flex items-center justify-between mb-3">
+                    <h3 className="text-2xl font-bold text-gray-900">{item.title}</h3>
+                    <Badge variant="secondary" className="bg-pink-100 text-pink-700 border-0">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {item.duration}
+                    </Badge>
+                  </div>
+                  <p className="text-gray-600 text-sm md:text-base leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+
+                {/* Icon */}
+                <div className="hidden lg:flex p-4 rounded-xl bg-pink-100 flex-shrink-0">
+                  <item.icon className="h-8 w-8 text-pink-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ))}
+    </div>
+
+    <div className="text-center mt-10 md:mt-12">
+      <Link href="/venue/auth/signup">
+        <Button size="lg" className="bg-pink-600 hover:bg-pink-700 text-white px-10 md:px-12 py-6 text-base md:text-lg font-semibold shadow-xl">
+          Get Started Now - It's Free
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </Link>
+    </div>
+  </Section>
+);
+
+const EventCategories = () => (
+  <Section className="bg-white">
+    <div className="text-center mb-10 md:mb-12">
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+        All Types of Events Welcome
+      </h2>
+      <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
+        Whatever type of venue you have, there's demand for it on AHiBi
+      </p>
+    </div>
+    
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      {eventCategories.map((category, index) => (
+        <Card key={index} className={`overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group ${category.color}`}>
+          <CardContent className="p-0">
+            <div className="aspect-[4/3] overflow-hidden">
+              <img 
+                src={category.image} 
+                alt={category.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+            </div>
+            <div className="p-5">
+              <h3 className="font-bold text-lg md:text-xl text-gray-900 mb-2">{category.title}</h3>
+              <p className="text-sm text-gray-600 mb-2">{category.description}</p>
+              <p className="text-xs text-pink-600 font-medium">{category.count}</p>
+            </div>
+          </CardContent>
         </Card>
+      ))}
+    </div>
+  </Section>
+);
+
+const BenefitsSection = () => (
+  <Section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+    <div className="text-center mb-10 md:mb-12">
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+        Everything You Need to Succeed
+      </h2>
+      <p className="text-gray-300 text-base md:text-lg max-w-3xl mx-auto">
+        We've built the complete toolkit for venue management
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
+      {benefits.map((benefit, index) => (
+        <div key={index} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4 md:p-5 hover:bg-white/20 transition-colors duration-300">
+          <div className="p-2 rounded-lg bg-pink-600/20 flex-shrink-0">
+            <benefit.icon className="h-5 w-5 text-pink-400" />
+          </div>
+          <span className="text-sm md:text-base font-medium">{benefit.text}</span>
+        </div>
       ))}
     </div>
   </Section>
 );
 
 const Plans = () => (
-  <Section id="plans">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Choose your plan</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Start free. Upgrade when you need advanced features and priority visibility.</p>
+  <Section id="plans" className="bg-gray-50">
+    <div className="text-center mb-10 md:mb-12">
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+        Choose Your Plan
+      </h2>
+      <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
+        Start free, upgrade anytime. All plans include our core features.
+      </p>
     </div>
-    <div className="grid gap-6 md:grid-cols-3">
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
       {tiers.map((t, index) => (
-        <Card key={t.name} className={`rounded-2xl border-purple-200/50 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm ${index === 1 ? 'ring-2 ring-purple-600' : ''}`}>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0">{t.tag}</Badge>
-              <CardTitle className="text-xl font-bold text-gray-800">{t.name}</CardTitle>
+        <Card key={t.name} className={`border-0 shadow-lg hover:shadow-2xl transition-all duration-300 relative overflow-hidden ${t.popular ? 'ring-2 ring-pink-600 scale-105 md:scale-110' : ''}`}>
+          {t.popular && (
+            <div className="absolute top-0 right-0 bg-pink-600 text-white px-4 py-1 text-xs font-bold transform rotate-0 translate-x-0 translate-y-0">
+              MOST POPULAR
             </div>
-            <p className="text-gray-600 font-medium">{t.price}</p>
+          )}
+          <CardHeader className="pb-4">
+            <Badge variant="secondary" className={`w-fit ${t.popular ? 'bg-pink-600 text-white' : 'bg-gray-100 text-gray-700'} border-0 mb-3`}>
+              {t.tag}
+            </Badge>
+            <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t.name}</CardTitle>
+            <div className="mb-4">
+              <span className="text-3xl md:text-4xl font-bold text-gray-900">{t.price}</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              <span className="font-semibold text-pink-600">{t.commission}</span> commission on bookings
+            </p>
           </CardHeader>
           <CardContent>
-            <ul className="mb-6 space-y-3 text-sm text-gray-600">
+            <ul className="mb-6 space-y-3 text-sm">
               {t.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 text-purple-600 flex-shrink-0" />{b}</li>
+                <li key={b} className="flex items-start gap-3">
+                  <Check className="mt-0.5 h-5 w-5 text-pink-600 flex-shrink-0" />
+                  <span className="text-gray-700">{b}</span>
+                </li>
               ))}
             </ul>
-            <Button className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">{t.cta}</Button>
+            <Button className={`w-full ${t.popular ? 'bg-pink-600 hover:bg-pink-700' : 'bg-gray-900 hover:bg-gray-800'} text-white py-6`}>
+              {t.cta}
+            </Button>
           </CardContent>
         </Card>
       ))}
@@ -301,18 +573,23 @@ const Plans = () => (
 );
 
 const FAQ = () => (
-  <Section id="faq">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-purple-600 to-orange-500 bg-clip-text text-transparent">Questions, answered</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Short, clear, and helpful. No jargon.</p>
+  <Section id="faq" className="bg-white">
+    <div className="text-center mb-10 md:mb-12">
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+        Frequently Asked Questions
+      </h2>
+      <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
+        Everything you need to know about joining AHiBi
+      </p>
     </div>
-    <div className="grid gap-6 md:grid-cols-2">
-      {faqs.map((f) => (
-        <Card key={f.q} className="rounded-2xl border-purple-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
+      {faqs.map((f, index) => (
+        <Card key={index} className="border-0 shadow-md hover:shadow-xl transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-lg font-bold text-gray-800">{f.q}</CardTitle>
+            <CardTitle className="text-lg md:text-xl font-bold text-gray-900 leading-tight">{f.q}</CardTitle>
           </CardHeader>
-          <CardContent className="text-gray-600">{f.a}</CardContent>
+          <CardContent className="text-gray-600 text-sm md:text-base leading-relaxed">{f.a}</CardContent>
         </Card>
       ))}
     </div>
@@ -320,31 +597,46 @@ const FAQ = () => (
 );
 
 const CTA = () => (
-  <Section id="join">
-    <div className="rounded-3xl bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 p-8 md:p-12 shadow-2xl">
-      <div className="grid items-center gap-8 md:grid-cols-2">
-        <div>
-          <h3 className="text-3xl font-bold md:text-5xl text-white">Ready to list your venue?</h3>
-          <p className="mt-4 text-purple-100 md:text-xl">Start accepting bookings online with AHiBi.</p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link href="/venue/auth/signup">
-              <Button size="lg" className="rounded-2xl px-8 bg-white text-purple-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">List your venue free</Button>
-            </Link>
-            <Link href="/venue/auth/login">
-              <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-purple-600 hover:bg-white hover:text-purple-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Venue Login</Button>
-            </Link>
-          </div>
+  <Section id="join" className="bg-gradient-to-br from-pink-600 via-pink-500 to-purple-600">
+    <div className="rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-sm p-6 md:p-12 lg:p-16 shadow-2xl border border-white/20">
+      <div className="text-center max-w-4xl mx-auto">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6">
+          Ready to Transform Your Venue Business?
+        </h2>
+        <p className="text-pink-50 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto">
+          Join 5,000+ venue owners already earning more with AHiBi. List your venue today and start accepting bookings within 24 hours.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 md:mb-10">
+          <Link href="/venue/auth/signup">
+            <Button size="lg" className="w-full sm:w-auto bg-white text-pink-600 hover:bg-gray-100 font-semibold px-10 md:px-12 py-6 text-base md:text-lg shadow-xl">
+              List Your Venue Free
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+          <Link href="/venue/auth/login">
+            <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-black hover:bg-white hover:text-pink-600 font-semibold px-10 md:px-12 py-6 text-base md:text-lg">
+              Venue Login
+            </Button>
+          </Link>
         </div>
-        <div className="rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm p-6">
-          <div className="mb-6 flex items-center gap-2 text-sm text-white">
-            <Shield className="h-5 w-5" />
-            We keep your data private and only share what you choose.
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-sm max-w-3xl mx-auto">
+          <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
+            <Check className="mx-auto mb-2 h-5 w-5" />
+            <div className="font-semibold">Free to Start</div>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Secure payments</div>
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Smart calendar</div>
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Instant bookings</div>
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Customer reviews</div>
+          <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
+            <Check className="mx-auto mb-2 h-5 w-5" />
+            <div className="font-semibold">No Setup Fees</div>
+          </div>
+          <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
+            <Check className="mx-auto mb-2 h-5 w-5" />
+            <div className="font-semibold">Secure Payments</div>
+          </div>
+          <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
+            <Check className="mx-auto mb-2 h-5 w-5" />
+            <div className="font-semibold">24/7 Support</div>
           </div>
         </div>
       </div>
@@ -354,16 +646,17 @@ const CTA = () => (
 
 export default function AhibiVenuePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-pink-50/30">
-
+    <div className="min-h-screen bg-white">
+      <Navbar />
+      
       <main>
-        <Navbar />
         <Hero />
-        {/* <SearchSection /> */}
-        <FeatureGrid />
-        <HowItWorks />
-        <OrganizerNote />
-        <Plans />
+        <PopularVenuesList />
+        <WhyJoinSection />
+        <HowToJoinSection />
+        <EventCategories />
+        <BenefitsSection />
+        {/* <Plans /> */}
         <FAQ />
         <CTA />
       </main>
