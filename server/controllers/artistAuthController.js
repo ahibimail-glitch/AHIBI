@@ -273,7 +273,8 @@ exports.updateArtistProfile = async (req, res) => {
       performanceDurationOther,
       performanceFormats,
       performanceFormatsOther,
-      feeRange
+      feeRange,
+      techRider
     } = req.body;
     
     console.log('Updating artist profile:', {
@@ -367,6 +368,47 @@ exports.updateArtistProfile = async (req, res) => {
         artist.feeRange = artist.feeRange || {};
         artist.feeRange.max = parseFloat(feeRange.max);
       }
+    }
+
+    if (techRider !== undefined && typeof techRider === 'object') {
+      artist.techRider = artist.techRider || {};
+
+      if (isValidValue(techRider.soundRequirements)) {
+        artist.techRider.soundRequirements = techRider.soundRequirements;
+      }
+      if (isValidValue(techRider.lightingRequirements)) {
+        artist.techRider.lightingRequirements = techRider.lightingRequirements;
+      }
+      if (isValidValue(techRider.stageRequirements)) {
+        artist.techRider.stageRequirements = techRider.stageRequirements;
+      }
+      if (isValidValue(techRider.instrumentsEquipmentNeeded)) {
+        artist.techRider.instrumentsEquipmentNeeded = techRider.instrumentsEquipmentNeeded;
+      }
+      if (isValidValue(techRider.powerRequirements)) {
+        artist.techRider.powerRequirements = techRider.powerRequirements;
+      }
+      if (isValidValue(techRider.specialNotes)) {
+        artist.techRider.specialNotes = techRider.specialNotes;
+      }
+
+      if (techRider.file !== undefined && typeof techRider.file === 'object') {
+        artist.techRider.file = artist.techRider.file || {};
+
+        if (isValidValue(techRider.file.url)) {
+          artist.techRider.file.url = techRider.file.url;
+        }
+
+        if (isValidValue(techRider.file.fileType)) {
+          artist.techRider.file.fileType = techRider.file.fileType;
+        }
+
+        if (isValidValue(techRider.file.uploadedAt)) {
+          artist.techRider.file.uploadedAt = techRider.file.uploadedAt;
+        }
+      }
+
+      artist.techRider.updatedAt = new Date();
     }
 
     const updatedArtist = await artist.save();

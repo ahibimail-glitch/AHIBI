@@ -220,6 +220,41 @@ const ArtistSchema = new mongoose.Schema({
       type: String
     }
   },
+  techRider: {
+    soundRequirements: {
+      type: String
+    },
+    lightingRequirements: {
+      type: String
+    },
+    stageRequirements: {
+      type: String
+    },
+    instrumentsEquipmentNeeded: {
+      type: String
+    },
+    powerRequirements: {
+      type: String
+    },
+    specialNotes: {
+      type: String
+    },
+    file: {
+      url: {
+        type: String
+      },
+      fileType: {
+        type: String,
+        enum: ['pdf', 'image']
+      },
+      uploadedAt: {
+        type: Date
+      }
+    },
+    updatedAt: {
+      type: Date
+    }
+  },
   socialLinks: {
     instagram: {
       type: String

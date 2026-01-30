@@ -95,6 +95,21 @@ interface Accolade {
   certificate?: string;
 }
 
+interface TechRider {
+  soundRequirements?: string;
+  lightingRequirements?: string;
+  stageRequirements?: string;
+  instrumentsEquipmentNeeded?: string;
+  powerRequirements?: string;
+  specialNotes?: string;
+  file?: {
+    url?: string;
+    fileType?: 'pdf' | 'image';
+    uploadedAt?: string;
+  };
+  updatedAt?: string;
+}
+
 interface ArtistProfile {
   _id: string;
   user: string;
@@ -160,6 +175,7 @@ interface ArtistProfile {
     refundPolicy: string;
     emergencyContact: string;
   };
+  techRider?: TechRider;
 }
 
 interface BookingRequest {
@@ -218,6 +234,9 @@ export default function ArtistDashboard() {
     showPerformanceFormatsOther: false,
   });
   const [uploadingImage, setUploadingImage] = useState<'profile' | 'cover' | null>(null);
+  const [techRiderSaving, setTechRiderSaving] = useState(false);
+  const [uploadingTechRiderFile, setUploadingTechRiderFile] = useState(false);
+  const [techRiderForm, setTechRiderForm] = useState<TechRider>({});
 
   // Fetch artist profile from backend
   useEffect(() => {
@@ -254,8 +273,101 @@ export default function ArtistDashboard() {
         showPerformanceDurationOther: profile.performanceDurations?.includes('other') || false,
         showPerformanceFormatsOther: profile.performanceFormats?.includes('other') || false,
       });
+      setTechRiderForm(profile.techRider || {});
     }
   }, [profile]);
+
+  const handleTechRiderSave = async () => {
+    try {
+      setTechRiderSaving(true);
+      const token = localStorage.getItem('artist_token');
+      if (!token) {
+        setError('Not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/artist/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          techRider: {
+            ...techRiderForm,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to save tech rider');
+      }
+
+      const data = await response.json();
+      if (data?.data?.artist) {
+        setProfile(data.data.artist);
+      }
+
+      setSuccessMessage('Tech Rider saved successfully!');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (e: any) {
+      setError(e?.message || 'Error saving tech rider');
+    } finally {
+      setTechRiderSaving(false);
+    }
+  };
+
+  const handleTechRiderFileUpload = async (file: File) => {
+    try {
+      setUploadingTechRiderFile(true);
+
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const formData = new FormData();
+
+      let endpoint = '/api/upload';
+      if (isPdf) {
+        endpoint = '/api/upload/document';
+        formData.append('document', file);
+        formData.append('folder', 'artists/tech-rider');
+      } else {
+        formData.append('photo', file);
+        formData.append('folder', 'artists/tech-rider');
+      }
+
+      const uploadResponse = await fetch(endpoint, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Upload failed');
+      }
+
+      const uploadData = await uploadResponse.json();
+      const uploadedUrl = isPdf ? uploadData?.data?.document?.url : uploadData?.data?.photo?.url;
+      if (!uploadedUrl) {
+        throw new Error('Upload succeeded but URL not returned');
+      }
+
+      setTechRiderForm(prev => ({
+        ...prev,
+        file: {
+          url: uploadedUrl,
+          fileType: isPdf ? 'pdf' : 'image',
+          uploadedAt: new Date().toISOString(),
+        }
+      }));
+
+      setSuccessMessage('Tech Rider file uploaded. Please click Save to apply.');
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (e: any) {
+      setError(e?.message || 'Error uploading file');
+    } finally {
+      setUploadingTechRiderFile(false);
+    }
+  };
 
   const fetchArtistProfile = async (token: string) => {
     try {
@@ -1609,6 +1721,122 @@ export default function ArtistDashboard() {
             )}
           </div>
         );
+      case "tech-rider":
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Tech Rider</CardTitle>
+              <CardDescription>
+                Define your technical requirements for events. Organizers will use this to prepare production.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="soundRequirements">Sound Requirements</Label>
+                  <Textarea
+                    id="soundRequirements"
+                    value={techRiderForm.soundRequirements || ''}
+                    onChange={(e) => setTechRiderForm(prev => ({ ...prev, soundRequirements: e.target.value }))}
+                    placeholder="e.g., 2 wireless mics, DI box, monitor wedges, mixer channels..."
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="lightingRequirements">Lighting Requirements</Label>
+                  <Textarea
+                    id="lightingRequirements"
+                    value={techRiderForm.lightingRequirements || ''}
+                    onChange={(e) => setTechRiderForm(prev => ({ ...prev, lightingRequirements: e.target.value }))}
+                    placeholder="e.g., front wash, moving heads, haze, follow spot..."
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="stageRequirements">Stage Requirements</Label>
+                  <Textarea
+                    id="stageRequirements"
+                    value={techRiderForm.stageRequirements || ''}
+                    onChange={(e) => setTechRiderForm(prev => ({ ...prev, stageRequirements: e.target.value }))}
+                    placeholder="e.g., minimum stage size, risers, drum riser, backdrop..."
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="instrumentsEquipmentNeeded">Instruments / Equipment Needed</Label>
+                  <Textarea
+                    id="instrumentsEquipmentNeeded"
+                    value={techRiderForm.instrumentsEquipmentNeeded || ''}
+                    onChange={(e) => setTechRiderForm(prev => ({ ...prev, instrumentsEquipmentNeeded: e.target.value }))}
+                    placeholder="e.g., keyboard stand, guitar amp, drum kit, DJ controller..."
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="powerRequirements">Power Requirements</Label>
+                  <Textarea
+                    id="powerRequirements"
+                    value={techRiderForm.powerRequirements || ''}
+                    onChange={(e) => setTechRiderForm(prev => ({ ...prev, powerRequirements: e.target.value }))}
+                    placeholder="e.g., 2 x 15A outlets on stage, isolated power for audio..."
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="specialNotes">Special Notes / Instructions</Label>
+                  <Textarea
+                    id="specialNotes"
+                    value={techRiderForm.specialNotes || ''}
+                    onChange={(e) => setTechRiderForm(prev => ({ ...prev, specialNotes: e.target.value }))}
+                    placeholder="Any special setup or instructions for the production team"
+                  />
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold">Optional Tech Rider File</h4>
+                    <p className="text-sm text-muted-foreground">Upload a PDF or image (detailed rider, stage plot, input list).</p>
+                  </div>
+                  <label>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleTechRiderFileUpload(file);
+                      }}
+                      disabled={uploadingTechRiderFile}
+                    />
+                    <Button type="button" variant="outline" disabled={uploadingTechRiderFile} asChild>
+                      <span>
+                        <FileText className="h-4 w-4 mr-2" />
+                        {uploadingTechRiderFile ? 'Uploading...' : 'Upload File'}
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+
+                {techRiderForm?.file?.url && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Current file: </span>
+                    <a
+                      href={techRiderForm.file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      View
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="button" onClick={handleTechRiderSave} disabled={techRiderSaving}>
+                  {techRiderSaving ? 'Saving...' : 'Save Tech Rider'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
       default:
         return (
           <div className="space-y-6">
@@ -1742,6 +1970,12 @@ export default function ArtistDashboard() {
             label="Profile" 
             active={activeView === "profile"} 
             onClick={() => setActiveView("profile")} 
+          />
+          <SidebarButton 
+            icon={FileText} 
+            label="Tech Rider" 
+            active={activeView === "tech-rider"} 
+            onClick={() => setActiveView("tech-rider")} 
           />
         </nav>
 

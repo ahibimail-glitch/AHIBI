@@ -50,6 +50,7 @@ router.put('/artists/:id/approve', adminController.approveArtist);
 router.put('/artists/:id/reject', [
   check('rejectionReason', 'Rejection reason is required').notEmpty()
 ], adminController.rejectArtist);
+router.delete('/artists/:id', adminController.deleteArtist);
 
 // Venue routes
 router.get('/venues', adminController.getAllVenues);

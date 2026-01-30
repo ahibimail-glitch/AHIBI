@@ -4,6 +4,8 @@ const Venue = require('../models/Venue');
 const Organizer = require('../models/Organizer');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
+const ArtistAvailability = require('../models/ArtistAvailability');
+const ArtistBooking = require('../models/ArtistBooking');
 const ApiResponse = require('../utils/apiResponse');
 const { v4: uuidv4 } = require('uuid');
 
@@ -303,12 +305,14 @@ exports.getAllArtists = async (req, res) => {
         { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
-        { artistType: { $regex: search, $options: 'i' } }
+        { stageName: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+        { type: { $regex: search, $options: 'i' } }
       ];
     }
     
     const artists = await Artist.find(query)
-      .select('_id name email phone artistType approvalStatus createdAt bio experience portfolio socialMedia website')
+      .select('_id name stageName email phone city type experience approvalStatus status createdAt profilePic')
       .skip(skip)
       .limit(parseInt(limit, 10))
       .sort({ createdAt: -1 });
@@ -338,7 +342,7 @@ exports.getAllArtists = async (req, res) => {
 exports.getArtistById = async (req, res) => {
   try {
     const artist = await Artist.findById(req.params.id)
-      .select('_id name email phone artistType approvalStatus createdAt updatedAt bio experience portfolio socialMedia website rejectionReason');
+      .select('_id name stageName gender email phone emergencyContact city profilePic performanceRegions status approvalStatus rejectionReason bio shortBio longBio languages type artistCategories eventTypes eventTypesOther audienceVibe performanceDurations performanceDurationOther performanceFormats performanceFormatsOther feeRange experience basePrice customPricing gallery accolades termsAndConditions cancellationPolicy techRider socialLinks availability totalBookings totalEarnings rating createdAt updatedAt');
     
     if (!artist) {
       return ApiResponse.notFound(res, 'Artist not found');
@@ -407,6 +411,38 @@ exports.rejectArtist = async (req, res) => {
   } catch (error) {
     console.error('Reject artist error:', error);
     return ApiResponse.serverError(res, 'Error rejecting artist', error);
+  }
+};
+
+/**
+ * @desc    Delete artist and related records
+ * @route   DELETE /api/admin/artists/:id
+ * @access  Private (Admin only)
+ */
+exports.deleteArtist = async (req, res) => {
+  try {
+    const artistId = req.params.id;
+
+    const artist = await Artist.findById(artistId);
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found');
+    }
+
+    await Promise.all([
+      ArtistAvailability.deleteMany({ artist: artistId }),
+      ArtistBooking.deleteMany({ artist: artistId }),
+      Event.updateMany(
+        { artists: artistId },
+        { $pull: { artists: artistId } }
+      )
+    ]);
+
+    await Artist.findByIdAndDelete(artistId);
+
+    return ApiResponse.success(res, 'Artist deleted successfully', { artistId });
+  } catch (error) {
+    console.error('Delete artist error:', error);
+    return ApiResponse.serverError(res, 'Error deleting artist', error);
   }
 };
 
