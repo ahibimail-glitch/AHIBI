@@ -597,7 +597,7 @@ export default function AhibiArtistPage() {
       </Section>
 
       {/* Pricing Plans */}
-      <Section id="plans" className="bg-gray-50">
+      {/* <Section id="plans" className="bg-gray-50">
         <div className="text-center mb-10 md:mb-12">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
             Choose Your Plan
@@ -643,7 +643,7 @@ export default function AhibiArtistPage() {
             </Card>
           ))}
         </div>
-      </Section>
+      </Section> */}
 
       {/* Our Clients */}
       <Section className="bg-white">
@@ -714,7 +714,7 @@ export default function AhibiArtistPage() {
                 </Button>
               </Link>
               <Link href="/artist/auth/login">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-white hover:bg-white hover:text-rose-600 font-semibold px-10 md:px-12 py-6 text-base md:text-lg">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-black hover:bg-white hover:text-rose-600 font-semibold px-10 md:px-12 py-6 text-base md:text-lg">
                   Artist Login
                 </Button>
               </Link>
