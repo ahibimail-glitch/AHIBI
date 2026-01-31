@@ -4,6 +4,7 @@ const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
+const whatsappService = require('../services/whatsappService');
 
 /**
  * @desc    Search artists with availability
@@ -199,30 +200,22 @@ exports.createBookingRequest = async (req, res) => {
       return ApiResponse.notFound(res, 'Artist not found or not approved');
     }
 
-    // Check if the requested time slot is available
     const availability = await ArtistAvailability.findOne({
       artist: artistId,
       date: new Date(event.date)
     });
 
-    if (!availability) {
-      return ApiResponse.badRequest(res, 'Artist has no availability set for this date');
+    // Block bookings for past dates
+    const eventDateOnly = new Date(event.date);
+    eventDateOnly.setHours(0, 0, 0, 0);
+    const todayOnly = new Date();
+    todayOnly.setHours(0, 0, 0, 0);
+    if (eventDateOnly < todayOnly) {
+      return ApiResponse.badRequest(res, 'Cannot create booking for a past date');
     }
 
-    const isAvailable = availability.isTimeSlotAvailable(event.startTime, event.endTime);
-    if (!isAvailable) {
-      return ApiResponse.badRequest(res, 'Requested time slot is not available');
-    }
-
-    // Check advance booking requirement
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    const daysDifference = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-    
-    if (daysDifference < availability.advanceBookingDays) {
-      return ApiResponse.badRequest(res, 
-        `Booking must be made at least ${availability.advanceBookingDays} days in advance`
-      );
+    if (availability && availability.dayStatus === 'unavailable') {
+      return ApiResponse.badRequest(res, 'Artist is unavailable on this date');
     }
 
     // Check booking duration
@@ -230,16 +223,56 @@ exports.createBookingRequest = async (req, res) => {
     const endTime = new Date(`2000-01-01T${event.endTime}:00`);
     const durationHours = (endTime - startTime) / (1000 * 60 * 60);
 
-    if (durationHours < availability.minimumBookingDuration) {
-      return ApiResponse.badRequest(res, 
-        `Minimum booking duration is ${availability.minimumBookingDuration} hours`
-      );
+    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+      return ApiResponse.badRequest(res, 'Invalid booking duration');
     }
 
-    if (durationHours > availability.maximumBookingDuration) {
-      return ApiResponse.badRequest(res, 
-        `Maximum booking duration is ${availability.maximumBookingDuration} hours`
-      );
+    // If availability exists, enforce slot-based rules and constraints
+    if (availability) {
+      const isAvailable = availability.isTimeSlotAvailable(event.startTime, event.endTime);
+      if (!isAvailable) {
+        return ApiResponse.badRequest(res, 'Requested time slot is not available');
+      }
+
+      // Check advance booking requirement
+      const eventDate = new Date(event.date);
+      const today = new Date();
+      const daysDifference = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+
+      if (daysDifference < availability.advanceBookingDays) {
+        return ApiResponse.badRequest(res,
+          `Booking must be made at least ${availability.advanceBookingDays} days in advance`
+        );
+      }
+
+      if (durationHours < availability.minimumBookingDuration) {
+        return ApiResponse.badRequest(res,
+          `Minimum booking duration is ${availability.minimumBookingDuration} hours`
+        );
+      }
+
+      if (durationHours > availability.maximumBookingDuration) {
+        return ApiResponse.badRequest(res,
+          `Maximum booking duration is ${availability.maximumBookingDuration} hours`
+        );
+      }
+    }
+
+    // Always prevent overlap with existing bookings even when artist hasn't configured availability
+    const overlappingBooking = await ArtistBooking.findOne({
+      artist: artistId,
+      'event.date': new Date(event.date),
+      'booking.status': { $in: ['pending', 'accepted', 'counter_offered'] },
+      $expr: {
+        $and: [
+          { $lt: ['$event.startTime', event.endTime] },
+          { $gt: ['$event.endTime', event.startTime] }
+        ]
+      }
+    }).select('_id');
+
+    if (overlappingBooking) {
+      return ApiResponse.badRequest(res, 'Artist already has a booking request for this time slot');
     }
 
     // Create booking request
@@ -278,6 +311,20 @@ exports.createBookingRequest = async (req, res) => {
     });
 
     await booking.save();
+
+    // Notify artist via WhatsApp (non-blocking)
+    try {
+      if (artist?.phone) {
+        const dateKey = new Date(event.date).toISOString().split('T')[0];
+        const message = `New booking request received for ${dateKey} (${event.startTime}-${event.endTime}). Please check your artist dashboard to accept/decline.`;
+        await whatsappService.sendTextMessage({
+          to: artist.phone,
+          body: message
+        });
+      }
+    } catch (notifyError) {
+      console.error('WhatsApp notify error:', notifyError?.message || notifyError);
+    }
 
     // Populate the booking with artist and organizer details
     const populatedBooking = await ArtistBooking.findById(booking._id)

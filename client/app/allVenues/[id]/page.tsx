@@ -1667,7 +1667,7 @@ export default function VenueDetailPage() {
                         {venueData.policies.noiseRestrictions && (
                           <div className="col-span-2">
                             <p className="text-gray-500 mb-0.5">Noise</p>
-                            <p className="font-medium text-gray-900">{venueData.policies.noiseRestrictions}</p>
+                            <p className="font-medium text-gray-900 whitespace-pre-line">{venueData.policies.noiseRestrictions}</p>
                           </div>
                         )}
                       </div>

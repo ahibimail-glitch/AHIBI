@@ -449,8 +449,8 @@ export default function VenueDetailsManager({
                   <Label>Outdoor</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="both" />
-                  <Label>Both</Label>
+                  <RadioGroupItem value="hybrid" />
+                  <Label>Hybrid</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -495,7 +495,16 @@ export default function VenueDetailsManager({
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-500">Indoor/Outdoor</Label>
-              <p className="text-sm">{venueData?.venueClassification?.indoorOutdoor || "Not specified"}</p>
+              <p className="text-sm">
+                {(() => {
+                  const value = venueData?.venueClassification?.indoorOutdoor;
+                  if (!value) return "Not specified";
+                  if (value === "indoor") return "Indoor";
+                  if (value === "outdoor") return "Outdoor";
+                  if (value === "both" || value === "hybrid") return "Hybrid";
+                  return value;
+                })()}
+              </p>
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-500">Operation Mode</Label>
@@ -1268,7 +1277,6 @@ export default function VenueDetailsManager({
                     { key: "stage", label: "Stage / Platform" },
                     { key: "airConditioning", label: "Air Conditioning / Heating" },
                     { key: "inHouseCatering", label: "In-house Catering" },
-                    { key: "cateringFlexibility", label: "Catering Flexibility (Outside catering allowed?)", hasDescription: true },
                     { key: "lightingSystem", label: "Lighting System" },
                     { key: "professionalSoundSystem", label: "Professional Sound System" },
                     { key: "ledScreenProjection", label: "LED Screen / Projection" },
@@ -1289,7 +1297,7 @@ export default function VenueDetailsManager({
                       <div className="flex items-center justify-between">
                         <Label className="font-medium">{amenity.label}</Label>
                         <div className="flex items-center space-x-2">
-                          <Label className="text-sm">No</Label>
+                          {/* <Label className="text-sm">No</Label> */}
                           <Checkbox
                             checked={editData[amenity.key]?.available || false}
                             onCheckedChange={(checked) => setEditData({
@@ -1496,27 +1504,38 @@ export default function VenueDetailsManager({
                     <RadioGroup
                       value={editData.smokingPolicy || ""}
                       onValueChange={(value) => setEditData({...editData, smokingPolicy: value})}
+                      className="mt-2 space-y-2"
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="allowed" />
-                        <Label>Allowed</Label>
-                    </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="not_allowed" />
-                        <Label>Not Allowed</Label>
+                        <RadioGroupItem value="allowed" id="smoking_allowed" />
+                        <Label htmlFor="smoking_allowed">Yes</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="designated_areas" />
-                        <Label>Designated Areas Only</Label>
+                        <RadioGroupItem value="not_allowed" id="smoking_not_allowed" />
+                        <Label htmlFor="smoking_not_allowed">No</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="designated_areas" id="smoking_designated" />
+                        <Label htmlFor="smoking_designated">Designated Areas Only</Label>
                       </div>
                     </RadioGroup>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={editData.alcoholServingPermission || false}
-                      onCheckedChange={(checked) => setEditData({...editData, alcoholServingPermission: checked})}
-                    />
+                  <div>
                     <Label>Alcohol Serving Permission</Label>
+                    <RadioGroup
+                      value={editData.alcoholServingPermission ? "allowed" : "not_allowed"}
+                      onValueChange={(value) => setEditData({...editData, alcoholServingPermission: value === "allowed"})}
+                      className="mt-2 space-y-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="allowed" id="alcohol_allowed" />
+                        <Label htmlFor="alcohol_allowed">Allowed</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="not_allowed" id="alcohol_not_allowed" />
+                        <Label htmlFor="alcohol_not_allowed">Not Allowed</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                   <div>
                     <Label>Required Permissions or Licenses</Label>
@@ -1557,7 +1576,11 @@ export default function VenueDetailsManager({
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Smoking Policy</Label>
-                    <p className="text-sm">{venueData?.policies?.smokingPolicy || "Not specified"}</p>
+                    <p className="text-sm">
+                      {venueData?.policies?.smokingPolicy
+                        ? venueData.policies.smokingPolicy.replace(/_/g, ' ')
+                        : "Not specified"}
+                    </p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Alcohol Serving Permission</Label>
@@ -1566,7 +1589,19 @@ export default function VenueDetailsManager({
                   {venueData?.policies?.noiseRestrictions && (
                     <div>
                       <Label className="text-sm font-medium text-gray-500">Noise Restrictions</Label>
-                      <p className="text-sm">{venueData.policies.noiseRestrictions}</p>
+                      <p className="text-sm whitespace-pre-line">{venueData.policies.noiseRestrictions}</p>
+                    </div>
+                  )}
+                  {venueData?.policies?.requiredPermissions && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Required Permissions or Licenses</Label>
+                      <p className="text-sm whitespace-pre-line">{venueData.policies.requiredPermissions}</p>
+                    </div>
+                  )}
+                  {venueData?.policies?.eventTypeRestrictions && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-500">Event Type Restrictions</Label>
+                      <p className="text-sm whitespace-pre-line">{venueData.policies.eventTypeRestrictions}</p>
                     </div>
                   )}
                 </div>

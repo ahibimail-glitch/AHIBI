@@ -22,6 +22,26 @@ router.post('/auth/verify-otp', [
   check('mode', 'Mode must be signup or login').isIn(['signup', 'login'])
 ], venueAuthController.verifyVenueOtp);
 
+router.post('/auth/login-password', [
+  check('phone', 'Phone number is required').matches(/^\d{10}$/),
+  check('password', 'Password is required').isString().notEmpty()
+], venueAuthController.loginVenueWithPassword);
+
+router.post('/auth/forgot-password/send-otp', [
+  check('phone', 'Phone number is required').matches(/^\d{10}$/)
+], venueAuthController.sendVenuePasswordResetOtp);
+
+router.post('/auth/forgot-password/verify-otp', [
+  check('phone', 'Phone number is required').matches(/^\d{10}$/),
+  check('otp', 'OTP is required').isLength({ min: 6, max: 6 })
+], venueAuthController.verifyVenuePasswordResetOtp);
+
+router.post('/auth/forgot-password/reset', [
+  check('phone', 'Phone number is required').matches(/^\d{10}$/),
+  check('newPassword', 'New password is required').isString().isLength({ min: 6 }),
+  check('confirmPassword', 'Confirm password is required').isString().isLength({ min: 6 })
+], venueAuthController.resetVenuePassword);
+
 // ============ VENUE MANAGER PROTECTED ROUTES ============
 
 // Venue profile management

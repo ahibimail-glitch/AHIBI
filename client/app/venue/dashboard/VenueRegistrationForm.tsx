@@ -541,8 +541,8 @@ export default function VenueRegistrationForm({
                     <Label htmlFor="outdoor">Outdoor</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="both" id="both" />
-                    <Label htmlFor="both">Both</Label>
+                    <RadioGroupItem value="hybrid" id="hybrid" />
+                    <Label htmlFor="hybrid">Hybrid</Label>
                   </div>
                 </RadioGroup>
               </div>

@@ -63,6 +63,15 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   const [loading, setLoading] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [blockTimeSlot, setBlockTimeSlot] = useState<TimeSlot>({
+    startTime: '09:00',
+    endTime: '10:00',
+    isAvailable: false,
+    isBooked: false,
+    price: 0,
+    note: ''
+  });
   const [newTimeSlot, setNewTimeSlot] = useState<TimeSlot>({
     startTime: '09:00',
     endTime: '10:00',
@@ -76,6 +85,19 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   useEffect(() => {
     fetchAvailability();
   }, [currentDate]);
+
+  const toDateKey = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const isPastDateKey = (dateKey: string) => {
+    const now = new Date();
+    const todayKey = toDateKey(now);
+    return dateKey < todayKey;
+  };
 
   const fetchAvailability = async () => {
     try {
@@ -95,7 +117,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
         const availabilityMap: { [key: string]: AvailabilityData } = {};
         
         data.data.availability.forEach((avail: AvailabilityData) => {
-          const dateKey = new Date(avail.date).toISOString().split('T')[0];
+          const dateKey = toDateKey(new Date(avail.date));
           availabilityMap[dateKey] = avail;
         });
         
@@ -158,7 +180,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
     const current = new Date(startDate);
 
     for (let i = 0; i < 42; i++) {
-      const dateKey = current.toISOString().split('T')[0];
+      const dateKey = toDateKey(current);
       const isCurrentMonth = current.getMonth() === month;
       const isToday = current.toDateString() === new Date().toDateString();
       const dayAvailability = availability[dateKey];
@@ -183,8 +205,140 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
       case 'partially_booked': return 'bg-yellow-100 text-yellow-800';
       case 'fully_booked': return 'bg-red-100 text-red-800';
       case 'unavailable': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-50 text-gray-600';
+      default: return 'bg-green-50 text-green-800';
     }
+  };
+
+  const splitSlotsForBlock = (slots: TimeSlot[], blockStart: string, blockEnd: string, note?: string) => {
+    const updated: TimeSlot[] = [];
+
+    for (const slot of slots) {
+      // Never alter booked slots
+      if (slot.isBooked) {
+        updated.push(slot);
+        continue;
+      }
+
+      // No overlap
+      if (slot.endTime <= blockStart || slot.startTime >= blockEnd) {
+        updated.push(slot);
+        continue;
+      }
+
+      // Slot fully within block range -> mark unavailable
+      if (slot.startTime >= blockStart && slot.endTime <= blockEnd) {
+        updated.push({
+          ...slot,
+          isAvailable: false,
+          note: note || slot.note
+        });
+        continue;
+      }
+
+      // Block is inside slot -> split into up to 3 parts
+      if (slot.startTime < blockStart) {
+        updated.push({
+          ...slot,
+          endTime: blockStart,
+          isAvailable: slot.isAvailable,
+        });
+      }
+
+      updated.push({
+        ...slot,
+        startTime: blockStart,
+        endTime: blockEnd,
+        isAvailable: false,
+        isBooked: false,
+        note: note || slot.note
+      });
+
+      if (slot.endTime > blockEnd) {
+        updated.push({
+          ...slot,
+          startTime: blockEnd,
+          isAvailable: slot.isAvailable,
+        });
+      }
+    }
+
+    // Normalize by sorting
+    return updated.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  };
+
+  const ensureDefaultOpenSlots = (dateKey: string) => {
+    const existing = availability[dateKey];
+    if (existing && Array.isArray(existing.timeSlots) && existing.timeSlots.length > 0) {
+      return existing;
+    }
+    return {
+      ...(existing || {
+        date: dateKey,
+        _id: existing?._id,
+        specialPricing: { isSpecialDay: false, multiplier: 1 },
+        minimumBookingDuration: 2,
+        maximumBookingDuration: 8,
+        advanceBookingDays: 7,
+        dayStatus: 'available',
+      }),
+      timeSlots: [
+        {
+          startTime: '00:00',
+          endTime: '23:59',
+          isAvailable: true,
+          isBooked: false,
+        }
+      ]
+    } as AvailabilityData;
+  };
+
+  const blockFullDay = (dateKey: string) => {
+    const base = availability[dateKey];
+    const availabilityData: AvailabilityData = {
+      ...(base || {
+        date: dateKey,
+        specialPricing: { isSpecialDay: false, multiplier: 1 },
+        minimumBookingDuration: 2,
+        maximumBookingDuration: 8,
+        advanceBookingDays: 7,
+      }),
+      dayStatus: 'unavailable',
+      timeSlots: [
+        {
+          startTime: '00:00',
+          endTime: '23:59',
+          isAvailable: false,
+          isBooked: false,
+          note: 'Blocked by artist'
+        }
+      ]
+    };
+
+    saveAvailability(dateKey, availabilityData);
+  };
+
+  const blockTimeRange = (dateKey: string) => {
+    const dayAvailability = ensureDefaultOpenSlots(dateKey);
+    const updatedSlots = splitSlotsForBlock(
+      dayAvailability.timeSlots,
+      blockTimeSlot.startTime,
+      blockTimeSlot.endTime,
+      blockTimeSlot.note
+    );
+    const updatedAvailability: AvailabilityData = {
+      ...dayAvailability,
+      timeSlots: updatedSlots
+    };
+    saveAvailability(dateKey, updatedAvailability);
+    setShowBlockDialog(false);
+    setBlockTimeSlot({
+      startTime: '09:00',
+      endTime: '10:00',
+      isAvailable: false,
+      isBooked: false,
+      price: 0,
+      note: ''
+    });
   };
 
   const addTimeSlot = (dateKey: string) => {
@@ -285,22 +439,25 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   ${isCurrentMonth ? 'bg-white' : 'bg-gray-50'}
                   ${isToday ? 'ring-2 ring-blue-500' : ''}
                   ${selectedDate === dateKey ? 'bg-blue-50' : ''}
-                  hover:bg-gray-100
+                  ${isPastDateKey(dateKey) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-100'}
                 `}
-                onClick={() => setSelectedDate(selectedDate === dateKey ? '' : dateKey)}
+                onClick={() => {
+                  if (isPastDateKey(dateKey)) return;
+                  setSelectedDate(selectedDate === dateKey ? '' : dateKey);
+                }}
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className={`text-sm ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
                     {date.getDate()}
                   </span>
-                  {dayAvailability && (
-                    <Badge variant="secondary" className={`text-xs ${getDayStatusColor(dayAvailability.dayStatus)}`}>
-                      {dayAvailability.timeSlots.filter(slot => slot.isAvailable && !slot.isBooked).length}
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className={`text-xs ${getDayStatusColor(dayAvailability?.dayStatus)}`}>
+                    {dayAvailability
+                      ? dayAvailability.timeSlots.filter(slot => slot.isAvailable && !slot.isBooked).length
+                      : 'Open'}
+                  </Badge>
                 </div>
                 
-                {dayAvailability && (
+                {dayAvailability ? (
                   <div className="space-y-1">
                     {dayAvailability.specialPricing.isSpecialDay && (
                       <div className="text-xs text-orange-600 font-medium">
@@ -310,6 +467,10 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                     <div className="text-xs text-gray-600">
                       {dayAvailability.timeSlots.length} slots
                     </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-600">
+                    Open by default
                   </div>
                 )}
               </div>
@@ -332,79 +493,131 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   day: 'numeric' 
                 })}
               </span>
-              <Dialog open={showTimeSlotDialog} onOpenChange={setShowTimeSlotDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Time Slot
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add Time Slot</DialogTitle>
-                    <DialogDescription>
-                      Create a new available time slot for this date.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => blockFullDay(selectedDate)}>
+                  Block full day
+                </Button>
+                <Dialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      Block time
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Block time range</DialogTitle>
+                      <DialogDescription>
+                        Block a specific time range so it cannot be booked.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="blockStartTime">From</Label>
+                          <Input
+                            id="blockStartTime"
+                            type="time"
+                            value={blockTimeSlot.startTime}
+                            onChange={(e) => setBlockTimeSlot(prev => ({ ...prev, startTime: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="blockEndTime">To</Label>
+                          <Input
+                            id="blockEndTime"
+                            type="time"
+                            value={blockTimeSlot.endTime}
+                            onChange={(e) => setBlockTimeSlot(prev => ({ ...prev, endTime: e.target.value }))}
+                          />
+                        </div>
+                      </div>
                       <div>
-                        <Label htmlFor="startTime">Start Time</Label>
+                        <Label htmlFor="blockNote">Reason (optional)</Label>
+                        <Textarea
+                          id="blockNote"
+                          placeholder="Example: Travel / Personal commitment"
+                          value={blockTimeSlot.note}
+                          onChange={(e) => setBlockTimeSlot(prev => ({ ...prev, note: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button variant="outline" onClick={() => setShowBlockDialog(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={() => blockTimeRange(selectedDate)}>
+                          Block
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={showTimeSlotDialog} onOpenChange={setShowTimeSlotDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add available slot
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add available time slot</DialogTitle>
+                      <DialogDescription>
+                        Add a slot you want to explicitly allow (optional).
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="startTime">Start Time</Label>
+                          <Input
+                            id="startTime"
+                            type="time"
+                            value={newTimeSlot.startTime}
+                            onChange={(e) => setNewTimeSlot(prev => ({ ...prev, startTime: e.target.value }))}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="endTime">End Time</Label>
+                          <Input
+                            id="endTime"
+                            type="time"
+                            value={newTimeSlot.endTime}
+                            onChange={(e) => setNewTimeSlot(prev => ({ ...prev, endTime: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="price">Custom Price (optional)</Label>
                         <Input
-                          id="startTime"
-                          type="time"
-                          value={newTimeSlot.startTime}
-                          onChange={(e) => setNewTimeSlot(prev => ({ ...prev, startTime: e.target.value }))}
+                          id="price"
+                          type="number"
+                          placeholder="Leave empty to use base price"
+                          value={newTimeSlot.price || ''}
+                          onChange={(e) => setNewTimeSlot(prev => ({ ...prev, price: e.target.value ? parseInt(e.target.value) : 0 }))}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="endTime">End Time</Label>
-                        <Input
-                          id="endTime"
-                          type="time"
-                          value={newTimeSlot.endTime}
-                          onChange={(e) => setNewTimeSlot(prev => ({ ...prev, endTime: e.target.value }))}
+                        <Label htmlFor="note">Note (optional)</Label>
+                        <Textarea
+                          id="note"
+                          placeholder="Any notes for this slot"
+                          value={newTimeSlot.note}
+                          onChange={(e) => setNewTimeSlot(prev => ({ ...prev, note: e.target.value }))}
                         />
                       </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button variant="outline" onClick={() => setShowTimeSlotDialog(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={() => addTimeSlot(selectedDate)}>
+                          Add
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="price">Custom Price (optional)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        placeholder="Leave empty to use base price"
-                        value={newTimeSlot.price || ''}
-                        onChange={(e) => setNewTimeSlot(prev => ({ ...prev, price: e.target.value ? parseInt(e.target.value) : 0 }))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="note">Note (optional)</Label>
-                      <Textarea
-                        id="note"
-                        placeholder="Any special notes for this time slot"
-                        value={newTimeSlot.note}
-                        onChange={(e) => setNewTimeSlot(prev => ({ ...prev, note: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="available"
-                        checked={newTimeSlot.isAvailable}
-                        onCheckedChange={(checked) => setNewTimeSlot(prev => ({ ...prev, isAvailable: checked }))}
-                      />
-                      <Label htmlFor="available">Available for booking</Label>
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setShowTimeSlotDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={() => addTimeSlot(selectedDate)}>
-                        Add Time Slot
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -478,7 +691,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
             ) : (
               <Alert>
                 <AlertDescription>
-                  No availability set for this date. Click "Add Time Slot" to start accepting bookings.
+                  This date is open by default. Use “Block time” or “Block full day” to make yourself unavailable.
                 </AlertDescription>
               </Alert>
             )}

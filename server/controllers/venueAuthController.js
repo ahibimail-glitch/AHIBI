@@ -254,6 +254,173 @@ exports.verifyVenueOtp = async (req, res) => {
   }
 };
 
+exports.loginVenueWithPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, password } = req.body;
+
+  try {
+    const venue = await Venue.findOne({ phone }).select('+password');
+
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
+    }
+
+    if (venue.approvalStatus === 'pending') {
+      return ApiResponse.accepted(res, 'Your venue account is pending approval', {
+        pending: true,
+        approvalStatus: venue.approvalStatus
+      });
+    }
+
+    if (venue.approvalStatus === 'rejected') {
+      return ApiResponse.forbidden(res, 'Your venue account has been rejected', {
+        rejected: true,
+        reason: venue.rejectionReason
+      });
+    }
+
+    if (!venue.password) {
+      return ApiResponse.badRequest(res, 'Password is not set. Please reset your password using OTP.');
+    }
+
+    const isMatch = await venue.matchPassword(password);
+    if (!isMatch) {
+      return ApiResponse.badRequest(res, 'Invalid phone or password');
+    }
+
+    const token = venue.getSignedJwtToken();
+
+    return ApiResponse.success(res, 'Login successful.', {
+      token,
+      user: {
+        _id: venue._id,
+        name: venue.name,
+        email: venue.email,
+        phone: venue.phone,
+        role: 'venue',
+      }
+    });
+  } catch (error) {
+    console.error('Venue password login error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+exports.sendVenuePasswordResetOtp = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone } = req.body;
+
+  try {
+    const venue = await Venue.findOne({ phone });
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
+    }
+
+    if (venue.approvalStatus === 'pending') {
+      return ApiResponse.forbidden(res, 'Your account is pending approval from the admin.');
+    }
+
+    if (venue.approvalStatus === 'rejected') {
+      return ApiResponse.forbidden(res, 'Your account has been rejected. Please contact support.');
+    }
+
+    const otp = await venue.setOtp();
+    const smsResponse = await smsService.sendOtp(phone, otp);
+
+    if (!smsResponse.success) {
+      return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
+    }
+
+    return ApiResponse.success(res, 'OTP sent successfully', {
+      phone,
+      otpSent: true
+    });
+  } catch (error) {
+    console.error('Send venue password reset OTP error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+exports.verifyVenuePasswordResetOtp = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, otp } = req.body;
+
+  try {
+    const venue = await Venue.findOne({ phone });
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
+    }
+
+    const isOtpValid = await venue.verifyOtp(otp);
+    if (!isOtpValid) {
+      return ApiResponse.badRequest(res, 'Invalid or expired OTP');
+    }
+
+    const resetKey = `venue_password_reset:${phone}`;
+    tempOtpStore.set(resetKey, { verified: true, expiresAt: Date.now() + 5 * 60 * 1000 });
+
+    return ApiResponse.success(res, 'OTP verified successfully.', {
+      phone,
+      verified: true
+    });
+  } catch (error) {
+    console.error('Verify venue password reset OTP error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+exports.resetVenuePassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, newPassword, confirmPassword } = req.body;
+
+  try {
+    if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+      return ApiResponse.badRequest(res, 'Passwords do not match');
+    }
+
+    const resetKey = `venue_password_reset:${phone}`;
+    const resetState = tempOtpStore.get(resetKey);
+
+    if (!resetState || !resetState.verified || !resetState.expiresAt || resetState.expiresAt < Date.now()) {
+      return ApiResponse.badRequest(res, 'Password reset session expired. Please verify OTP again.');
+    }
+
+    const venue = await Venue.findOne({ phone }).select('+password');
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
+    }
+
+    venue.password = newPassword;
+    await venue.save({ validateBeforeSave: false });
+
+    tempOtpStore.delete(resetKey);
+
+    return ApiResponse.success(res, 'Password reset successful.', {
+      phone,
+      passwordReset: true
+    });
+  } catch (error) {
+    console.error('Reset venue password error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
 /**
  * @desc    Get venue profile
  * @route   GET /api/venue/profile
@@ -387,7 +554,7 @@ exports.updateVenueClassification = async (req, res) => {
     const { venueTypes, venueTypeOther, indoorOutdoor, operationMode } = req.body;
 
     // Validation
-    if (indoorOutdoor && !['indoor', 'outdoor', 'both'].includes(indoorOutdoor)) {
+    if (indoorOutdoor && !['indoor', 'outdoor', 'both', 'hybrid'].includes(indoorOutdoor)) {
       return ApiResponse.badRequest(res, 'Invalid indoor/outdoor value');
     }
     if (operationMode && !['seasonal', 'year_round'].includes(operationMode)) {

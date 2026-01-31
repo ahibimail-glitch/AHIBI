@@ -1,6 +1,7 @@
 const ArtistBooking = require('../models/ArtistBooking');
 const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
+const ArtistAvailability = require('../models/ArtistAvailability');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
 
@@ -98,6 +99,70 @@ exports.acceptBooking = async (req, res) => {
       message: 'I have accepted your booking request. Looking forward to performing at your event!',
       timestamp: new Date()
     });
+
+    const dateOnly = new Date(booking.event.date);
+    dateOnly.setHours(0, 0, 0, 0);
+
+    // Create/update availability to reflect the accepted slot as booked
+    let availability = await ArtistAvailability.findOne({
+      artist: req.user.id,
+      date: dateOnly
+    });
+
+    const bookedStart = booking.event.startTime;
+    const bookedEnd = booking.event.endTime;
+
+    const buildSplitSlots = () => {
+      const slots = [];
+      if (bookedStart !== '00:00') {
+        slots.push({
+          startTime: '00:00',
+          endTime: bookedStart,
+          isAvailable: true,
+          isBooked: false
+        });
+      }
+
+      slots.push({
+        startTime: bookedStart,
+        endTime: bookedEnd,
+        isAvailable: true,
+        isBooked: true,
+        bookingId: booking._id
+      });
+
+      if (bookedEnd !== '23:59') {
+        slots.push({
+          startTime: bookedEnd,
+          endTime: '23:59',
+          isAvailable: true,
+          isBooked: false
+        });
+      }
+      return slots;
+    };
+
+    if (!availability) {
+      availability = new ArtistAvailability({
+        artist: req.user.id,
+        date: dateOnly,
+        timeSlots: buildSplitSlots()
+      });
+      availability.updateDayStatus();
+      await availability.save();
+    } else {
+      if (Array.isArray(availability.timeSlots) && availability.timeSlots.length > 0) {
+        const booked = availability.bookTimeSlot(bookedStart, bookedEnd, booking._id);
+        if (!booked) {
+          availability.timeSlots = buildSplitSlots();
+          availability.updateDayStatus();
+        }
+      } else {
+        availability.timeSlots = buildSplitSlots();
+        availability.updateDayStatus();
+      }
+      await availability.save();
+    }
 
     await booking.save();
 

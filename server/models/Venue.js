@@ -60,6 +60,10 @@ const VenueSchema = new mongoose.Schema({
     unique: true,
     match: [/^\d{10}$/, 'Please enter a valid 10-digit phone number']
   },
+  password: {
+    type: String,
+    select: false
+  },
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
@@ -96,7 +100,7 @@ const VenueSchema = new mongoose.Schema({
     venueTypeOther: String,
     indoorOutdoor: {
       type: String,
-      enum: ['indoor', 'outdoor', 'both'],
+      enum: ['indoor', 'outdoor', 'hybrid'],
       required: [true, 'Indoor/Outdoor specification is required']
     },
     operationMode: {
@@ -625,9 +629,19 @@ const VenueSchema = new mongoose.Schema({
 });
 
 // Update the updatedAt timestamp before saving
-VenueSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+VenueSchema.pre('save', async function(next) {
+  try {
+    this.updatedAt = Date.now();
+
+    if (this.isModified('password') && this.password) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Calculate average rating when a new review is added
@@ -681,6 +695,14 @@ VenueSchema.methods.verifyOtp = async function(enteredOtp) {
   }
 
   return isMatch;
+};
+
+VenueSchema.methods.matchPassword = async function(enteredPassword) {
+  if (!this.password) {
+    return false;
+  }
+
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
 // Sign JWT and return

@@ -66,8 +66,11 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
   const [currentDate, setCurrentDate] = useState(new Date());
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasOrganizerToken, setHasOrganizerToken] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+  const [manualStartTime, setManualStartTime] = useState('');
+  const [manualEndTime, setManualEndTime] = useState('');
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [bookingForm, setBookingForm] = useState<BookingFormData>({
     eventName: '',
@@ -82,24 +85,91 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
     fetchAvailability();
   }, [currentDate, artistId]);
 
+  const toDateKey = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const getTodayKey = () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const formatDateDDMMYY = (dateKey: string) => {
+    const [yyyy, mm, dd] = dateKey.split('-');
+    return `${dd}/${mm}/${String(yyyy).slice(-2)}`;
+  };
+
   const fetchAvailability = async () => {
     try {
       setLoading(true);
+      const token = localStorage.getItem('organizer_token');
+      if (!token) {
+        setHasOrganizerToken(false);
+        setAvailability([]);
+        return;
+      }
+      setHasOrganizerToken(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
       
       const response = await fetch(`/api/organizer/artists/${artistId}/calendar?month=${month}&year=${year}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('organizer_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setAvailability(data.data.availability || []);
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setAvailability([]);
+        toast({
+          title: "Booking unavailable",
+          description: data?.message || "Please login as organizer to book this artist.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const calendarData = data?.data?.calendarData;
+      if (!calendarData || typeof calendarData !== 'object') {
+        setAvailability([]);
+        return;
+      }
+
+      const normalizedAvailability: DayAvailability[] = Object.entries(calendarData).map(
+        ([dateKey, dayData]: any) => ({
+          _id: `${artistId}-${dateKey}`,
+          date: dateKey,
+          dayStatus: dayData?.dayStatus || 'unavailable',
+          timeSlots: Array.isArray(dayData?.availableSlots)
+            ? dayData.availableSlots.map((slot: any) => ({
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                isAvailable: true,
+                isBooked: false,
+                price: slot.calculatedPrice,
+                notes: slot.note,
+              }))
+            : [],
+          specialPricing: dayData?.isSpecialDay
+            ? {
+                isSpecial: true,
+                reason: dayData?.specialReason,
+              }
+            : undefined,
+        })
+      );
+
+      setAvailability(normalizedAvailability);
     } catch (error) {
       console.error('Error fetching availability:', error);
+      setAvailability([]);
     } finally {
       setLoading(false);
     }
@@ -129,13 +199,17 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
   };
 
   const getDateAvailability = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateKey(date);
     return availability.find(avail => avail.date === dateStr);
   };
 
   const getDayStatusColor = (date: Date) => {
+    const todayKey = getTodayKey();
+    const dateKey = toDateKey(date);
+    if (dateKey < todayKey) return 'bg-gray-100 text-gray-400 cursor-not-allowed';
+
     const dayAvail = getDateAvailability(date);
-    if (!dayAvail) return 'bg-gray-100 text-gray-400';
+    if (!dayAvail) return 'bg-green-50 text-green-800 hover:bg-green-100 cursor-pointer';
     
     switch (dayAvail.dayStatus) {
       case 'available':
@@ -164,17 +238,63 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
   };
 
   const handleDateClick = (date: Date) => {
-    const dayAvail = getDateAvailability(date);
-    if (dayAvail && (dayAvail.dayStatus === 'available' || dayAvail.dayStatus === 'partially_booked')) {
-      setSelectedDate(date.toISOString().split('T')[0]);
+    const todayKey = getTodayKey();
+    const dateKey = toDateKey(date);
+    if (dateKey < todayKey) {
+      return;
     }
+
+    const dayAvail = getDateAvailability(date);
+    if (dayAvail && (dayAvail.dayStatus === 'unavailable' || dayAvail.dayStatus === 'fully_booked')) {
+      return;
+    }
+    setSelectedDate(dateKey);
+    setSelectedTimeSlot(null);
+    setManualStartTime('');
+    setManualEndTime('');
   };
 
   const handleTimeSlotSelect = (timeSlot: TimeSlot) => {
     if (timeSlot.isAvailable && !timeSlot.isBooked) {
       setSelectedTimeSlot(timeSlot);
+      setManualStartTime('');
+      setManualEndTime('');
       setShowBookingForm(true);
     }
+  };
+
+  const handleManualTimeContinue = () => {
+    if (!selectedDate) return;
+    if (!manualStartTime || !manualEndTime) {
+      toast({
+        title: "Select time",
+        description: "Please select both start and end time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const start = new Date(`2000-01-01T${manualStartTime}:00`);
+    const end = new Date(`2000-01-01T${manualEndTime}:00`);
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+      toast({
+        title: "Invalid time range",
+        description: "End time must be after start time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBookingForm(prev => ({ ...prev, duration: Math.ceil(durationHours) }));
+    setSelectedTimeSlot({
+      startTime: manualStartTime,
+      endTime: manualEndTime,
+      isAvailable: true,
+      isBooked: false,
+      price: artist.basePrice,
+    });
+    setShowBookingForm(true);
   };
 
   const calculatePrice = () => {
@@ -201,21 +321,26 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
       setSubmitting(true);
       
       const bookingData = {
-        artist: artistId,
-        date: selectedDate,
-        startTime: selectedTimeSlot.startTime,
-        endTime: selectedTimeSlot.endTime,
-        duration: bookingForm.duration,
+        artistId,
         event: {
           name: bookingForm.eventName,
           description: bookingForm.eventDescription,
-          location: bookingForm.eventLocation
+          date: selectedDate,
+          startTime: selectedTimeSlot.startTime,
+          endTime: selectedTimeSlot.endTime,
+          venue: {
+            name: bookingForm.eventLocation,
+            address: bookingForm.eventLocation,
+            city: artist.city,
+            state: '',
+            pincode: ''
+          },
+          eventType: 'private_party',
+          expectedAudience: 0
         },
-        pricing: {
-          amount: calculatePrice(),
-          currency: 'INR'
-        },
-        specialRequests: bookingForm.specialRequests
+        requestedAmount: calculatePrice(),
+        organizerRequirements: '',
+        specialRequirements: bookingForm.specialRequests
       };
 
       const response = await fetch('/api/organizer/bookings', {
@@ -235,6 +360,8 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         setShowBookingForm(false);
         setSelectedDate(null);
         setSelectedTimeSlot(null);
+        setManualStartTime('');
+        setManualEndTime('');
         setBookingForm({
           eventName: '',
           eventDescription: '',
@@ -270,6 +397,10 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
   ];
 
   const selectedDayAvailability = selectedDate ? availability.find(avail => avail.date === selectedDate) : null;
+  const manualDurationHours = manualStartTime && manualEndTime
+    ? (new Date(`2000-01-01T${manualEndTime}:00`).getTime() - new Date(`2000-01-01T${manualStartTime}:00`).getTime()) / (1000 * 60 * 60)
+    : null;
+  const isManualTimeRangeValid = manualDurationHours !== null && Number.isFinite(manualDurationHours) && manualDurationHours > 0;
 
   return (
     <div className="space-y-6">
@@ -308,6 +439,18 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         </div>
       </div>
 
+      {!loading && !hasOrganizerToken && (
+        <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
+          Login as an organizer to view availability and book this artist.
+        </div>
+      )}
+
+      {!loading && hasOrganizerToken && availability.length === 0 && (
+        <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm">
+          All dates are open by default. Only dates explicitly marked unavailable by the artist will be blocked.
+        </div>
+      )}
+
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-1">
         {/* Day headers */}
@@ -323,7 +466,7 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
             {date ? (
               <div
                 className={`w-full h-full p-1 text-center text-sm rounded-lg transition-colors ${getDayStatusColor(date)} ${
-                  selectedDate === date.toISOString().split('T')[0] ? 'ring-2 ring-pink-500' : ''
+                  selectedDate === toDateKey(date) ? 'ring-2 ring-pink-500' : ''
                 }`}
                 onClick={() => handleDateClick(date)}
               >
@@ -337,43 +480,100 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
       </div>
 
       {/* Selected Date Time Slots */}
-      {selectedDate && selectedDayAvailability && (
+      {selectedDate && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Clock className="h-5 w-5 mr-2" />
-              Available Time Slots - {new Date(selectedDate).toLocaleDateString()}
+              Available Time Slots - {formatDateDDMMYY(selectedDate)}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {selectedDayAvailability.timeSlots.map((slot, index) => (
-                <div
-                  key={index}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    slot.isAvailable && !slot.isBooked
-                      ? 'border-green-300 bg-green-50 hover:bg-green-100'
-                      : 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                  }`}
-                  onClick={() => handleTimeSlotSelect(slot)}
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">
-                      {slot.startTime} - {slot.endTime}
-                    </span>
-                    <Badge variant={slot.isAvailable && !slot.isBooked ? "default" : "secondary"}>
-                      {slot.isBooked ? 'Booked' : slot.isAvailable ? 'Available' : 'Unavailable'}
-                    </Badge>
+            {selectedDayAvailability?.dayStatus === 'unavailable' ? (
+              <div className="text-sm text-gray-600">
+                This date is marked unavailable by the artist.
+              </div>
+            ) : selectedDayAvailability && selectedDayAvailability.timeSlots.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {selectedDayAvailability.timeSlots.map((slot, index) => (
+                  <div
+                    key={index}
+                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                      slot.isAvailable && !slot.isBooked
+                        ? 'border-green-300 bg-green-50 hover:bg-green-100'
+                        : 'border-gray-300 bg-gray-50 cursor-not-allowed'
+                    }`}
+                    onClick={() => handleTimeSlotSelect(slot)}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">
+                        {slot.startTime} - {slot.endTime}
+                      </span>
+                      <Badge variant={slot.isAvailable && !slot.isBooked ? "default" : "secondary"}>
+                        {slot.isBooked ? 'Booked' : slot.isAvailable ? 'Available' : 'Unavailable'}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      ₹{slot.price || artist.basePrice}/hour
+                    </div>
+                    {slot.notes && (
+                      <div className="text-xs text-gray-500 mt-1">{slot.notes}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <div className="text-sm text-gray-800 font-medium">
+                    Pick your preferred time
                   </div>
                   <div className="text-sm text-gray-600">
-                    ₹{slot.price || artist.basePrice}/hour
+                    This artist hasn’t set predefined slots for this date. Select a time range and send a request.
                   </div>
-                  {slot.notes && (
-                    <div className="text-xs text-gray-500 mt-1">{slot.notes}</div>
-                  )}
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="manualStartTime">From</Label>
+                    <Input
+                      id="manualStartTime"
+                      type="time"
+                      value={manualStartTime}
+                      onChange={(e) => setManualStartTime(e.target.value)}
+                    />
+                    <div className="text-xs text-gray-500 mt-1">Example: 18:30</div>
+                  </div>
+                  <div>
+                    <Label htmlFor="manualEndTime">To</Label>
+                    <Input
+                      id="manualEndTime"
+                      type="time"
+                      value={manualEndTime}
+                      onChange={(e) => setManualEndTime(e.target.value)}
+                    />
+                    <div className="text-xs text-gray-500 mt-1">Example: 21:30</div>
+                  </div>
+                </div>
+                {manualStartTime && manualEndTime && !isManualTimeRangeValid && (
+                  <div className="text-sm text-red-600">
+                    End time must be after start time.
+                  </div>
+                )}
+                {isManualTimeRangeValid && (
+                  <div className="text-sm text-gray-700">
+                    Duration: <span className="font-medium">{Math.ceil(manualDurationHours!)} hour(s)</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs text-gray-500">
+                    You can edit this later before sending.
+                  </div>
+                  <Button onClick={handleManualTimeContinue} disabled={!manualStartTime || !manualEndTime || !isManualTimeRangeValid}>
+                    Continue to details
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -386,7 +586,7 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
             <DialogDescription>
               {selectedDate && selectedTimeSlot && (
                 <>
-                  {new Date(selectedDate).toLocaleDateString()} • {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
+                  {formatDateDDMMYY(selectedDate)} • {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
                 </>
               )}
             </DialogDescription>

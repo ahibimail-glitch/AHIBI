@@ -44,6 +44,13 @@ import {
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -183,6 +190,8 @@ interface BookingRequest {
   event: {
     name: string;
     date: string;
+    startTime?: string;
+    endTime?: string;
     venue: {
       name: string;
       address: string;
@@ -191,6 +200,7 @@ interface BookingRequest {
   organizer: {
     name: string;
     email: string;
+    phone?: string;
   };
   booking: {
     requestedAmount: number;
@@ -654,6 +664,45 @@ export default function ArtistDashboard() {
   // State for bookings
   const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRequest | null>(null);
+  const [bookingDetailsOpen, setBookingDetailsOpen] = useState(false);
+  const [loadingBookingDetails, setLoadingBookingDetails] = useState(false);
+
+  const formatDateDDMMYY = (value: string) => {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  };
+
+  const fetchBookingDetails = async (bookingId: string) => {
+    try {
+      setLoadingBookingDetails(true);
+      const token = localStorage.getItem('artist_token');
+      const response = await fetch(`/api/artist/bookings/${bookingId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      const booking = data?.data?.booking;
+      if (booking) {
+        setSelectedBooking(booking);
+        setBookingDetailsOpen(true);
+      }
+    } catch (e) {
+      console.error('Error fetching booking details:', e);
+    } finally {
+      setLoadingBookingDetails(false);
+    }
+  };
 
   // Fetch booking requests
   const fetchBookings = async () => {
@@ -830,16 +879,25 @@ export default function ArtistDashboard() {
                         </p>
                         <p className="text-sm text-muted-foreground mb-1">
                           <Calendar className="h-4 w-4 inline mr-1" />
-                          {new Date(request.event.date).toLocaleDateString()}
+                          {formatDateDDMMYY(request.event.date)}
+                          {request.event.startTime && request.event.endTime ? ` • ${request.event.startTime} - ${request.event.endTime}` : ''}
                         </p>
                         <p className="text-sm text-muted-foreground mb-3">
                           <MapPin className="h-4 w-4 inline mr-1" />
                           {request.event.venue.name}
                         </p>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => fetchBookingDetails(request._id)}
+                            disabled={loadingBookingDetails}
+                          >
+                            View Details
+                          </Button>
                           <Button 
                             size="sm" 
-                            className="flex-1"
+                            className="flex-1 min-w-[120px]"
                             onClick={() => handleBookingAction(request._id, 'accept')}
                           >
                             Accept
@@ -847,7 +905,7 @@ export default function ArtistDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1 bg-transparent"
+                            className="flex-1 min-w-[140px] bg-transparent"
                             onClick={() => {
                               const amount = prompt('Enter counter offer amount:');
                               const message = prompt('Add a message (optional):');
@@ -878,6 +936,52 @@ export default function ArtistDashboard() {
                   )}
                 </CardContent>
               </Card>
+
+              <Dialog open={bookingDetailsOpen} onOpenChange={setBookingDetailsOpen}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Booking Details</DialogTitle>
+                    <DialogDescription>
+                      Organizer and event information
+                    </DialogDescription>
+                  </DialogHeader>
+                  {selectedBooking ? (
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Event</div>
+                        <div className="font-medium">{selectedBooking.event.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatDateDDMMYY(selectedBooking.event.date)}
+                          {selectedBooking.event.startTime && selectedBooking.event.endTime
+                            ? ` • ${selectedBooking.event.startTime} - ${selectedBooking.event.endTime}`
+                            : ''}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {selectedBooking.event.venue?.name}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Organizer</div>
+                        <div className="font-medium">{selectedBooking.organizer?.name}</div>
+                        <div className="text-sm text-muted-foreground">{selectedBooking.organizer?.email}</div>
+                        {selectedBooking.organizer?.phone && (
+                          <div className="text-sm text-muted-foreground">{selectedBooking.organizer.phone}</div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm">
+                          Offered: <span className="font-medium">₹{selectedBooking.booking?.requestedAmount}</span>
+                        </div>
+                        <Badge variant="outline">{selectedBooking.booking?.status}</Badge>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No details available.</div>
+                  )}
+                </DialogContent>
+              </Dialog>
 
               {/* Upcoming Events */}
               {/* <Card>
