@@ -59,7 +59,7 @@ interface AvailabilityCalendarProps {
 export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [availability, setAvailability] = useState<{ [key: string]: AvailabilityData }>({});
+  const [availability, setAvailability] = useState<{ [key: string]: AvailabilityData | undefined }>({});
   const [loading, setLoading] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
@@ -272,9 +272,8 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
       return existing;
     }
     return {
-      ...(existing || {
+      ...(existing ?? {
         date: dateKey,
-        _id: existing?._id,
         specialPricing: { isSpecialDay: false, multiplier: 1 },
         minimumBookingDuration: 2,
         maximumBookingDuration: 8,

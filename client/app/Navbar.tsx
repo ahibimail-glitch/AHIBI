@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Film, Ticket, User } from "lucide-react";
+import { Menu, X, Home, Film, Ticket, User, House, Building } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -122,7 +122,7 @@ export default function Navbar() {
             className={`flex flex-col items-center justify-center gap-1 transition-colors ${isActive("/allVenues") || pathname?.startsWith("/allVenues") ? "text-[#ff0e0e]" : "text-gray-600"
               }`}
           >
-            <Film className="h-6 w-6" />
+            <Building className="h-6 w-6" />
             <span className="text-[10px] font-medium">Venues</span>
           </Link>
 
