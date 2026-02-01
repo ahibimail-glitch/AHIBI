@@ -1,14 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
 import Script from "next/script"
 import "./globals.css"
 import FloatingWhatsapp from "@/components/ui/FloatingWhatsapp"
 import { VenueAuthProvider } from "@/hooks/useVenueAuth"
 import { Toaster } from "@/components/ui/sonner"
 import { Toaster as HotToaster } from "react-hot-toast"
-
-const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Ahibi - Next-Gen Event Management",
@@ -24,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="font-sans">
         <VenueAuthProvider>
           {children}
           <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 50 }}>

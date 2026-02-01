@@ -233,10 +233,6 @@ export default function SportsDiscoveryPage() {
 
       {/* ================= STYLES ================= */}
       <style jsx global>{`
-        body {
-          font-family: Inter, system-ui, sans-serif;
-        }
-
         .filter-pill {
           padding: 0.5rem 1rem;
           border-radius: 9999px;

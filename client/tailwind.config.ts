@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 // all in fixtures is set to tailwind v3 as interims solutions
 
@@ -12,6 +13,10 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+		fontFamily: {
+			sans: ["Inter", ...defaultTheme.fontFamily.sans],
+			serif: ["Merriweather", ...defaultTheme.fontFamily.serif],
+		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
