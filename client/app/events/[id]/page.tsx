@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Timer,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -619,7 +620,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <CalendarIcon className="h-4 w-4" />
                   <span>
-                    {startDateTime.date} | {startDateTime.time} Onwards
+                    {startDateTime.date}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Timer className="h-4 w-4" />
+                  <span>
+                    {startDateTime.time} Onwards
                   </span>
                 </div>
 
@@ -729,9 +736,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         {/* Venue Section with Map */}
         <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h2 className="text-2xl font-bold mb-4">Venue Details</h2>
+            <h2 className="text-2xl font-bold mb-4">VENUE DETAILS</h2>
             <div className="space-y-2 text-sm">
-              
+
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
                 <div>

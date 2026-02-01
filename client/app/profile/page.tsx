@@ -45,6 +45,10 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  User,
+  LogOut,
+  Bell,
+  Lock,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -68,6 +72,9 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = React.useRef<HTMLInputElement | null>(null);
 
   interface Booking {
     _id: string;
@@ -162,10 +169,8 @@ export default function ProfilePage() {
           setError(data.message || "Failed to fetch bookings");
         } else {
           console.log(data.bookings[0]);
-          // Show all bookings, including pending Annie Musical bookings
-          // For regular event bookings, still filter out pending ones
-          const filteredBookings = (data.bookings || []).filter((booking: Booking) => 
-            booking.paymentStatus === 'completed' || 
+          const filteredBookings = (data.bookings || []).filter((booking: Booking) =>
+            booking.paymentStatus === 'completed' ||
             booking.paymentStatus === 'paid' ||
             (booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending')
           );
@@ -202,68 +207,85 @@ export default function ProfilePage() {
     fetchSportsBookings();
   }, []);
 
-  const [preferences, setPreferences] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    eventRecommendations: true,
-    promotionalEmails: false,
-    weeklyDigest: true,
-  });
-
-  const [privacy, setPrivacy] = useState({
-    profileVisibility: "public",
-    showAttendedEvents: true,
-    showInterests: true,
-    allowMessages: true,
-  });
-
-  const savedEvents = [
-    {
-      id: 1,
-      title: "Jazz Night Under Stars",
-      date: "July 22, 2024",
-      price: "₹800",
-      image: "/images/carausel1.jpg?height=100&width=150",
-    },
-    {
-      id: 2,
-      title: "Food & Wine Festival",
-      date: "August 5, 2024",
-      price: "₹1,200",
-      image: "/images/carausel1.jpg?height=100&width=150",
-    },
-    {
-      id: 3,
-      title: "Art Exhibition Opening",
-      date: "August 10, 2024",
-      price: "₹500",
-      image: "/images/carausel1.jpg?height=100&width=150",
-    },
-  ];
-
   const handleSaveProfile = () => {
     setIsEditing(false);
   };
 
-  const handleInterestToggle = (interest: string) => {
-    setProfileData((prevProfile) => {
-      if (!prevProfile) return null;
+  const handleSelectAvatar = () => {
+    if (uploadingAvatar) return;
+    setAvatarError(null);
+    avatarInputRef.current?.click();
+  };
 
-      const newInterests = prevProfile.interests.includes(interest)
-        ? prevProfile.interests.filter((i) => i !== interest)
-        : [...prevProfile.interests, interest];
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      return { ...prevProfile, interests: newInterests };
-    });
+    setAvatarError(null);
+
+    try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please select an image file');
+      }
+
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        throw new Error('Image must be smaller than 5MB');
+      }
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      setUploadingAvatar(true);
+
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      const uploadRes = await fetch(getApiUrl('upload'), {
+        method: 'POST',
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json().catch(() => null);
+
+      const uploadedUrl = uploadData?.data?.photo?.url;
+      if (!uploadRes.ok || uploadData?.status !== 'success' || typeof uploadedUrl !== 'string') {
+        throw new Error(uploadData?.message || 'Failed to upload image');
+      }
+
+      const updateRes = await fetch(getApiUrl('auth/update-profile'), {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profilePic: uploadedUrl }),
+      });
+
+      const updateData = await updateRes.json().catch(() => null);
+      if (!updateRes.ok || !updateData?.success) {
+        throw new Error(updateData?.message || 'Failed to update profile');
+      }
+
+      if (updateData?.data?.user) {
+        setProfileData(updateData.data.user);
+      }
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : 'Failed to upload profile picture');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
   };
 
   const handleViewTicket = (booking: any) => {
     if (booking.bookingType === 'annie-musical') {
-      // For Annie Musical bookings, redirect to booking detail page
       router.push(`/annie-musical/bookings/${booking._id}`);
     } else {
-      // For regular event bookings, use the existing route
       router.push(`/events/${booking._id}/bookings`);
     }
   }
@@ -292,28 +314,12 @@ export default function ProfilePage() {
     }
   };
 
-  const availableInterests = [
-    "Music",
-    "Comedy",
-    "Technology",
-    "Food",
-    "Art",
-    "Dance",
-    "Sports",
-    "Theater",
-    "Literature",
-    "Photography",
-    "Travel",
-    "Fashion",
-    "Gaming",
-  ];
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="flex justify-center items-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
         </div>
       </div>
     );
@@ -321,13 +327,13 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 text-lg">{error}</p>
-            <Button onClick={() => window.location.reload()} className="mt-4">
+            <Button onClick={() => window.location.reload()} className="mt-4 bg-black text-white hover:bg-gray-800">
               Try Again
             </Button>
           </div>
@@ -338,7 +344,7 @@ export default function ProfilePage() {
 
   if (!profileData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
@@ -350,485 +356,478 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
-      <div className="container mx-auto px-4 py-6 max-w-7xl pb-24 md:pb-6">
-        {/* Enhanced Profile Header */}
-        <Card className="mb-8 shadow-lg border-0 bg-gradient-to-r from-white via-white to-blue-50/30">
-          <CardContent className="p-6 md:p-8">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center space-y-6 lg:space-y-0 lg:space-x-8">
-              {/* Avatar Section */}
-              <div className="relative group">
-                <div className="relative">
-                  <Avatar className="w-28 h-28 lg:w-32 lg:h-32 border-4 border-white shadow-xl ring-4 ring-blue-50">
-                    <AvatarImage
-                      src={profileData.avatar || "/images/profile.png"}
-                      className="object-cover"
-                    />
-                    <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                      {profileData.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="absolute -bottom-1 -right-1 h-10 w-10 rounded-full p-0 shadow-lg border-2 border-white hover:scale-105 transition-transform"
-                  >
-                    <Camera className="h-4 w-4" />
-                  </Button>
-                </div>
+      {/* Hero Profile Section - Black Background */}
+      <div className="bg-white text-gray-900">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+
+              {/* Avatar */}
+              <div className="relative group mx-auto md:mx-0">
+
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
+
+                <Avatar className="w-32 h-32 md:w-40 md:h-40 border-4 border-gray-200 shadow-sm">
+                  <AvatarImage
+                    src={profileData.profilePic || profileData.avatar || "/images/profile.png"}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-3xl font-bold bg-gray-100 text-gray-900 ">
+                    {profileData.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+
+                <Button
+                  size="sm"
+                  type="button"
+                  disabled={uploadingAvatar}
+                  onClick={handleSelectAvatar}
+                  className="absolute -bottom-2 -right-2 h-10 w-10 rounded-full p-0 bg-gray-900 text-white hover:bg-gray-800 shadow"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+
+                {avatarError ? (
+                  <div className="mt-3 text-center text-sm text-red-600">{avatarError}</div>
+                ) : null}
               </div>
 
               {/* Profile Info */}
-              <div className="flex-1 w-full lg:w-auto">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-                  <div>
-                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <div className="text-center sm:text-left">
+
+                    <h1 className="text-3xl md:text-4xl font-bold mb-2">
                       {profileData.name}
                     </h1>
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                      Verified Member
+
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Verified</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-4 w-4 text-gray-500" />
+                        <span>{profileData.email}</span>
+                      </div>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
+
+                  {/* <Button
                     onClick={() => setIsEditing(!isEditing)}
-                    className="self-start sm:self-auto bg-white hover:bg-gray-50 border-gray-200"
+                    className="mt-4 sm:mt-0 bg-gray-900 text-white hover:bg-gray-800"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     {isEditing ? "Cancel" : "Edit Profile"}
-                  </Button>
+                  </Button> */}
                 </div>
 
-                {/* Contact Info Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                  <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                    <Mail className="h-4 w-4 mr-2 text-blue-500" />
-                    <span className="truncate">{profileData.email}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                    <MapPin className="h-4 w-4 mr-2 text-red-500" />
-                    <span>{profileData.city || "Location not set"}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-                    <Calendar className="h-4 w-4 mr-2 text-green-500" />
-                    <span>Member since 2025</span>
-                  </div>
-                </div>
-
-                {/* Bio */}
-                {profileData.bio && (
-                  <p className="text-gray-700 leading-relaxed mb-4 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-lg p-4">
-                    {profileData.bio}
-                  </p>
-                )}
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-gray-200">
+                  <div>
+                    <div className="text-3xl font-bold">
                       {userBookings.length + sportsBookings.length}
                     </div>
-                    <div className="text-xs text-gray-500">Total Bookings</div>
+                    <div className="text-sm text-gray-500">Total Bookings</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {userBookings.filter(b => b.paymentStatus === "completed" || b.paymentStatus === "paid").length +
-                       sportsBookings.filter(b => b.status === "completed").length}
+
+                  <div>
+                    <div className="text-3xl font-bold">
+                      {userBookings.filter(
+                        b =>
+                          b.paymentStatus === "completed" ||
+                          b.paymentStatus === "paid"
+                      ).length +
+                        sportsBookings.filter(b => b.status === "completed").length}
                     </div>
-                    <div className="text-xs text-gray-500">Completed</div>
+                    <div className="text-sm text-gray-500">Completed</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
-                      ₹{(userBookings.reduce((sum, booking) => sum + booking.total, 0) +
-                         sportsBookings.reduce((sum, booking) => sum + booking.pricing.totalAmount, 0)).toLocaleString()}
+
+                  <div>
+                    <div className="text-3xl font-bold">
+                      ₹
+                      {(
+                        userBookings.reduce(
+                          (sum, booking) => sum + booking.total,
+                          0
+                        ) +
+                        sportsBookings.reduce(
+                          (sum, booking) => sum + booking.pricing.totalAmount,
+                          0
+                        )
+                      ).toLocaleString()}
                     </div>
-                    <div className="text-xs text-gray-500">Total Spent</div>
+                    <div className="text-sm text-gray-500">Total Spent</div>
                   </div>
                 </div>
               </div>
+
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Enhanced Tabs */}
-        <Tabs defaultValue="bookings" className="space-y-8">
-          <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
-            <TabsList className="grid w-full grid-cols-2 h-14 bg-gray-50/50">
-              <TabsTrigger 
-                value="bookings" 
-                className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-              >
-                <Ticket className="h-4 w-4 mr-2" />
-                My Bookings
-              </TabsTrigger>
-              <TabsTrigger 
-                value="personal" 
-                className="text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Personal Info
-              </TabsTrigger>
-            </TabsList>
           </div>
+        </div>
+      </div>
 
-          <TabsContent value="bookings" className="space-y-6">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-bold text-gray-900">My Bookings</CardTitle>
-                    <CardDescription className="text-gray-600">
-                      All your event bookings and sports court reservations
-                    </CardDescription>
-                  </div>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {userBookings.length + sportsBookings.length} bookings
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                {/* Toggle Buttons */}
-                <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-lg">
-                  <button
-                    onClick={() => setBookingType('events')}
-                    className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                      bookingType === 'events'
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Tabs */}
+        <div className="mb-8">
+          <Tabs defaultValue="bookings" className="space-y-8">
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-200">
+              <TabsList className="h-auto p-0 bg-transparent grid w-full grid-cols-2 gap-4">
+                <TabsTrigger
+                  value="bookings"
+                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none pb-4 font-semibold"
+                >
+                  <Ticket className="h-5 w-5 mr-2" />
+                  My Bookings
+                </TabsTrigger>
+                <TabsTrigger
+                  value="personal"
+                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none pb-4 font-semibold"
+                >
+                  <User className="h-5 w-5 mr-2" />
+                  Personal Info
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            {/* Bookings Tab */}
+            <TabsContent value="bookings" className="space-y-6">
+              {/* Booking Type Toggle */}
+              <div className="flex gap-3 border-b border-gray-200 pb-4">
+                <button
+                  onClick={() => setBookingType('events')}
+                  className={`px-6 py-3 font-semibold transition-all rounded-lg ${bookingType === 'events'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
-                  >
-                    <Ticket className="h-4 w-4 inline mr-2" />
-                    Event Bookings ({userBookings.length})
-                  </button>
-                  <button
-                    onClick={() => setBookingType('sports')}
-                    className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                      bookingType === 'sports'
-                        ? 'bg-white text-orange-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                >
+                  Event Bookings ({userBookings.length})
+                </button>
+                <button
+                  onClick={() => setBookingType('sports')}
+                  className={`px-6 py-3 font-semibold transition-all rounded-lg ${bookingType === 'sports'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
-                  >
-                    <Calendar className="h-4 w-4 inline mr-2" />
-                    Sports Bookings ({sportsBookings.length})
-                  </button>
-                </div>
+                >
+                  Sports Bookings ({sportsBookings.length})
+                </button>
+              </div>
+
+              {/* Event Bookings */}
+              {bookingType === 'events' && (
                 <div className="space-y-4">
-                  {bookingType === 'events' ? (
-                    <>
-                      {userBookings && userBookings.length > 0 ? (
-                        userBookings.map((booking, index) => (
-                          <div
-                            key={booking._id}
-                            className="group relative bg-gradient-to-r from-white to-gray-50/50 border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-blue-200"
-                          >
-                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                              <div className="flex items-start space-x-4">
-                                <div className="relative">
-                                  <Image
-                                    src={booking.event?.banner || "/placeholder.jpg"}
-                                    alt={booking.event?.title || "Event"}
-                                    width={120}
-                                    height={80}
-                                    className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg object-cover shadow-sm ring-2 ring-white"
-                                  />
+                  {userBookings && userBookings.length > 0 ? (
+                    userBookings.map((booking) => (
+                      <div
+                        key={booking._id}
+                        className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                              <Image
+                                src={booking.event?.banner || "/placeholder.jpg"}
+                                alt={booking.event?.title || "Event"}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                                {booking.event?.title || "Event"}
+                              </h3>
+
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {new Date(booking.bookedAt).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
-                                    {booking.event?.title || "Event"}
-                                  </h3>
-                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
-                                    <div className="flex items-center">
-                                      <Calendar className="h-4 w-4 mr-1" />
-                                      {new Date(booking.bookedAt).toLocaleDateString('en-IN', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric'
-                                      })}
-                                    </div>
-                                    <div className="flex items-center">
-                                      <Ticket className="h-4 w-4 mr-1" />
-                                      {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    {getStatusIcon(booking.paymentStatus)}
-                                    <Badge
-                                      className={`${getStatusColor(booking.paymentStatus)} border font-medium px-3 py-1`}
-                                    >
-                                      {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
-                                    </Badge>
-                                    {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' && (
-                                      <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium px-3 py-1">
-                                        <Clock className="h-3 w-3 mr-1 inline animate-pulse" />
-                                        Payment Processing
-                                      </Badge>
-                                    )}
-                                  </div>
+                                <div className="flex items-center gap-1">
+                                  <Ticket className="h-4 w-4" />
+                                  {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
                                 </div>
                               </div>
-                              
-                              <div className="text-right lg:ml-6">
-                                <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.total.toLocaleString()}</p>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                  {(booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed')||(booking.bookingType !== 'ahibi-fest' && booking.paymentStatus === 'completed') ? (      
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline" 
-                                      onClick={() => handleViewTicket(booking)}
-                                      className="hover:bg-blue-50 hover:border-blue-300"
-                                    >
-                                      View Ticket
-                                    </Button>
-                                  ):null}
-                                </div>
+
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={`${getStatusColor(booking.paymentStatus)} border font-medium`}
+                                >
+                                  {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                                </Badge>
+                                {booking.bookingType === 'annie-musical' && booking.paymentStatus === 'pending' && (
+                                  <Badge className="bg-blue-50 text-blue-700 border border-blue-200">
+                                    Payment Processing
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-12">
-                          <Ticket className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No event bookings found</h3>
-                          <p className="text-gray-500 mb-6">You haven't booked any events yet</p>
-                          <Button asChild>
-                            <Link href="/events">Explore Events</Link>
-                          </Button>
+
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:text-right">
+                            <div className="text-2xl font-bold">₹{booking.total.toLocaleString()}</div>
+                            {(booking.bookingType === 'annie-musical' && booking.paymentStatus === 'completed') ||
+                              (booking.bookingType !== 'ahibi-fest' && booking.paymentStatus === 'completed') ? (
+                              <Button
+                                onClick={() => handleViewTicket(booking)}
+                                className="bg-black text-white hover:bg-gray-800"
+                              >
+                                View Ticket
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
-                      )}
-                    </>
+                      </div>
+                    ))
                   ) : (
-                    <>
-                      {sportsBookings && sportsBookings.length > 0 ? (
-                        sportsBookings.map((booking) => (
-                          <div
-                            key={booking._id}
-                            className="group relative bg-gradient-to-r from-orange-50 to-white border border-orange-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-orange-300"
-                          >
-                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                              <div className="flex items-start space-x-4">
-                                <div className="relative">
-                                  <div className="w-20 h-16 lg:w-24 lg:h-18 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-2xl font-bold shadow-sm ring-2 ring-white">
-                                    {booking.court.sportType === 'cricket' ? '🏏' :
-                                     booking.court.sportType === 'football' ? '⚽' :
-                                     booking.court.sportType === 'basketball' ? '🏀' :
-                                     booking.court.sportType === 'badminton' ? '🏸' :
-                                     booking.court.sportType === 'tennis' ? '🎾' :
-                                     booking.court.sportType === 'volleyball' ? '🏐' :
-                                     booking.court.sportType === 'table_tennis' ? '🏓' :
-                                     booking.court.sportType === 'swimming' ? '🏊' :
-                                     booking.court.sportType === 'gym' ? '💪' :
-                                     booking.court.sportType === 'yoga' ? '🧘' :
-                                     '🏟️'}
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
-                                    {booking.venue.venueName}
-                                  </h3>
-                                  <p className="text-sm text-gray-600 mb-2">
-                                    {booking.court.courtName} • {booking.court.sportType.toUpperCase()}
-                                  </p>
-                                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-3">
-                                    <div className="flex items-center">
-                                      <Calendar className="h-4 w-4 mr-1" />
-                                      {new Date(booking.bookingDate).toLocaleDateString('en-IN', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric'
-                                      })}
-                                    </div>
-                                    <div className="flex items-center">
-                                      <Clock className="h-4 w-4 mr-1" />
-                                      {booking.startTime} - {booking.endTime}
-                                    </div>
-                                    <div className="flex items-center">
-                                      <MapPin className="h-4 w-4 mr-1" />
-                                      {booking.venue.address.city}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    {getStatusIcon(booking.status)}
-                                    <Badge
-                                      className={`${getStatusColor(booking.status)} border font-medium px-3 py-1`}
-                                    >
-                                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="text-right lg:ml-6">
-                                <p className="text-2xl font-bold text-gray-900 mb-3">₹{booking.pricing.totalAmount.toLocaleString()}</p>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    onClick={() => router.push(`/sports/bookings/${booking._id}`)}
-                                    className="hover:bg-orange-50 hover:border-orange-300"
-                                  >
-                                    View Details
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-12">
-                          <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No sports bookings found</h3>
-                          <p className="text-gray-500 mb-6">You haven't booked any sports courts yet</p>
-                          <Button asChild>
-                            <Link href="/sports">Browse Venues</Link>
-                          </Button>
-                        </div>
-                      )}
-                    </>
+                    <div className="text-center py-16 border border-gray-200 rounded-lg">
+                      <Ticket className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No event bookings found</h3>
+                      <p className="text-gray-500 mb-6">Start exploring amazing events</p>
+                      <Button asChild className="bg-black text-white hover:bg-gray-800">
+                        <Link href="/events">Explore Events</Link>
+                      </Button>
+                    </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="personal" className="space-y-6">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-                <CardTitle className="text-xl font-bold text-gray-900">Personal Information</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Manage your personal details and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-8">
-                {/* Contact Information */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Contact Information</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-medium text-gray-700">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={profileData.name}
-                        onChange={(e) =>
-                          setProfileData({ ...profileData, name: e.target.value })
-                        }
-                        disabled={!isEditing}
-                        className="bg-gray-50 border-gray-200 focus:bg-white transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={profileData.email}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            email: e.target.value,
-                          })
-                        }
-                        disabled={!isEditing}
-                        className="bg-gray-50 border-gray-200 focus:bg-white transition-colors"
-                      />
-                    </div>
-                  </div>
+              {/* Sports Bookings */}
+              {bookingType === 'sports' && (
+                <div className="space-y-4">
+                  {sportsBookings && sportsBookings.length > 0 ? (
+                    sportsBookings.map((booking) => (
+                      <div
+                        key={booking._id}
+                        className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="w-20 h-20 flex-shrink-0 rounded-lg bg-black flex items-center justify-center text-white text-3xl">
+                              {booking.court.sportType === 'cricket' ? '🏏' :
+                                booking.court.sportType === 'football' ? '⚽' :
+                                  booking.court.sportType === 'basketball' ? '🏀' :
+                                    booking.court.sportType === 'badminton' ? '🏸' :
+                                      booking.court.sportType === 'tennis' ? '🎾' :
+                                        booking.court.sportType === 'volleyball' ? '🏐' :
+                                          booking.court.sportType === 'table_tennis' ? '🏓' :
+                                            booking.court.sportType === 'swimming' ? '🏊' :
+                                              booking.court.sportType === 'gym' ? '💪' :
+                                                booking.court.sportType === 'yoga' ? '🧘' : '🏟️'}
+                            </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number</Label>
-                      <div className="relative">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-lg mb-1">
+                                {booking.venue.venueName}
+                              </h3>
+                              <p className="text-sm text-gray-600 mb-3">
+                                {booking.court.courtName} • {booking.court.sportType.toUpperCase()}
+                              </p>
+
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {new Date(booking.bookingDate).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  {booking.startTime} - {booking.endTime}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-4 w-4" />
+                                  {booking.venue.address.city}
+                                </div>
+                              </div>
+
+                              <Badge className={`${getStatusColor(booking.status)} border font-medium`}>
+                                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:text-right">
+                            <div className="text-2xl font-bold">₹{booking.pricing.totalAmount.toLocaleString()}</div>
+                            <Button
+                              onClick={() => router.push(`/sports/bookings/${booking._id}`)}
+                              className="bg-black text-white hover:bg-gray-800"
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-16 border border-gray-200 rounded-lg">
+                      <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No sports bookings found</h3>
+                      <p className="text-gray-500 mb-6">Book your favorite sports venue</p>
+                      <Button asChild className="bg-black text-white hover:bg-gray-800">
+                        <Link href="/sports">Browse Venues</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Personal Info Tab */}
+            <TabsContent value="personal" className="space-y-6">
+              <div className="border border-gray-200 rounded-lg">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-2xl font-bold">Personal Information</h2>
+                  <p className="text-gray-600 mt-1">Manage your account details</p>
+                </div>
+
+                <div className="p-6 space-y-8">
+                  {/* Contact Information */}
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold border-b border-gray-200 pb-2">Contact Details</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="font-medium">Full Name</Label>
                         <Input
-                          id="phone"
-                          type={showPhone ? "text" : "password"}
-                          value={profileData.phone}
+                          id="name"
+                          value={profileData.name}
                           onChange={(e) =>
-                            setProfileData({
-                              ...profileData,
-                              phone: e.target.value,
-                            })
+                            setProfileData({ ...profileData, name: e.target.value })
                           }
                           disabled={!isEditing}
-                          className="bg-gray-50 border-gray-200 focus:bg-white transition-colors pr-12"
+                          className="border-gray-300 focus:border-black focus:ring-black"
                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                          onClick={() => setShowPhone(!showPhone)}
-                        >
-                          {showPhone ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
-                          )}
-                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="font-medium">Email Address</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={profileData.email}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, email: e.target.value })
+                          }
+                          disabled={!isEditing}
+                          className="border-gray-300 focus:border-black focus:ring-black"
+                        />
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="font-medium">Phone Number</Label>
+                        <div className="relative">
+                          <Input
+                            id="phone"
+                            type={showPhone ? "text" : "password"}
+                            value={profileData.phone}
+                            onChange={(e) =>
+                              setProfileData({ ...profileData, phone: e.target.value })
+                            }
+                            disabled={!isEditing}
+                            className="border-gray-300 focus:border-black focus:ring-black pr-12"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3"
+                            onClick={() => setShowPhone(!showPhone)}
+                          >
+                            {showPhone ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="city" className="font-medium">City</Label>
+                        <Input
+                          id="city"
+                          value={profileData.city || ""}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, city: e.target.value })
+                          }
+                          disabled={!isEditing}
+                          placeholder="Enter your city"
+                          className="border-gray-300 focus:border-black focus:ring-black"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bio Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold border-b border-gray-200 pb-2">About</h3>
                     <div className="space-y-2">
-                      <Label htmlFor="city" className="text-sm font-medium text-gray-700">City</Label>
-                      <Input
-                        id="city"
-                        value={profileData.city || ""}
+                      <Label htmlFor="bio" className="font-medium">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        value={profileData.bio || ""}
                         onChange={(e) =>
-                          setProfileData({ ...profileData, city: e.target.value })
+                          setProfileData({ ...profileData, bio: e.target.value })
                         }
                         disabled={!isEditing}
-                        placeholder="Enter your city"
-                        className="bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                        rows={4}
+                        placeholder="Tell us about yourself..."
+                        className="border-gray-300 focus:border-black focus:ring-black resize-none"
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Bio Section */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">About You</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="bio" className="text-sm font-medium text-gray-700">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={profileData.bio || ""}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, bio: e.target.value })
-                      }
-                      disabled={!isEditing}
-                      rows={4}
-                      placeholder="Tell us about yourself..."
-                      className="bg-gray-50 border-gray-200 focus:bg-white transition-colors resize-none"
-                    />
-                  </div>
+                  {/* Action Buttons */}
+                  {isEditing && (
+                    <div className="flex gap-3 pt-6 border-t border-gray-200">
+                      <Button
+                        onClick={handleSaveProfile}
+                        className="bg-black text-white hover:bg-gray-800"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditing(false)}
+                        className="border-gray-300"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                 </div>
-
-                {/* Action Buttons */}
-                {isEditing && (
-                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
-                    <Button onClick={handleSaveProfile} className="flex-1 sm:flex-none">
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsEditing(false)}
-                      className="flex-1 sm:flex-none"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-      
+
       <Footer />
     </div>
   );

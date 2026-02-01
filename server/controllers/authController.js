@@ -329,7 +329,7 @@ exports.updateProfile = async (req, res) => {
   }
 
   try {
-    const { name, email } = req.body;
+    const { name, email, profilePic } = req.body;
     const userId = req.user.id;
 
     // Find user by ID
@@ -345,6 +345,7 @@ exports.updateProfile = async (req, res) => {
     // Update user profile
     if (name) user.name = name;
     if (email) user.email = email;
+    if (typeof profilePic === 'string') user.profilePic = profilePic;
 
     await user.save();
 

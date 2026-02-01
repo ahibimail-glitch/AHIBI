@@ -42,7 +42,8 @@ const passwordSetupValidation = [
 
 const profileValidation = [
   check('name', 'Name is required').optional(),
-  check('email', 'Please include a valid email').optional().isEmail()
+  check('email', 'Please include a valid email').optional().isEmail(),
+  check('profilePic', 'Profile picture must be a string').optional().isString()
 ];
 
 // Public routes
