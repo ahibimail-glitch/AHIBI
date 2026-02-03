@@ -12,7 +12,7 @@ import { FileUploadArea } from '@/components/ui/file-upload-area';
 export const dynamic = 'force-dynamic';
 
 const SPORTS = [
-  'cricket', 'football', 'basketball', 'badminton', 'tennis',
+  'cricket', 'football','pickleball', 'basketball', 'badminton', 'tennis',
   'volleyball', 'table_tennis', 'squash', 'swimming', 'gym',
   'yoga', 'boxing', 'martial_arts', 'athletics', 'hockey',
   'kabaddi', 'archery', 'shooting', 'golf', 'other'

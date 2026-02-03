@@ -30,7 +30,7 @@ const CourtSchema = new mongoose.Schema({
   sportType: {
     type: String,
     enum: [
-      'cricket', 'football', 'basketball', 'badminton', 'tennis',
+      'cricket', 'football', 'pickleball', 'basketball', 'badminton', 'tennis',
       'volleyball', 'table_tennis', 'squash', 'swimming', 'gym',
       'yoga', 'boxing', 'martial_arts', 'athletics', 'hockey',
       'kabaddi', 'archery', 'shooting', 'golf', 'other'
