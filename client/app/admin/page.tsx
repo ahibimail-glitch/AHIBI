@@ -280,7 +280,6 @@ export default function AdminDashboard() {
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
-          <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => { setActiveView("schedule-event"); setSidebarOpen(false); }} />
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
@@ -289,6 +288,9 @@ export default function AdminDashboard() {
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
           </div>
+           <SidebarButton icon={Music} label="Artist Approvals" active={activeView === "artist-approvals"} onClick={() => { setActiveView("artist-approvals"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Music} label="Artist Management" active={activeView === "artist-management"} onClick={() => { setActiveView("artist-management"); setSidebarOpen(false); }} />
+
           <SidebarButton icon={UserCheck} label="Organizers" active={activeView === "organizer-approvals"} onClick={() => { setActiveView("organizer-approvals"); setSidebarOpen(false); }} />
           <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => { setActiveView("venue-approvals"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => { setActiveView("event-approvals"); setSidebarOpen(false); }} />
@@ -301,10 +303,10 @@ export default function AdminDashboard() {
           />
 
           <div className="pt-4 pb-2 px-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase">Artists</h3>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Events</h3>
           </div>
-          <SidebarButton icon={Music} label="Artist Approvals" active={activeView === "artist-approvals"} onClick={() => { setActiveView("artist-approvals"); setSidebarOpen(false); }} />
-          <SidebarButton icon={Music} label="Artist Management" active={activeView === "artist-management"} onClick={() => { setActiveView("artist-management"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => { setActiveView("schedule-event"); setSidebarOpen(false); }} />
+          <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => { setActiveView("create-event"); setSidebarOpen(false); }} />
           <SidebarButton
             icon={CalendarCheck2}
             label="Approved Events"
@@ -319,12 +321,12 @@ export default function AdminDashboard() {
           />
 
        
+       
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
           <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => { setActiveView("coupons"); setSidebarOpen(false); }} />
           {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => { setActiveView("aiko-hall"); setSidebarOpen(false); }} /> */}
-          <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => { setActiveView("create-event"); setSidebarOpen(false); }} />
           <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => { setActiveView("hero-images"); setSidebarOpen(false); }} />
           <SidebarButton icon={ImageIcon} label="Events Hero Images" active={activeView === "events-hero-images"} onClick={() => { setActiveView("events-hero-images"); setSidebarOpen(false); }} />
           <SidebarButton icon={BarChart3} label="Analytics" active={activeView === "analytics"} onClick={() => { setActiveView("analytics"); setSidebarOpen(false); }} />
