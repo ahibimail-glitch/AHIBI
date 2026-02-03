@@ -149,6 +149,48 @@ const Hero = () => (
 /* ----------------------------- */
 /* Facilities */
 /* ----------------------------- */
+const SportsCardSection = () => (
+  <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+    {/* dotted background */}
+    <div
+      className="absolute inset-0 opacity-60"
+      style={{
+        backgroundImage: "radial-gradient(#e6cfc7 1px, transparent 1px)",
+        backgroundSize: "18px 18px",
+      }}
+    />
+
+    <div className="relative z-10 container mx-auto px-4">
+      <div className="mx-auto max-w-2xl text-center">
+        {/* badge */}
+        <div className="inline-block rounded bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+          SPORT
+        </div>
+
+        {/* heading */}
+        <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+          Post your{" "}
+          <span className="text-red-600">sports events </span>
+        </h1>
+
+        {/* subtext */}
+        <p className="mt-4 text-sm sm:text-base text-gray-600">
+          Fill the stands. Live in under{" "}
+          <span className="font-semibold text-gray-900">5 minutes.</span>
+        </p>
+
+        {/* CTA */}
+        <div className="mt-8">
+          <Link href="/allOrganizers">
+            <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+              GET STARTED
+            </button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  </section>
+);
 const Facilities = () => (
     <Section id="facilities" muted>
         <div className="text-center mb-14">
@@ -340,6 +382,7 @@ export default function SportsPage() {
         <div className="min-h-screen bg-white text-slate-900">
             <Navbar />
             <Hero />
+            <SportsCardSection />
             <Facilities />
             <HowItWorks />
             <ForPlayers />

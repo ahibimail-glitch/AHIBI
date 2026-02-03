@@ -61,31 +61,31 @@ const popularVenues = [
 ];
 
 const eventCategories = [
-  { 
-    title: "Corporate Events", 
-    count: "2000+ venues", 
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop", 
+  {
+    title: "Corporate Events",
+    count: "2000+ venues",
+    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop",
     color: "bg-blue-50",
     description: "Conferences, seminars, team building"
   },
-  { 
-    title: "Social Gatherings", 
-    count: "1500+ venues", 
-    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop", 
+  {
+    title: "Social Gatherings",
+    count: "1500+ venues",
+    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop",
     color: "bg-purple-50",
     description: "Parties, celebrations, receptions"
   },
-  { 
-    title: "Workshops & Training", 
-    count: "800+ venues", 
-    image: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=300&h=200&fit=crop", 
+  {
+    title: "Workshops & Training",
+    count: "800+ venues",
+    image: "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=300&h=200&fit=crop",
     color: "bg-green-50",
     description: "Classes, seminars, skill development"
   },
-  { 
-    title: "Entertainment Events", 
-    count: "1200+ venues", 
-    image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300&h=200&fit=crop", 
+  {
+    title: "Entertainment Events",
+    count: "1200+ venues",
+    image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300&h=200&fit=crop",
     color: "bg-orange-50",
     description: "Concerts, shows, performances"
   },
@@ -246,18 +246,18 @@ const Hero = () => (
   <div className="relative h-[450px] md:h-[550px] lg:h-[650px] overflow-hidden">
     {/* Background Image */}
     <div className="absolute inset-0">
-      <img 
-        src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=1600&h=900&fit=crop" 
+      <img
+        src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=1600&h=900&fit=crop"
         alt="Event venue"
         className="w-full h-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70"></div>
     </div>
-    
+
     {/* Content */}
     <div className="relative h-full flex items-center justify-center">
       <div className="text-center px-4 max-w-5xl mx-auto">
-        
+
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 drop-shadow-2xl leading-tight">
           Turn Your Venue Into a<br className="hidden sm:block" />
           <span className="text-pink-400">Profitable Business</span>
@@ -266,7 +266,7 @@ const Hero = () => (
           List your space. Get discovered. Accept bookings online. <br className="hidden md:block" />
           Start earning more from your venue today.
         </p>
-        
+
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
           <Link href="/venue/auth/signup" className="w-full sm:w-auto">
@@ -309,18 +309,18 @@ const PopularVenuesList = () => (
         <p className="text-gray-600 text-sm md:text-base">Successful venues already earning on AHiBi</p>
       </div>
       <Link href="/allVenues/list">
-      <Button variant="link" className="text-pink-600 hover:text-pink-700 hidden md:flex">
-        View all <ChevronRight className="h-4 w-4 ml-1" />
-      </Button>
+        <Button variant="link" className="text-pink-600 hover:text-pink-700 hidden md:flex">
+          View all <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
       </Link>
     </div>
-    
+
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
       {popularVenues.map((venue, index) => (
         <Card key={index} className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group">
           <div className="aspect-[4/3] overflow-hidden relative">
-            <img 
-              src={venue.image} 
+            <img
+              src={venue.image}
               alt={venue.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             />
@@ -352,6 +352,50 @@ const PopularVenuesList = () => (
     </div>
   </Section>
 );
+const VenueCardSection = () => (
+  <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+    {/* dotted background */}
+    <div
+      className="absolute inset-0 opacity-60"
+      style={{
+        backgroundImage: "radial-gradient(#e6cfc7 1px, transparent 1px)",
+        backgroundSize: "18px 18px",
+      }}
+    />
+
+    <div className="relative z-10 container mx-auto px-4">
+      <div className="mx-auto max-w-2xl text-center">
+        {/* badge */}
+        <div className="inline-block rounded bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+          VENUE
+        </div>
+
+        {/* heading */}
+        <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+          List your{" "}
+          <span className="text-red-600">Venue Space</span>
+        </h1>
+
+        {/* subtext */}
+        <p className="mt-4 text-sm sm:text-base text-gray-600">
+          The right audience. Live in under{" "}
+          <span className="font-semibold text-gray-900">5 minutes.</span>
+        </p>
+
+        {/* CTA */}
+        <div className="mt-8">
+          <Link href="/allOrganizers">
+            <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+              GET STARTED
+            </button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
+
 
 const WhyJoinSection = () => (
   <Section id="why-join">
@@ -408,7 +452,7 @@ const HowToJoinSection = () => (
           {index < howToJoin.length - 1 && (
             <div className="absolute left-6 md:left-8 top-20 md:top-24 w-0.5 h-full bg-gradient-to-b from-pink-300 to-purple-300 -z-10"></div>
           )}
-          
+
           <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
             <CardContent className="p-6 md:p-8">
               <div className="flex flex-col md:flex-row items-start gap-6">
@@ -474,14 +518,14 @@ const EventCategories = () => (
         Whatever type of venue you have, there's demand for it on AHiBi
       </p>
     </div>
-    
+
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
       {eventCategories.map((category, index) => (
         <Card key={index} className={`overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group ${category.color}`}>
           <CardContent className="p-0">
             <div className="aspect-[4/3] overflow-hidden">
-              <img 
-                src={category.image} 
+              <img
+                src={category.image}
                 alt={category.title}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
@@ -532,7 +576,7 @@ const Plans = () => (
         Start free, upgrade anytime. All plans include our core features.
       </p>
     </div>
-    
+
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
       {tiers.map((t, index) => (
         <Card key={t.name} className={`border-0 shadow-lg hover:shadow-2xl transition-all duration-300 relative overflow-hidden ${t.popular ? 'ring-2 ring-pink-600 scale-105 md:scale-110' : ''}`}>
@@ -582,7 +626,7 @@ const FAQ = () => (
         Everything you need to know about joining AHiBi
       </p>
     </div>
-    
+
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
       {faqs.map((f, index) => (
         <Card key={index} className="border-0 shadow-md hover:shadow-xl transition-all duration-300">
@@ -606,7 +650,7 @@ const CTA = () => (
         <p className="text-pink-50 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto">
           Join 5,000+ venue owners already earning more with AHiBi. List your venue today and start accepting bookings within 24 hours.
         </p>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 md:mb-10">
           <Link href="/venue/auth/signup">
             <Button size="lg" className="w-full sm:w-auto bg-white text-pink-600 hover:bg-gray-100 font-semibold px-10 md:px-12 py-6 text-base md:text-lg shadow-xl">
@@ -648,10 +692,11 @@ export default function AhibiVenuePage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      
+
       <main>
         <Hero />
         <PopularVenuesList />
+        <VenueCardSection />
         <WhyJoinSection />
         <HowToJoinSection />
         <EventCategories />
