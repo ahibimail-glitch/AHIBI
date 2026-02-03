@@ -190,10 +190,11 @@ export default function HomePage() {
     const fetchHomeData = async () => {
       setLoading(true)
       try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const [eventsRes, venuesRes, artistsRes] = await Promise.all([
-          fetch(`/api/events?limit=30`),
-          fetch(`/api/venue`),
-          fetch(`/api/artist/public?limit=12`),
+          fetch(`${apiUrl}/api/events?limit=30`),
+          fetch(`${apiUrl}/api/venue`),
+          fetch(`${apiUrl}/api/artist/public?limit=12`),
         ])
 
         if (eventsRes.ok) {
@@ -240,7 +241,8 @@ export default function HomePage() {
     const fetchHeroImages = async () => {
       setLoadingHeroImages(true)
       try {
-        const response = await fetch(`/api/hero-images?active=true`)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        const response = await fetch(`${apiUrl}/api/hero-images?active=true`)
         if (!response.ok) throw new Error("Failed to fetch hero images")
         const data = await response.json()
 
@@ -276,7 +278,8 @@ export default function HomePage() {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch(`/api/events?isFeatured=true&limit=10`)
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=10`)
         if (!response.ok) {
           setFeaturedEvents([])
           setError("Failed to fetch featured events")
