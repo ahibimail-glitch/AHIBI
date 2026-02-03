@@ -142,38 +142,39 @@ export default function ArenaPartnerAuth() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-                <div className="text-center mb-8">
-                    <div className="flex justify-center mb-4">
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-50 flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8">
+                <div className="text-center mb-6 sm:mb-8">
+                    <div className="flex justify-center mb-3 sm:mb-4">
                         <Image
                             src="/images/LogoB.png"
                             alt="Ahibi"
-                            width={160}
-                            height={160}
+                            width={140}
+                            height={140}
                             priority
-                            className=" object-contain"
+                            className="object-contain w-32 h-32 sm:w-40 sm:h-40"
                         />
                     </div>
 
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                         Arena Partner Portal
                     </h1>
-                    <p className="text-gray-600">
+                    <p className="text-sm sm:text-base text-gray-600">
                         {mode === 'login' ? 'Welcome back!' : 'Join Ahibi Sports'}
                     </p>
                 </div>
 
                 {/* Mode Toggle */}
-                <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+                <div className="flex gap-2 mb-5 sm:mb-6 bg-gray-100 p-1 rounded-lg">
                     <button
                         onClick={() => {
                             setMode('login');
                             setStep('phone');
                         }}
-                        className={`flex-1 py-2 rounded-md font-medium transition-all ${mode === 'login'
-                                ? 'bg-white text-orange-600 shadow-sm'
-                                : 'text-gray-600'
+                        className={`flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${
+                                mode === 'login'
+                                    ? 'bg-white text-orange-600 shadow-sm'
+                                    : 'text-gray-600'
                             }`}
                     >
                         Login
@@ -183,9 +184,10 @@ export default function ArenaPartnerAuth() {
                             setMode('signup');
                             setStep('phone');
                         }}
-                        className={`flex-1 py-2 rounded-md font-medium transition-all ${mode === 'signup'
-                                ? 'bg-white text-orange-600 shadow-sm'
-                                : 'text-gray-600'
+                        className={`flex-1 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${
+                                mode === 'signup'
+                                    ? 'bg-white text-orange-600 shadow-sm'
+                                    : 'text-gray-600'
                             }`}
                     >
                         Sign Up
@@ -209,14 +211,14 @@ export default function ArenaPartnerAuth() {
                                 maxLength={10}
                                 pattern="[0-9]{10}"
                                 required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading || formData.phone.length !== 10}
-                            className="w-full bg-orange-600 text-white py-3 rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            className="w-full bg-orange-600 text-white py-3 rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl active:scale-95"
                         >
                             {loading ? 'Sending...' : 'Send OTP'}
                         </button>
@@ -240,9 +242,9 @@ export default function ArenaPartnerAuth() {
                                 maxLength={6}
                                 pattern="[0-9]{6}"
                                 required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-center text-2xl tracking-widest"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-center text-xl sm:text-2xl tracking-widest"
                             />
-                            <p className="text-sm text-gray-500 mt-2">
+                            <p className="text-xs sm:text-sm text-gray-500 mt-2">
                                 OTP sent to {formData.phone}
                             </p>
                         </div>
@@ -250,7 +252,7 @@ export default function ArenaPartnerAuth() {
                         <button
                             type="submit"
                             disabled={loading || formData.otp.length !== 6}
-                            className="w-full bg-orange-600 text-white py-3 rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            className="w-full bg-orange-600 text-white py-3 rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl active:scale-95"
                         >
                             {loading ? 'Verifying...' : mode === 'signup' ? 'Continue' : 'Login'}
                         </button>
@@ -258,7 +260,7 @@ export default function ArenaPartnerAuth() {
                         <button
                             type="button"
                             onClick={() => setStep('phone')}
-                            className="w-full text-orange-600 py-2 text-sm hover:underline"
+                            className="w-full text-orange-600 py-2 text-sm hover:underline font-medium"
                         >
                             Change Phone Number
                         </button>
@@ -267,7 +269,7 @@ export default function ArenaPartnerAuth() {
 
                 {/* Details Step (Signup Only) */}
                 {step === 'details' && mode === 'signup' && (
-                    <form onSubmit={handleSignup} className="space-y-4">
+                    <form onSubmit={handleSignup} className="space-y-3 sm:space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Your Name
@@ -319,7 +321,7 @@ export default function ArenaPartnerAuth() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-orange-600 text-white py-3 rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                            className="w-full bg-orange-600 text-white py-3 rounded-lg font-medium hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl active:scale-95"
                         >
                             {loading ? 'Creating Account...' : 'Complete Registration'}
                         </button>
@@ -327,7 +329,7 @@ export default function ArenaPartnerAuth() {
                         <button
                             type="button"
                             onClick={() => setStep('otp')}
-                            className="w-full text-orange-600 py-2 text-sm hover:underline"
+                            className="w-full text-orange-600 py-2 text-sm hover:underline font-medium"
                         >
                             Back
                         </button>
@@ -335,7 +337,7 @@ export default function ArenaPartnerAuth() {
                 )}
 
                 {/* Footer */}
-                <div className="mt-8 text-center text-sm text-gray-500">
+                <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-gray-500">
                     <p>
                         By continuing, you agree to our{' '}
                         <a href="/terms" className="text-orange-600 hover:underline">

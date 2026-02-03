@@ -337,16 +337,16 @@ export default function ArenaPartnerBookings() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 gap-3">
             <div className="flex items-center">
-              <Link href="/arena-partner/dashboard" className="text-orange-600 hover:text-orange-700">
+              <Link href="/arena-partner/dashboard" className="text-white hover:text-orange-100 text-sm sm:text-base font-medium">
                 ← Back to Dashboard
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Bookings Management</h1>
+            <div className="flex items-center">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Bookings Management</h1>
             </div>
           </div>
         </div>
@@ -354,16 +354,16 @@ export default function ArenaPartnerBookings() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
           <Card className="bg-white border-0 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Calendar className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <div className="ml-3 sm:ml-4 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Bookings</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
               </div>
             </CardContent>
@@ -427,22 +427,23 @@ export default function ArenaPartnerBookings() {
         </div>
 
         {/* Filters */}
-        <Card className="bg-white border-0 shadow-sm mb-6 sticky top-[60px] z-30">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
+        <Card className="bg-white border-0 shadow-sm mb-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="w-full">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Search by customer name, phone, venue, or court..."
+                    placeholder="Search by customer name, phone, venue..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm"
                   />
                 </div>
               </div>
 
-              <div className="w-full lg:w-48">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="w-full">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by status" />
@@ -474,7 +475,7 @@ export default function ArenaPartnerBookings() {
                 </Select>
               </div>
 
-              <div className="w-full lg:w-56">
+              <div className="w-full">
                 <Select value={courtFilter} onValueChange={setCourtFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by court" />
@@ -490,17 +491,18 @@ export default function ArenaPartnerBookings() {
                 </Select>
               </div>
 
-              <Button onClick={fetchBookings} variant="outline" className="w-full lg:w-auto">
+              <Button onClick={fetchBookings} variant="outline" className="w-full">
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Bookings List */}
         <Card className="bg-white border-0 shadow-sm">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             {filteredBookings.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -512,34 +514,34 @@ export default function ArenaPartnerBookings() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {filteredBookings.map((booking) => (
                   <div
                     key={booking._id}
-                    className="border border-gray-200 rounded-xl p-6 bg-white hover:shadow-md transition-shadow"
+                    className="border border-gray-200 rounded-xl p-4 sm:p-6 bg-white hover:shadow-md transition-shadow"
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                       {/* Left Section - Booking Details */}
                       <div className="flex-1">
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-3 sm:gap-4">
                           {/* Sport Icon */}
-                          <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-2xl">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center text-xl sm:text-2xl flex-shrink-0">
                             {getSportIcon(booking.court.sportType)}
                           </div>
 
                           <div className="flex-1">
                             {/* Venue and Court */}
                             <div className="mb-2">
-                              <h3 className="font-semibold text-gray-900 text-lg">
+                              <h3 className="font-semibold text-gray-900 text-sm sm:text-base lg:text-lg">
                                 {booking.venue.venueName}
                               </h3>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-xs sm:text-sm text-gray-600">
                                 {booking.court.courtName} • {booking.court.sportType.toUpperCase()}
                               </p>
                             </div>
 
                             {/* Date and Time */}
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm text-gray-600 mb-3">
                               <div className="flex items-center">
                                 <Calendar className="h-4 w-4 mr-1" />
                                 {new Date(booking.bookingDate).toLocaleDateString('en-IN', {
@@ -563,9 +565,9 @@ export default function ArenaPartnerBookings() {
                             </div>
 
                             {/* Customer Info */}
-                            <div className="mb-3">
+                            <div className="mb-3 overflow-x-auto">
                               {booking.user ? (
-                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm text-gray-600">
                                   <div className="flex items-center">
                                     <User className="h-4 w-4 mr-1" />
                                     {booking.user.name}
@@ -580,9 +582,9 @@ export default function ArenaPartnerBookings() {
                                   </div>
                                 </div>
                               ) : booking.contactDetails ? (
-                                <div className="flex flex-col gap-1 text-sm text-gray-600">
-                                  <div className="text-violet-500 font-bold uppercase text-base">MANUAL BOOKING</div>
-                                  <div className="flex items-center gap-4">
+                                <div className="flex flex-col gap-1 text-xs sm:text-sm text-gray-600">
+                                  <div className="text-violet-500 font-bold uppercase text-xs sm:text-sm">MANUAL BOOKING</div>
+                                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4">
                                     <div className="flex items-center">
                                       <User className="h-4 w-4 mr-1" />
                                       {booking.contactDetails.name}
@@ -611,18 +613,18 @@ export default function ArenaPartnerBookings() {
                       </div>
 
                       {/* Right Section - Price and Actions */}
-                      <div className="lg:text-right min-w-[220px]">
-                        <div className="mb-4">
-                          <p className="text-lg font-semibold text-gray-900">Total: ₹{booking.pricing.totalAmount.toLocaleString()}</p>
+                      <div className="lg:text-right min-w-[180px] sm:min-w-[220px]">
+                        <div className="mb-3 sm:mb-4">
+                          <p className="text-base sm:text-lg font-semibold text-gray-900">Total: ₹{booking.pricing.totalAmount.toLocaleString()}</p>
 
 
                           {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs sm:text-sm text-gray-500">
                               Paid earlier: ({booking.payment.advancePaymentPercent || 0}%): ₹{booking.payment.amountPaid.toLocaleString()}
                             </p>
                           )}
                           {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && booking.payment.amountPaid < booking.pricing.totalAmount && booking.status !== 'completed' && (
-                            <p className="text-l font-medium text-orange-700">
+                            <p className="text-sm sm:text-base font-medium text-orange-700">
                               Amount to be paid: ₹{Math.max(0, booking.pricing.totalAmount - booking.payment.amountPaid).toLocaleString()}
                             </p>
                           )}
@@ -633,7 +635,7 @@ export default function ArenaPartnerBookings() {
                             <Button
                               size="sm"
                               onClick={() => handleCheckIn(booking._id)}
-                              className="w-full lg:w-auto"
+                              className="w-full text-xs sm:text-sm"
                             >
                               Check In
                             </Button>
@@ -643,7 +645,7 @@ export default function ArenaPartnerBookings() {
                             <Button
                               size="sm"
                               onClick={() => handleComplete(booking._id)}
-                              className="w-full lg:w-auto"
+                              className="w-full text-xs sm:text-sm"
                             >
                               Complete
                             </Button>
@@ -653,7 +655,7 @@ export default function ArenaPartnerBookings() {
                             size="sm"
                             variant="outline"
                             onClick={() => router.push(`/arena-partner/bookings/${booking._id}`)}
-                            className="w-full lg:w-auto"
+                            className="w-full text-xs sm:text-sm"
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             View Details
