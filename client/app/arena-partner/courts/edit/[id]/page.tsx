@@ -72,9 +72,7 @@ export default function EditCourtPage() {
           timeRange: { start: '12:00', end: '23:00' }
         }
       },
-      minimumDuration: 60,
-      maximumDuration: 180,
-      slotInterval: 60
+      duration: 60
     },
     features: {
       lighting: false,
@@ -155,9 +153,7 @@ export default function EditCourtPage() {
               timeRange: court.pricing?.weekend?.peak?.timeRange || { start: '12:00', end: '23:00' }
             }
           },
-          minimumDuration: court.pricing?.minimumDuration || 60,
-          maximumDuration: court.pricing?.maximumDuration || 180,
-          slotInterval: court.pricing?.slotInterval || 60
+          duration: court.pricing?.duration || 60
         },
         features: {
           lighting: court.features?.lighting || false,
@@ -697,45 +693,18 @@ export default function EditCourtPage() {
             {/* Duration Settings */}
             <div>
               <h3 className="text-md font-medium text-gray-800 mb-3">Duration Settings</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Minimum Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricing.minimumDuration}
-                    onChange={(e) => updateFormData('pricing.minimumDuration', e.target.value)}
-                    placeholder="e.g., 60"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Maximum Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricing.maximumDuration}
-                    onChange={(e) => updateFormData('pricing.maximumDuration', e.target.value)}
-                    placeholder="e.g., 180"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Slot Interval (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.pricing.slotInterval}
-                    onChange={(e) => updateFormData('pricing.slotInterval', e.target.value)}
-                    placeholder="e.g., 60"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  />
-                </div>
+              <div className="max-w-md">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={formData.pricing.duration}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                  readOnly
+                />
+                <p className="text-xs text-gray-500 mt-1">Fixed at 60 minutes for all bookings</p>
               </div>
             </div>
           </div>

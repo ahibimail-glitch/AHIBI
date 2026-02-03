@@ -99,22 +99,11 @@ const CourtSchema = new mongoose.Schema({
         timeRange: { start: String, end: String }
       }
     },
-    // Minimum booking duration in minutes
-    minimumDuration: {
+    // Booking duration in minutes (fixed at 60 minutes)
+    duration: {
       type: Number,
       default: 60,
       required: true
-    },
-    // Maximum booking duration in minutes
-    maximumDuration: {
-      type: Number,
-      default: 180
-    },
-    // Slot interval in minutes (e.g., 30, 60)
-    slotInterval: {
-      type: Number,
-      default: 60,
-      enum: [30, 60, 90, 120]
     }
   },
   

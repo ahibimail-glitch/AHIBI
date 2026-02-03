@@ -36,9 +36,7 @@ interface Court {
       offPeak: { pricePerHour: number; timeRange: { start: string; end: string } };
       peak: { pricePerHour: number; timeRange: { start: string; end: string } };
     };
-    minimumDuration: number;
-    maximumDuration: number;
-    slotInterval: number;
+    duration: number;
   };
   venue: {
     _id: string;

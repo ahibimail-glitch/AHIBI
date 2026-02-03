@@ -230,7 +230,7 @@ TimeSlotSchema.statics.generateSlotsForDate = async function(courtId, date) {
   const endHour = parseInt(operatingHours.close.split(':')[0]);
   const endMinute = parseInt(operatingHours.close.split(':')[1]);
   
-  const slotInterval = court.pricing.slotInterval || 60;
+  const slotDuration = court.pricing.duration || 60;
   const slots = [];
   
   let currentHour = startHour;
@@ -240,7 +240,7 @@ TimeSlotSchema.statics.generateSlotsForDate = async function(courtId, date) {
     const startTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
     
     // Calculate end time
-    let endTimeMinutes = currentMinute + slotInterval;
+    let endTimeMinutes = currentMinute + slotDuration;
     let endTimeHour = currentHour;
     
     if (endTimeMinutes >= 60) {
@@ -267,7 +267,7 @@ TimeSlotSchema.statics.generateSlotsForDate = async function(courtId, date) {
         date: dateObj,
         startTime: startTime,
         endTime: endTime,
-        duration: slotInterval,
+        duration: slotDuration,
         price: price,
         status: 'available'
       });
@@ -276,7 +276,7 @@ TimeSlotSchema.statics.generateSlotsForDate = async function(courtId, date) {
     }
     
     // Move to next slot
-    currentMinute += slotInterval;
+    currentMinute += slotDuration;
     if (currentMinute >= 60) {
       currentHour += Math.floor(currentMinute / 60);
       currentMinute = currentMinute % 60;
