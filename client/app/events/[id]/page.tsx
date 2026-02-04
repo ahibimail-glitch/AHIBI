@@ -645,7 +645,33 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 Book Now
                 <span className="ml-4 font-bold">{priceRange}</span>
               </Button>
+
+              {/* NORTHEAST DANCE LEAGUE REGISTERATION BUTTON */}
+              {event._id === "698358b4adfa8417cead34d0" &&
+                <div className="flex justify-center mt-6">
+                  <Link
+                    href="/NortheastGrandDanceLeague/register"
+                    className="inline-flex items-center gap-2 rounded-full
+             border border-black
+             px-6 py-3 text-sm sm:text-base font-semibold
+             text-black shadow-lg
+             transition-all duration-300
+             hover:bg-black hover:text-white
+             hover:scale-105"
+                  >
+                    Register as a Participant →
+                  </Link>
+
+                </div>
+
+
+              }
             </div>
+
+
+
+
+
           </div>
         </div>
       </div>

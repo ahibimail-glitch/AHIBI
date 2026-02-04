@@ -66,6 +66,7 @@ import HmfTickets from "./components/HmfTickets";
 import HFTickets from "./components/HFTickets";
 import ScheduleEvent from "./components/ScheduleEvent";
 import KakiMarketingSettings from "./components/KakiMarketingSettings";
+import DanceLeagueRegistrations from "./components/DanceLeagueRegistrations";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -205,6 +206,8 @@ export default function AdminDashboard() {
         return <ScheduleEvent />;
       case "kaki-marketing":
         return <KakiMarketingSettings />;
+      case "dance-league":
+        return <DanceLeagueRegistrations />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -320,7 +323,10 @@ export default function AdminDashboard() {
             onClick={() => { setActiveView("featured-events"); setSidebarOpen(false); }}
           />
 
-       
+          <div className="pt-4 pb-2 px-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase">Special Events</h3>
+          </div>
+          <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
        
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>

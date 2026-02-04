@@ -36,6 +36,7 @@ const arenaPartnerRoutes = require('./routes/arenaPartner.routes');
 const sportsRoutes = require('./routes/sports.routes');
 const sportsAdminRoutes = require('./routes/sportsAdmin.routes');
 const systemConfigRoutes = require('./routes/systemConfig.routes');
+const danceLeagueRoutes = require('./routes/danceLeague.routes');
 
 // Create Express app
 const app = express();
@@ -94,6 +95,14 @@ app.post('/api/merch/payments/webhook/razorpay', express.raw({ type: '*/*' }), (
   merchController.razorpayWebhook(req, res);
 });
 
+app.post('/api/dance-league/webhook', express.raw({ type: '*/*' }), (req, res, next) => {
+  req.rawBody = req.body;
+  next();
+}, (req, res) => {
+  const danceLeagueController = require('./controllers/danceLeagueController');
+  danceLeagueController.handleWebhook(req, res);
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -142,6 +151,7 @@ app.use('/api/arena-partner', arenaPartnerRoutes);
 app.use('/api/sports', sportsRoutes);
 app.use('/api/admin/sports', sportsAdminRoutes);
 app.use('/api/system', systemConfigRoutes);
+app.use('/api/dance-league', danceLeagueRoutes);
 
 // Root route
 app.get('/', (req, res) => {

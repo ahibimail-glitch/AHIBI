@@ -265,13 +265,13 @@ export default function HomePage() {
     fetchHeroImages()
   }, [])
 
-  useEffect(() => {
-    if (backgroundImages.length <= 1) return
-    const interval = setInterval(() => {
-      setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [backgroundImages.length])
+  // useEffect(() => {
+  //   if (backgroundImages.length <= 1) return
+  //   const interval = setInterval(() => {
+  //     setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length)
+  //   }, 5000)
+  //   return () => clearInterval(interval)
+  // }, [backgroundImages.length])
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -460,7 +460,7 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero Carousel Banner */}
-      <section className="relative w-full bg-white ">
+      <section className="relative w-full bg-white">
         {loadingHeroImages ? (
           <div className="w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse" />
         ) : (
@@ -472,7 +472,11 @@ export default function HomePage() {
                   }`}
               >
                 <Image
-                  src={(isMobileViewport && image.mobileUrl ? image.mobileUrl : image.url) || "/images/carausel1.jpg"}
+                  src={
+                    (isMobileViewport && image.mobileUrl
+                      ? image.mobileUrl
+                      : image.url) || "/images/carausel1.jpg"
+                  }
                   alt={`Banner ${index + 1}`}
                   fill
                   className="object-cover"
@@ -482,14 +486,54 @@ export default function HomePage() {
               </div>
             ))}
 
-            {/* Carousel Indicators */}
+            {/* LEFT BUTTON */}
             {backgroundImages.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10">
+              <button
+                onClick={() =>
+                  setCurrentBgSlide(
+                    (prev) =>
+                      (prev - 1 + backgroundImages.length) %
+                      backgroundImages.length
+                  )
+                }
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20
+                     bg-black/40 hover:bg-black/60 text-white
+                     w-9 h-9 rounded-full flex items-center justify-center
+                     backdrop-blur-sm transition"
+                aria-label="Previous slide"
+              >
+                ‹
+              </button>
+            )}
+
+            {/* RIGHT BUTTON */}
+            {backgroundImages.length > 1 && (
+              <button
+                onClick={() =>
+                  setCurrentBgSlide(
+                    (prev) => (prev + 1) % backgroundImages.length
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20
+                     bg-black/40 hover:bg-black/60 text-white
+                     w-9 h-9 rounded-full flex items-center justify-center
+                     backdrop-blur-sm transition"
+                aria-label="Next slide"
+              >
+                ›
+              </button>
+            )}
+
+            {/* INDICATORS */}
+            {backgroundImages.length > 1 && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                 {backgroundImages.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentBgSlide(index)}
-                    className={`h-1 rounded-full transition-all ${index === currentBgSlide ? "bg-white w-6" : "bg-white/50 w-1"
+                    className={`h-1 rounded-full transition-all ${index === currentBgSlide
+                      ? "bg-white w-6"
+                      : "bg-white/50 w-1"
                       }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -500,7 +544,8 @@ export default function HomePage() {
         )}
       </section>
 
-      <section className=" py-8 sm:py-12 bg-white">
+
+      <section className=" bg-white">
         <div className="container mx-auto px-3 sm:px-4">
 
           {/* HERO CARD */}
@@ -823,7 +868,7 @@ export default function HomePage() {
         </section>
       )}
 
-       {/* Venues Section */}
+      {/* Venues Section */}
       {venues.length > 0 && (
         <section className="py-6 sm:py-8 md:py-10 bg-[#f5f5f5]">
           <div className="container mx-auto px-3 sm:px-4">
@@ -858,6 +903,50 @@ export default function HomePage() {
           </div>
         </section>
       )}
+      {/* HERO CARD */}
+      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+        {/* dotted background */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              "radial-gradient(#e6cfc7 1px, transparent 1px)",
+            backgroundSize: "18px 18px",
+          }}
+        />
+
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="mx-auto max-w-2xl text-center">
+
+            {/* badge */}
+            <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+              VENUE
+            </div>
+
+            {/* heading */}
+            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+              List your {" "}
+              <span className="text-red-600">Venue Space</span>
+            </h1>
+
+            {/* subtext */}
+            <p className="mt-4 text-sm sm:text-base text-gray-600">
+              The right audience. Live in under{" "}
+              <span className="font-semibold text-gray-900">5 minutes.</span>
+            </p>
+
+            {/* CTA */}
+            <div className="mt-8">
+              <Link href="/allOrganizers">
+                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+                  GET STARTED
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
 
       {/* Artists Section */}
@@ -895,6 +984,49 @@ export default function HomePage() {
           </div>
         </section>
       )}
+      {/* HERO CARD */}
+      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+        {/* dotted background */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              "radial-gradient(#e6cfc7 1px, transparent 1px)",
+            backgroundSize: "18px 18px",
+          }}
+        />
+
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="mx-auto max-w-2xl text-center">
+
+            {/* badge */}
+            <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+              ARTIST
+            </div>
+
+            {/* heading */}
+            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+              Showcase your <br />
+              <span className="text-red-600"> artistic talent</span>
+            </h1>
+
+            {/* subtext */}
+            <p className="mt-4 text-sm sm:text-base text-gray-600">
+              Reach more fans. Live in under{" "}
+              <span className="font-semibold text-gray-900">5 minutes.</span>
+            </p>
+
+            {/* CTA */}
+            <div className="mt-8">
+              <Link href="/allOrganizers">
+                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+                  GET STARTED
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
 
       {/* Explore Categories */}
@@ -919,6 +1051,54 @@ export default function HomePage() {
                 </Card>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* HERE SHOW AVAILABLE SPORTS VENUES FETCH FROM DATABASE */}
+
+
+
+      {/* HERO CARD */}
+      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+        {/* dotted background */}
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              "radial-gradient(#e6cfc7 1px, transparent 1px)",
+            backgroundSize: "18px 18px",
+          }}
+        />
+
+        <div className="relative z-10 container mx-auto px-4">
+          <div className="mx-auto max-w-2xl text-center">
+
+            {/* badge */}
+            <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+              EVENTS
+            </div>
+
+            {/* heading */}
+            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+              Post your {" "}
+              <span className="text-red-600">sports events</span>
+            </h1>
+
+            {/* subtext */}
+            <p className="mt-4 text-sm sm:text-base text-gray-600">
+              Fill the stands. Live in under{" "}
+              <span className="font-semibold text-gray-900">5 minutes.</span>
+            </p>
+
+            {/* CTA */}
+            <div className="mt-8">
+              <Link href="/allOrganizers">
+                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+                  GET STARTED
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
