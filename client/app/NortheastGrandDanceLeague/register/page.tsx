@@ -56,47 +56,31 @@ export default function DanceRegistrationForm() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-4 sm:py-8 lg:py-12 px-3 sm:px-4 lg:px-6">
       <div className="max-w-5xl mx-auto">
         {/* Cover Image Section */}
-        <div className="relative w-full h-48 sm:h-64 lg:h-80 rounded-2xl sm:rounded-3xl overflow-hidden mb-6 sm:mb-8 lg:mb-12 shadow-2xl">
-          <img 
-            src="/api/placeholder/1200/400" 
-            alt="Northeast Grand Dance League" 
-            className="w-full h-full object-cover"
+        <div className="relative w-full  rounded-2xl sm:rounded-3xl overflow-hidden mb-6 sm:mb-8 lg:mb-12 shadow-2xl">
+          {/* Mobile image */}
+          <img
+            src="/images/NEDLPH.jpeg"
+            alt="Northeast Grand Dance League"
+            className="block md:hidden w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
-          
-          {/* Cover Image Content */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-            <div className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 bg-yellow-400/90 rounded-full mb-3 sm:mb-4">
-              <Award className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-900" />
-              <span className="text-xs sm:text-sm font-bold text-yellow-900 tracking-wider">SEASON 01 • OFFICIAL REGISTRATION</span>
-              <Award className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-900" />
-            </div>
-            
-            <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-              <Music className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-blue-400" />
-              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold text-white tracking-tight" 
-                  style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-                Northeast
-              </h1>
-              <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-purple-400" />
-            </div>
-            
-            <h2 className="text-lg sm:text-2xl lg:text-4xl font-light text-white tracking-[0.15em] sm:tracking-[0.25em] mb-2 sm:mb-3"
-                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-              GRAND DANCE LEAGUE
-            </h2>
-            
-            <p className="text-blue-100 text-xs sm:text-sm lg:text-base max-w-2xl leading-relaxed">
-              Join the most prestigious dance competition in the Northeast region
-            </p>
-          </div>
+
+          {/* Desktop image */}
+          <img
+            src="/images/NEDL.jpeg"
+            alt="Northeast Grand Dance League"
+            className="hidden md:block w-full h-full object-cover"
+          />
+
+
+
+
         </div>
 
         {/* Form Card */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-200">
           {/* Decorative gradient line */}
           <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
-          
+
           {/* Form Title */}
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-4 sm:px-6 lg:px-10 py-5 sm:py-6 lg:py-8 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -296,25 +280,22 @@ export default function DanceRegistrationForm() {
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, registrationType: 'solo' }))}
-                className={`group relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all ${
-                  formData.registrationType === 'solo'
+                className={`group relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all ${formData.registrationType === 'solo'
                     ? 'bg-blue-50 border-blue-500 shadow-lg shadow-blue-100'
                     : 'bg-gray-50 border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                }`}
+                  }`}
               >
                 <div className="flex items-start justify-between mb-3 sm:mb-4">
-                  <div className={`p-2 sm:p-3 rounded-xl transition-all ${
-                    formData.registrationType === 'solo'
+                  <div className={`p-2 sm:p-3 rounded-xl transition-all ${formData.registrationType === 'solo'
                       ? 'bg-blue-100'
                       : 'bg-gray-100'
-                  }`}>
+                    }`}>
                     <User className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-blue-600" />
                   </div>
-                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 transition-all flex items-center justify-center ${
-                    formData.registrationType === 'solo'
+                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 transition-all flex items-center justify-center ${formData.registrationType === 'solo'
                       ? 'bg-blue-500 border-blue-500'
                       : 'border-gray-300'
-                  }`}>
+                    }`}>
                     {formData.registrationType === 'solo' && (
                       <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -322,7 +303,7 @@ export default function DanceRegistrationForm() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="text-left space-y-1.5 sm:space-y-2">
                   <h4 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Solo</h4>
                   <p className="text-xs sm:text-sm text-gray-600">Individual performance showcase</p>
@@ -339,25 +320,22 @@ export default function DanceRegistrationForm() {
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, registrationType: 'group' }))}
-                className={`group relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all ${
-                  formData.registrationType === 'group'
+                className={`group relative p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all ${formData.registrationType === 'group'
                     ? 'bg-purple-50 border-purple-500 shadow-lg shadow-purple-100'
                     : 'bg-gray-50 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
-                }`}
+                  }`}
               >
                 <div className="flex items-start justify-between mb-3 sm:mb-4">
-                  <div className={`p-2 sm:p-3 rounded-xl transition-all ${
-                    formData.registrationType === 'group'
+                  <div className={`p-2 sm:p-3 rounded-xl transition-all ${formData.registrationType === 'group'
                       ? 'bg-purple-100'
                       : 'bg-gray-100'
-                  }`}>
+                    }`}>
                     <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-purple-600" />
                   </div>
-                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 transition-all flex items-center justify-center ${
-                    formData.registrationType === 'group'
+                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 transition-all flex items-center justify-center ${formData.registrationType === 'group'
                       ? 'bg-purple-500 border-purple-500'
                       : 'border-gray-300'
-                  }`}>
+                    }`}>
                     {formData.registrationType === 'group' && (
                       <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -365,7 +343,7 @@ export default function DanceRegistrationForm() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="text-left space-y-1.5 sm:space-y-2">
                   <h4 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">Group</h4>
                   <p className="text-xs sm:text-sm text-gray-600">Collaborative team performance</p>
@@ -439,7 +417,7 @@ export default function DanceRegistrationForm() {
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                   <h4 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900">Group Details</h4>
                 </div>
-                
+
                 <div>
                   <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block uppercase tracking-wide">Group Name</label>
                   <input
@@ -452,7 +430,7 @@ export default function DanceRegistrationForm() {
                     required={formData.registrationType === 'group'}
                   />
                 </div>
-                
+
                 <div>
                   <label className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 block uppercase tracking-wide">Number of Dancers</label>
                   <input
@@ -466,7 +444,7 @@ export default function DanceRegistrationForm() {
                     required={formData.registrationType === 'group'}
                   />
                 </div>
-                
+
                 <div>
                   <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                     <Music className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
@@ -537,7 +515,7 @@ export default function DanceRegistrationForm() {
                   <p className="text-xs sm:text-sm text-gray-600">By submitting this form, you agree to the following:</p>
                 </div>
               </div>
-              
+
               <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-gray-700 mb-5 sm:mb-6">
                 <li className="flex gap-2 sm:gap-3 items-start p-2.5 sm:p-3 bg-white rounded-lg">
                   <span className="text-yellow-600 text-base sm:text-lg flex-shrink-0">•</span>
@@ -602,7 +580,7 @@ export default function DanceRegistrationForm() {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               )}
             </button>
-            
+
             <p className="text-center text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
               Secure registration powered by Northeast Grand Dance League
             </p>
