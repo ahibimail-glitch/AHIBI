@@ -648,7 +648,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
               {/* NORTHEAST DANCE LEAGUE REGISTERATION BUTTON */}
               {event._id === "698358b4adfa8417cead34d0" &&
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-start mt-6">
                   <Link
                     href="/NortheastGrandDanceLeague/register"
                     className="inline-flex items-center gap-2 rounded-full
