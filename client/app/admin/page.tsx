@@ -329,10 +329,10 @@ export default function AdminDashboard() {
             onClick={() => { setActiveView("featured-events"); setSidebarOpen(false); }}
           />
 
-          {/* <div className="pt-4 pb-2 px-2">
+          <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Special Events</h3>
           </div>
-          <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} /> */}
+          <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
        
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
