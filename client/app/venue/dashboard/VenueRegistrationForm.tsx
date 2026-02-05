@@ -408,10 +408,10 @@ export default function VenueRegistrationForm({
       case 1:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Venue Owner Details</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Venue Owner Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="fullName">Full Name (as per official records) *</Label>
@@ -493,10 +493,10 @@ export default function VenueRegistrationForm({
       case 2:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Venue Classification</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Venue Classification</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 pt-4">
               <div>
                 <Label>What type of venue is this? (Multiple choice) *</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
@@ -571,10 +571,10 @@ export default function VenueRegistrationForm({
       case 3:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Venue Location & Accessibility</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Venue Location & Accessibility</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <Label htmlFor="street">Complete Address *</Label>
@@ -704,10 +704,10 @@ export default function VenueRegistrationForm({
       case 4:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Venue Capacity & Booking Options</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Venue Capacity & Booking Options</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="standingCapacity">Standing Capacity *</Label>
@@ -812,10 +812,10 @@ export default function VenueRegistrationForm({
       case 5:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Pricing & Payment</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Pricing & Payment</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div>
                 <Label htmlFor="basePrice">Rental Rate Per Day *</Label>
                 <Input
@@ -921,10 +921,10 @@ export default function VenueRegistrationForm({
       case 6:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Facilities & Amenities</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Facilities & Amenities</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 pt-4">
               {Object.entries(formData.amenities).map(([key, amenity]) => (
                 <div key={key} className="space-y-2">
                   <div className="flex items-center space-x-2">
@@ -954,10 +954,10 @@ export default function VenueRegistrationForm({
       case 7:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Venue Policies & Add-on Services</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Venue Policies & Add-on Services</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 pt-4">
               <div className="space-y-4">
                 <h4 className="font-semibold">Operating Hours</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1065,10 +1065,10 @@ export default function VenueRegistrationForm({
       case 8:
         return (
           <Card>
-            <CardHeader>
-              <CardTitle>Document Upload & Final Confirmation</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg sm:text-xl">Document Upload & Final Confirmation</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6 pt-4">
               <div className="space-y-4">
                 <div>
                   <Label>Venue Images (High Resolution)</Label>
@@ -1167,45 +1167,63 @@ export default function VenueRegistrationForm({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">AHIBI Venue Listing</h1>
-        <p className="text-gray-600">Complete your venue registration to get listed on AHIBI</p>
+    <div className="max-w-4xl mx-auto p-3 sm:p-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">AHIBI Venue Listing</h1>
+        <p className="text-sm sm:text-base text-gray-600">Complete your venue registration to get listed on AHIBI</p>
         
         {/* Progress indicator */}
-        <div className="flex items-center justify-between mt-6">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((step) => (
-            <div
-              key={step}
-              className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step <= currentStep ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              {step}
-            </div>
-          ))}
+        <div className="mt-4 sm:mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs sm:text-sm font-medium text-gray-700">Step {currentStep} of 8</span>
+            <span className="text-xs sm:text-sm text-gray-500">{Math.round((currentStep / 8) * 100)}% Complete</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 sm:h-2.5">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 sm:h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / 8) * 100}%` }}
+            />
+          </div>
+          {/* Desktop step indicators */}
+          <div className="hidden sm:flex items-center justify-between mt-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((step) => (
+              <div key={step} className="flex flex-col items-center">
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all ${
+                    step < currentStep ? 'bg-green-500 text-white' :
+                    step === currentStep ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 
+                    'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {step < currentStep ? '✓' : step}
+                </div>
+                <span className="text-xs text-gray-500 mt-1">Step {step}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         {renderStepContent()}
 
-        <div className="flex justify-between mt-8">
+        <div className="flex flex-col sm:flex-row justify-between gap-3 mt-6 sm:mt-8">
           <Button
             type="button"
             variant="outline"
             onClick={prevStep}
             disabled={currentStep === 1}
+            className="w-full sm:w-auto order-2 sm:order-1"
           >
             Previous
           </Button>
           
           {currentStep < 8 ? (
-            <Button type="button" onClick={nextStep}>
-              Next
+            <Button type="button" onClick={nextStep} className="w-full sm:w-auto order-1 sm:order-2">
+              Next Step
             </Button>
           ) : (
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto order-1 sm:order-2">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Registration
             </Button>

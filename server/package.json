@@ -20,6 +20,7 @@
   "author": "Ahibi Team",
   "license": "ISC",
   "dependencies": {
+    "@mux/mux-node": "^8.0.0",
     "axios": "^1.5.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.40.0",

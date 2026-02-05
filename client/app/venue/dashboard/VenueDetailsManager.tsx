@@ -34,7 +34,10 @@ import {
   Trash2,
   Image as ImageIcon,
   Video,
-  File
+  File,
+  ArrowLeft,
+  Menu,
+  ChevronRight
 } from "lucide-react";
 import { uploadToVercelBlob, uploadMultipleToVercelBlob } from "@/lib/vercelBlob";
 import { FileUploadArea } from "@/components/ui/file-upload-area";
@@ -58,19 +61,22 @@ export default function VenueDetailsManager({
   const [saving, setSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const sidebarItems = [
-    { id: "owner-details", label: "Owner Details", icon: User },
-    { id: "venue-classification", label: "Venue Classification", icon: Building },
-    { id: "location", label: "Location & Accessibility", icon: MapPin },
-    { id: "capacity", label: "Capacity & Booking", icon: Users },
-    { id: "pricing", label: "Pricing & Payment", icon: DollarSign },
-    { id: "amenities", label: "Facilities & Amenities", icon: Star },
-    { id: "policies", label: "Venue Policies", icon: Settings },
-    { id: "addon-services", label: "Add-on Services", icon: FileText },
-    { id: "documents", label: "Documents & Media", icon: Camera },
-    { id: "authorizations", label: "Authorizations", icon: Shield },
+    { id: "owner-details", label: "Owner Details", shortLabel: "Owner", icon: User },
+    { id: "venue-classification", label: "Venue Classification", shortLabel: "Classification", icon: Building },
+    { id: "location", label: "Location & Accessibility", shortLabel: "Location", icon: MapPin },
+    { id: "capacity", label: "Capacity & Booking", shortLabel: "Capacity", icon: Users },
+    { id: "pricing", label: "Pricing & Payment", shortLabel: "Pricing", icon: DollarSign },
+    { id: "amenities", label: "Facilities & Amenities", shortLabel: "Amenities", icon: Star },
+    { id: "policies", label: "Venue Policies", shortLabel: "Policies", icon: Settings },
+    { id: "addon-services", label: "Add-on Services", shortLabel: "Add-ons", icon: FileText },
+    { id: "documents", label: "Documents & Media", shortLabel: "Documents", icon: Camera },
+    { id: "authorizations", label: "Authorizations", shortLabel: "Auth", icon: Shield },
   ];
+
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   const getInitialEditData = (section: string) => {
     switch (section) {
@@ -217,14 +223,14 @@ export default function VenueDetailsManager({
   };
 
   const renderOwnerDetails = () => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="shadow-sm">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />
           Owner Details
         </CardTitle>
         {editingSection !== "owner-details" && (
-          <Button variant="outline" size="sm" onClick={() => handleEdit("owner-details")}>
+          <Button variant="outline" size="sm" onClick={() => handleEdit("owner-details")} className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
@@ -373,14 +379,14 @@ export default function VenueDetailsManager({
   );
 
   const renderVenueClassification = () => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="shadow-sm">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
         <CardTitle className="flex items-center gap-2">
           <Building className="h-5 w-5" />
           Venue Classification
         </CardTitle>
         {editingSection !== "venue-classification" && (
-          <Button variant="outline" size="sm" onClick={() => handleEdit("venue-classification")}>
+          <Button variant="outline" size="sm" onClick={() => handleEdit("venue-classification")} className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
@@ -517,14 +523,14 @@ export default function VenueDetailsManager({
   );
 
   const renderLocationSection = () => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+    <Card className="shadow-sm">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
           Location & Accessibility
         </CardTitle>
         {editingSection !== "location" && (
-          <Button variant="outline" size="sm" onClick={() => handleEdit("location")}>
+          <Button variant="outline" size="sm" onClick={() => handleEdit("location")} className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
@@ -745,23 +751,24 @@ export default function VenueDetailsManager({
   );
 
   const renderSectionContent = () => {
-    switch (activeSection) {
-      case "owner-details":
-        return renderOwnerDetails();
-      case "venue-classification":
-        return renderVenueClassification();
-      case "location":
-        return renderLocationSection();
+    const content = (() => {
+      switch (activeSection) {
+        case "owner-details":
+          return renderOwnerDetails();
+        case "venue-classification":
+          return renderVenueClassification();
+        case "location":
+          return renderLocationSection();
       case "capacity":
         return (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 Capacity & Booking Details
               </CardTitle>
               {editingSection !== "capacity" && (
-                <Button variant="outline" size="sm" onClick={() => handleEdit("capacity")}>
+                <Button variant="outline" size="sm" onClick={() => handleEdit("capacity")} className="w-full sm:w-auto">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -831,7 +838,7 @@ export default function VenueDetailsManager({
                   </div>
                   <div>
                     <Label>Time Slots Available</Label>
-                    <div className="grid grid-cols-3 gap-2 mt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
                       {[
                         { value: "full_day", label: "Full Day" },
                         { value: "half_day", label: "Half Day" },
@@ -976,14 +983,14 @@ export default function VenueDetailsManager({
         );
       case "pricing":
         return (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
                 Pricing & Payment
               </CardTitle>
               {editingSection !== "pricing" && (
-                <Button variant="outline" size="sm" onClick={() => handleEdit("pricing")}>
+                <Button variant="outline" size="sm" onClick={() => handleEdit("pricing")} className="w-full sm:w-auto">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -1256,14 +1263,14 @@ export default function VenueDetailsManager({
         );
       case "amenities":
         return (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+          <Card className="shadow-sm">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
               <CardTitle className="flex items-center gap-2">
                 <Star className="h-5 w-5" />
                 Facilities & Amenities
               </CardTitle>
               {editingSection !== "amenities" && (
-                <Button variant="outline" size="sm" onClick={() => handleEdit("amenities")}>
+                <Button variant="outline" size="sm" onClick={() => handleEdit("amenities")} className="w-full sm:w-auto">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -2262,83 +2269,92 @@ export default function VenueDetailsManager({
             </CardContent>
           </Card>
         );
-      default:
-        return null;
-    }
-  };
+        default:
+          return null;
+      }
+    })();
 
-  return (
-    <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
-      {/* Mobile pills nav */}
-      <div className="md:hidden bg-white border-b">
-        <div className="px-4 py-3 overflow-x-auto">
-          <div className="flex gap-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-full whitespace-nowrap text-sm border transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-white text-gray-700 border-gray-200'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar */}
-      <div className="hidden md:block w-64 bg-white shadow-sm border-r">
-        <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold">Venue Details</h2>
-          <p className="text-sm text-gray-500">Manage your venue information</p>
-        </div>
-        <nav className="p-4">
-          <ul className="space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.id}>
+    return (
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+        {/* Mobile Section Navigation */}
+        <div className="md:hidden">
+          <button
+            onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+            className="w-full flex items-center justify-between p-3 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Menu className="h-5 w-5 text-gray-600" />
+              <span className="text-sm font-medium text-gray-900">
+                {sidebarItems.find(item => item.id === activeSection)?.label || 'Select Section'}
+              </span>
+            </div>
+            <ChevronRight className={`h-5 w-5 text-gray-400 transition-transform ${showMobileSidebar ? 'rotate-90' : ''}`} />
+          </button>
+          
+          {showMobileSidebar && (
+            <div className="mt-2 bg-white border rounded-lg shadow-lg overflow-hidden">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
                   <button
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
-                      activeSection === item.id
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-gray-600 hover:bg-gray-50'
+                    key={item.id}
+                    onClick={() => {
+                      setActiveSection(item.id);
+                      setShowMobileSidebar(false);
+                      setEditingSection(null);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b last:border-b-0 ${
+                      isActive 
+                        ? 'bg-blue-50 text-blue-700 border-l-4 border-l-blue-600' 
+                        : 'text-gray-700 hover:bg-gray-50 border-l-4 border-l-transparent'
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                    <span className="text-sm font-medium">{item.label}</span>
+                    {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Section Navigation */}
+        <div className="hidden md:block">
+          <div className="bg-white border rounded-lg shadow-sm p-2">
+            <div className="flex flex-wrap gap-2">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveSection(item.id);
+                      setEditingSection(null);
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md' 
+                        : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="hidden lg:inline">{item.label}</span>
+                    <span className="lg:hidden">{item.shortLabel}</span>
                   </button>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-4 sm:p-5 md:p-6">
-          <div className="mb-4 md:mb-6">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-              {sidebarItems.find(item => item.id === activeSection)?.label}
-            </h1>
-            <p className="text-gray-600 text-sm md:text-base">
-              View and edit your venue {activeSection.replace('-', ' ')} information
-            </p>
+                );
+              })}
+            </div>
           </div>
-          {renderSectionContent()}
         </div>
+
+        {/* Section Content */}
+        {content}
       </div>
-    </div>
-  );
+    );
+  };
+
+  return renderSectionContent();
 }

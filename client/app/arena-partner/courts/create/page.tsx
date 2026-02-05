@@ -353,76 +353,149 @@ function CreateCourtPageContent() {
           </div>
 
           {/* Specifications */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Specifications</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Specifications</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="maintenance">Under Maintenance</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Dimensions</label>
+              <div className="grid grid-cols-3 gap-4">
+                <input
+                  type="number"
+                  value={formData.specifications.dimensions.length}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      specifications: {
+                        ...formData.specifications,
+                        dimensions: { ...formData.specifications.dimensions, length: e.target.value }
+                      }
+                    })
+                  }
+                  placeholder="Length"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
+                <input
+                  type="number"
+                  value={formData.specifications.dimensions.width}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      specifications: {
+                        ...formData.specifications,
+                        dimensions: { ...formData.specifications.dimensions, width: e.target.value }
+                      }
+                    })
+                  }
+                  placeholder="Width"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                />
                 <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  value={formData.specifications.dimensions.unit}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      specifications: {
+                        ...formData.specifications,
+                        dimensions: { ...formData.specifications.dimensions, unit: e.target.value }
+                      }
+                    })
+                  }
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="maintenance">Under Maintenance</option>
+                  <option value="meters">Meters</option>
+                  <option value="feet">Feet</option>
+                  <option value="yards">Yards</option>
                 </select>
               </div>
+            </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Dimensions</label>
-                <div className="grid grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Features</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3">
+                {Object.entries(formData.features).map(([key, value]) => (
+                  <label key={key} className="flex items-center gap-2 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={value as boolean}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          features: { ...formData.features, [key]: e.target.checked }
+                        })
+                      }
+                      className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-gray-700 capitalize leading-snug">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Court Type</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                <label className="flex items-center gap-2 min-w-0">
                   <input
-                    type="number"
-                    value={formData.specifications.dimensions.length}
+                    type="checkbox"
+                    checked={formData.specifications.indoor}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        specifications: {
-                          ...formData.specifications,
-                          dimensions: { ...formData.specifications.dimensions, length: e.target.value },
-                        },
+                        specifications: { ...formData.specifications, indoor: e.target.checked }
                       })
                     }
-                    placeholder="Length"
-                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
+                  <span className="text-sm text-gray-700">Indoor</span>
+                </label>
+                <label className="flex items-center gap-2 min-w-0">
                   <input
-                    type="number"
-                    value={formData.specifications.dimensions.width}
+                    type="checkbox"
+                    checked={formData.specifications.covered}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        specifications: {
-                          ...formData.specifications,
-                          dimensions: { ...formData.specifications.dimensions, width: e.target.value },
-                        },
+                        specifications: { ...formData.specifications, covered: e.target.checked }
                       })
                     }
-                    placeholder="Width"
-                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
-                  <select
-                    value={formData.specifications.dimensions.unit}
+                  <span className="text-sm text-gray-700">Covered</span>
+                </label>
+                <label className="flex items-center gap-2 min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={formData.specifications.airConditioned}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        specifications: {
-                          ...formData.specifications,
-                          dimensions: { ...formData.specifications.dimensions, unit: e.target.value },
-                        },
+                        specifications: { ...formData.specifications, airConditioned: e.target.checked }
                       })
                     }
-                    className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                  >
-                    <option value="meters">Meters</option>
-                    <option value="feet">Feet</option>
-                    <option value="yards">Yards</option>
-                  </select>
-                </div>
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">Air Conditioned</span>
+                </label>
               </div>
             </div>
           </div>
+        </div>
 
           {/* Capacity */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -782,80 +855,6 @@ function CreateCourtPageContent() {
             </div>
           </div>
 
-          {/* Features */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Features & Amenities</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.keys(formData.features).map((feature) => (
-                <label key={feature} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.features[feature as keyof typeof formData.features]}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        features: { ...formData.features, [feature]: e.target.checked }
-                      })
-                    }
-                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                  />
-                  <span className="text-sm text-gray-700 capitalize">
-                    {feature.replace(/([A-Z])/g, ' $1').trim()}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.specifications.indoor}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      specifications: { ...formData.specifications, indoor: e.target.checked }
-                    })
-                  }
-                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                />
-                <span className="text-sm text-gray-700">Indoor</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.specifications.covered}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      specifications: { ...formData.specifications, covered: e.target.checked }
-                    })
-                  }
-                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                />
-                <span className="text-sm text-gray-700">Covered</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.specifications.airConditioned}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      specifications: {
-                        ...formData.specifications,
-                        airConditioned: e.target.checked
-                      }
-                    })
-                  }
-                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                />
-                <span className="text-sm text-gray-700">Air Conditioned</span>
-              </label>
-            </div>
-          </div>
 
           {/* Submit Button */}
           <div className="flex gap-4">

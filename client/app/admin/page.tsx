@@ -30,6 +30,7 @@ import {
   Package,
   Menu,
   X,
+  Video,
 } from "lucide-react";
 
 // Import child components
@@ -67,6 +68,7 @@ import HFTickets from "./components/HFTickets";
 import ScheduleEvent from "./components/ScheduleEvent";
 import KakiMarketingSettings from "./components/KakiMarketingSettings";
 import DanceLeagueRegistrations from "./components/DanceLeagueRegistrations";
+import AdminLivestreamPage from "./livestream/page";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -208,6 +210,8 @@ export default function AdminDashboard() {
         return <KakiMarketingSettings />;
       case "dance-league":
         return <DanceLeagueRegistrations />;
+      case "live-streaming":
+        return <AdminLivestreamPage/>
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -303,6 +307,7 @@ export default function AdminDashboard() {
             active={false}
             onClick={() => { router.push('/admin/sports/partners'); setSidebarOpen(false); }}
           />
+          <SidebarButton icon={Video} label="Live Streaming" active={activeView === "live-streaming"} onClick={() => { setActiveView("live-streaming"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Events</h3>

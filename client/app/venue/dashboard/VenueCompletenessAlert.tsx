@@ -11,7 +11,8 @@ import {
   Info, 
   ChevronRight,
   CheckCircle2,
-  X
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { useState } from "react";
 import { checkVenueCompleteness, MissingField } from "@/utils/venueValidation";
@@ -27,17 +28,6 @@ export default function VenueCompletenessAlert({
 }: VenueCompletenessAlertProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const completeness = checkVenueCompleteness(venueData);
-
-  // Debug logging
-  console.log('Venue Data for validation:', {
-    description: venueData?.description,
-    address: venueData?.address,
-    pricing: venueData?.pricing,
-    capacity: venueData?.capacity,
-    capacityDetails: venueData?.capacityDetails,
-    venueClassification: venueData?.venueClassification
-  });
-  console.log('Completeness result:', completeness);
 
   // Don't show if venue is complete
   if (completeness.isComplete && completeness.recommendedMissing.length === 0) {
@@ -83,31 +73,31 @@ export default function VenueCompletenessAlert({
 
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {getSeverityIcon(severity)}
-          <h4 className="font-semibold text-sm">{title}</h4>
-          <Badge variant="outline" className="ml-auto">
+          <h4 className="font-semibold text-xs sm:text-sm">{title}</h4>
+          <Badge variant="outline" className="ml-auto text-xs">
             {fields.length} {fields.length === 1 ? 'field' : 'fields'}
           </Badge>
         </div>
-        <div className="space-y-1 pl-6">
+        <div className="space-y-2 pl-0 sm:pl-6">
           {fields.map((field, index) => (
             <div 
               key={index}
-              className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 sm:p-2 rounded-md hover:bg-gray-50 transition-colors"
             >
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{field.fieldLabel}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-900">{field.fieldLabel}</p>
                 <p className="text-xs text-gray-500">{field.sectionLabel}</p>
               </div>
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => onNavigateToSection(field.section)}
-                className="ml-2"
+                className="w-full sm:w-auto sm:ml-2 h-10 sm:h-8"
               >
-                Fill Now
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="flex-1 text-left sm:text-center">Fill Now</span>
+                <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           ))}
@@ -124,10 +114,10 @@ export default function VenueCompletenessAlert({
         ? 'border-orange-300 bg-orange-50/50'
         : 'border-blue-300 bg-blue-50/50'
     }`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1">
-            <CardTitle className="flex items-center gap-2 text-lg">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               {completeness.criticalMissing.length > 0 ? (
                 <>
                   <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -145,7 +135,7 @@ export default function VenueCompletenessAlert({
                 </>
               )}
             </CardTitle>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">
               {completeness.criticalMissing.length > 0 
                 ? 'Complete critical fields to activate your venue listing and start receiving bookings.'
                 : completeness.importantMissing.length > 0
@@ -157,17 +147,17 @@ export default function VenueCompletenessAlert({
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="ml-2"
+            className="ml-2 self-end sm:self-auto h-9 w-9 p-0"
           >
-            {isExpanded ? <X className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </Button>
         </div>
 
         {/* Progress Bar */}
-        <div className="mt-4">
+        <div className="mt-3 sm:mt-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Profile Completion</span>
-            <span className="text-sm font-bold text-gray-900">{completeness.completionPercentage}%</span>
+            <span className="text-xs sm:text-sm font-medium text-gray-700">Profile Completion</span>
+            <span className="text-xs sm:text-sm font-bold text-gray-900">{completeness.completionPercentage}%</span>
           </div>
           <Progress 
             value={completeness.completionPercentage} 
@@ -177,7 +167,7 @@ export default function VenueCompletenessAlert({
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
           {/* Critical Missing Fields */}
           {renderMissingFieldsList(
             completeness.criticalMissing,
@@ -200,17 +190,17 @@ export default function VenueCompletenessAlert({
           )}
 
           {/* Summary Actions */}
-          <div className="pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
+          <div className="pt-3 sm:pt-4 border-t">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-xs sm:text-sm text-gray-600">
                 {completeness.missingFields.length} {completeness.missingFields.length === 1 ? 'field' : 'fields'} remaining
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 {completeness.criticalMissing.length > 0 && (
                   <Button
                     size="sm"
                     variant="default"
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
                     onClick={() => onNavigateToSection(completeness.criticalMissing[0].section)}
                   >
                     Complete Critical Fields
@@ -220,7 +210,7 @@ export default function VenueCompletenessAlert({
                   <Button
                     size="sm"
                     variant="default"
-                    className="bg-orange-600 hover:bg-orange-700"
+                    className="bg-orange-600 hover:bg-orange-700 w-full sm:w-auto"
                     onClick={() => onNavigateToSection(completeness.importantMissing[0].section)}
                   >
                     Add Important Details

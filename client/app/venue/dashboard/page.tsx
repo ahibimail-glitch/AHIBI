@@ -193,9 +193,7 @@ export default function VenueDashboard() {
   }
 
   return (
-    <div className="h-screen bg-muted/40">
-    
-
+    <div className="min-h-screen bg-gray-50">
       <VenueDashboardLayout
         venueData={venueData}
         stats={stats}

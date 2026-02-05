@@ -289,7 +289,7 @@ export default function EditCourtPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <Link
               href="/arena-partner/courts"
@@ -312,10 +312,11 @@ export default function EditCourtPage() {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Court Images */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Court Images</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Court Images</h2>
           <p className="text-sm text-gray-600 mb-4">Upload multiple photos of your court. Select one as the cover image that will appear in venue listings.</p>
           <FileUploadArea
             key={`court-images-${coverImageIndex}`}
@@ -336,21 +337,20 @@ export default function EditCourtPage() {
         </div>
 
         {/* Basic Information */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Basic Information</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Venue *
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Select Venue *
               </label>
               <select
                 value={formData.venueId}
                 onChange={(e) => updateFormData('venueId', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 required
               >
-                <option value="">Select Venue</option>
                 {venues.map((venue) => (
                   <option key={venue._id} value={venue._id}>
                     {venue.venueName} - {venue.address?.city}
@@ -360,7 +360,7 @@ export default function EditCourtPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Court Name *
               </label>
               <input
@@ -368,13 +368,13 @@ export default function EditCourtPage() {
                 value={formData.courtName}
                 onChange={(e) => updateFormData('courtName', e.target.value)}
                 placeholder="e.g., Main Court"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Court Number
               </label>
               <input
@@ -382,18 +382,18 @@ export default function EditCourtPage() {
                 value={formData.courtNumber}
                 onChange={(e) => updateFormData('courtNumber', e.target.value)}
                 placeholder="e.g., 1, A, etc."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Sport Type *
               </label>
               <select
                 value={formData.sportType}
                 onChange={(e) => updateFormData('sportType', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 required
               >
                 {SPORTS.map((sport) => (
@@ -403,22 +403,15 @@ export default function EditCourtPage() {
                 ))}
               </select>
             </div>
-          </div>
-        </div>
 
-        {/* Specifications */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Specifications</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Surface Type
               </label>
               <select
                 value={formData.specifications.surfaceType}
                 onChange={(e) => updateFormData('specifications.surfaceType', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
               >
                 {SURFACE_TYPES.map((type) => (
                   <option key={type} value={type}>
@@ -427,15 +420,20 @@ export default function EditCourtPage() {
                 ))}
               </select>
             </div>
+          </div>
+        </div>
 
+        {/* Specifications */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Specifications</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => updateFormData('status', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -444,28 +442,26 @@ export default function EditCourtPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Dimensions
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Dimensions</label>
               <div className="grid grid-cols-3 gap-4">
                 <input
                   type="number"
                   value={formData.specifications.dimensions.length}
                   onChange={(e) => updateFormData('specifications.dimensions.length', e.target.value)}
                   placeholder="Length"
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 />
                 <input
                   type="number"
                   value={formData.specifications.dimensions.width}
                   onChange={(e) => updateFormData('specifications.dimensions.width', e.target.value)}
                   placeholder="Width"
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 />
                 <select
                   value={formData.specifications.dimensions.unit}
                   onChange={(e) => updateFormData('specifications.dimensions.unit', e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                 >
                   <option value="meters">Meters</option>
                   <option value="feet">Feet</option>
@@ -475,17 +471,17 @@ export default function EditCourtPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Features</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3">
                 {Object.entries(formData.features).map(([key, value]) => (
-                  <label key={key} className="flex items-center gap-2">
+                  <label key={key} className="flex items-center gap-2 min-w-0">
                     <input
                       type="checkbox"
                       checked={value as boolean}
                       onChange={(e) => updateFormData(`features.${key}`, e.target.checked)}
-                      className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                      className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                     />
-                    <span className="text-sm text-gray-700 capitalize">
+                    <span className="text-sm text-gray-700 capitalize leading-snug">
                       {key.replace(/([A-Z])/g, ' $1').trim()}
                     </span>
                   </label>
@@ -494,32 +490,32 @@ export default function EditCourtPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Court Type</label>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Court Type</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+                <label className="flex items-center gap-2 min-w-0">
                   <input
                     type="checkbox"
                     checked={formData.specifications.indoor}
                     onChange={(e) => updateFormData('specifications.indoor', e.target.checked)}
-                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
                   <span className="text-sm text-gray-700">Indoor</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 min-w-0">
                   <input
                     type="checkbox"
                     checked={formData.specifications.covered}
                     onChange={(e) => updateFormData('specifications.covered', e.target.checked)}
-                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
                   <span className="text-sm text-gray-700">Covered</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 min-w-0">
                   <input
                     type="checkbox"
                     checked={formData.specifications.airConditioned}
                     onChange={(e) => updateFormData('specifications.airConditioned', e.target.checked)}
-                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                    className="h-4 w-4 shrink-0 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                   />
                   <span className="text-sm text-gray-700">Air Conditioned</span>
                 </label>
@@ -529,12 +525,12 @@ export default function EditCourtPage() {
         </div>
 
         {/* Capacity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Capacity</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Capacity</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Players Capacity
               </label>
               <input
@@ -542,12 +538,12 @@ export default function EditCourtPage() {
                 value={formData.capacity.players}
                 onChange={(e) => updateFormData('capacity.players', e.target.value)}
                 placeholder="e.g., 10"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Spectators Capacity
               </label>
               <input
@@ -555,23 +551,23 @@ export default function EditCourtPage() {
                 value={formData.capacity.spectators}
                 onChange={(e) => updateFormData('capacity.spectators', e.target.value)}
                 placeholder="e.g., 50"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Pricing */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Pricing</h2>
           
           <div className="space-y-6">
             {/* Weekday Pricing */}
             <div>
-              <h3 className="text-md font-medium text-gray-800 mb-3">Weekday Pricing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <h3 className="text-md font-semibold text-gray-800 mb-3">Weekday Pricing</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Off-Peak Price (₹/hour)
                   </label>
                   <input
@@ -579,27 +575,27 @@ export default function EditCourtPage() {
                     value={formData.pricing.weekday.offPeak.pricePerHour}
                     onChange={(e) => updateFormData('pricing.weekday.offPeak.pricePerHour', e.target.value)}
                     placeholder="e.g., 500"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                   />
                   <div className="flex gap-2 mt-2">
                     <input
                       type="time"
                       value={formData.pricing.weekday.offPeak.timeRange.start}
                       onChange={(e) => updateFormData('pricing.weekday.offPeak.timeRange.start', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                     <span className="self-center text-sm text-gray-500">to</span>
                     <input
                       type="time"
                       value={formData.pricing.weekday.offPeak.timeRange.end}
                       onChange={(e) => updateFormData('pricing.weekday.offPeak.timeRange.end', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Peak Price (₹/hour)
                   </label>
                   <input
@@ -607,21 +603,21 @@ export default function EditCourtPage() {
                     value={formData.pricing.weekday.peak.pricePerHour}
                     onChange={(e) => updateFormData('pricing.weekday.peak.pricePerHour', e.target.value)}
                     placeholder="e.g., 800"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                   />
                   <div className="flex gap-2 mt-2">
                     <input
                       type="time"
                       value={formData.pricing.weekday.peak.timeRange.start}
                       onChange={(e) => updateFormData('pricing.weekday.peak.timeRange.start', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                     <span className="self-center text-sm text-gray-500">to</span>
                     <input
                       type="time"
                       value={formData.pricing.weekday.peak.timeRange.end}
                       onChange={(e) => updateFormData('pricing.weekday.peak.timeRange.end', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                   </div>
                 </div>
@@ -630,10 +626,10 @@ export default function EditCourtPage() {
 
             {/* Weekend Pricing */}
             <div>
-              <h3 className="text-md font-medium text-gray-800 mb-3">Weekend Pricing</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <h3 className="text-md font-semibold text-gray-800 mb-3">Weekend Pricing</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Off-Peak Price (₹/hour)
                   </label>
                   <input
@@ -641,27 +637,27 @@ export default function EditCourtPage() {
                     value={formData.pricing.weekend.offPeak.pricePerHour}
                     onChange={(e) => updateFormData('pricing.weekend.offPeak.pricePerHour', e.target.value)}
                     placeholder="e.g., 600"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                   />
                   <div className="flex gap-2 mt-2">
                     <input
                       type="time"
                       value={formData.pricing.weekend.offPeak.timeRange.start}
                       onChange={(e) => updateFormData('pricing.weekend.offPeak.timeRange.start', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                     <span className="self-center text-sm text-gray-500">to</span>
                     <input
                       type="time"
                       value={formData.pricing.weekend.offPeak.timeRange.end}
                       onChange={(e) => updateFormData('pricing.weekend.offPeak.timeRange.end', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Peak Price (₹/hour)
                   </label>
                   <input
@@ -669,21 +665,21 @@ export default function EditCourtPage() {
                     value={formData.pricing.weekend.peak.pricePerHour}
                     onChange={(e) => updateFormData('pricing.weekend.peak.pricePerHour', e.target.value)}
                     placeholder="e.g., 1000"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
                   />
                   <div className="flex gap-2 mt-2">
                     <input
                       type="time"
                       value={formData.pricing.weekend.peak.timeRange.start}
                       onChange={(e) => updateFormData('pricing.weekend.peak.timeRange.start', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                     <span className="self-center text-sm text-gray-500">to</span>
                     <input
                       type="time"
                       value={formData.pricing.weekend.peak.timeRange.end}
                       onChange={(e) => updateFormData('pricing.weekend.peak.timeRange.end', e.target.value)}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                     />
                   </div>
                 </div>
@@ -692,16 +688,16 @@ export default function EditCourtPage() {
 
             {/* Duration Settings */}
             <div>
-              <h3 className="text-md font-medium text-gray-800 mb-3">Duration Settings</h3>
+              <h3 className="text-md font-semibold text-gray-800 mb-3">Duration Settings</h3>
               <div className="max-w-md">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Duration (minutes)
                 </label>
                 <input
                   type="number"
                   value={formData.pricing.duration}
                   disabled
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                   readOnly
                 />
                 <p className="text-xs text-gray-500 mt-1">Fixed at 60 minutes for all bookings</p>
@@ -711,23 +707,24 @@ export default function EditCourtPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-4">
+        <div className="flex gap-4">
           <Link
             href="/arena-partner/courts"
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-center font-medium"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-4 h-4" />
             {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

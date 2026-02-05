@@ -37,6 +37,7 @@ const sportsRoutes = require('./routes/sports.routes');
 const sportsAdminRoutes = require('./routes/sportsAdmin.routes');
 const systemConfigRoutes = require('./routes/systemConfig.routes');
 const danceLeagueRoutes = require('./routes/danceLeague.routes');
+const livestreamRoutes = require('./routes/livestream.routes');
 
 // Create Express app
 const app = express();
@@ -152,6 +153,7 @@ app.use('/api/sports', sportsRoutes);
 app.use('/api/admin/sports', sportsAdminRoutes);
 app.use('/api/system', systemConfigRoutes);
 app.use('/api/dance-league', danceLeagueRoutes);
+app.use('/api/livestream', livestreamRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -178,9 +180,9 @@ const connectDB = async () => {
 // Initialize server
 const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
-  // Start the booking cleanup service
-  const bookingCleanupService = require('./services/bookingCleanupService');
-  bookingCleanupService.start();
+  // // Start the booking cleanup service
+  // const bookingCleanupService = require('./services/bookingCleanupService');
+  // bookingCleanupService.start();
   
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

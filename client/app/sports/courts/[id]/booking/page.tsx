@@ -94,6 +94,27 @@ export default function CourtBookingPage() {
   const { user, loading: authLoading } = useAuth();
   const courtId = params.id as string;
 
+  const timeToMinutes = (time: string) => {
+    const [h, m] = time.split(":").map((v) => Number(v));
+    if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+    return h * 60 + m;
+  };
+
+  const isSameLocalDay = (a: Date, b: Date) => {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  };
+
+  const isSlotInPastForSelectedDate = (slot: TimeSlot) => {
+    const now = new Date();
+    if (!isSameLocalDay(selectedDate, now)) return false;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    return timeToMinutes(slot.startTime) < nowMinutes;
+  };
+
   const [court, setCourt] = useState<Court | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
@@ -179,9 +200,15 @@ export default function CourtBookingPage() {
     return availableSlots.filter((slot) => {
       // Keep a small safety net to ensure we never show slots outside venue hours,
       // even if they were accidentally generated server-side.
-      return slot.startTime >= open && slot.endTime <= close;
+      const withinHours = slot.startTime >= open && slot.endTime <= close;
+      if (!withinHours) return false;
+
+      // Don't allow past time slots for today
+      if (isSlotInPastForSelectedDate(slot)) return false;
+
+      return true;
     });
-  }, [availableSlots, operatingHoursForSelectedDate]);
+  }, [availableSlots, operatingHoursForSelectedDate, selectedDate]);
 
   // Fetch available slots when date changes
   useEffect(() => {
@@ -242,6 +269,11 @@ export default function CourtBookingPage() {
 
   const handleSlotSelection = (slot: TimeSlot) => {
     if (slot.status !== "available") return;
+
+    if (isSlotInPastForSelectedDate(slot)) {
+      alert("You cannot book a past time slot for today.");
+      return;
+    }
 
     const isSelected = selectedSlots.some((s) => s._id === slot._id);
 
@@ -320,6 +352,17 @@ export default function CourtBookingPage() {
   const handlePayment = async () => {
     if (!user) {
       router.push(`/auth?redirect=/sports/courts/${courtId}/booking`);
+      return;
+    }
+
+    if (selectedSlots.length === 0) {
+      alert("Please select at least one time slot");
+      return;
+    }
+
+    const hasPastSlot = selectedSlots.some((s) => isSlotInPastForSelectedDate(s));
+    if (hasPastSlot) {
+      setError("You cannot book a past time slot for today. Please select a future time.");
       return;
     }
 

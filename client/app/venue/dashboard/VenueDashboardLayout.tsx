@@ -49,7 +49,9 @@ import {
   X,
   Ban,
   Building,
-  Menu
+  Menu,
+  ArrowLeft,
+  Home
 } from "lucide-react";
 import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { toast } from "sonner";
@@ -274,11 +276,11 @@ export default function VenueDashboardLayout({
   };
 
   const renderFaqsContent = () => (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">FAQs</h1>
-          <p className="text-gray-600">Add common questions and answers for your venue</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">FAQs</h1>
+          <p className="text-sm sm:text-base text-gray-600">Add common questions and answers for your venue</p>
         </div>
       </div>
 
@@ -318,7 +320,7 @@ export default function VenueDashboardLayout({
                 .slice()
                 .sort((a, b) => (a.order || 0) - (b.order || 0))
                 .map((f) => (
-                <div key={f._id} className="border rounded-lg p-4">
+                <div key={f._id} className="border rounded-lg p-3 sm:p-4">
                   {editingFaqId === f._id ? (
                     <div className="space-y-3">
                       <div>
@@ -340,9 +342,9 @@ export default function VenueDashboardLayout({
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-4">
-                        <h3 className="font-medium text-gray-900">{f.question}</h3>
-                        <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                        <h3 className="font-medium text-gray-900 flex-1">{f.question}</h3>
+                        <div className="flex gap-2 self-end sm:self-start">
                           <Button size="sm" variant="outline" onClick={() => startEditFaq(f)}>
                             <Edit className="h-4 w-4 mr-2" /> Edit
                           </Button>
@@ -523,26 +525,26 @@ export default function VenueDashboardLayout({
   };
 
   const renderBookingsContent = () => (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
       {/* Venue Completeness Alert */}
       <VenueCompletenessAlert 
         venueData={venueData}
         onNavigateToSection={handleNavigateToSection}
       />
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">All Bookings</h1>
-          <p className="text-gray-600">Manage and track all venue bookings</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">All Bookings</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage and track all venue bookings</p>
         </div>
-        <Button onClick={onExportBookings} variant="outline" size="sm">
+        <Button onClick={onExportBookings} variant="outline" size="sm" className="w-full sm:w-auto">
           <Download className="h-4 w-4 mr-2" />
           Export CSV
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -580,8 +582,8 @@ export default function VenueDashboardLayout({
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -593,7 +595,7 @@ export default function VenueDashboardLayout({
                 />
               </div>
             </div>
-            <div className="w-48">
+            <div className="w-full sm:w-48">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -614,20 +616,20 @@ export default function VenueDashboardLayout({
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guests</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guests</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredBookings.map((booking) => (
                   <tr key={booking._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div>
                         <p className="font-medium text-gray-900">{booking.user?.name || 'N/A'}</p>
                         <p className="text-sm text-gray-500">{booking.user?.email || 'N/A'}</p>
@@ -669,14 +671,14 @@ export default function VenueDashboardLayout({
       "July", "August", "September", "October", "November", "December"];
     
     return (
-      <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Calendar View</h1>
-          <div className="flex items-center space-x-4">
+      <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Calendar View</h1>
+          <div className="flex items-center justify-center space-x-2 sm:space-x-4">
             <Button variant="outline" onClick={previousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h2 className="text-lg font-semibold min-w-[200px] text-center">
+            <h2 className="text-base sm:text-lg font-semibold min-w-[160px] sm:min-w-[200px] text-center">
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </h2>
             <Button variant="outline" onClick={nextMonth}>
@@ -686,19 +688,19 @@ export default function VenueDashboardLayout({
         </div>
 
         <Card>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-7 gap-2 mb-4">
+          <CardContent className="p-3 sm:p-6">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3 sm:mb-4">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="p-2 text-center font-semibold text-gray-600 border-b">
+                <div key={day} className="p-1 sm:p-2 text-center text-xs sm:text-sm font-semibold text-gray-600 border-b">
                   {day}
                 </div>
               ))}
             </div>
             
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {/* Empty cells for days before month starts */}
               {Array.from({ length: startingDayOfWeek }, (_, i) => (
-                <div key={`empty-${i}`} className="p-2 h-24"></div>
+                <div key={`empty-${i}`} className="p-1 sm:p-2 h-16 sm:h-24"></div>
               ))}
               
               {/* Days of the month */}
@@ -719,14 +721,14 @@ export default function VenueDashboardLayout({
                 return (
                   <div
                     key={day}
-                    className={`p-2 h-24 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                    className={`p-1 sm:p-2 h-16 sm:h-24 border rounded-lg cursor-pointer hover:bg-gray-50 ${
                       isToday ? 'bg-blue-50 border-blue-200' : 
                       isFullDayBlocked ? 'bg-red-50 border-red-300' :
                       hasPartialBlock ? 'bg-orange-50 border-orange-200' :
                       'border-gray-200'
                     }`}
                   >
-                    <div className={`font-semibold ${
+                    <div className={`text-xs sm:text-sm font-semibold ${
                       isToday ? 'text-blue-600' : 
                       isFullDayBlocked ? 'text-red-600' :
                       hasPartialBlock ? 'text-orange-600' :
@@ -779,9 +781,9 @@ export default function VenueDashboardLayout({
 
         {/* Booking Legend */}
         <Card>
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-3">Calendar Legend</h3>
-            <div className="flex flex-wrap gap-4">
+          <CardContent className="p-3 sm:p-4">
+            <h3 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3">Calendar Legend</h3>
+            <div className="flex flex-wrap gap-2 sm:gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
                 <span className="text-sm">Confirmed Bookings</span>
@@ -820,7 +822,7 @@ export default function VenueDashboardLayout({
         return renderFaqsContent();
       case "listing":
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Listing Details</h1>
@@ -1015,14 +1017,14 @@ export default function VenueDashboardLayout({
         );
       case "earnings":
         return (
-          <div className="space-y-6 p-6">
+          <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Earnings & Analytics</h1>
               <p className="text-gray-600">Track your venue's financial performance</p>
             </div>
 
             {/* Revenue Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -1130,7 +1132,7 @@ export default function VenueDashboardLayout({
             </Card>
 
             {/* Performance Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Booking Trends</CardTitle>
@@ -1190,7 +1192,7 @@ export default function VenueDashboardLayout({
         );
       case "settings":
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Venue Settings</h1>
               <p className="text-gray-600">Configure your venue preferences and policies</p>
@@ -1409,24 +1411,27 @@ export default function VenueDashboardLayout({
   };
 
   return (
-    <div className="flex h-full flex-col md:flex-row">
+    <div className="flex h-full flex-col md:flex-row bg-gray-50">
       {/* Mobile Header with Hamburger */}
-      <div className="md:hidden sticky top-0 z-30 bg-white border-b">
-        <div className="px-4 py-3 flex items-center justify-between">
+      <div className="md:hidden sticky top-0 z-30 bg-white border-b shadow-sm">
+        <div className="px-3 py-3 flex items-center justify-between">
           <button
             aria-label="Open menu"
-            className="p-2 rounded-md border border-gray-200 hover:bg-gray-50"
+            className="p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
             onClick={() => setMobileSidebarOpen(true)}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5 text-gray-700" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm">
               {venueData?.name?.charAt(0) || 'V'}
             </div>
-            <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{venueData?.name || 'Venue'}</span>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-900 truncate max-w-[150px]">{venueData?.name || 'Venue Dashboard'}</span>
+              <span className="text-xs text-gray-500">{sidebarItems.find(item => item.id === activeTab)?.label || 'Dashboard'}</span>
+            </div>
           </div>
-          <div className="w-8" />
+          <div className="w-10" />
         </div>
       </div>
 
@@ -1434,30 +1439,44 @@ export default function VenueDashboardLayout({
       {mobileSidebarOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 z-40"
+            className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl border-r flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
+          <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl border-r flex flex-col animate-in slide-in-from-left duration-300">
+            <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold text-gray-700">Venue Dashboard</h2>
+                <button
+                  aria-label="Close menu"
+                  className="p-1.5 rounded-lg hover:bg-white/50 transition-colors"
+                  onClick={() => setMobileSidebarOpen(false)}
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-base font-bold">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md">
                   {venueData?.name?.charAt(0) || 'V'}
                 </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-900">{venueData?.name || 'Venue Name'}</h2>
-                  <p className="text-xs text-gray-500">{venueData?.address?.city || 'City'}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-bold text-gray-900 truncate">{venueData?.name || 'Venue Name'}</h3>
+                  <p className="text-xs text-gray-600 truncate">{venueData?.address?.city || 'City'}</p>
+                  <Badge 
+                    className={`mt-1 text-xs ${
+                      venueData?.approvalStatus === 'approved' 
+                        ? 'bg-green-100 text-green-700' 
+                        : venueData?.approvalStatus === 'rejected'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}
+                  >
+                    {venueData?.approvalStatus || 'Pending'}
+                  </Badge>
                 </div>
               </div>
-              <button
-                aria-label="Close menu"
-                className="p-2 rounded-md hover:bg-gray-50"
-                onClick={() => setMobileSidebarOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
-            <nav className="p-3 overflow-y-auto">
-              <ul className="space-y-1">
+            <nav className="flex-1 p-3 overflow-y-auto">
+              <ul className="space-y-1.5">
                 {sidebarItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
@@ -1465,24 +1484,36 @@ export default function VenueDashboardLayout({
                     <li key={item.id}>
                       <button
                         onClick={() => { setActiveTab(item.id); setMobileSidebarOpen(false); }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
-                          isActive ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-gray-700 hover:bg-gray-50'
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-xl transition-all ${
+                          isActive 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md transform scale-[1.02]' 
+                            : 'text-gray-700 hover:bg-gray-100 active:scale-95'
                         }`}
                       >
-                        <Icon className="h-4 w-4" />
+                        <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
                         <span className="text-sm font-medium">{item.label}</span>
+                        {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
                       </button>
                     </li>
                   );
                 })}
               </ul>
             </nav>
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left rounded-lg text-gray-700 hover:bg-white transition-colors border border-gray-200"
+              >
+                <Home className="h-4 w-4" />
+                <span className="text-sm font-medium">Back to Home</span>
+              </button>
+            </div>
           </div>
         </>
       )}
 
-      {/* Left Sidebar */}
-      <div className="hidden md:block w-64 bg-white shadow-sm border-r">
+      {/* Left Sidebar - Desktop */}
+      <div className="hidden md:block w-64 bg-white shadow-sm border-r min-h-screen">
         <div className="p-6 border-b">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-lg font-bold">
@@ -1531,8 +1562,8 @@ export default function VenueDashboardLayout({
       </div>
 
       {/* Right Content Area */}
-      <div className="flex-1 overflow-auto">
-        <div className="p-6">
+      <div className="flex-1 overflow-auto bg-gray-50">
+        <div className="p-3 sm:p-6 max-w-7xl mx-auto">
           {/* Kaki Marketing Banner */}
           <div className="mb-6">
             <KakiMarketingBanner platform="venue" />

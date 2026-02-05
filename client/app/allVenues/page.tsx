@@ -11,6 +11,34 @@ import Link from "next/link";
 import Footer from "../Footer";
 import Navbar from "../Navbar";
 
+type VenueApiItem = {
+  _id: string;
+  name: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+  };
+  capacity?: number;
+  capacityDetails?: {
+    standingCapacity?: number;
+  };
+  pricing?: {
+    basePrice?: number;
+  };
+  rating?: {
+    average?: number;
+    count?: number;
+  };
+  venueClassification?: {
+    venueTypes?: string[];
+  };
+  gallery?: Array<{ url?: string; isMain?: boolean }>;
+  documents?: {
+    venueImages?: Array<{ url?: string; isMain?: boolean }>;
+  };
+};
+
 const features = [
   { icon: Search, title: "Get Discovered", text: "Reach thousands of event organizers searching for the perfect venue." },
   { icon: CalendarClock, title: "Real-Time Bookings", text: "Automated scheduling with instant confirmations and calendar sync." },
@@ -27,38 +55,49 @@ const venueTypes = [
   { icon: Calendar, label: "Meeting Rooms" },
 ];
 
-const popularVenues = [
-  {
-    name: "Grand Convention Center",
-    location: "Guwahati, Assam",
-    capacity: "500-1000 guests",
-    price: "₹75,000/day",
-    rating: 4.8,
-    reviews: 234,
-    type: "Corporate Events",
-    image: "https://images.pexels.com/photos/1884583/pexels-photo-1884583.jpeg"
-  },
-  {
-    name: "Skyview Banquet Hall",
-    location: "Dimapur, Nagaland",
-    capacity: "200-500 guests",
-    price: "₹50,000/day",
-    rating: 4.6,
-    reviews: 156,
-    type: "Social Events",
-    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=300&fit=crop"
-  },
-  {
-    name: "Elite Conference Hub",
-    location: "Shillong, Meghalaya",
-    capacity: "50-200 guests",
-    price: "₹15,000/day",
-    rating: 4.9,
-    reviews: 298,
-    type: "Business Meetings",
-    image: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=400&h=300&fit=crop"
-  },
-];
+const getVenueImageUrl = (venue: VenueApiItem) => {
+  const gallery = Array.isArray(venue.gallery) ? venue.gallery : [];
+  const venueImages = Array.isArray(venue.documents?.venueImages) ? venue.documents?.venueImages || [] : [];
+  const all = [...gallery, ...venueImages];
+  return (
+    all.find((img) => img?.isMain && img?.url)?.url ||
+    all.find((img) => img?.url)?.url ||
+    "https://images.unsplash.com/photo-1519167758481-83f550bb49b3"
+  );
+};
+
+const formatVenueType = (venue: VenueApiItem) => {
+  const type = venue.venueClassification?.venueTypes?.[0];
+  if (!type) return "Venue";
+  return type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+const formatCapacityLabel = (venue: VenueApiItem) => {
+  const cap = venue.capacityDetails?.standingCapacity ?? venue.capacity;
+  if (!cap || cap <= 0) return "Capacity on request";
+  return `${cap}+ guests`;
+};
+
+const formatPriceLabel = (venue: VenueApiItem) => {
+  const base = venue.pricing?.basePrice;
+  if (!base || base <= 0) return "Price on request";
+  return `₹${base.toLocaleString("en-IN")}/day`;
+};
+
+const toFeaturedVenueCard = (venue: VenueApiItem) => {
+  const location = [venue.address?.city, venue.address?.state].filter(Boolean).join(", ") || "Location not provided";
+  return {
+    id: venue._id,
+    name: venue.name,
+    location,
+    capacity: formatCapacityLabel(venue),
+    price: formatPriceLabel(venue),
+    rating: venue.rating?.average ?? 0,
+    reviews: venue.rating?.count ?? 0,
+    type: formatVenueType(venue),
+    image: getVenueImageUrl(venue),
+  };
+};
 
 const eventCategories = [
   {
@@ -301,7 +340,7 @@ const Hero = () => (
   </div>
 );
 
-const PopularVenuesList = () => (
+const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<typeof toFeaturedVenueCard>[] }) => (
   <Section className="bg-gray-50">
     <div className="flex items-center justify-between mb-6 md:mb-8">
       <div>
@@ -316,8 +355,9 @@ const PopularVenuesList = () => (
     </div>
 
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-      {popularVenues.map((venue, index) => (
-        <Card key={index} className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group">
+      {featuredVenues.map((venue) => (
+        <Link key={venue.id} href={`/allVenues/${venue.id}`} className="block">
+          <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group h-full">
           <div className="aspect-[4/3] overflow-hidden relative">
             <img
               src={venue.image}
@@ -347,8 +387,38 @@ const PopularVenuesList = () => (
               <span className="text-gray-500 ml-1">({venue.reviews} reviews)</span>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </Link>
       ))}
+
+      <Link href="/allVenues/list" className="block">
+        <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group h-full">
+          <CardContent className="p-0 h-full">
+            <div className="relative h-full min-h-[320px] flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-700">
+              <div
+                className="absolute inset-0 opacity-20"
+                style={{
+                  backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+                  backgroundSize: "18px 18px",
+                }}
+              />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center mb-4 backdrop-blur-sm mx-auto">
+                  <Building2 className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="text-white text-xl font-bold mb-2">View All Venues</h3>
+                <p className="text-white/90 text-sm mb-5 max-w-xs mx-auto">
+                  Browse every verified venue, filter by city and capacity, and book instantly.
+                </p>
+                <Button className="bg-white text-pink-700 hover:bg-white/90 font-semibold">
+                  Explore Venues
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   </Section>
 );
@@ -384,7 +454,7 @@ const VenueCardSection = () => (
 
         {/* CTA */}
         <div className="mt-8">
-          <Link href="/allOrganizers">
+          <Link href="/venue/dashboard">
             <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
               GET STARTED
             </button>
@@ -688,14 +758,25 @@ const CTA = () => (
   </Section>
 );
 
-export default function AhibiVenuePage() {
+export default async function AhibiVenuePage() {
+  let featuredVenues: ReturnType<typeof toFeaturedVenueCard>[] = [];
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const res = await fetch(`${apiUrl}/api/venue/`, { cache: "no-store" });
+    const data = await res.json();
+    const venues: VenueApiItem[] = data?.success ? data?.data?.venues || [] : [];
+    featuredVenues = venues.slice(0, 2).map(toFeaturedVenueCard);
+  } catch {
+    featuredVenues = [];
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
       <main>
         <Hero />
-        <PopularVenuesList />
+        <PopularVenuesList featuredVenues={featuredVenues} />
         <VenueCardSection />
         <WhyJoinSection />
         <HowToJoinSection />

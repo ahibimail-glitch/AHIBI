@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MapPin, Star, ChevronRight, Search } from 'lucide-react';
 import Navbar from '../../Navbar';
 import Footer from '../../Footer';
@@ -17,29 +18,157 @@ const SPORTS = [
   'Swimming',
 ];
 
+function toMinutes(hhmm?: string) {
+  if (!hhmm || typeof hhmm !== 'string') return null;
+  const m = hhmm.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+  return h * 60 + mm;
+}
+
+function dayKeyFromDate(dateStr?: string) {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  const idx = d.getDay();
+  const keys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+  return keys[idx];
+}
+
+function overlaps(a: { start: number; end: number }, b: { start: number; end: number }) {
+  return a.start < b.end && b.start < a.end;
+}
+
+function getTimeOfDayRange(timeOfDay?: string) {
+  switch ((timeOfDay || '').toLowerCase()) {
+    case 'morning':
+      return { start: 6 * 60, end: 12 * 60 };
+    case 'afternoon':
+      return { start: 12 * 60, end: 17 * 60 };
+    case 'evening':
+      return { start: 17 * 60, end: 22 * 60 };
+    case 'night':
+      return { start: 22 * 60, end: 24 * 60 };
+    default:
+      return null;
+  }
+}
+
 export default function SportsDiscoveryPage() {
+  const searchParams = useSearchParams();
   const [venues, setVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   const [filters, setFilters] = useState({
+    q: '',
     sport: '',
     city: '',
+    date: '',
+    timeOfDay: '',
+    facilities: '',
     minPrice: '',
     maxPrice: '',
     rating: '',
   });
 
   useEffect(() => {
+    const q = searchParams.get('q') || '';
+    const sport = searchParams.get('sport') || '';
+    const city = searchParams.get('city') || '';
+    const rating = searchParams.get('rating') || '';
+    const facilities = searchParams.get('facilities') || '';
+    const date = searchParams.get('date') || '';
+    const timeOfDay = searchParams.get('timeOfDay') || '';
+
+    setFilters((prev) => ({
+      ...prev,
+      q,
+      sport,
+      city,
+      rating,
+      facilities,
+      date,
+      timeOfDay,
+    }));
+
+    setInitialized(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!initialized) return;
     fetchVenues();
-  }, [filters]);
+  }, [filters, initialized]);
 
   async function fetchVenues() {
     setLoading(true);
     try {
       const params: any = {};
-      Object.entries(filters).forEach(([k, v]) => v && (params[k] = v));
+      // API-supported filters
+      if (filters.sport) params.sport = filters.sport;
+      if (filters.city) params.city = filters.city;
+      if (filters.rating) params.rating = filters.rating;
+      if (filters.facilities) params.facilities = filters.facilities;
+
       const res = await sportsApi.searchVenues(params);
-      setVenues(res.data.data.venues);
+      let apiVenues = res.data.data.venues || [];
+
+      // Client-side date + timeOfDay filter based on venue operating hours
+      const dayKey = dayKeyFromDate(filters.date);
+      const timeRange = getTimeOfDayRange(filters.timeOfDay);
+      if (filters.date || timeRange) {
+        apiVenues = apiVenues.filter((v: any) => {
+          const hours = v?.operatingHours?.[dayKey];
+          if (!hours) return true;
+          if (hours.closed) return false;
+
+          const openM = toMinutes(hours.open);
+          const closeM = toMinutes(hours.close);
+          if (openM === null || closeM === null) return true;
+
+          // handle overnight close (e.g. 18:00 - 02:00)
+          const effectiveClose = closeM <= openM ? closeM + 24 * 60 : closeM;
+          const venueRange = { start: openM, end: effectiveClose };
+
+          if (!timeRange) return true;
+
+          // check timeRange in same day window
+          const tr = timeRange;
+          const withinSameDay = overlaps(venueRange, { start: tr.start, end: tr.end });
+          if (withinSameDay) return true;
+
+          // also check if venue open past midnight and requested range is early next day
+          if (effectiveClose > 24 * 60 && tr.start < openM) {
+            return overlaps(venueRange, { start: tr.start + 24 * 60, end: tr.end + 24 * 60 });
+          }
+          return false;
+        });
+      }
+
+      // Client-side query filter ("search sport or facility")
+      const q = (filters.q || '').trim().toLowerCase();
+      if (!q) {
+        setVenues(apiVenues);
+        return;
+      }
+
+      const filtered = apiVenues.filter((v: any) => {
+        const name = (v.venueName || '').toLowerCase();
+        const city = (v.address?.city || '').toLowerCase();
+        const state = (v.address?.state || '').toLowerCase();
+        const sportsSupported = Array.isArray(v.sportsSupported)
+          ? v.sportsSupported.map((s: any) => String(s).toLowerCase())
+          : [];
+
+        return (
+          name.includes(q) ||
+          city.includes(q) ||
+          state.includes(q) ||
+          sportsSupported.some((s: string) => s.includes(q))
+        );
+      });
+
+      setVenues(filtered);
     } catch (e) {
       console.error(e);
     } finally {
@@ -104,6 +233,13 @@ export default function SportsDiscoveryPage() {
       {/* ================= FILTER BAR ================= */}
       <section id="explore" className="sticky top-[60px] z-40 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex gap-3 overflow-x-auto">
+          <input
+            className="filter-pill"
+            placeholder="Search sport or facility"
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+          />
+
           <select
             className="filter-pill"
             value={filters.sport}

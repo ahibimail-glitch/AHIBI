@@ -42,7 +42,12 @@ exports.protect = async (req, res, next) => {
       console.log('Token decoded successfully. User ID:', decoded.id, 'Role:', decoded.role);
 
       // Determine which model to use based on the token role primarily, not just the route
-      const isAdminRoute = req.originalUrl.startsWith('/api/admin') || req.originalUrl.startsWith('/api/system');
+      // Keep a central list of admin-only route prefixes
+      const isAdminRoute =
+        req.originalUrl.startsWith('/api/admin') ||
+        req.originalUrl.startsWith('/api/system') ||
+        req.originalUrl.startsWith('/api/livestream/admin');
+
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
@@ -65,8 +70,13 @@ exports.protect = async (req, res, next) => {
         console.log('AUTH FAILED: Non-arena partner trying to access arena partner route');
         return res.status(403).json({ success: false, message: 'Arena partner access required' });
       }
+
+      if (isAdminRoute && decoded.role !== 'admin') {
+        console.log('AUTH FAILED: Non-admin trying to access admin route');
+        return res.status(403).json({ success: false, message: 'Admin access required' });
+      }
       
-      if (decoded.role === 'admin' && isAdminRoute) {
+      if (decoded.role === 'admin') {
         console.log('Looking for Admin with ID:', decoded.id);
         user = await Admin.findById(decoded.id);
         if (!user) {
@@ -205,7 +215,12 @@ exports.optionalAuth = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const isAdminRoute = req.originalUrl.startsWith('/api/admin') || req.originalUrl.startsWith('/api/system');
+      // Keep a central list of admin-only route prefixes
+      const isAdminRoute =
+        req.originalUrl.startsWith('/api/admin') ||
+        req.originalUrl.startsWith('/api/system') ||
+        req.originalUrl.startsWith('/api/livestream/admin');
+
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
@@ -218,7 +233,12 @@ exports.optionalAuth = async (req, res, next) => {
 
       let user;
 
-      if (decoded.role === 'admin' || isAdminRoute) {
+      if (isAdminRoute && decoded.role !== 'admin') {
+        // optionalAuth should never hard-block requests; just don't attach a user
+        return next();
+      }
+
+      if (decoded.role === 'admin') {
         user = await Admin.findById(decoded.id);
         if (user) user.role = 'admin';
       } else if (decoded.role === 'organizer' || isOrganizerRoute) {

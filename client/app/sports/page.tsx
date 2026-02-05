@@ -88,49 +88,60 @@ const Hero = () => (
                     </CardHeader>
 
                     <CardContent className="space-y-5">
-                        <div className="flex gap-3">
+                        <form action="/sports/list" className="flex gap-3">
                             <Input
+                                name="q"
                                 placeholder="Search sport or facility"
                                 className="rounded-full"
                             />
-                            <Button className="rounded-full bg-black text-white hover:bg-black/90">
+                            <Button type="submit" className="rounded-full bg-black text-white hover:bg-black/90">
                                 <Search className="h-4 w-4" />
                             </Button>
-                        </div>
+                        </form>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {[
-                                "Football",
-                                "Badminton",
-                                "Tennis",
-                                "Basketball",
-                                "Cricket",
-                                "Volleyball",
-                                "Table Tennis",
-                                "Swimming",
-                            ].map((label) => (
-                                <div
-                                    key={label}
+                                { label: "Football", sport: "football" },
+                                { label: "Badminton", sport: "badminton" },
+                                { label: "Tennis", sport: "tennis" },
+                                { label: "Basketball", sport: "basketball" },
+                                { label: "Cricket", sport: "cricket" },
+                                { label: "Volleyball", sport: "volleyball" },
+                                { label: "Table Tennis", sport: "table_tennis" },
+                                { label: "Swimming", sport: "swimming" },
+                            ].map((item) => (
+                                <Link
+                                    key={item.sport}
+                                    href={`/sports/list?sport=${encodeURIComponent(item.sport)}`}
                                     className="rounded-full border border-black/10 bg-slate-50 px-3 py-2 text-sm text-slate-700 text-center hover:bg-slate-100 transition"
                                 >
-                                    {label}
-                                </div>
+                                    {item.label}
+                                </Link>
                             ))}
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-full border bg-slate-50 px-4 py-2 text-sm">
+                            <Link
+                                href="/sports/list?city=Dimapur"
+                                className="rounded-full border bg-slate-50 px-4 py-2 text-sm hover:bg-slate-100 transition"
+                            >
                                 <MapPin className="inline h-4 w-4 mr-2" />
                                 Dimapur
-                            </div>
-                            <div className="rounded-full border bg-slate-50 px-4 py-2 text-sm">
+                            </Link>
+                            <Link
+                                href={`/sports/list?date=${encodeURIComponent(new Date().toISOString().slice(0, 10))}`}
+                                className="rounded-full border bg-slate-50 px-4 py-2 text-sm hover:bg-slate-100 transition"
+                            >
                                 <CalendarClock className="inline h-4 w-4 mr-2" />
                                 Today
-                            </div>
-                            <div className="rounded-full border bg-slate-50 px-4 py-2 text-sm">
+                            </Link>
+                            <Link
+                                href="/sports/list?timeOfDay=evening"
+                                className="rounded-full border bg-slate-50 px-4 py-2 text-sm hover:bg-slate-100 transition"
+                            >
                                 <CalendarClock className="inline h-4 w-4 mr-2" />
                                 Evening
-                            </div>
+                            </Link>
                         </div>
 
                         <Button
@@ -181,7 +192,7 @@ const SportsCardSection = () => (
 
         {/* CTA */}
         <div className="mt-8">
-          <Link href="/allOrganizers">
+          <Link href="/arena-partner/auth">
             <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
               GET STARTED
             </button>
@@ -204,23 +215,23 @@ const Facilities = () => (
 
         <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3">
             {[
-                "Futsal & Football Grounds",
-                "Badminton Courts",
-                "Tennis Courts",
-                "Basketball Courts",
-                "Cricket Nets & Grounds",
-                "Volleyball Courts",
-                "Table Tennis",
-                "Swimming Pools",
+                { label: "Futsal & Football Grounds", sport: "football" },
+                { label: "Badminton Courts", sport: "badminton" },
+                { label: "Tennis Courts", sport: "tennis" },
+                { label: "Basketball Courts", sport: "basketball" },
+                { label: "Cricket Nets & Grounds", sport: "cricket" },
+                { label: "Volleyball Courts", sport: "volleyball" },
+                { label: "Table Tennis", sport: "table_tennis" },
+                { label: "Swimming Pools", sport: "swimming" },
+                { label: "Pickleball", sport: "pickleball" },
             ].map((item) => (
-                <Card
-                    key={item}
-                    className="rounded-2xl border border-black/10 hover:shadow-lg transition"
-                >
-                    <CardContent className="p-6 font-medium text-slate-800">
-                        {item}
-                    </CardContent>
-                </Card>
+                <Link key={item.label} href={`/sports/list?sport=${encodeURIComponent(item.sport)}`}>
+                    <Card className="rounded-2xl border border-black/10 hover:shadow-lg transition cursor-pointer">
+                        <CardContent className="p-6 font-medium text-slate-800">
+                            {item.label}
+                        </CardContent>
+                    </Card>
+                </Link>
             ))}
         </div>
     </Section>

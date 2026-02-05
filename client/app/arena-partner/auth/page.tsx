@@ -147,7 +147,7 @@ export default function ArenaPartnerAuth() {
                 <div className="text-center mb-6 sm:mb-8">
                     <div className="flex justify-center mb-3 sm:mb-4">
                         <Image
-                            src="/images/LogoB.png"
+                            src="/images/AhibiSportsB.png"
                             alt="Ahibi"
                             width={140}
                             height={140}

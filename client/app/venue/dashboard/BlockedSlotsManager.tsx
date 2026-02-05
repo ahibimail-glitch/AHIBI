@@ -291,23 +291,24 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, book
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Blocked Dates & Time Slots</h1>
-          <p className="text-gray-600 mt-1">Manage offline bookings and internal reservations</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Blocked Dates & Time Slots</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage offline bookings and internal reservations</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
-              Block Date/Time
+              <span className="hidden sm:inline">Block Date/Time</span>
+              <span className="sm:hidden">Block Date</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
               <DialogTitle>{editingSlot ? 'Edit Blocked Slot' : 'Block Date or Time Slot'}</DialogTitle>
               <DialogDescription>
@@ -431,14 +432,14 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, book
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
                 <Button variant="outline" onClick={() => {
                   setDialogOpen(false);
                   resetForm();
-                }}>
+                }} className="w-full sm:w-auto">
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit}>
+                <Button onClick={handleSubmit} className="w-full sm:w-auto">
                   {editingSlot ? 'Update' : 'Block Date/Time'}
                 </Button>
               </div>
@@ -449,42 +450,44 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, book
 
       {blockedSlots.length === 0 ? (
         <Card>
-          <CardContent className="p-12 text-center">
+          <CardContent className="p-6 sm:p-12 text-center">
             <Ban className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">No Blocked Slots</h3>
             <p className="text-gray-600 mb-4">
               You haven't blocked any dates or time slots yet. Block dates to prevent online bookings for offline reservations or internal events.
             </p>
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Block Your First Date
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3 sm:gap-4">
           {blockedSlots.map((slot) => (
             <Card key={slot._id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CalendarIcon className="h-5 w-5 text-gray-500" />
-                      <span className="font-semibold text-lg">
-                        {format(new Date(slot.date), 'EEEE, MMMM d, yyyy')}
-                      </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="h-5 w-5 text-gray-500" />
+                        <span className="font-semibold text-base sm:text-lg">
+                          {format(new Date(slot.date), 'EEEE, MMMM d, yyyy')}
+                        </span>
+                      </div>
                       <Badge className={getReasonColor(slot.reason)}>
                         {getReasonLabel(slot.reason)}
                       </Badge>
                     </div>
                     
                     {slot.isFullDayBlocked ? (
-                      <div className="flex items-center gap-2 text-red-600 ml-8">
+                      <div className="flex items-center gap-2 text-red-600 ml-0 sm:ml-8">
                         <Ban className="h-4 w-4" />
                         <span className="font-medium">Full Day Blocked</span>
                       </div>
                     ) : (
-                      <div className="ml-8 space-y-1">
+                      <div className="ml-0 sm:ml-8 space-y-1">
                         {slot.timeSlots.map((timeSlot, idx) => (
                           <div key={idx} className="flex items-center gap-2 text-gray-700">
                             <Clock className="h-4 w-4 text-gray-400" />
@@ -495,24 +498,28 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, book
                     )}
                     
                     {slot.notes && (
-                      <p className="text-gray-600 text-sm mt-3 ml-8">{slot.notes}</p>
+                      <p className="text-gray-600 text-sm mt-3 ml-0 sm:ml-8">{slot.notes}</p>
                     )}
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 self-end sm:self-start">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(slot)}
+                      className="flex-1 sm:flex-none"
                     >
                       <Edit className="h-4 w-4" />
+                      <span className="ml-1 sm:hidden">Edit</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => slot._id && handleDelete(slot._id)}
+                      className="flex-1 sm:flex-none"
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
+                      <span className="ml-1 sm:hidden">Delete</span>
                     </Button>
                   </div>
                 </div>
