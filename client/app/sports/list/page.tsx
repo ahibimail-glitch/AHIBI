@@ -186,48 +186,45 @@ function SportsDiscoveryClient() {
       <Navbar />
 
       {/* ================= HERO ================= */}
-      <section className="relative h-[100vh] w-full">
-        <Image
-          src="https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?q=80&w=2400&auto=format&fit=crop"
-          alt="Sports"
-          fill
-          priority
-          className="object-cover"
-        />
+      <section className="relative min-h-[50vh] md:min-h-[60vh] w-full overflow-hidden">
+  <Image
+    src="https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?q=80&w=2400&auto=format&fit=crop"
+    alt="Sports"
+    fill
+    priority
+    className="object-cover"
+  />
 
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/40" />
+  {/* Overlay */}
+  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/20" />
 
-        {/* Content */}
-        <div className="absolute bottom-24 left-6 md:left-20 max-w-3xl">
-          <h1 className="text-white text-4xl sm:text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
-            SPORTS FOR <br /> EVERY PASSION
-          </h1>
+  {/* Content */}
+  <div className="absolute bottom-12 md:bottom-24 left-6 md:left-20 max-w-3xl">
+    <h1 className="text-white text-4xl sm:text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
+      SPORTS FOR <br /> EVERY PASSION
+    </h1>
 
-          <p className="text-white/80 mt-6 max-w-md text-base md:text-lg">
-            Discover top-notch sports facilities designed to support every passion and lifestyle.
-          </p>
+    <p className="text-white/90 mt-6 max-w-md text-base md:text-lg">
+      Discover top-notch sports facilities designed to support every passion and lifestyle.
+    </p>
 
-          {/* CTA Buttons */}
-          <div className="mt-8 flex items-center gap-4">
-            <Link href="/arena-partner/auth">
-              <button className="px-6 py-3 rounded-full bg-white text-black font-semibold hover:scale-105 transition">
-                Sign up
-              </button>
-            </Link>
+    <div className="mt-8 flex items-center gap-4">
+      <Link href="/arena-partner/auth">
+        <button className="px-6 py-3 rounded-full bg-white text-black font-semibold hover:scale-105 transition">
+          Sign up
+        </button>
+      </Link>
 
-            {/* <Link href="/arena-partner/auth">
-              <button className="px-6 py-3 rounded-full border border-white/60 text-white font-semibold hover:bg-white hover:text-black transition">
-                Login
-              </button>
-            </Link> */}
+      <button
+        onClick={scrollToExplore}
+        className="px-6 py-3 rounded-full border border-white/70 text-white font-semibold hover:bg-white hover:text-black transition"
+      >
+        Explore
+      </button>
+    </div>
+  </div>
+</section>
 
-            <button onClick={scrollToExplore} className="px-6 py-3 rounded-full border border-white/60 text-white font-semibold hover:bg-white hover:text-black transition">
-              Explore
-            </button>
-          </div>
-        </div>
-      </section>
 
 
       {/* ================= FILTER BAR ================= */}

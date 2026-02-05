@@ -13,6 +13,7 @@ import {
     MapPin,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { backgroundPosition } from "tailwindcss/defaultTheme";
 
 /* ----------------------------- */
 /* Shared Section Wrapper */
@@ -21,15 +22,19 @@ const Section = ({
     children,
     id,
     muted,
+    className,
+    style,
 }: {
     children: React.ReactNode;
     id?: string;
     muted?: boolean;
+    className?: string;
+    style?: React.CSSProperties;
 }) => (
     <section
         id={id}
-        className={`py-20 md:py-28 ${muted ? "bg-slate-50/70" : "bg-white"
-            }`}
+        style={style}
+        className={`py-20 md:py-28 ${muted ? "bg-slate-50/70" : "bg-white"} ${className || ''}`}
     >
         <div className="mx-auto max-w-7xl px-5 md:px-8">{children}</div>
     </section>
@@ -39,18 +44,30 @@ const Section = ({
 /* Hero */
 /* ----------------------------- */
 const Hero = () => (
-    <Section>
-        <div className="grid items-center gap-14 md:grid-cols-2">
+    <Section
+        className="relative overflow-hidden"
+        style={{
+            backgroundImage:
+                "url('https://images.unsplash.com/photo-1471295253337-3ceaaedca402?auto=format&fit=crop&w=1600&q=80')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+        }}
+    >
+        {/* Dark overlay */}
+        {/* <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" /> */}
+
+        {/* Content */}
+        <div className="relative grid items-center gap-14 md:grid-cols-2">
             {/* Left */}
             <div>
-                <h1 className="text-4xl md:text-6xl xl:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
+                <h1 className="text-4xl md:text-6xl xl:text-7xl font-extrabold tracking-tight text-white leading-[1.05]">
                     AHIBI Sports
                 </h1>
-                <p className="mt-4 text-xl md:text-2xl text-slate-600 font-medium">
+                <p className="mt-4 text-xl md:text-2xl text-white font-medium">
                     Book Sports Facilities. List Your Ground.
                 </p>
 
-                <p className="mt-6 max-w-xl text-slate-600 md:text-lg leading-relaxed">
+                <p className="mt-6 max-w-xl text-white md:text-lg leading-relaxed">
                     Discover and book verified sports courts instantly — or list your
                     facility and manage bookings effortlessly.
                 </p>
@@ -68,19 +85,19 @@ const Hero = () => (
                     </Link>
                 </div>
 
-                <div className="mt-8 flex flex-wrap gap-6 text-sm text-slate-600">
+                <div className="mt-8 flex flex-wrap gap-6 text-sm text-white">
                     <span className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-black" /> Book by the hour
+                        <Check className="h-4 w-4 text-white" /> Book by the hour
                     </span>
                     <span className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-black" /> Live availability
+                        <Check className="h-4 w-4 text-white" /> Live availability
                     </span>
                 </div>
             </div>
 
             {/* Right – Search Card */}
             <div className="w-full">
-                <Card className="rounded-3xl border border-black/10 shadow-2xl bg-white/80 backdrop-blur">
+                <Card className="rounded-3xl border border-black/10 shadow-2xl bg-white/90 backdrop-blur">
                     <CardHeader>
                         <CardTitle className="text-xl font-bold text-slate-900">
                             Quick search
@@ -94,7 +111,10 @@ const Hero = () => (
                                 placeholder="Search sport or facility"
                                 className="rounded-full"
                             />
-                            <Button type="submit" className="rounded-full bg-black text-white hover:bg-black/90">
+                            <Button
+                                type="submit"
+                                className="rounded-full bg-black text-white hover:bg-black/90"
+                            >
                                 <Search className="h-4 w-4" />
                             </Button>
                         </form>
@@ -129,7 +149,9 @@ const Hero = () => (
                                 Dimapur
                             </Link>
                             <Link
-                                href={`/sports/list?date=${encodeURIComponent(new Date().toISOString().slice(0, 10))}`}
+                                href={`/sports/list?date=${encodeURIComponent(
+                                    new Date().toISOString().slice(0, 10)
+                                )}`}
                                 className="rounded-full border bg-slate-50 px-4 py-2 text-sm hover:bg-slate-100 transition"
                             >
                                 <CalendarClock className="inline h-4 w-4 mr-2" />
@@ -157,50 +179,51 @@ const Hero = () => (
     </Section>
 );
 
+
 /* ----------------------------- */
 /* Facilities */
 /* ----------------------------- */
 const SportsCardSection = () => (
-  <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
-    {/* dotted background */}
-    <div
-      className="absolute inset-0 opacity-60"
-      style={{
-        backgroundImage: "radial-gradient(#e6cfc7 1px, transparent 1px)",
-        backgroundSize: "18px 18px",
-      }}
-    />
+    <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
+        {/* dotted background */}
+        <div
+            className="absolute inset-0 opacity-60"
+            style={{
+                backgroundImage: "radial-gradient(#e6cfc7 1px, transparent 1px)",
+                backgroundSize: "18px 18px",
+            }}
+        />
 
-    <div className="relative z-10 container mx-auto px-4">
-      <div className="mx-auto max-w-2xl text-center">
-        {/* badge */}
-        <div className="inline-block rounded bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
-          SPORT
+        <div className="relative z-10 container mx-auto px-4">
+            <div className="mx-auto max-w-2xl text-center">
+                {/* badge */}
+                <div className="inline-block rounded bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
+                    SPORT
+                </div>
+
+                {/* heading */}
+                <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+                    Post your{" "}
+                    <span className="text-red-600">sports events </span>
+                </h1>
+
+                {/* subtext */}
+                <p className="mt-4 text-sm sm:text-base text-gray-600">
+                    Fill the stands. Live in under{" "}
+                    <span className="font-semibold text-gray-900">5 minutes.</span>
+                </p>
+
+                {/* CTA */}
+                <div className="mt-8">
+                    <Link href="/arena-partner/auth">
+                        <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
+                            GET STARTED
+                        </button>
+                    </Link>
+                </div>
+            </div>
         </div>
-
-        {/* heading */}
-        <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-          Post your{" "}
-          <span className="text-red-600">sports events </span>
-        </h1>
-
-        {/* subtext */}
-        <p className="mt-4 text-sm sm:text-base text-gray-600">
-          Fill the stands. Live in under{" "}
-          <span className="font-semibold text-gray-900">5 minutes.</span>
-        </p>
-
-        {/* CTA */}
-        <div className="mt-8">
-          <Link href="/arena-partner/auth">
-            <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-              GET STARTED
-            </button>
-          </Link>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 );
 const Facilities = () => (
     <Section id="facilities" muted>
