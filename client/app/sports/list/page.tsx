@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MapPin, Star, ChevronRight, Search } from 'lucide-react';
 import Navbar from '../../Navbar';
@@ -54,7 +54,7 @@ function getTimeOfDayRange(timeOfDay?: string) {
   }
 }
 
-export default function SportsDiscoveryPage() {
+function SportsDiscoveryClient() {
   const searchParams = useSearchParams();
   const [venues, setVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -379,5 +379,13 @@ export default function SportsDiscoveryPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function SportsDiscoveryPage() {
+  return (
+    <Suspense fallback={<div className="bg-white text-slate-900" />}>
+      <SportsDiscoveryClient />
+    </Suspense>
   );
 }
