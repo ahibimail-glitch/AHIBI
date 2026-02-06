@@ -669,7 +669,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
               <Button
                 onClick={handleBuyNowClick}
-                className="w-full md:w-auto  bg-[#ff0e0e] text-white font-semibold px-8 py-6 rounded-lg
+                className="w-full md:w-auto  bg-red-600 text-white font-semibold px-8 py-6 rounded-lg
     hover:bg-[#c90c0c]
     hover:shadow-lg hover:-translate-y-0.5"
               >
@@ -921,7 +921,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
             <Button
               onClick={handleBuyNowClick}
-              className=" bg-[#ff0e0e] text-white font-semibold px-8 py-6 rounded-lg
+              className=" bg-red-600 text-white font-semibold px-8 py-6 rounded-lg
     hover:bg-[#c90c0c]
     hover:shadow-lg hover:-translate-y-0.5"
             >
@@ -935,7 +935,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
         <Button
           onClick={handleBuyNowClick}
-          className="w-full  bg-[#ff0e0e] text-white font-semibold px-8 py-6 rounded-lg
+          className="w-full  bg-red-600 text-white font-semibold px-8 py-6 rounded-lg
     hover:bg-[#c90c0c]
     hover:shadow-lg hover:-translate-y-0.5"
         >
