@@ -331,6 +331,33 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     router.push(`/events/${params.id}/checkout`);
   };
 
+  const handleShareClick = async () => {
+    try {
+      const url = window.location.href;
+      const title = event?.title || "AHIBI Event";
+      const text = `Check out this event: ${title}`;
+
+      const nav = navigator as any;
+
+      if (typeof nav?.share === "function") {
+        await nav.share({ title, text, url });
+        return;
+      }
+
+      if (nav?.clipboard?.writeText) {
+        await nav.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+        return;
+      }
+
+      toast.error("Sharing is not supported on this device");
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      console.error("Share failed:", err);
+      toast.error("Failed to share link");
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchEvent = async () => {
@@ -600,6 +627,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   variant="ghost"
                   size="icon"
                   className="absolute top-4 right-4 bg-white/80 backdrop-blur hover:bg-white text-gray-700 rounded-full shadow"
+                  onClick={handleShareClick}
+                  aria-label="Share event"
                 >
                   <Share2 className="h-5 w-5" />
                 </Button>
@@ -640,7 +669,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
               <Button
                 onClick={handleBuyNowClick}
-                className="w-full md:w-auto bg-black text-white hover:bg-gray-900 font-semibold py-6 px-8 rounded-lg text-lg"
+                className="w-full md:w-auto  bg-[#ff0e0e] text-white font-semibold px-8 py-6 rounded-lg
+    hover:bg-[#c90c0c]
+    hover:shadow-lg hover:-translate-y-0.5"
               >
                 Book Now
                 <span className="ml-4 font-bold">{priceRange}</span>
@@ -890,7 +921,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             </div>
             <Button
               onClick={handleBuyNowClick}
-              className="bg-black text-white hover:bg-gray-800 font-semibold px-8 py-6 rounded-lg"
+              className=" bg-[#ff0e0e] text-white font-semibold px-8 py-6 rounded-lg
+    hover:bg-[#c90c0c]
+    hover:shadow-lg hover:-translate-y-0.5"
             >
               Book Now
             </Button>
@@ -902,7 +935,9 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
         <Button
           onClick={handleBuyNowClick}
-          className="w-full bg-black text-white hover:bg-gray-800 font-semibold py-6 rounded-lg text-lg"
+          className="w-full  bg-[#ff0e0e] text-white font-semibold px-8 py-6 rounded-lg
+    hover:bg-[#c90c0c]
+    hover:shadow-lg hover:-translate-y-0.5"
         >
           Book Now
           <span className="ml-4">{priceRange}</span>
