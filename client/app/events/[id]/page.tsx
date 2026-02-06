@@ -207,7 +207,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const getEventImage = (e: any) => {
-    const url = e?.coverImage || e?.banner || '';
+    const url = e?.banner || e?.coverImage || '';
     if (!url) return "/placeholder.svg";
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     const base = process.env.NEXT_PUBLIC_API_URL || '';
