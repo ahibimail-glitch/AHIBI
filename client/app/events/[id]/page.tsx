@@ -626,7 +626,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-4 right-4 bg-white/80 backdrop-blur hover:bg-white text-gray-700 rounded-full shadow"
+                  className="absolute top-4 right-4 bg-white/80 backdrop-blur hover:bg-white hover:text-black text-gray-700 rounded-full shadow"
                   onClick={handleShareClick}
                   aria-label="Share event"
                 >
