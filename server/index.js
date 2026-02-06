@@ -38,6 +38,7 @@ const sportsAdminRoutes = require('./routes/sportsAdmin.routes');
 const systemConfigRoutes = require('./routes/systemConfig.routes');
 const danceLeagueRoutes = require('./routes/danceLeague.routes');
 const livestreamRoutes = require('./routes/livestream.routes');
+const donationRoutes = require('./routes/donation.routes');
 
 // Create Express app
 const app = express();
@@ -104,6 +105,14 @@ app.post('/api/dance-league/webhook', express.raw({ type: '*/*' }), (req, res, n
   danceLeagueController.handleWebhook(req, res);
 });
 
+app.post('/api/donations/webhook', express.raw({ type: '*/*' }), (req, res, next) => {
+  req.rawBody = req.body;
+  next();
+}, (req, res) => {
+  const donationController = require('./controllers/donationController');
+  donationController.handleDonationWebhook(req, res);
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -154,6 +163,7 @@ app.use('/api/admin/sports', sportsAdminRoutes);
 app.use('/api/system', systemConfigRoutes);
 app.use('/api/dance-league', danceLeagueRoutes);
 app.use('/api/livestream', livestreamRoutes);
+app.use('/api/donations', donationRoutes);
 
 // Root route
 app.get('/', (req, res) => {
