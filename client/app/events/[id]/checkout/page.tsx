@@ -122,7 +122,7 @@ export default function CheckoutPage() {
 
   const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
   const HF_id = ["6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
-  
+
   const isHMFEvent = HMF_id.includes(eventId);
   const isHFEvent = HF_id.includes(eventId);
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
@@ -140,10 +140,10 @@ export default function CheckoutPage() {
 
   const statesByCountry: Record<string, string[]> = {
     India: [
-      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 
-      'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 
-      'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 
-      'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 
+      'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+      'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+      'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+      'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
       'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir'
     ],
   };
@@ -447,7 +447,7 @@ export default function CheckoutPage() {
         handler: async function (response: RazorpayResponse) {
           try {
             setIsProcessingPayment(true);
-            
+
             const verificationResponse = await fetch(
               `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
               {
@@ -553,7 +553,7 @@ export default function CheckoutPage() {
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Back to Event</span>
           </button>
-          
+
           <div className="space-y-2">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Checkout</h1>
             <p className="text-gray-600">{event.title}</p>
@@ -580,7 +580,7 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-bold text-gray-900 mb-2">Visitor Information</h2>
                   <p className="text-sm text-gray-600">Required for event registration</p>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">Country *</label>
@@ -595,7 +595,7 @@ export default function CheckoutPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">State/Province *</label>
                     {sortedStates.length > 0 ? (
@@ -638,7 +638,7 @@ export default function CheckoutPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Select Tickets</h2>
                 <p className="text-sm text-gray-600">Choose your preferred ticket categories</p>
               </div>
-              
+
               <div className="space-y-4">
                 {event.ticketTypes && event.ticketTypes.length > 0 ? (
                   event.ticketTypes.map((ticket) => {
@@ -651,13 +651,12 @@ export default function CheckoutPage() {
                     return (
                       <div
                         key={ticket._id}
-                        className={`rounded-2xl border-2 transition-all overflow-hidden ${
-                          quantity > 0
-                            ? 'border-black bg-gray-50 shadow-md'
-                            : isSoldOut
+                        className={`rounded-2xl border-2 transition-all overflow-hidden ${quantity > 0
+                          ? 'border-black bg-gray-50 shadow-md'
+                          : isSoldOut
                             ? 'border-gray-200 bg-gray-50 opacity-60'
                             : 'border-gray-200 hover:border-gray-400 bg-white'
-                        }`}
+                          }`}
                       >
                         <div className="p-5 sm:p-6">
                           <div className="flex justify-between items-start mb-4">
@@ -676,6 +675,13 @@ export default function CheckoutPage() {
                                 )}
                               </div>
                               <p className="text-sm text-gray-600">{ticket.description}</p>
+                              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                Capacity:
+                                <span className="text-black">{ticket.capacity}</span>
+                                {ticket.capacity === 1 ? "person" : "people"}
+                              </p>
+
+
                             </div>
                             <div className="text-right ml-4">
                               <span className="text-2xl font-bold text-gray-900">₹{ticket.price.toLocaleString()}</span>
@@ -744,11 +750,11 @@ export default function CheckoutPage() {
                                 >
                                   <Minus className="w-5 h-5 text-gray-700" />
                                 </button>
-                                
+
                                 <span className="w-16 h-10 bg-white rounded-full border-2 border-gray-300 flex items-center justify-center text-base font-bold text-gray-900">
                                   {quantity}
                                 </span>
-                                
+
                                 <button
                                   onClick={() => {
                                     if (!isFormComplete) {
@@ -824,7 +830,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     ))}
-                    
+
                     {/* Coupon */}
                     <div className="pt-4 border-t border-white/10">
                       <div className="flex gap-2">
@@ -860,14 +866,14 @@ export default function CheckoutPage() {
                         <span>Subtotal</span>
                         <span className="font-semibold">₹{subtotalAmount.toLocaleString()}</span>
                       </div>
-                      
+
                       {discountAmount > 0 && (
                         <div className="flex justify-between text-green-400 text-sm">
                           <span>Discount ({appliedCoupon.code})</span>
                           <span className="font-semibold">-₹{discountAmount.toLocaleString()}</span>
                         </div>
                       )}
-                      
+
                       <div className="flex justify-between text-white pt-3 border-t border-white/10">
                         <span className="text-base font-semibold">Total</span>
                         <span className="text-2xl font-bold">₹{payableAmount.toLocaleString()}</span>
