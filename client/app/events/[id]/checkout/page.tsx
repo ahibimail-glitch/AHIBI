@@ -684,7 +684,7 @@ export default function CheckoutPage() {
 
                             </div>
                             <div className="text-right ml-4">
-                              <span className="text-2xl font-bold text-gray-900">₹{ticket.price.toLocaleString()}</span>
+                              <span className="text-xl font-bold text-gray-900">₹{ticket.price.toLocaleString()}</span>
                             </div>
                           </div>
 

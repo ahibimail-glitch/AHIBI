@@ -5,16 +5,24 @@ const nodemailer = require('nodemailer');
  */
 class EmailService {
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE,
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
+    const port = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
+
+    const transportConfig = {
+      ...(process.env.EMAIL_SERVICE ? { service: process.env.EMAIL_SERVICE } : {}),
+      ...(process.env.EMAIL_HOST ? { host: process.env.EMAIL_HOST } : {}),
+      ...(Number.isFinite(port) ? { port } : {}),
+      ...(Number.isFinite(port) ? { secure: port === 465 } : {}),
+      ...(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
+        ? {
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASSWORD,
+            },
+          }
+        : {}),
+    };
+
+    this.transporter = nodemailer.createTransport(transportConfig);
   }
 
   /**
@@ -242,10 +250,53 @@ class EmailService {
    */
   async sendTicketEmail(booking, qrCodeDataUrl = null) {
     try {
-      const subject = 'Your Ticket for ' + (booking.event.title || 'Upcoming Event');
+      // Backward-compatible signature: (toEmail, customerName, ticketDetails)
+      if (typeof booking === 'string') {
+        const toEmail = booking;
+        const customerName = typeof qrCodeDataUrl === 'string' ? qrCodeDataUrl : 'Customer';
+        const details = arguments.length >= 3 && arguments[2] ? arguments[2] : {};
+
+        const subject = `Your Ticket for ${details.eventName || 'Upcoming Event'}`;
+
+        const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <div style="text-align: center; background-color: #4a154b; padding: 20px; border-radius: 8px 8px 0 0;">
+            <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px;">
+            <h1 style="color: white; margin: 15px 0 5px;">Booking Confirmed</h1>
+          </div>
+          <div style="padding: 20px;">
+            <p style="margin: 0 0 10px;">Hi ${customerName || 'Customer'},</p>
+            <p style="margin: 0 0 20px;">Your booking has been confirmed.</p>
+            <div style="background-color: #f8f8f8; border-left: 4px solid #4a154b; padding: 15px; margin-bottom: 20px;">
+              <p style="margin: 5px 0;"><strong>Booking ID:</strong> ${details.bookingId || ''}</p>
+              <p style="margin: 5px 0;"><strong>Event:</strong> ${details.eventName || ''}</p>
+              <p style="margin: 5px 0;"><strong>Date:</strong> ${details.eventDate || 'TBA'}</p>
+              <p style="margin: 5px 0;"><strong>Time:</strong> ${details.eventTime || 'TBA'}</p>
+              <p style="margin: 5px 0;"><strong>Ticket Type:</strong> ${details.ticketType || 'Standard'}</p>
+              <p style="margin: 5px 0;"><strong>Quantity:</strong> ${details.quantity || 1}</p>
+            </div>
+            <p style="margin: 0; font-size: 14px;">You can access your tickets anytime in the "My Tickets" section of Ahibi.</p>
+          </div>
+        </div>
+        `;
+
+        const result = await this.sendMail({
+          to: toEmail,
+          subject,
+          html,
+        });
+
+        if (result.success) {
+          console.log(`Ticket email sent to ${toEmail} for booking ${details.bookingId || ''}`);
+        }
+
+        return result;
+      }
+
+      const subject = 'Your Ticket for ' + ((booking?.event && booking.event.title) || 'Upcoming Event');
       
       // Format date and time
-      const eventDate = booking.event.startDate ? 
+      const eventDate = booking?.event?.startDate ? 
         new Date(booking.event.startDate).toLocaleDateString('en-IN', { 
           weekday: 'long', 
           year: 'numeric', 
@@ -253,14 +304,14 @@ class EmailService {
           day: 'numeric' 
         }) : 'TBA';
         
-      const eventTime = booking.event.startDate ? 
+      const eventTime = booking?.event?.startDate ? 
         new Date(booking.event.startDate).toLocaleTimeString('en-IN', { 
           hour: '2-digit', 
           minute: '2-digit' 
         }) : 'TBA';
 
       // Format location
-      const eventLocation = booking.event.location ? 
+      const eventLocation = booking?.event?.location ? 
         (booking.event.location.address ? 
           `${booking.event.location.address}, ${booking.event.location.city || ''}` : 
           'Location details available in the app'
@@ -315,13 +366,13 @@ class EmailService {
       `;
 
       const result = await this.sendMail({
-        to: booking.user.email,
+        to: booking?.user?.email,
         subject,
         html
       });
 
       if (result.success) {
-        console.log(`Ticket email sent to ${booking.user.email} for booking ${booking._id || booking.id}`);
+        console.log(`Ticket email sent to ${booking?.user?.email} for booking ${booking?._id || booking?.id}`);
       }
 
       return result;
