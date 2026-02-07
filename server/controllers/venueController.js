@@ -5,6 +5,7 @@ const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const emailService = require('../services/emailService');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -386,6 +387,31 @@ exports.verifyPayment = async (req, res) => {
         totalEarnings: booking.pricing.totalAmount
       }
     });
+
+    // Send booking confirmation email (SMS disabled)
+    try {
+      const populatedBooking = await VenueBooking.findById(booking._id)
+        .populate('venue', 'name')
+        .populate('user', 'name email');
+
+      const userEmail = populatedBooking?.user?.email;
+      if (userEmail) {
+        await emailService.sendVenueBookingConfirmationEmail(
+          userEmail,
+          populatedBooking?.user?.name || 'Customer',
+          {
+            bookingId: populatedBooking?._id,
+            venueName: populatedBooking?.venue?.name || 'Venue',
+            bookingDate: populatedBooking?.bookingDate ? new Date(populatedBooking.bookingDate).toLocaleDateString() : 'TBA',
+            timeSlot: `${populatedBooking?.startTime || ''} - ${populatedBooking?.endTime || ''}`.trim(),
+            guestCount: populatedBooking?.guestCount || 1,
+            totalAmount: populatedBooking?.pricing?.totalAmount,
+          }
+        );
+      }
+    } catch (emailError) {
+      console.error('[Venue Booking] Failed to send confirmation email:', emailError);
+    }
 
     return ApiResponse.success(res, 'Payment verified and booking confirmed', { booking });
     

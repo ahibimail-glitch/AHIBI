@@ -6,7 +6,8 @@ const ArtistBooking = require('../models/ArtistBooking');
 const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
-const tempOtpStore = require('../utils/tempOtpStore'); 
+const tempOtpStore = require('../utils/tempOtpStore');
+const adminNotificationController = require('./adminNotificationController'); 
 
 /**
  * @desc    Verify OTP for organizer
@@ -127,6 +128,9 @@ exports.verifyOrganizerOtp = async (req, res) => {
       try {
         // Create organizer account from stored data
         const organizer = await Organizer.create(stored.data);
+
+        // Notify admin about new organizer registration
+        adminNotificationController.notifyOrganizerRegistration(organizer);
 
         return ApiResponse.success(res, 'Organizer account created successfully. Pending admin approval.', {
           organizer: {

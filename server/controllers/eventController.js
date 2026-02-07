@@ -3,6 +3,10 @@ const Event = require('../models/Event');
 const ApiResponse = require('../utils/apiResponse');
 const { v4: uuidv4 } = require('uuid');
 const Booking = require('../models/Booking');
+const adminNotificationController = require('./adminNotificationController');
+const emailService = require('../services/emailService');
+const Organizer = require('../models/Organizer');
+const User = require('../models/User');
 
 /**
  * @desc    Create a new event (Admin only)
@@ -206,7 +210,7 @@ const getEvents = async (req, res) => {
  */
 const approveEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.id);
+    const event = await Event.findById(req.params.id).populate('organizer', 'name email phone');
 
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
@@ -218,6 +222,41 @@ const approveEvent = async (req, res) => {
     event.approvedAt = new Date();
 
     await event.save();
+
+    // Mark ALL related notifications as completed
+    adminNotificationController.markEntityNotificationsCompleted('Event', req.params.id, 'approved', req.user.id);
+
+    // Send approval email to organizer with event details
+    const organizerIdCandidate =
+      event.organizerInfo?.id ||
+      event.createdBy ||
+      event.organizer?._id ||
+      event.organizer;
+
+    const organizerId = organizerIdCandidate?._id || organizerIdCandidate;
+
+    const organizerDoc = organizerId
+      ? await Organizer.findById(organizerId).select('name email phone')
+      : null;
+
+    const userDoc = !organizerDoc && organizerId
+      ? await User.findById(organizerId).select('name email phone')
+      : null;
+
+    const eventForEmail = typeof event.toObject === 'function' ? event.toObject() : event;
+    if (organizerDoc) eventForEmail.organizer = organizerDoc;
+    if (!organizerDoc && userDoc) eventForEmail.organizer = userDoc;
+
+    if (eventForEmail.organizer?.email) {
+      emailService.sendEventApprovalNotification(eventForEmail, true).catch(err => {
+        console.error('Error sending event approval email:', err);
+      });
+    } else {
+      console.warn('Skipping event approval email: organizer email not found', {
+        eventId: event._id,
+        organizerId: organizerId?.toString?.() || organizerId,
+      });
+    }
 
     return ApiResponse.success(res, 'Event approved successfully', { event });
   } catch (error) {
@@ -239,7 +278,7 @@ const rejectEvent = async (req, res) => {
       return ApiResponse.error(res, 'Rejection reason is required', {}, 400);
     }
 
-    const event = await Event.findById(req.params.id);
+    const event = await Event.findById(req.params.id).populate('organizer', 'name email phone');
 
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
@@ -252,6 +291,41 @@ const rejectEvent = async (req, res) => {
     event.rejectedAt = new Date();
 
     await event.save();
+
+    // Mark ALL related notifications as completed
+    adminNotificationController.markEntityNotificationsCompleted('Event', req.params.id, 'rejected', req.user.id);
+
+    // Send rejection email to organizer
+    const organizerIdCandidate =
+      event.organizerInfo?.id ||
+      event.createdBy ||
+      event.organizer?._id ||
+      event.organizer;
+
+    const organizerId = organizerIdCandidate?._id || organizerIdCandidate;
+
+    const organizerDoc = organizerId
+      ? await Organizer.findById(organizerId).select('name email phone')
+      : null;
+
+    const userDoc = !organizerDoc && organizerId
+      ? await User.findById(organizerId).select('name email phone')
+      : null;
+
+    const eventForEmail = typeof event.toObject === 'function' ? event.toObject() : event;
+    if (organizerDoc) eventForEmail.organizer = organizerDoc;
+    if (!organizerDoc && userDoc) eventForEmail.organizer = userDoc;
+
+    if (eventForEmail.organizer?.email) {
+      emailService.sendEventApprovalNotification(eventForEmail, false, reason).catch(err => {
+        console.error('Error sending event rejection email:', err);
+      });
+    } else {
+      console.warn('Skipping event rejection email: organizer email not found', {
+        eventId: event._id,
+        organizerId: organizerId?.toString?.() || organizerId,
+      });
+    }
 
     return ApiResponse.success(res, 'Event rejected successfully', { event });
   } catch (error) {
@@ -916,6 +990,9 @@ const createOrganizerEvent = async (req, res) => {
 
     await event.save();
 
+    // Notify admin about new event creation
+    adminNotificationController.notifyEventCreated(event, req.user);
+
     return ApiResponse.success(res, 'Event created successfully and pending approval', { event }, 201);
   } catch (error) {
     console.error('Error creating organizer event:', error);
@@ -1126,6 +1203,13 @@ const updateOrganizerEvent = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
+
+    // Notify admin when organizer edits an event (especially if it goes back to pending)
+    try {
+      await adminNotificationController.notifyEventUpdated(updatedEvent, req.user);
+    } catch (e) {
+      console.error('Error creating event updated admin notification:', e);
+    }
 
     return ApiResponse.success(res, 'Event updated successfully', { event: updatedEvent });
   } catch (error) {

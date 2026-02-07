@@ -1,6 +1,7 @@
 const ArenaPartner = require('../models/ArenaPartner');
 const ApiResponse = require('../utils/apiResponse');
 const smsService = require('../services/smsService');
+const adminNotificationController = require('./adminNotificationController');
 
 /**
  * @desc    Send OTP to arena partner phone
@@ -101,6 +102,9 @@ exports.verifyOtp = async (req, res) => {
       };
       partner.approvalStatus = 'pending';
       await partner.save();
+
+      // Notify admin about new sports partner registration
+      adminNotificationController.notifySportsPartnerRegistration(partner);
     }
 
     const token = partner.getSignedJwtToken();

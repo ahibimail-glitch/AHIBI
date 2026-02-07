@@ -8,6 +8,8 @@ const ArtistAvailability = require('../models/ArtistAvailability');
 const ArtistBooking = require('../models/ArtistBooking');
 const ApiResponse = require('../utils/apiResponse');
 const { v4: uuidv4 } = require('uuid');
+const adminNotificationController = require('./adminNotificationController');
+const emailService = require('../services/emailService');
 
 /**
  * @desc    Dashboard statistics for admin
@@ -243,6 +245,14 @@ exports.approveOrganizer = async (req, res) => {
     if (!organizer) {
       return ApiResponse.notFound(res, 'Organizer not found');
     }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Organizer', req.params.id, 'approved', req.user._id);
+    
+    // Send approval email to organizer
+    emailService.sendOrganizerApprovalNotification(organizer, true).catch(err => {
+      console.error('Error sending organizer approval email:', err);
+    });
     
     return ApiResponse.success(res, 'Organizer approved successfully', { organizer });
   } catch (error) {
@@ -274,6 +284,9 @@ exports.rejectOrganizer = async (req, res) => {
     if (!organizer) {
       return ApiResponse.notFound(res, 'Organizer not found');
     }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Organizer', req.params.id, 'rejected', req.user._id);
     
     return ApiResponse.success(res, 'Organizer rejected successfully', { organizer });
   } catch (error) {
@@ -375,6 +388,9 @@ exports.approveArtist = async (req, res) => {
     if (!artist) {
       return ApiResponse.notFound(res, 'Artist not found');
     }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Artist', req.params.id, 'approved', req.user._id);
     
     return ApiResponse.success(res, 'Artist approved successfully', { artist });
   } catch (error) {
@@ -406,6 +422,9 @@ exports.rejectArtist = async (req, res) => {
     if (!artist) {
       return ApiResponse.notFound(res, 'Artist not found');
     }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Artist', req.params.id, 'rejected', req.user._id);
     
     return ApiResponse.success(res, 'Artist rejected successfully', { artist });
   } catch (error) {
@@ -603,10 +622,20 @@ exports.approveEvent = async (req, res) => {
         approvedBy: req.user._id
       },
       { new: true }
-    );
+    ).populate('organizer', 'name email phone');
     
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Event', req.params.id, 'approved', req.user._id);
+    
+    // Send approval email to organizer with event details
+    if (event.organizer) {
+      emailService.sendEventApprovalNotification(event, true).catch(err => {
+        console.error('Error sending event approval email:', err);
+      });
     }
     
     return ApiResponse.success(res, 'Event approved successfully', { event });
@@ -639,6 +668,9 @@ exports.rejectEvent = async (req, res) => {
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
     }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Event', req.params.id, 'rejected', req.user._id);
     
     return ApiResponse.success(res, 'Event rejected successfully', { event });
   } catch (error) {
@@ -966,6 +998,9 @@ exports.approveVenue = async (req, res) => {
       await User.findByIdAndUpdate(venue.user, { approvalStatus: 'approved' });
     }
 
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Venue', req.params.id, 'approved', req.user._id);
+
     return ApiResponse.success(res, "Venue approved successfully", venue);
   } catch (error) {
     return ApiResponse.serverError(res, "Error approving venue", error.message);
@@ -998,6 +1033,9 @@ exports.rejectVenue = async (req, res) => {
     if (venue.user) {
       await User.findByIdAndUpdate(venue.user, { approvalStatus: 'rejected' });
     }
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Venue', req.params.id, 'rejected', req.user._id);
 
     return ApiResponse.success(res, "Venue rejected successfully", venue);
   } catch (error) {

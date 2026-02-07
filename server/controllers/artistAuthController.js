@@ -3,6 +3,7 @@ const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
 const tempOtpStore = require('../utils/tempOtpStore');
+const adminNotificationController = require('./adminNotificationController');
 
 /**
  * @desc    Register a new artist
@@ -51,6 +52,9 @@ exports.artistSignup = async (req, res) => {
       experience,
       approvalStatus: 'pending'
     });
+
+    // Notify admin about new artist registration
+    adminNotificationController.notifyArtistRegistration(artist);
 
     // For OTP-based signup, we don't send a token here.
     // The user will verify OTP to complete registration and get a token.

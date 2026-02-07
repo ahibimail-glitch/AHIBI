@@ -376,6 +376,7 @@ export default function OrganizerSignupPage() {
                 <p className="text-gray-300">
                   Welcome to Ahibi 3.0, {signupData.name}! Your organizer account is pending approval from the admin.
                 </p>
+                <p className="text-white">You will recieve a confirmation mail once your account is approved.</p>
               </div>
 
               <div className="p-4 bg-gray-800/50 rounded-lg text-left border border-gray-600">

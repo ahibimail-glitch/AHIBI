@@ -4,6 +4,7 @@ const User = require('../models/User');
 const { validationResult } = require('express-validator');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const emailService = require('../services/emailService');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -129,6 +130,27 @@ exports.verifyPayment = async (req, res) => {
     await booking.save();
 
     await AikoHall.updateOne({}, { $inc: { totalBookings: 1, totalRevenue: booking.pricing.totalAmount } });
+
+    // Send booking confirmation email (SMS disabled)
+    try {
+      const userDoc = await User.findById(req.user.id).select('name email');
+      if (userDoc?.email) {
+        await emailService.sendVenueBookingConfirmationEmail(
+          userDoc.email,
+          userDoc.name || 'Customer',
+          {
+            bookingId: booking._id,
+            venueName: 'Aiko Hall',
+            bookingDate: booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString() : 'TBA',
+            timeSlot: `${booking.startTime || ''} - ${booking.endTime || ''}`.trim(),
+            guestCount: booking.guestCount || 1,
+            totalAmount: booking?.pricing?.totalAmount,
+          }
+        );
+      }
+    } catch (emailError) {
+      console.error('[Aiko Booking] Failed to send confirmation email:', emailError);
+    }
 
     res.status(201).json({ success: true, message: 'Booking created successfully', data: booking });
 

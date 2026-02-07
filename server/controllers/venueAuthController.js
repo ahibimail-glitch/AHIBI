@@ -3,6 +3,7 @@ const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
 const tempOtpStore = require('../utils/tempOtpStore');
+const adminNotificationController = require('./adminNotificationController');
 
 /**
  * @desc    Send OTP for venue
@@ -238,6 +239,9 @@ exports.verifyVenueOtp = async (req, res) => {
       // Save without running full validation; details will be updated later in admin panel
       const venue = new Venue(venueData);
       await venue.save({ validateBeforeSave: false });
+
+      // Notify admin about new venue registration
+      adminNotificationController.notifyVenueRegistration(venue);
 
       return ApiResponse.success(res, 'Venue account created successfully. Pending admin approval.', {
         venue: {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ import KakiMarketingSettings from "./components/KakiMarketingSettings";
 import DanceLeagueRegistrations from "./components/DanceLeagueRegistrations";
 import AdminLivestreamPage from "./livestream/page";
 import Donations from "./components/Donations";
+import AdminNotifications from "./components/AdminNotifications";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -114,6 +115,85 @@ export default function AdminDashboard() {
   const [activeView, setActiveView] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const lastUnreadCountRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let intervalId: number | undefined;
+
+    const playNotificationSound = () => {
+      try {
+        if (typeof window === "undefined") return;
+
+        const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+        if (!AudioContextClass) return;
+
+        const audioContext = new AudioContextClass();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+
+        gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.35);
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.4);
+
+        oscillator.onended = () => {
+          try {
+            audioContext.close();
+          } catch {
+            // ignore
+          }
+        };
+      } catch {
+        // ignore
+      }
+    };
+
+    const fetchUnreadCount = async () => {
+      try {
+        const token = localStorage.getItem("admin_token");
+        if (!token) return;
+
+        const res = await fetch(`/api/admin/notifications/stats`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        const totalUnread = data?.data?.totalUnread;
+        if (typeof totalUnread === "number") {
+          const previous = lastUnreadCountRef.current;
+          if (previous !== null && totalUnread > previous) {
+            playNotificationSound();
+          }
+
+          lastUnreadCountRef.current = totalUnread;
+          setUnreadNotificationCount(totalUnread);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      fetchUnreadCount();
+      intervalId = window.setInterval(fetchUnreadCount, 300000);
+    }
+
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, []);
 
   // --- Mock Data (replace with API calls) ---
   const stats = [
@@ -216,6 +296,8 @@ export default function AdminDashboard() {
         return <AdminLivestreamPage/>
       case "donations":
         return <Donations />;
+      case "notifications":
+        return <AdminNotifications />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -288,6 +370,7 @@ export default function AdminDashboard() {
 
         <nav className="flex flex-col space-y-2">
           <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => { setActiveView("dashboard"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} />
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
@@ -383,7 +466,19 @@ export default function AdminDashboard() {
                 <Badge variant="secondary" className="hidden sm:flex bg-green-100 text-green-800 border-green-200">
                   <Activity className="h-3 w-3 mr-1" /> System Healthy
                 </Badge>
-                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10"><Bell className="h-3 w-3 sm:h-4 sm:w-4" /></Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 sm:h-10 sm:w-10 relative"
+                  onClick={() => setActiveView("notifications")}
+                >
+                  <Bell className="h-3 w-3 sm:h-4 sm:w-4" />
+                  {unreadNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] leading-5 text-center">
+                      {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                    </span>
+                  )}
+                </Button>
               </div>
             </div>
           </div>

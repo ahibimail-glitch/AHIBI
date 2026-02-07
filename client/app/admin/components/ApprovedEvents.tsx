@@ -502,8 +502,14 @@ export default function ApprovedEvents() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 200 && response.data) {
-        const updatedEvent = response.data.event || response.data;
-        setEvents(prev => prev.map(event => event._id === updatedEvent._id ? updatedEvent : event));
+        const updatedEvent =
+          response.data?.data?.event ||
+          response.data?.event ||
+          response.data;
+
+        if (updatedEvent?._id) {
+          setEvents(prev => prev.map(event => event._id === updatedEvent._id ? updatedEvent : event));
+        }
         setIsEditDialogOpen(false);
         alert("Event updated successfully");
       } else {

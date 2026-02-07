@@ -159,6 +159,71 @@ class EmailService {
   }
 
   /**
+   * Send organizer account approval notification
+   * @param {Object} organizer - Organizer object
+   * @param {Boolean} approved - Whether the organizer was approved
+   * @param {String} rejectionReason - Reason for rejection if not approved
+   * @returns {Promise<Object>} - Send result
+   */
+  async sendOrganizerApprovalNotification(organizer, approved, rejectionReason = '') {
+    const subject = approved 
+      ? 'Your Organizer Account Has Been Approved!' 
+      : 'Your Organizer Account Application Requires Changes';
+
+    let html;
+    
+    if (approved) {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">🎉 Account Approved!</h1>
+          <p>Hi ${organizer.name || 'there'},</p>
+          <p>Great news! Your organizer account has been approved by the Ahibi team.</p>
+          <div style="background-color: #f0f9ff; border-left: 4px solid #4a154b; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #4a154b;">What's Next?</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li style="margin: 8px 0;">Log in to your organizer dashboard</li>
+              <li style="margin: 8px 0;">Create and publish your first event</li>
+              <li style="margin: 8px 0;">Start selling tickets to your audience</li>
+              <li style="margin: 8px 0;">Track bookings and manage your events</li>
+            </ul>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://ahibi.in'}/organizer/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Go to Dashboard
+            </a>
+          </div>
+          <p>We're excited to have you as part of the Ahibi community. If you need any help getting started, our support team is here for you.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">Account Application Update</h1>
+          <p>Hi ${organizer.name || 'there'},</p>
+          <p>Thank you for applying to become an organizer on Ahibi.</p>
+          <p>Our team has reviewed your application and we need some additional information or changes before we can approve your account:</p>
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <strong>Required Changes:</strong>
+            <p style="margin: 10px 0 0;">${rejectionReason}</p>
+          </div>
+          <p>Please update your information and resubmit your application. If you have any questions, feel free to contact our support team.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    }
+
+    return this.sendMail({
+      to: organizer.email,
+      subject,
+      html
+    });
+  }
+
+  /**
    * Send event approval notification to organizer
    * @param {Object} event - Event object with populated organizer
    * @param {Boolean} approved - Whether the event was approved
@@ -173,14 +238,56 @@ class EmailService {
     let html;
     
     if (approved) {
+      const eventDate = event.startDate ? 
+        new Date(event.startDate).toLocaleDateString('en-IN', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }) : 'TBA';
+        
+      const eventTime = event.startDate ? 
+        new Date(event.startDate).toLocaleTimeString('en-IN', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        }) : 'TBA';
+
+      const eventLocation = event.location?.address || event.location?.city || 'Location details available in dashboard';
+
       html = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
-          <h1 style="color: #4a154b; margin-bottom: 20px;">Event Approved!</h1>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">🎉 Event Approved!</h1>
           <p>Hi ${event.organizer.name || 'there'},</p>
-          <p>Great news! Your event <strong>${event.title}</strong> has been approved and is now live on Ahibi.</p>
-          <p>You can now start promoting your event and selling tickets.</p>
-          <p>Best of luck with your event!</p>
+          <p>Congratulations! Your event has been approved by the Ahibi team and is now live on our platform.</p>
+          
+          <div style="background-color: #f0f9ff; border-left: 4px solid #4a154b; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #4a154b;">Event Details</h3>
+            <p style="margin: 8px 0;"><strong>Event Name:</strong> ${event.title}</p>
+            <p style="margin: 8px 0;"><strong>Date:</strong> ${eventDate}</p>
+            <p style="margin: 8px 0;"><strong>Time:</strong> ${eventTime}</p>
+            <p style="margin: 8px 0;"><strong>Location:</strong> ${eventLocation}</p>
+            ${event.category ? `<p style="margin: 8px 0;"><strong>Category:</strong> ${event.category}</p>` : ''}
+          </div>
+
+          <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #10b981;">What's Next?</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li style="margin: 8px 0;">Your event is now visible to all Ahibi users</li>
+              <li style="margin: 8px 0;">Start promoting your event on social media</li>
+              <li style="margin: 8px 0;">Monitor ticket sales in your dashboard</li>
+              <li style="margin: 8px 0;">Manage attendees and bookings</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://ahibi.in'}/organizer/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              View Event Dashboard
+            </a>
+          </div>
+
+          <p>Best of luck with your event! We're excited to see it succeed.</p>
           <p>Best regards,<br>The Ahibi Team</p>
         </div>
       `;
@@ -239,6 +346,41 @@ class EmailService {
       to: payout.user.email,
       subject,
       html
+    });
+  }
+
+  async sendVenueBookingConfirmationEmail(toEmail, customerName, details = {}) {
+    const subject = `Venue Booking Confirmed${details.venueName ? `: ${details.venueName}` : ''}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <div style="text-align: center; background-color: #4a154b; padding: 20px; border-radius: 8px 8px 0 0;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px;">
+          <h1 style="color: white; margin: 15px 0 5px;">Venue Booking Confirmed</h1>
+        </div>
+
+        <div style="padding: 20px;">
+          <p style="margin: 0 0 10px;">Hi ${customerName || 'Customer'},</p>
+          <p style="margin: 0 0 20px;">Your venue booking has been confirmed.</p>
+
+          <div style="background-color: #f8f8f8; border-left: 4px solid #4a154b; padding: 15px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Booking ID:</strong> ${details.bookingId || ''}</p>
+            <p style="margin: 5px 0;"><strong>Venue:</strong> ${details.venueName || ''}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${details.bookingDate || 'TBA'}</p>
+            <p style="margin: 5px 0;"><strong>Time Slot:</strong> ${details.timeSlot || 'TBA'}</p>
+            <p style="margin: 5px 0;"><strong>Guests:</strong> ${details.guestCount || 'TBA'}</p>
+            ${typeof details.totalAmount === 'number' ? `<p style="margin: 5px 0;"><strong>Amount Paid:</strong> ₹${details.totalAmount.toLocaleString()}</p>` : ''}
+          </div>
+
+          <p style="margin: 0; font-size: 14px;">If you have any questions, reply to this email and we’ll help you out.</p>
+        </div>
+      </div>
+    `;
+
+    return this.sendMail({
+      to: toEmail,
+      subject,
+      html,
     });
   }
 
