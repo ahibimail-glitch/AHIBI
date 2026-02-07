@@ -69,7 +69,7 @@ class EmailService {
     const subject = 'Welcome to Ahibi!';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+        <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
         <h1 style="color: #4a154b; margin-bottom: 20px;">Welcome to Ahibi!</h1>
         <p>Hi ${user.name || 'there'},</p>
         <p>Thank you for joining Ahibi - your go-to platform for discovering and booking amazing events!</p>
@@ -102,7 +102,7 @@ class EmailService {
     const subject = 'Your Ahibi Verification Code';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+        <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
         <h1 style="color: #4a154b; margin-bottom: 20px;">Verification Code</h1>
         <p>Hi ${user.name || 'there'},</p>
         <p>Your verification code for Ahibi is:</p>
@@ -131,7 +131,7 @@ class EmailService {
     const subject = 'Your Booking Confirmation';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+        <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
         <h1 style="color: #4a154b; margin-bottom: 20px;">Booking Confirmed!</h1>
         <p>Hi ${ticket.user.name || 'there'},</p>
         <p>Your booking for <strong>${ticket.event.title}</strong> has been confirmed!</p>
@@ -174,8 +174,8 @@ class EmailService {
     
     if (approved) {
       html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
           <h1 style="color: #4a154b; margin-bottom: 20px;">Event Approved!</h1>
           <p>Hi ${event.organizer.name || 'there'},</p>
           <p>Great news! Your event <strong>${event.title}</strong> has been approved and is now live on Ahibi.</p>
@@ -187,7 +187,7 @@ class EmailService {
     } else {
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
           <h1 style="color: #4a154b; margin-bottom: 20px;">Event Requires Changes</h1>
           <p>Hi ${event.organizer.name || 'there'},</p>
           <p>Thank you for submitting your event <strong>${event.title}</strong>.</p>
@@ -218,7 +218,7 @@ class EmailService {
     const subject = 'Your Payout Has Been Processed';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+        <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
         <h1 style="color: #4a154b; margin-bottom: 20px;">Payout Processed</h1>
         <p>Hi ${payout.user.name || 'there'},</p>
         <p>We're pleased to inform you that your payout of <strong>₹${payout.amount}</strong> has been processed and will be credited to your bank account within 2-3 business days.</p>
@@ -261,7 +261,7 @@ class EmailService {
         const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <div style="text-align: center; background-color: #4a154b; padding: 20px; border-radius: 8px 8px 0 0;">
-            <img src="https://ahibi.com/logo.png" alt="Ahibi Logo" style="max-width: 150px;">
+            <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px;">
             <h1 style="color: white; margin: 15px 0 5px;">Booking Confirmed</h1>
           </div>
           <div style="padding: 20px;">

@@ -376,48 +376,7 @@ exports.verifyPayment = async (req, res) => {
     try {
       console.log('[Payment] Starting ticket notification process');
 
-      // Send ticket via SMS if phone number is available
-      if (user.phone) {
-        console.log('[Payment] Preparing to send SMS to:', user.phone);
-
-        // Format date for SMS
-        const eventDate = updatedEvent.startDate ?
-          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-          }) : 'TBA';
-
-        // Prepare ticket details for SMS
-        const ticketDetails = {
-          bookingId: bookings[0]._id, // Use first booking ID for SMS
-          eventName: updatedEvent.title,
-          ticketType: tickets.map(t => `${t.ticketType} (${t.quantity})`).join(', '),
-          quantity: totalTickets,
-          eventDate: eventDate
-        };
-
-        console.log('[Payment] Sending ticket details via SMS:', ticketDetails);
-
-        // Send booking confirmation SMS
-        await smsService.sendBookingConfirmation(
-          user.phone,
-          updatedEvent.title,
-          bookings[0]._id.toString(),
-          ticketDetails.ticketType,
-          totalTickets
-        );
-
-        // Also send detailed ticket SMS
-        try {
-          const smsResult = await smsService.sendTicket(user.phone, ticketDetails);
-          console.log('[Payment] SMS result:', smsResult);
-        } catch (smsError) {
-          console.error('[Payment] SMS sending error:', smsError);
-        }
-      } else {
-        console.log('[Payment] Cannot send SMS - no valid phone number found');
-      }
+      // SMS sending disabled for successful bookings
 
       // Send ticket via email with QR code if email is available
       if (user.email) {

@@ -214,36 +214,7 @@ router.post("/", auth.protect, async (req, res) => {
       });
       console.log('[Booking] QR code generated successfully');
       
-      // Send ticket via SMS
-      if (userDetails && userDetails.phone) {
-        console.log('[Booking] Preparing to send SMS to:', userDetails.phone);
-        // Format date for SMS
-        const eventDate = updatedEvent.startDate ? 
-          new Date(updatedEvent.startDate).toLocaleDateString('en-IN', { 
-            day: 'numeric', 
-            month: 'short', 
-            year: 'numeric' 
-          }) : 'TBA';
-        
-        // Prepare ticket details
-        const ticketDetails = {
-          bookingId: booking._id,
-          eventName: updatedEvent.title,
-          ticketType: ticketType,
-          eventDate: eventDate
-        };
-        console.log('[Booking] Sending ticket details via SMS:', ticketDetails);
-        
-        // Send SMS with ticket details
-        try {
-          const smsResult = await smsService.sendTicket(userDetails.phone, ticketDetails);
-          console.log('[Booking] SMS result:', smsResult);
-        } catch (smsError) {
-          console.error('[Booking] SMS sending error:', smsError);
-        }
-      } else {
-        console.log('[Booking] Cannot send SMS - no valid phone number found');
-      }
+      // SMS sending disabled for successful bookings
       
       // Send ticket via email with QR code
       if (userDetails && userDetails.email) {
