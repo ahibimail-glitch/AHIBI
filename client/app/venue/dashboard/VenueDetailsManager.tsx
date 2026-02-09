@@ -47,13 +47,15 @@ interface VenueDetailsManagerProps {
   onUpdate: (section: string, data: any) => Promise<void>;
   initialSection?: string | null;
   onSectionChange?: () => void;
+  onBack?: () => void;
 }
 
 export default function VenueDetailsManager({ 
   venueData, 
   onUpdate, 
   initialSection, 
-  onSectionChange 
+  onSectionChange,
+  onBack 
 }: VenueDetailsManagerProps) {
   const [activeSection, setActiveSection] = useState("owner-details");
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -2276,6 +2278,18 @@ export default function VenueDetailsManager({
 
     return (
       <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+        {/* Back Button */}
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="-ml-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        )}
         {/* Mobile Section Navigation */}
         <div className="md:hidden">
           <button

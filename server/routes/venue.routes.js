@@ -48,6 +48,10 @@ router.post('/auth/forgot-password/reset', [
 router.get('/profile', protect, venueAuthController.getVenueProfile);
 router.put('/profile', protect, venueAuthController.updateVenueProfile);
 
+// Multi-venue management
+router.get('/venues', protect, venueAuthController.getMyVenues);
+router.post('/venues', protect, venueAuthController.createVenue);
+
 // Separate section update endpoints
 router.put('/details/owner-details', protect, venueAuthController.updateOwnerDetails);
 router.put('/details/venue-classification', protect, venueAuthController.updateVenueClassification);

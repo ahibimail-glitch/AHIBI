@@ -64,6 +64,7 @@ import Footer from "../../Footer";
 
 interface VenueData {
   _id: string;
+  managedByVenueId?: string | null;
   name: string;
   description: string;
   address: {
@@ -467,6 +468,7 @@ export default function VenueDetailPage() {
   const venueId = params.id as string;
   const [venueData, setVenueData] = useState<VenueData | null>(null);
   const [resolvedVenueId, setResolvedVenueId] = useState<string | null>(null);
+  const [childVenues, setChildVenues] = useState<VenueData[]>([]);
   const [similarVenues, setSimilarVenues] = useState<VenueData[]>([]);
   const [showMobileBooking, setShowMobileBooking] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -618,6 +620,23 @@ export default function VenueDetailPage() {
     }
   };
 
+  const fetchChildVenues = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/venue/`);
+      const data = await response.json();
+      if (data.success) {
+        const venues: VenueData[] = data.data.venues || [];
+        const children = venues
+          .filter((v) => v.managedByVenueId === resolvedVenueId)
+          .slice(0, 12);
+        setChildVenues(children);
+      }
+    } catch (error) {
+      console.error('Error fetching child venues:', error);
+    }
+  };
+
   const handleSubmitReview = async () => {
     if (!user) {
       toast.error('Please login to write a review.');
@@ -727,6 +746,16 @@ export default function VenueDetailPage() {
       fetchSimilarVenues();
     }
   }, [venueData]);
+
+  // Fetch child venues (only when current venue is a parent/root venue)
+  useEffect(() => {
+    if (venueData && resolvedVenueId && venueData.managedByVenueId == null) {
+      fetchChildVenues();
+    } else {
+      setChildVenues([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venueData, resolvedVenueId]);
 
   const fetchBookings = async () => {
     try {
@@ -1476,6 +1505,14 @@ export default function VenueDetailPage() {
                 >
                   FAQ
                 </TabsTrigger>
+                {childVenues.length > 0 && (
+                  <TabsTrigger
+                    value="more-venues"
+                    className="px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-base data-[state=active]:border-b-2 data-[state=active]:border-purple-600 data-[state=active]:text-purple-700 data-[state=active]:bg-transparent rounded-none font-medium transition-all flex-shrink-0"
+                  >
+                    More Venues
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               {/* Portfolio Tab */}
@@ -1927,6 +1964,51 @@ export default function VenueDetailPage() {
                   )}
                 </div>
               </TabsContent>
+
+              {childVenues.length > 0 && (
+                <TabsContent value="more-venues" className="p-4 sm:p-6">
+                  <div>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+                      More venues from {venueData?.name}
+                    </h2>
+                    <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible">
+                      {childVenues.map((venue) => {
+                        const venueImage = getPrimaryVenueImage(venue);
+                        return (
+                          <div
+                            key={venue._id}
+                            className="flex-shrink-0 w-[200px] sm:w-[220px] lg:w-full bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() => router.push(`/allVenues/${venue._id}`)}
+                          >
+                            <div className="relative h-28 sm:h-32 lg:h-36 overflow-hidden">
+                              {venueImage ? (
+                                <img src={venueImage} alt={venue.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs">No image</div>
+                              )}
+                              <div className="absolute top-2 left-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-md">
+                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                <span className="text-xs font-medium">{venue.rating?.average?.toFixed(1) || '0.0'}</span>
+                              </div>
+                            </div>
+                            <div className="p-3">
+                              <h3 className="font-semibold text-sm text-gray-900 truncate">{venue.name}</h3>
+                              <div className="flex items-center gap-1 mt-1 text-gray-500">
+                                <MapPin className="h-3 w-3" />
+                                <span className="text-xs truncate">{venue.address.city}</span>
+                              </div>
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                                <span className="text-sm font-bold text-gray-900">₹{(venue.pricing.hourlyRate || venue.pricing.basePrice || 0).toLocaleString('en-IN')}</span>
+                                <span className="text-xs text-gray-500">{venue.capacity} guests</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
 

@@ -82,7 +82,7 @@ export default function BookingInvoicePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
       </div>
     );
@@ -90,30 +90,30 @@ export default function BookingInvoicePage() {
 
   if (!booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-red-500">Booking not found or access denied.</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <p className="text-red-500 text-center text-sm sm:text-base">Booking not found or access denied.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <main className="container mx-auto px-4 py-12 md:py-24">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-start mb-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
+        <div className="w-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Booking Confirmed!</h1>
-              <p className="text-gray-500">Thank you for your booking. Here is your invoice.</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Booking Confirmed!</h1>
+              <p className="text-gray-500 text-sm sm:text-base mt-1">Thank you for your booking. Here is your invoice.</p>
             </div>
-            <Button onClick={handleDownloadPdf} disabled={downloading}>
+            <Button onClick={handleDownloadPdf} disabled={downloading} className="w-full sm:w-auto">
               <Download className="h-4 w-4 mr-2" />
               {downloading ? 'Downloading...' : 'Download PDF'}
             </Button>
           </div>
 
-          <Card ref={invoiceRef} className="p-8 bg-white shadow-lg">
-            <CardHeader className="border-b pb-6 mb-8">
+          <Card ref={invoiceRef} className="bg-white shadow-lg sm:shadow-xl rounded-2xl sm:rounded-3xl p-5 sm:p-8">
+            <CardHeader className="border-b pb-4 sm:pb-6 mb-6 sm:mb-8">
                 <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-bold text-purple-700">INVOICE</h2>
@@ -126,7 +126,7 @@ export default function BookingInvoicePage() {
                 </div>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-8 mb-8">
+              <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-3">Billed To:</h3>
                   <div className="flex items-center mb-2">
@@ -147,8 +147,8 @@ export default function BookingInvoicePage() {
               </div>
 
               <h3 className="font-semibold text-gray-700 mb-3">Booking Summary:</h3>
-              <div className="border rounded-lg">
-                <div className="p-4 flex justify-between items-center border-b">
+              <div className="border rounded-lg overflow-hidden">
+                <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b">
                     <div className='flex items-center'>
                         <Calendar className="h-5 w-5 mr-3 text-purple-600"/>
                         <div>
@@ -172,18 +172,18 @@ export default function BookingInvoicePage() {
                     </div>
                 </div>
                 {booking.specialNotes && (
-                    <div className="p-4 border-b">
+                    <div className="p-4 sm:p-5 border-b">
                         <p className='font-medium'>Special Notes</p>
                         <p className='text-sm text-gray-600 mt-1'>{booking.specialNotes}</p>
                     </div>
                 )}
-                <div className="p-4 flex justify-end items-center bg-gray-50">
+                <div className="p-4 sm:p-5 flex justify-end items-center bg-gray-50">
                     <p className='font-semibold text-lg'>Total Amount Paid:</p>
                     <p className='font-bold text-xl text-purple-700 ml-4'>₹{booking.pricing.totalAmount.toLocaleString('en-IN')}</p>
                 </div>
               </div>
 
-              <div className="mt-12 text-center text-xs text-gray-500">
+              <div className="mt-8 sm:mt-10 text-center text-[11px] sm:text-xs text-gray-500 space-y-1">
                 <p>Thank you for choosing Aiko Hall. We look forward to hosting your event!</p>
                 <p>This is a computer-generated invoice and does not require a signature.</p>
               </div>

@@ -45,6 +45,7 @@ interface BlockedSlot {
 
 interface BlockedSlotsManagerProps {
   venueId: string;
+  selectedVenueId?: string | null;
   bookings?: Array<{
     bookingDate: string | Date;
     startTime: string;
@@ -54,7 +55,7 @@ interface BlockedSlotsManagerProps {
   }>;
 }
 
-const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, bookings = [] }) => {
+const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, selectedVenueId, bookings = [] }) => {
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -105,12 +106,15 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, book
 
   useEffect(() => {
     fetchBlockedSlots();
-  }, []);
+  }, [selectedVenueId]);
 
   const fetchBlockedSlots = async () => {
     try {
       const token = localStorage.getItem('venueToken');
-      const response = await fetch(`${apiUrl}/api/venue/blocked-slots`, {
+      const url = selectedVenueId
+        ? `${apiUrl}/api/venue/blocked-slots?venueId=${selectedVenueId}`
+        : `${apiUrl}/api/venue/blocked-slots`;
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -180,21 +184,22 @@ const BlockedSlotsManager: React.FC<BlockedSlotsManagerProps> = ({ venueId, book
 
     try {
       const token = localStorage.getItem('venueToken');
-      const payload = {
+      const payload: Record<string, unknown> = {
         date: selectedDate.toISOString(),
         isFullDayBlocked: isFullDay,
         timeSlots: isFullDay ? [] : timeSlots,
         reason,
         notes
       };
+      if (selectedVenueId) payload.venueId = selectedVenueId;
 
-      const url = editingSlot 
+      const requestUrl = editingSlot 
         ? `${apiUrl}/api/venue/blocked-slots/${editingSlot._id}`
         : `${apiUrl}/api/venue/blocked-slots`;
       
       const method = editingSlot ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await fetch(requestUrl, {
         method,
         headers: {
           'Content-Type': 'application/json',

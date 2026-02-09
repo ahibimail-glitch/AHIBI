@@ -46,6 +46,7 @@ import { toast } from "sonner";
 
 interface Venue {
   _id: string;
+  managedByVenueId?: string | null;
   name: string;
   description: string;
   ownerDetails?: {
@@ -221,12 +222,14 @@ export default function AllVenuesPage() {
       const data = await response.json();
       
       if (data.success) {
-        setVenues(data.data.venues);
-        setFilteredVenues(data.data.venues);
+        const allVenues: Venue[] = data.data.venues;
+        const parentVenues = allVenues.filter((v) => v.managedByVenueId == null);
+        setVenues(parentVenues);
+        setFilteredVenues(parentVenues);
         
         // Extract unique cities
         const uniqueCities = Array.from(
-          new Set(data.data.venues.map((v: Venue) => v.address.city))
+          new Set(parentVenues.map((v: Venue) => v.address.city))
         ) as string[];
         setCities(uniqueCities);
       } else {
@@ -326,15 +329,15 @@ export default function AllVenuesPage() {
       </div> */}
 
       {/* Filters Section */}
-      <div className="container mx-auto px-4 py-6">
-        <Card className="border shadow-m">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-5 sm:pt-6 sm:pb-6">
+        <Card className="border shadow-sm sm:shadow-md rounded-2xl sm:rounded-3xl">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
               {/* Search */}
               <div className="space-y-2">
                 <Label htmlFor="search">Search</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="search"
                     placeholder="Search venues..."
@@ -379,7 +382,7 @@ export default function AllVenuesPage() {
               <div className="space-y-2 flex items-end">
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-sm sm:text-base"
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedCity("all");
@@ -396,7 +399,7 @@ export default function AllVenuesPage() {
       </div>
 
       {/* Venues Grid/List */}
- <div className="container mx-auto px-4 pb-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {filteredVenues.length === 0 ? (
           <div className="max-w-md mx-auto">
             <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-12 text-center">

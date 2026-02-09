@@ -42,22 +42,28 @@ const VenueSchema = new mongoose.Schema({
     }
   },
   
+  // When set, this venue is managed by another (parent) venue. Parent's login can access this venue.
+  managedByVenueId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Venue',
+    default: null
+  },
+
   // For backward compatibility
   name: {
     type: String,
     required: [true, 'Venue name is required'],
     trim: true
   },
+  // Unique only for root venues (managedByVenueId null). Child venues can share parent's contact.
   email: {
     type: String,
     required: [true, 'Please add an email'],
-    unique: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
   },
   phone: {
     type: String,
     required: [true, 'Please add a phone number'],
-    unique: true,
     match: [/^\d{10}$/, 'Please enter a valid 10-digit phone number']
   },
   password: {
@@ -627,6 +633,17 @@ const VenueSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Partial unique indexes: only root venues (managedByVenueId null) require unique email/phone.
+// Child venues can share parent's contact for login/communication.
+VenueSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { managedByVenueId: null } }
+);
+VenueSchema.index(
+  { phone: 1 },
+  { unique: true, partialFilterExpression: { managedByVenueId: null } }
+);
 
 // Update the updatedAt timestamp before saving
 VenueSchema.pre('save', async function(next) {

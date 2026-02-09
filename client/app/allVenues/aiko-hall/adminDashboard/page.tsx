@@ -452,29 +452,66 @@ export default function AikoHallManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="min-h-[50vh] flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
-  if (!isLoggedIn) { return ( <Dialog open={true}> <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle>Admin Login</DialogTitle> </DialogHeader> <div className="space-y-4"> <div> <Label>Email</Label> <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter admin email" /> </div> <div> <Label>Password</Label> <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" /> </div> <Button className="w-full" onClick={handleLogin} disabled={loggingIn}> {loggingIn ? "Logging in..." : "Login"} </Button> </div> </DialogContent> </Dialog> ); }
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <Dialog open={true}>
+          <DialogContent className="sm:max-w-md w-full rounded-2xl">
+            <DialogHeader>
+              <DialogTitle>Admin Login</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter admin email"
+                />
+              </div>
+              <div>
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                />
+              </div>
+              <Button className="w-full" onClick={handleLogin} disabled={loggingIn}>
+                {loggingIn ? "Logging in..." : "Login"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
   
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Aiko Hall Management</h2>
           <p className="text-gray-600">Manage bookings and settings for Aiko Hall</p>
         </div>
-        <div className="flex space-x-2">
-          <Button onClick={exportBookings} variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button onClick={exportBookings} variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
           <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Button>
@@ -581,7 +618,7 @@ export default function AikoHallManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto flex flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="bookings">Bookings</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -666,7 +703,7 @@ export default function AikoHallManagement() {
 
         <TabsContent value="bookings" className="space-y-4">
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

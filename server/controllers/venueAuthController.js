@@ -20,7 +20,7 @@ exports.sendVenueOtp = async (req, res) => {
 
   try {
     if (mode === 'login') {
-      const venue = await Venue.findOne({ phone });
+      const venue = await Venue.findOne({ phone, managedByVenueId: null });
       if (!venue) {
         return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
       }
@@ -47,7 +47,7 @@ exports.sendVenueOtp = async (req, res) => {
     }
 
     if (mode === 'signup' || !mode) {
-      let venue = await Venue.findOne({ phone });
+      let venue = await Venue.findOne({ phone, managedByVenueId: null });
 
       if (venue) {
         return ApiResponse.badRequest(res, 'Number is already registered');
@@ -89,7 +89,7 @@ exports.verifyVenueOtp = async (req, res) => {
 
   try {
     if (mode === 'login') {
-      const venue = await Venue.findOne({ phone });
+      const venue = await Venue.findOne({ phone, managedByVenueId: null });
       
       if (!venue) {
         return ApiResponse.badRequest(res, 'Venue not found');
@@ -267,7 +267,7 @@ exports.loginVenueWithPassword = async (req, res) => {
   const { phone, password } = req.body;
 
   try {
-    const venue = await Venue.findOne({ phone }).select('+password');
+    const venue = await Venue.findOne({ phone, managedByVenueId: null }).select('+password');
 
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
@@ -323,7 +323,7 @@ exports.sendVenuePasswordResetOtp = async (req, res) => {
   const { phone } = req.body;
 
   try {
-    const venue = await Venue.findOne({ phone });
+    const venue = await Venue.findOne({ phone, managedByVenueId: null });
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
     }
@@ -362,7 +362,7 @@ exports.verifyVenuePasswordResetOtp = async (req, res) => {
   const { phone, otp } = req.body;
 
   try {
-    const venue = await Venue.findOne({ phone });
+    const venue = await Venue.findOne({ phone, managedByVenueId: null });
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
     }
@@ -405,7 +405,7 @@ exports.resetVenuePassword = async (req, res) => {
       return ApiResponse.badRequest(res, 'Password reset session expired. Please verify OTP again.');
     }
 
-    const venue = await Venue.findOne({ phone }).select('+password');
+    const venue = await Venue.findOne({ phone, managedByVenueId: null }).select('+password');
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
     }
@@ -426,13 +426,176 @@ exports.resetVenuePassword = async (req, res) => {
 };
 
 /**
+ * Helper: Resolve which venue ID the request is operating on.
+ * If venueId query param is provided and the user has access (self or managed child), return it.
+ * Otherwise return req.user.id.
+ */
+const resolveVenueId = async (req) => {
+  const venueId = req.query.venueId || req.body.venueId;
+  if (!venueId) return req.user.id;
+
+  // Check if venueId is self
+  if (venueId.toString() === req.user.id.toString()) return venueId;
+
+  // Check if venueId is a managed child
+  const child = await Venue.findOne({
+    _id: venueId,
+    managedByVenueId: req.user.id
+  });
+  if (child) return venueId;
+
+  return null; // Not authorized
+};
+
+/**
+ * @desc    Get all venues the logged-in venue can manage (self + children)
+ * @route   GET /api/venue/venues
+ * @access  Private (Venue only)
+ */
+exports.getMyVenues = async (req, res) => {
+  try {
+    const owned = await Venue.find({
+      $or: [
+        { _id: req.user.id },
+        { managedByVenueId: req.user.id }
+      ]
+    })
+      .select('_id name email phone approvalStatus address city managedByVenueId')
+      .sort({ managedByVenueId: 1, name: 1 }); // Own venue first, then children
+
+    const venues = owned.map((v) => ({
+      _id: v._id,
+      name: v.name,
+      email: v.email,
+      phone: v.phone,
+      approvalStatus: v.approvalStatus,
+      city: v.address?.city || '-',
+      isManaged: !!v.managedByVenueId
+    }));
+
+    return ApiResponse.success(res, 'Venues retrieved successfully', {
+      venues
+    });
+  } catch (error) {
+    console.error('Get my venues error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving venues', error);
+  }
+};
+
+/**
+ * @desc    Create a new venue (managed by current venue)
+ * @route   POST /api/venue/venues
+ * @access  Private (Venue only)
+ */
+exports.createVenue = async (req, res) => {
+  try {
+    const { name, description, address } = req.body;
+
+    if (!name || !name.trim()) {
+      return ApiResponse.badRequest(res, 'Venue name is required');
+    }
+
+    const parentVenue = await Venue.findById(req.user.id);
+    if (!parentVenue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    // Child venues use parent's email and phone - same contact can be shared
+    const parentEmail = parentVenue.email || parentVenue.ownerDetails?.email || parentVenue.contactInfo?.email;
+    const parentPhone = parentVenue.phone || parentVenue.ownerDetails?.primaryContact || parentVenue.contactInfo?.phone;
+    if (!parentEmail || !parentPhone) {
+      return ApiResponse.badRequest(res, 'Parent venue must have email and phone set');
+    }
+
+    // Deep clone parent details - child inherits everything but updates are independent
+    const toJson = (obj) => (obj && typeof obj.toObject === 'function' ? obj.toObject() : obj);
+    const parentObj = parentVenue.toObject ? parentVenue.toObject() : parentVenue;
+
+    const venueData = {
+      name: name.trim(),
+      email: parentEmail,
+      phone: parentPhone,
+      managedByVenueId: req.user.id,
+      approvalStatus: 'pending',
+      description: description && description.trim() ? description.trim() : (parentVenue.description || 'To be updated'),
+      ownerDetails: toJson(parentObj.ownerDetails) || {
+        fullName: 'Not Provided',
+        primaryContact: parentPhone,
+        email: parentEmail,
+        businessName: name.trim(),
+        designation: 'Owner',
+        alternateContact: '',
+        businessRegistrationNumber: '',
+        gstNumber: ''
+      },
+      venueClassification: toJson(parentObj.venueClassification) || {
+        venueTypes: [],
+        venueTypeOther: '',
+        indoorOutdoor: 'indoor',
+        operationMode: 'year_round'
+      },
+      address: address || toJson(parentObj.address) || {
+        street: 'To be updated',
+        city: 'Unknown',
+        state: 'Unknown',
+        pincode: '000000',
+        landmark: '',
+        googleMapsLink: '',
+        directions: ''
+      },
+      parking: toJson(parentObj.parking) || { carCapacity: 0, twoWheelerAvailable: false },
+      capacity: parentObj.capacity || 0,
+      capacityDetails: toJson(parentObj.capacityDetails) || {
+        standingCapacity: 0,
+        seatingCapacity: {},
+        advanceBookingDays: 30
+      },
+      amenities: toJson(parentObj.amenities) || {},
+      facilities: toJson(parentObj.facilities) || {},
+      policies: toJson(parentObj.policies) || {},
+      addOnServices: toJson(parentObj.addOnServices) || {},
+      terms: toJson(parentObj.terms) || {},
+      pricing: toJson(parentObj.pricing) || { basePrice: 0 },
+      contactInfo: {
+        phone: parentPhone,
+        email: parentEmail,
+        website: parentObj.contactInfo?.website || ''
+      },
+      documents: toJson(parentObj.documents) || {},
+      authorizations: toJson(parentObj.authorizations) || {}
+    };
+
+    const venue = new Venue(venueData);
+    await venue.save({ validateBeforeSave: false });
+
+    adminNotificationController.notifyVenueRegistration(venue);
+
+    return ApiResponse.success(res, 'Venue created successfully. Pending admin approval.', {
+      venue: {
+        _id: venue._id,
+        name: venue.name,
+        approvalStatus: venue.approvalStatus
+      }
+    });
+  } catch (error) {
+    console.error('Create venue error:', error);
+    return ApiResponse.serverError(res, 'Error creating venue', error);
+  }
+};
+
+/**
  * @desc    Get venue profile
  * @route   GET /api/venue/profile
  * @access  Private (Venue only)
  */
 exports.getVenueProfile = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) {
+      return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    }
+
+    const venue = await Venue.findById(venueId);
 
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue profile not found');
@@ -460,7 +623,9 @@ exports.updateVenueProfile = async (req, res) => {
   }
 
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
 
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue profile not found');
@@ -499,7 +664,9 @@ exports.updateVenueProfile = async (req, res) => {
  */
 exports.updateOwnerDetails = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -550,7 +717,9 @@ exports.updateOwnerDetails = async (req, res) => {
  */
 exports.updateVenueClassification = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -594,7 +763,9 @@ exports.updateVenueClassification = async (req, res) => {
  */
 exports.updateLocation = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -662,7 +833,9 @@ exports.updateLocation = async (req, res) => {
  */
 exports.updateCapacity = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -710,7 +883,9 @@ exports.updateCapacity = async (req, res) => {
  */
 exports.updatePricing = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -758,7 +933,9 @@ exports.updatePricing = async (req, res) => {
  */
 exports.updateAmenities = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -833,7 +1010,9 @@ exports.updateAmenities = async (req, res) => {
  */
 exports.updatePolicies = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -864,7 +1043,9 @@ exports.updatePolicies = async (req, res) => {
  */
 exports.updateAddOnServices = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -895,7 +1076,9 @@ exports.updateAddOnServices = async (req, res) => {
  */
 exports.updateDocuments = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -944,7 +1127,9 @@ exports.updateDocuments = async (req, res) => {
  */
 exports.updateAuthorizations = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -984,7 +1169,9 @@ exports.updateAuthorizations = async (req, res) => {
  */
 exports.getFaqs = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id).select('faqs');
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId).select('faqs');
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1006,7 +1193,9 @@ exports.createFaq = async (req, res) => {
     if (!question || !answer) {
       return ApiResponse.badRequest(res, 'Question and answer are required');
     }
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1036,7 +1225,9 @@ exports.updateFaq = async (req, res) => {
   try {
     const { faqId } = req.params;
     const { question, answer, isActive, order } = req.body;
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1064,7 +1255,9 @@ exports.updateFaq = async (req, res) => {
 exports.deleteFaq = async (req, res) => {
   try {
     const { faqId } = req.params;
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1088,7 +1281,9 @@ exports.deleteFaq = async (req, res) => {
  */
 exports.getBlockedSlots = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1108,7 +1303,9 @@ exports.getBlockedSlots = async (req, res) => {
  */
 exports.addBlockedSlot = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1168,7 +1365,9 @@ exports.updateBlockedSlot = async (req, res) => {
     const { slotId } = req.params;
     const { date, isFullDayBlocked, timeSlots, reason, notes } = req.body;
 
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -1214,7 +1413,9 @@ exports.deleteBlockedSlot = async (req, res) => {
   try {
     const { slotId } = req.params;
 
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueId(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }

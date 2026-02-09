@@ -51,7 +51,9 @@ import {
   Building,
   Menu,
   ArrowLeft,
-  Home
+  Home,
+  Plus,
+  ChevronDown
 } from "lucide-react";
 import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { toast } from "sonner";
@@ -60,9 +62,14 @@ import { useVenueAuth } from "@/hooks/useVenueAuth";
 import VenueDetailsManager from "./VenueDetailsManager";
 import BlockedSlotsManager from "./BlockedSlotsManager";
 import VenueCompletenessAlert from "./VenueCompletenessAlert";
+import AddVenueForm from "./AddVenueForm";
 
 interface VenueDashboardLayoutProps {
   venueData: any;
+  venues?: any[];
+  selectedVenueId?: string | null;
+  onSelectVenue?: (id: string) => void;
+  onRefreshVenues?: () => void;
   stats: any;
   bookings: any[];
   onSectionUpdate: (section: string, data: any) => Promise<void>;
@@ -71,6 +78,10 @@ interface VenueDashboardLayoutProps {
 
 export default function VenueDashboardLayout({ 
   venueData, 
+  venues = [],
+  selectedVenueId = null,
+  onSelectVenue,
+  onRefreshVenues,
   stats, 
   bookings, 
   onSectionUpdate,
@@ -109,6 +120,7 @@ export default function VenueDashboardLayout({
   
   const [savingSettings, setSavingSettings] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showAddVenue, setShowAddVenue] = useState(false);
   // FAQs state
   const [faqs, setFaqs] = useState<Array<{ _id?: string; question: string; answer: string; isActive?: boolean; order?: number }>>([]);
   const [faqLoading, setFaqLoading] = useState(false);
@@ -124,14 +136,13 @@ export default function VenueDashboardLayout({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sidebarItems = [
-    { id: "bookings", label: "Bookings", icon: Calendar },
-    { id: "calendar", label: "Calendar", icon: Calendar },
-    { id: "blocked-slots", label: "Block Dates/Times", icon: Ban },
-    // { id: "listing", label: "Listing Details", icon: Edit },
-    { id: "earnings", label: "Earnings", icon: DollarSign },
-    // { id: "settings", label: "Settings", icon: Settings },
-    { id: "venue-details", label: "Manage Venue Details", icon: Building },
-    { id: "faqs", label: "FAQs", icon: FileText },
+    ...(venues.length > 0 ? [{ id: "my-venues" as const, label: "My Venues", icon: Building }] : []),
+    { id: "bookings" as const, label: "Bookings", icon: Calendar },
+    { id: "calendar" as const, label: "Calendar", icon: Calendar },
+    { id: "blocked-slots" as const, label: "Block Dates/Times", icon: Ban },
+    { id: "earnings" as const, label: "Earnings", icon: DollarSign },
+    { id: "venue-details" as const, label: "Manage Venue Details", icon: Building },
+    { id: "faqs" as const, label: "FAQs", icon: FileText },
   ];
 
   const filteredBookings = bookings.filter(booking => {
@@ -163,7 +174,10 @@ export default function VenueDashboardLayout({
     try {
       setFaqLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/venue/faqs`, {
+      const url = selectedVenueId
+        ? `${apiUrl}/api/venue/faqs?venueId=${selectedVenueId}`
+        : `${apiUrl}/api/venue/faqs`;
+      const res = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
         }
@@ -196,13 +210,14 @@ export default function VenueDashboardLayout({
     }
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const body = selectedVenueId ? { ...newFaq, venueId: selectedVenueId } : newFaq;
       const res = await fetch(`${apiUrl}/api/venue/faqs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
         },
-        body: JSON.stringify(newFaq)
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -231,13 +246,14 @@ export default function VenueDashboardLayout({
   const saveFaq = async (faqId: string) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const body = selectedVenueId ? { ...editingFaq, venueId: selectedVenueId } : editingFaq;
       const res = await fetch(`${apiUrl}/api/venue/faqs/${faqId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
         },
-        body: JSON.stringify(editingFaq)
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -256,7 +272,10 @@ export default function VenueDashboardLayout({
   const deleteFaq = async (faqId: string) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/venue/faqs/${faqId}`, {
+      const url = selectedVenueId
+        ? `${apiUrl}/api/venue/faqs/${faqId}?venueId=${selectedVenueId}`
+        : `${apiUrl}/api/venue/faqs/${faqId}`;
+      const res = await fetch(url, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('venueToken')}`
@@ -636,7 +655,7 @@ export default function VenueDashboardLayout({
                         <p className="text-sm text-gray-500">{booking.user?.phone || 'N/A'}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div>
                         <p className="font-medium text-gray-900">
                           {format(new Date(booking.bookingDate), 'MMM dd, yyyy')}
@@ -646,13 +665,13 @@ export default function VenueDashboardLayout({
                         </p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
                       {booking.guestCount}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-medium text-gray-900">
                       ₹{booking.pricing?.totalAmount?.toLocaleString() || 'N/A'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
                       {getStatusBadge(booking.status)}
                     </td>
                   </tr>
@@ -810,14 +829,90 @@ export default function VenueDashboardLayout({
     );
   };
 
+  const renderMyVenuesContent = () => (
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Venues</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage all your venue listings</p>
+        </div>
+        <Button onClick={() => setShowAddVenue(true)} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Venue
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:gap-4">
+        {venues.map((v) => (
+          <Card
+            key={v._id}
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              selectedVenueId === v._id ? 'ring-2 ring-blue-500 bg-blue-50/50' : ''
+            }`}
+            onClick={() => onSelectVenue?.(v._id)}
+          >
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                    {v.name?.charAt(0) || 'V'}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{v.name}</h3>
+                    <p className="text-sm text-gray-500">{v.city || v.email}</p>
+                    <Badge
+                      className={`mt-1 text-xs ${
+                        v.approvalStatus === 'approved'
+                          ? 'bg-green-100 text-green-700'
+                          : v.approvalStatus === 'rejected'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}
+                    >
+                      {v.approvalStatus || 'Pending'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedVenueId === v._id && (
+                    <Badge variant="outline" className="text-blue-600">Current</Badge>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={selectedVenueId === v._id ? 'default' : 'outline'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectVenue?.(v._id);
+                    }}
+                  >
+                    {selectedVenueId === v._id ? 'Managing' : 'Switch'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <AddVenueForm
+        open={showAddVenue}
+        onOpenChange={setShowAddVenue}
+        onSuccess={() => onRefreshVenues?.()}
+        parentVenue={venueData ? { name: venueData.name, email: venueData.email, phone: venueData.phone } : null}
+      />
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
+      case "my-venues":
+        return renderMyVenuesContent();
       case "bookings":
         return renderBookingsContent();
       case "calendar":
         return renderCalendarContent();
       case "blocked-slots":
-        return <BlockedSlotsManager venueId={venueData._id} bookings={bookings} />;
+        return <BlockedSlotsManager venueId={venueData?._id} selectedVenueId={selectedVenueId} bookings={bookings} />;
       case "faqs":
         return renderFaqsContent();
       case "listing":
@@ -1403,6 +1498,7 @@ export default function VenueDashboardLayout({
             onUpdate={onSectionUpdate}
             initialSection={venueDetailsSection}
             onSectionChange={() => setVenueDetailsSection(null)}
+            onBack={() => setActiveTab("bookings")}
           />
         );
       default:
@@ -1422,16 +1518,28 @@ export default function VenueDashboardLayout({
           >
             <Menu className="h-5 w-5 text-gray-700" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-8 h-8 flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-sm">
               {venueData?.name?.charAt(0) || 'V'}
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-gray-900 truncate max-w-[150px]">{venueData?.name || 'Venue Dashboard'}</span>
+            <div className="flex flex-col min-w-0 flex-1">
+              {venues.length > 1 ? (
+                <select
+                  value={selectedVenueId || ''}
+                  onChange={(e) => onSelectVenue?.(e.target.value)}
+                  className="text-sm font-semibold text-gray-900 bg-transparent border-none p-0 focus:ring-0 truncate max-w-full"
+                >
+                  {venues.map((v) => (
+                    <option key={v._id} value={v._id}>{v.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-sm font-semibold text-gray-900 truncate">{venueData?.name || 'Venue Dashboard'}</span>
+              )}
               <span className="text-xs text-gray-500">{sidebarItems.find(item => item.id === activeTab)?.label || 'Dashboard'}</span>
             </div>
           </div>
-          <div className="w-10" />
+          <div className="w-10 flex-shrink-0" />
         </div>
       </div>
 
@@ -1564,6 +1672,21 @@ export default function VenueDashboardLayout({
       {/* Right Content Area */}
       <div className="flex-1 overflow-auto bg-gray-50">
         <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+          {/* Venue Switcher - Desktop */}
+          {venues.length > 1 && (
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-2">
+              <Label className="text-sm text-gray-600">Active Venue:</Label>
+              <select
+                value={selectedVenueId || ''}
+                onChange={(e) => onSelectVenue?.(e.target.value)}
+                className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {venues.map((v) => (
+                  <option key={v._id} value={v._id}>{v.name} ({v.approvalStatus || 'pending'})</option>
+                ))}
+              </select>
+            </div>
+          )}
           {/* Kaki Marketing Banner */}
           <div className="mb-6">
             <KakiMarketingBanner platform="venue" />

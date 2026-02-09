@@ -423,7 +423,7 @@ export default function AikoHallPage() {
       </div>
 
       {/* Hero Section with Image Carousel */}
-      <div className="relative h-[60vh] md:h-[70vh] overflow-hidden">
+      <div className="relative min-h-[360px] sm:min-h-[420px] md:h-[70vh] overflow-hidden rounded-b-3xl md:rounded-b-[40px] shadow-xl md:shadow-2xl">
         <div className="absolute inset-0">
           <img
             src={venueImages[currentImageIndex]}
@@ -433,27 +433,27 @@ export default function AikoHallPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         </div>
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons (desktop / large screens) */}
         <button
           onClick={prevImage}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-200"
+          className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-200"
         >
           <ChevronLeft className="h-6 w-6" />
         </button>
         <button
           onClick={nextImage}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-200"
+          className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full backdrop-blur-sm transition-all duration-200"
         >
           <ChevronRight className="h-6 w-6" />
         </button>
 
         {/* Image Indicators */}
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2">
+        <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 flex space-x-1.5 sm:space-x-2">
           {venueImages.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentImageIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-200 ${index === currentImageIndex ? 'bg-white' : 'bg-white/50'}`}
+              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-200 ${index === currentImageIndex ? 'bg-white' : 'bg-white/50'}`}
             />
           ))}
         </div>
@@ -461,22 +461,22 @@ export default function AikoHallPage() {
         {/* Hero Content */}
         <div className="absolute inset-0 flex items-center justify-center text-center px-4">
           <div className="max-w-4xl">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-4 drop-shadow-lg">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-3 sm:mb-4 drop-shadow-lg leading-tight">
               {aikoHallData.name}
             </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-6 drop-shadow-md">
+            <p className="text-base sm:text-lg md:text-2xl text-white/90 mb-5 md:mb-6 drop-shadow-md">
               Premium Event & Banquet Hall in Dimapur
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-              <div className="flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">
                 <Star className="h-5 w-5 text-yellow-400 mr-2" />
                 <span className="text-white font-medium">4.8 Rating</span>
               </div>
-              <div className="flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+              <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">
                 <Users className="h-5 w-5 text-white mr-2" />
                 <span className="text-white font-medium">Up to {aikoHallData.maxCapacity} Guests</span>
               </div>
-              <div className="flex items-center bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+              <div className="flex items-center bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full">
                 <Award className="h-5 w-5 text-white mr-2" />
                 <span className="text-white font-medium">{aikoHallData.venueCategory} Venue</span>
               </div>
@@ -486,8 +486,8 @@ export default function AikoHallPage() {
       </div>
 
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
           {/* Main Content */}
           <div className="xl:col-span-2 space-y-8">
             {/* Quick Info Cards */}

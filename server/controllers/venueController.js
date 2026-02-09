@@ -476,6 +476,17 @@ exports.getBookingById = async (req, res) => {
 
 // ============ VENUE MANAGER DASHBOARD ENDPOINTS ============
 
+const resolveVenueIdForManager = async (req) => {
+  const venueId = req.query.venueId || req.body.venueId;
+  if (!venueId) return req.user.id;
+  if (venueId.toString() === req.user.id.toString()) return venueId;
+  const child = await Venue.findOne({
+    _id: venueId,
+    managedByVenueId: req.user.id
+  });
+  return child ? venueId : null;
+};
+
 /**
  * @desc    Get venue manager dashboard stats
  * @route   GET /api/venues/manager/stats
@@ -483,7 +494,10 @@ exports.getBookingById = async (req, res) => {
  */
 exports.getVenueManagerStats = async (req, res) => {
   try {
-    const venueId = req.user.id;
+    const venueId = await resolveVenueIdForManager(req);
+    if (!venueId) {
+      return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    }
     
     // Get total bookings
     const totalBookings = await VenueBooking.countDocuments({
@@ -559,9 +573,13 @@ exports.getVenueManagerStats = async (req, res) => {
  */
 exports.getVenueManagerBookings = async (req, res) => {
   try {
+    const venueId = await resolveVenueIdForManager(req);
+    if (!venueId) {
+      return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    }
     const { status, startDate, endDate } = req.query;
     
-    let query = { venue: req.user.id };
+    let query = { venue: venueId };
     
     if (status) {
       query.status = status;
@@ -602,10 +620,16 @@ exports.updateBookingStatus = async (req, res) => {
   try {
     const { status, venueNotes, rejectionReason } = req.body;
     
-    const booking = await VenueBooking.findOne({
-      _id: req.params.bookingId,
-      venue: req.user.id
-    });
+    const booking = await VenueBooking.findOne({ _id: req.params.bookingId });
+    if (!booking) {
+      return ApiResponse.notFound(res, 'Booking not found');
+    }
+    const bookingVenueId = booking.venue.toString();
+    const isSelf = bookingVenueId === req.user.id.toString();
+    const isManagedChild = !isSelf && await Venue.findOne({ _id: booking.venue, managedByVenueId: req.user.id });
+    if (!isSelf && !isManagedChild) {
+      return ApiResponse.forbidden(res, 'Not authorized to update this booking');
+    }
     
     if (!booking) {
       return ApiResponse.notFound(res, 'Booking not found');
@@ -637,9 +661,11 @@ exports.updateBookingStatus = async (req, res) => {
  */
 exports.updateAvailability = async (req, res) => {
   try {
+    const venueId = await resolveVenueIdForManager(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
     const { date, isAvailable, note } = req.body;
     
-    const venue = await Venue.findById(req.user.id);
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
     }
@@ -674,7 +700,9 @@ exports.updateAvailability = async (req, res) => {
  */
 exports.updateVenueManagerProfile = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.user.id);
+    const venueId = await resolveVenueIdForManager(req);
+    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const venue = await Venue.findById(venueId);
     
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');

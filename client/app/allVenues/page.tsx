@@ -282,7 +282,7 @@ const Section = ({ children, id, className = "" }: { children: React.ReactNode; 
 );
 
 const Hero = () => (
-  <div className="relative h-[450px] md:h-[550px] lg:h-[650px] overflow-hidden">
+  <div className="relative min-h-[420px] sm:min-h-[460px] md:h-[540px] lg:h-[640px] overflow-hidden">
     {/* Background Image */}
     <div className="absolute inset-0">
       <img
@@ -295,19 +295,19 @@ const Hero = () => (
 
     {/* Content */}
     <div className="relative h-full flex items-center justify-center">
-      <div className="text-center px-4 max-w-5xl mx-auto">
+      <div className="text-center px-4 sm:px-6 max-w-5xl mx-auto">
 
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 md:mb-6 drop-shadow-2xl leading-tight">
           Turn Your Venue Into a<br className="hidden sm:block" />
           <span className="text-pink-400">Profitable Business</span>
         </h1>
-        <p className="text-lg md:text-xl lg:text-2xl text-white/95 mb-8 md:mb-10 max-w-3xl mx-auto drop-shadow-lg">
+        <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/95 mb-6 sm:mb-8 md:mb-10 max-w-3xl mx-auto drop-shadow-lg">
           List your space. Get discovered. Accept bookings online. <br className="hidden md:block" />
           Start earning more from your venue today.
         </p>
 
         {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center max-w-lg mx-auto">
           <Link href="/venue/auth/signup" className="w-full sm:w-auto">
             <Button size="lg" className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700 text-white px-8 md:px-10 py-6 text-base md:text-lg font-semibold shadow-2xl">
               List Your Venue Free
@@ -321,7 +321,7 @@ const Hero = () => (
           </Link>
         </div>
 
-        <div className="mt-8 md:mt-10 flex flex-wrap justify-center items-center gap-4 md:gap-8 text-sm md:text-base text-white/90">
+        <div className="mt-6 sm:mt-8 md:mt-10 flex flex-wrap justify-center items-center gap-3 md:gap-6 text-xs sm:text-sm md:text-base text-white/90">
           <div className="flex items-center gap-2">
             <Check className="h-5 w-5 text-pink-400" />
             <span>Free to start</span>
