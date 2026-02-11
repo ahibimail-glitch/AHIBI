@@ -1,24 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Minus,
-  Plus,
   Loader2,
   ArrowLeft,
-  Ticket as TicketIcon,
-  XCircle,
-  Users,
-  CheckCircle2,
-  Info,
-  ShieldCheck,
-  Calendar,
-  MapPin,
-  Tag,
-  X,
-  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Check,
 } from "lucide-react";
 import Script from "next/script";
 
@@ -30,16 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -48,7 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import HMFTermsContent from "@/components/HMFTermsContent";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
@@ -100,12 +81,12 @@ export default function CheckoutPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
-  const summaryRef = useRef<HTMLDivElement | null>(null);
 
   const [event, setEvent] = useState<Event | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTickets, setSelectedTickets] = useState<Map<string, { ticket: TicketType; quantity: number }>>(new Map());
+  const [expandedTickets, setExpandedTickets] = useState<Set<string>>(new Set());
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -115,6 +96,7 @@ export default function CheckoutPage() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // HMF event state
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -231,29 +213,94 @@ export default function CheckoutPage() {
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
-  // Check if this is a free/RSVP event and auto-add FREE ticket
   const isFreeEvent = event?.isFreeEvent || false;
-  
+
+  // Add free ticket for RSVP events
   useEffect(() => {
-    if (isFreeEvent && event && !selectedTickets.size) {
-      // Auto-add FREE ticket for RSVP/Free events
+    if (event && isFreeEvent && event.ticketTypes.length === 0) {
+      // Auto-add a free ticket type for RSVP events
       const freeTicket: TicketType = {
-        _id: 'free-ticket-auto',
-        name: 'FREE',
+        _id: 'free-rsvp-ticket',
+        name: 'Free RSVP',
         price: 0,
-        quantity: 999999, // Unlimited availability
+        quantity: 1000, // Large number for unlimited RSVP
         sold: 0,
-        description: 'Free RSVP ticket',
+        description: 'Free RSVP ticket for this event',
         capacity: 1,
-        benefits: []
+        benefits: ['Free entry to the event']
       };
-      
-      setSelectedTickets(new Map().set('free-ticket-auto', { 
-        ticket: freeTicket, 
-        quantity: 1 
-      }));
+      setEvent({
+        ...event,
+        ticketTypes: [freeTicket]
+      });
     }
-  }, [isFreeEvent, event, selectedTickets.size]);
+  }, [event, isFreeEvent]);
+
+  const toggleTicketExpansion = (ticketId: string) => {
+    setExpandedTickets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(ticketId)) {
+        newSet.delete(ticketId);
+      } else {
+        newSet.add(ticketId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleAddTicket = (ticket: TicketType) => {
+    if (!isFormComplete) {
+      toast.error(isHMFEvent ? "Please select your country and state first" : "Please fill in all required fields");
+      return;
+    }
+
+    // For free RSVP events, allow only 1 ticket per user
+    if (isFreeEvent && ticket.price === 0) {
+      const currentItem = selectedTickets.get(ticket._id);
+      if (currentItem && currentItem.quantity >= 1) {
+        toast.error("Only 1 RSVP ticket allowed per user");
+        return;
+      }
+    }
+
+    const currentItem = selectedTickets.get(ticket._id);
+    const currentQuantity = currentItem?.quantity || 0;
+    const newQuantity = currentQuantity + 1;
+
+    // Check availability
+    if (newQuantity > ticket.quantity - ticket.sold) {
+      toast.error("No more tickets available");
+      return;
+    }
+
+    // Check 10 ticket limit (only for paid events)
+    if (!isFreeEvent) {
+      const totalTickets = Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0);
+      if (totalTickets >= 10) {
+        toast.error("You can add up to 10 tickets only");
+        return;
+      }
+    }
+
+    setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+    toast.success(isFreeEvent ? `RSVP confirmed for ${ticket.name}` : `Added ${ticket.name}`);
+  };
+
+  const handleRemoveTicket = (ticketId: string) => {
+    const currentItem = selectedTickets.get(ticketId);
+    if (!currentItem) return;
+
+    const newQuantity = currentItem.quantity - 1;
+    if (newQuantity === 0) {
+      setSelectedTickets(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(ticketId);
+        return newMap;
+      });
+    } else {
+      setSelectedTickets(prev => new Map(prev).set(ticketId, { ticket: currentItem.ticket, quantity: newQuantity }));
+    }
+  };
 
   const handleApplyCoupon = async () => {
     try {
@@ -297,6 +344,14 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleProceed = () => {
+    if (selectedTickets.size === 0) {
+      toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket");
+      return;
+    }
+    setCurrentStep(3);
+  };
+
   const handleBooking = async () => {
     setBookingError(null);
     if (isBookingClosed) {
@@ -310,7 +365,7 @@ export default function CheckoutPage() {
       return;
     }
     if (selectedTickets.size === 0) {
-      toast.error("Please select at least one ticket type");
+      toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket type");
       return;
     }
     if (!acceptedTerms) {
@@ -549,10 +604,10 @@ export default function CheckoutPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
-          <p className="text-lg font-semibold text-gray-900">Loading checkout...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-gray-400" />
+          <p className="text-sm text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -562,107 +617,122 @@ export default function CheckoutPage() {
     return null;
   }
 
+  const totalTicketsSelected = Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0);
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-white via-gray-50 to-white">
+    <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 max-w-7xl">
+      <div className="flex-1">
         {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push(`/events/${eventId}`)}
-            className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors mb-6 group"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Back to Event</span>
-          </button>
+        <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
+          <div className="max-w-full mx-auto px-4 py-4 sm:max-w-4xl">
+            <button
+              onClick={() => router.push(`/events/${eventId}`)}
+              className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors mb-4"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
 
-          <div className="space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Checkout</h1>
-            <p className="text-gray-600">{event.title}</p>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>{new Date(event.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>{event.location.city}</span>
-              </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h1>
+            <div className="text-sm text-gray-600">
+              <p>{event.location.address}: {event.location.city}</p>
+              <p>{new Date(event.startDate).toLocaleDateString('en-US', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })}</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Main Content - Ticket Selection */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* HMF Country Selection */}
-            {isHMFEvent && (
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-8">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Visitor Information</h2>
-                  <p className="text-sm text-gray-600">Required for event registration</p>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">Country *</label>
-                    <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-                      <SelectTrigger className="w-full h-12 rounded-2xl border-gray-300 focus:border-black focus:ring-black">
-                        <SelectValue placeholder="Select your country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sortedCountries.map((country) => (
-                          <SelectItem key={country} value={country}>{country}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+        {/* Progress Steps */}
+        <div className="border-b border-gray-200 bg-gray-50">
+          <div className="max-w-full mx-auto px-4 py-6 sm:max-w-4xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+              {[
+                { num: 1, label: "Ticket" },
+                { num: 2, label: "Ticket Mode" },
+                { num: 3, label: "Review & Proceed to Pay" }
+              ].map((step, idx) => (
+                <div key={step.num} className="flex items-center flex-1 w-full sm:w-auto">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep >= step.num
+                      ? 'bg-black text-white'
+                      : 'bg-gray-200 text-gray-500'
+                      }`}>
+                      {currentStep > step.num ? <Check className="w-4 h-4" /> : step.num}
+                    </div>
+                    <span className={`text-sm font-medium whitespace-nowrap ${currentStep >= step.num ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
+                      {step.label}
+                    </span>
                   </div>
+                  {idx < 2 && (
+                    <div className={`h-px flex-1 mx-4 hidden sm:block ${currentStep > step.num ? 'bg-black' : 'bg-gray-300'
+                      }`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">State/Province *</label>
-                    {sortedStates.length > 0 ? (
-                      <Select value={selectedState} onValueChange={setSelectedState}>
-                        <SelectTrigger className="w-full h-12 rounded-2xl border-gray-300 focus:border-black focus:ring-black">
-                          <SelectValue placeholder="Select your state" />
+        {/* Main Content */}
+        <div className="max-w-full mx-auto px-4 py-8 sm:max-w-4xl">
+          {currentStep === 1 && (
+            <>
+              {/* HMF Country Selection */}
+              {isHMFEvent && (
+                <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Visitor Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                      <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select your country" />
                         </SelectTrigger>
                         <SelectContent>
-                          {sortedStates.map((state) => (
-                            <SelectItem key={state} value={state}>{state}</SelectItem>
+                          {sortedCountries.map((country) => (
+                            <SelectItem key={country} value={country}>{country}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <Input
-                        placeholder="Enter your state/province"
-                        value={selectedState}
-                        onChange={(e) => setSelectedState(e.target.value)}
-                        className="h-12 rounded-2xl border-gray-300 focus:border-black focus:ring-black"
-                      />
-                    )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">State/Province *</label>
+                      {sortedStates.length > 0 ? (
+                        <Select value={selectedState} onValueChange={setSelectedState}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select your state" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sortedStates.map((state) => (
+                              <SelectItem key={state} value={state}>{state}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          placeholder="Enter your state/province"
+                          value={selectedState}
+                          onChange={(e) => setSelectedState(e.target.value)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Error Message */}
-            {bookingError && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-red-900">{bookingError}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Ticket Categories */}
-            {!isFreeEvent && (
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-8">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-2">Select Tickets</h2>
-                  <p className="text-sm text-gray-600">Choose your preferred ticket categories</p>
-                </div>
+              {/* Ticket Selection */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold text-gray-900 mb-2">{isFreeEvent ? 'Confirm RSVP' : 'Select Tickets'}</h2>
+                <p className="text-sm text-gray-600 mb-6">{isFreeEvent ? 'Confirm your attendance for this free event' : 'You can add up to 10 tickets only'}</p>
 
                 <div className="space-y-4">
                   {event.ticketTypes && event.ticketTypes.length > 0 ? (
@@ -670,348 +740,324 @@ export default function CheckoutPage() {
                       const isSoldOut = ticket.quantity <= ticket.sold;
                       const selectedItem = selectedTickets.get(ticket._id);
                       const quantity = selectedItem?.quantity || 0;
+                      const isExpanded = expandedTickets.has(ticket._id);
                       const availabilityPercentage = Math.max(0, Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100));
-                      const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                      const isFastFilling = availabilityPercentage <= 30 && !isSoldOut;
 
                       return (
                         <div
                           key={ticket._id}
-                          className={`rounded-2xl border-2 transition-all overflow-hidden ${quantity > 0
-                            ? 'border-black bg-gray-50 shadow-md'
-                            : isSoldOut
-                              ? 'border-gray-200 bg-gray-50 opacity-60'
-                              : 'border-gray-200 hover:border-gray-400 bg-white'
-                            }`}
+                          className="border border-gray-200 rounded-lg overflow-hidden bg-white"
                         >
-                          <div className="p-5 sm:p-6">
-                            <div className="flex justify-between items-start mb-4">
+                          <div className="p-5">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h3 className="text-lg font-bold text-gray-900">{ticket.name}</h3>
-                                  {isSoldOut && (
-                                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
-                                      Sold Out
-                                    </span>
-                                  )}
-                                  {isLimited && !isSoldOut && (
-                                    <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                                      Limited
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-600">{ticket.description}</p>
-                                <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                                  Capacity:
-                                  <span className="text-black">{ticket.capacity}</span>
-                                  {ticket.capacity === 1 ? "person" : "people"}
+                                <h3 className="text-base font-bold text-gray-900">{ticket.name}</h3>
+                                {quantity > 0 && (
+                                  <p className="text-xs text-gray-600 mt-1">{quantity} ticket{quantity > 1 ? 's' : ''} added</p>
+                                )}
+                                <p className="mt-2 text-s text-gray-600">
+                                  Capacity: {ticket.capacity} {ticket.capacity === 1 ? "person" : "people"}
                                 </p>
-
-
                               </div>
-                              <div className="text-right ml-4">
-                                <span className="text-xl font-bold text-gray-900">₹{ticket.price.toLocaleString()}</span>
+                              <div className="text-left sm:text-right">
+                                <p className="text-lg font-bold text-gray-900">
+                                  {ticket.price === 0 ? 'FREE' : `₹${ticket.price.toLocaleString()}`}
+                                </p>
+                                {isFastFilling && (
+                                  <p className="text-xs text-orange-600 font-medium">Fast Filling</p>
+                                )}
                               </div>
                             </div>
 
-                            {ticket.benefits && ticket.benefits.length > 0 && (
-                              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                                <p className="text-xs font-semibold text-gray-900 mb-2">What's included:</p>
-                                <ul className="space-y-1.5">
-                                  {ticket.benefits.map((benefit, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
-                                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                                      <span>{benefit}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                            {isExpanded && (
+                              <div className="mb-4 text-sm text-gray-700">
+                                <p className="mb-2">{ticket.description}</p>
+                                {ticket.benefits && ticket.benefits.length > 0 && (
+                                  <ul className="space-y-1">
+                                    {ticket.benefits.map((benefit, i) => (
+                                      <li key={i} className="flex items-start gap-2">
+                                        <span className="text-green-600">•</span>
+                                        <span>{benefit}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+
                               </div>
                             )}
 
-                            {isHMFEvent && (
-                              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4 text-xs space-y-1">
-                                <div className="flex justify-between text-gray-700">
-                                  <span>Ticket price</span>
-                                  <span>₹{Math.max(0, (ticket.price || 0) - 50).toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-700">
-                                  <span>Tourism sustainability fund</span>
-                                  <span>₹50</span>
-                                </div>
-                                <div className="flex justify-between font-semibold text-gray-900 pt-1 border-t border-gray-300">
-                                  <span>Total</span>
-                                  <span>₹{ticket.price.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            )}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+                              <button
+                                onClick={() => toggleTicketExpansion(ticket._id)}
+                                className="flex items-center gap-1 text-sm text-red-600 font-medium hover:underline"
+                              >
+                                Know {isExpanded ? 'less' : 'more'}
+                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
 
-                            {!isSoldOut && (
-                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 border border-gray-200">
-                                <div className="flex items-center justify-between mb-3">
-                                  <span className="text-sm font-semibold text-gray-900">Quantity</span>
-                                  {quantity > 0 && (
-                                    <span className="text-sm font-bold text-gray-900">
-                                      ₹{(ticket.price * quantity).toLocaleString()}
+                              <div className="flex flex-row sm:flex-row items-center gap-3 w-full sm:w-auto">
+                                {quantity > 0 && (
+                                  <>
+                                    <button
+                                      onClick={() => handleRemoveTicket(ticket._id)}
+                                      className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                                    >
+                                      Remove
+                                    </button>
+                                    <span className="px-4 py-2 text-sm font-bold bg-gray-100 rounded">
+                                      {quantity}
                                     </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center justify-center gap-4">
-                                  <button
-                                    onClick={() => {
-                                      if (quantity > 0) {
-                                        const newQuantity = quantity - 1;
-                                        if (newQuantity === 0) {
-                                          setSelectedTickets(prev => {
-                                            const newMap = new Map(prev);
-                                            newMap.delete(ticket._id);
-                                            return newMap;
-                                          });
-                                        } else {
-                                          setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                        }
-                                      }
-                                    }}
-                                    disabled={quantity <= 0}
-                                    className="w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-black disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center hover:scale-105"
-                                  >
-                                    <Minus className="w-5 h-5 text-gray-700" />
-                                  </button>
-
-                                  <span className="w-16 h-10 bg-white rounded-full border-2 border-gray-300 flex items-center justify-center text-base font-bold text-gray-900">
-                                    {quantity}
-                                  </span>
-
-                                  <button
-                                    onClick={() => {
-                                      if (!isFormComplete) {
-                                        toast.error(isHMFEvent ? "Please select your country and state first" : "Please fill in all required fields");
-                                        return;
-                                      }
-                                      const newQuantity = quantity + 1;
-                                      if (newQuantity <= ticket.quantity - ticket.sold) {
-                                        setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                        if (newQuantity === 1) {
-                                          setTimeout(() => {
-                                            summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                          }, 100);
-                                        }
-                                      }
-                                    }}
-                                    disabled={quantity >= ticket.quantity - ticket.sold}
-                                    className="w-10 h-10 rounded-full bg-black text-white hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center hover:scale-105"
-                                  >
-                                    <Plus className="w-5 h-5" />
-                                  </button>
-                                </div>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => handleAddTicket(ticket)}
+                                  disabled={isSoldOut || (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) || (!isFreeEvent && totalTicketsSelected >= 10)}
+                                  className="px-6 py-2 text-sm font-medium text-red-600 border border-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isSoldOut ? 'Sold Out' : (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) ? 'RSVP Confirmed' : (isFreeEvent && ticket.price === 0) ? 'RSVP Now' : 'Add'}
+                                </button>
                               </div>
-                            )}
+                            </div>
                           </div>
                         </div>
                       );
                     })
                   ) : (
                     <div className="text-center py-12 text-gray-500">
-                      <TicketIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm">No tickets available at this time</p>
+                      <p>No tickets available</p>
                     </div>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* Free Event RSVP Message */}
-            {isFreeEvent && (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-3xl p-6 sm:p-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Free Event RSVP</h2>
-                  <p className="text-gray-600 mb-4">
-                    This is a free event! Simply confirm your attendance by completing the RSVP below.
-                  </p>
-                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
-                    <span>FREE Admission</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              {/* Proceed Button */}
+              <button
+                onClick={handleProceed}
+                disabled={selectedTickets.size === 0}
+                className="
+    w-full
+    py-3 sm:py-4
+    bg-red-600
+    text-white
+    font-semibold
+    text-base sm:text-lg
+    rounded-xl
+    shadow-lg
+    hover:bg-red-700
+    active:scale-[0.98]
+    transition-all duration-200 ease-in-out
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+    disabled:shadow-none
+  "
+              >
+                {isFreeEvent ? "Proceed to Confirm RSVP" : "Proceed"}
+              </button>
 
-          {/* Sidebar - Booking Summary */}
-          <div ref={summaryRef} className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-            <div className="bg-gradient-to-br from-black via-gray-900 to-black rounded-3xl shadow-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <TicketIcon className="w-5 h-5" />
-                  Order Summary
-                </h2>
-              </div>
+            </>
+          )}
 
-              <div className="p-6">
-                {selectedTickets.size === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <TicketIcon className="w-8 h-8 text-white/40" />
+          {currentStep === 3 && (
+            <div className="mb-10">
+
+              {/* Heading */}
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                {isFreeEvent ? "Review & Confirm RSVP" : "Review & Proceed to Pay"}
+              </h2>
+
+              {/* Order Summary Card */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+
+                {/* Selected Tickets */}
+                <div className="space-y-5">
+                  {Array.from(selectedTickets.values()).map((item) => (
+                    <div
+                      key={item.ticket._id}
+                      className="flex justify-between items-start sm:items-center gap-4"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {item.ticket.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {item.quantity} ×{" "}
+                          {item.ticket.price === 0
+                            ? "FREE"
+                            : `₹${item.ticket.price.toLocaleString()}`}
+                        </p>
+                      </div>
+
+                      <p className="font-semibold text-gray-900 text-right">
+                        {item.ticket.price === 0
+                          ? "FREE"
+                          : `₹${(item.ticket.price * item.quantity).toLocaleString()}`}
+                      </p>
                     </div>
-                    <p className="text-sm text-white/70">No tickets selected</p>
-                    <p className="text-xs text-white/50 mt-1">Select tickets to continue</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Selected Tickets */}
-                    {Array.from(selectedTickets.values()).map((item) => (
-                      <div key={item.ticket._id} className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-white text-sm">{item.ticket.name}</h3>
-                            <p className="text-xs text-white/60 mt-1">
-                              {item.quantity} × ₹{item.ticket.price.toLocaleString()}
-                            </p>
-                          </div>
-                          <span className="text-lg font-bold text-white">
-                            ₹{(item.ticket.price * item.quantity).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                  ))}
+                </div>
 
-                    {/* Coupon */}
-                    {!isFreeEvent && (
-                      <div className="pt-4 border-t border-white/10">
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-                            <Input
-                              placeholder="Promo code"
-                              value={couponCode}
-                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                              className="pl-10 h-12 rounded-2xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white focus:ring-white"
-                            />
-                          </div>
-                          <button
-                            onClick={handleApplyCoupon}
-                            disabled={couponApplying || !couponCode.trim()}
-                            className="px-6 h-12 bg-white text-black rounded-2xl font-semibold text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                          >
-                            {couponApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
-                          </button>
-                        </div>
-                        {couponError && <p className="text-xs text-red-400 mt-2">{couponError}</p>}
-                        {appliedCoupon && (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Code {appliedCoupon.code} applied</span>
-                          </div>
+                {/* Coupon Section */}
+                {!isFreeEvent && (
+                  <div className="border-t border-gray-200 mt-6 pt-6">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Input
+                        placeholder="Enter coupon code"
+                        value={couponCode}
+                        onChange={(e) =>
+                          setCouponCode(e.target.value.toUpperCase())
+                        }
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleApplyCoupon}
+                        disabled={couponApplying || !couponCode.trim()}
+                        variant="outline"
+                        className="sm:w-auto w-full"
+                      >
+                        {couponApplying ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          "Apply"
                         )}
-                      </div>
+                      </Button>
+                    </div>
+
+                    {couponError && (
+                      <p className="text-xs text-red-600 mt-2">
+                        {couponError}
+                      </p>
                     )}
 
-                    {/* Pricing Breakdown */}
-                    <div className="space-y-3 pt-4 border-t border-white/10">
-                      <div className="flex justify-between text-white/80 text-sm">
-                        <span>Subtotal</span>
-                        <span className="font-semibold">₹{subtotalAmount.toLocaleString()}</span>
-                      </div>
-
-                      {discountAmount > 0 && (
-                        <div className="flex justify-between text-green-400 text-sm">
-                          <span>Discount ({appliedCoupon.code})</span>
-                          <span className="font-semibold">-₹{discountAmount.toLocaleString()}</span>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between text-white pt-3 border-t border-white/10">
-                        <span className="text-base font-semibold">Total</span>
-                        <span className="text-2xl font-bold">₹{payableAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Terms & Checkout */}
-                    <div className="pt-4 space-y-4">
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <Checkbox
-                          id="terms"
-                          checked={acceptedTerms}
-                          onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
-                          className="mt-1 border-white/30 data-[state=checked]:bg-white data-[state=checked]:text-black"
-                        />
-                        <span className="text-xs text-white/80 leading-relaxed">
-                          I accept the{" "}
-                          <button
-                            type="button"
-                            onClick={() => setTermsModalOpen(true)}
-                            className="text-white font-semibold hover:underline"
-                          >
-                            Terms and Conditions
-                          </button>
-                        </span>
-                      </label>
-
-                      <button
-                        onClick={handleBooking}
-                        disabled={isBooking || !acceptedTerms || (isHMFEvent && !isFormComplete)}
-                        className="w-full h-14 bg-white text-black rounded-full font-bold text-base hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transform hover:scale-105 disabled:transform-none"
-                      >
-                        {isBooking ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            {isFreeEvent ? 'Confirming RSVP...' : 'Processing...'}
-                          </>
-                        ) : (
-                          <>
-                            <ShieldCheck className="w-5 h-5" />
-                            {isFreeEvent ? 'Confirm RSVP' : 'Proceed to Payment'}
-                          </>
-                        )}
-                      </button>
-                    </div>
+                    {appliedCoupon && (
+                      <p className="text-xs text-green-600 mt-2">
+                        Code {appliedCoupon.code} applied
+                      </p>
+                    )}
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Security Badge */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">Secure Payment</p>
-                  <p className="text-xs text-gray-600">Your information is protected</p>
+                {/* Totals */}
+                <div className="border-t border-gray-200 mt-6 pt-6 space-y-3">
+
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Subtotal</span>
+                    <span>
+                      {subtotalAmount === 0
+                        ? "FREE"
+                        : `₹${subtotalAmount.toLocaleString()}`}
+                    </span>
+                  </div>
+
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount</span>
+                      <span>-₹{discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2">
+                    <span>{isFreeEvent ? "RSVP Status" : "Total"}</span>
+                    <span>
+                      {payableAmount === 0
+                        ? "Confirmed"
+                        : `₹${payableAmount.toLocaleString()}`}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Terms */}
+              <label className="flex items-start gap-3 mb-8 cursor-pointer">
+                <Checkbox
+                  checked={acceptedTerms}
+                  onCheckedChange={(checked) =>
+                    setAcceptedTerms(checked as boolean)
+                  }
+                  className="mt-1"
+                />
+                <span className="text-sm text-gray-700 leading-relaxed">
+                  I accept the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTermsModalOpen(true)}
+                    className="font-semibold underline hover:text-black"
+                  >
+                    Terms and Conditions
+                  </button>
+                </span>
+              </label>
+
+              {/* Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+
+                <button
+                  onClick={() => setCurrentStep(1)}
+                  className="w-full sm:w-auto px-6 py-3 sm:py-4 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition"
+                >
+                  Back
+                </button>
+
+                <button
+                  onClick={handleBooking}
+                  disabled={isBooking || !acceptedTerms}
+                  className="
+           w-full
+    py-3 sm:py-4
+    bg-red-600
+    text-white
+    font-semibold
+    text-base sm:text-lg
+    rounded-xl
+    shadow-lg
+    hover:bg-red-700
+    active:scale-[0.98]
+    transition-all duration-200 ease-in-out
+    disabled:opacity-50
+    disabled:cursor-not-allowed
+    disabled:shadow-none
+        "
+                >
+                  {isBooking ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing...
+                    </span>
+                  ) : isFreeEvent ? (
+                    "Confirm RSVP"
+                  ) : (
+                    "Proceed to Payment"
+                  )}
+                </button>
+
+              </div>
             </div>
-          </div>
+          )}
+
         </div>
       </div>
 
       {/* Payment Processing Overlay */}
       {isProcessingPayment && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <div className="w-20 h-20 bg-gradient-to-br from-black to-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Loader2 className="w-10 h-10 text-white animate-spin" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">{isFreeEvent ? 'Confirming RSVP' : 'Processing Payment'}</h3>
-            <p className="text-gray-600 mb-6">
-              {isFreeEvent ? 'Please wait while we confirm your RSVP...' : 'Please wait while we confirm your booking...'}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 sm:p-8 max-w-sm w-full text-center">
+            <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4 text-gray-400" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {isFreeEvent ? 'Confirming RSVP' : 'Processing Payment'}
+            </h3>
+            <p className="text-gray-600">
+              {isFreeEvent ? 'Please wait...' : 'Do not close this window...'}
             </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-              <p className="text-xs font-semibold text-amber-800">
-                Do not refresh or close this page
-              </p>
-            </div>
           </div>
         </div>
       )}
 
       {/* Terms Modal */}
       <Dialog open={termsModalOpen} onOpenChange={setTermsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto rounded-3xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto mx-4">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Terms & Conditions</DialogTitle>
-            {isHMFEvent && <DialogDescription className="text-gray-600">Hornbill Music Festival 2025</DialogDescription>}
+            <DialogTitle>Terms & Conditions</DialogTitle>
+            {isHMFEvent && <DialogDescription>Hornbill Music Festival 2025</DialogDescription>}
           </DialogHeader>
           <div className="prose max-w-none">
             {isHFEvent ? (
