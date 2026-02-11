@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building, Palette, MapPin, Calendar } from "lucide-react";
-import OrganizerApprovalList from "./OrganizerApprovalList";
-
-import VenueApprovalList from "./VenueApprovalList";
+import OrganizerManagement from "./OrganizerManagement";
+import ArtistManagement from "./ArtistManagement";
+import VenueManagement from "./VenueManagement";
 import EventApprovalList from "./EventApprovalList";
 
 export default function ApprovalTabs() {
@@ -34,13 +34,15 @@ export default function ApprovalTabs() {
         </TabsList>
         
         <TabsContent value="organizers" className="mt-6">
-          <OrganizerApprovalList />
+          <OrganizerManagement />
         </TabsContent>
         
-     
+        <TabsContent value="artists" className="mt-6">
+          <ArtistManagement />
+        </TabsContent>
         
         <TabsContent value="venues" className="mt-6">
-          <VenueApprovalList />
+          <VenueManagement />
         </TabsContent>
         
         <TabsContent value="events" className="mt-6">
