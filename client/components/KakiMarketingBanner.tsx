@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Phone, X, ExternalLink, MessageCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Phone, X, MessageCircle, ChevronRight, Sparkles } from "lucide-react";
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
 
 interface KakiMarketingBranding {
   enabled: boolean;
@@ -10,422 +14,310 @@ interface KakiMarketingBranding {
 }
 
 interface KakiMarketingBannerProps {
-  platform: 'arenaPartner' | 'organizer' | 'venue' | 'artist';
+  platform: "arenaPartner" | "organizer" | "venue" | "artist";
   className?: string;
-  variant?: 'default' | 'compact' | 'minimal';
+  variant?: "default" | "compact" | "minimal";
 }
 
-export default function KakiMarketingBanner({ 
-  platform, 
-  className = "", 
-  variant = 'default' 
-}: KakiMarketingBannerProps) {
+// ─────────────────────────────────────────────────────────────
+// Hook
+// ─────────────────────────────────────────────────────────────
+
+function useBranding(platform: KakiMarketingBannerProps["platform"]) {
   const [branding, setBranding] = useState<KakiMarketingBranding | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+    fetch(`${apiUrl}/api/system/branding`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.success && data.data.enabled && data.data.visibility[platform]) {
+          setBranding({
+            enabled: true,
+            message: data.data.message,
+            contactPhone: data.data.contactPhone,
+          });
+        }
+      })
+      .catch(() => { })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [platform]);
+
+  return { branding, loading };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+
+const phoneHref = (p: string) => `tel:${p.replace(/\D/g, "")}`;
+const waHref = (p: string) => `https://wa.me/${p.replace(/\D/g, "")}`;
+
+// ─────────────────────────────────────────────────────────────
+// Logo
+// ─────────────────────────────────────────────────────────────
+
+function Logo({ size = 36 }: { size?: number }) {
+  return (
+    <span
+      style={{ width: size, height: size }}
+      className="inline-flex items-center justify-center rounded-xl
+        bg-gradient-to-br from-orange-500 to-rose-500 shadow-md shrink-0"
+    >
+      <span
+        style={{ fontSize: size * 0.38 }}
+        className="font-black text-white leading-none select-none"
+      >
+        KM
+      </span>
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// CTA Buttons (improved for mobile)
+// ─────────────────────────────────────────────────────────────
+
+function CallBtn({
+  phone,
+  small,
+}: {
+  phone: string;
+  small?: boolean;
+}) {
+  // w-full on small screens, auto on >= sm
+  const base = `flex items-center gap-2 rounded-xl font-semibold
+    bg-gradient-to-br from-orange-500 to-rose-500 text-white
+    shadow-lg shadow-orange-500/30 hover:-translate-y-0.5
+    active:scale-95 transition-all`;
+  const size = small ? "text-xs px-3 py-2" : "text-sm px-4 py-2.5";
+  return (
+    <a
+      href={phoneHref(phone)}
+      className={`${base} ${size} w-full sm:w-auto justify-center sm:justify-center`}
+      aria-label={`Call ${phone}`}
+    >
+      <Phone className={small ? "w-3.5 h-3.5" : "w-4 h-4"} />
+      Call
+    </a>
+  );
+}
+
+function WhatsAppBtn({
+  phone,
+  small,
+}: {
+  phone: string;
+  small?: boolean;
+}) {
+  const base = `flex items-center gap-2 rounded-xl font-semibold
+    bg-emerald-50 text-emerald-700 border border-emerald-200
+    hover:-translate-y-0.5 active:scale-95 transition-all`;
+  const size = small ? "text-xs px-3 py-2" : "text-sm px-4 py-2.5";
+  return (
+    <a
+      href={waHref(phone)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${base} ${size} w-full sm:w-auto justify-center sm:justify-center`}
+      aria-label={`Message ${phone} on WhatsApp`}
+    >
+      <MessageCircle className={small ? "w-3.5 h-3.5" : "w-4 h-4"} />
+      WhatsApp
+    </a>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Default Banner (FIXED)
+// ─────────────────────────────────────────────────────────────
+
+export default function KakiMarketingBanner({
+  platform,
+  className = "",
+  variant = "default",
+}: KakiMarketingBannerProps) {
+  const { branding, loading } = useBranding(platform);
+  const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    fetchBranding();
+    if (!loading && branding) requestAnimationFrame(() => setVisible(true));
+  }, [loading, branding]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    setTimeout(() => setDismissed(true), 250);
   }, []);
 
-  const fetchBranding = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/system/branding`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          // Check if branding is enabled for this platform
-          if (data.data.enabled && data.data.visibility[platform]) {
-            setBranding({
-              enabled: data.data.enabled,
-              message: data.data.message,
-              contactPhone: data.data.contactPhone
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching branding:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading || dismissed || !branding?.enabled) return null;
 
-  if (loading || dismissed || !branding || !branding.enabled) {
-    return null;
-  }
-
-  if (variant === 'compact') {
-    return <KakiMarketingCompact platform={platform} className={className} branding={branding} onDismiss={() => setDismissed(true)} />;
-  }
-
-  if (variant === 'minimal') {
-    return <KakiMarketingMinimal platform={platform} className={className} branding={branding} />;
-  }
+  if (variant === "compact")
+    return <KakiMarketingCompact platform={platform} className={className} />;
+  if (variant === "minimal")
+    return <KakiMarketingMinimal platform={platform} className={className} />;
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 ${className}`}>
-      <div className="p-4 sm:p-5 md:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          {/* Main Content */}
-          <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-            {/* Logo */}
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl flex items-center justify-center flex-shrink-0 border border-orange-200 shadow-sm">
-              <span className="text-orange-600 text-sm sm:text-base font-bold">KM</span>
+    <div
+      className={`relative rounded-2xl border border-orange-100
+        bg-gradient-to-br from-white via-orange-50 to-amber-50
+        shadow-xl shadow-orange-100/60 transition-all duration-300
+        max-w-full
+        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}
+        ${className}`}
+      role="region"
+      aria-label="Marketing Partner banner"
+    >
+      <div className="flex flex-col sm:flex-row gap-4 p-4 sm:p-5">
+        {/* Left: logo + text */}
+        <div className="flex gap-3 flex-1 min-w-0">
+          <Logo size={40} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
+                Marketing Partner
+              </span>
+              <Sparkles className="w-3 h-3 text-amber-400" />
             </div>
-            
-            {/* Text Content */}
-            <div className="flex-1 min-w-0">
-              {/* Badge */}
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  Marketing Partner
-                </span>
-              </div>
-              
-              {/* Message */}
-              <p className="text-sm sm:text-base text-gray-700 leading-relaxed mb-4">
-                {branding.message}
-              </p>
-              
-              {/* Action Buttons - Stacked on mobile, inline on desktop */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <a
-                  href={`tel:${branding.contactPhone}`}
-                  className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-orange-600 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-orange-700 active:bg-orange-800 transition-colors duration-150 shadow-sm hover:shadow-md touch-manipulation"
-                >
-                  <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>Call Now</span>
-                </a>
-                
-                <a
-                  href={`https://wa.me/${branding.contactPhone.replace(/[^\d]/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-green-600 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors duration-150 shadow-sm hover:shadow-md touch-manipulation"
-                >
-                  <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span>WhatsApp</span>
-                </a>
-              </div>
-              
-              {/* Phone number display on mobile */}
-              <p className="text-xs text-gray-500 mt-3 sm:hidden">
-                📞 {branding.contactPhone}
-              </p>
-            </div>
-          </div>
-          
-          {/* Dismiss Button - Top right on mobile, aligned on desktop */}
-          <button
-            onClick={() => setDismissed(true)}
-            className="absolute top-3 right-3 sm:static sm:ml-2 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-all duration-150 touch-manipulation"
-            aria-label="Dismiss marketing banner"
-          >
-            <X className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-// Compact version for smaller spaces
-export function KakiMarketingCompact({ 
-  platform, 
-  className = "",
-  branding: propBranding,
-  onDismiss
-}: KakiMarketingBannerProps & { 
-  branding?: KakiMarketingBranding | null;
-  onDismiss?: () => void;
-}) {
-  const [branding, setBranding] = useState<KakiMarketingBranding | null>(propBranding || null);
-  const [loading, setLoading] = useState(!propBranding);
-
-  useEffect(() => {
-    if (!propBranding) {
-      fetchBranding();
-    }
-  }, [propBranding]);
-
-  const fetchBranding = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/system/branding`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          if (data.data.enabled && data.data.visibility[platform]) {
-            setBranding({
-              enabled: data.data.enabled,
-              message: data.data.message,
-              contactPhone: data.data.contactPhone
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching branding:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading || !branding || !branding.enabled) {
-    return null;
-  }
-
-  return (
-    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
-      <div className="p-3 sm:p-4">
-        {/* Mobile: Stack vertically, Desktop: Horizontal */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          {/* Logo and Message */}
-          <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg flex items-center justify-center border border-orange-200 flex-shrink-0">
-              <span className="text-orange-600 text-sm font-bold">KM</span>
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-gray-800 leading-relaxed line-clamp-2">
-                {branding.message}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                <p className="text-xs text-gray-500">Available 24/7</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <a
-              href={`tel:${branding.contactPhone}`}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-orange-600 text-white text-xs sm:text-sm font-semibold rounded-md hover:bg-orange-700 active:bg-orange-800 transition-colors duration-150 shadow-sm touch-manipulation"
+            {/* Better mobile clamp: allow 3 lines on very small screens, 2 on sm+ */}
+            <p
+              className="text-sm text-gray-800 leading-relaxed
+                line-clamp-3 sm:line-clamp-2 min-w-0 break-words"
             >
-              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Call</span>
-            </a>
-            
-            <a
-              href={`https://wa.me/${branding.contactPhone.replace(/[^\d]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 text-white text-xs sm:text-sm font-semibold rounded-md hover:bg-green-700 active:bg-green-800 transition-colors duration-150 shadow-sm touch-manipulation"
-            >
-              <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Chat</span>
-            </a>
-            
-            {onDismiss && (
-              <button
-                onClick={onDismiss}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 active:bg-gray-200 rounded-md transition-all duration-150 touch-manipulation"
-                aria-label="Dismiss"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Minimal version for subtle placement
-export function KakiMarketingMinimal({ 
-  platform, 
-  className = "",
-  branding: propBranding
-}: KakiMarketingBannerProps & { 
-  branding?: KakiMarketingBranding | null;
-}) {
-  const [branding, setBranding] = useState<KakiMarketingBranding | null>(propBranding || null);
-  const [loading, setLoading] = useState(!propBranding);
-
-  useEffect(() => {
-    if (!propBranding) {
-      fetchBranding();
-    }
-  }, [propBranding]);
-
-  const fetchBranding = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/system/branding`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          if (data.data.enabled && data.data.visibility[platform]) {
-            setBranding({
-              enabled: data.data.enabled,
-              message: data.data.message,
-              contactPhone: data.data.contactPhone
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching branding:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading || !branding || !branding.enabled) {
-    return null;
-  }
-
-  return (
-    <div className={`bg-gradient-to-r from-gray-50 to-orange-50/30 border border-gray-200 rounded-lg ${className}`}>
-      <div className="p-2.5 sm:p-3">
-        {/* Mobile: Stack vertically, Desktop: Horizontal */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 sm:justify-between">
-          {/* Logo and Message */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-md flex items-center justify-center flex-shrink-0 shadow-sm">
-              <span className="text-orange-600 text-xs font-bold">KM</span>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-700 font-medium line-clamp-2 flex-1">
               {branding.message}
             </p>
+
+            {/* mobile-visible phone */}
+            <a
+              href={phoneHref(branding.contactPhone)}
+              className="mt-2 inline-flex items-center gap-1 text-sm
+                font-semibold text-orange-500 sm:hidden"
+              aria-label={`Call ${branding.contactPhone}`}
+            >
+              <Phone className="w-4 h-4" />
+              {branding.contactPhone}
+            </a>
           </div>
-          
-          {/* Phone Number - Click to call */}
-          <a
-            href={`tel:${branding.contactPhone}`}
-            className="inline-flex items-center justify-center sm:justify-start gap-1.5 px-3 py-1.5 sm:px-0 sm:py-0 bg-white sm:bg-transparent border border-orange-200 sm:border-0 rounded-md sm:rounded-none text-xs sm:text-sm text-orange-600 hover:text-orange-700 font-semibold transition-colors touch-manipulation"
-          >
-            <Phone className="h-3 w-3 sm:hidden" />
-            <span>{branding.contactPhone}</span>
-          </a>
         </div>
+
+        {/* Right: CTAs — on mobile these stack and are full width */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:ml-auto w-full sm:w-auto">
+          {/* phone label shown on sm+ (desktop/tablet) */}
+          <span className="hidden sm:flex text-xs text-gray-400 gap-1 items-center mr-2">
+            <Phone className="w-3.5 h-3.5 text-orange-400" />
+            {branding.contactPhone}
+          </span>
+
+          {/* Buttons container: mobile => full width buttons stacked; sm => inline */}
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <CallBtn phone={branding.contactPhone} />
+            <WhatsAppBtn phone={branding.contactPhone} />
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={dismiss}
+        className="absolute top-1 right-1 p-5.5 rounded-lg
+          text-gray-400 hover:text-gray-600 hover:bg-black/5 focus:outline-none focus:ring-2 focus:ring-orange-200"
+        aria-label="Dismiss marketing banner"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Compact (FIXED) — improved mobile layout
+// ─────────────────────────────────────────────────────────────
+
+export function KakiMarketingCompact({
+  platform,
+  className = "",
+}: KakiMarketingBannerProps) {
+  const { branding, loading } = useBranding(platform);
+  const [dismissed, setDismissed] = useState(false);
+
+  if (loading || dismissed || !branding?.enabled) return null;
+
+  return (
+    <div>
+      <div
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5
+        bg-orange-50 border border-orange-200 ${className}`}
+      >
+        <Logo size={30} />
+
+        {/* message truncates on wider screens; on very small screens it wraps cleanly */}
+        <p className="text-xs text-gray-700 flex-1 min-w-0 sm:truncate">
+          {branding.message}
+        </p>
+
+        <button
+          onClick={() => setDismissed(true)}
+          className="p-2 text-gray-400"
+          aria-label="Dismiss compact marketing"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* stacked full-width CTAs for compact usage on mobile */}
+      <div className="mt-2 flex flex-col gap-2">
+        <CallBtn phone={branding.contactPhone} small />
+        <WhatsAppBtn phone={branding.contactPhone} small />
       </div>
     </div>
   );
 }
 
-// Floating Action Button version for mobile
-export function KakiMarketingFAB({ 
-  platform, 
-  className = "" 
-}: Omit<KakiMarketingBannerProps, 'variant'>) {
-  const [branding, setBranding] = useState<KakiMarketingBranding | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+// ─────────────────────────────────────────────────────────────
+// Minimal (FIXED) — keep compact touch targets on mobile
+// ─────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetchBranding();
-  }, []);
+export function KakiMarketingMinimal({
+  platform,
+  className = "",
+}: KakiMarketingBannerProps) {
+  const { branding, loading } = useBranding(platform);
 
-  const fetchBranding = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/system/branding`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          if (data.data.enabled && data.data.visibility[platform]) {
-            setBranding({
-              enabled: data.data.enabled,
-              message: data.data.message,
-              contactPhone: data.data.contactPhone
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching branding:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading || !branding || !branding.enabled) {
-    return null;
-  }
+  if (loading || !branding?.enabled) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      {expanded && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setExpanded(false)}
-        />
-      )}
-      
-      {/* FAB */}
-      <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
-        {expanded ? (
-          // Expanded Card
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 w-[calc(100vw-2rem)] max-w-sm animate-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg flex items-center justify-center border border-orange-200">
-                  <span className="text-orange-600 text-sm font-bold">KM</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Kaki Marketing</p>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <p className="text-xs text-gray-500">Available Now</p>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setExpanded(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <p className="text-sm text-gray-700 mb-4 leading-relaxed">
-              {branding.message}
-            </p>
-            
-            <div className="flex gap-2">
-              <a
-                href={`tel:${branding.contactPhone}`}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 text-white text-sm font-semibold rounded-lg hover:bg-orange-700 active:bg-orange-800 transition-colors shadow-sm touch-manipulation"
-              >
-                <Phone className="h-4 w-4" />
-                <span>Call Now</span>
-              </a>
-              
-              <a
-                href={`https://wa.me/${branding.contactPhone.replace(/[^\d]/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors shadow-sm touch-manipulation"
-              >
-                <MessageCircle className="h-4 w-4" />
-                <span>WhatsApp</span>
-              </a>
-            </div>
-          </div>
-        ) : (
-          // Collapsed FAB
-          <button
-            onClick={() => setExpanded(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 touch-manipulation"
-          >
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">KM</span>
-            </div>
-            <span className="font-semibold text-sm pr-1">Need Help?</span>
-          </button>
-        )}
+    <div
+      className={`flex items-center justify-between gap-3
+      px-4 py-2.5 rounded-xl bg-white border shadow-sm ${className}`}
+      role="region"
+      aria-label="Minimal marketing"
+    >
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+        <Logo size={26} />
+        <p className="text-xs text-gray-600 line-clamp-2 min-w-0">
+          {branding.message}
+        </p>
       </div>
-    </>
+
+      <a
+        href={phoneHref(branding.contactPhone)}
+        className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-orange-500"
+        aria-label={`Call ${branding.contactPhone}`}
+      >
+        <Phone className="w-3.5 h-3.5" />
+        {branding.contactPhone}
+        <ChevronRight className="w-3 h-3" />
+      </a>
+
+      {/* For mobile show a tappable button instead */}
+      <div className="sm:hidden w-1/3">
+        <CallBtn phone={branding.contactPhone} small />
+      </div>
+    </div>
   );
 }

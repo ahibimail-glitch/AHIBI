@@ -32,6 +32,7 @@ import {
   X,
   Video,
   Heart,
+  FileText,
 } from "lucide-react";
 
 // Import child components
@@ -72,6 +73,7 @@ import DanceLeagueRegistrations from "./components/DanceLeagueRegistrations";
 import AdminLivestreamPage from "./livestream/page";
 import Donations from "./components/Donations";
 import AdminNotifications from "./components/AdminNotifications";
+import TermsManager from "./components/TermsManager";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -298,6 +300,8 @@ export default function AdminDashboard() {
         return <Donations />;
       case "notifications":
         return <AdminNotifications />;
+      case "terms":
+        return <TermsManager />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -370,7 +374,7 @@ export default function AdminDashboard() {
 
         <nav className="flex flex-col space-y-2">
           <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => { setActiveView("dashboard"); setSidebarOpen(false); }} />
-          <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} />
+          {/* <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} /> */}
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
@@ -425,6 +429,7 @@ export default function AdminDashboard() {
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
+          {/* <SidebarButton icon={FileText} label="Terms & Conditions" active={activeView === "terms"} onClick={() => { setActiveView("terms"); setSidebarOpen(false); }} /> */}
           <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => { setActiveView("coupons"); setSidebarOpen(false); }} />
           {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => { setActiveView("aiko-hall"); setSidebarOpen(false); }} /> */}
           <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => { setActiveView("hero-images"); setSidebarOpen(false); }} />

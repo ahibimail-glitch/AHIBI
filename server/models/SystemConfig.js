@@ -21,6 +21,28 @@ const SystemConfigSchema = new mongoose.Schema({
       sports: { type: Boolean, default: true },
       artist: { type: Boolean, default: true }
     }
+  },
+  termsAndConditions: {
+    organizer: {
+      heading: { type: String, default: "Organizer Terms and Conditions" },
+      content: { type: String, default: "Default organizer terms and conditions content..." },
+      lastUpdated: { type: Date, default: Date.now }
+    },
+    venue: {
+      heading: { type: String, default: "Venue Terms and Conditions" },
+      content: { type: String, default: "Default venue terms and conditions content..." },
+      lastUpdated: { type: Date, default: Date.now }
+    },
+    artist: {
+      heading: { type: String, default: "Artist Terms and Conditions" },
+      content: { type: String, default: "Default artist terms and conditions content..." },
+      lastUpdated: { type: Date, default: Date.now }
+    },
+    sports: {
+      heading: { type: String, default: "Sports Terms and Conditions" },
+      content: { type: String, default: "Default sports terms and conditions content..." },
+      lastUpdated: { type: Date, default: Date.now }
+    }
   }
 }, {
   timestamps: true

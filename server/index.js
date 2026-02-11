@@ -40,6 +40,8 @@ const danceLeagueRoutes = require('./routes/danceLeague.routes');
 const livestreamRoutes = require('./routes/livestream.routes');
 const donationRoutes = require('./routes/donation.routes');
 const adminNotificationRoutes = require('./routes/adminNotification.routes');
+const adminTermsRoutes = require('./routes/adminTermsRoutes');
+const publicTermsRoutes = require('./routes/publicTermsRoutes');
 
 // Create Express app
 const app = express();
@@ -166,6 +168,8 @@ app.use('/api/dance-league', danceLeagueRoutes);
 app.use('/api/livestream', livestreamRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/admin/notifications', adminNotificationRoutes);
+app.use('/api/admin/terms', adminTermsRoutes);
+app.use('/api/public/terms', publicTermsRoutes);
 
 // Root route
 app.get('/', (req, res) => {

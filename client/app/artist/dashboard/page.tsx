@@ -43,6 +43,7 @@ import {
   Music2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import TermsDisplay from "@/components/TermsDisplay";
 import {
   Dialog,
   DialogContent,
@@ -2013,6 +2014,9 @@ export default function ArtistDashboard() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Terms & Conditions */}
+            <TermsDisplay category="artist" />
           </div>
         );
     }

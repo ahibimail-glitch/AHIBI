@@ -421,16 +421,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4">
+    <div className="w-full max-w-6xl mx-auto p-4 sm:p-6">
       <form onSubmit={handleSubmit}>
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg w-full">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Create New Event</CardTitle>
-            <CardDescription className="text-gray-600">
+          <CardHeader className="pb-4 sm:pb-6">
+            <CardTitle className="text-lg sm:text-xl text-gray-900">Create New Event</CardTitle>
+            <CardDescription className="text-sm sm:text-base text-gray-600">
               Fill in the details below to add a new event to the platform.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="eventPoster">Event Poster (2:3) *</Label>
@@ -928,11 +928,11 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               </div>
             )}
 
-            <div className="flex justify-end pt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 sm:pt-6">
               <Button
                 type="submit"
                 disabled={isLoading || isUploadingPoster || isUploadingCover}
-                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 transition-opacity"
+                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 transition-opacity w-full sm:w-auto"
               >
                 {isLoading ? (
                   <>

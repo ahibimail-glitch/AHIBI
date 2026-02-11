@@ -16,6 +16,7 @@ import {
   BarChart3,
   Loader2,
 } from "lucide-react";
+import OrganizerTerms from "./OrganizerTerms";
 
 interface DashboardProps {
   setActiveView: (view: string) => void;
@@ -290,6 +291,8 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
             </div>
           </CardContent>
         </Card>
+
+
       </div>
 
       {/* Upcoming Events */}

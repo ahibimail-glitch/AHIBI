@@ -436,18 +436,18 @@ const QrScanner = () => {
   };
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto p-4 ">
       {/* Animation Overlay for Already Used Tickets */}
       {showAlreadyUsedAnimation && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-in fade-in-0">
-          <div className="bg-white p-10 rounded-lg shadow-2xl flex flex-col items-center animate-in fade-in-0 zoom-in-95">
-            <AlertCircle className="h-28 w-28 text-amber-500" />
-            <p className="mt-5 text-4xl font-bold text-gray-800">Already Used</p>
+          <div className="bg-white p-6 sm:p-10 rounded-lg shadow-2xl flex flex-col items-center animate-in fade-in-0 zoom-in-95 max-w-xs mx-4">
+            <AlertCircle className="h-16 w-16 sm:h-28 sm:w-28 text-amber-500" />
+            <p className="mt-4 text-2xl sm:text-4xl font-bold text-gray-800">Already Used</p>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Scanner Section */}
         <div className="md:col-span-1">
           <Card>
@@ -482,10 +482,10 @@ const QrScanner = () => {
                 )}
               </div>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="scan">Camera Scan</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 gap-10">
+                  <TabsTrigger value="scan">Camera</TabsTrigger>
                   <TabsTrigger value="upload">Upload Image</TabsTrigger>
-                  <TabsTrigger value="manual">Manual Entry</TabsTrigger>
+                  {/* <TabsTrigger value="manual">Manual Entry</TabsTrigger> */}
                 </TabsList>
 
                 <TabsContent value="scan" className="space-y-4">
@@ -552,14 +552,15 @@ const QrScanner = () => {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="booking-code">Booking Code</Label>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <Input
                             id="booking-code"
                             placeholder="Enter booking code (e.g., SPX2024072501)"
                             value={manualCode}
                             onChange={(e) => setManualCode(e.target.value)}
+                            className="flex-1"
                           />
-                          <Button type="submit">
+                          <Button type="submit" className="w-full sm:w-auto">
                             <Search className="h-4 w-4 mr-2" />
                             Verify
                           </Button>

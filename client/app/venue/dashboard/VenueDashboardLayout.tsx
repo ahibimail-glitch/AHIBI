@@ -63,6 +63,7 @@ import VenueDetailsManager from "./VenueDetailsManager";
 import BlockedSlotsManager from "./BlockedSlotsManager";
 import VenueCompletenessAlert from "./VenueCompletenessAlert";
 import AddVenueForm from "./AddVenueForm";
+import TermsDisplay from "@/components/TermsDisplay";
 
 interface VenueDashboardLayoutProps {
   venueData: any;
@@ -681,6 +682,9 @@ export default function VenueDashboardLayout({
           </div>
         </CardContent>
       </Card>
+
+      {/* Terms & Conditions */}
+      <TermsDisplay category="venue" />
     </div>
   );
 

@@ -61,8 +61,8 @@ export default function Settings() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-        <p className="text-gray-600">Manage your account settings and preferences</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Settings</h2>
+        <p className="text-sm sm:text-base text-gray-600">Manage your account settings and preferences</p>
       </div>
 
       {/* Profile Settings */}

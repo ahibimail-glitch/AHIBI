@@ -231,6 +231,30 @@ export default function CheckoutPage() {
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
+  // Check if this is a free/RSVP event and auto-add FREE ticket
+  const isFreeEvent = event?.isFreeEvent || false;
+  
+  useEffect(() => {
+    if (isFreeEvent && event && !selectedTickets.size) {
+      // Auto-add FREE ticket for RSVP/Free events
+      const freeTicket: TicketType = {
+        _id: 'free-ticket-auto',
+        name: 'FREE',
+        price: 0,
+        quantity: 999999, // Unlimited availability
+        sold: 0,
+        description: 'Free RSVP ticket',
+        capacity: 1,
+        benefits: []
+      };
+      
+      setSelectedTickets(new Map().set('free-ticket-auto', { 
+        ticket: freeTicket, 
+        quantity: 1 
+      }));
+    }
+  }, [isFreeEvent, event, selectedTickets.size]);
+
   const handleApplyCoupon = async () => {
     try {
       setCouponApplying(true);
@@ -633,164 +657,184 @@ export default function CheckoutPage() {
             )}
 
             {/* Ticket Categories */}
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-8">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Select Tickets</h2>
-                <p className="text-sm text-gray-600">Choose your preferred ticket categories</p>
-              </div>
+            {!isFreeEvent && (
+              <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 sm:p-8">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-2">Select Tickets</h2>
+                  <p className="text-sm text-gray-600">Choose your preferred ticket categories</p>
+                </div>
 
-              <div className="space-y-4">
-                {event.ticketTypes && event.ticketTypes.length > 0 ? (
-                  event.ticketTypes.map((ticket) => {
-                    const isSoldOut = ticket.quantity <= ticket.sold;
-                    const selectedItem = selectedTickets.get(ticket._id);
-                    const quantity = selectedItem?.quantity || 0;
-                    const availabilityPercentage = Math.max(0, Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100));
-                    const isLimited = availabilityPercentage <= 20 && !isSoldOut;
+                <div className="space-y-4">
+                  {event.ticketTypes && event.ticketTypes.length > 0 ? (
+                    event.ticketTypes.map((ticket) => {
+                      const isSoldOut = ticket.quantity <= ticket.sold;
+                      const selectedItem = selectedTickets.get(ticket._id);
+                      const quantity = selectedItem?.quantity || 0;
+                      const availabilityPercentage = Math.max(0, Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100));
+                      const isLimited = availabilityPercentage <= 20 && !isSoldOut;
 
-                    return (
-                      <div
-                        key={ticket._id}
-                        className={`rounded-2xl border-2 transition-all overflow-hidden ${quantity > 0
-                          ? 'border-black bg-gray-50 shadow-md'
-                          : isSoldOut
-                            ? 'border-gray-200 bg-gray-50 opacity-60'
-                            : 'border-gray-200 hover:border-gray-400 bg-white'
-                          }`}
-                      >
-                        <div className="p-5 sm:p-6">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">{ticket.name}</h3>
-                                {isSoldOut && (
-                                  <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
-                                    Sold Out
+                      return (
+                        <div
+                          key={ticket._id}
+                          className={`rounded-2xl border-2 transition-all overflow-hidden ${quantity > 0
+                            ? 'border-black bg-gray-50 shadow-md'
+                            : isSoldOut
+                              ? 'border-gray-200 bg-gray-50 opacity-60'
+                              : 'border-gray-200 hover:border-gray-400 bg-white'
+                            }`}
+                        >
+                          <div className="p-5 sm:p-6">
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="text-lg font-bold text-gray-900">{ticket.name}</h3>
+                                  {isSoldOut && (
+                                    <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                                      Sold Out
+                                    </span>
+                                  )}
+                                  {isLimited && !isSoldOut && (
+                                    <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                                      Limited
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600">{ticket.description}</p>
+                                <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                  Capacity:
+                                  <span className="text-black">{ticket.capacity}</span>
+                                  {ticket.capacity === 1 ? "person" : "people"}
+                                </p>
+
+
+                              </div>
+                              <div className="text-right ml-4">
+                                <span className="text-xl font-bold text-gray-900">₹{ticket.price.toLocaleString()}</span>
+                              </div>
+                            </div>
+
+                            {ticket.benefits && ticket.benefits.length > 0 && (
+                              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                                <p className="text-xs font-semibold text-gray-900 mb-2">What's included:</p>
+                                <ul className="space-y-1.5">
+                                  {ticket.benefits.map((benefit, i) => (
+                                    <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                                      <span>{benefit}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {isHMFEvent && (
+                              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4 text-xs space-y-1">
+                                <div className="flex justify-between text-gray-700">
+                                  <span>Ticket price</span>
+                                  <span>₹{Math.max(0, (ticket.price || 0) - 50).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-700">
+                                  <span>Tourism sustainability fund</span>
+                                  <span>₹50</span>
+                                </div>
+                                <div className="flex justify-between font-semibold text-gray-900 pt-1 border-t border-gray-300">
+                                  <span>Total</span>
+                                  <span>₹{ticket.price.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {!isSoldOut && (
+                              <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 border border-gray-200">
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="text-sm font-semibold text-gray-900">Quantity</span>
+                                  {quantity > 0 && (
+                                    <span className="text-sm font-bold text-gray-900">
+                                      ₹{(ticket.price * quantity).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-center gap-4">
+                                  <button
+                                    onClick={() => {
+                                      if (quantity > 0) {
+                                        const newQuantity = quantity - 1;
+                                        if (newQuantity === 0) {
+                                          setSelectedTickets(prev => {
+                                            const newMap = new Map(prev);
+                                            newMap.delete(ticket._id);
+                                            return newMap;
+                                          });
+                                        } else {
+                                          setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        }
+                                      }
+                                    }}
+                                    disabled={quantity <= 0}
+                                    className="w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-black disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center hover:scale-105"
+                                  >
+                                    <Minus className="w-5 h-5 text-gray-700" />
+                                  </button>
+
+                                  <span className="w-16 h-10 bg-white rounded-full border-2 border-gray-300 flex items-center justify-center text-base font-bold text-gray-900">
+                                    {quantity}
                                   </span>
-                                )}
-                                {isLimited && !isSoldOut && (
-                                  <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                                    Limited
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600">{ticket.description}</p>
-                              <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                                Capacity:
-                                <span className="text-black">{ticket.capacity}</span>
-                                {ticket.capacity === 1 ? "person" : "people"}
-                              </p>
 
-
-                            </div>
-                            <div className="text-right ml-4">
-                              <span className="text-xl font-bold text-gray-900">₹{ticket.price.toLocaleString()}</span>
-                            </div>
-                          </div>
-
-                          {ticket.benefits && ticket.benefits.length > 0 && (
-                            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                              <p className="text-xs font-semibold text-gray-900 mb-2">What's included:</p>
-                              <ul className="space-y-1.5">
-                                {ticket.benefits.map((benefit, i) => (
-                                  <li key={i} className="flex items-start gap-2 text-xs text-gray-700">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
-                                    <span>{benefit}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {isHMFEvent && (
-                            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4 text-xs space-y-1">
-                              <div className="flex justify-between text-gray-700">
-                                <span>Ticket price</span>
-                                <span>₹{Math.max(0, (ticket.price || 0) - 50).toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between text-gray-700">
-                                <span>Tourism sustainability fund</span>
-                                <span>₹50</span>
-                              </div>
-                              <div className="flex justify-between font-semibold text-gray-900 pt-1 border-t border-gray-300">
-                                <span>Total</span>
-                                <span>₹{ticket.price.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {!isSoldOut && (
-                            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-4 border border-gray-200">
-                              <div className="flex items-center justify-between mb-3">
-                                <span className="text-sm font-semibold text-gray-900">Quantity</span>
-                                {quantity > 0 && (
-                                  <span className="text-sm font-bold text-gray-900">
-                                    ₹{(ticket.price * quantity).toLocaleString()}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-center gap-4">
-                                <button
-                                  onClick={() => {
-                                    if (quantity > 0) {
-                                      const newQuantity = quantity - 1;
-                                      if (newQuantity === 0) {
-                                        setSelectedTickets(prev => {
-                                          const newMap = new Map(prev);
-                                          newMap.delete(ticket._id);
-                                          return newMap;
-                                        });
-                                      } else {
+                                  <button
+                                    onClick={() => {
+                                      if (!isFormComplete) {
+                                        toast.error(isHMFEvent ? "Please select your country and state first" : "Please fill in all required fields");
+                                        return;
+                                      }
+                                      const newQuantity = quantity + 1;
+                                      if (newQuantity <= ticket.quantity - ticket.sold) {
                                         setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
+                                        if (newQuantity === 1) {
+                                          setTimeout(() => {
+                                            summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                          }, 100);
+                                        }
                                       }
-                                    }
-                                  }}
-                                  disabled={quantity <= 0}
-                                  className="w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-black disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center hover:scale-105"
-                                >
-                                  <Minus className="w-5 h-5 text-gray-700" />
-                                </button>
-
-                                <span className="w-16 h-10 bg-white rounded-full border-2 border-gray-300 flex items-center justify-center text-base font-bold text-gray-900">
-                                  {quantity}
-                                </span>
-
-                                <button
-                                  onClick={() => {
-                                    if (!isFormComplete) {
-                                      toast.error(isHMFEvent ? "Please select your country and state first" : "Please fill in all required fields");
-                                      return;
-                                    }
-                                    const newQuantity = quantity + 1;
-                                    if (newQuantity <= ticket.quantity - ticket.sold) {
-                                      setSelectedTickets(prev => new Map(prev).set(ticket._id, { ticket, quantity: newQuantity }));
-                                      if (newQuantity === 1) {
-                                        setTimeout(() => {
-                                          summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }, 100);
-                                      }
-                                    }
-                                  }}
-                                  disabled={quantity >= ticket.quantity - ticket.sold}
-                                  className="w-10 h-10 rounded-full bg-black text-white hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center hover:scale-105"
-                                >
-                                  <Plus className="w-5 h-5" />
-                                </button>
+                                    }}
+                                    disabled={quantity >= ticket.quantity - ticket.sold}
+                                    className="w-10 h-10 rounded-full bg-black text-white hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center hover:scale-105"
+                                  >
+                                    <Plus className="w-5 h-5" />
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-12 text-gray-500">
-                    <TicketIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm">No tickets available at this time</p>
-                  </div>
-                )}
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <TicketIcon className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm">No tickets available at this time</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Free Event RSVP Message */}
+            {isFreeEvent && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-3xl p-6 sm:p-8">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Free Event RSVP</h2>
+                  <p className="text-gray-600 mb-4">
+                    This is a free event! Simply confirm your attendance by completing the RSVP below.
+                  </p>
+                  <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                    <span>FREE Admission</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar - Booking Summary */}
@@ -832,33 +876,35 @@ export default function CheckoutPage() {
                     ))}
 
                     {/* Coupon */}
-                    <div className="pt-4 border-t border-white/10">
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
-                          <Input
-                            placeholder="Promo code"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                            className="pl-10 h-12 rounded-2xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white focus:ring-white"
-                          />
+                    {!isFreeEvent && (
+                      <div className="pt-4 border-t border-white/10">
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60" />
+                            <Input
+                              placeholder="Promo code"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              className="pl-10 h-12 rounded-2xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white focus:ring-white"
+                            />
+                          </div>
+                          <button
+                            onClick={handleApplyCoupon}
+                            disabled={couponApplying || !couponCode.trim()}
+                            className="px-6 h-12 bg-white text-black rounded-2xl font-semibold text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            {couponApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
+                          </button>
                         </div>
-                        <button
-                          onClick={handleApplyCoupon}
-                          disabled={couponApplying || !couponCode.trim()}
-                          className="px-6 h-12 bg-white text-black rounded-2xl font-semibold text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                          {couponApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply'}
-                        </button>
+                        {couponError && <p className="text-xs text-red-400 mt-2">{couponError}</p>}
+                        {appliedCoupon && (
+                          <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Code {appliedCoupon.code} applied</span>
+                          </div>
+                        )}
                       </div>
-                      {couponError && <p className="text-xs text-red-400 mt-2">{couponError}</p>}
-                      {appliedCoupon && (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Code {appliedCoupon.code} applied</span>
-                        </div>
-                      )}
-                    </div>
+                    )}
 
                     {/* Pricing Breakdown */}
                     <div className="space-y-3 pt-4 border-t border-white/10">
@@ -909,12 +955,12 @@ export default function CheckoutPage() {
                         {isBooking ? (
                           <>
                             <Loader2 className="w-5 h-5 animate-spin" />
-                            Processing...
+                            {isFreeEvent ? 'Confirming RSVP...' : 'Processing...'}
                           </>
                         ) : (
                           <>
                             <ShieldCheck className="w-5 h-5" />
-                            Proceed to Payment
+                            {isFreeEvent ? 'Confirm RSVP' : 'Proceed to Payment'}
                           </>
                         )}
                       </button>
@@ -947,9 +993,9 @@ export default function CheckoutPage() {
             <div className="w-20 h-20 bg-gradient-to-br from-black to-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
               <Loader2 className="w-10 h-10 text-white animate-spin" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Processing Payment</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">{isFreeEvent ? 'Confirming RSVP' : 'Processing Payment'}</h3>
             <p className="text-gray-600 mb-6">
-              Please wait while we confirm your booking...
+              {isFreeEvent ? 'Please wait while we confirm your RSVP...' : 'Please wait while we confirm your booking...'}
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
               <p className="text-xs font-semibold text-amber-800">

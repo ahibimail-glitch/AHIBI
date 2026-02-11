@@ -87,23 +87,20 @@ export default function Analytics() {
     { month: "Jun", revenue: 82000, tickets: 200 },
   ];
 
-  return(<div>
-    This feature will be available soon
-  </div>)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
-          <p className="text-gray-600">Track your event performance and insights</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
+          <p className="text-sm sm:text-base text-gray-600">Track your event performance and insights</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Export Report
           </Button>
-          <Button className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 transition-opacity">
+          <Button className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 transition-opacity w-full sm:w-auto">
             <Eye className="h-4 w-4 mr-2" />
             View Details
           </Button>

@@ -356,13 +356,13 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{getPageTitle()}</h2>
-          <p className="text-gray-600">{getPageDescription()}</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{getPageTitle()}</h2>
+          <p className="text-sm sm:text-base text-gray-600">{getPageDescription()}</p>
         </div>
         {filterStatus === 'approved' && (
-          <div className="inline-flex rounded-md border overflow-hidden">
+          <div className="inline-flex rounded-md border overflow-hidden self-start sm:self-auto">
             <button
               className={`px-3 py-1 text-sm ${viewStatus === 'approved' ? 'bg-primary text-white' : 'bg-white'}`}
               onClick={() => setViewStatus('approved')}
@@ -382,7 +382,7 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
       {/* Search and Filters */}
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardContent className="pt-6">
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -394,12 +394,12 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                 />
               </div>
             </div>
-            <Button variant="outline">Filter</Button>
+            <Button variant="outline" className="w-full sm:w-auto">Filter</Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Events Table */}
+      {/* Events List */}
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader>
           <CardTitle>{getPageTitle()}</CardTitle>
@@ -408,168 +408,207 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Event Name</TableHead>
-                <TableHead>Date & Location</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tickets</TableHead>
-                <TableHead>Revenue</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEvents.map((event) => (
-                <TableRow key={event._id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{event.title}</div>
-                      <div className="text-sm text-gray-500">
-                        {event.ticketTypes.length > 0 ? `₹${event.ticketTypes[0].price}` : '₹0'}
+          {/* Desktop Table */}
+          <div className="hidden lg:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Event Name</TableHead>
+                  <TableHead>Date & Location</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tickets</TableHead>
+                  <TableHead>Revenue</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEvents.map((event) => (
+                  <TableRow key={event._id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{event.title}</div>
+                        <div className="text-sm text-gray-500">
+                          {event.ticketTypes.length > 0 ? `₹${event.ticketTypes[0].price}` : '₹0'}
+                        </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm">{new Date(event.startDate).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">{event.location.address}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(event.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm">
+                          {event.ticketsSold}/{event.totalTickets}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                        <div
+                          className="bg-gradient-to-r from-pink-500 to-purple-600 h-2 rounded-full"
+                          style={{
+                            width: `${event.totalTickets > 0 ? (event.ticketsSold / event.totalTickets) * 100 : 0}%`,
+                          }}
+                        ></div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">₹{event.totalRevenue}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        {event.status === 'approved' || event.status === 'active' ? (
+                          <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
+                            Pause
+                          </Button>
+                        ) : null}
+                        {event.status === 'paused' ? (
+                          <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50" onClick={() => handleResumeEvent(event._id)}>
+                            Resume
+                          </Button>
+                        ) : null}
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setEditingEventId(event._id)}
+                          disabled={event.status === "completed"}
+                          title={event.status === "completed" ? "Cannot edit completed events" : "Edit event"}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteEvent(event._id)}
+                          disabled={event.status === "completed" || deletingEventId === event._id}
+                          title={event.status === "completed" ? "Cannot delete completed events" : "Delete event"}
+                        >
+                          {deletingEventId === event._id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      {event.status === "completed" && (
+                        <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>Completed events cannot be modified</span>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4">
+            {filteredEvents.map((event) => (
+              <div key={event._id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                {/* Event Header */}
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 truncate">{event.title}</h3>
+                    <p className="text-sm text-gray-500">
+                      {event.ticketTypes.length > 0 ? `₹${event.ticketTypes[0].price}` : '₹0'}
+                    </p>
+                  </div>
+                  {getStatusBadge(event.status)}
+                </div>
+
+                {/* Event Details */}
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">{new Date(event.startDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">{event.location.address}</span>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="bg-gray-50 rounded-lg p-2">
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <Users className="h-3 w-3 mr-1" />
+                      <span>Tickets</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">{new Date(event.startDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-500">{event.location.address}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(event.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm">
-                        {event.ticketsSold}/{event.totalTickets}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div className="text-xs font-medium">{event.ticketsSold}/{event.totalTickets}</div>
+                    <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
                       <div
-                        className="bg-gradient-to-r from-pink-500 to-purple-600 h-2 rounded-full"
+                        className="bg-gradient-to-r from-pink-500 to-purple-600 h-1 rounded-full"
                         style={{
                           width: `${event.totalTickets > 0 ? (event.ticketsSold / event.totalTickets) * 100 : 0}%`,
                         }}
                       ></div>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">₹{event.totalRevenue}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      {event.status === 'approved' || event.status === 'active' ? (
-                        <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
-                          Pause
-                        </Button>
-                      ) : null}
-                      {event.status === 'paused' ? (
-                        <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50" onClick={() => handleResumeEvent(event._id)}>
-                          Resume
-                        </Button>
-                      ) : null}
-                      <Button size="sm" variant="outline">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setEditingEventId(event._id)}
-                        disabled={event.status === "completed"}
-                        title={event.status === "completed" ? "Cannot edit completed events" : "Edit event"}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDeleteEvent(event._id)}
-                        disabled={event.status === "completed" || deletingEventId === event._id}
-                        title={event.status === "completed" ? "Cannot delete completed events" : "Delete event"}
-                      >
-                        {deletingEventId === event._id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                    {event.status === "completed" && (
-                      <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500">
-                        <AlertTriangle className="h-3 w-3" />
-                        <span>Completed events cannot be modified</span>
-                      </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2">
+                    <div className="text-xs text-gray-600 mb-1">Revenue</div>
+                    <div className="text-sm font-medium">₹{event.totalRevenue}</div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2">
+                  {event.status === 'approved' || event.status === 'active' ? (
+                    <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50 flex-1" onClick={() => handlePauseEvent(event._id)}>
+                      Pause
+                    </Button>
+                  ) : null}
+                  {event.status === 'paused' ? (
+                    <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50 flex-1" onClick={() => handleResumeEvent(event._id)}>
+                      Resume
+                    </Button>
+                  ) : null}
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setEditingEventId(event._id)}
+                    disabled={event.status === "completed"}
+                    className="flex-1"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-red-600 hover:text-red-700 flex-1"
+                    onClick={() => handleDeleteEvent(event._id)}
+                    disabled={event.status === "completed" || deletingEventId === event._id}
+                  >
+                    {deletingEventId === event._id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
                     )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium">Total Events</p>
-                <p className="text-2xl font-bold">{events.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-sm font-medium">Approved Events</p>
-                <p className="text-2xl font-bold">
-                  {events.filter(e => e.status === "approved").length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <div>
-                <p className="text-sm font-medium">Pending Events</p>
-                <p className="text-2xl font-bold">
-                  {events.filter(e => e.status === "pending").length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-orange-600" />
-              <div>
-                <p className="text-sm font-medium">Total Revenue</p>
-                <p className="text-2xl font-bold">
-                  ₹{events.reduce((sum, event) => sum + event.totalRevenue, 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

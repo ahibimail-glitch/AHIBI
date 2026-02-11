@@ -208,23 +208,23 @@ export default function ScheduleEvent() {
   return (
     <div className="space-y-6">
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <CardTitle>Schedule Event</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Schedule Event</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 Set a booking cutoff time per event. If not set, booking will be allowed until the event end time.
               </CardDescription>
             </div>
-            <Button variant="outline" onClick={fetchEvents} disabled={loading}>
+            <Button variant="outline" onClick={fetchEvents} disabled={loading} className="w-full sm:w-auto">
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 sm:gap-6">
+            <Card className="xl:col-span-2 lg:col-span-1">
               <CardHeader>
                 <CardTitle className="text-lg">My Events</CardTitle>
                 <CardDescription>Only events created by you are shown here</CardDescription>
@@ -300,7 +300,7 @@ export default function ScheduleEvent() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-3">
+            <Card className="xl:col-span-3 lg:col-span-1">
               <CardHeader>
                 <CardTitle className="text-lg">Schedule</CardTitle>
                 <CardDescription>Update booking end time for the selected event</CardDescription>
@@ -378,11 +378,11 @@ export default function ScheduleEvent() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setBookingEndTime("")}>
+                    <div className="flex flex-col sm:flex-row justify-end gap-2">
+                      <Button variant="outline" onClick={() => setBookingEndTime("")} className="w-full sm:w-auto">
                         Clear
                       </Button>
-                      <Button onClick={handleSave} disabled={saving}>
+                      <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
                         {saving ? "Saving..." : "Save"}
                       </Button>
                     </div>
