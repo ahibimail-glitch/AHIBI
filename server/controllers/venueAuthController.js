@@ -227,6 +227,7 @@ exports.verifyVenueOtp = async (req, res) => {
         name: signupData.venueName || signupData.name || 'New Venue',
         email: ownerEmail,
         phone: signupData.phone || phone,
+        password: signupData.password,
         approvalStatus: 'pending',
         ownerDetails,
         venueClassification,

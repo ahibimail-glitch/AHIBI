@@ -13,7 +13,8 @@ router.post('/auth/send-otp', [
   check('phone', 'Phone number is required').matches(/^\d{10}$/),
   check('mode', 'Mode must be signup or login').isIn(['signup', 'login']),
   // Minimal validation for signup; remaining details will be captured later in admin panel
-  check('email', 'Please include a valid email').if(check('mode').equals('signup')).isEmail().optional({ nullable: true })
+  check('email', 'Please include a valid email').if(check('mode').equals('signup')).isEmail().optional({ nullable: true }),
+  check('password', 'Password is required for signup').if(check('mode').equals('signup')).isString().isLength({ min: 6 })
 ], venueAuthController.sendVenueOtp);
 
 router.post('/auth/verify-otp', [

@@ -317,6 +317,74 @@ class EmailService {
   }
 
   /**
+   * Send venue account approval notification
+   * @param {Object} venue - Venue object
+   * @param {Boolean} approved - Whether the venue was approved
+   * @param {String} rejectionReason - Reason for rejection if not approved
+   * @returns {Promise<Object>} - Send result
+   */
+  async sendVenueApprovalNotification(venue, approved, rejectionReason = '') {
+    const subject = approved 
+      ? 'Your Venue Account Has Been Approved!' 
+      : 'Your Venue Account Application Requires Changes';
+
+    const venueName = venue.ownerDetails?.businessName || venue.name;
+    const ownerName = venue.ownerDetails?.fullName || 'Venue Owner';
+
+    let html;
+    
+    if (approved) {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">🎉 Venue Account Approved!</h1>
+          <p>Hi ${ownerName},</p>
+          <p>Great news! Your venue <strong>${venueName}</strong> has been approved by the Ahibi team.</p>
+          <div style="background-color: #f0f9ff; border-left: 4px solid #4a154b; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #4a154b;">What's Next?</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li style="margin: 8px 0;">Log in to your venue dashboard</li>
+              <li style="margin: 8px 0;">Complete your venue profile with photos and details</li>
+              <li style="margin: 8px 0;">Set your availability and pricing</li>
+              <li style="margin: 8px 0;">Start receiving booking requests from organizers</li>
+            </ul>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://ahibi.in'}/venue/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Go to Dashboard
+            </a>
+          </div>
+          <p>We're excited to have ${venueName} as part of the Ahibi platform. If you need any help getting started, our support team is here for you.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">Venue Application Update</h1>
+          <p>Hi ${ownerName},</p>
+          <p>Thank you for applying to list your venue <strong>${venueName}</strong> on Ahibi.</p>
+          <p>Our team has reviewed your application and we need some additional information or changes before we can approve your venue:</p>
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <strong>Required Changes:</strong>
+            <p style="margin: 10px 0 0;">${rejectionReason}</p>
+          </div>
+          <p>Please update your venue information and resubmit your application. If you have any questions, feel free to contact our support team.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    }
+
+    return this.sendMail({
+      to: venue.email,
+      subject,
+      html
+    });
+  }
+
+  /**
    * Send payout confirmation email
    * @param {Object} payout - Payout object with user details
    * @returns {Promise<Object>} - Send result

@@ -998,6 +998,13 @@ exports.approveVenue = async (req, res) => {
       await User.findByIdAndUpdate(venue.user, { approvalStatus: 'approved' });
     }
 
+    // Send approval email to venue organizer
+    try {
+      await emailService.sendVenueApprovalNotification(venue, true);
+    } catch (emailError) {
+      console.error('Failed to send venue approval email:', emailError);
+    }
+
     // Mark related notification as completed
     adminNotificationController.markNotificationCompleted('Venue', req.params.id, 'approved', req.user._id);
 
@@ -1032,6 +1039,13 @@ exports.rejectVenue = async (req, res) => {
     // Also update the user status
     if (venue.user) {
       await User.findByIdAndUpdate(venue.user, { approvalStatus: 'rejected' });
+    }
+
+    // Send rejection email to venue organizer
+    try {
+      await emailService.sendVenueApprovalNotification(venue, false, rejectionReason);
+    } catch (emailError) {
+      console.error('Failed to send venue rejection email:', emailError);
     }
 
     // Mark related notification as completed

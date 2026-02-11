@@ -32,6 +32,8 @@ export default function VenueSignupPage() {
     email: "",
     phone: "",
     venueName: "",
+    password: "",
+    confirmPassword: "",
     agreeToTerms: false,
   });
   const [otp, setOtp] = useState("");
@@ -42,6 +44,20 @@ export default function VenueSignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Validate passwords match
+    if (signupData.password !== signupData.confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (signupData.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      setLoading(false);
+      return;
+    }
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -55,6 +71,7 @@ export default function VenueSignupPage() {
           email: signupData.email,
           phone: signupData.phone,
           venueName: signupData.venueName,
+          password: signupData.password,
           mode: 'signup'
         }),
       });
@@ -234,6 +251,54 @@ export default function VenueSignupPage() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-200">
+                  Password *
+                </Label>
+                <div className="relative">
+                  <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Create a password"
+                    value={signupData.password}
+                    onChange={(e) =>
+                      setSignupData({
+                        ...signupData,
+                        password: e.target.value,
+                      })
+                    }
+                    className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-gray-200">
+                  Confirm Password *
+                </Label>
+                <div className="relative">
+                  <Shield className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={signupData.confirmPassword}
+                    onChange={(e) =>
+                      setSignupData({
+                        ...signupData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    className="pl-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-orange-500"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="terms"
@@ -261,7 +326,7 @@ export default function VenueSignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:opacity-90 transition-opacity"
-                disabled={loading || !signupData.agreeToTerms}
+                disabled={loading || !signupData.agreeToTerms || !signupData.password || !signupData.confirmPassword}
               >
                 {loading ? 'Sending OTP...' : 'Continue to Verification'}
               </Button>
