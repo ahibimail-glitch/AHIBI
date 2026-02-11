@@ -4,6 +4,7 @@ const Event = require('../models/Event');
 const Booking = require('../models/Booking');
 const ArtistBooking = require('../models/ArtistBooking');
 const smsService = require('../services/smsService');
+const emailService = require('../services/emailService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
 const tempOtpStore = require('../utils/tempOtpStore');
@@ -131,6 +132,11 @@ exports.verifyOrganizerOtp = async (req, res) => {
 
         // Notify admin about new organizer registration
         adminNotificationController.notifyOrganizerRegistration(organizer);
+
+        // Send welcome email to organizer
+        emailService.sendWelcomeEmail(organizer).catch(err => {
+          console.error('Error sending organizer welcome email:', err);
+        });
 
         return ApiResponse.success(res, 'Organizer account created successfully. Pending admin approval.', {
           organizer: {

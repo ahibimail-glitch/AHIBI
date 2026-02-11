@@ -376,7 +376,7 @@ exports.notifyOrganizerRegistration = async (organizer) => {
         city: organizer.address?.city,
         state: organizer.address?.state
       },
-      redirectUrl: `/admin?view=organizer-approvals`
+      redirectUrl: `/admin?view=organizer-management`
     });
   } catch (error) {
     console.error('Error creating organizer registration notification:', error);
@@ -444,7 +444,7 @@ exports.notifyVenueRegistration = async (venue) => {
         city: venue.location?.city,
         venueTypes: venue.venueClassification?.venueTypes
       },
-      redirectUrl: `/admin?view=venue-approvals`
+      redirectUrl: `/admin?view=venue-management`
     });
   } catch (error) {
     console.error('Error creating venue registration notification:', error);

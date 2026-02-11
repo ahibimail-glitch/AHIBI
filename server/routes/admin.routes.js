@@ -42,6 +42,7 @@ router.put('/organizers/:id/approve', adminController.approveOrganizer);
 router.put('/organizers/:id/reject', [
   check('rejectionReason', 'Rejection reason is required').notEmpty()
 ], adminController.rejectOrganizer);
+router.delete('/organizers/:id', adminController.deleteOrganizer);
 
 // Artist routes  
 router.get('/artists', adminController.getAllArtists);
@@ -59,6 +60,7 @@ router.put('/venues/:id/approve', adminController.approveVenue);
 router.put('/venues/:id/reject', [
   check('rejectionReason', 'Rejection reason is required').notEmpty()
 ], adminController.rejectVenue);
+router.delete('/venues/:id', adminController.deleteVenue);
 
 // Event routes
 router.get('/events/all', adminController.getAllEvents);

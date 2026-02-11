@@ -39,10 +39,9 @@ import {
 import Dashboard from "./components/Dashboard";
 import UsersComponent from "./components/Users";
 import Bookings from "./components/Bookings";
-import Organizers from "./components/Organizers";
 import Artists from "./components/Artists";
-import Venues from "./components/Venues";
 import Events from "./components/Events";
+import OrganizerManagement from "./components/OrganizerManagement";
 import System from "./components/System";
 import CreateEventForm from "./components/CreateEventForm";
 import Analytics from "./components/Analytics";
@@ -62,6 +61,7 @@ import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
 import FeaturedEvents from "./components/FeaturedEvents";
 import ArtistManagement from "./components/ArtistManagement";
+import VenueManagement from "./components/VenueManagement";
 
 import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
@@ -226,14 +226,14 @@ export default function AdminDashboard() {
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
       case "fc25-players":
         return <FC25Players />;
-      case "organizer-approvals":
-        return <Organizers />;
+      case "organizer-management":
+        return <OrganizerManagement />;
       case "artist-approvals":
         return <Artists />;
       case "artist-management":
         return <ArtistManagement />;
-      case "venue-approvals":
-        return <Venues />;
+      case "venue-management":
+        return <VenueManagement />;
       case "event-approvals":
         return <Events />;
       case "approved-events":
@@ -386,11 +386,10 @@ export default function AdminDashboard() {
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
           </div>
-           <SidebarButton icon={Music} label="Artist Approvals" active={activeView === "artist-approvals"} onClick={() => { setActiveView("artist-approvals"); setSidebarOpen(false); }} />
+          <SidebarButton icon={UserCheck} label="Organizer Management" active={activeView === "organizer-management"} onClick={() => { setActiveView("organizer-management"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Music} label="Artist Approvals" active={activeView === "artist-approvals"} onClick={() => { setActiveView("artist-approvals"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Artist Management" active={activeView === "artist-management"} onClick={() => { setActiveView("artist-management"); setSidebarOpen(false); }} />
-
-          <SidebarButton icon={UserCheck} label="Organizers" active={activeView === "organizer-approvals"} onClick={() => { setActiveView("organizer-approvals"); setSidebarOpen(false); }} />
-          <SidebarButton icon={Building2} label="Venues" active={activeView === "venue-approvals"} onClick={() => { setActiveView("venue-approvals"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Building2} label="Venue Management" active={activeView === "venue-management"} onClick={() => { setActiveView("venue-management"); setSidebarOpen(false); }} />
           {/* Sports Integration */}
           <SidebarButton
             icon={UserCheck}

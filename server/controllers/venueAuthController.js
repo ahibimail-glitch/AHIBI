@@ -1,5 +1,6 @@
 const Venue = require('../models/Venue');
 const smsService = require('../services/smsService');
+const emailService = require('../services/emailService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
 const tempOtpStore = require('../utils/tempOtpStore');
@@ -243,6 +244,11 @@ exports.verifyVenueOtp = async (req, res) => {
 
       // Notify admin about new venue registration
       adminNotificationController.notifyVenueRegistration(venue);
+
+      // Send welcome email to venue organizer
+      emailService.sendWelcomeEmail(venue).catch(err => {
+        console.error('Error sending venue welcome email:', err);
+      });
 
       return ApiResponse.success(res, 'Venue account created successfully. Pending admin approval.', {
         venue: {
@@ -570,6 +576,11 @@ exports.createVenue = async (req, res) => {
     await venue.save({ validateBeforeSave: false });
 
     adminNotificationController.notifyVenueRegistration(venue);
+
+    // Send welcome email to venue organizer
+    emailService.sendWelcomeEmail(venue).catch(err => {
+      console.error('Error sending venue welcome email:', err);
+    });
 
     return ApiResponse.success(res, 'Venue created successfully. Pending admin approval.', {
       venue: {

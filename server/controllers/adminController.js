@@ -295,6 +295,41 @@ exports.rejectOrganizer = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Delete an organizer
+ * @route   DELETE /api/admin/organizers/:id
+ * @access  Private (Admin only)
+ */
+exports.deleteOrganizer = async (req, res) => {
+  try {
+    const organizerId = req.params.id;
+
+    const organizer = await Organizer.findById(organizerId);
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer not found');
+    }
+
+    // Check if organizer has any events
+    const Event = require('../models/Event');
+    const eventCount = await Event.countDocuments({ organizer: organizerId });
+
+    if (eventCount > 0) {
+      return ApiResponse.badRequest(res, `Cannot delete organizer with ${eventCount} events. Please cancel or reassign them first.`);
+    }
+
+    // Delete the organizer
+    await Organizer.findByIdAndDelete(organizerId);
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Organizer', organizerId, 'deleted', req.user._id);
+
+    return ApiResponse.success(res, 'Organizer deleted successfully', { organizerId });
+  } catch (error) {
+    console.error('Delete organizer error:', error);
+    return ApiResponse.serverError(res, 'Error deleting organizer', error);
+  }
+};
+
 // Decoupled Artist Management Functions
 
 /**
@@ -998,15 +1033,13 @@ exports.approveVenue = async (req, res) => {
       await User.findByIdAndUpdate(venue.user, { approvalStatus: 'approved' });
     }
 
-    // Send approval email to venue organizer
-    try {
-      await emailService.sendVenueApprovalNotification(venue, true);
-    } catch (emailError) {
-      console.error('Failed to send venue approval email:', emailError);
-    }
-
     // Mark related notification as completed
     adminNotificationController.markNotificationCompleted('Venue', req.params.id, 'approved', req.user._id);
+    
+    // Send approval email to venue organizer
+    emailService.sendVenueApprovalNotification(venue, true).catch(err => {
+      console.error('Error sending venue approval email:', err);
+    });
 
     return ApiResponse.success(res, "Venue approved successfully", venue);
   } catch (error) {
@@ -1041,18 +1074,56 @@ exports.rejectVenue = async (req, res) => {
       await User.findByIdAndUpdate(venue.user, { approvalStatus: 'rejected' });
     }
 
-    // Send rejection email to venue organizer
-    try {
-      await emailService.sendVenueApprovalNotification(venue, false, rejectionReason);
-    } catch (emailError) {
-      console.error('Failed to send venue rejection email:', emailError);
-    }
-
     // Mark related notification as completed
     adminNotificationController.markNotificationCompleted('Venue', req.params.id, 'rejected', req.user._id);
+    
+    // Send rejection email to venue organizer
+    emailService.sendVenueApprovalNotification(venue, false, rejectionReason).catch(err => {
+      console.error('Error sending venue rejection email:', err);
+    });
 
     return ApiResponse.success(res, "Venue rejected successfully", venue);
   } catch (error) {
     return ApiResponse.serverError(res, "Error rejecting venue", error.message);
+  }
+};
+
+/**
+ * @desc    Delete a venue
+ * @route   DELETE /api/admin/venues/:id
+ * @access  Private (Admin only)
+ */
+exports.deleteVenue = async (req, res) => {
+  try {
+    const venueId = req.params.id;
+
+    const venue = await Venue.findById(venueId);
+    if (!venue) {
+      return ApiResponse.notFound(res, 'Venue not found');
+    }
+
+    // Check if venue has any bookings or events
+    const Booking = require('../models/Booking');
+    const Event = require('../models/Event');
+    
+    const [bookingCount, eventCount] = await Promise.all([
+      Booking.countDocuments({ venue: venueId }),
+      Event.countDocuments({ venue: venueId })
+    ]);
+
+    if (bookingCount > 0 || eventCount > 0) {
+      return ApiResponse.badRequest(res, `Cannot delete venue with ${bookingCount} bookings and ${eventCount} events. Please cancel or reassign them first.`);
+    }
+
+    // Delete the venue
+    await Venue.findByIdAndDelete(venueId);
+
+    // Mark related notification as completed
+    adminNotificationController.markNotificationCompleted('Venue', venueId, 'deleted', req.user._id);
+
+    return ApiResponse.success(res, 'Venue deleted successfully', { venueId });
+  } catch (error) {
+    console.error('Delete venue error:', error);
+    return ApiResponse.serverError(res, 'Error deleting venue', error);
   }
 };
