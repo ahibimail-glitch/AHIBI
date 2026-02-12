@@ -397,6 +397,12 @@ export default function AdminDashboard() {
             active={false}
             onClick={() => { router.push('/admin/sports/partners'); setSidebarOpen(false); }}
           />
+          <SidebarButton
+            icon={Building2}
+            label="Sports Management"
+            active={false}
+            onClick={() => { router.push('/admin/sports/management'); setSidebarOpen(false); }}
+          />
           <SidebarButton icon={Video} label="Live Streaming" active={activeView === "live-streaming"} onClick={() => { setActiveView("live-streaming"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">

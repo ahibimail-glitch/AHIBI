@@ -1,5 +1,7 @@
+const mongoose = require('mongoose');
 const ArenaPartner = require('../models/ArenaPartner');
 const ApiResponse = require('../utils/apiResponse');
+const notificationService = require('../services/notificationService');
 const smsService = require('../services/smsService');
 const adminNotificationController = require('./adminNotificationController');
 
@@ -253,6 +255,9 @@ exports.submitForApproval = async (req, res) => {
 
     partner.approvalStatus = 'pending';
     await partner.save();
+
+    // Send notification to admin
+    await notificationService.handleSportsPartnerRegistration(partner);
 
     return ApiResponse.success(res, 'Submitted for approval successfully', {
       approvalStatus: partner.approvalStatus

@@ -6,6 +6,7 @@ const TimeSlot = require('../models/TimeSlot');
 const SportsBooking = require('../models/SportsBooking');
 const Payout = require('../models/Payout');
 const ApiResponse = require('../utils/apiResponse');
+const notificationService = require('../services/notificationService');
 
 // ============ VENUE MANAGEMENT ============
 
@@ -36,6 +37,9 @@ exports.createVenue = async (req, res) => {
 
     partner.statistics.totalVenues += 1;
     await partner.save();
+
+    // Send notification to admin
+    await notificationService.handleSportsVenueCreation(venue);
 
     return ApiResponse.success(res, 'Venue created successfully. Pending admin approval.', { venue });
 
@@ -222,6 +226,9 @@ exports.createCourt = async (req, res) => {
 
     venue.statistics.totalCourts += 1;
     await venue.save();
+
+    // Send notification to admin
+    await notificationService.handleCourtCreation(court);
 
     return ApiResponse.success(res, 'Court created successfully', { court });
 

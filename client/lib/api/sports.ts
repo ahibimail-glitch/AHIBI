@@ -234,6 +234,16 @@ export const adminSportsApi = {
 
   toggleFeatured: (id: string) => api.put(`/api/admin/sports/venues/${id}/featured`),
 
+  // Courts
+  getAllCourts: (params?: any) => api.get('/api/admin/sports/courts', { params }),
+
+  getCourtDetails: (id: string) => api.get(`/api/admin/sports/courts/${id}/details`),
+
+  toggleCourtActive: (id: string) => api.put(`/api/admin/sports/courts/${id}/toggle-active`),
+
+  updateCourtPricing: (id: string, hourlyRate: number) =>
+    api.put(`/api/admin/sports/courts/${id}/pricing`, { hourlyRate }),
+
   // Bookings
   getAllBookings: (params?: any) => api.get('/api/admin/sports/bookings', { params }),
 

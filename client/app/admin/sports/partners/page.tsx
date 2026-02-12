@@ -139,7 +139,36 @@ export default function SportsAdminPartnersPage() {
             <h1 className="text-2xl font-bold text-gray-900">Arena Partners</h1>
             <p className="text-sm text-gray-600">Approve or manage arena partner onboarding</p>
           </div>
-          <Link href="/admin" className="text-sm text-orange-600 hover:underline">Back to Admin</Link>
+          <div className="flex gap-3">
+            <Link href="/admin/sports/management" className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium">
+              Manage All Venues & Courts
+            </Link>
+            <Link href="/admin" className="text-sm text-orange-600 hover:underline">Back to Admin</Link>
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="text-sm text-gray-600">Total Partners</div>
+            <div className="text-2xl font-bold text-gray-900">{partners.length}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="text-sm text-gray-600">Approved Partners</div>
+            <div className="text-2xl font-bold text-green-600">{partners.filter(p => p.approvalStatus === 'approved').length}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="text-sm text-gray-600">Pending Approval</div>
+            <div className="text-2xl font-bold text-yellow-600">{partners.filter(p => p.approvalStatus === 'pending').length}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="text-sm text-gray-600">Management Actions</div>
+            <div className="text-sm font-medium text-blue-600">
+              <Link href="/admin/sports/management" className="hover:underline">
+                Manage Venues & Courts →
+              </Link>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6 mb-6">

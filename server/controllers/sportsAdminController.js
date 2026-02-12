@@ -5,6 +5,7 @@ const Court = require('../models/Court');
 const SportsBooking = require('../models/SportsBooking');
 const Payout = require('../models/Payout');
 const ApiResponse = require('../utils/apiResponse');
+const notificationService = require('../services/notificationService');
 
 // ============ ARENA PARTNER MANAGEMENT ============
 
@@ -19,17 +20,30 @@ exports.getAllArenaPartners = async (req, res) => {
 
     let query = {};
 
+
+    // Filter out temporary partners (those with default name 'Arena Partner' and temp email pattern)
+    query.$and = [
+      {
+        $or: [
+          { name: { $ne: 'Arena Partner' } },
+          { email: { $not: /@temp\.com$/ } }
+        ]
+      }
+    ];
+
     if (status) {
-      query.approvalStatus = status;
+      query.$and.push({ approvalStatus: status });
     }
 
     if (search) {
-      query.$or = [
-        { name: new RegExp(search, 'i') },
-        { email: new RegExp(search, 'i') },
-        { phone: new RegExp(search, 'i') },
-        { 'businessDetails.businessName': new RegExp(search, 'i') }
-      ];
+      query.$and.push({
+        $or: [
+          { name: new RegExp(search, 'i') },
+          { email: new RegExp(search, 'i') },
+          { phone: new RegExp(search, 'i') },
+          { 'businessDetails.businessName': new RegExp(search, 'i') }
+        ]
+      });
     }
 
     const partners = await ArenaPartner.find(query)
@@ -105,6 +119,9 @@ exports.approveArenaPartner = async (req, res) => {
 
     await partner.save();
 
+    // Send notification and email
+    await notificationService.handleArenaPartnerApproval(partner, true, '', req.user);
+
     return ApiResponse.success(res, 'Arena partner approved successfully', { partner });
 
   } catch (error) {
@@ -138,6 +155,9 @@ exports.rejectArenaPartner = async (req, res) => {
     partner.approvedBy = undefined;
 
     await partner.save();
+
+    // Send notification and email
+    await notificationService.handleArenaPartnerApproval(partner, false, reason, req.user);
 
     return ApiResponse.success(res, 'Arena partner rejected successfully', { partner });
 
@@ -348,6 +368,9 @@ exports.approveVenue = async (req, res) => {
 
     await venue.save();
 
+    // Send notification and email
+    await notificationService.handleSportsVenueApproval(venue, true, '', req.user);
+
     return ApiResponse.success(res, 'Venue approved successfully', { venue });
 
   } catch (error) {
@@ -379,6 +402,9 @@ exports.rejectVenue = async (req, res) => {
     venue.rejectionReason = reason;
 
     await venue.save();
+
+    // Send notification and email
+    await notificationService.handleSportsVenueApproval(venue, false, reason, req.user);
 
     return ApiResponse.success(res, 'Venue rejected successfully', { venue });
 
@@ -1237,6 +1263,268 @@ exports.toggleVenueActive = async (req, res) => {
   } catch (error) {
     console.error('Toggle venue active error:', error);
     return ApiResponse.serverError(res, 'Error updating venue status', error);
+  }
+};
+
+/**
+ * @desc    Get all courts across all venues
+ * @route   GET /api/admin/sports/courts
+ * @access  Private (Admin)
+ */
+exports.getAllCourts = async (req, res) => {
+  try {
+    const { sport, venueId, status, search } = req.query;
+
+    let query = {};
+
+    if (sport) {
+      query.sportType = sport;
+    }
+
+    if (venueId) {
+      query.venue = venueId;
+    }
+
+    if (status) {
+      query.status = status === 'active' ? 'active' : 'inactive';
+    }
+
+    if (search) {
+      query.$or = [
+        { courtName: new RegExp(search, 'i') },
+        { sportType: new RegExp(search, 'i') }
+      ];
+    }
+
+    const courts = await Court.find(query)
+      .populate('venue', 'venueName address.city address.state')
+      .populate('arenaPartner', 'name businessDetails')
+      .sort({ createdAt: -1 });
+
+    // Transform courts data to include simplified pricing and proper structure
+    const transformedCourts = courts.map(court => {
+      // Get the base hourly rate from weekday off-peak pricing for display
+      const baseHourlyRate = court.pricing?.weekday?.offPeak?.pricePerHour || 0;
+      
+      return {
+        ...court.toObject(),
+        // Add simplified pricing field for frontend compatibility
+        pricing: {
+          hourlyRate: baseHourlyRate,
+          // Keep original pricing structure for detailed view
+          ...court.pricing
+        },
+        // Ensure isActive field is available (use status field as fallback)
+        isActive: court.isActive !== undefined ? court.isActive : court.status === 'active',
+        // Ensure totalBookings is available
+        totalBookings: court.totalBookings || court.statistics?.totalBookings || 0
+      };
+    });
+
+    return ApiResponse.success(res, 'Courts retrieved successfully', {
+      courts: transformedCourts,
+      count: transformedCourts.length
+    });
+
+  } catch (error) {
+    console.error('Get courts error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving courts', error);
+  }
+};
+
+/**
+ * @desc    Toggle court active status
+ * @route   PUT /api/admin/sports/courts/:id/toggle-active
+ * @access  Private (Admin)
+ */
+exports.toggleCourtActive = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id);
+
+    if (!court) {
+      return ApiResponse.notFound(res, 'Court not found');
+    }
+
+    // Toggle between active and inactive status
+    const newStatus = court.status === 'active' ? 'inactive' : 'active';
+    court.status = newStatus;
+
+    await court.save();
+
+    return ApiResponse.success(res, `Court ${newStatus} successfully`, { court });
+
+  } catch (error) {
+    console.error('Toggle court active error:', error);
+    return ApiResponse.serverError(res, 'Error updating court status', error);
+  }
+};
+
+/**
+ * @desc    Update court pricing
+ * @route   PUT /api/admin/sports/courts/:id/pricing
+ * @access  Private (Admin)
+ */
+exports.updateCourtPricing = async (req, res) => {
+  try {
+    const { hourlyRate } = req.body;
+
+    if (!hourlyRate || hourlyRate < 0) {
+      return ApiResponse.badRequest(res, 'Valid hourly rate is required');
+    }
+
+    const court = await Court.findById(req.params.id);
+
+    if (!court) {
+      return ApiResponse.notFound(res, 'Court not found');
+    }
+
+    // Update all pricing tiers with the new hourly rate
+    const newRate = Number(hourlyRate);
+    
+    if (court.pricing.weekday?.offPeak) {
+      court.pricing.weekday.offPeak.pricePerHour = newRate;
+    }
+    if (court.pricing.weekday?.peak) {
+      court.pricing.weekday.peak.pricePerHour = newRate;
+    }
+    if (court.pricing.weekend?.offPeak) {
+      court.pricing.weekend.offPeak.pricePerHour = newRate;
+    }
+    if (court.pricing.weekend?.peak) {
+      court.pricing.weekend.peak.pricePerHour = newRate;
+    }
+
+    await court.save();
+
+    return ApiResponse.success(res, 'Court pricing updated successfully', { court });
+
+  } catch (error) {
+    console.error('Update court pricing error:', error);
+    return ApiResponse.serverError(res, 'Error updating court pricing', error);
+  }
+};
+
+/**
+ * @desc    Get court details with bookings
+ * @route   GET /api/admin/sports/courts/:id/details
+ * @access  Private (Admin)
+ */
+exports.getCourtDetails = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id)
+      .populate('venue', 'venueName address city state')
+      .populate('arenaPartner', 'name businessDetails email phone');
+
+    if (!court) {
+      return ApiResponse.notFound(res, 'Court not found');
+    }
+
+    // Get recent bookings for this court
+    const bookings = await SportsBooking.find({ court: court._id })
+      .populate('user', 'name email phone')
+      .sort({ bookingDate: -1 })
+      .limit(20);
+
+    // Get booking statistics
+    const totalBookings = await SportsBooking.countDocuments({ court: court._id });
+    const confirmedBookings = await SportsBooking.countDocuments({ 
+      court: court._id, 
+      status: { $in: ['confirmed', 'completed'] } 
+    });
+
+    // Get base hourly rate for revenue calculation
+    const baseHourlyRate = court.pricing?.weekday?.offPeak?.pricePerHour || 0;
+
+    return ApiResponse.success(res, 'Court details retrieved successfully', {
+      court: {
+        ...court.toObject(),
+        // Add simplified pricing for frontend compatibility
+        pricing: {
+          hourlyRate: baseHourlyRate,
+          ...court.pricing
+        },
+        isActive: court.status === 'active'
+      },
+      recentBookings: bookings,
+      statistics: {
+        totalBookings,
+        confirmedBookings,
+        revenue: confirmedBookings * baseHourlyRate
+      }
+    });
+
+  } catch (error) {
+    console.error('Get court details error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving court details', error);
+  }
+};
+
+/**
+ * @desc    Approve court
+ * @route   PUT /api/admin/sports/courts/:id/approve
+ * @access  Private (Admin)
+ */
+exports.approveCourt = async (req, res) => {
+  try {
+    const court = await Court.findById(req.params.id)
+      .populate('arenaPartner', 'name email')
+      .populate('venue', 'venueName address.city address.state');
+
+    if (!court) {
+      return ApiResponse.notFound(res, 'Court not found');
+    }
+
+    if (court.status === 'active') {
+      return ApiResponse.badRequest(res, 'Court is already approved');
+    }
+
+    court.status = 'active';
+    await court.save();
+
+    // Send notification and email
+    await notificationService.handleCourtApproval(court, true, '', req.user);
+
+    return ApiResponse.success(res, 'Court approved successfully', { court });
+
+  } catch (error) {
+    console.error('Approve court error:', error);
+    return ApiResponse.serverError(res, 'Error approving court', error);
+  }
+};
+
+/**
+ * @desc    Reject court
+ * @route   PUT /api/admin/sports/courts/:id/reject
+ * @access  Private (Admin)
+ */
+exports.rejectCourt = async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    if (!reason) {
+      return ApiResponse.badRequest(res, 'Rejection reason is required');
+    }
+
+    const court = await Court.findById(req.params.id)
+      .populate('arenaPartner', 'name email')
+      .populate('venue', 'venueName address.city address.state');
+
+    if (!court) {
+      return ApiResponse.notFound(res, 'Court not found');
+    }
+
+    court.status = 'inactive';
+    court.rejectionReason = reason;
+    await court.save();
+
+    // Send notification and email
+    await notificationService.handleCourtApproval(court, false, reason, req.user);
+
+    return ApiResponse.success(res, 'Court rejected successfully', { court });
+
+  } catch (error) {
+    console.error('Reject court error:', error);
+    return ApiResponse.serverError(res, 'Error rejecting court', error);
   }
 };
 

@@ -745,6 +745,226 @@ class EmailService {
       };
     }
   }
+
+  /**
+   * Send arena partner approval notification
+   * @param {Object} partner - ArenaPartner object
+   * @param {Boolean} approved - Whether the partner was approved
+   * @param {String} rejectionReason - Reason for rejection if not approved
+   * @returns {Promise<Object>} - Send result
+   */
+  async sendArenaPartnerApprovalNotification(partner, approved, rejectionReason = '') {
+    const subject = approved 
+      ? 'Your Arena Partner Account Has Been Approved!' 
+      : 'Your Arena Partner Application Requires Changes';
+
+    const businessName = partner.businessDetails?.businessName || partner.name;
+
+    let html;
+    
+    if (approved) {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">🎉 Arena Partner Account Approved!</h1>
+          <p>Hi ${partner.name || 'there'},</p>
+          <p>Great news! Your arena partner account for <strong>${businessName}</strong> has been approved by the Ahibi team.</p>
+          <div style="background-color: #f0f9ff; border-left: 4px solid #4a154b; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #4a154b;">What's Next?</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li style="margin: 8px 0;">Log in to your arena partner dashboard</li>
+              <li style="margin: 8px 0;">Add your sports venues and courts</li>
+              <li style="margin: 8px 0;">Set your pricing and availability</li>
+              <li style="margin: 8px 0;">Start receiving bookings from sports enthusiasts</li>
+            </ul>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://ahibi.in'}/arena-partner/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Go to Dashboard
+            </a>
+          </div>
+          <p>We're excited to have ${businessName} as part of the Ahibi sports community. If you need any help getting started, our support team is here for you.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">Arena Partner Application Update</h1>
+          <p>Hi ${partner.name || 'there'},</p>
+          <p>Thank you for applying to become an arena partner on Ahibi.</p>
+          <p>Our team has reviewed your application and we need some additional information or changes before we can approve your account:</p>
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <strong>Required Changes:</strong>
+            <p style="margin: 10px 0 0;">${rejectionReason}</p>
+          </div>
+          <p>Please update your information and resubmit your application. If you have any questions, feel free to contact our support team.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    }
+
+    return this.sendMail({
+      to: partner.email,
+      subject,
+      html
+    });
+  }
+
+  /**
+   * Send sports venue approval notification to arena partner
+   * @param {Object} venue - SportsVenue object with populated arenaPartner
+   * @param {Boolean} approved - Whether the venue was approved
+   * @param {String} rejectionReason - Reason for rejection if not approved
+   * @returns {Promise<Object>} - Send result
+   */
+  async sendSportsVenueApprovalNotification(venue, approved, rejectionReason = '') {
+    const subject = approved 
+      ? 'Your Sports Venue Has Been Approved!' 
+      : 'Your Sports Venue Requires Changes';
+
+    let html;
+    
+    if (approved) {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">🏟️ Sports Venue Approved!</h1>
+          <p>Hi ${venue.arenaPartner.name || 'there'},</p>
+          <p>Congratulations! Your sports venue <strong>${venue.venueName}</strong> has been approved and is now live on the Ahibi platform.</p>
+          
+          <div style="background-color: #f0f9ff; border-left: 4px solid #4a154b; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #4a154b;">Venue Details</h3>
+            <p style="margin: 8px 0;"><strong>Venue Name:</strong> ${venue.venueName}</p>
+            <p style="margin: 8px 0;"><strong>Location:</strong> ${venue.address.city}, ${venue.address.state}</p>
+            <p style="margin: 8px 0;"><strong>Sports:</strong> ${venue.sportsSupported.join(', ')}</p>
+          </div>
+
+          <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #10b981;">What's Next?</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li style="margin: 8px 0;">Your venue is now visible to all Ahibi users</li>
+              <li style="margin: 8px 0;">Users can search and book your courts</li>
+              <li style="margin: 8px 0;">Monitor bookings in your dashboard</li>
+              <li style="margin: 8px 0;">Manage court availability and pricing</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://ahibi.in'}/arena-partner/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Manage Venue
+            </a>
+          </div>
+
+          <p>We're excited to see your venue thrive on Ahibi!</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">Sports Venue Requires Changes</h1>
+          <p>Hi ${venue.arenaPartner.name || 'there'},</p>
+          <p>Thank you for submitting your sports venue <strong>${venue.venueName}</strong>.</p>
+          <p>Our team has reviewed your submission and we need some changes before we can approve it:</p>
+          <div style="background-color: #f7f7f7; padding: 15px; margin: 20px 0; border-left: 4px solid #4a154b;">
+            ${rejectionReason}
+          </div>
+          <p>Please make the necessary changes and resubmit your venue for approval.</p>
+          <p>If you have any questions, feel free to contact our support team.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    }
+
+    return this.sendMail({
+      to: venue.arenaPartner.email,
+      subject,
+      html
+    });
+  }
+
+  /**
+   * Send court approval notification to arena partner
+   * @param {Object} court - Court object with populated arenaPartner
+   * @param {Boolean} approved - Whether the court was approved
+   * @param {String} rejectionReason - Reason for rejection if not approved
+   * @returns {Promise<Object>} - Send result
+   */
+  async sendCourtApprovalNotification(court, approved, rejectionReason = '') {
+    const subject = approved 
+      ? 'Your Court Has Been Approved!' 
+      : 'Your Court Requires Changes';
+
+    let html;
+    
+    if (approved) {
+      const hourlyRate = court.pricing?.weekday?.offPeak?.pricePerHour || 0;
+      
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">🏸 Court Approved!</h1>
+          <p>Hi ${court.arenaPartner.name || 'there'},</p>
+          <p>Congratulations! Your court <strong>${court.courtName}</strong> has been approved and is now available for booking on the Ahibi platform.</p>
+          
+          <div style="background-color: #f0f9ff; border-left: 4px solid #4a154b; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #4a154b;">Court Details</h3>
+            <p style="margin: 8px 0;"><strong>Court Name:</strong> ${court.courtName}</p>
+            <p style="margin: 8px 0;"><strong>Sport:</strong> ${court.sportType}</p>
+            <p style="margin: 8px 0;"><strong>Hourly Rate:</strong> ₹${hourlyRate}</p>
+            <p style="margin: 8px 0;"><strong>Status:</strong> Active</p>
+          </div>
+
+          <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #10b981;">What's Next?</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li style="margin: 8px 0;">Your court is now visible to all Ahibi users</li>
+              <li style="margin: 8px 0;">Users can book your court by the hour</li>
+              <li style="margin: 8px 0;">Manage availability in your dashboard</li>
+              <li style="margin: 8px 0;">Track bookings and revenue</li>
+            </ul>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://ahibi.in'}/arena-partner/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Manage Court
+            </a>
+          </div>
+
+          <p>We're excited to see your court get booked!</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
+          <h1 style="color: #4a154b; margin-bottom: 20px;">Court Requires Changes</h1>
+          <p>Hi ${court.arenaPartner.name || 'there'},</p>
+          <p>Thank you for submitting your court <strong>${court.courtName}</strong>.</p>
+          <p>Our team has reviewed your submission and we need some changes before we can approve it:</p>
+          <div style="background-color: #f7f7f7; padding: 15px; margin: 20px 0; border-left: 4px solid #4a154b;">
+            ${rejectionReason}
+          </div>
+          <p>Please make the necessary changes and resubmit your court for approval.</p>
+          <p>If you have any questions, feel free to contact our support team.</p>
+          <p>Best regards,<br>The Ahibi Team</p>
+        </div>
+      `;
+    }
+
+    return this.sendMail({
+      to: court.arenaPartner.email,
+      subject,
+      html
+    });
+  }
 }
 
 module.exports = new EmailService();

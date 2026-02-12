@@ -36,6 +36,14 @@ router.get('/venues/:id/reviews', sportsAdminController.getVenueReviews);
 router.put('/venues/:id/toggle-active', sportsAdminController.toggleVenueActive);
 router.delete('/reviews/:id', sportsAdminController.deleteReview);
 
+// ============ COURT MANAGEMENT ROUTES ============
+router.get('/courts', sportsAdminController.getAllCourts);
+router.get('/courts/:id/details', sportsAdminController.getCourtDetails);
+router.put('/courts/:id/approve', sportsAdminController.approveCourt);
+router.put('/courts/:id/reject', sportsAdminController.rejectCourt);
+router.put('/courts/:id/toggle-active', sportsAdminController.toggleCourtActive);
+router.put('/courts/:id/pricing', sportsAdminController.updateCourtPricing);
+
 // ============ BOOKING MANAGEMENT ROUTES ============
 router.get('/bookings', sportsAdminController.getAllBookings);
 router.get('/bookings/:id', sportsAdminController.getBookingById);

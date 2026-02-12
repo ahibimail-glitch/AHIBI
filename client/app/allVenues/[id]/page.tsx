@@ -470,22 +470,10 @@ export default function VenueDetailPage() {
   const [resolvedVenueId, setResolvedVenueId] = useState<string | null>(null);
   const [childVenues, setChildVenues] = useState<VenueData[]>([]);
   const [similarVenues, setSimilarVenues] = useState<VenueData[]>([]);
-  const [showMobileBooking, setShowMobileBooking] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [finalBookingDetails, setFinalBookingDetails] = useState<any>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [availabilityData, setAvailabilityData] = useState<AvailabilityData | null>(null);
-  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const LegendDot = ({
@@ -504,84 +492,8 @@ export default function VenueDetailPage() {
   }
 
 
-  // Booking form state
-  const [bookingForm, setBookingForm] = useState({
-    startTime: "",
-    endTime: "",
-    eventType: "",
-    specialRequirements: ""
-  });
 
-  // Estimated pricing state
-  const [estimatedPrice, setEstimatedPrice] = useState<number>(0);
-  const [fullDaySelected, setFullDaySelected] = useState<boolean>(false);
 
-  // Helper: compute duration in hours between start and end (handles overnight)
-  const getDurationHours = (start: string, end: string): number => {
-    if (!start || !end) return 0;
-    const startDate = new Date(`2000-01-01T${start}:00`);
-    const endDate = new Date(`2000-01-01T${end}:00`);
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
-    if (endDate <= startDate) {
-      endDate.setDate(endDate.getDate() + 1);
-    }
-    return (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-  };
-
-  // Helper: compute estimated price per rules
-  const computeEstimatedPrice = (): number => {
-    if (!venueData) return 0;
-    const base = venueData.pricing?.basePrice || 0;
-    const hourly = venueData.pricing?.hourlyRate || 0;
-    const halfDay = venueData.pricing?.halfDayRate;
-    const fullDay = venueData.pricing?.fullDayRate;
-    const cleaning = venueData.pricing?.cleaningFee || 0;
-    const securityDeposit = venueData.pricing?.securityDeposit || 0;
-
-    const dur = fullDaySelected ? 24 : getDurationHours(bookingForm.startTime, bookingForm.endTime);
-    if (dur <= 0) return 0;
-
-    let variable = 0;
-    let includeBase = false;
-
-    // Rules:
-    // - < 12 hours: security + base + hourly * duration
-    // - half day: security + halfDayRate
-    // - full day: security + fullDayRate
-    if (fullDaySelected) {
-      if (typeof fullDay === 'number' && fullDay > 0) {
-        variable = fullDay;
-      } else {
-        variable = hourly > 0 ? hourly * 24 : 0;
-      }
-    } else if (dur >= 12) {
-      if (typeof halfDay === 'number' && halfDay > 0) {
-        variable = halfDay;
-      } else {
-        // Per rule: for half-day bookings, do NOT fall back to hourly.
-        // Only use explicit half-day or a derived half-day from full-day.
-        const derivedHalf =
-          typeof fullDay === 'number' && fullDay > 0 ? fullDay / 2 : 0;
-        variable = Math.max(0, derivedHalf);
-      }
-    } else {
-      includeBase = true;
-      variable = hourly * dur;
-    }
-
-    const total =
-      securityDeposit +
-      (includeBase ? base : 0) +
-      variable +
-      cleaning;
-
-    return Math.max(0, Math.round(total));
-  };
-
-  useEffect(() => {
-    setEstimatedPrice(computeEstimatedPrice());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingForm.startTime, bookingForm.endTime, fullDaySelected, venueData]);
 
   // Helper: get Half Day Rate for display (explicit or derived)
   const getHalfDayRate = () => {
@@ -613,9 +525,9 @@ export default function VenueDetailPage() {
     const images = extractVenueImages(venueData);
     if (Math.abs(distance) > minSwipeDistance) {
       if (distance > 0 && images.length > 0) {
-        setActiveImageIndex((prev) => (prev + 1) % images.length);
+        setActiveImageIndex((prev: number) => (prev + 1) % images.length);
       } else if (images.length > 0) {
-        setActiveImageIndex((prev) => (prev - 1 + images.length) % images.length);
+        setActiveImageIndex((prev: number) => (prev - 1 + images.length) % images.length);
       }
     }
   };
@@ -721,7 +633,7 @@ export default function VenueDetailPage() {
     const interval = setInterval(() => {
       const images = extractVenueImages(venueData);
       if (images.length > 0) {
-        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+        setActiveImageIndex((prev: number) => (prev + 1) % images.length);
       }
     }, 5000);
 
@@ -733,12 +645,6 @@ export default function VenueDetailPage() {
     };
   }, [venueId]);
 
-  // Once the real DB ID is known, fetch bookings with the correct ID
-  useEffect(() => {
-    if (resolvedVenueId) {
-      fetchBookings();
-    }
-  }, [resolvedVenueId]);
 
   // Fetch similar venues when venue data is loaded
   useEffect(() => {
@@ -757,18 +663,6 @@ export default function VenueDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [venueData, resolvedVenueId]);
 
-  const fetchBookings = async () => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/venue/${resolvedVenueId || venueId}/bookings`);
-      const data = await response.json();
-      if (data.success) {
-        setBookings(data.data.bookings);
-      }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    }
-  };
 
   const fetchSimilarVenues = async () => {
     try {
@@ -789,49 +683,6 @@ export default function VenueDetailPage() {
     }
   };
 
-  // Fetch availability data for selected date
-  const fetchAvailabilityData = async (date: Date) => {
-    if (!resolvedVenueId) return;
-
-    setLoadingAvailability(true);
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
-      // Use local date formatting to avoid timezone issues
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-
-      console.log('Fetching availability for date:', dateStr, 'Original date object:', date);
-      console.log('Date components - Year:', year, 'Month:', month, 'Day:', day);
-
-      const response = await fetch(`${apiUrl}/api/venue/${resolvedVenueId}/availability/${dateStr}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setAvailabilityData(data.data.availability);
-      } else {
-        console.error('Failed to fetch availability:', data.message);
-        toast.error('Failed to load availability data');
-      }
-    } catch (error) {
-      console.error('Error fetching availability:', error);
-      toast.error('Error loading availability data');
-    } finally {
-      setLoadingAvailability(false);
-    }
-  };
-
-  // Fetch availability when date changes
-  useEffect(() => {
-    if (selectedDate && resolvedVenueId) {
-      console.log('Selected date changed to:', selectedDate);
-      console.log('Selected date string:', selectedDate.toString());
-      console.log('Selected date ISO:', selectedDate.toISOString());
-      fetchAvailabilityData(selectedDate);
-    }
-  }, [selectedDate, resolvedVenueId]);
 
   // Helper function to format date
   const formatDate = (date: Date) => {
@@ -843,252 +694,23 @@ export default function VenueDetailPage() {
     });
   };
 
-  // Generate available time options based on availability data
-  const getAvailableTimeOptions = (): TimeOption[] => {
-    if (!availabilityData) {
-      return availableTimes; // Fallback to all times if no availability data
-    }
-
-    return availableTimes.map(timeOption => {
-      const timeSlot = availabilityData.timeSlots.find(slot => slot.time === timeOption.value);
-      const isAvailable = timeSlot?.available !== false;
-
-      return {
-        ...timeOption,
-        available: isAvailable,
-        disabled: !isAvailable,
-        bookings: timeSlot?.bookings || []
-      } as TimeOption;
-    });
-  };
-
-  // Format time for display (convert 24h to 12h format)
-  const formatTimeForDisplay = (time: string) => {
-    const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
 
   const nextImage = () => {
     const images = extractVenueImages(venueData);
     if (images.length > 0) {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+      setActiveImageIndex((prev: number) => (prev + 1) % images.length);
     }
   };
 
   const prevImage = () => {
     const images = extractVenueImages(venueData);
     if (images.length > 0) {
-      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+      setActiveImageIndex((prev: number) => (prev - 1 + images.length) % images.length);
     }
   };
 
-  const handleDownloadInvoice = () => {
-    if (!finalBookingDetails) return;
 
-    const invoiceContent = `
-      ${venueData?.name} - Booking Invoice
-      =============================
-      Booking ID: ${finalBookingDetails._id}
-      Date: ${format(new Date(finalBookingDetails.bookingDate), 'PPP')}
-      Time: ${finalBookingDetails.startTime} - ${finalBookingDetails.endTime}
-      Guests: ${finalBookingDetails.guestCount}
-      Event Type: ${finalBookingDetails.eventType || 'N/A'}
-      
-      Total Amount Paid: INR ${finalBookingDetails.pricing.totalAmount}
-      Payment Status: ${finalBookingDetails.pricing.paymentStatus}
-      Payment ID: ${finalBookingDetails.paymentDetails.paymentId}
-      
-      Thank you for booking with ${venueData?.name}!
-    `;
 
-    const blob = new Blob([invoiceContent.trim()], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${venueData?.name?.replace(/\s+/g, '-') || 'venue'}-Invoice-${finalBookingDetails._id}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const getUnavailableDates = () => {
-    const unavailableDates: Date[] = [];
-
-    // Add confirmed bookings
-    bookings.forEach(booking => {
-      // Only mark dates as unavailable for confirmed bookings
-      if (booking.status === 'confirmed') {
-        unavailableDates.push(new Date(booking.bookingDate));
-      }
-    });
-
-    // Add blocked dates (full day blocks)
-    if (venueData?.blockedSlots) {
-      venueData.blockedSlots.forEach((slot: any) => {
-        if (slot.isFullDayBlocked) {
-          unavailableDates.push(new Date(slot.date));
-        }
-      });
-    }
-
-    return unavailableDates;
-  };
-
-  const getPartiallyBookedDates = () => {
-    // For now, we'll treat all dates with bookings as partially booked
-    // In the future, we could check if all time slots are booked
-    return getUnavailableDates();
-  };
-
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    // Function to format the date as YYYY-MM-DD in the local timezone
-    const toYYYYMMDD = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-    e.preventDefault();
-    setFormError(null);
-
-    if (!user) {
-      toast.error('You must be logged in to book.');
-      router.push(createAuthRedirectUrl());
-      return;
-    }
-
-    if (!selectedDate) {
-      setFormError('Please select a booking date.');
-      return;
-    }
-    if (!fullDaySelected && !bookingForm.startTime) {
-      setFormError('Please select a start time.');
-      return;
-    }
-    if (!fullDaySelected) {
-      if (!bookingForm.endTime) {
-        setFormError('Please select an end time.');
-        return;
-      }
-      if (bookingForm.startTime >= bookingForm.endTime) {
-        setFormError('End time must be after start time.');
-        return;
-      }
-    }
-    // guestCount will be auto-populated below
-
-    // Safety check: ensure we have a valid venue ID
-    if (!resolvedVenueId) {
-      setFormError('Unable to process booking. Venue information not loaded properly.');
-      toast.error('Please refresh the page and try again.');
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      // Auto guest count: minimumBookingCapacity or 1
-      const autoGuestCount = venueData?.capacityDetails?.minimumBookingCapacity && venueData.capacityDetails.minimumBookingCapacity > 0
-        ? venueData.capacityDetails.minimumBookingCapacity
-        : 1;
-
-      const orderResponse = await fetch(`${apiUrl}/api/venue/${resolvedVenueId}/bookings/create-order`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          bookingDate: toYYYYMMDD(selectedDate),
-          startTime: fullDaySelected ? '00:00' : bookingForm.startTime,
-          endTime: fullDaySelected ? '23:00' : bookingForm.endTime,
-          guestCount: autoGuestCount,
-          eventType: bookingForm.eventType,
-          specialRequirements: bookingForm.specialRequirements,
-          pricingHint: {
-            estimatedPrice,
-            fullDaySelected,
-          }
-        }),
-      });
-
-      const order = await orderResponse.json();
-
-      if (!orderResponse.ok) {
-        throw new Error(order.message || order.error || 'Failed to create order.');
-      }
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: order.data.amount,
-        currency: order.data.currency,
-        name: venueData?.name || 'Venue Booking',
-        description: `Booking for ${format(selectedDate, 'PPP')}`,
-        order_id: order.data.orderId,
-        handler: async function (response: any) {
-          setIsVerifying(true);
-          const verificationResponse = await fetch(`${apiUrl}/api/venue/${resolvedVenueId}/bookings/verify-payment`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature,
-              bookingId: order.data.bookingId
-            }),
-          });
-
-          const verificationData = await verificationResponse.json();
-          setIsVerifying(false);
-
-          if (verificationData.success) {
-            setFinalBookingDetails(verificationData.data.booking);
-            setBookingSuccess(true);
-            toast.success('Booking confirmed!');
-            fetchBookings();
-          } else {
-            toast.error(verificationData.message || 'Payment verification failed.');
-            setFormError('Payment verification failed. Please contact support.');
-          }
-        },
-        prefill: {
-          name: user.name,
-          email: user.email,
-          contact: user.phone,
-        },
-        notes: {
-          venueId: venueId,
-          venueName: venueData?.name
-        },
-        theme: {
-          color: '#8A2BE2'
-        }
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-
-      rzp.on('payment.failed', function (response: any) {
-        toast.error('Payment failed. Please try again.');
-        setFormError(`Payment failed: ${response.error.description}`);
-      });
-
-    } catch (error: any) {
-      console.error('Booking process error:', error);
-      setFormError(error.message || 'An unexpected error occurred.');
-      toast.error(error.message || 'An error occurred during the booking process.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -1125,186 +747,7 @@ export default function VenueDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
-      {isVerifying && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100]">
-          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl flex flex-col items-center mx-4">
-            <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-4 border-purple-200 border-t-purple-600"></div>
-            <p className="text-gray-800 text-base sm:text-lg mt-4 font-medium">Verifying payment...</p>
-            <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
-          </div>
-        </div>
-      )}
 
-      {/* Mobile Booking Bottom Sheet */}
-      {showMobileBooking && (
-        <div className="fixed inset-0 z-[90] lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileBooking(false)} />
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-300">
-            <div className="sticky top-0 bg-white pt-3 pb-2 px-4 border-b z-10">
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-3" />
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900">Book {venueData?.name}</h3>
-                <button onClick={() => setShowMobileBooking(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
-            </div>
-            <div className="p-4 space-y-4 pb-8">
-              {bookingSuccess ? (
-                <div className="text-center py-6">
-                  <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="h-10 w-10 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
-                  <div className="text-left space-y-2 text-sm bg-green-50 p-4 rounded-xl mt-4 mb-4">
-                    <div className="flex justify-between"><span className="text-gray-500">Date:</span><span className="font-medium">{finalBookingDetails?.bookingDate && format(new Date(finalBookingDetails.bookingDate), 'PP')}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Time:</span><span className="font-medium">{finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</span></div>
-                    <div className="flex justify-between pt-2 border-t border-green-200"><span className="font-medium">Total Paid:</span><span className="font-bold text-green-600 text-lg">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span></div>
-                  </div>
-                  <Button onClick={() => { handleDownloadInvoice(); setShowMobileBooking(false); }} className="w-full bg-green-600 hover:bg-green-700">
-                    <Download className="h-4 w-4 mr-2" />Download Invoice
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* Step 1: Select Date */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4 text-purple-600" />
-                      Select Date
-                    </h4>
-                    <div className="border border-gray-200 rounded-xl p-2 bg-gray-50">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || (venueData?.blockedSlots?.some((slot: any) => new Date(slot.date).toDateString() === date.toDateString() && slot.isFullDayBlocked) || false)}
-                        className="rounded-md bg-white w-full"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Step 2: Select Time */}
-                  {selectedDate && (
-                    <div className="space-y-3 pt-2">
-                      <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-purple-600" />
-                        Select Time for {format(selectedDate, 'PP')}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-xs">Start Time *</Label>
-                          <Select
-                            value={bookingForm.startTime}
-                            onValueChange={(value) =>
-                              setBookingForm({ ...bookingForm, startTime: value })
-                            }
-                            disabled={fullDaySelected}
-                          >
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder="Start" />
-                            </SelectTrigger>
-
-                            <SelectContent
-                              position="popper"
-                              side="bottom"
-                              align="start"
-                              sideOffset={6}
-                              avoidCollisions
-                              className="max-h-[50vh] overflow-y-auto z-[600]"
-                            >
-                              {getAvailableTimeOptions().map((time) => (
-                                <SelectItem
-                                  key={time.value}
-                                  value={time.value}
-                                  disabled={time.disabled || fullDaySelected}
-                                >
-                                  {time.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-
-                        </div>
-                        <div>
-                          <Label className="text-xs">End Time *</Label>
-
-                          <Select
-                            value={bookingForm.endTime}
-                            onValueChange={(value) =>
-                              setBookingForm({ ...bookingForm, endTime: value })
-                            }
-                            disabled={fullDaySelected}
-                          >
-                            <SelectTrigger className="h-10">
-                              <SelectValue placeholder="End" />
-                            </SelectTrigger>
-
-                            <SelectContent
-                              position="popper"
-                              side="bottom"
-                              align="start"
-                              sideOffset={6}
-                              avoidCollisions
-                              className="max-h-[50vh] overflow-y-auto z-[600]"
-                            >
-                              {getAvailableTimeOptions().map((time) => (
-                                <SelectItem
-                                  key={time.value}
-                                  value={time.value}
-                                  disabled={time.disabled || fullDaySelected}
-                                >
-                                  {time.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
-                        <input id="fullDayMobile" type="checkbox" checked={fullDaySelected} onChange={(e) => { setFullDaySelected(e.target.checked); if (e.target.checked) setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' })); }} className="h-4 w-4" />
-                        <Label htmlFor="fullDayMobile" className="text-sm">Book Full Day</Label>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Event Type (Optional)</Label>
-                        <Input value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="Wedding, Party, Conference..." className="h-10" />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Price Summary & Book Button */}
-                  {selectedDate && (
-                    <div className="space-y-3 pt-2 border-t">
-                      <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-gray-600">Estimated Total</span>
-                          <span className="text-2xl font-bold text-purple-700">₹{estimatedPrice.toLocaleString('en-IN')}</span>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          {fullDaySelected
-                            ? `Full day rate + security deposit${venueData?.pricing?.cleaningFee ? ' + cleaning' : ''}`
-                            : (getDurationHours(bookingForm.startTime, bookingForm.endTime) || 0) >= 12
-                              ? `Half day rate + security deposit${venueData?.pricing?.cleaningFee ? ' + cleaning' : ''}`
-                              : `${getDurationHours(bookingForm.startTime, bookingForm.endTime) || 0} hrs × hourly rate + base price + security deposit${venueData?.pricing?.cleaningFee ? ' + cleaning' : ''}`}
-                        </p>
-                      </div>
-                      {formError && <div className="p-3 text-sm text-red-700 bg-red-50 rounded-lg">{formError}</div>}
-                      <Button
-                        onClick={handleBookingSubmit}
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl text-base"
-                        disabled={submitting || authLoading || !bookingForm.startTime || (!fullDaySelected && !bookingForm.endTime)}
-                      >
-                        {submitting ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Processing...</> : <><IndianRupee className="h-5 w-5 mr-2" />Book & Pay ₹{estimatedPrice.toLocaleString('en-IN')}</>}
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Navbar Section */}
       <Navbar />
@@ -1454,7 +897,7 @@ export default function VenueDetailPage() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => setShowMobileBooking(true)}
+                  onClick={() => router.push(`/allVenues/${venueId}/checkout`)}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg"
                 >
                   Book Now
@@ -2012,239 +1455,15 @@ export default function VenueDetailPage() {
             </Tabs>
           </div>
 
-          {/* Right Sidebar - Hidden on Mobile, Sticky on Desktop */}
-          <div className="hidden lg:block lg:space-y-4 lg:sticky lg:top-4">
-            {/* Calendar Card */}
-            <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
-              <CardHeader className="pb-3 border-b border-gray-100 bg-gradient-to-r from-purple-50/50 to-pink-50/50 p-4">
-                <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
-                  <div className="bg-purple-600 p-1.5 rounded-lg">
-                    <CalendarIcon className="h-4 w-4 text-white" />
-                  </div>
-                  Check Availability
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="space-y-3 p-4">
-                {/* Calendar Wrapper */}
-                <div className="rounded-lg border border-gray-200 p-2 bg-gray-50">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    disabled={(date) => {
-                      if (date < new Date(new Date().setHours(0, 0, 0, 0))) {
-                        return true
-                      }
-
-                      const isFullyBlocked = venueData?.blockedSlots?.some((slot: any) => {
-                        const slotDate = new Date(slot.date)
-                        return (
-                          slotDate.toDateString() === date.toDateString() &&
-                          slot.isFullDayBlocked
-                        )
-                      })
-
-                      return isFullyBlocked || false
-                    }}
-                    modifiers={{
-                      partiallyBooked: getPartiallyBookedDates(),
-                      fullyBlocked: (date) =>
-                        venueData?.blockedSlots?.some((slot: any) => {
-                          const slotDate = new Date(slot.date)
-                          return (
-                            slotDate.toDateString() === date.toDateString() &&
-                            slot.isFullDayBlocked
-                          )
-                        }) || false,
-
-                      partiallyBlocked: (date) =>
-                        venueData?.blockedSlots?.some((slot: any) => {
-                          const slotDate = new Date(slot.date)
-                          return (
-                            slotDate.toDateString() === date.toDateString() &&
-                            !slot.isFullDayBlocked
-                          )
-                        }) || false,
-
-                      past: (date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0)),
-                    }}
-                    modifiersClassNames={{
-                      available:
-                        "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-medium",
-
-                      partiallyBooked:
-                        "bg-amber-200 text-amber-900 hover:bg-amber-300",
-
-                      partiallyBlocked:
-                        "bg-yellow-200 text-yellow-900 hover:bg-yellow-300",
-
-                      fullyBlocked:
-                        "bg-red-300 text-red-900 line-through cursor-not-allowed opacity-90",
-
-                      past:
-                        "text-gray-400 cursor-not-allowed opacity-60",
-
-                      today:
-                        "border border-indigo-500 text-indigo-700 bg-indigo-50",
-                    }}
-                    className="rounded-md bg-white"
-                  />
-                </div>
-
-                {/* Legend - Compact */}
-                <div className="grid grid-cols-2 gap-1.5 text-[10px] text-gray-500">
-                  <LegendDot color="bg-emerald-500" label="Available" />
-                  <LegendDot color="bg-amber-500" label="Partial" />
-                  <LegendDot color="bg-red-500" label="Blocked" />
-                  <LegendDot color="bg-gray-400" label="Past" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Booking Section */}
-            {selectedDate && (
-              <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-purple-50/50 to-pink-50/50 border-b border-gray-100 p-4">
-                  <CardTitle className="text-base font-bold text-gray-900">Book Venue</CardTitle>
-                  <CardDescription className="text-purple-600 font-medium text-sm mt-1 flex items-center gap-1.5">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                    {format(selectedDate, 'PPP')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4">
-                  {bookingSuccess ? (
-                    <div className="text-center py-4">
-                      <div className="bg-green-100 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <CheckCircle className="h-8 w-8 text-green-600" />
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">Booking Confirmed!</h3>
-                      <div className="text-left space-y-2 text-sm bg-green-50 p-3 rounded-lg mt-3 mb-3">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Date:</span>
-                          <span className="font-medium">{format(new Date(finalBookingDetails?.bookingDate), 'PP')}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">Time:</span>
-                          <span className="font-medium">{finalBookingDetails?.startTime} - {finalBookingDetails?.endTime}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-green-200">
-                          <span className="font-medium">Total:</span>
-                          <span className="font-bold text-green-600">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-                      <Button onClick={handleDownloadInvoice} size="sm" className="w-full bg-green-600 hover:bg-green-700">
-                        <Download className="h-4 w-4 mr-1.5" />
-                        Download Invoice
-                      </Button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleBookingSubmit} className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor="startTime" className="text-xs">Start *</Label>
-                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, startTime: value })} value={bookingForm.startTime} disabled={fullDaySelected}>
-                            <SelectTrigger id="startTime" className="h-9 text-sm">
-                              <SelectValue placeholder="Start" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getAvailableTimeOptions().map((time) => (
-                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected} className="text-sm">
-                                  {time.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="endTime" className="text-xs">End *</Label>
-                          <Select onValueChange={(value) => setBookingForm({ ...bookingForm, endTime: value })} value={bookingForm.endTime} disabled={fullDaySelected}>
-                            <SelectTrigger id="endTime" className="h-9 text-sm">
-                              <SelectValue placeholder="End" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {getAvailableTimeOptions().map((time) => (
-                                <SelectItem key={time.value} value={time.value} disabled={time.disabled || fullDaySelected} className="text-sm">
-                                  {time.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <input id="fullDay" type="checkbox" checked={fullDaySelected} onChange={(e) => { setFullDaySelected(e.target.checked); if (e.target.checked) setBookingForm((prev) => ({ ...prev, startTime: '00:00', endTime: '23:00' })); }} className="h-3.5 w-3.5" />
-                        <Label htmlFor="fullDay" className="text-xs font-normal">Full Day</Label>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="eventType" className="text-xs">Event Type</Label>
-                        <Input id="eventType" value={bookingForm.eventType} onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} placeholder="Wedding, Party, etc." className="h-9 text-sm" />
-                      </div>
-
-                      {/* Price Summary */}
-                      <div className="bg-purple-50 border border-purple-100 rounded-lg p-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600">Estimated</span>
-                          <span className="font-bold text-purple-700">₹{estimatedPrice.toLocaleString('en-IN')}</span>
-                        </div>
-                      </div>
-
-                      {formError && (
-                        <div className="p-2 text-xs text-red-700 bg-red-50 rounded-lg">{formError}</div>
-                      )}
-
-                      <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-2.5 rounded-lg" disabled={submitting || authLoading}>
-                        {submitting ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Processing...</> : <><IndianRupee className="h-4 w-4 mr-1" />Book & Pay</>}
-                      </Button>
-                    </form>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {!selectedDate && (
-              <Card className="bg-white border border-gray-200 shadow-lg rounded-xl overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="text-center py-4">
-                    <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <CalendarIcon className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Select a Date</h3>
-                    <p className="text-xs text-gray-500">
-                      Choose a date to book
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Contact Card - Compact */}
-            <Card className="bg-gradient-to-br from-purple-600 to-pink-600 text-white border-0 shadow-lg rounded-xl overflow-hidden">
-              <CardContent className="p-4">
-                <h3 className="text-sm font-bold mb-3 flex items-center gap-1.5">
-                  <MessageCircle className="h-4 w-4" />
-                  Need Help?
-                </h3>
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-lg">
-                    <Phone className="h-4 w-4" />
-                    <span className="text-sm">{venueData?.contactInfo.phone}</span>
-                  </div>
-                  {venueData?.contactInfo.email && (
-                    <div className="flex items-center gap-2 bg-white/10 p-2.5 rounded-lg">
-                      <Mail className="h-4 w-4" />
-                      <span className="text-xs break-all">{venueData.contactInfo.email}</span>
-                    </div>
-                  )}
-                </div>
-                <Button size="sm" className="w-full bg-white text-purple-600 hover:bg-gray-50 font-semibold">
-                  Contact
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Book Now CTA - Sticky on Mobile */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
+            <Button
+              onClick={() => router.push(`/allVenues/${venueId}/checkout`)}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold py-3 rounded-lg"
+            >
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Book This Venue
+            </Button>
           </div>
 
 
@@ -2316,7 +1535,7 @@ export default function VenueDetailPage() {
             </p>
           </div>
           <Button
-            onClick={() => setShowMobileBooking(true)}
+            onClick={() => router.push(`/allVenues/${venueId}/checkout`)}
             className="bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg flex-shrink-0"
           >
             <CalendarIcon className="h-4 w-4 mr-1.5" />
