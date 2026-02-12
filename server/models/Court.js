@@ -99,9 +99,10 @@ const CourtSchema = new mongoose.Schema({
         timeRange: { start: String, end: String }
       }
     },
-    // Booking duration in minutes (fixed at 60 minutes)
+    // Booking duration in minutes (30 or 60 minutes)
     duration: {
       type: Number,
+      enum: [30, 60],
       default: 60,
       required: true
     }

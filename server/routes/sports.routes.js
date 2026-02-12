@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const sportsBookingController = require('../controllers/sportsBookingController');
+const sportsSlotController = require('../controllers/sportsSlotController');
 const { protect } = require('../middlewares/auth');
 
 // ============ VENUE DISCOVERY ROUTES (PUBLIC) ============
@@ -27,5 +28,9 @@ router.post('/bookings/:id/cancel', protect, sportsBookingController.cancelBooki
 
 // ============ REVIEW ROUTES (PROTECTED) ============
 router.post('/venues/:id/reviews', protect, sportsBookingController.addVenueReview);
+
+// ============ SLOT MANAGEMENT ROUTES (PROTECTED - ARENA PARTNER) ============
+router.post('/courts/:courtId/regenerate-slots', protect, sportsSlotController.regenerateSlots);
+router.post('/courts/:courtId/regenerate-slots-bulk', protect, sportsSlotController.regenerateSlotsBulk);
 
 module.exports = router;

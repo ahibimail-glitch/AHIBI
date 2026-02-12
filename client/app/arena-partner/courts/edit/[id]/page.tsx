@@ -691,16 +691,23 @@ export default function EditCourtPage() {
               <h3 className="text-md font-semibold text-gray-800 mb-3">Duration Settings</h3>
               <div className="max-w-md">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Duration (minutes)
+                  Booking Duration *
                 </label>
-                <input
-                  type="number"
+                <select
                   value={formData.pricing.duration}
-                  disabled
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-                  readOnly
-                />
-                <p className="text-xs text-gray-500 mt-1">Fixed at 60 minutes for all bookings</p>
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      pricing: { ...formData.pricing, duration: parseInt(e.target.value) }
+                    })
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  required
+                >
+                  <option value={30}>30 minutes (1/2 hour)</option>
+                  <option value={60}>60 minutes (1 hour)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Choose the minimum booking duration for this court</p>
               </div>
             </div>
           </div>

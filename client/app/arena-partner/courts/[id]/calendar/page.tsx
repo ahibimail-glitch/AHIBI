@@ -35,6 +35,9 @@ interface OperatingHoursDay {
 interface CourtDetails {
   _id: string;
   courtName: string;
+  pricing?: {
+    duration: number;
+  };
   venue?: {
     _id: string;
     operatingHours?: Partial<Record<DayKey, OperatingHoursDay>>;
@@ -47,6 +50,16 @@ function formatDateISO(d: Date) {
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatTimeSlot(startTime: string, endTime: string, duration: number): string {
+  // For 30-minute slots, show both start and end time
+  // For 60-minute slots, show just the start time (as it's implied to be 1 hour)
+  if (duration === 30) {
+    return `${startTime} - ${endTime}`;
+  } else {
+    return `${startTime}`;
+  }
 }
 
 function addDays(base: Date, days: number) {
@@ -83,6 +96,7 @@ export default function CourtCalendarPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
 
   const weekDays = useMemo(() => {
     // Build a 7-day range starting at anchorDate (Mon-Sun or Today + next 6 days)
@@ -172,10 +186,63 @@ export default function CourtCalendarPage() {
     return slots.filter((s) => s.startTime >= (open as string) && s.endTime <= (close as string));
   };
 
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const filterByCurrentTime = (slots: SlotItem[], d: Date): SlotItem[] => {
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const slotDate = new Date(d);
+    slotDate.setHours(0, 0, 0, 0);
+    
+    // If it's not today, return all slots
+    if (slotDate.getTime() !== today.getTime()) {
+      return slots;
+    }
+    
+    // For today, filter out past time slots
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    
+    return slots.filter((slot) => {
+      const [slotHour, slotMinute] = slot.startTime.split(':').map(Number);
+      const slotTimeInMinutes = slotHour * 60 + slotMinute;
+      
+      // Allow slots that are at least 30 minutes in the future
+      // This gives users time to book before the slot starts
+      return slotTimeInMinutes > currentTimeInMinutes + 30;
+    });
+  };
+
   const computeRange = (slots: SlotItem[]) => {
-    if (!slots || slots.length === 0) return { start: "", end: "" };
+    if (!slots || slots.length === 0) return { start: "", end: "", totalPrice: 0 };
     const sorted = [...slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
-    return { start: sorted[0].startTime, end: sorted[sorted.length - 1].endTime };
+    const duration = court?.pricing?.duration || 60;
+    const firstSlot = sorted[0];
+    const lastSlot = sorted[sorted.length - 1];
+    
+    // Calculate total price
+    const totalPrice = sorted.reduce((sum, slot) => sum + slot.price, 0);
+    
+    if (duration === 30) {
+      // For 30-minute slots, show full range
+      return { start: firstSlot.startTime, end: lastSlot.endTime, totalPrice };
+    } else {
+      // For 60-minute slots, show start time and count
+      const slotCount = sorted.length;
+      return { 
+        start: firstSlot.startTime, 
+        end: lastSlot.endTime,
+        totalPrice,
+        display: slotCount === 1 
+          ? firstSlot.startTime 
+          : `${firstSlot.startTime} (${slotCount} slots)`
+      };
+    }
   };
 
   const areContiguous = (slots: SlotItem[]) => {
@@ -228,6 +295,30 @@ export default function CourtCalendarPage() {
     }
   };
 
+  const regenerateSlots = async (date: string) => {
+    if (!courtId) return;
+    setRegenerating(true);
+    try {
+      const token = localStorage.getItem("arenaPartnerToken");
+      const res = await fetch(`/api/sports/courts/${courtId}/regenerate-slots`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({ date }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Failed to regenerate slots");
+      console.log("Slots regenerated:", json.data);
+      await fetchWeek(); // Refresh the calendar
+    } catch (e: any) {
+      console.error("Error regenerating slots:", e);
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -238,15 +329,33 @@ export default function CourtCalendarPage() {
               <CalendarIcon className="w-5 h-5 text-orange-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Court Calendar</h1>
-                <p className="text-sm text-gray-600">View weekly availability and bookings</p>
+                <p className="text-sm text-gray-600">
+                  View weekly availability and bookings
+                  {court && (
+                    <span className="ml-2 text-orange-600">
+                      (Duration: {court.pricing?.duration || 60}min)
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
-            <Link
-              href="/arena-partner/courts"
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Back to Courts
-            </Link>
+            <div className="flex items-center gap-3">
+              {court && (
+                <button
+                  onClick={() => regenerateSlots(formatDateISO(new Date()))}
+                  disabled={regenerating}
+                  className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {regenerating ? "Regenerating..." : "Regenerate Today's Slots"}
+                </button>
+              )}
+              <Link
+                href="/arena-partner/courts"
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Back to Courts
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -289,8 +398,16 @@ export default function CourtCalendarPage() {
               <div>
                 <div className="text-sm text-gray-500">Create walk-in booking</div>
                 <div className="text-lg font-semibold text-gray-900">
-                  {new Date(selectedForBooking.date).toLocaleDateString()} · {computeRange(selectedForBooking.slots).start} - {computeRange(selectedForBooking.slots).end}
+                  {new Date(selectedForBooking.date).toLocaleDateString()} · {computeRange(selectedForBooking.slots).display || `${computeRange(selectedForBooking.slots).start} - ${computeRange(selectedForBooking.slots).end}`}
                 </div>
+                <div className="text-xl font-bold text-orange-600 mt-1">
+                  Total Price: ₹{computeRange(selectedForBooking.slots).totalPrice}
+                </div>
+                {selectedForBooking.slots.length > 1 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    ({selectedForBooking.slots.length} slots × ₹{selectedForBooking.slots[0]?.price || 0} each)
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setSelectedForBooking(null)}
@@ -382,13 +499,26 @@ export default function CourtCalendarPage() {
           {weekDays.map((day) => {
             const key = formatDateISO(day);
             const allSlots = weekSlots[key] || [];
-            const filtered = filterByOperatingHours(allSlots, day);
+            const filteredByHours = filterByOperatingHours(allSlots, day);
+            const filtered = filterByCurrentTime(filteredByHours, day);
             const hours = getOperatingHoursFor(day);
             return (
               <div key={key} className="bg-white rounded-xl border border-gray-200 shadow-sm">
                 <div className="p-4 border-b border-gray-100">
-                  <div className="text-sm text-gray-500">
-                    {day.toLocaleDateString("en-US", { weekday: "long" })}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      {day.toLocaleDateString("en-US", { weekday: "long" })}
+                      {isToday(day) && (
+                        <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                          Today
+                        </span>
+                      )}
+                    </div>
+                    {isToday(day) && filteredByHours.length > filtered.length && (
+                      <div className="text-xs text-gray-500">
+                        Past times hidden
+                      </div>
+                    )}
                   </div>
                   <div className="text-lg font-semibold text-gray-900">
                     {day.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -424,7 +554,7 @@ export default function CourtCalendarPage() {
                               ? "bg-yellow-50 border-yellow-100"
                               : "bg-gray-50 border-gray-100"
                           } ${isSelected ? "ring-2 ring-orange-500" : ""}`}
-                          title={`${slot.startTime} - ${slot.endTime}`}
+                          title={`${formatTimeSlot(slot.startTime, slot.endTime, court?.pricing?.duration || 60)}`}
                           onClick={() => {
                             if (!canSelect) return;
                             setSubmitMsg(null);
@@ -453,20 +583,22 @@ export default function CourtCalendarPage() {
                             });
                           }}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-between">
                             <span className="font-semibold text-gray-800">
-                              {slot.startTime} - {slot.endTime}
+                              {formatTimeSlot(slot.startTime, slot.endTime, court?.pricing?.duration || 60)}
                             </span>
-                            <span className="text-gray-500">₹{slot.price}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-green-600">₹{slot.price}</span>
+                              {statusBadge(slot.status)}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {statusBadge(slot.status)}
-                            {slot.status === "available" && (
-                              <span className="ml-2 px-2 py-1 rounded-md bg-orange-100 text-orange-800 text-xs">
+                          {slot.status === "available" && (
+                            <div className="flex justify-end mt-1">
+                              <span className="px-2 py-1 rounded-md bg-orange-100 text-orange-800 text-xs">
                                 {isSelected ? "Selected" : "Tap to select"}
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })

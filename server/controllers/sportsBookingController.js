@@ -322,9 +322,13 @@ exports.getAvailableSlots = async (req, res) => {
       date: new Date(date)
     }).sort({ startTime: 1 });
 
-    // If no slots exist, generate them
-    if (slots.length === 0) {
-      slots = await TimeSlot.generateSlotsForDate(court._id, date);
+    // Check if slots exist and if their duration matches the court's current duration
+    const courtDuration = court.pricing.duration || 60;
+    const needsRegeneration = slots.length > 0 && slots.some(slot => slot.duration !== courtDuration);
+
+    // If no slots exist or duration has changed, regenerate them
+    if (slots.length === 0 || needsRegeneration) {
+      slots = await TimeSlot.regenerateSlotsForDate(court._id, date);
     }
 
     // Recalculate prices (in case pricing rules were updated after slots were generated).

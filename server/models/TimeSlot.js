@@ -191,6 +191,61 @@ TimeSlotSchema.statics.confirmBooking = async function(slotId, bookingId) {
   return slot;
 };
 
+// Static method to regenerate slots for a court on a specific date
+TimeSlotSchema.statics.regenerateSlotsForDate = async function(courtId, date) {
+  // Check for existing booked slots
+  const bookedSlots = await this.find({
+    court: courtId,
+    date: new Date(date),
+    status: 'booked'
+  });
+  
+  // If there are booked slots, don't regenerate to avoid conflicts
+  if (bookedSlots.length > 0) {
+    console.log(`Skipping regeneration for court ${courtId} on ${date} - ${bookedSlots.length} slots already booked`);
+    // Return existing slots but update non-booked ones with correct duration
+    const existingSlots = await this.find({
+      court: courtId,
+      date: new Date(date)
+    }).sort({ startTime: 1 });
+    
+    // Update non-booked slots with correct duration
+    const Court = mongoose.model('Court');
+    const court = await Court.findById(courtId);
+    const courtDuration = court.pricing.duration || 60;
+    
+    for (const slot of existingSlots) {
+      if (slot.status !== 'booked' && slot.duration !== courtDuration) {
+        // Recalculate end time based on new duration
+        const startHour = parseInt(slot.startTime.split(':')[0]);
+        const startMinute = parseInt(slot.startTime.split(':')[1]);
+        let endTimeMinutes = startMinute + courtDuration;
+        let endTimeHour = startHour;
+        
+        if (endTimeMinutes >= 60) {
+          endTimeHour += Math.floor(endTimeMinutes / 60);
+          endTimeMinutes = endTimeMinutes % 60;
+        }
+        
+        slot.endTime = `${endTimeHour.toString().padStart(2, '0')}:${endTimeMinutes.toString().padStart(2, '0')}`;
+        slot.duration = courtDuration;
+        await slot.save();
+      }
+    }
+    
+    return existingSlots;
+  }
+  
+  // Delete existing slots for this court and date (only if no bookings)
+  await this.deleteMany({
+    court: courtId,
+    date: new Date(date)
+  });
+  
+  // Generate new slots with updated duration
+  return await this.generateSlotsForDate(courtId, date);
+};
+
 // Static method to generate slots for a court on a specific date
 TimeSlotSchema.statics.generateSlotsForDate = async function(courtId, date) {
   const Court = mongoose.model('Court');
