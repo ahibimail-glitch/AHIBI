@@ -1,10 +1,18 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { arenaPartnerDashboard, arenaPartnerVenues } from '@/lib/api/sports';
 import Link from 'next/link';
 import KakiMarketingBanner from '@/components/KakiMarketingBanner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export default function ArenaPartnerDashboard() {
   const router = useRouter();
@@ -14,6 +22,8 @@ export default function ArenaPartnerDashboard() {
   const [venues, setVenues] = useState<any[]>([]);
   const [showVenueSelector, setShowVenueSelector] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<string>('');
+  const [shouldWarnOnExit, setShouldWarnOnExit] = useState(true);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('arenaPartnerToken');
@@ -24,6 +34,26 @@ export default function ArenaPartnerDashboard() {
 
     fetchDashboardData();
   }, []);
+
+  // Custom back-button confirmation to leave Arena Partner dashboard
+  useEffect(() => {
+    if (!shouldWarnOnExit || typeof window === "undefined") return;
+
+    // Push a history state so the first back press stays on this page
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      setShowExitDialog(true);
+      // Immediately push state again so further back presses stay here until the user confirms
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [shouldWarnOnExit]);
 
   const fetchDashboardData = async () => {
     try {
@@ -42,6 +72,8 @@ export default function ArenaPartnerDashboard() {
   };
 
   const handleLogout = () => {
+    // Allow intentional logout without showing the leave-dashboard dialog
+    setShouldWarnOnExit(false);
     localStorage.removeItem('arenaPartnerToken');
     router.push('/arena-partner/auth');
   };
@@ -377,6 +409,36 @@ export default function ArenaPartnerDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Leave dashboard confirmation dialog */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent className="max-w-sm sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave arena partner dashboard?</DialogTitle>
+            <DialogDescription>
+              If you go back now, you may lose your current view or any unsaved changes. Do you really want to close the dashboard?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowExitDialog(false)}
+            >
+              Stay on dashboard
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white"
+              onClick={() => {
+                setShowExitDialog(false);
+                setShouldWarnOnExit(false);
+                router.push("/");
+              }}
+            >
+              Leave dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

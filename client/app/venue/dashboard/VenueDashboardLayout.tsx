@@ -135,6 +135,10 @@ export default function VenueDashboardLayout({
   const [imageUrls, setImageUrls] = useState<string[]>(venueData?.gallery?.map((img: any) => img.url) || []);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [shouldWarnOnExit, setShouldWarnOnExit] = useState(true);
+  const [showExitDialog, setShowExitDialog] = useState(false);
+
+  const router = useRouter();
 
   const sidebarItems = [
     ...(venues.length > 0 ? [{ id: "my-venues" as const, label: "My Venues", icon: Building }] : []),
@@ -203,6 +207,26 @@ export default function VenueDashboardLayout({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  // Custom back-button confirmation to leave Venue dashboard
+  useEffect(() => {
+    if (!shouldWarnOnExit || typeof window === "undefined") return;
+
+    // Push a history state so the first back press stays on this page
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      setShowExitDialog(true);
+      // Immediately push state again so further back presses stay here until the user confirms
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [shouldWarnOnExit]);
 
   const createFaq = async () => {
     if (!newFaq.question.trim() || !newFaq.answer.trim()) {
@@ -1839,6 +1863,36 @@ export default function VenueDashboardLayout({
               </div>
             </div>
           )}
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Leave dashboard confirmation dialog */}
+    <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+      <DialogContent className="max-w-sm sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Leave venue dashboard?</DialogTitle>
+          <DialogDescription>
+            If you go back now, you may lose your current view or any unsaved changes. Do you really want to close the dashboard?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end gap-2 pt-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowExitDialog(false)}
+          >
+            Stay on dashboard
+          </Button>
+          <Button
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+            onClick={() => {
+              setShowExitDialog(false);
+              setShouldWarnOnExit(false);
+              router.push("/");
+            }}
+          >
+            Leave dashboard
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

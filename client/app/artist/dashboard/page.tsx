@@ -248,6 +248,8 @@ export default function ArtistDashboard() {
   const [techRiderSaving, setTechRiderSaving] = useState(false);
   const [uploadingTechRiderFile, setUploadingTechRiderFile] = useState(false);
   const [techRiderForm, setTechRiderForm] = useState<TechRider>({});
+  const [shouldWarnOnExit, setShouldWarnOnExit] = useState(true);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   // Fetch artist profile from backend
   useEffect(() => {
@@ -274,6 +276,26 @@ export default function ArtistDashboard() {
       setLoading(false);
     }
   }, [router]);
+
+  // Custom back-button confirmation to leave Artist dashboard
+  useEffect(() => {
+    if (!shouldWarnOnExit || typeof window === "undefined") return;
+
+    // Push a history state so the first back press stays on this page
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      setShowExitDialog(true);
+      // Immediately push state again so further back presses stay here until the user confirms
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [shouldWarnOnExit]);
 
   // Initialize form state when profile loads
   useEffect(() => {
@@ -429,6 +451,8 @@ export default function ArtistDashboard() {
   };
 
   const handleLogout = () => {
+    // Allow intentional logout without showing the leave-dashboard dialog
+    setShouldWarnOnExit(false);
     localStorage.removeItem('artist_token');
     localStorage.removeItem('artist_user');
     router.push('/artist/auth/login');
@@ -2119,6 +2143,36 @@ export default function ArtistDashboard() {
           {renderContent()}
         </div>
       </main>
+
+      {/* Leave dashboard confirmation dialog */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent className="max-w-sm sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave artist dashboard?</DialogTitle>
+            <DialogDescription>
+              If you go back now, you may lose your current view or any unsaved changes. Do you really want to close the dashboard?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowExitDialog(false)}
+            >
+              Stay on dashboard
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-pink-600 to-purple-600 text-white"
+              onClick={() => {
+                setShowExitDialog(false);
+                setShouldWarnOnExit(false);
+                router.push("/");
+              }}
+            >
+              Leave dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

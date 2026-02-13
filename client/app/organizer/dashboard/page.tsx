@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   LayoutDashboard,
   Calendar,
   Users,
@@ -84,7 +91,10 @@ export default function OrganizerDashboard() {
   const [loading, setLoading] = useState(true)
   const [activeView, setActiveView] = useState("dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [shouldWarnOnExit, setShouldWarnOnExit] = useState(true)
+  const [showExitDialog, setShowExitDialog] = useState(false)
 
+  // Load organizer data from localStorage
   useEffect(() => {
     if (isAuthenticated) {
       const userData = localStorage.getItem('organizer_user');
@@ -100,7 +110,30 @@ export default function OrganizerDashboard() {
     setLoading(authLoading);
   }, [isAuthenticated, authLoading]);
 
+  // Warn user with custom popup when they press browser back from the dashboard
+  useEffect(() => {
+    if (!shouldWarnOnExit || typeof window === "undefined") return
+
+    // Push a new history state so that the first back press stays on this page
+    window.history.pushState(null, "", window.location.href)
+
+    const handlePopState = () => {
+      // Show our own nice UI instead of a native browser popup
+      setShowExitDialog(true)
+      // Immediately push state again so further back presses stay on dashboard
+      window.history.pushState(null, "", window.location.href)
+    }
+
+    window.addEventListener("popstate", handlePopState)
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
+  }, [shouldWarnOnExit])
+
   const handleLogout = () => {
+    // Allow navigation without warning when logging out intentionally
+    setShouldWarnOnExit(false)
     localStorage.removeItem('organizer_token')
     localStorage.removeItem('organizer_user')
     router.push('/organizer/auth/login')
@@ -361,6 +394,37 @@ export default function OrganizerDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Leave dashboard confirmation dialog */}
+      <Dialog open={showExitDialog} onOpenChange={setShowExitDialog}>
+        <DialogContent className="max-w-sm sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave organizer dashboard?</DialogTitle>
+            <DialogDescription>
+              If you go back now, you may lose your current view or any unsaved changes. Do you really want to close the dashboard?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowExitDialog(false)}
+            >
+              Stay on dashboard
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-pink-600 to-purple-600 text-white"
+              onClick={() => {
+                setShowExitDialog(false)
+                setShouldWarnOnExit(false)
+                // Navigate away from dashboard; adjust target if needed
+                router.push("/")
+              }}
+            >
+              Leave dashboard
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
