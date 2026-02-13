@@ -52,6 +52,21 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'City is required']
   },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: [0, 0] // [longitude, latitude]
+    }
+  },
+  address: {
+    type: String,
+    default: ''
+  },
   role: {
     type: String,
     enum: ['user', 'admin', 'artist', 'venue', 'organizer'],
@@ -169,6 +184,9 @@ UserSchema.virtual('organizer', {
 // Ensure virtual fields are serialized
 UserSchema.set('toJSON', { virtuals: true });
 UserSchema.set('toObject', { virtuals: true });
+
+// Create geospatial index for location field
+UserSchema.index({ location: '2dsphere' });
 
 // Compare entered password to hashed passwordHash (new method)
 UserSchema.methods.matchPasswordHash = async function(enteredPassword) {

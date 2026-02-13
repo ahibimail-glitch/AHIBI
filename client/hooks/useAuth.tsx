@@ -10,6 +10,12 @@ interface User {
   email: string;
   phone: string;
   role?: string;
+  city?: string;
+  address?: string;
+  location?: {
+    type: string;
+    coordinates: [number, number]; // [longitude, latitude]
+  };
   // Add other user properties as needed
 }
 

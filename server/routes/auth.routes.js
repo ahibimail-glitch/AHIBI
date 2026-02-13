@@ -46,6 +46,16 @@ const profileValidation = [
   check('profilePic', 'Profile picture must be a string').optional().isString()
 ];
 
+const locationValidation = [
+  check('latitude', 'Latitude must be a number between -90 and 90')
+    .optional()
+    .isFloat({ min: -90, max: 90 }),
+  check('longitude', 'Longitude must be a number between -180 and 180')
+    .optional()
+    .isFloat({ min: -180, max: 180 }),
+  check('address', 'Address must be a string').optional().isString()
+];
+
 // Public routes
 router.post('/send-otp', phoneValidation, authController.sendOtp);
 router.post('/verify-otp', otpValidation, authController.verifyOtp);
@@ -62,5 +72,6 @@ router.post('/setup-password', protect, passwordSetupValidation, authController.
 // Protected routes
 router.get('/profile', protect, authController.getProfile);
 router.put('/update-profile', protect, profileValidation, authController.updateProfile);
+router.put('/update-location', protect, locationValidation, authController.updateLocation);
 
 module.exports = router;
