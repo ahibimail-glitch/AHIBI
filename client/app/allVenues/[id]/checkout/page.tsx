@@ -534,10 +534,10 @@ export default function VenueCheckoutPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-red-500 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading venue information...</p>
+          <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin text-red-500 mx-auto" />
+          <p className="mt-4 text-sm sm:text-base text-gray-600">Loading venue information...</p>
         </div>
       </div>
     );
@@ -545,18 +545,18 @@ export default function VenueCheckoutPage() {
 
   if (!loading && !venueData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CalendarIcon className="h-8 w-8 text-red-500" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-red-100 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-red-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Venue Not Found</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Venue Not Found</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-6">
             The venue you're looking for doesn't exist or has been removed.
           </p>
           <Button
             onClick={() => router.push('/allVenues')}
-            className="bg-red-500 hover:bg-red-600"
+            className="bg-red-500 hover:bg-red-600 h-11 sm:h-12 text-sm sm:text-base px-6"
           >
             Browse All Venues
           </Button>
@@ -570,52 +570,56 @@ export default function VenueCheckoutPage() {
       <Navbar />
       
       {isVerifying && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100]">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center mx-4">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-red-200 border-t-red-600"></div>
-            <p className="text-gray-800 text-lg mt-4 font-medium">Verifying payment...</p>
-            <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-[100] px-4">
+          <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full">
+            <div className="animate-spin rounded-full h-14 w-14 sm:h-16 sm:w-16 border-4 border-red-200 border-t-red-600"></div>
+            <p className="text-gray-800 text-base sm:text-lg mt-4 font-medium">Verifying payment...</p>
+            <p className="text-gray-500 text-xs sm:text-sm mt-1">Please wait a moment</p>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Breadcrumb */}
         <button 
           onClick={() => router.push(`/allVenues/${venueId}`)}
-          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4 sm:mb-6 transition-colors min-h-[44px]"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back
+          <span>Back</span>
         </button>
 
-        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-6 lg:mb-8">Complete your booking</h1>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">
+          Complete your booking
+        </h1>
 
-        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column - Venue Info & Booking Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Venue Summary Card */}
             <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
-                    <Building2 className="w-full h-full p-4 text-gray-400" />
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
+                    <Building2 className="w-full h-full p-3 sm:p-4 text-gray-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h2 className="text-lg lg:text-xl font-bold text-gray-900 truncate">{venueData?.name}</h2>
-                      <div className="flex items-center gap-1 flex-shrink-0 text-sm">
-                        <Star className="h-4 w-4 fill-red-500 text-red-500" />
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                      <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 line-clamp-2">
+                        {venueData?.name}
+                      </h2>
+                      <div className="flex items-center gap-1 flex-shrink-0 text-xs sm:text-sm">
+                        <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-red-500 text-red-500" />
                         <span className="font-semibold">
                           {(venueData?.rating?.average ?? 0).toFixed(1)}
                         </span>
                         <span className="text-gray-500">
-                          · {venueData?.rating?.count ?? 0} reviews
+                          · {venueData?.rating?.count ?? 0}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
+                      <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                       <span className="truncate">{venueData?.address?.city}, {venueData?.address?.state}</span>
                     </div>
                   </div>
@@ -625,12 +629,12 @@ export default function VenueCheckoutPage() {
 
             {/* Calendar Card */}
             <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-bold text-gray-900">Select a date</CardTitle>
+              <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+                <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Select a date</CardTitle>
               </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="flex justify-center">
+              <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="flex justify-center overflow-x-auto">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
@@ -657,15 +661,15 @@ export default function VenueCheckoutPage() {
                       caption: "flex justify-center pt-1 relative items-center px-2",
                       caption_label: "text-sm font-semibold",
                       nav: "space-x-1 flex items-center",
-                      nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+                      nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100",
                       nav_button_previous: "absolute left-1",
                       nav_button_next: "absolute right-1",
                       table: "w-full border-collapse space-y-1",
                       head_row: "flex justify-around",
-                      head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem] flex-1 text-center",
+                      head_cell: "text-gray-500 rounded-md w-8 sm:w-9 font-normal text-[0.75rem] sm:text-[0.8rem] flex-1 text-center",
                       row: "flex w-full mt-2 justify-around",
                       cell: "text-center text-sm p-0 relative flex-1 [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                      day: "h-9 w-9 p-0 font-normal hover:bg-gray-100 rounded-md aria-selected:opacity-100 mx-auto",
+                      day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-gray-100 rounded-md aria-selected:opacity-100 mx-auto text-sm sm:text-base",
                       day_selected: "bg-red-500 text-white hover:bg-red-600 hover:text-white focus:bg-red-500 focus:text-white",
                       day_today: "bg-gray-100 text-gray-900 font-semibold",
                       day_outside: "text-gray-400 opacity-50",
@@ -676,9 +680,9 @@ export default function VenueCheckoutPage() {
                 </div>
 
                 {slotSummary && (
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
-                      <span><strong>{slotSummary.totalSlots}</strong> total slots</span>
+                  <div className="bg-gray-50 p-2.5 sm:p-3 rounded-lg">
+                    <div className="flex items-center justify-center gap-3 sm:gap-4 text-xs text-gray-600">
+                      <span><strong>{slotSummary.totalSlots}</strong> total</span>
                       <span className="text-green-600"><strong>{slotSummary.availableSlots}</strong> available</span>
                       <span className="text-red-600"><strong>{slotSummary.bookedSlots}</strong> booked</span>
                     </div>
@@ -690,14 +694,14 @@ export default function VenueCheckoutPage() {
             {/* Booking Duration Selection */}
             {selectedDate && (
               <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-gray-900">Select booking duration</CardTitle>
+                <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+                  <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Select booking duration</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     {/* Custom Time Option */}
                     <div className="col-span-1">
-                      <Label className="text-sm font-medium text-gray-900 mb-2 block">
+                      <Label className="text-xs sm:text-sm font-medium text-gray-900 mb-2 block">
                         Custom Time
                       </Label>
                       <div className="space-y-2">
@@ -717,7 +721,7 @@ export default function VenueCheckoutPage() {
                             }
                           }}
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full h-11 text-sm">
                             <SelectValue placeholder="Start time" />
                           </SelectTrigger>
                           <SelectContent>
@@ -730,8 +734,8 @@ export default function VenueCheckoutPage() {
                                   disabled={!isAvailable}
                                   className={!isAvailable ? "text-gray-400" : ""}
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     {slot.label}
                                     {!isAvailable && <span className="text-xs text-red-500">(Booked)</span>}
                                   </div>
@@ -748,7 +752,7 @@ export default function VenueCheckoutPage() {
                             }
                           }}
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full h-11 text-sm">
                             <SelectValue placeholder="End time" />
                           </SelectTrigger>
                           <SelectContent>
@@ -762,11 +766,11 @@ export default function VenueCheckoutPage() {
                                   disabled={!isAvailable || !isValidEndTime}
                                   className={!isAvailable || !isValidEndTime ? "text-gray-400" : ""}
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     {slot.label}
                                     {!isAvailable && <span className="text-xs text-red-500">(Booked)</span>}
-                                    {!isValidEndTime && <span className="text-xs text-orange-500">(Before start)</span>}
+                                    {!isValidEndTime && <span className="text-xs text-orange-500">(Invalid)</span>}
                                   </div>
                                 </SelectItem>
                               );
@@ -778,7 +782,7 @@ export default function VenueCheckoutPage() {
 
                     {/* Half Day Option */}
                     <div>
-                      <Label className="text-sm font-medium text-gray-900 mb-2 block">
+                      <Label className="text-xs sm:text-sm font-medium text-gray-900 mb-2 block">
                         Half Day
                       </Label>
                       <button
@@ -789,18 +793,18 @@ export default function VenueCheckoutPage() {
                             endTime: "17:00" 
                           });
                         }}
-                        className={`w-full p-4 rounded-lg border-2 transition-all ${
+                        className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-all min-h-[100px] ${
                           bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00"
                             ? 'border-red-500 bg-red-50 text-red-700'
                             : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
                         <div className="text-center">
-                          <Clock className="h-6 w-6 mx-auto mb-2" />
-                          <div className="font-semibold">8 Hours</div>
-                          <div className="text-sm">9:00 AM - 5:00 PM</div>
+                          <Clock className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1.5 sm:mb-2" />
+                          <div className="font-semibold text-sm sm:text-base">8 Hours</div>
+                          <div className="text-xs sm:text-sm">9 AM - 5 PM</div>
                           {venueData?.pricing?.halfDayRate && (
-                            <div className="text-sm font-medium mt-1">
+                            <div className="text-xs sm:text-sm font-medium mt-1">
                               ₹{venueData.pricing.halfDayRate.toLocaleString('en-IN')}
                             </div>
                           )}
@@ -810,7 +814,7 @@ export default function VenueCheckoutPage() {
 
                     {/* Full Day Option */}
                     <div>
-                      <Label className="text-sm font-medium text-gray-900 mb-2 block">
+                      <Label className="text-xs sm:text-sm font-medium text-gray-900 mb-2 block">
                         Full Day
                       </Label>
                       <button
@@ -821,18 +825,18 @@ export default function VenueCheckoutPage() {
                             endTime: "23:00" 
                           });
                         }}
-                        className={`w-full p-4 rounded-lg border-2 transition-all ${
+                        className={`w-full p-3 sm:p-4 rounded-lg border-2 transition-all min-h-[100px] ${
                           bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00"
                             ? 'border-red-500 bg-red-50 text-red-700'
                             : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
                         <div className="text-center">
-                          <Clock className="h-6 w-6 mx-auto mb-2" />
-                          <div className="font-semibold">23 Hours</div>
-                          <div className="text-sm">12:00 AM - 11:00 PM</div>
+                          <Clock className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-1.5 sm:mb-2" />
+                          <div className="font-semibold text-sm sm:text-base">23 Hours</div>
+                          <div className="text-xs sm:text-sm">12 AM - 11 PM</div>
                           {venueData?.pricing?.fullDayRate && (
-                            <div className="text-sm font-medium mt-1">
+                            <div className="text-xs sm:text-sm font-medium mt-1">
                               ₹{venueData.pricing.fullDayRate.toLocaleString('en-IN')}
                             </div>
                           )}
@@ -842,9 +846,9 @@ export default function VenueCheckoutPage() {
                   </div>
 
                   {bookingForm.startTime && bookingForm.endTime && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-2 text-sm text-blue-700">
-                        <Clock className="h-4 w-4" />
+                    <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-blue-700">
+                        <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                         <span>
                           Duration: {getDurationHours(bookingForm.startTime, bookingForm.endTime).toFixed(1)} hours
                         </span>
@@ -858,12 +862,12 @@ export default function VenueCheckoutPage() {
             {/* Guest Count */}
             {selectedDate && bookingForm.startTime && (
               <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-gray-900">Number of guests</CardTitle>
+                <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+                  <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Number of guests</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
                   <div className="space-y-2">
-                    <Label htmlFor="guestCount" className="text-sm font-medium text-gray-900">
+                    <Label htmlFor="guestCount" className="text-xs sm:text-sm font-medium text-gray-900">
                       Number of guests
                     </Label>
                     <Input
@@ -878,10 +882,10 @@ export default function VenueCheckoutPage() {
                           setGuestCount(value);
                         }
                       }}
-                      className="w-full"
+                      className="w-full h-11 text-sm sm:text-base"
                       placeholder="Enter number of guests"
                     />
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs sm:text-sm text-gray-500">
                       Maximum capacity: {venueData?.capacity || 0} guests
                     </p>
                   </div>
@@ -889,19 +893,19 @@ export default function VenueCheckoutPage() {
               </Card>
             )}
 
-            {/* Event Type (Mobile) */}
+            {/* Event Type */}
             {selectedDate && bookingForm.startTime && (
-              <Card className="bg-white border border-gray-200 shadow-sm lg:hidden">
-                <CardContent className="p-4">
-                  <Label htmlFor="eventType-mobile" className="text-sm font-medium text-gray-900 mb-2 block">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardContent className="p-4 sm:p-6">
+                  <Label htmlFor="eventType" className="text-xs sm:text-sm font-medium text-gray-900 mb-2 block">
                     Event Type (Optional)
                   </Label>
                   <Input 
-                    id="eventType-mobile"
+                    id="eventType"
                     value={bookingForm.eventType} 
                     onChange={(e) => setBookingForm({ ...bookingForm, eventType: e.target.value })} 
                     placeholder="Wedding, Party, Conference, etc." 
-                    className="h-11"
+                    className="h-11 text-sm sm:text-base"
                   />
                 </CardContent>
               </Card>
@@ -910,19 +914,19 @@ export default function VenueCheckoutPage() {
 
           {/* Right Column - Price Summary */}
           <div className="lg:col-span-1">
-            <div className="sticky top-4">
+            <div className="lg:sticky lg:top-4">
               <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg font-bold text-gray-900">Price summary</CardTitle>
+                <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+                  <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Price summary</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
                   {bookingSuccess ? (
-                    <div className="text-center py-6">
-                      <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle className="h-10 w-10 text-green-600" />
+                    <div className="text-center py-4 sm:py-6">
+                      <div className="bg-green-100 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                        <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-green-600" />
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
-                      <div className="text-left space-y-2 text-sm bg-green-50 p-4 rounded-xl mt-4 mb-4">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Booking Confirmed!</h3>
+                      <div className="text-left space-y-2 text-xs sm:text-sm bg-green-50 p-3 sm:p-4 rounded-xl mt-3 sm:mt-4 mb-3 sm:mb-4">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Date:</span>
                           <span className="font-medium">{format(new Date(finalBookingDetails?.bookingDate), 'PP')}</span>
@@ -936,16 +940,16 @@ export default function VenueCheckoutPage() {
                           <span className="font-bold text-green-600">₹{finalBookingDetails?.pricing?.totalAmount?.toLocaleString('en-IN')}</span>
                         </div>
                       </div>
-                      <Button onClick={handleDownloadInvoice} className="w-full bg-green-600 hover:bg-green-700">
+                      <Button onClick={handleDownloadInvoice} className="w-full bg-green-600 hover:bg-green-700 h-11 sm:h-12 text-sm sm:text-base">
                         <Download className="h-4 w-4 mr-2" />
                         Download Invoice
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {venueData && selectedDate && bookingForm.startTime ? (
                         <div>
-                          <div className="space-y-3 text-sm">
+                          <div className="space-y-2.5 sm:space-y-3 text-xs sm:text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-600">Base price</span>
                               <span className="font-medium">₹{venueData.pricing.basePrice.toLocaleString('en-IN')}</span>
@@ -957,7 +961,7 @@ export default function VenueCheckoutPage() {
                                     ? "Full day rate"
                                     : bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00"
                                     ? "Half day rate"
-                                    : `Hourly rate (${getDurationHours(bookingForm.startTime, bookingForm.endTime || bookingForm.startTime).toFixed(1)} hrs)`
+                                    : `Hourly (${getDurationHours(bookingForm.startTime, bookingForm.endTime || bookingForm.startTime).toFixed(1)}h)`
                                   }
                                 </span>
                                 <span className="font-medium">
@@ -984,19 +988,19 @@ export default function VenueCheckoutPage() {
                             )}
                           </div>
 
-                          <div className="border-t pt-4">
-                            <div className="flex justify-between items-center mb-4">
-                              <span className="text-base font-semibold text-gray-900">Total</span>
-                              <span className="text-2xl font-bold text-gray-900">₹{estimatedPrice.toLocaleString('en-IN')}</span>
+                          <div className="border-t pt-3 sm:pt-4 mt-3 sm:mt-4">
+                            <div className="flex justify-between items-center mb-3 sm:mb-4">
+                              <span className="text-sm sm:text-base font-semibold text-gray-900">Total</span>
+                              <span className="text-xl sm:text-2xl font-bold text-gray-900">₹{estimatedPrice.toLocaleString('en-IN')}</span>
                             </div>
 
                             {formError && (
-                              <div className="p-3 text-sm text-red-700 bg-red-50 rounded-lg mb-4">{formError}</div>
+                              <div className="p-2.5 sm:p-3 text-xs sm:text-sm text-red-700 bg-red-50 rounded-lg mb-3 sm:mb-4">{formError}</div>
                             )}
 
                             <Button 
                               onClick={handleBookingSubmit}
-                              className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-lg h-auto text-base"
+                              className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 sm:py-3.5 rounded-lg h-auto text-sm sm:text-base"
                               disabled={submitting || authLoading || !bookingForm.startTime}
                             >
                               {submitting ? (
@@ -1011,9 +1015,9 @@ export default function VenueCheckoutPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-8">
-                          <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">Select date and time to see pricing</p>
+                        <div className="text-center py-6 sm:py-8">
+                          <CalendarIcon className="h-10 w-10 sm:h-12 sm:w-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+                          <p className="text-xs sm:text-sm text-gray-500">Select date and time to see pricing</p>
                         </div>
                       )}
                     </div>
