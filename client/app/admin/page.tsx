@@ -434,7 +434,7 @@ export default function AdminDashboard() {
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
-          {/* <SidebarButton icon={FileText} label="Terms & Conditions" active={activeView === "terms"} onClick={() => { setActiveView("terms"); setSidebarOpen(false); }} /> */}
+          <SidebarButton icon={FileText} label="Terms & Conditions" active={activeView === "terms"} onClick={() => { setActiveView("terms"); setSidebarOpen(false); }} />
           <SidebarButton icon={Ticket} label="Coupons" active={activeView === "coupons"} onClick={() => { setActiveView("coupons"); setSidebarOpen(false); }} />
           {/* <SidebarButton icon={Building2} label="Aiko Hall" active={activeView === "aiko-hall"} onClick={() => { setActiveView("aiko-hall"); setSidebarOpen(false); }} /> */}
           <SidebarButton icon={ImageIcon} label="Hero Images" active={activeView === "hero-images"} onClick={() => { setActiveView("hero-images"); setSidebarOpen(false); }} />

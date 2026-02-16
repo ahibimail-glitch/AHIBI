@@ -194,7 +194,7 @@ const Hero = () => (
 const IntroSection = () => (
   <Section className="relative bg-gradient-to-b from-white to-gray-50">
     <div className="max-w-5xl mx-auto text-center px-6">
-      
+
       {/* Small Tagline */}
       <p className="text-sm font-semibold text-pink-600 tracking-wide uppercase mb-4">
         Designed for Growth
@@ -229,7 +229,7 @@ const IntroSection = () => (
 
 const FeaturesSection = () => (
   <Section className="relative bg-gradient-to-b from-gray-50 to-white">
-    
+
     {/* Heading */}
     <div className="text-center mb-16">
       <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
@@ -258,7 +258,7 @@ const FeaturesSection = () => (
         >
           <CardContent className="p-8">
             <div className="flex items-start gap-5">
-              
+
               {/* Icon */}
               <div
                 className="

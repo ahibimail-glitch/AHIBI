@@ -21,7 +21,7 @@ interface User {
 
 interface UseAuthOptions {
   tokenName?: string;
-  redirectPath?: string;
+  redirectPath?: string | null;
 }
 
 // Helper function to decode JWT token to get user role
@@ -63,7 +63,7 @@ export const useAuth = (options?: UseAuthOptions) => {
   
   // Default options
   const tokenName = options?.tokenName || 'token';
-  const redirectPath = options?.redirectPath || '/auth';
+  const redirectPath = options?.redirectPath ?? '/auth';
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -74,7 +74,7 @@ export const useAuth = (options?: UseAuthOptions) => {
           setIsAuthenticated(false);
           setUser(null);
           setLoading(false);
-          if (redirectPath) {
+          if (redirectPath !== null) {
             router.replace(createAuthRedirectUrl());
           }
           return;
@@ -108,7 +108,7 @@ export const useAuth = (options?: UseAuthOptions) => {
           localStorage.removeItem(tokenName); // Invalid token, remove it
           setIsAuthenticated(false);
           setUser(null);
-          if (redirectPath) {
+          if (redirectPath !== null) {
             router.replace(createAuthRedirectUrl());
           }
         } finally {

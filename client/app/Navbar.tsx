@@ -35,7 +35,7 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const pathname = usePathname();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth({ redirectPath: null });
 
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
