@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from "../../../../hooks/useAuth";
 import { createAuthRedirectUrl } from "@/utils/redirectUtils";
@@ -37,6 +38,10 @@ interface VenueData {
   managedByVenueId?: string | null;
   name: string;
   description: string;
+  rating?: {
+    average?: number;
+    count?: number;
+  };
   address: {
     street: string;
     city: string;
@@ -515,6 +520,18 @@ export default function VenueCheckoutPage() {
     return timeSlot?.available !== false;
   };
 
+  const slotSummary = useMemo(() => {
+    if (!availabilityData?.timeSlots?.length) {
+      return availabilityData?.summary ?? null;
+    }
+
+    const totalSlots = availabilityData.timeSlots.length;
+    const bookedSlots = availabilityData.timeSlots.filter(slot => slot.available === false).length;
+    const availableSlots = totalSlots - bookedSlots;
+
+    return { totalSlots, availableSlots, bookedSlots };
+  }, [availabilityData]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -587,10 +604,14 @@ export default function VenueCheckoutPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h2 className="text-lg lg:text-xl font-bold text-gray-900 truncate">{venueData?.name}</h2>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 flex-shrink-0 text-sm">
                         <Star className="h-4 w-4 fill-red-500 text-red-500" />
-                        <span className="text-sm font-semibold">4.8</span>
-                        <span className="text-sm text-gray-500">· 124 reviews</span>
+                        <span className="font-semibold">
+                          {(venueData?.rating?.average ?? 0).toFixed(1)}
+                        </span>
+                        <span className="text-gray-500">
+                          · {venueData?.rating?.count ?? 0} reviews
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -654,12 +675,12 @@ export default function VenueCheckoutPage() {
                   />
                 </div>
 
-                {availabilityData && (
+                {slotSummary && (
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <div className="flex items-center justify-center gap-4 text-xs text-gray-600">
-                      <span><strong>{availabilityData.summary.totalSlots}</strong> total slots</span>
-                      <span className="text-green-600"><strong>{availabilityData.summary.availableSlots}</strong> available</span>
-                      <span className="text-red-600"><strong>{availabilityData.summary.bookedSlots}</strong> booked</span>
+                      <span><strong>{slotSummary.totalSlots}</strong> total slots</span>
+                      <span className="text-green-600"><strong>{slotSummary.availableSlots}</strong> available</span>
+                      <span className="text-red-600"><strong>{slotSummary.bookedSlots}</strong> booked</span>
                     </div>
                   </div>
                 )}
@@ -941,11 +962,11 @@ export default function VenueCheckoutPage() {
                                 </span>
                                 <span className="font-medium">
                                   {bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00"
-                                    ? `₹${(venueData.pricing.fullDayRate || (venueData.pricing.hourlyRate || 0) * 23).toLocaleString('en-IN')}`
-                                    : bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00"
-                                    ? `₹${(venueData.pricing.halfDayRate || (venueData.pricing.hourlyRate || 0) * 8).toLocaleString('en-IN')}`
-                                    : `₹${((venueData.pricing.hourlyRate || 0) * getDurationHours(bookingForm.startTime, bookingForm.endTime || bookingForm.startTime)).toLocaleString('en-IN')}`
-                                  }
+                            ? `₹${(venueData.pricing.fullDayRate || (venueData.pricing.hourlyRate || 0) * 23).toLocaleString('en-IN')}`
+                            : bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00"
+                            ? `₹${(venueData.pricing.halfDayRate || (venueData.pricing.hourlyRate || 0) * 8).toLocaleString('en-IN')}`
+                            : `₹${((venueData.pricing.hourlyRate || 0) * getDurationHours(bookingForm.startTime, bookingForm.endTime || bookingForm.startTime)).toLocaleString('en-IN')}`
+                          }
                                 </span>
                               </div>
                             )}

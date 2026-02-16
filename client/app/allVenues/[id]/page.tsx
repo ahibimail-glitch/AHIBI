@@ -493,6 +493,7 @@ export default function VenueDetailPage() {
 
   const displayImages = extractVenueImages(venueData);
   const startingPrice = venueData?.pricing.basePrice || 0;
+  const pricing = venueData?.pricing;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -575,7 +576,7 @@ export default function VenueDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-foreground leading-tight">
-                      ${startingPrice.toLocaleString()}
+                      ₹{startingPrice.toLocaleString("en-IN")}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Starting
@@ -740,57 +741,65 @@ export default function VenueDetailPage() {
 
               {/* Base Price Highlight */}
               <div className="mb-5">
-                <span className="text-3xl font-bold text-primary">
-                  ${venueData?.pricing.basePrice.toLocaleString()}
-                </span>
-                <span className="text-sm text-muted-foreground ml-1.5">
-                  base price
-                </span>
+                {pricing?.basePrice !== undefined ? (
+                  <>
+                    <span className="text-3xl font-bold text-primary">
+                      ₹{pricing.basePrice.toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-sm text-muted-foreground ml-1.5">
+                      base price
+                    </span>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Contact the venue for base pricing details
+                  </p>
+                )}
               </div>
 
               {/* Pricing Rows */}
               <div className="space-y-3 mb-5">
-                {venueData?.pricing.hourlyRate && (
+                {pricing?.hourlyRate !== undefined && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Hourly Rate</span>
                     <span className="font-medium text-foreground">
-                      ${venueData.pricing.hourlyRate}
+                      ₹{pricing.hourlyRate.toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
 
-                {venueData?.pricing.halfDayRate && (
+                {pricing?.halfDayRate !== undefined && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Half Day</span>
                     <span className="font-medium text-foreground">
-                      ${venueData.pricing.halfDayRate}
+                      ₹{pricing.halfDayRate.toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
 
-                {venueData?.pricing.fullDayRate && (
+                {pricing?.fullDayRate !== undefined && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Full Day</span>
                     <span className="font-medium text-foreground">
-                      ${venueData.pricing.fullDayRate}
+                      ₹{pricing.fullDayRate.toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
 
-                {venueData?.pricing.cleaningFee !== undefined && (
+                {pricing?.cleaningFee !== undefined && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Cleaning Fee</span>
                     <span className="font-medium text-foreground">
-                      ${venueData.pricing.cleaningFee.toLocaleString()}
+                      ₹{pricing.cleaningFee.toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
 
-                {venueData?.pricing.securityDeposit && (
+                {pricing?.securityDeposit !== undefined && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Security Deposit</span>
                     <span className="font-medium text-foreground">
-                      ${venueData.pricing.securityDeposit.toLocaleString()}
+                      ₹{pricing.securityDeposit.toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
@@ -989,7 +998,7 @@ export default function VenueDetailPage() {
               <div className="mb-6">
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-bold text-gray-900">
-                    ${startingPrice.toLocaleString()}
+                    ₹{startingPrice.toLocaleString("en-IN")}
                   </span>
                   <span className="text-gray-600">starting</span>
                 </div>
@@ -1009,7 +1018,9 @@ export default function VenueDetailPage() {
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-gray-600 text-xs mb-1">Cleaning Fee</p>
                     <p className="font-semibold text-gray-900">
-                      ${venueData?.pricing.cleaningFee !== undefined ? venueData.pricing.cleaningFee.toLocaleString() : "NA"}
+                      {venueData?.pricing.cleaningFee !== undefined
+                        ? `₹${venueData.pricing.cleaningFee.toLocaleString("en-IN")}`
+                        : "NA"}
                     </p>
                   </div>
                 </div>
@@ -1065,7 +1076,7 @@ export default function VenueDetailPage() {
                       </div>
                       <div className="flex items-baseline gap-1">
                         <span className="font-bold text-gray-900">
-                          ${(venue.pricing.hourlyRate || venue.pricing.basePrice || 0).toLocaleString()}
+                          ₹{(venue.pricing.hourlyRate || venue.pricing.basePrice || 0).toLocaleString("en-IN")}
                         </span>
                         <span className="text-sm text-gray-500">starting</span>
                       </div>
@@ -1083,7 +1094,7 @@ export default function VenueDetailPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="flex items-baseline gap-1">
-              <span className="text-xl font-bold text-gray-900">${startingPrice.toLocaleString()}</span>
+              <span className="text-xl font-bold text-gray-900">₹{startingPrice.toLocaleString("en-IN")}</span>
               <span className="text-sm text-gray-600">starting</span>
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-500">
