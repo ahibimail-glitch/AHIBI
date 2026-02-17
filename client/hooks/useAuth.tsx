@@ -63,7 +63,7 @@ export const useAuth = (options?: UseAuthOptions) => {
   
   // Default options
   const tokenName = options?.tokenName || 'token';
-  const redirectPath = options?.redirectPath ?? '/auth';
+  const redirectPath = options?.redirectPath === undefined ? '/auth' : options.redirectPath;
 
   useEffect(() => {
     const fetchUser = async () => {

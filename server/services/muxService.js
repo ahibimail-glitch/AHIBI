@@ -48,12 +48,12 @@ const createLiveStream = async (options = {}) => {
     const { liveStreams } = getMuxApis();
 
     const {
-      playbackPolicy = 'signed', // 'signed' for protected, 'public' for open
+      playbackPolicy = 'public', // 'signed' for protected, 'public' for open
       latencyMode = 'low', // 'low', 'reduced', 'standard'
       reconnectWindow = 60, // seconds to wait for reconnection
       maxContinuousDuration = 43200, // 12 hours max
       newAssetSettings = {
-        playback_policy: ['signed'], // VOD will also be signed
+        playback_policy: ['public'], // VOD will also be signed
         mp4_support: 'standard' // Enable MP4 download for VOD
       }
     } = options;

@@ -56,6 +56,12 @@ const liveStreamSchema = new mongoose.Schema({
     index: true
   },
 
+  playbackPolicy: {
+    type: String,
+    enum: ['signed', 'public'],
+    default: 'signed'
+  },
+
   // RTMP ingest URL
   rtmpUrl: {
     type: String,

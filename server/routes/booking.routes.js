@@ -7,6 +7,7 @@ const auth = require("../middlewares/auth");
 const QRCode = require('qrcode'); // Import QRCode library
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
+const whatsappService = require('../services/whatsappService');
 const Scan = require("../models/Scan");
 
 // @route   POST /api/bookings/verify-ticket
@@ -215,7 +216,50 @@ router.post("/", auth.protect, async (req, res) => {
       console.log('[Booking] QR code generated successfully');
       
       // SMS sending disabled for successful bookings
-      
+
+      const displayEventDate = isEvent.startDate
+        ? new Date(isEvent.startDate).toLocaleString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Event date TBA';
+
+      // Send WhatsApp confirmation via Fast2SMS template (non-blocking)
+      if (userDetails?.phone) {
+        whatsappService
+          .sendBookingConfirmationTemplate({
+            phone: userDetails.phone,
+            customerName: userDetails.name || userDetails.email || 'Customer',
+            eventName: isEvent.title,
+            eventDate: displayEventDate,
+            ticketType: booking.ticketType,
+            quantity: booking.quantity,
+            bookingId: booking._id,
+          })
+          .then(() => console.log('[Booking] WhatsApp template confirmation sent'))
+          .catch((waError) =>
+            console.error('[Booking] WhatsApp template send failed:', waError?.message || waError)
+          );
+      }
+
+      // Send admin WhatsApp alert (non-blocking)
+      whatsappService
+        .sendAdminBookingAlert({
+          bookingId: booking._id,
+          customerName: userDetails?.name || 'Customer',
+          itemsCount: booking.quantity,
+          totalAmount: booking.total,
+          shippingLabel: displayEventDate,
+          statusPretty: 'Confirmed'
+        })
+        .then(() => console.log('[Booking] Admin WhatsApp alert sent'))
+        .catch((waError) =>
+          console.error('[Booking] Admin WhatsApp alert failed:', waError?.message || waError)
+        );
+
       // Send ticket via email with QR code
       if (userDetails && userDetails.email) {
         // Rest of the email sending code remains unchanged

@@ -38,12 +38,12 @@ const createLiveStream = asyncHandler(async (req, res) => {
 
   try {
     const muxResult = await muxService.createLiveStream({
-      playbackPolicy: 'signed',
+      playbackPolicy: 'public',
       latencyMode,
       reconnectWindow: 60,
       maxContinuousDuration: 43200,
       newAssetSettings: {
-        playback_policy: ['signed'],
+        playback_policy: ['public'],
         mp4_support: 'standard'
       }
     });

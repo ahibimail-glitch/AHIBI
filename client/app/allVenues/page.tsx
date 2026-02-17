@@ -70,8 +70,12 @@ const toFeaturedVenueCard = (venue: VenueApiItem) => {
     id: venue._id,
     name: venue.name,
     location,
+    city: venue.address?.city || "",
+    state: venue.address?.state || "",
+    capacityRaw: venue.capacityDetails?.standingCapacity ?? venue.capacity ?? null,
     capacity: formatCapacityLabel(venue),
     price: formatPriceLabel(venue),
+    basePriceValue: venue.pricing?.basePrice ?? null,
     rating: venue.rating?.average ?? 0,
     reviews: venue.rating?.count ?? 0,
     type: formatVenueType(venue),
@@ -318,6 +322,8 @@ const HowItWorksSection = () => (
 const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<typeof toFeaturedVenueCard>[] }) => {
   if (featuredVenues.length === 0) return null;
 
+  const displayedVenues = featuredVenues.slice(0, 2);
+
   return (
     <Section className="bg-gray-50">
       <div className="flex items-center justify-between mb-8">
@@ -332,70 +338,72 @@ const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<type
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {featuredVenues.map((venue) => (
-          <Link key={venue.id} href={`/allVenues/${venue.id}`} className="block">
-            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group h-full">
-              <div className="aspect-[4/3] overflow-hidden relative">
-                <img
-                  src={venue.image}
-                  alt={venue.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <Badge className="absolute top-3 left-3 bg-pink-600 hover:bg-pink-700 text-white border-0">
-                  {venue.type}
-                </Badge>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {displayedVenues.map((venue) => (
+          <Link key={venue.id} href={`/allVenues/${venue.id}`} className="group block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-200">
+            <div className="relative aspect-[16/10] overflow-hidden">
+              <img
+                src={venue.image}
+                alt={venue.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-800 flex items-center gap-1">
+                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                {(venue.rating || 0).toFixed(1)}
               </div>
-              <CardContent className="p-5">
-                <h3 className="font-semibold text-xl text-gray-900 mb-2">{venue.name}</h3>
-                <p className="text-sm text-gray-600 mb-3 flex items-center">
-                  <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
-                  {venue.location}
-                </p>
-                <div className="flex items-center justify-between text-sm mb-3">
-                  <span className="text-gray-600 flex items-center">
-                    <Users className="h-4 w-4 mr-1 flex-shrink-0" />
-                    {venue.capacity}
-                  </span>
-                  <span className="font-semibold text-pink-600 text-base">{venue.price}</span>
-                </div>
-                <div className="flex items-center text-sm border-t pt-3">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                  <span className="font-medium">{venue.rating}</span>
-                  <span className="text-gray-500 ml-1">({venue.reviews} reviews)</span>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">{venue.type}</p>
+                <h3 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">{venue.name}</h3>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <span className="truncate">{venue.location}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  {venue.capacityRaw ? `${venue.capacityRaw} guests` : "Capacity on request"}
+                </span>
+                <span>{venue.reviews} reviews</span>
+              </div>
+              <div className="border-t border-gray-100 pt-3 flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-gray-900">
+                  {venue.basePriceValue !== null
+                    ? `₹${venue.basePriceValue.toLocaleString("en-IN")}`
+                    : venue.price}
+                </span>
+                <span className="text-sm text-gray-500">starting</span>
+              </div>
+            </div>
           </Link>
         ))}
 
-        <Link href="/allVenues/list" className="block">
-          <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group h-full">
-            <CardContent className="p-0 h-full">
-              <div className="relative h-full min-h-[320px] flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-700">
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
-                    backgroundSize: "18px 18px",
-                  }}
-                />
-                <div className="relative">
-                  <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center mb-4 backdrop-blur-sm mx-auto">
-                    <Building2 className="h-7 w-7 text-white" />
-                  </div>
-                  <h3 className="text-white text-xl font-bold mb-2">View All Venues</h3>
-                  <p className="text-white/90 text-sm mb-5 max-w-xs mx-auto">
-                    Browse every verified venue, filter by city and capacity, and book instantly.
-                  </p>
-                  <Button className="bg-white text-pink-700 hover:bg-white/90 font-semibold">
-                    Explore Venues
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <Link href="/allVenues/list" className="group block bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-700 rounded-2xl text-white p-6 flex flex-col justify-between min-h-[320px] relative overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+              backgroundSize: "18px 18px",
+            }}
+          />
+          <div className="relative space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center backdrop-blur-sm">
+              <Building2 className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-white/80">Discover</p>
+              <h3 className="text-2xl font-bold leading-tight">View all verified venues</h3>
+            </div>
+            <p className="text-white/85 text-sm max-w-sm">
+              Explore the entire catalogue, filter by city, capacity, pricing, and book instantly.
+            </p>
+          </div>
+          <Button className="relative w-full mt-6 bg-white text-pink-700 hover:bg-white/90 font-semibold">
+            Explore venues
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </Link>
       </div>
 
@@ -515,7 +523,7 @@ export default async function AhibiVenuePage() {
     const res = await fetch(`${apiUrl}/api/venue/`, { cache: "no-store" });
     const data = await res.json();
     const venues: VenueApiItem[] = data?.success ? data?.data?.venues || [] : [];
-    featuredVenues = venues.slice(0, 3).map(toFeaturedVenueCard);
+    featuredVenues = venues.slice(0, 2).map(toFeaturedVenueCard);
   } catch {
     featuredVenues = [];
   }

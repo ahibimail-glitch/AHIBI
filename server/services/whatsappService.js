@@ -9,6 +9,64 @@ const normalizeToE164 = (phone) => {
   return null;
 };
 
+const normalizeToFast2SmsNumber = (phone) => {
+  if (!phone) return null;
+  const digits = String(phone).replace(/\D/g, '');
+  if (!digits) return null;
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.startsWith('91') && digits.length === 12) return digits;
+  return digits;
+};
+
+const redactNumber = (number = '') => {
+  const digits = String(number);
+  if (digits.length <= 6) return digits.replace(/\d/g, '*');
+  return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
+};
+
+const sendFast2SmsWhatsapp = async ({ number, messageId, variablesValues }) => {
+  const apiKey = process.env.FAST2SMS_API_KEY;
+  if (!apiKey) {
+    throw new Error('Fast2SMS API key is not configured');
+  }
+
+  if (!messageId) {
+    throw new Error('Fast2SMS WhatsApp template ID is not configured');
+  }
+
+  if (!number) {
+    throw new Error('Destination phone number is missing');
+  }
+
+  const params = {
+    authorization: apiKey,
+    message_id: messageId,
+    numbers: number,
+    variables_values: variablesValues
+  };
+
+  console.log('[Fast2SMS] Sending WhatsApp template', {
+    number: redactNumber(number),
+    messageId,
+    varsCount: String(variablesValues || '').split('|').length
+  });
+
+  const response = await axios.get('https://www.fast2sms.com/dev/whatsapp', {
+    params,
+    timeout: 12000
+  });
+
+  console.log('[Fast2SMS] WhatsApp response', response.data);
+
+  const success = response.data?.return === true;
+  return {
+    success,
+    data: response.data
+  };
+};
+
+const buildVarsPipe = (values = []) => values.map((value) => String(value ?? '').trim()).join('|');
+
 const whatsappService = {
   sendTextMessage: async ({ to, body }) => {
     const enabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'true';
@@ -25,7 +83,34 @@ const whatsappService = {
         hasToken: !!token,
         hasPhoneNumberId: !!phoneNumberId
       });
-      return { success: false, message: 'WhatsApp is not configured' };
+
+      // Fall back to Fast2SMS WhatsApp if Meta config is missing
+      try {
+        const digits = normalizeToFast2SmsNumber(to);
+        const fallbackTemplate = process.env.FAST2SMS_WHATSAPP_FALLBACK_TEMPLATE_ID || process.env.FAST2SMS_MESSAGE_ID;
+        if (!fallbackTemplate) {
+          return { success: false, message: 'No WhatsApp provider configured' };
+        }
+
+        const varsPipe = buildVarsPipe([
+          (body || 'Notification').slice(0, 60),
+          '-',
+          '-',
+          '-',
+          '-',
+          'Info'
+        ]);
+
+        const result = await sendFast2SmsWhatsapp({
+          number: digits,
+          messageId: fallbackTemplate,
+          variablesValues: varsPipe
+        });
+        return result;
+      } catch (fallbackError) {
+        console.error('[WhatsApp] Fast2SMS fallback failed:', fallbackError?.message || fallbackError);
+        return { success: false, message: fallbackError?.message || 'WhatsApp is not configured' };
+      }
     }
 
     const toE164 = normalizeToE164(to);
@@ -67,12 +152,104 @@ const whatsappService = {
         message: error.response?.data?.error?.message || error.message,
         details: error.response?.data
       });
-      return {
-        success: false,
-        message: error.response?.data?.error?.message || error.message,
-        error: error.response?.data || error.message
-      };
+
+      // Attempt Fast2SMS fallback if Meta call fails
+      try {
+        const digits = normalizeToFast2SmsNumber(to);
+        const fallbackTemplate = process.env.FAST2SMS_WHATSAPP_FALLBACK_TEMPLATE_ID || process.env.FAST2SMS_MESSAGE_ID;
+        if (!fallbackTemplate) {
+          throw new Error(error.response?.data?.error?.message || error.message);
+        }
+
+        const varsPipe = buildVarsPipe([
+          (body || 'Notification').slice(0, 60),
+          '-',
+          '-',
+          '-',
+          '-',
+          'Info'
+        ]);
+
+        const result = await sendFast2SmsWhatsapp({
+          number: digits,
+          messageId: fallbackTemplate,
+          variablesValues: varsPipe
+        });
+        return result;
+      } catch (fallbackError) {
+        console.error('[WhatsApp] Fast2SMS fallback failed:', fallbackError?.message || fallbackError);
+        return {
+          success: false,
+          message: error.response?.data?.error?.message || error.message,
+          error: error.response?.data || error.message
+        };
+      }
     }
+  },
+
+  sendBookingConfirmationTemplate: async ({
+    phone,
+    customerName,
+    eventName,
+    eventDate,
+    ticketType,
+    quantity,
+    bookingId,
+    templateId
+  }) => {
+    const normalized = normalizeToFast2SmsNumber(phone);
+    if (!normalized) {
+      throw new Error('Invalid destination phone number');
+    }
+
+    const messageId = templateId || process.env.FAST2SMS_MESSAGE_ID;
+    const varsPipe = buildVarsPipe([
+      customerName || 'Guest',
+      eventName || 'Your event',
+      eventDate || 'Date TBA',
+      ticketType || 'General Admission',
+      typeof quantity === 'number' ? quantity : (Number(quantity) || 1),
+      bookingId || '-'
+    ]);
+
+    return sendFast2SmsWhatsapp({
+      number: normalized,
+      messageId,
+      variablesValues: varsPipe
+    });
+  },
+
+  sendAdminBookingAlert: async ({
+    bookingId,
+    customerName,
+    itemsCount,
+    totalAmount,
+    shippingLabel,
+    statusPretty,
+    templateId,
+    adminNumber
+  }) => {
+    const adminFallbackNumber = adminNumber || process.env.FAST2SMS_ADMIN_NUMBER;
+    const normalized = normalizeToFast2SmsNumber(adminFallbackNumber);
+    if (!normalized) {
+      throw new Error('Admin phone number is not configured');
+    }
+
+    const messageId = templateId || process.env.FAST2SMS_ADMIN_MESSAGE_ID;
+    const varsPipe = buildVarsPipe([
+      customerName || 'Customer',
+      bookingId || '-',
+      typeof itemsCount === 'number' ? itemsCount : (Number(itemsCount) || 1),
+      Number(totalAmount || 0).toFixed(2),
+      shippingLabel || 'E-Ticket Delivery',
+      statusPretty || 'Confirmed'
+    ]);
+
+    return sendFast2SmsWhatsapp({
+      number: normalized,
+      messageId,
+      variablesValues: varsPipe
+    });
   }
 };
 

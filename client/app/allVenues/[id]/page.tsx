@@ -323,6 +323,7 @@ export default function VenueDetailPage() {
   const [venueData, setVenueData] = useState<VenueData | null>(null);
   const [resolvedVenueId, setResolvedVenueId] = useState<string | null>(null);
   const [childVenues, setChildVenues] = useState<VenueData[]>([]);
+  const [managedCollectionLabel, setManagedCollectionLabel] = useState<string | null>(null);
   const [similarVenues, setSimilarVenues] = useState<VenueData[]>([]);
   const [loading, setLoading] = useState(false);
   const { user, loading: authLoading } = useAuth();
@@ -331,19 +332,45 @@ export default function VenueDetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   const fetchChildVenues = async () => {
+    if (!resolvedVenueId || !venueData) return;
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const response = await fetch(`${apiUrl}/api/venue/`);
       const data = await response.json();
-      if (data.success) {
-        const venues: VenueData[] = data.data.venues || [];
+
+      if (!data.success) {
+        setChildVenues([]);
+        setManagedCollectionLabel(null);
+        return;
+      }
+
+      const venues: VenueData[] = data.data.venues || [];
+
+      if (venueData.managedByVenueId) {
+        const managerId = venueData.managedByVenueId;
+        const siblings = venues
+          .filter((v) => v.managedByVenueId === managerId && v._id !== resolvedVenueId)
+          .slice(0, 12);
+
+        const parentVenue = venues.find((v) => v._id === managerId);
+        const combined = parentVenue
+          ? [parentVenue, ...siblings.filter((v) => v._id !== parentVenue._id)]
+          : siblings;
+
+        setChildVenues(combined);
+        setManagedCollectionLabel(parentVenue?.name || null);
+      } else {
         const children = venues
-          .filter((v) => v.managedByVenueId === resolvedVenueId)
+          .filter((v) => v.managedByVenueId === resolvedVenueId && v._id !== resolvedVenueId)
           .slice(0, 12);
         setChildVenues(children);
+        setManagedCollectionLabel(venueData.name || null);
       }
     } catch (error) {
-      console.error('Error fetching child venues:', error);
+      console.error('Error fetching related venues:', error);
+      setChildVenues([]);
+      setManagedCollectionLabel(null);
     }
   };
 
@@ -453,10 +480,11 @@ export default function VenueDetailPage() {
   }, [venueData]);
 
   useEffect(() => {
-    if (venueData && resolvedVenueId && venueData.managedByVenueId == null) {
+    if (venueData && resolvedVenueId) {
       fetchChildVenues();
     } else {
       setChildVenues([]);
+      setManagedCollectionLabel(null);
     }
   }, [venueData, resolvedVenueId]);
 
@@ -1039,6 +1067,71 @@ export default function VenueDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Venues from the same collection/manager */}
+        {childVenues.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+              <div>
+                <p className="text-sm uppercase tracking-wide text-gray-500 mb-1">More options</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {managedCollectionLabel
+                    ? `More venues from ${managedCollectionLabel}`
+                    : "More venues from this host"}
+                </h2>
+              </div>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={() => router.push("/allVenues/list")}
+              >
+                Browse all venues
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {childVenues.map((venue) => {
+                const venueImage = getPrimaryVenueImage(venue);
+                const price = venue.pricing.basePrice || venue.pricing.hourlyRate || 0;
+                return (
+                  <div
+                    key={venue._id}
+                    className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100"
+                    onClick={() => router.push(`/allVenues/${venue._id}`)}
+                  >
+                    <div className="relative h-48 overflow-hidden">
+                      {venueImage ? (
+                        <img src={venueImage} alt={venue.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <ImageIcon className="h-12 w-12 text-gray-400" />
+                        </div>
+                      )}
+                      <Badge className="absolute top-3 left-3 bg-white/85 text-gray-900 border border-white">
+                        {venue.venueClassification?.indoorOutdoor || "Venue"}
+                      </Badge>
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <h3 className="font-semibold text-gray-900 text-lg truncate">{venue.name}</h3>
+                      <div className="flex items-center gap-1 text-gray-500 text-sm">
+                        <MapPin className="h-3.5 w-3.5" />
+                        <span className="truncate">{venue.address.city || "City"}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <span>Capacity: {venue.capacity || "N/A"}</span>
+                        <span>Rating: {(venue.rating?.average ?? 0).toFixed(1)}</span>
+                      </div>
+                      <div className="flex items-baseline gap-2 pt-1">
+                        <span className="text-xl font-bold text-gray-900">₹{price.toLocaleString("en-IN")}</span>
+                        <span className="text-sm text-gray-500">starting</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Similar Venues */}
         {similarVenues.length > 0 && (

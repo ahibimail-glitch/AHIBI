@@ -6,6 +6,7 @@ const User = require('../models/User');
 const smsService = require('../services/smsService');
 const QRCode = require('qrcode'); // Import QRCode library
 const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
 const BikerBash = require('../models/BikerBash');
@@ -372,11 +373,46 @@ exports.verifyPayment = async (req, res) => {
       }
     }
 
-    // Send booking confirmation SMS and email
+    // Send booking confirmation WhatsApp + email
     try {
       console.log('[Payment] Starting ticket notification process');
 
-      // SMS sending disabled for successful bookings
+      const displayEventDate = updatedEvent?.startDate
+        ? new Date(updatedEvent.startDate).toLocaleString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Event date TBA';
+
+      if (user.phone) {
+        whatsappService
+          .sendBookingConfirmationTemplate({
+            phone: user.phone,
+            customerName: user.name || user.email || 'Customer',
+            eventName: updatedEvent?.title || event.title,
+            eventDate: displayEventDate,
+            ticketType: tickets.map((t) => `${t.ticketType}`).join(', '),
+            quantity: totalTickets,
+            bookingId: bookings[0]?._id
+          })
+          .then(() => console.log('[Payment] WhatsApp confirmation sent'))
+          .catch((waErr) => console.error('[Payment] WhatsApp confirmation failed:', waErr?.message || waErr));
+      }
+
+      whatsappService
+        .sendAdminBookingAlert({
+          bookingId: bookings[0]?._id,
+          customerName: user.name || 'Customer',
+          itemsCount: totalTickets,
+          totalAmount: bookings.reduce((sum, b) => sum + (b.total || 0), 0),
+          shippingLabel: displayEventDate,
+          statusPretty: 'Confirmed'
+        })
+        .then(() => console.log('[Payment] Admin WhatsApp alert sent'))
+        .catch((waErr) => console.error('[Payment] Admin WhatsApp alert failed:', waErr?.message || waErr));
 
       // Send ticket via email with QR code if email is available
       if (user.email) {
