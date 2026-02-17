@@ -24,6 +24,14 @@ import Navbar from "../../Navbar";
 import Footer from "../../Footer";
 import { toast } from "sonner";
 
+const slugifyVenueName = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 interface Venue {
   _id: string;
   managedByVenueId?: string | null;
@@ -303,20 +311,23 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
   return (
     <button
       type="button"
-      onClick={() => router.push(`/allVenues/${venue._id}`)}
-      className="group text-left w-full bg-card rounded-xl border border-surface-border shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
+      onClick={() => {
+        const slug = slugifyVenueName(venue.name);
+        router.push(`/allVenues/${encodeURIComponent(slug || venue._id)}`);
+      }}
+      className="group text-left w-full h-full min-h-[420px] md:min-h-[460px] bg-card rounded-2xl border border-surface-border/80 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300"
     >
-      <div className="aspect-[16/10] overflow-hidden">
+      <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={imageUrl}
           alt={venue.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
       </div>
-      <div className="p-4 space-y-2">
+      <div className="p-5 space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground leading-tight">{venue.name}</h3>
+          <h3 className="text-lg font-semibold text-foreground leading-tight line-clamp-2">{venue.name}</h3>
           <div className="flex items-center gap-1 shrink-0">
             <Star className="w-3.5 h-3.5 fill-primary text-primary" />
             <span className="text-sm font-medium text-foreground">{venue.rating?.average ?? "–"}</span>
@@ -341,17 +352,6 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
             <span className="flex items-center gap-1">
               <Car className="w-3 h-3" /> Parking
             </span>
-          )}
-        </div>
-
-        <div className="pt-1 border-t border-surface-border">
-          <span className="text-lg font-bold text-primary">
-            {venue.pricing?.basePrice !== undefined
-              ? `₹${venue.pricing.basePrice.toLocaleString("en-IN")}`
-              : "Price on request"}
-          </span>
-          {venue.pricing?.basePrice !== undefined && (
-            <span className="text-xs text-muted-foreground ml-1">starting</span>
           )}
         </div>
       </div>

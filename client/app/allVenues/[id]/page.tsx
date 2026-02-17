@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from "../../../hooks/useAuth";
 import { createAuthRedirectUrl } from "@/utils/redirectUtils";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   CalendarIcon,
+  ArrowLeft,
   MapPin,
   Phone,
   Mail,
@@ -22,6 +23,8 @@ import {
   Music,
   Zap,
   Home,
+  TreePine,
+  Layers,
   Snowflake,
   Award,
   Shield,
@@ -268,6 +271,15 @@ const getPrimaryVenueImage = (venue: VenueData): string => {
   return imgs.length > 0 ? imgs[0] : '';
 };
 
+const isMongoObjectId = (value: string) => /^[a-f\d]{24}$/i.test(value);
+const slugifyVenueName = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const facilityIcons: { [key: string]: any } = {
   parking: Car,
   ac: Snowflake,
@@ -317,9 +329,28 @@ const facilityIcons: { [key: string]: any } = {
   'Backup Generator': Zap,
 };
 
+const formatAmenityLabel = (key: string) =>
+  (() => {
+    const normalized = key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!normalized) return normalized;
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  })();
+
 export default function VenueDetailPage() {
   const params = useParams();
-  const venueId = params.id as string;
+  const rawParam = (params.id as string) || "";
+  const venueId = (() => {
+    try {
+      return decodeURIComponent(rawParam);
+    } catch {
+      return rawParam;
+    }
+  })();
+  const isIdRoute = isMongoObjectId(venueId);
   const [venueData, setVenueData] = useState<VenueData | null>(null);
   const [resolvedVenueId, setResolvedVenueId] = useState<string | null>(null);
   const [childVenues, setChildVenues] = useState<VenueData[]>([]);
@@ -414,8 +445,8 @@ export default function VenueDetailPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
-          rating: newReview.rating, 
+        body: JSON.stringify({
+          rating: newReview.rating,
           comment: newReview.comment,
           userName: user?.name || user?.email || 'Anonymous'
         })
@@ -441,26 +472,69 @@ export default function VenueDetailPage() {
       setLoading(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/venue/${venueId}`);
-        const data = await response.json();
+        if (isIdRoute) {
+          const response = await fetch(`${apiUrl}/api/venue/${venueId}`);
+          const data = await response.json();
 
-        if (!response.ok) {
-          if (response.status === 404) {
-            toast.error('Venue not found. Please check the URL or go back to venue listings.');
-          } else if (response.status === 403) {
-            toast.error('This venue is not available for booking.');
-          } else {
-            toast.error(data.message || 'Failed to load venue data.');
+          if (!response.ok) {
+            if (response.status === 404) {
+              toast.error('Venue not found. Please check the URL or go back to venue listings.');
+            } else if (response.status === 403) {
+              toast.error('This venue is not available for booking.');
+            } else {
+              toast.error(data.message || 'Failed to load venue data.');
+            }
+            return;
           }
-          return;
-        }
 
-
-        if (data.success && data.data.venue) {
-          setVenueData(data.data.venue);
-          setResolvedVenueId(data.data.venue._id);
+          if (data.success && data.data.venue) {
+            setVenueData(data.data.venue);
+            setResolvedVenueId(data.data.venue._id);
+          } else {
+            toast.error('Failed to load venue data.');
+          }
         } else {
-          toast.error('Failed to load venue data.');
+          // Treat non-ObjectId routes as "parent venue by name" pages.
+          const listResponse = await fetch(`${apiUrl}/api/venue/`);
+          const listData = await listResponse.json();
+
+          if (!listData?.success) {
+            toast.error('Failed to load venues');
+            return;
+          }
+
+          const venues = (listData?.data?.venues || []) as Array<{ _id: string; name: string; managedByVenueId?: string | null }>;
+          const targetSlug = slugifyVenueName(venueId);
+          // Prefer matching a parent venue (managedByVenueId == null) to avoid collisions with child venues.
+          const parentMatch = venues.find(
+            (v) => (v.managedByVenueId == null) && slugifyVenueName(v.name) === targetSlug
+          );
+          const anyMatch = venues.find((v) => slugifyVenueName(v.name) === targetSlug);
+          const match = parentMatch || anyMatch;
+
+          if (!match?._id) {
+            toast.error('Venue not found. Please check the URL or go back to venue listings.');
+            return;
+          }
+
+          const detailResponse = await fetch(`${apiUrl}/api/venue/${match._id}`);
+          const detailData = await detailResponse.json();
+
+          if (!detailResponse.ok) {
+            if (detailResponse.status === 404) {
+              toast.error('Venue not found. Please check the URL or go back to venue listings.');
+            } else {
+              toast.error(detailData?.message || 'Failed to load venue data.');
+            }
+            return;
+          }
+
+          if (detailData.success && detailData.data.venue) {
+            setVenueData(detailData.data.venue);
+            setResolvedVenueId(detailData.data.venue._id);
+          } else {
+            toast.error('Failed to load venue data.');
+          }
         }
       } catch (error) {
         console.error('Fetch venue error:', error);
@@ -471,13 +545,13 @@ export default function VenueDetailPage() {
     };
 
     fetchVenueData();
-  }, [venueId]);
+  }, [venueId, isIdRoute]);
 
   useEffect(() => {
-    if (venueData) {
+    if (venueData && isIdRoute) {
       fetchSimilarVenues();
     }
-  }, [venueData]);
+  }, [venueData, isIdRoute]);
 
   useEffect(() => {
     if (venueData && resolvedVenueId) {
@@ -487,6 +561,40 @@ export default function VenueDetailPage() {
       setManagedCollectionLabel(null);
     }
   }, [venueData, resolvedVenueId]);
+
+  const displayImages = extractVenueImages(venueData);
+
+  const amenityItems = useMemo(() => {
+    if (!venueData) return [];
+    const items: { id: string; label: string; Icon: typeof Check }[] = [];
+
+    if (venueData.amenities) {
+      Object.entries(venueData.amenities).forEach(([key, value]) => {
+        const amenityValue = value as { available?: boolean };
+        if (amenityValue?.available) {
+          items.push({
+            id: `amenity-${key}`,
+            label: formatAmenityLabel(key),
+            Icon: facilityIcons[key] || Check,
+          });
+        }
+      });
+    }
+
+    if (venueData.facilities) {
+      Object.entries(venueData.facilities).forEach(([key, value]) => {
+        if (Boolean(value)) {
+          items.push({
+            id: `facility-${key}`,
+            label: formatAmenityLabel(key),
+            Icon: facilityIcons[key] || Check,
+          });
+        }
+      });
+    }
+
+    return items;
+  }, [venueData]);
 
   if (loading) {
     return (
@@ -519,7 +627,185 @@ export default function VenueDetailPage() {
     );
   }
 
-  const displayImages = extractVenueImages(venueData);
+  if (!isIdRoute) {
+    const heroImage = displayImages[0];
+    const parentLocation = [venueData?.address?.city, venueData?.address?.state].filter(Boolean).join(", ");
+    const parentRatingAvg = venueData?.rating?.average ?? 0;
+    const parentRatingCount = venueData?.rating?.count ?? 0;
+    const parentCapacity = venueData?.capacityDetails?.standingCapacity ?? venueData?.capacity ?? 0;
+    const parentType = venueData?.venueClassification?.indoorOutdoor || venueData?.venueClassification?.venueTypes?.[0] || "Venue";
+    const availableSpaces = childVenues;
+
+    const spaceTypeLabel = (type?: string) => {
+      if (!type) return "Venue";
+      if (type === "both" || type === "indoor_outdoor") return "Indoor & Outdoor";
+      return type.replace(/_/g, " ");
+    };
+
+    const SpaceTypeIcon = ({ type }: { type?: string }) => {
+      if (type === "outdoor") return <TreePine className="w-3.5 h-3.5" />;
+      if (type === "both" || type === "indoor_outdoor") return <Layers className="w-3.5 h-3.5" />;
+      return <Home className="w-3.5 h-3.5" />;
+    };
+
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Navbar />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-10">
+          <button
+            onClick={() => router.push("/allVenues/list")}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" /> All Venues
+          </button>
+
+          {heroImage ? (
+            <HeroCarousel images={[heroImage, ...displayImages.slice(1)]} venueName={venueData?.name || "Venue"} />
+          ) : (
+            <div className="relative w-full aspect-[16/9] overflow-hidden rounded-2xl bg-muted flex items-center justify-center">
+              <ImageIcon className="h-10 w-10 text-muted-foreground" />
+            </div>
+          )}
+
+          <div className="mt-5 mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">{venueData?.name}</h1>
+            <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 fill-primary text-primary" />
+                <span className="font-medium text-foreground">{parentRatingAvg ? parentRatingAvg.toFixed(1) : "–"}</span>
+                <span>({parentRatingCount})</span>
+              </div>
+              <span className="text-border">·</span>
+              {parentLocation && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>{parentLocation}</span>
+                </div>
+              )}
+              <span className="text-border">·</span>
+              <div className="flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                <span>{parentCapacity ? `Up to ${parentCapacity}` : "Capacity on request"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6 mb-10">
+            {venueData?.description ? (
+              <div className="bg-card rounded-xl border border-border p-5">
+                <h2 className="text-lg font-semibold mb-2">About this venue</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">{venueData.description}</p>
+              </div>
+            ) : null}
+
+            <div className="bg-card rounded-xl border border-border p-5">
+              <h2 className="text-lg font-semibold mb-3">Venue snapshot</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Guest capacity</p>
+                    <p className="text-muted-foreground text-sm">{parentCapacity ? `${parentCapacity}+ guests` : "On request"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <SpaceTypeIcon type={parentType} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Venue type</p>
+                    <p className="text-muted-foreground text-sm">{spaceTypeLabel(parentType)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <CalendarIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Events hosted</p>
+                    <p className="text-muted-foreground text-sm">{venueData?.totalBookings ? `${venueData.totalBookings}+` : "Premium listing"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <Star className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Rating</p>
+                    <p className="text-muted-foreground text-sm">{parentRatingCount ? `${parentRatingCount} reviews` : "Awaiting reviews"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-8">
+            <h2 className="text-xl font-bold mb-1">Available Spaces</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              {availableSpaces.length} space{availableSpaces.length !== 1 ? "s" : ""} available at {venueData?.name}
+            </p>
+
+            {availableSpaces.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {availableSpaces.map((space) => {
+                  const image = getPrimaryVenueImage(space);
+                  const slug = slugifyVenueName(space.name);
+                  const targetId = space._id || slug;
+                  const capacity = space.capacityDetails?.standingCapacity ?? space.capacity ?? 0;
+                  const typeLabel = spaceTypeLabel(space.venueClassification?.indoorOutdoor || space.venueClassification?.venueTypes?.[0]);
+
+                  return (
+                    <button
+                      key={space._id}
+                      onClick={() => targetId && router.push(`/allVenues/${encodeURIComponent(targetId)}`)}
+                      className="group text-left w-full bg-card rounded-xl border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div className="aspect-[16/10] overflow-hidden">
+                        {image ? (
+                          <img
+                            src={image}
+                            alt={space.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
+                            <ImageIcon className="h-8 w-8" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <h3 className="font-semibold text-foreground leading-tight line-clamp-2">{space.name}</h3>
+                        {space.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{space.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5" /> Up to {capacity || "N/A"}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <SpaceTypeIcon type={space.venueClassification?.indoorOutdoor || space.venueClassification?.venueTypes?.[0]} />
+                            {typeLabel}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">No spaces available under this venue.</div>
+            )}
+          </div>
+        </div>
+
+        <Footer />
+      </div>
+    );
+  }
+
   const startingPrice = venueData?.pricing.basePrice || 0;
   const pricing = venueData?.pricing;
 
@@ -720,45 +1006,18 @@ export default function VenueDetailPage() {
               </h2>
 
               <div className="flex flex-wrap gap-2">
-                {/* Amenities */}
-                {venueData?.amenities &&
-                  Object.entries(venueData.amenities)
-                    .filter(([_, value]) => value.available)
-                    .map(([key]) => {
-                      const formattedKey = key.replace(/([A-Z])/g, " $1").trim();
-                      const IconComponent = facilityIcons[key] || Check;
-
-                      return (
-                        <span
-                          key={key}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-secondary text-sm text-secondary-foreground font-medium"
-                        >
-                          <IconComponent className="w-3.5 h-3.5" />
-                          {formattedKey}
-                        </span>
-                      );
-                    })}
-
-                {/* Facilities */}
-                {venueData?.facilities &&
-                  Object.entries(venueData.facilities)
-                    .filter(([_, value]) => value)
-                    .map(([key]) => {
-                      const formattedKey = key.replace(/([A-Z])/g, " $1").trim();
-                      const IconComponent = facilityIcons[key] || Check;
-
-                      return (
-                        <span
-                          key={key}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-secondary text-sm text-secondary-foreground font-medium"
-                        >
-                          <IconComponent className="w-3.5 h-3.5" />
-                          {formattedKey}
-                        </span>
-                      );
-                    })}
+                {amenityItems.map(({ id, label, Icon }) => (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-gray-100 text-black text-sm font-medium"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
+
 
 
             {/* Pricing Section */}
@@ -908,8 +1167,8 @@ export default function VenueDetailPage() {
                               <Star
                                 key={i}
                                 className={`w-3 h-3 ${i < review.rating
-                                    ? "fill-primary text-primary"
-                                    : "text-border"
+                                  ? "fill-primary text-primary"
+                                  : "text-border"
                                   }`}
                               />
                             ))}
@@ -963,8 +1222,8 @@ export default function VenueDetailPage() {
                       >
                         <Star
                           className={`h-5 w-5 cursor-pointer transition ${newReview.rating >= star
-                              ? "text-primary fill-primary"
-                              : "text-border"
+                            ? "text-primary fill-primary"
+                            : "text-border"
                             }`}
                         />
                       </button>
@@ -1068,70 +1327,6 @@ export default function VenueDetailPage() {
           </div>
         </div>
 
-        {/* Venues from the same collection/manager */}
-        {childVenues.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-              <div>
-                <p className="text-sm uppercase tracking-wide text-gray-500 mb-1">More options</p>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {managedCollectionLabel
-                    ? `More venues from ${managedCollectionLabel}`
-                    : "More venues from this host"}
-                </h2>
-              </div>
-              <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={() => router.push("/allVenues/list")}
-              >
-                Browse all venues
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {childVenues.map((venue) => {
-                const venueImage = getPrimaryVenueImage(venue);
-                const price = venue.pricing.basePrice || venue.pricing.hourlyRate || 0;
-                return (
-                  <div
-                    key={venue._id}
-                    className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow cursor-pointer border border-gray-100"
-                    onClick={() => router.push(`/allVenues/${venue._id}`)}
-                  >
-                    <div className="relative h-48 overflow-hidden">
-                      {venueImage ? (
-                        <img src={venueImage} alt={venue.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                          <ImageIcon className="h-12 w-12 text-gray-400" />
-                        </div>
-                      )}
-                      <Badge className="absolute top-3 left-3 bg-white/85 text-gray-900 border border-white">
-                        {venue.venueClassification?.indoorOutdoor || "Venue"}
-                      </Badge>
-                    </div>
-                    <div className="p-4 space-y-2">
-                      <h3 className="font-semibold text-gray-900 text-lg truncate">{venue.name}</h3>
-                      <div className="flex items-center gap-1 text-gray-500 text-sm">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span className="truncate">{venue.address.city || "City"}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>Capacity: {venue.capacity || "N/A"}</span>
-                        <span>Rating: {(venue.rating?.average ?? 0).toFixed(1)}</span>
-                      </div>
-                      <div className="flex items-baseline gap-2 pt-1">
-                        <span className="text-xl font-bold text-gray-900">₹{price.toLocaleString("en-IN")}</span>
-                        <span className="text-sm text-gray-500">starting</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Similar Venues */}
         {similarVenues.length > 0 && (

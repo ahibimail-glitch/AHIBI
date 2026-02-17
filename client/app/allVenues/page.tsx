@@ -46,6 +46,14 @@ const getVenueImageUrl = (venue: VenueApiItem) => {
   );
 };
 
+const slugifyVenueName = (value: string | undefined) =>
+  (value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const formatVenueType = (venue: VenueApiItem) => {
   const type = venue.venueClassification?.venueTypes?.[0];
   if (!type) return "Venue";
@@ -58,12 +66,6 @@ const formatCapacityLabel = (venue: VenueApiItem) => {
   return `${cap}+ guests`;
 };
 
-const formatPriceLabel = (venue: VenueApiItem) => {
-  const base = venue.pricing?.basePrice;
-  if (!base || base <= 0) return "Price on request";
-  return `₹${base.toLocaleString("en-IN")}/day`;
-};
-
 const toFeaturedVenueCard = (venue: VenueApiItem) => {
   const location = [venue.address?.city, venue.address?.state].filter(Boolean).join(", ") || "Location not provided";
   return {
@@ -74,8 +76,6 @@ const toFeaturedVenueCard = (venue: VenueApiItem) => {
     state: venue.address?.state || "",
     capacityRaw: venue.capacityDetails?.standingCapacity ?? venue.capacity ?? null,
     capacity: formatCapacityLabel(venue),
-    price: formatPriceLabel(venue),
-    basePriceValue: venue.pricing?.basePrice ?? null,
     rating: venue.rating?.average ?? 0,
     reviews: venue.rating?.count ?? 0,
     type: formatVenueType(venue),
@@ -340,7 +340,11 @@ const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<type
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {displayedVenues.map((venue) => (
-          <Link key={venue.id} href={`/allVenues/${venue.id}`} className="group block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-200">
+          <Link
+            key={venue.id}
+            href={`/allVenues/${encodeURIComponent(slugifyVenueName(venue.name) || venue.id)}`}
+            className="group block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-200"
+          >
             <div className="relative aspect-[16/10] overflow-hidden">
               <img
                 src={venue.image}
@@ -367,14 +371,6 @@ const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<type
                   {venue.capacityRaw ? `${venue.capacityRaw} guests` : "Capacity on request"}
                 </span>
                 <span>{venue.reviews} reviews</span>
-              </div>
-              <div className="border-t border-gray-100 pt-3 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-gray-900">
-                  {venue.basePriceValue !== null
-                    ? `₹${venue.basePriceValue.toLocaleString("en-IN")}`
-                    : venue.price}
-                </span>
-                <span className="text-sm text-gray-500">starting</span>
               </div>
             </div>
           </Link>
