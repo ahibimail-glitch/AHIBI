@@ -16,7 +16,7 @@ const features = [
   { icon: CalendarClock, title: "Streamlined Booking", text: "Manage all your event bookings in one place with real-time availability and instant confirmations." },
   { icon: Wallet, title: "Budget Management", text: "Track expenses, compare quotes, and manage payments securely with transparent pricing from all vendors." },
   { icon: Shield, title: "Secure Contracts", text: "Digital contracts, payment protection, and cancellation policies ensure safe and professional transactions." },
-  { icon: Sparkles, title: "Event Planning Tools", text: "Access comprehensive tools for timeline management, guest lists, and vendor coordination." },
+  { icon: Sparkles, title: "Event Planning Tools", text: "Access comprehensive tools for timeline management, guest lists." },
   { icon: SlidersHorizontal, title: "Analytics Dashboard", text: "Track RSVPs, monitor budgets, and get insights to make your events more successful." },
 ];
 
@@ -147,29 +147,56 @@ const Hero = () => (
   </Section>
 );
 
+const comingSoonFeatures = [
+  "Find Perfect Talent",
+  "Secure Contracts",
+  "Budget Management",
+];
+
 const FeatureGrid = () => (
   <Section id="features">
     <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">Everything you need to organize amazing events</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Powerful tools to find talent, manage bookings, and execute flawless events.</p>
+      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">
+        Everything you need to organize amazing events
+      </h2>
+      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">
+        Powerful tools to find talent, manage bookings, and execute flawless events.
+      </p>
     </div>
+
     <div className="grid gap-6 md:grid-cols-3">
       {features.map((f) => (
-        <Card key={f.title} className="rounded-2xl border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
+        <Card
+          key={f.title}
+          className="relative rounded-2xl border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm"
+        >
+          {/* Show badge only for selected features */}
+          {comingSoonFeatures.includes(f.title) && (
+            <span className="absolute top-3 right-3 text-xs font-semibold bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">
+              Coming Soon
+            </span>
+          )}
+
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600">
                 <f.icon className="h-5 w-5 text-white" />
               </div>
-              <CardTitle className="text-lg font-bold text-gray-800">{f.title}</CardTitle>
+              <CardTitle className="text-lg font-bold text-gray-800">
+                {f.title}
+              </CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="text-gray-600">{f.text}</CardContent>
+
+          <CardContent className="text-gray-600">
+            {f.text}
+          </CardContent>
         </Card>
       ))}
     </div>
   </Section>
 );
+
 
 const HowItWorks = () => (
   <Section id="how">
