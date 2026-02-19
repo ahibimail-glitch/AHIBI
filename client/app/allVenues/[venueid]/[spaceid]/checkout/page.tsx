@@ -229,7 +229,7 @@ export default function SpaceCheckoutPage() {
   const computeEstimatedPrice = (): { basePrice: number; totalPrice: number; duration: number } => {
     if (!spaceData) return { basePrice: 0, totalPrice: 0, duration: 0 };
     
-    const hourly = spaceData.pricing?.hourlyRate || 100; // Default to ₹100 if not set
+    const hourly = spaceData.pricing?.hourlyRate ?? 100; // Default to ₹100 if not set
     const halfDay = spaceData.pricing?.halfDayRate;
     const fullDay = spaceData.pricing?.fullDayRate;
     const cleaning = spaceData.pricing?.cleaningFee || 0;
@@ -243,22 +243,20 @@ export default function SpaceCheckoutPage() {
     let basePrice = hourly * duration;
 
     // Override with special rates only for exact time matches
-    if (bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00" && typeof fullDay === 'number' && fullDay > 0) {
+    if (bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00" && typeof fullDay !== 'undefined') {
       basePrice = fullDay;
-    } else if (bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00" && typeof halfDay === 'number' && halfDay > 0) {
+    } else if (bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00" && typeof halfDay !== 'undefined') {
       basePrice = halfDay;
     }
 
     // Add cleaning fee and security deposit
     const totalPrice = basePrice + cleaning + securityDeposit;
 
-    // Ensure minimum amount for Razorpay (₹100 for test transactions)
-    const minimumAmount = 100;
-    const finalTotalPrice = totalPrice < minimumAmount ? minimumAmount : totalPrice;
-    const finalBasePrice = finalTotalPrice - cleaning - securityDeposit;
+    // If final price is zero, set to 1 (minimum charge)
+    const finalTotalPrice = totalPrice === 0 ? 1 : totalPrice;
 
     return {
-      basePrice: Math.max(0, Math.round(finalBasePrice)),
+      basePrice: Math.max(0, Math.round(basePrice)),
       totalPrice: Math.max(0, Math.round(finalTotalPrice)),
       duration
     };
@@ -1548,6 +1546,16 @@ export default function SpaceCheckoutPage() {
                               <span className="text-sm sm:text-base font-semibold text-gray-900">Total</span>
                               <span className="text-xl sm:text-2xl font-bold text-gray-900">₹{estimatedPrice.toLocaleString('en-IN')}</span>
                             </div>
+
+                            {/* Minimum charge note */}
+                            {(() => {
+                              const calculatedTotal = (basePrice || 0) + (spaceData?.pricing?.cleaningFee || 0) + (spaceData?.pricing?.securityDeposit || 0);
+                              return calculatedTotal === 0 && estimatedPrice === 1 ? (
+                                <div className="text-xs text-gray-500 mb-3 sm:mb-4 p-2 bg-gray-50 rounded">
+                                  * Minimum charge of ₹1 applies for processing fees
+                                </div>
+                              ) : null;
+                            })()}
 
                             {formError && (
                               <div className="p-2.5 sm:p-3 text-xs sm:text-sm text-red-700 bg-red-50 rounded-lg mb-3 sm:mb-4">{formError}</div>

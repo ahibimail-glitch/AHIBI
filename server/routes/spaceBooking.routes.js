@@ -59,15 +59,15 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
     };
     
     const duration = getDurationHours(startTime, endTime);
-    const hourlyRate = space.pricing.hourlyRate || 100; // Default to ₹100 if not set
+    const hourlyRate = space.pricing.hourlyRate ?? 100; // Default to ₹100 if not set
 
     // Default to hourly calculation
     totalAmount = hourlyRate * duration;
 
     // Override with special rates only for exact time matches
-    if (startTime === "00:00" && endTime === "23:00" && space.pricing.fullDayRate) {
+    if (startTime === "00:00" && endTime === "23:00" && space.pricing.fullDayRate !== undefined) {
       totalAmount = space.pricing.fullDayRate;
-    } else if (startTime === "09:00" && endTime === "17:00" && space.pricing.halfDayRate) {
+    } else if (startTime === "09:00" && endTime === "17:00" && space.pricing.halfDayRate !== undefined) {
       totalAmount = space.pricing.halfDayRate;
     }
 
@@ -75,11 +75,9 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
     totalAmount += (space.pricing.cleaningFee || 0);
     totalAmount += (space.pricing.securityDeposit || 0);
 
-    // Ensure minimum amount for Razorpay (₹100 for test transactions)
-    const minimumAmount = 100;
-    if (totalAmount < minimumAmount) {
-      totalAmount = minimumAmount;
-      console.log(`Amount adjusted to minimum: ₹${totalAmount}`);
+    // If final price is zero, set to 1 to avoid payment issues
+    if (totalAmount === 0) {
+      totalAmount = 1;
     }
 
     console.log(`Final calculation: Base=${space.pricing.basePrice || 0}, Hourly=${space.pricing.hourlyRate || 0}, Duration=${duration}hrs, Total=₹${totalAmount}`);
@@ -142,6 +140,18 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
 
   } catch (error) {
     console.error('Create order error:', error);
+    
+    // Handle Razorpay specific errors
+    if (error.statusCode === 400 && error.error?.code === 'BAD_REQUEST_ERROR') {
+      const description = error.error?.description || '';
+      if (description.includes('less than minimum amount allowed')) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'The total booking amount is below the minimum payment threshold. Please adjust your booking duration or contact the venue for pricing options.' 
+        });
+      }
+    }
+    
     res.status(500).json({ success: false, message: 'Failed to create booking order' });
   }
 });
