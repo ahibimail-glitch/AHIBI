@@ -20,7 +20,35 @@ router.use(authorize('admin'));
 router.get('/events', eventController.getEvents);
 router.get('/events/pending', adminController.getPendingEvents);
 router.post('/events', validateEvent, eventController.createEvent);
-router.put('/events/:id', eventController.updateEvent);
+router.put('/events/:id', [
+  check('title', 'Title is required').optional().notEmpty().trim(),
+  check('description', 'Description is required').optional().not().isEmpty(),
+  check('banner', 'Banner image URL is required').optional().not().isEmpty(),
+  check('coverImage', 'Cover image URL is required').optional().not().isEmpty(),
+  check('category', 'Category is required').optional().not().isEmpty(),
+  check('startDate', 'Start date must be a valid ISO 8601 date').optional().isISO8601().toDate(),
+  check('endDate', 'End date must be a valid ISO 8601 date').optional().isISO8601().toDate(),
+  check('endDate').optional().custom((value, { req }) => {
+    const startDate = req.body.startDate ? new Date(req.body.startDate) : null;
+    if (startDate && new Date(value) <= startDate) {
+      throw new Error('End date must be after start date');
+    }
+    return true;
+  }),
+  check('location.address', 'Address is required').optional().not().isEmpty(),
+  check('location.city', 'City is required').optional().not().isEmpty(),
+  check('location.state', 'State is required').optional().not().isEmpty(),
+  check('location.country', 'Country is required').optional().not().isEmpty(),
+  check('location.pincode', 'Pincode is required').optional().not().isEmpty(),
+  check('ticketTypes', 'Ticket types must be an array').optional().isArray(),
+  check('ticketTypes.*.name', 'Ticket type name is required').optional().not().isEmpty(),
+  check('ticketTypes.*.price', 'Ticket price must be a number').optional().isNumeric(),
+  check('ticketTypes.*.quantity', 'Ticket quantity must be an integer').optional().isInt({ min: 0 }),
+  // Gallery validation - optional array of objects with url and caption
+  check('gallery').optional().isArray(),
+  check('gallery.*.url', 'Gallery image URL is required').optional().notEmpty(),
+  check('gallery.*.caption', 'Gallery image caption must be a string').optional().isString(),
+], eventController.updateEvent);
 router.put('/events/:id/approve', eventController.approveEvent);
 router.put('/events/:id/reject', eventController.rejectEvent);
 router.put('/events/:id/pause', eventController.pauseEvent);

@@ -14,11 +14,19 @@ import {
   Loader2,
   MapPin,
   Search,
+  Share2,
   SlidersHorizontal,
   Star,
   TreePine,
   Users,
   X,
+  Heart,
+  Wifi,
+  UtensilsCrossed,
+  Music,
+  Camera,
+  Phone,
+  IndianRupee,
 } from "lucide-react";
 import Navbar from "../../Navbar";
 import Footer from "../../Footer";
@@ -334,15 +342,64 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
       ? "Indoor"
       : "Outdoor";
   const hasParking = Boolean(venue.parking?.carCapacity || venue.parking?.twoWheelerAvailable);
+  const isAccessible = Boolean(venue.accessibility?.wheelchairAccess || venue.accessibility?.liftElevator);
+
+  // Pricing display
+  const hourlyRate = venue.pricing?.hourlyRate;
+  const basePrice = venue.pricing?.basePrice;
+  const displayPrice = hourlyRate ? `₹${hourlyRate.toLocaleString()}/hr` :
+                     basePrice ? `From ₹${basePrice.toLocaleString()}` :
+                     "Price on request";
+
+  // Venue features/amenities
+  const features: Array<{ icon: typeof Car; label: string }> = [];
+
+  if (hasParking) features.push({ icon: Car, label: "Parking" });
+  if (isAccessible) features.push({ icon: Accessibility, label: "Accessible" });
+  if (venue.venueClassification?.venueTypes?.includes("Banquet Hall")) features.push({ icon: UtensilsCrossed, label: "Catering" });
+  if (venue.venueClassification?.venueTypes?.includes("Conference Hall")) features.push({ icon: Users, label: "Meeting" });
+  if (venue.venueClassification?.venueTypes?.includes("Party Hall")) features.push({ icon: Music, label: "Events" });
+  if (venue.venueClassification?.venueTypes?.includes("Wedding Venue")) features.push({ icon: Heart, label: "Weddings" });
+
+  const handleBookNow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/allVenues/${venue._id}`);
+  };
+
+  const handleShare = async () => {
+    try {
+      const url = `${window.location.origin}/allVenues/${venue._id}`;
+      const venueName = venue.businessName || venue.name;
+      const shareData = {
+        title: `${venueName} - Venue Booking`,
+        text: `Check out ${venueName} for your events!`,
+        url: url,
+      };
+
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share(shareData);
+        toast.success("Venue shared successfully!");
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(url);
+        toast.success("Venue link copied to clipboard!");
+      }
+    } catch (err) {
+      console.error('Share failed:', err);
+      // Fallback: copy to clipboard
+      try {
+        const url = `${window.location.origin}/allVenues/${venue._id}`;
+        await navigator.clipboard.writeText(url);
+        toast.success("Venue link copied to clipboard!");
+      } catch (clipboardErr) {
+        toast.error("Failed to share venue");
+      }
+    }
+  };
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        router.push(`/allVenues/${venue._id}`);
-      }}
-      className="group text-left w-full h-full min-h-[420px] md:min-h-[460px] bg-card rounded-2xl border border-surface-border/80 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300"
-    >
+    <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+      {/* Image Section */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={imageUrl}
@@ -350,38 +407,101 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
-      </div>
-      <div className="p-5 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg font-semibold text-foreground leading-tight line-clamp-2">{venue.businessName || venue.name}</h3>
-          <div className="flex items-center gap-1 shrink-0">
-            <Star className="w-3.5 h-3.5 fill-primary text-primary" />
-            <span className="text-sm font-medium text-foreground">{venue.rating?.average ?? "–"}</span>
-            <span className="text-xs text-muted-foreground">({venue.rating?.count ?? 0})</span>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          <MapPin className="w-3.5 h-3.5 shrink-0" />
-          <span>
-            {venue.address?.city || "Unknown"}
-            {venue.address?.state ? `, ${venue.address.state}` : ""}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Users className="w-3.5 h-3.5" /> Up to {capacity || "N/A"}
-          </span>
-          <span>{venueTypeLabel}</span>
-          {hasParking && (
-            <span className="flex items-center gap-1">
-              <Car className="w-3 h-3" /> Parking
+        {/* Overlay badges */}
+        <div className="absolute top-4 left-4 flex flex-col gap-2">
+          {venue.isPopular && (
+            <span className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Popular
+            </span>
+          )}
+          {venue.isVerified && (
+            <span className="bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Verified
             </span>
           )}
         </div>
+
+     
+
+        
       </div>
-    </button>
+
+      {/* Content Section */}
+      <div className="p-6 space-y-4">
+        {/* Header */}
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-xl font-bold text-gray-900 leading-tight line-clamp-2 flex-1">
+              {venue.businessName || venue.name}
+            </h3>
+          </div>
+
+          {/* Location */}
+          <div className="flex items-center gap-2 text-gray-600">
+            <MapPin className="w-4 h-4 text-gray-400" />
+            <span className="text-sm">
+              {venue.address?.city || "Unknown"}
+              {venue.address?.state ? `, ${venue.address.state}` : ""}
+            </span>
+          </div>
+        </div>
+
+        {/* Description Preview */}
+        {venue.description && (
+          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+            {venue.description}
+          </p>
+        )}
+
+        {/* Features Grid */}
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
+            <Layers className="w-3 h-3" />
+            {venueTypeLabel}
+          </span>
+
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+            <Users className="w-3 h-3" />
+            Up to {capacity || "N/A"}
+          </span>
+
+          {features.slice(0, 2).map((feature, index) => (
+            <span key={index} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 text-gray-700 text-xs font-medium rounded-full">
+              <feature.icon className="w-3 h-3" />
+              {feature.label}
+            </span>
+          ))}
+        </div>
+
+        {/* Pricing & Actions */}
+        <div className="flex items-center justify-between pt-2">
+          
+
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/allVenues/${venue._id}`);
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              View Details
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShare();
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-1"
+            >
+              <Share2 className="w-4 h-4" />
+              Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -513,7 +633,7 @@ export default function AllVenuesPage() {
 
             <div className="flex-1">
               {filtered.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filtered.map((venue) => (
                     <VenueCard key={venue._id} venue={venue} />
                   ))}

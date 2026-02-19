@@ -77,7 +77,24 @@ router.post('/events', [
 
 router.get('/events', protect, eventController.getOrganizerEvents);
 router.get('/events/:id', protect, eventController.getOrganizerEventById);
-router.put('/events/:id', protect, eventController.updateOrganizerEvent);
+router.put('/events/:id', [
+  protect,
+  check('title', 'Event title is required').optional().notEmpty(),
+  check('description', 'Event description is required').optional().notEmpty(),
+  check('category', 'Event category is required').optional().notEmpty(),
+  check('startDate', 'Start date is required').optional().notEmpty(),
+  check('endDate', 'End date is required').optional().notEmpty(),
+  check('location.address', 'Venue address is required').optional().notEmpty(),
+  // Gallery validation - optional array of objects with url and caption
+  check('gallery').optional().isArray(),
+  check('gallery.*.url', 'Gallery image URL is required').optional().notEmpty(),
+  check('gallery.*.caption', 'Gallery image caption must be a string').optional().isString(),
+  // Ticket types validation (conditional for free events)
+  check('ticketTypes').optional().isArray(),
+  check('ticketTypes.*.name').optional().notEmpty(),
+  check('ticketTypes.*.price').optional().isNumeric(),
+  check('ticketTypes.*.quantity').optional().isInt({ min: 0 }),
+], eventController.updateOrganizerEvent);
 router.put('/events/:id/pause', protect, eventController.pauseOrganizerEvent);
 router.put('/events/:id/resume', protect, eventController.resumeOrganizerEvent);
 router.delete('/events/:id', protect, eventController.deleteOrganizerEvent);

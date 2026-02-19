@@ -82,6 +82,7 @@ interface Event {
   createdAt: string;
   banner?: string;
   coverImage?: string;
+  gallery?: Array<{ url: string; caption: string }>;
   socialLinks?: {
     website?: string;
     facebook?: string;
@@ -119,6 +120,11 @@ export default function ApprovedEvents() {
   const [isUploading, setIsUploading] = useState(false);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+
+  // Gallery/Map images state
+  const [galleryImages, setGalleryImages] = useState<Array<{ url: string; caption: string; file?: File }>>([]);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Delete event state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -327,6 +333,8 @@ export default function ApprovedEvents() {
     setEditingEvent(eventCopy);
     setImagePreview(event.banner || null);
     setCoverPreview(eventCopy.coverImage || null);
+    // Load existing gallery images
+    setGalleryImages(eventCopy.gallery || []);
     setIsEditDialogOpen(true);
     setEditError(null);
   };
@@ -382,6 +390,88 @@ export default function ApprovedEvents() {
       setEditError(err instanceof Error ? err.message : 'Failed to upload image');
     } finally {
       setIsUploadingCover(false);
+    }
+  };
+
+  // Gallery/Map image handlers
+  const handleGalleryImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const files = Array.from(e.target.files);
+    const newImages: Array<{ url: string; caption: string; file?: File }> = [];
+
+    for (const file of files) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        setEditError(validationError);
+        return;
+      }
+
+      try {
+        const preview = await createImagePreview(file);
+        newImages.push({
+          url: preview,
+          caption: '',
+          file: file
+        });
+      } catch (err) {
+        console.error('Error creating preview:', err);
+        setEditError('Failed to process image. Please try again.');
+        return;
+      }
+    }
+
+    setGalleryImages(prev => [...prev, ...newImages]);
+    // Reset file input
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateGalleryCaption = (index: number, caption: string) => {
+    setGalleryImages(prev => prev.map((img, i) => 
+      i === index ? { ...img, caption } : img
+    ));
+  };
+
+  const uploadGalleryImages = async () => {
+    if (galleryImages.length === 0) return [];
+
+    try {
+      setIsUploadingGallery(true);
+      setEditError(null);
+
+      const uploadedImages = await Promise.all(
+        galleryImages.map(async (image) => {
+          if (image.file) {
+            // Upload new file
+            const uploadedUrl = await uploadFile(image.file);
+            return {
+              url: uploadedUrl.status === 'success' && uploadedUrl.data?.photo?.url ? uploadedUrl.data.photo.url : image.url,
+              caption: image.caption
+            };
+          } else {
+            // Already uploaded image
+            return {
+              url: image.url,
+              caption: image.caption
+            };
+          }
+        })
+      );
+
+      setGalleryImages(uploadedImages);
+      return uploadedImages;
+    } catch (err) {
+      console.error('Error uploading gallery images:', err);
+      setEditError('Failed to upload gallery images. Please try again.');
+      return [];
+    } finally {
+      setIsUploadingGallery(false);
     }
   };
 
@@ -486,9 +576,18 @@ export default function ApprovedEvents() {
         return;
       }
       
+      // Upload gallery images first
+      const uploadedGallery = await uploadGalleryImages();
+      if (uploadedGallery === undefined && galleryImages.length > 0) {
+        // If upload failed and we have gallery images, don't proceed
+        setIsEditLoading(false);
+        return;
+      }
+      
       // Prepare data for backend - convert category back to database format
       const dataToSend = {
         ...editingEvent,
+        gallery: uploadedGallery || galleryImages.filter(img => !img.file), // Only include uploaded images
         isFreeEvent: !!editingEvent.isFreeEvent,
         ticketTypes: editingEvent.isFreeEvent ? [] : editingEvent.ticketTypes,
         convenience: editingEvent.isFreeEvent ? { percentage: 0, fixedAmount: 0 } : editingEvent.convenience,
@@ -688,6 +787,69 @@ export default function ApprovedEvents() {
                     <input type="file" ref={coverInputRef} onChange={handleCoverImageChange} className="hidden" accept="image/jpeg,image/png,image/webp" />
                     <Button type="button" variant="outline" onClick={() => coverInputRef.current?.click()} disabled={isUploadingCover}><Upload className="mr-2 h-4 w-4" />{isUploadingCover ? 'Uploading...' : 'Change Image'}</Button>
                   </div>
+                </div>
+
+                {/* Event Maps/Gallery */}
+                <div className="space-y-4 p-4 border rounded-md">
+                  <h4 className="font-medium">Event Maps & Gallery (optional)</h4>
+                  <div>
+                    <Label htmlFor="galleryImages">Upload Images</Label>
+                    <Input
+                      id="galleryImages"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleGalleryImageChange}
+                      ref={galleryInputRef}
+                      disabled={isUploadingGallery}
+                    />
+                    {isUploadingGallery && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <span className="mr-2">⏳</span>
+                        <span className="text-sm text-gray-600">Uploading gallery images...</span>
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-1">
+                      You can upload multiple images. Each image can have an optional caption.
+                    </p>
+                  </div>
+
+                  {galleryImages.length > 0 && (
+                    <div className="space-y-4">
+                      <Label>Gallery Images ({galleryImages.length})</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {galleryImages.map((image, index) => (
+                          <div key={index} className="border rounded-lg p-4 space-y-3">
+                            <div className="relative">
+                              <img
+                                src={image.url}
+                                alt={`Gallery image ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-2 right-2 h-6 w-6 p-0"
+                                onClick={() => removeGalleryImage(index)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Caption (optional)</Label>
+                              <Input
+                                value={image.caption}
+                                onChange={(e) => updateGalleryCaption(index, e.target.value)}
+                                placeholder="Describe this image"
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Basic Info */}

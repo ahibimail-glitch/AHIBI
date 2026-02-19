@@ -72,7 +72,7 @@ interface Event {
   description: string;
   banner: string;
   coverImage?: string;
-  gallery: string[];
+  gallery: Array<{ url: string; caption: string }>;
   organizer: EventOrganizer | null;
   artists: any[];
   startDate: string;
@@ -624,6 +624,34 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          GALLERY/MAP IMAGES
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {event.gallery && event.gallery.length > 0 && (
+        <section className="w-full border-t border-gray-100">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+            <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Event Maps & Gallery</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {event.gallery.map((image, index) => (
+                <div key={index} className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                  <Image
+                    src={image.url}
+                    alt={image.caption || `Event image ${index + 1}`}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  {image.caption && (
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                      <p className="text-white text-sm font-medium line-clamp-2">{image.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           TERMS & CONDITIONS (accordion)

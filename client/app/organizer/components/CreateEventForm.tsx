@@ -88,6 +88,11 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const posterInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
+  // Gallery/Map images state
+  const [galleryImages, setGalleryImages] = useState<Array<{ url: string; caption: string; file?: File }>>([]);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
   const uploadAndSetImage = async (
     file: File,
     kind: 'poster' | 'cover'
@@ -142,6 +147,88 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   const handleCoverChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     await uploadAndSetImage(e.target.files[0], 'cover');
+  };
+
+  // Gallery/Map image handlers
+  const handleGalleryImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const files = Array.from(e.target.files);
+    const newImages: Array<{ url: string; caption: string; file?: File }> = [];
+
+    for (const file of files) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+
+      try {
+        const preview = await createImagePreview(file);
+        newImages.push({
+          url: preview,
+          caption: '',
+          file: file
+        });
+      } catch (err) {
+        console.error('Error creating preview:', err);
+        setError('Failed to process image. Please try again.');
+        return;
+      }
+    }
+
+    setGalleryImages(prev => [...prev, ...newImages]);
+    // Reset file input
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = '';
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateGalleryCaption = (index: number, caption: string) => {
+    setGalleryImages(prev => prev.map((img, i) => 
+      i === index ? { ...img, caption } : img
+    ));
+  };
+
+  const uploadGalleryImages = async () => {
+    if (galleryImages.length === 0) return [];
+
+    try {
+      setIsUploadingGallery(true);
+      setError(null);
+
+      const uploadedImages = await Promise.all(
+        galleryImages.map(async (image) => {
+          if (image.file) {
+            // Upload new file
+            const uploadedUrl = await uploadFile(image.file);
+            return {
+              url: uploadedUrl.status === 'success' && uploadedUrl.data?.photo?.url ? uploadedUrl.data.photo.url : image.url,
+              caption: image.caption
+            };
+          } else {
+            // Already uploaded image
+            return {
+              url: image.url,
+              caption: image.caption
+            };
+          }
+        })
+      );
+
+      setGalleryImages(uploadedImages);
+      return uploadedImages;
+    } catch (err) {
+      console.error('Error uploading gallery images:', err);
+      setError('Failed to upload gallery images. Please try again.');
+      return [];
+    } finally {
+      setIsUploadingGallery(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -264,6 +351,14 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     setIsLoading(true);
     setError(null);
 
+    // Upload gallery images first
+    const uploadedGallery = await uploadGalleryImages();
+    if (uploadedGallery === undefined && galleryImages.length > 0) {
+      // If upload failed and we have gallery images, don't proceed
+      setIsLoading(false);
+      return;
+    }
+
     // Basic validation
     if (!eventData.eventName || !eventData.description || !eventData.venue ||
       !eventData.startDate || !eventData.endDate || !eventData.category) {
@@ -320,6 +415,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       termsAndConditions: eventData.termsAndConditions,
       banner: eventData.posterImage,
       coverImage: eventData.coverImage,
+      gallery: uploadedGallery,
       category: categoryMap[eventData.category.toLowerCase()] || 'Other',
       startDate: new Date(eventData.startDate).toISOString(),
       endDate: new Date(eventData.endDate).toISOString(),
@@ -520,6 +616,74 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 </div>
               </div>
             </div>
+
+            {/* Event Maps/Gallery */}
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-base">Event Maps & Gallery (optional)</CardTitle>
+                <CardDescription>Upload maps and additional images for your event</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="galleryImages">Upload Images</Label>
+                  <Input
+                    id="galleryImages"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleGalleryImageChange}
+                    ref={galleryInputRef}
+                    disabled={isUploadingGallery}
+                  />
+                  {isUploadingGallery && (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <span className="mr-2">⏳</span>
+                      <span className="text-sm text-gray-600">Uploading gallery images...</span>
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-500 mt-1">
+                    You can upload multiple images. Each image can have an optional caption.
+                  </p>
+                </div>
+
+                {galleryImages.length > 0 && (
+                  <div className="space-y-4">
+                    <Label>Gallery Images ({galleryImages.length})</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {galleryImages.map((image, index) => (
+                        <div key={index} className="border rounded-lg p-4 space-y-3">
+                          <div className="relative">
+                            <img
+                              src={image.url}
+                              alt={`Gallery image ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2 h-6 w-6 p-0"
+                              onClick={() => removeGalleryImage(index)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div>
+                            <Label className="text-sm">Caption (optional)</Label>
+                            <Input
+                              value={image.caption}
+                              onChange={(e) => updateGalleryCaption(index, e.target.value)}
+                              placeholder="Describe this image"
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Basic Event Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

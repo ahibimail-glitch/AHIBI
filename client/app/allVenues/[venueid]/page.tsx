@@ -149,7 +149,7 @@ const validateFile = (file: File, maxSize: number = 10 * 1024 * 1024): string | 
 const getPrimaryVenueImage = (space: SpaceData) => {
   // For SpaceData, use gallery
   const gallery = Array.isArray(space.gallery) ? space.gallery : [];
-  
+
   // If cover image is set, find it in the gallery
   if (space.coverImage) {
     const coverImage = gallery.find((img: any) => img.public_id === space.coverImage);
@@ -157,7 +157,7 @@ const getPrimaryVenueImage = (space: SpaceData) => {
       return coverImage.url;
     }
   }
-  
+
   // Fallback to isMain image or first image
   const mainImage = gallery.find((img: any) => img?.isMain)?.url;
   const firstImage = gallery.find((img: any) => img?.url)?.url;
@@ -166,10 +166,10 @@ const getPrimaryVenueImage = (space: SpaceData) => {
 
 const getVenueCoverImage = (venue: VenueData | null) => {
   if (!venue) return "";
-  
+
   // Check venue.images first (new Cloudinary images field)
   const venueImages = Array.isArray(venue.images) ? venue.images : [];
-  
+
   // If cover image is set, find it in the images array
   if (venue.coverImage && venueImages.length > 0) {
     const coverImage = venueImages.find(img => img.public_id === venue.coverImage);
@@ -177,12 +177,12 @@ const getVenueCoverImage = (venue: VenueData | null) => {
       return coverImage.url;
     }
   }
-  
+
   // Fallback to first image if no cover image is set or not found
   if (venueImages.length > 0) {
     return venueImages[0].url || "";
   }
-  
+
   // Return empty string if no images available
   return "";
 };
@@ -190,12 +190,12 @@ const getVenueCoverImage = (venue: VenueData | null) => {
 const formatVenueType = (space: SpaceData) => {
   const venueTypes = space.venueClassification?.venueTypes || [];
   if (venueTypes.length === 0) return "Venue";
-  
+
   // Format the venue type (replace underscores with spaces and capitalize)
   const formattedType = venueTypes[0]
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (l) => l.toUpperCase());
-  
+
   return formattedType;
 };
 
@@ -632,7 +632,7 @@ export default function VenueDetailPage() {
                   <MapPin className="h-4 w-4" />
                   <span>{venueData?.address.city}, {venueData?.address.state}</span>
                 </div>
-                
+
               </div>
             </div>
 
@@ -640,62 +640,91 @@ export default function VenueDetailPage() {
 
             {/* Available Spaces */}
             {spaces.length > 0 && (
-              <div className="bg-card rounded-xl border border-surface-border p-6 shadow-sm animate-fade-in">
-                <h2 className="text-lg font-semibold text-foreground mb-4">
-                  Available Spaces ({spaces.length})
-                </h2>
+              <section className="mt-10">
+                <div className="bg-card rounded-2xl border border-surface-border/60 p-6 sm:p-8 shadow-sm">
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {spaces.map((space) => {
-                    const image = getPrimaryVenueImage(space);
-                    const capacity = space.capacityDetails?.standingCapacity ?? space.capacity ?? 0;
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
+                      Available Spaces
+                    </h2>
+                    <span className="text-sm text-muted-foreground">
+                      {spaces.length} options
+                    </span>
+                  </div>
 
-                    return (
-                      <button
-                        key={space._id}
-                        onClick={() => router.push(`/allVenues/${resolvedVenueId}/${space._id}`)}
-                        className="group text-left w-full bg-card rounded-xl border border-surface-border shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
-                      >
-                        <div className="aspect-[16/10] overflow-hidden">
-                          {image ? (
-                            <img
-                              src={image}
-                              alt={space.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-muted flex items-center justify-center">
-                              <Building2 className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                            {space.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                            {space.description}
-                          </p>
-                          <div className="flex items-center justify-between mt-3">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full">
-                                {formatVenueType(space)}
-                              </span>
-                              <span className="text-sm text-muted-foreground">
-                                Upto {capacity} guests
-                              </span>
-                            </div>
-                            <span className="text-sm font-semibold text-foreground">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {spaces.map((space) => {
+                      const image = getPrimaryVenueImage(space);
+                      const capacity =
+                        space.capacityDetails?.standingCapacity ??
+                        space.capacity ??
+                        0;
+
+                      return (
+                        <button
+                          key={space._id}
+                          onClick={() =>
+                            router.push(`/allVenues/${resolvedVenueId}/${space._id}`)
+                          }
+                          className="group relative rounded-2xl overflow-hidden border border-surface-border/60 bg-card shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                        >
+                          {/* Image */}
+                          <div className="relative aspect-[16/10] overflow-hidden">
+                            {image ? (
+                              <img
+                                src={image}
+                                alt={space.name}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-muted flex items-center justify-center">
+                                <Building2 className="h-10 w-10 text-muted-foreground" />
+                              </div>
+                            )}
+
+
+
+                            {/* Floating price badge */}
+                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-sm font-semibold px-3 py-1 rounded-full shadow-md">
                               ₹{space.pricing.basePrice.toLocaleString("en-IN")}
-                            </span>
+                            </div>
                           </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+
+                          {/* Content */}
+                          <div className="p-5 space-y-3">
+                            <h3 className="text-lg font-semibold line-clamp-1 group-hover:text-primary transition-colors text-left">
+                              {space.name}
+                            </h3>
+
+                            <p className="text-sm text-muted-foreground line-clamp-2 text-left">
+                              {space.description}
+                            </p>
+
+                            <div className="flex flex-col gap-2">
+                              <div className="flex flex-col text-sm text-left">
+                                <span className="text-primary font-medium">
+                                  {formatVenueType(space)}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  Up to {capacity} guests
+                                </span>
+                              </div>
+
+                              <div className="flex justify-center pt-2">
+                                <div className="bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium hover:bg-primary/20 transition-colors">
+                                  View Details
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              </section>
             )}
+
 
             {/* About This Venue */}
             <div className="bg-card rounded-xl border border-surface-border p-6 shadow-sm animate-fade-in">
@@ -844,7 +873,7 @@ export default function VenueDetailPage() {
                           <p className="text-sm text-muted-foreground mt-1">
                             {venue.address.city}, {venue.address.state}
                           </p>
-                          
+
                         </div>
                       </button>
                     );
@@ -937,7 +966,7 @@ export default function VenueDetailPage() {
           </div>
         </div>
 
-    </div>
+      </div>
       <Footer />
     </div>
   );

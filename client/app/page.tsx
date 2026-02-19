@@ -769,7 +769,7 @@ export default function HomePage() {
 
       {/* Sports Events Section */}
       {sportsEvents.length > 0 && (
-        <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
+        <section className="lg:mt-48 md:mt-48 py-4 sm:py-6 md:py-8 bg-[#2b3148]">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
@@ -858,7 +858,7 @@ export default function HomePage() {
 
       {/* Popular Venues Section */}
       {venues.length > 0 && (
-        <section className="lg:mt-48 py-10 bg-[#f8fafc]">
+        <section className=" mt-40 py-10 bg-[#f8fafc]">
           <div className="container mx-auto px-4">
 
             {/* Section Header */}
@@ -877,8 +877,8 @@ export default function HomePage() {
             {/* Grid Layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
-              {venues.slice(0, 5).map((venue: any, idx: number) => {
-                const name = venue?.name || `Venue ${idx + 1}`;
+              {venues.slice(0, 2).map((venue: any, idx: number) => {
+                const name = venue?.businessName || venue?.name || `Venue ${idx + 1}`;
                 const image = getVenueImage(venue, idx);
                 const rating = venue?.rating?.average || 0;
                 const reviews = venue?.rating?.count || 0;
