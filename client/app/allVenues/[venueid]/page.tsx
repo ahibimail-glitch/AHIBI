@@ -895,8 +895,8 @@ export default function VenueDetailPage() {
           </div>
         </div>
 
-      <Footer />
     </div>
+      <Footer />
     </div>
   );
 

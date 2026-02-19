@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState, useRef, type ReactNode, type TouchEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ArrowRight, Calendar, ChevronRight, Clock, Loader2, MapPin, Star, TrendingUp, Users } from "lucide-react"
+import { ArrowRight, Building2, Calendar, ChevronRight, Clock, Loader2, MapPin, Star, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import Navbar from "./Navbar"
 import Footer from "./Footer"
 import type { EventsResponse, Event } from "@/types/event"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
+import StickyHeroCards from "@/components/StickyHeroCards"
 
 type PublicArtist = {
   _id: string
@@ -549,48 +550,7 @@ export default function HomePage() {
         <div className="container mx-auto px-3 sm:px-4">
 
           {/* HERO CARD */}
-          <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
-            {/* dotted background */}
-            <div
-              className="absolute inset-0 opacity-60"
-              style={{
-                backgroundImage:
-                  "radial-gradient(#e6cfc7 1px, transparent 1px)",
-                backgroundSize: "18px 18px",
-              }}
-            />
 
-            <div className="relative z-10 container mx-auto px-4">
-              <div className="mx-auto max-w-2xl text-center">
-
-                {/* badge */}
-                <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
-                  EVENTS
-                </div>
-
-                {/* heading */}
-                <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-                  Post your own{" "}
-                  <span className="text-red-600">listings</span>
-                </h1>
-
-                {/* subtext */}
-                <p className="mt-4 text-sm sm:text-base text-gray-600">
-                  Fast setup. Live in under{" "}
-                  <span className="font-semibold text-gray-900">5 minutes.</span>
-                </p>
-
-                {/* CTA */}
-                <div className="mt-8">
-                  <Link href="/allOrganizers">
-                    <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-                      GET STARTED
-                    </button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
 
 
 
@@ -726,7 +686,7 @@ export default function HomePage() {
           </section>
         </div>
       </section>
-
+      <StickyHeroCards />
       {/* Music Events Section */}
       {musicEvents.length > 0 && (
         <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
@@ -868,84 +828,139 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Venues Section */}
+      {/* Popular Venues Section */}
       {venues.length > 0 && (
-        <section className="py-6 sm:py-8 md:py-10 bg-[#f5f5f5]">
-          <div className="container mx-auto px-3 sm:px-4">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">Popular Venues</h2>
-              <Link href="/allVenues/list" className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5">
-                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+        <section className="lg:mt-48 py-10 bg-[#f8fafc]">
+          <div className="container mx-auto px-4">
+
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                Popular Venues
+              </h2>
+              <Link
+                href="/allVenues/list"
+                className="text-pink-600 hover:underline text-sm font-medium flex items-center gap-1"
+              >
+                See All <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto pb-3 scrollbar-hide">
-              {venues.slice(0, 10).map((venue: any, idx: number) => {
-                const placeName = venue?.name || venue?.address?.city || `Place ${idx + 1}`
-                const img = getVenueImage(venue, idx)
+            {/* Grid Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+              {venues.slice(0, 5).map((venue: any, idx: number) => {
+                const name = venue?.name || `Venue ${idx + 1}`;
+                const image = getVenueImage(venue, idx);
+                const rating = venue?.rating?.average || 0;
+                const reviews = venue?.rating?.count || 0;
+                const location =
+                  [venue?.address?.city, venue?.address?.state]
+                    .filter(Boolean)
+                    .join(", ") || "Location not specified";
+
+                const capacity =
+                  venue?.capacityDetails?.standingCapacity ||
+                  venue?.capacityDetails?.seatingCapacity;
+
                 return (
                   <Link
                     key={venue?._id || idx}
-                    href={venue?._id ? `/allVenues/${venue._id}` : "/allVenues"}
-                    className="block"
+                    href={`/allVenues/${venue._id}`}
+                    className="group block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300"
                   >
-                    <Card className="relative min-w-[200px] sm:min-w-[240px] md:min-w-[300px] lg:min-w-[360px] h-[320px] sm:h-[420px] md:h-[480px] rounded-xl overflow-hidden border-0 shadow-sm hover:shadow-2xl transition-shadow cursor-pointer flex-shrink-0">
-                      <Image src={img} alt={placeName} fill className="object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-3 left-3 text-white font-semibold text-sm sm:text-base md:text-lg">
-                        {placeName}
+                    {/* Image */}
+                    <div className="relative aspect-[16/10] overflow-hidden">
+                      <Image
+                        src={image}
+                        alt={name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+
+                      {/* Rating Badge */}
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-800 flex items-center gap-1">
+                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                        {rating.toFixed(1)}
                       </div>
-                    </Card>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5 space-y-3">
+
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">
+                          {venue?.type || "Event Venue"}
+                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2">
+                          {name}
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        <span className="truncate">{location}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          {capacity ? `${capacity} guests` : "Capacity on request"}
+                        </span>
+                        <span>{reviews} reviews</span>
+                      </div>
+
+                    </div>
                   </Link>
-                )
+                );
               })}
+
+              {/* View All Card */}
+              <Link
+                href="/allVenues/list"
+                className="group block bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-700 rounded-2xl text-white p-6 flex flex-col justify-between min-h-[340px] relative overflow-hidden"
+              >
+                <div
+                  className="absolute inset-0 opacity-20"
+                  style={{
+                    backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+                    backgroundSize: "18px 18px",
+                  }}
+                />
+
+                <div className="relative space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <Building2 className="h-7 w-7" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm uppercase tracking-[0.2em] text-white/80">
+                      Discover
+                    </p>
+                    <h3 className="text-2xl font-bold leading-tight">
+                      View all verified venues
+                    </h3>
+                  </div>
+
+                  <p className="text-white/85 text-sm max-w-sm">
+                    Explore the entire catalogue, filter by city, capacity, pricing,
+                    and book instantly.
+                  </p>
+                </div>
+
+                <Button className="relative w-full mt-6 bg-white text-pink-700 hover:bg-white/90 font-semibold">
+                  Explore venues
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+
             </div>
           </div>
         </section>
       )}
-      {/* HERO CARD */}
-      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
-        {/* dotted background */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              "radial-gradient(#e6cfc7 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-          }}
-        />
 
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
 
-            {/* badge */}
-            <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
-              VENUE
-            </div>
 
-            {/* heading */}
-            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-              List your {" "}
-              <span className="text-red-600">Venue Space</span>
-            </h1>
-
-            {/* subtext */}
-            <p className="mt-4 text-sm sm:text-base text-gray-600">
-              The right audience. Live in under{" "}
-              <span className="font-semibold text-gray-900">5 minutes.</span>
-            </p>
-
-            {/* CTA */}
-            <div className="mt-8">
-              <Link href="/allOrganizers">
-                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-                  GET STARTED
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
 
 
 
@@ -984,124 +999,14 @@ export default function HomePage() {
           </div>
         </section>
       )}
-      {/* HERO CARD */}
-      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
-        {/* dotted background */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              "radial-gradient(#e6cfc7 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-          }}
-        />
-
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
-
-            {/* badge */}
-            <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
-              ARTIST
-            </div>
-
-            {/* heading */}
-            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-              Showcase your <br />
-              <span className="text-red-600"> artistic talent</span>
-            </h1>
-
-            {/* subtext */}
-            <p className="mt-4 text-sm sm:text-base text-gray-600">
-              Reach more fans. Live in under{" "}
-              <span className="font-semibold text-gray-900">5 minutes.</span>
-            </p>
-
-            {/* CTA */}
-            <div className="mt-8">
-              <Link href="/allOrganizers">
-                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-                  GET STARTED
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* Explore Categories */}
-      <section className="py-6 sm:py-8 md:py-10 bg-white">
-        <div className="container mx-auto px-3 sm:px-4">
-          <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C] mb-4">Explore More</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
-            {offeringTiles.map((item) => (
-              <Link key={item.label} href={item.href}>
-                <Card className="relative rounded-xl overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 border-0 transform hover:-translate-y-1">
-                  {/* Force a tall poster aspect ratio and responsive heights */}
-                  <div className="w-full aspect-[2/3] sm:aspect-[3/4] md:aspect-[2/3]">
-                    <Image src={item.image} alt={item.label} fill className="object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                    <div className="absolute bottom-3 left-3 text-white">
-                      <div className="font-bold text-sm sm:text-base md:text-lg">{item.label}</div>
-                      {item.count !== null && item.count > 0 && (
-                        <div className="text-[10px] sm:text-xs md:text-sm opacity-90">{item.count} available</div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* HERE SHOW AVAILABLE SPORTS VENUES FETCH FROM DATABASE */}
 
 
 
-      {/* HERO CARD */}
-      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
-        {/* dotted background */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              "radial-gradient(#e6cfc7 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-          }}
-        />
 
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
 
-            {/* badge */}
-            <div className="inline-block rounded  bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
-              EVENTS
-            </div>
 
-            {/* heading */}
-            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-              Post your {" "}
-              <span className="text-red-600">sports events</span>
-            </h1>
 
-            {/* subtext */}
-            <p className="mt-4 text-sm sm:text-base text-gray-600">
-              Fill the stands. Live in under{" "}
-              <span className="font-semibold text-gray-900">5 minutes.</span>
-            </p>
 
-            {/* CTA */}
-            <div className="mt-8">
-              <Link href="/allOrganizers">
-                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-                  GET STARTED
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <Footer />
     </div>
