@@ -148,8 +148,26 @@ export default function EditProfileForm({ venue, onUpdate }: EditProfileFormProp
 
       const data = await response.json();
       if (data.success && data.data.photos) {
-        setVenueImages(prev => [...prev, ...data.data.photos]);
-        toast.success(`${data.data.photos.length} image(s) uploaded successfully`);
+        // Update local state first
+        const currentImages = venueImages || [];
+        const updatedImages = [...currentImages, ...data.data.photos];
+        setVenueImages(updatedImages);
+
+        // Update venue profile to persist the new images
+        const updateResponse = await fetch(`${apiUrl}/api/venue/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${venueToken}`
+          },
+          body: JSON.stringify({ images: updatedImages })
+        });
+
+        if (updateResponse.ok) {
+          toast.success(`${data.data.photos.length} image(s) uploaded successfully`);
+        } else {
+          toast.error('Images uploaded but failed to update venue profile');
+        }
       } else {
         throw new Error('Invalid response from server');
       }

@@ -519,8 +519,26 @@ export default function EditSpaceForm({ venue, space, onClose }: { venue: VenueD
 
       const data = await response.json();
       if (data.success && data.data.photos) {
-        setGallery(prev => [...prev, ...data.data.photos]);
-        toast.success(`${data.data.photos.length} image(s) uploaded successfully`);
+        // Update local state first
+        const currentGallery = gallery || [];
+        const updatedGallery = [...currentGallery, ...data.data.photos];
+        setGallery(updatedGallery);
+
+        // Update space profile to persist the new images
+        const updateResponse = await fetch(`/api/venue/spaces/${space._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${venueToken}`
+          },
+          body: JSON.stringify({ gallery: updatedGallery })
+        });
+
+        if (updateResponse.ok) {
+          toast.success(`${data.data.photos.length} image(s) uploaded successfully`);
+        } else {
+          toast.error('Images uploaded but failed to update space profile');
+        }
       } else {
         throw new Error('Invalid response from server');
       }
