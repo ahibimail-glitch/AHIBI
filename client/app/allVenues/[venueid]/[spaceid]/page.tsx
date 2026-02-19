@@ -152,6 +152,7 @@ interface SpaceData {
     caption?: string;
     isMain?: boolean;
   }>;
+  coverImage?: string;
   totalBookings: number;
   totalEarnings: number;
   rating: {
@@ -185,11 +186,35 @@ const isMongoObjectId = (id: string) => {
 const extractSpaceImages = (space: SpaceData | null) => {
   if (!space) return [];
   const gallery = Array.isArray(space.gallery) ? space.gallery : [];
+
+  // If cover image is set, prioritize it
+  if (space.coverImage) {
+    const coverImage = gallery.find(img => img.url === space.coverImage);
+    if (coverImage) {
+      // Put cover image first, then the rest
+      const otherImages = gallery.filter(img => img.url !== space.coverImage);
+      return [coverImage.url, ...otherImages.map(img => img.url).filter(Boolean)];
+    }
+  }
+
+  // Return all gallery images if no cover image
   return gallery.map(img => img.url).filter(Boolean);
 };
 
 const getPrimarySpaceImage = (space: SpaceData) => {
+  if (!space) return "";
+
   const gallery = Array.isArray(space.gallery) ? space.gallery : [];
+
+  // If cover image is set, return it
+  if (space.coverImage) {
+    const coverImage = gallery.find(img => img.url === space.coverImage);
+    if (coverImage?.url) {
+      return coverImage.url;
+    }
+  }
+
+  // Fallback to isMain image or first image
   return gallery.find((img) => img?.isMain)?.url || gallery.find((img) => img?.url) || "";
 };
 

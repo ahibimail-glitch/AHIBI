@@ -1134,7 +1134,22 @@ export default function SpaceCheckoutPage() {
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden">
                     {spaceData?.gallery && spaceData.gallery.length > 0 ? (
                       <img
-                        src={spaceData.gallery.find((img: any) => img.isMain)?.url || spaceData.gallery[0]?.url || ""}
+                        src={(() => {
+                          const gallery = Array.isArray(spaceData.gallery) ? spaceData.gallery : [];
+                          
+                          // If cover image is set, find it in the gallery
+                          if (spaceData.coverImage) {
+                            const coverImage = gallery.find((img: any) => img.url === spaceData.coverImage);
+                            if (coverImage?.url) {
+                              return coverImage.url;
+                            }
+                          }
+                          
+                          // Fallback to isMain image or first image
+                          const mainImage = gallery.find((img: any) => img.isMain)?.url;
+                          const firstImage = gallery.find((img: any) => img.url)?.url;
+                          return mainImage || firstImage || "";
+                        })()}
                         alt={spaceData?.name}
                         className="w-full h-full object-cover"
                       />

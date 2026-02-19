@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { ArrowLeft, Save, Upload, X, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Upload, X, Plus, Trash2, Image as ImageIcon, Star } from 'lucide-react';
 
 interface CloudinaryPhoto {
   public_id: string;
@@ -245,6 +245,7 @@ interface SpaceData {
     eventTypeRestrictions?: string;
   };
   gallery: CloudinaryPhoto[];
+  coverImage?: string;
 }
 
 const venueTypeOptions = [
@@ -542,7 +543,9 @@ export default function EditSpaceForm({ venue, space, onClose }: { venue: VenueD
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/upload/${publicId}`, {
+      // Properly encode the public ID to handle forward slashes
+      const encodedPublicId = encodeURIComponent(publicId);
+      const response = await fetch(`${apiUrl}/api/upload/${encodedPublicId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${venueToken}`,
@@ -560,6 +563,44 @@ export default function EditSpaceForm({ venue, space, onClose }: { venue: VenueD
     } catch (error) {
       console.error('Image deletion error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete image');
+    }
+  };
+
+  // Handle set cover image for space
+  const handleSetCoverImage = async (publicId: string) => {
+    try {
+      // Use venue token for space image operations
+      const venueToken = localStorage.getItem('venueToken');
+      if (!venueToken) {
+        toast.error('Authentication required. Please log in again.');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/upload/space-cover-image`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${venueToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ publicId, spaceId: space._id }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to set cover image');
+      }
+
+      const data = await response.json();
+      toast.success('Cover image set successfully!');
+      
+      // Update the space data to reflect the cover image change
+      if (space) {
+        space.coverImage = publicId;
+      }
+    } catch (error) {
+      console.error('Set cover image error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to set cover image');
     }
   };
 
@@ -1071,13 +1112,43 @@ export default function EditSpaceForm({ venue, space, onClose }: { venue: VenueD
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleImageDelete(image.public_id)}
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        
+                        {/* Cover Image Badge */}
+                        {space?.coverImage === image.public_id && (
+                          <div className="absolute top-2 left-2 bg-yellow-500 text-white rounded-full p-1 flex items-center">
+                            <Star className="h-3 w-3" />
+                          </div>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {!space?.coverImage || space?.coverImage !== image.public_id ? (
+                            <button
+                              type="button"
+                              onClick={() => handleSetCoverImage(image.public_id)}
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg px-2 py-1.5 flex items-center gap-1.5 shadow-lg transition-all duration-200 hover:scale-105"
+                              title="Set as cover image"
+                            >
+                              <Star className="h-4 w-4" />
+                              <span className="text-xs font-medium">Set as Cover</span>
+                            </button>
+                          ) : (
+                            <div className="bg-green-500 text-white rounded-lg px-2 py-1.5 flex items-center gap-1.5 shadow-lg" title="Cover image">
+                              <Star className="h-4 w-4" />
+                              <span className="text-xs font-medium">Cover Image</span>
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleImageDelete(image.public_id)}
+                            className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-2 py-1.5 flex items-center gap-1.5 shadow-lg transition-all duration-200 hover:scale-105"
+                            title="Delete image"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="text-xs font-medium">Delete</span>
+                          </button>
+                        </div>
+                        
                         <div className="mt-1 text-xs text-gray-500 truncate">
                           {image.format.toUpperCase()} • {Math.round(image.size / 1024)}KB
                         </div>

@@ -67,11 +67,11 @@ interface Venue {
     public_id?: string;
     url: string;
     width?: number;
-    height?: number;
     format?: string;
     size?: number;
     created_at?: string;
   }>;
+  coverImage?: string;
   pricing?: {
     basePrice?: number;
     hourlyRate?: number;
@@ -130,6 +130,16 @@ const getVenueType = (venue: Venue): VenueType => {
 const getVenueImageUrl = (venue: Venue) => {
   // Check venue.images first (new Cloudinary images field)
   const venueImages = Array.isArray(venue.images) ? venue.images : [];
+  
+  // If cover image is set, find it in the images array
+  if (venue.coverImage && venueImages.length > 0) {
+    const coverImage = venueImages.find(img => img.public_id === venue.coverImage);
+    if (coverImage?.url) {
+      return coverImage.url;
+    }
+  }
+  
+  // Fallback to first image if no cover image is set or not found
   if (venueImages.length > 0) {
     return venueImages[0].url || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3";
   }

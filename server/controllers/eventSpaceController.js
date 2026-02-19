@@ -188,7 +188,7 @@ const updateSpace = async (req, res) => {
     const allowedFields = [
       'name', 'description', 'tagline', 'venueClassification', 'address',
       'capacity', 'capacityDetails', 'parking', 'accessibility', 'facilities', 'amenities',
-      'pricing', 'gallery', 'contactInfo', 'terms', 'policies', 'addOnServices',
+      'pricing', 'gallery', 'coverImage', 'contactInfo', 'terms', 'policies', 'addOnServices',
       'documents', 'authorizations', 'faqs'
     ];
 

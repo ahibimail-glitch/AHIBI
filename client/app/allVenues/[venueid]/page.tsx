@@ -52,6 +52,7 @@ interface VenueData {
     size?: number;
     created_at?: string;
   }>;
+  coverImage?: string;
   socialLinks?: {
     website?: string;
     facebook?: string;
@@ -102,6 +103,7 @@ interface SpaceData {
     caption?: string;
     isMain?: boolean;
   }>;
+  coverImage?: string;
   totalBookings: number;
   totalEarnings: number;
   rating: {
@@ -138,12 +140,45 @@ const validateFile = (file: File, maxSize: number = 10 * 1024 * 1024): string | 
   return null;
 };
 
-const getPrimaryVenueImage = (venue: SpaceData) => {
+const getPrimaryVenueImage = (space: SpaceData) => {
   // For SpaceData, use gallery
-  const gallery = Array.isArray(venue.gallery) ? venue.gallery : [];
+  const gallery = Array.isArray(space.gallery) ? space.gallery : [];
+  
+  // If cover image is set, find it in the gallery
+  if (space.coverImage) {
+    const coverImage = gallery.find((img: any) => img.url === space.coverImage);
+    if (coverImage?.url) {
+      return coverImage.url;
+    }
+  }
+  
+  // Fallback to isMain image or first image
   const mainImage = gallery.find((img: any) => img?.isMain)?.url;
   const firstImage = gallery.find((img: any) => img?.url)?.url;
   return mainImage || firstImage || "";
+};
+
+const getVenueCoverImage = (venue: VenueData | null) => {
+  if (!venue) return "";
+  
+  // Check venue.images first (new Cloudinary images field)
+  const venueImages = Array.isArray(venue.images) ? venue.images : [];
+  
+  // If cover image is set, find it in the images array
+  if (venue.coverImage && venueImages.length > 0) {
+    const coverImage = venueImages.find(img => img.public_id === venue.coverImage);
+    if (coverImage?.url) {
+      return coverImage.url;
+    }
+  }
+  
+  // Fallback to first image if no cover image is set or not found
+  if (venueImages.length > 0) {
+    return venueImages[0].url || "";
+  }
+  
+  // Return empty string if no images available
+  return "";
 };
 
 const formatVenueType = (space: SpaceData) => {
@@ -530,22 +565,25 @@ export default function VenueDetailPage() {
         </div>
 
         {/* Hero Section */}
-        {venueData?.images && venueData.images.length > 0 ? (
-          <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl bg-gray-200 group">
-            <img
-              src={venueData.images[0].url}
-              alt={venueData.businessName || venueData.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl bg-gray-200">
-            <div className="w-full h-full flex flex-col items-center justify-center">
-              <Building2 className="h-16 w-16 text-gray-400 mb-2" />
-              <p className="text-gray-500">No venue images available</p>
+        {(() => {
+          const coverImageUrl = getVenueCoverImage(venueData);
+          return coverImageUrl ? (
+            <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl bg-gray-200 group">
+              <img
+                src={coverImageUrl}
+                alt={venueData?.businessName || venueData?.name}
+                className="w-full h-full object-cover"
+              />
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden rounded-2xl bg-gray-200">
+              <div className="w-full h-full flex flex-col items-center justify-center">
+                <Building2 className="h-16 w-16 text-gray-400 mb-2" />
+                <p className="text-gray-500">No venue images available</p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Hidden file input */}
         {isVenueOwner && (
@@ -772,9 +810,7 @@ export default function VenueDetailPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {similarVenues.map((venue) => {
-                    const venueImage = venue.images && venue.images.length > 0
-                      ? venue.images[0].url
-                      : null;
+                    const venueImage = getVenueCoverImage(venue);
 
                     return (
                       <button

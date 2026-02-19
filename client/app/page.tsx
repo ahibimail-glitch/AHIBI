@@ -26,6 +26,16 @@ type PublicVenue = {
   address?: { city?: string; state?: string }
   documents?: { venueImages?: Array<{ url?: string; isMain?: boolean }> }
   gallery?: Array<{ url?: string }>
+  images?: Array<{
+    public_id?: string;
+    url: string;
+    width?: number;
+    height?: number;
+    format?: string;
+    size?: number;
+    created_at?: string;
+  }>;
+  coverImage?: string;
 }
 
 const FALLBACK_IMAGES = {
@@ -62,6 +72,24 @@ const getArtistImage = (artist: PublicArtist) => {
 }
 
 const getVenueImage = (venue: PublicVenue, idx?: number) => {
+  // Check venue.images first (new Cloudinary images field)
+  const venueImages = Array.isArray(venue.images) ? venue.images : [];
+  
+  // If cover image is set, find it in the images array
+  if (venue.coverImage && venueImages.length > 0) {
+    const coverImage = venueImages.find(img => img.public_id === venue.coverImage);
+    if (coverImage?.url) {
+      return resolveImageUrl(coverImage.url, "venue");
+    }
+  }
+  
+  // Fallback to first image if no cover image is set or not found
+  if (venueImages.length > 0) {
+    const firstImage = venueImages[0].url;
+    if (firstImage) return resolveImageUrl(firstImage, "venue");
+  }
+  
+  // Fallback to legacy fields
   const main = venue.documents?.venueImages?.find((i) => i?.isMain)?.url
   const anyDoc = venue.documents?.venueImages?.[0]?.url
   const anyGallery = venue.gallery?.[0]?.url

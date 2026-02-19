@@ -325,6 +325,12 @@ const eventSpaceSchema = new mongoose.Schema({
     created_at: String
   }],
 
+  // Cover image (stores public_id of the cover image)
+  coverImage: {
+    type: String,
+    default: null
+  },
+
   // Contact Info (inherits from parent but can be overridden)
   contactInfo: {
     phone: {

@@ -79,6 +79,7 @@ interface SpaceData {
     caption?: string;
     isMain?: boolean;
   }>;
+  coverImage?: string;
   createdAt: string;
   updatedAt: string;
   parking: {
@@ -257,6 +258,15 @@ export default function SpacesSection({ venue }: SpacesSectionProps) {
   });
 
   const getPrimaryImage = (space: SpaceData) => {
+    // If cover image is set, find it in the gallery
+    if (space.coverImage) {
+      const coverImage = space.gallery.find(img => img.public_id === space.coverImage);
+      if (coverImage?.url) {
+        return coverImage.url;
+      }
+    }
+  
+    // Fallback to isMain image or first image
     const mainImage = space.gallery.find(img => img.isMain);
     return mainImage?.url || space.gallery[0]?.url || '/api/placeholder/400/300';
   };

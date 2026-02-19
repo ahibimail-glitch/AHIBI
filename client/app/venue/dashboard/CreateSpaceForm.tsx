@@ -485,6 +485,17 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
         return;
       }
 
+      // Validate that venue details are complete before allowing space creation
+      if (!venue.name || !venue.businessName || !venue.email || !venue.phone) {
+        toast.error('Please complete your venue details (name, business name, email, and phone) before creating spaces.');
+        return;
+      }
+
+      if (!venue.address || !venue.address.city || !venue.address.state || !venue.address.pincode) {
+        toast.error('Please complete your venue address details (city, state, and pincode) before creating spaces.');
+        return;
+      }
+
       const payload = {
         ...formData,
         venueId: String(venueId), // Ensure it's a string

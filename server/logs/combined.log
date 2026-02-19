@@ -174,3 +174,20 @@
 {"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 00:12:38"}
 {"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 00:16:34"}
 {"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 00:28:14"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 16:27:00"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 16:27:15"}
+{"level":"info","message":"Photo deleted successfully: venue-images/szlzpuvhc68mcvprj42q by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:34:15"}
+{"level":"info","message":"Cover image set successfully: venue-images/yi3blmzgwdgazuiijy4f by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:37:56"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:38:10"}
+{"level":"info","message":"Cover image set successfully: venue-images/t6unsxn7qqjo6a8ofbmo by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:40:04"}
+{"level":"info","message":"2 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:44:12"}
+{"level":"info","message":"3 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:46:20"}
+{"level":"info","message":"Space cover image set successfully: space-images/waeo1xm2inxmlcwfwdoo for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:46:43"}
+{"level":"info","message":"Space cover image set successfully: space-images/juuepk3pbavodo9fkase for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:49:13"}
+{"level":"info","message":"Space cover image set successfully: space-images/p1xfsut8honkem7vieqi for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:49:33"}
+{"level":"info","message":"Space cover image set successfully: space-images/waeo1xm2inxmlcwfwdoo for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:49:35"}
+{"level":"info","message":"Photo deleted successfully: space-images/juuepk3pbavodo9fkase by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:50:37"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:57:19"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:57:49"}
+{"level":"info","message":"Space cover image set successfully: space-images/xsbp9wtlqu0mmvy1vfkk for space 6996f3898ffa1d878c2af0fe by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:58:10"}
+{"level":"info","message":"Space cover image set successfully: space-images/xsbp9wtlqu0mmvy1vfkk for space 6996f3898ffa1d878c2af0fe by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:58:15"}

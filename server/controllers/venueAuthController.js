@@ -376,7 +376,7 @@ const updateProfile = async (req, res) => {
 
     const allowedFields = [
       'name', 'email', 'phone', 'businessName', 'address', 
-      'socialLinks', 'images'
+      'socialLinks', 'images', 'coverImage'
     ];
 
     const updateData = {};

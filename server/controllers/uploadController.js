@@ -139,15 +139,17 @@ const {
         }
       };
       
-      // Add user ID if available
-      const userId = req.user?.id || 'anonymous';
+      // Add user/venue ID if available
+      const userId = req.venue?.id || req.user?.id || 'anonymous';
+      const userType = req.venue ? 'venue' : 'user';
       if (userId) {
         uploadOptions.context.uploaded_by = userId;
+        uploadOptions.context.user_type = userType;
       }
       
       const results = await uploadMultiplePhotos(files, folder, uploadOptions);
   
-      logger.info(`${results.length} photos uploaded successfully by user ${userId}`);
+      logger.info(`${results.length} photos uploaded successfully by ${userType} ${userId}`);
   
       res.status(200).json({
         success: true,
@@ -162,6 +164,111 @@ const {
     }
   };
   
+  // Set cover image
+  exports.setCoverImage = async (req, res, next) => {
+    try {
+      const { publicId } = req.body;
+  
+      if (!publicId) {
+        return next(new AppError('Public ID is required', 400));
+      }
+      
+      // Decode the public ID to handle forward slashes and other URL-encoded characters
+      const decodedPublicId = decodeURIComponent(publicId);
+      
+      // Get venue from authentication
+      const venueId = req.venue.id;
+      const Venue = require('../models/Venue');
+      
+      const venue = await Venue.findById(venueId);
+      if (!venue) {
+        return next(new AppError('Venue not found', 404));
+      }
+      
+      // Check if the image exists in venue's images
+      const imageExists = venue.images.some(img => img.public_id === decodedPublicId);
+      if (!imageExists) {
+        return next(new AppError('Image not found in venue images', 404));
+      }
+      
+      // Set the cover image
+      venue.coverImage = decodedPublicId;
+      await venue.save();
+      
+      // Log with appropriate user identifier
+      const userId = req.venue?.id || req.user?.id || 'anonymous';
+      const userType = req.venue ? 'venue' : 'user';
+  
+      logger.info(`Cover image set successfully: ${decodedPublicId} by ${userType} ${userId}`);
+  
+      res.status(200).json({
+        status: 'success',
+        data: {
+          message: 'Cover image set successfully',
+          coverImage: decodedPublicId
+        }
+      });
+    } catch (error) {
+      logger.error(`Set cover image failed: ${error.message}`);
+      next(error);
+    }
+  };
+
+  // Set cover image for space
+  exports.setSpaceCoverImage = async (req, res, next) => {
+    try {
+      const { publicId, spaceId } = req.body;
+  
+      if (!publicId) {
+        return next(new AppError('Public ID is required', 400));
+      }
+      
+      if (!spaceId) {
+        return next(new AppError('Space ID is required', 400));
+      }
+      
+      // Decode the public ID to handle forward slashes and other URL-encoded characters
+      const decodedPublicId = decodeURIComponent(publicId);
+      
+      // Get venue from authentication
+      const venueId = req.venue.id;
+      const EventSpace = require('../models/EventSpace');
+      
+      // Find the space and verify it belongs to the authenticated venue
+      const space = await EventSpace.findOne({ _id: spaceId, venueId: venueId });
+      if (!space) {
+        return next(new AppError('Space not found or does not belong to this venue', 404));
+      }
+      
+      // Check if the image exists in space's gallery
+      const imageExists = space.gallery.some(img => img.public_id === decodedPublicId);
+      if (!imageExists) {
+        return next(new AppError('Image not found in space gallery', 404));
+      }
+      
+      // Set the cover image
+      space.coverImage = decodedPublicId;
+      await space.save();
+      
+      // Log with appropriate user identifier
+      const userId = req.venue?.id || req.user?.id || 'anonymous';
+      const userType = req.venue ? 'venue' : 'user';
+  
+      logger.info(`Space cover image set successfully: ${decodedPublicId} for space ${spaceId} by ${userType} ${userId}`);
+  
+      res.status(200).json({
+        status: 'success',
+        data: {
+          message: 'Space cover image set successfully',
+          coverImage: decodedPublicId
+        }
+      });
+    } catch (error) {
+      logger.error(`Set space cover image failed: ${error.message}`);
+      next(error);
+    }
+  };
+  
   // Delete photo
   exports.deletePhoto = async (req, res, next) => {
     try {
@@ -170,10 +277,17 @@ const {
       if (!publicId) {
         return next(new AppError('Public ID is required', 400));
       }
+      
+      // Decode the public ID to handle forward slashes and other URL-encoded characters
+      const decodedPublicId = decodeURIComponent(publicId);
   
-      const result = await deletePhoto(publicId);
+      const result = await deletePhoto(decodedPublicId);
+      
+      // Log with appropriate user identifier (venue or user)
+      const userId = req.venue?.id || req.user?.id || 'anonymous';
+      const userType = req.venue ? 'venue' : 'user';
   
-      logger.info(`Photo deleted successfully: ${publicId} by user ${req.user.id}`);
+      logger.info(`Photo deleted successfully: ${decodedPublicId} by ${userType} ${userId}`);
   
       res.status(200).json({
         status: 'success',
@@ -196,8 +310,11 @@ const {
       if (!publicId) {
         return next(new AppError('Public ID is required', 400));
       }
+      
+      // Decode the public ID to handle forward slashes and other URL-encoded characters
+      const decodedPublicId = decodeURIComponent(publicId);
   
-      const photoInfo = await getPhotoInfo(publicId);
+      const photoInfo = await getPhotoInfo(decodedPublicId);
   
       res.status(200).json({
         status: 'success',
@@ -219,8 +336,11 @@ const {
       if (!publicId) {
         return next(new AppError('Public ID is required', 400));
       }
+      
+      // Decode the public ID to handle forward slashes and other URL-encoded characters
+      const decodedPublicId = decodeURIComponent(publicId);
   
-      const urls = getResponsiveUrls(publicId);
+      const urls = getResponsiveUrls(decodedPublicId);
   
       res.status(200).json({
         status: 'success',
