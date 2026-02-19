@@ -148,30 +148,38 @@ export default function AdminNotifications() {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("admin_token");
+      console.log('Fetching admin notifications...');
       
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
+      const token = localStorage.getItem("admin_token");
+      if (!token) throw new Error("Admin authentication required");
 
-      if (searchQuery) params.append("search", searchQuery);
-      if (categoryFilter !== "all") params.append("category", categoryFilter);
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      if (priorityFilter !== "all") params.append("priority", priorityFilter);
+      const params: Record<string, string> = {};
+      if (categoryFilter !== "all") params.category = categoryFilter;
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      params.page = page.toString();
+      params.limit = limit.toString();
 
-      const response = await fetch(`/api/admin/notifications?${params}`, {
+      console.log('Notifications API params:', params);
+
+      const response = await fetch(`/api/admin/notifications?${new URLSearchParams(params)}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.data.notifications || []);
-        setTotalPages(data.data.pagination?.pages || 1);
-        setTotal(data.data.pagination?.total || 0);
+      console.log('Notifications API response:', await response.json());
+
+      if (!response.ok) {
+        throw new Error((await response.json())?.message || "Failed to fetch notifications");
       }
+
+      const data = await response.json();
+      const notificationsData = data.data.notifications || [];
+      console.log('Notifications data:', notificationsData);
+      setNotifications(notificationsData);
+      setTotalPages(data.data.pagination?.pages || 1);
+      setTotal(data.data.pagination?.total || 0);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {

@@ -965,6 +965,130 @@ class EmailService {
       html
     });
   }
+
+  // Send venue approval notification
+  async sendVenueApprovalNotification(venue, notes = '') {
+    const subject = '🎉 Your Venue Has Been Approved! - AHIBI';
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="https://ahibi.in/images/LogoB.png" alt="AHIBI Logo" style="height: 60px; margin-bottom: 20px;">
+            <h1 style="color: #4a154b; margin: 0;">Congratulations! 🎉</h1>
+            <p style="color: #666; font-size: 18px; margin: 10px 0;">Your venue has been approved</p>
+          </div>
+          
+          <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+            <h2 style="color: #155724; margin: 0 0 10px 0;">Venue Details</h2>
+            <p style="margin: 5px 0;"><strong>Venue Name:</strong> ${venue.businessName || venue.name}</p>
+            <p style="margin: 5px 0;"><strong>Contact Email:</strong> ${venue.email}</p>
+            <p style="margin: 5px 0;"><strong>Phone:</strong> ${venue.phone}</p>
+            <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">Active</span></p>
+          </div>
+
+          <div style="margin: 30px 0;">
+            <h3 style="color: #4a154b; margin: 0 0 15px 0;">What's Next?</h3>
+            <ul style="color: #666; line-height: 1.6;">
+              <li>✅ Login to your venue dashboard to get started</li>
+              <li>✅ Add your venue spaces and configure pricing</li>
+              <li>✅ Set up your availability calendar</li>
+              <li>✅ Start receiving bookings from customers</li>
+            </ul>
+          </div>
+
+          ${notes ? `
+          <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <h4 style="color: #856404; margin: 0 0 10px 0;">Note from Admin:</h4>
+            <p style="color: #856404; margin: 0;">${notes}</p>
+          </div>
+          ` : ''}
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/venue/dashboard" 
+               style="background-color: #4a154b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+              Go to Your Dashboard
+            </a>
+          </div>
+
+          <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; text-align: center; color: #666; font-size: 14px;">
+            <p style="margin: 0;">If you have any questions, please contact our support team.</p>
+            <p style="margin: 5px 0;">Best regards,<br>The AHIBI Team</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return this.sendMail({
+      to: venue.email,
+      subject,
+      html
+    });
+  }
+
+  // Send venue rejection notification
+  async sendVenueRejectionNotification(venue, reason, notes = '') {
+    const subject = 'Regarding Your Venue Application - AHIBI';
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <img src="https://ahibi.in/images/LogoB.png" alt="AHIBI Logo" style="height: 60px; margin-bottom: 20px;">
+            <h1 style="color: #dc3545; margin: 0;">Application Update</h1>
+            <p style="color: #666; font-size: 18px; margin: 10px 0;">Regarding your venue application</p>
+          </div>
+          
+          <div style="background-color: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+            <h2 style="color: #721c24; margin: 0 0 10px 0;">Application Status: Not Approved</h2>
+            <p style="margin: 5px 0;"><strong>Venue Name:</strong> ${venue.businessName || venue.name}</p>
+            <p style="margin: 5px 0;"><strong>Contact Email:</strong> ${venue.email}</p>
+            <p style="margin: 5px 0;"><strong>Phone:</strong> ${venue.phone}</p>
+          </div>
+
+          <div style="background-color: #f7f7f7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6c757d;">
+            <h3 style="color: #495057; margin: 0 0 10px 0;">Reason for Rejection:</h3>
+            <p style="color: #495057; margin: 0;">${reason}</p>
+          </div>
+
+          ${notes ? `
+          <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <h4 style="color: #856404; margin: 0 0 10px 0;">Additional Notes:</h4>
+            <p style="color: #856404; margin: 0;">${notes}</p>
+          </div>
+          ` : ''}
+
+          <div style="margin: 30px 0;">
+            <h3 style="color: #4a154b; margin: 0 0 15px 0;">Next Steps:</h3>
+            <ol style="color: #666; line-height: 1.6;">
+              <li>Review the feedback provided above</li>
+              <li>Make the necessary changes to your venue information</li>
+              <li>Feel free to resubmit your application once changes are made</li>
+              <li>Contact our support team if you need assistance</li>
+            </ol>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/venue/auth/signup" 
+               style="background-color: #6c757d; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+              Update Your Application
+            </a>
+          </div>
+
+          <div style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 30px; text-align: center; color: #666; font-size: 14px;">
+            <p style="margin: 0;">We encourage you to resubmit your application after making the necessary changes.</p>
+            <p style="margin: 5px 0;">Best regards,<br>The AHIBI Team</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return this.sendMail({
+      to: venue.email,
+      subject,
+      html
+    });
+  }
 }
 
 module.exports = new EmailService();

@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Eye, Trash2, CheckCircle, XCircle, Search, Building2, MapPin, Phone, Mail, Calendar } from "lucide-react";
+import { Loader2, Eye, Trash2, CheckCircle, XCircle, Search, Building, MapPin, Phone, Mail, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -36,25 +36,32 @@ type ApprovalStatus = "pending" | "approved" | "rejected";
 type VenueListItem = {
   _id: string;
   name?: string;
+  businessName?: string;
   email?: string;
   phone?: string;
-  city?: string;
-  state?: string;
-  venueType?: string;
-  capacity?: number;
-  approvalStatus?: ApprovalStatus;
-  status?: string;
-  createdAt: string;
-  images?: string[];
-  ownerDetails?: {
-    fullName?: string;
-    businessName?: string;
-  };
-  location?: {
-    address?: string;
+  address?: {
+    street?: string;
     city?: string;
     state?: string;
     pincode?: string;
+    country?: string;
+  };
+  status?: ApprovalStatus;
+  isVerified?: boolean;
+  isActive?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  images?: Array<{
+    public_id: string;
+    url: string;
+    width: number;
+    height: number;
+  }>;
+  socialLinks?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
   };
 };
 
@@ -65,10 +72,6 @@ function formatDate(value?: string) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleString();
-}
-
-function isProbablyUrl(value: string) {
-  return /^https?:\/\//i.test(value);
 }
 
 function formatLabel(key: string) {
@@ -86,7 +89,7 @@ function ValueRenderer({ value }: { value: any }) {
   }
 
   if (typeof value === "string") {
-    if (isProbablyUrl(value)) {
+    if (/^https?:\/\//i.test(value)) {
       const isImage = /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(value);
       return (
         <div className="space-y-2">
@@ -242,14 +245,11 @@ export default function VenueManagement() {
     return venues.filter((v) => {
       const haystack = [
         v.name,
+        v.businessName,
         v.email,
         v.phone,
-        v.city,
-        v.state,
-        v.venueType,
-        v.ownerDetails?.fullName,
-        v.ownerDetails?.businessName,
-        v.location?.address,
+        v.address?.city,
+        v.address?.state,
       ]
         .filter(Boolean)
         .join(" ")
@@ -262,8 +262,8 @@ export default function VenueManagement() {
     const counts = { total: 0, pending: 0, approved: 0, rejected: 0 };
     counts.total = venues.length;
     for (const v of venues) {
-      if (v.approvalStatus === "approved") counts.approved += 1;
-      else if (v.approvalStatus === "rejected") counts.rejected += 1;
+      if (v.status === "approved") counts.approved += 1;
+      else if (v.status === "rejected") counts.rejected += 1;
       else counts.pending += 1;
     }
     return counts;
@@ -274,16 +274,14 @@ export default function VenueManagement() {
     const keys = [
       "_id",
       "name",
+      "businessName",
       "email",
       "phone",
-      "approvalStatus",
       "status",
+      "isVerified",
+      "isActive",
       "createdAt",
       "updatedAt",
-      "venueType",
-      "capacity",
-      "city",
-      "state",
     ];
     const out: Record<string, any> = {};
     for (const k of keys) {
@@ -292,44 +290,14 @@ export default function VenueManagement() {
     return out;
   }, [venueDetails]);
 
-  const ownerForDetails = useMemo(() => {
+  const addressForDetails = useMemo(() => {
     if (!venueDetails) return null;
-    const keys = ["ownerDetails"];
-    const out: Record<string, any> = {};
-    for (const k of keys) {
-      if (venueDetails[k] !== undefined) out[k] = venueDetails[k];
-    }
-    return out;
+    return venueDetails.address || {};
   }, [venueDetails]);
 
-  const locationForDetails = useMemo(() => {
+  const socialForDetails = useMemo(() => {
     if (!venueDetails) return null;
-    const keys = ["location", "address", "landmark"];
-    const out: Record<string, any> = {};
-    for (const k of keys) {
-      if (venueDetails[k] !== undefined) out[k] = venueDetails[k];
-    }
-    return out;
-  }, [venueDetails]);
-
-  const capacityForDetails = useMemo(() => {
-    if (!venueDetails) return null;
-    const keys = ["capacityDetails", "pricing", "parking"];
-    const out: Record<string, any> = {};
-    for (const k of keys) {
-      if (venueDetails[k] !== undefined) out[k] = venueDetails[k];
-    }
-    return out;
-  }, [venueDetails]);
-
-  const classificationForDetails = useMemo(() => {
-    if (!venueDetails) return null;
-    const keys = ["venueClassification", "amenities", "rules"];
-    const out: Record<string, any> = {};
-    for (const k of keys) {
-      if (venueDetails[k] !== undefined) out[k] = venueDetails[k];
-    }
-    return out;
+    return venueDetails.socialLinks || {};
   }, [venueDetails]);
 
   const openDetails = async (id: string) => {
@@ -437,7 +405,7 @@ export default function VenueManagement() {
 
   const deleteVenue = async (id: string) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this venue? This will remove all associated bookings and data."
+      "Are you sure you want to delete this venue? This action cannot be undone."
     );
     if (!confirmed) return;
 
@@ -481,7 +449,7 @@ export default function VenueManagement() {
             <div className="space-y-1">
               <CardTitle>Venue Management</CardTitle>
               <CardDescription>
-                Clean management view for venues: review details, approve/reject, or delete.
+                Manage venue registrations: review details, approve/reject, or delete venues.
               </CardDescription>
             </div>
 
@@ -565,7 +533,6 @@ export default function VenueManagement() {
                     <TableHead>Venue</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -573,11 +540,11 @@ export default function VenueManagement() {
                 </TableHeader>
                 <TableBody>
                   {filteredVenues.map((v) => {
-                    const approvalStatus = v.approvalStatus || "pending";
+                    const status = v.status || "pending";
                     const statusBadgeClass =
-                      approvalStatus === "approved"
+                      status === "approved"
                         ? "bg-green-100 text-green-700 border-green-200"
-                        : approvalStatus === "rejected"
+                        : status === "rejected"
                           ? "bg-red-100 text-red-700 border-red-200"
                           : "bg-yellow-100 text-yellow-700 border-yellow-200";
 
@@ -585,36 +552,43 @@ export default function VenueManagement() {
                       <TableRow key={v._id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Building2 className="h-10 w-10 rounded-md object-cover border text-gray-400" />
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Building className="h-5 w-5 text-blue-600" />
+                            </div>
                             <div>
                               <div className="font-medium text-gray-900">
-                                {v.name || v.ownerDetails?.businessName || "Unknown"}
+                                {v.businessName || v.name || "Unknown"}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {v.ownerDetails?.fullName || ""}
+                                {v.businessName && v.name ? v.name : ""}
                               </div>
                             </div>
                           </div>
                         </TableCell>
 
                         <TableCell>
-                          <div className="text-sm">{v.email || "No email"}</div>
-                          <div className="text-xs text-gray-500">{v.phone || "No phone"}</div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="h-3 w-3 text-gray-400" />
+                            <span>{v.email || "No email"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                            <Phone className="h-3 w-3" />
+                            <span>{v.phone || "No phone"}</span>
+                          </div>
                         </TableCell>
 
                         <TableCell>
-                          <div className="text-sm">{v.city || "Not provided"}</div>
-                          <div className="text-xs text-gray-500">{v.state || ""}</div>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="text-sm">{v.venueType || "Not provided"}</div>
-                          <div className="text-xs text-gray-500">{v.capacity ? `Capacity: ${v.capacity}` : ""}</div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-3 w-3 text-gray-400" />
+                            <span>
+                              {v.address?.city ? `${v.address.city}${v.address?.state ? `, ${v.address.state}` : ""}` : "Not provided"}
+                            </span>
+                          </div>
                         </TableCell>
 
                         <TableCell>
                           <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass}`}>
-                            {approvalStatus.charAt(0).toUpperCase() + approvalStatus.slice(1)}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
                           </span>
                         </TableCell>
 
@@ -632,7 +606,7 @@ export default function VenueManagement() {
                               View
                             </Button>
 
-                            {approvalStatus === "pending" ? (
+                            {status === "pending" ? (
                               <>
                                 <Button
                                   variant="outline"
@@ -706,7 +680,7 @@ export default function VenueManagement() {
           <DialogHeader>
             <DialogTitle>Venue Details</DialogTitle>
             <DialogDescription>
-              Review everything the venue submitted.
+              Review all venue information and manage approval status.
             </DialogDescription>
           </DialogHeader>
 
@@ -720,10 +694,12 @@ export default function VenueManagement() {
             <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <Building2 className="h-16 w-16 rounded-lg object-cover border text-gray-400" />
+                  <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Building className="h-8 w-8 text-blue-600" />
+                  </div>
                   <div>
                     <div className="text-lg font-semibold text-gray-900">
-                      {venueDetails.name || venueDetails.ownerDetails?.businessName || "Unknown"}
+                      {venueDetails.businessName || venueDetails.name || "Unknown"}
                     </div>
                     <div className="text-sm text-gray-600">{venueDetails.email || "No email"}</div>
                     <div className="text-sm text-gray-600">{venueDetails.phone || "No phone"}</div>
@@ -731,18 +707,18 @@ export default function VenueManagement() {
                       <Badge
                         variant="secondary"
                         className={
-                          venueDetails.approvalStatus === "approved"
+                          venueDetails.status === "approved"
                             ? "bg-green-100 text-green-700 border border-green-200"
-                            : venueDetails.approvalStatus === "rejected"
+                            : venueDetails.status === "rejected"
                               ? "bg-red-100 text-red-700 border border-red-200"
                               : "bg-yellow-100 text-yellow-700 border border-yellow-200"
                         }
                       >
-                        {(venueDetails.approvalStatus || "pending")
+                        {(venueDetails.status || "pending")
                           .toString()
                           .charAt(0)
                           .toUpperCase() +
-                          (venueDetails.approvalStatus || "pending").toString().slice(1)}
+                          (venueDetails.status || "pending").toString().slice(1)}
                       </Badge>
                     </div>
                   </div>
@@ -750,7 +726,7 @@ export default function VenueManagement() {
 
                 {selectedVenueId ? (
                   <div className="flex flex-wrap gap-2">
-                    {(venueDetails.approvalStatus || "pending") === "pending" ? (
+                    {(venueDetails.status || "pending") === "pending" ? (
                       <>
                         <Button
                           variant="outline"
@@ -800,10 +776,8 @@ export default function VenueManagement() {
               <Tabs defaultValue="overview" className="w-full">
                 <TabsList className="bg-white flex flex-wrap justify-start">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="owner">Owner Details</TabsTrigger>
-                  <TabsTrigger value="location">Location</TabsTrigger>
-                  <TabsTrigger value="capacity">Capacity & Pricing</TabsTrigger>
-                  <TabsTrigger value="classification">Classification</TabsTrigger>
+                  <TabsTrigger value="address">Address</TabsTrigger>
+                  <TabsTrigger value="social">Social Links</TabsTrigger>
                   <TabsTrigger value="raw">Raw Data</TabsTrigger>
                 </TabsList>
 
@@ -811,7 +785,7 @@ export default function VenueManagement() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">Overview</CardTitle>
-                      <CardDescription>Key identity and status information.</CardDescription>
+                      <CardDescription>Basic venue information and status.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ObjectRenderer data={overviewForDetails} />
@@ -819,50 +793,26 @@ export default function VenueManagement() {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="owner">
+                <TabsContent value="address">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Owner Details</CardTitle>
-                      <CardDescription>Venue owner information and contact details.</CardDescription>
+                      <CardTitle className="text-base">Address Information</CardTitle>
+                      <CardDescription>Venue location details.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ObjectRenderer data={ownerForDetails} />
+                      <ObjectRenderer data={addressForDetails} />
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="location">
+                <TabsContent value="social">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Location & Address</CardTitle>
-                      <CardDescription>Venue location, address and directions.</CardDescription>
+                      <CardTitle className="text-base">Social Links</CardTitle>
+                      <CardDescription>Social media and website links.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ObjectRenderer data={locationForDetails} />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="capacity">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Capacity & Pricing</CardTitle>
-                      <CardDescription>Seating capacity, pricing details and parking information.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ObjectRenderer data={capacityForDetails} />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="classification">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Classification & Amenities</CardTitle>
-                      <CardDescription>Venue types, amenities and rules.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ObjectRenderer data={classificationForDetails} />
+                      <ObjectRenderer data={socialForDetails} />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -870,8 +820,8 @@ export default function VenueManagement() {
                 <TabsContent value="raw">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Raw Data</CardTitle>
-                      <CardDescription>Everything as returned by the backend.</CardDescription>
+                      <CardTitle className="text-base">Complete Data</CardTitle>
+                      <CardDescription>All venue data as stored in database.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ObjectRenderer data={venueDetails} />

@@ -1,130 +1,195 @@
 const express = require('express');
-const { check } = require('express-validator');
-const venueAuthController = require('../controllers/venueAuthController');
-const venueController = require('../controllers/venueController');
-const { protect } = require('../middlewares/auth');
-
+const { body } = require('express-validator');
 const router = express.Router();
 
-// ============ PUBLIC ROUTES ============
+// Import controllers
+const {
+  sendSignupOTP,
+  verifySignupOTP,
+  sendLoginOTP,
+  verifyLoginOTP,
+  passwordLogin,
+  getProfile,
+  updateProfile
+} = require('../controllers/venueAuthController');
 
-// Venue authentication
-router.post('/auth/send-otp', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('mode', 'Mode must be signup or login').isIn(['signup', 'login']),
-  // Minimal validation for signup; remaining details will be captured later in admin panel
-  check('email', 'Please include a valid email').if(check('mode').equals('signup')).isEmail().optional({ nullable: true }),
-  check('password', 'Password is required for signup').if(check('mode').equals('signup')).isString().isLength({ min: 6 })
-], venueAuthController.sendVenueOtp);
+const {
+  getPublicVenues,
+  getPublicVenueById
+} = require('../controllers/venueController');
 
-router.post('/auth/verify-otp', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('otp', 'OTP is required').isLength({ min: 6, max: 6 }),
-  check('mode', 'Mode must be signup or login').isIn(['signup', 'login'])
-], venueAuthController.verifyVenueOtp);
+const {
+  getVenueSpaces,
+  getSpaceById,
+  createSpace,
+  updateSpace,
+  deleteSpace,
+  getSpaceStats,
+  getVenueBookings,
+  getPublicVenueSpaces,
+  getPublicSpaceById
+} = require('../controllers/eventSpaceController');
 
-router.post('/auth/login-password', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('password', 'Password is required').isString().notEmpty()
-], venueAuthController.loginVenueWithPassword);
+// Import middleware
+const venueAuth = require('../middlewares/venueAuth');
 
-router.post('/auth/forgot-password/send-otp', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/)
-], venueAuthController.sendVenuePasswordResetOtp);
+// Validation rules
+const signupValidation = [
+  body('name').trim().isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters'),
+  body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('phone').matches(/^[6-9]\d{9}$/).withMessage('Valid Indian phone number required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('businessName').optional().custom((value) => {
+    if (!value || value.trim() === '') return true;  // Allow empty
+    return value.trim().length >= 2 && value.trim().length <= 100;  // Validate if filled
+  }),
+  // Optional fields - don't validate empty strings
+  body('address.city').optional().custom((value) => {
+    if (value && value.trim().length === 0) return true;
+    if (value && value.trim().length > 0) return value.trim().length <= 50;
+    return true;
+  }),
+  body('address.state').optional().custom((value) => {
+    if (value && value.trim().length === 0) return true;
+    if (value && value.trim().length > 0) return value.trim().length <= 50;
+    return true;
+  }),
+  body('address.pincode').optional().custom((value) => {
+    if (!value || value.trim() === '') return true;
+    return /^\d{6}$/.test(value);
+  }),
+  body('contactPerson.name').optional().custom((value) => {
+    if (value && value.trim().length === 0) return true;
+    if (value && value.trim().length > 0) return value.trim().length >= 2 && value.trim().length <= 50;
+    return true;
+  }),
+  body('contactPerson.phone').optional().custom((value) => {
+    if (!value || value.trim() === '') return true;
+    return /^[6-9]\d{9}$/.test(value);
+  }),
+  body('contactPerson.email').optional().custom((value) => {
+    if (!value || value.trim() === '') return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  })
+];
 
-router.post('/auth/forgot-password/verify-otp', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('otp', 'OTP is required').isLength({ min: 6, max: 6 })
-], venueAuthController.verifyVenuePasswordResetOtp);
+const otpValidation = [
+  body('phone').matches(/^[6-9]\d{9}$/).withMessage('Valid Indian phone number required'),
+  body('otp').matches(/^\d{6}$/).withMessage('OTP must be 6 digits')
+];
 
-router.post('/auth/forgot-password/reset', [
-  check('phone', 'Phone number is required').matches(/^\d{10}$/),
-  check('newPassword', 'New password is required').isString().isLength({ min: 6 }),
-  check('confirmPassword', 'Confirm password is required').isString().isLength({ min: 6 })
-], venueAuthController.resetVenuePassword);
+const loginValidation = [
+  body('phone').matches(/^[6-9]\d{9}$/).withMessage('Valid Indian phone number required')
+];
 
-// ============ VENUE MANAGER PROTECTED ROUTES ============
+const passwordLoginValidation = [
+  body('phone').matches(/^[6-9]\d{9}$/).withMessage('Valid Indian phone number required'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+];
 
-// Venue profile management
-router.get('/profile', protect, venueAuthController.getVenueProfile);
-router.put('/profile', protect, venueAuthController.updateVenueProfile);
+const updateProfileValidation = [
+  body('name').optional().trim().isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters'),
+  body('email').optional().isEmail().normalizeEmail().withMessage('Valid email required'),
+  body('phone').optional().matches(/^[6-9]\d{9}$/).withMessage('Valid Indian phone number required'),
+  body('businessName').optional().trim().isLength({ min: 2, max: 100 }).withMessage('Business name must be 2-100 characters'),
+  body('address.city').optional().trim().isLength({ min: 2, max: 50 }).withMessage('City must be 2-50 characters'),
+  body('address.state').optional().trim().isLength({ min: 2, max: 50 }).withMessage('State must be 2-50 characters'),
+  body('address.pincode').optional().matches(/^\d{6}$/).withMessage('Valid pincode required'),
+  body('images').optional().isArray().withMessage('Images must be an array'),
+  // Social links validation
+  body('socialLinks.website').optional().isURL().withMessage('Valid website URL required'),
+  body('socialLinks.facebook').optional().isURL().withMessage('Valid Facebook URL required'),
+  body('socialLinks.instagram').optional().isURL().withMessage('Valid Instagram URL required'),
+  body('socialLinks.twitter').optional().isURL().withMessage('Valid Twitter URL required')
+];
 
-// Multi-venue management
-router.get('/venues', protect, venueAuthController.getMyVenues);
-router.post('/venues', protect, venueAuthController.createVenue);
+// Event space validation rules
+const createSpaceValidation = [
+  body('name').trim().isLength({ min: 2, max: 100 }).withMessage('Space name must be 2-100 characters'),
+  body('description').trim().isLength({ min: 10, max: 2000 }).withMessage('Description must be 10-2000 characters'),
+  body('venueId').isMongoId().withMessage('Valid venue ID is required'),
+  body('capacity').isInt({ min: 1 }).withMessage('Capacity must be at least 1'),
+  body('capacityDetails.standingCapacity').isInt({ min: 1 }).withMessage('Standing capacity must be at least 1'),
+  body('capacityDetails.minimumBookingCapacity').optional().isInt({ min: 1 }).withMessage('Minimum booking capacity must be at least 1'),
+  body('pricing.basePrice').isFloat({ min: 0 }).withMessage('Base price must be non-negative'),
+  body('pricing.hourlyRate').optional().isFloat({ min: 0 }).withMessage('Hourly rate must be non-negative'),
+  body('pricing.halfDayRate').optional().isFloat({ min: 0 }).withMessage('Half day rate must be non-negative'),
+  body('pricing.fullDayRate').optional().isFloat({ min: 0 }).withMessage('Full day rate must be non-negative'),
+  body('address.street').trim().isLength({ min: 5 }).withMessage('Street address is required'),
+  body('address.city').trim().isLength({ min: 2, max: 50 }).withMessage('City must be 2-50 characters'),
+  body('address.state').trim().isLength({ min: 2, max: 50 }).withMessage('State must be 2-50 characters'),
+  body('address.pincode').matches(/^\d{6}$/).withMessage('Valid 6-digit pincode required'),
+  body('venueClassification.indoorOutdoor').isIn(['indoor', 'outdoor', 'hybrid']).withMessage('Valid indoor/outdoor selection required'),
+  body('contactInfo.phone').matches(/^\d{10}$/).withMessage('Valid 10-digit phone number required'),
+  body('contactInfo.email').optional().isEmail().normalizeEmail().withMessage('Valid email required')
+];
 
-// Separate section update endpoints
-router.put('/details/owner-details', protect, venueAuthController.updateOwnerDetails);
-router.put('/details/venue-classification', protect, venueAuthController.updateVenueClassification);
-router.put('/details/location', protect, venueAuthController.updateLocation);
-router.put('/details/capacity', protect, venueAuthController.updateCapacity);
-router.put('/details/pricing', protect, venueAuthController.updatePricing);
-router.put('/details/amenities', protect, venueAuthController.updateAmenities);
-router.put('/details/policies', protect, venueAuthController.updatePolicies);
-router.put('/details/addon-services', protect, venueAuthController.updateAddOnServices);
-router.put('/details/documents', protect, venueAuthController.updateDocuments);
-router.put('/details/authorizations', protect, venueAuthController.updateAuthorizations);
+const updateSpaceValidation = [
+  body('name').optional().trim().isLength({ min: 2, max: 100 }).withMessage('Space name must be 2-100 characters'),
+  body('description').optional().trim().isLength({ min: 10, max: 2000 }).withMessage('Description must be 10-2000 characters'),
+  body('capacity').optional().isInt({ min: 1 }).withMessage('Capacity must be at least 1'),
+  body('capacityDetails.standingCapacity').optional().isInt({ min: 1 }).withMessage('Standing capacity must be at least 1'),
+  body('pricing.basePrice').optional().isFloat({ min: 0 }).withMessage('Base price must be non-negative'),
+  body('address.street').optional().trim().isLength({ min: 5 }).withMessage('Street address is required'),
+  body('address.city').optional().trim().isLength({ min: 2, max: 50 }).withMessage('City must be 2-50 characters'),
+  body('address.state').optional().trim().isLength({ min: 2, max: 50 }).withMessage('State must be 2-50 characters'),
+  body('address.pincode').optional().matches(/^\d{6}$/).withMessage('Valid 6-digit pincode required')
+];
 
-// FAQs management (venue-owned)
-router.get('/faqs', protect, venueAuthController.getFaqs);
-router.post('/faqs', protect, venueAuthController.createFaq);
-router.put('/faqs/:faqId', protect, venueAuthController.updateFaq);
-router.delete('/faqs/:faqId', protect, venueAuthController.deleteFaq);
+// Public routes (no authentication required)
 
-// Blocked slots management (for offline bookings/internal reservations)
-router.get('/blocked-slots', protect, venueAuthController.getBlockedSlots);
-router.post('/blocked-slots', protect, venueAuthController.addBlockedSlot);
-router.put('/blocked-slots/:slotId', protect, venueAuthController.updateBlockedSlot);
-router.delete('/blocked-slots/:slotId', protect, venueAuthController.deleteBlockedSlot);
+// Get all approved venues
+router.get('/', getPublicVenues);
 
-// Venue manager dashboard
-router.get('/manager/stats', protect, venueController.getVenueManagerStats);
-router.get('/manager/bookings', protect, venueController.getVenueManagerBookings);
-router.put('/manager/bookings/:bookingId', protect, [
-  check('status', 'Status is required').isIn(['pending', 'confirmed', 'rejected', 'cancelled', 'completed']),
-  check('rejectionReason', 'Rejection reason is required when rejecting').if(
-    check('status').equals('rejected')
-  ).notEmpty()
-], venueController.updateBookingStatus);
+// Send OTP for signup
+router.post('/auth/send-signup-otp', signupValidation, sendSignupOTP);
 
-router.put('/manager/availability', protect, venueController.updateAvailability);
-router.put('/manager/profile', protect, venueController.updateVenueManagerProfile);
+// Verify OTP and complete signup
+router.post('/auth/verify-signup-otp', otpValidation, verifySignupOTP);
 
-// ============ USER PROTECTED ROUTES ============
+// Send OTP for login
+router.post('/auth/send-login-otp', loginValidation, sendLoginOTP);
 
-// User's bookings (fixed prefix to avoid conflict with '/:id')
-router.get('/my-bookings', protect, venueController.getUserBookings);
-router.get('/bookings/:bookingId', protect, venueController.getBookingById);
+// Verify OTP and login
+router.post('/auth/verify-login-otp', otpValidation, verifyLoginOTP);
 
-// Booking routes (for users) with ':id' - MUST come BEFORE the general /:id routes
-router.post('/:id/bookings/create-order', (req, res, next) => {
-  console.log('=== ROUTE HIT: POST /:id/bookings/create-order ===');
-  console.log('Venue ID from route:', req.params.id);
-  console.log('Request body:', req.body);
-  next();
-}, protect, [
-  check('bookingDate', 'Booking date is required').isISO8601(),
-  check('startTime', 'Start time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-  check('endTime', 'End time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
-  check('guestCount', 'Guest count is required').isInt({ min: 1 })
-], venueController.createBookingOrder);
+// Password-based login
+router.post('/auth/login', passwordLoginValidation, passwordLogin);
 
-router.post('/:id/bookings/verify-payment', protect, venueController.verifyPayment);
+// Protected routes (require authentication)
 
-// ============ PUBLIC ROUTES ============
+// Get venue profile
+router.get('/profile', venueAuth, getProfile);
 
-// Debug route (should be before parameterized routes)
-router.get('/debug/list-all', venueController.debugListAllVenues);
+// Update venue profile
+router.put('/profile', venueAuth, updateProfileValidation, updateProfile);
 
-// Public venue listing should be before parameterized routes
-router.get('/', venueController.getAllVenues);
+// Event space routes (protected)
+// Get venue spaces
+router.get('/spaces', venueAuth, getVenueSpaces);
 
-// Specific routes with parameters - MUST come before general /:id routes
-router.get('/:id/availability/:date', venueController.getTimeSlotAvailability);
-router.get('/:id/bookings', venueController.getVenueBookings);
-router.post('/:id/reviews', protect, venueController.addVenueReview);
+// Get all bookings for venue (all spaces)
+router.get('/spaces/bookings', venueAuth, getVenueBookings);
 
-// General /:id routes - MUST come after specific routes
-router.get('/:id', venueController.getVenueById);
+// Get space statistics
+router.get('/spaces/stats', venueAuth, getSpaceStats);
+
+// Create new space
+router.post('/spaces', venueAuth, createSpaceValidation, createSpace);
+
+// Update space
+router.put('/spaces/:id', venueAuth, updateSpaceValidation, updateSpace);
+
+// Delete space
+router.delete('/spaces/:id', venueAuth, deleteSpace);
+
+// Get venue details by ID (public view) - Must be last to avoid conflicts
+router.get('/:id', getPublicVenueById);
+
+// Get public space details by ID (no auth required)
+router.get('/spaces/:id', getPublicSpaceById);
+
+// Get public spaces for a venue (no auth required)
+router.get('/:id/spaces', getPublicVenueSpaces);
 
 module.exports = router;

@@ -10,6 +10,7 @@ import Navbar from "../Navbar";
 type VenueApiItem = {
   _id: string;
   name: string;
+  businessName: string;
   address?: {
     street?: string;
     city?: string;
@@ -33,12 +34,28 @@ type VenueApiItem = {
   documents?: {
     venueImages?: Array<{ url?: string; isMain?: boolean }>;
   };
+  images?: Array<{
+    public_id?: string;
+    url: string;
+    width?: number;
+    height?: number;
+    format?: string;
+    size?: number;
+    created_at?: string;
+  }>;
 };
 
 const getVenueImageUrl = (venue: VenueApiItem) => {
+  // Check venue.images first (new Cloudinary images field)
+  const venueImages = Array.isArray(venue.images) ? venue.images : [];
+  if (venueImages.length > 0) {
+    return venueImages[0].url || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3";
+  }
+  
+  // Fallback to gallery and documents.venueImages (legacy fields)
   const gallery = Array.isArray(venue.gallery) ? venue.gallery : [];
-  const venueImages = Array.isArray(venue.documents?.venueImages) ? venue.documents?.venueImages || [] : [];
-  const all = [...gallery, ...venueImages];
+  const docImages = Array.isArray(venue.documents?.venueImages) ? venue.documents?.venueImages || [] : [];
+  const all = [...gallery, ...docImages];
   return (
     all.find((img) => img?.isMain && img?.url)?.url ||
     all.find((img) => img?.url)?.url ||
@@ -70,7 +87,7 @@ const toFeaturedVenueCard = (venue: VenueApiItem) => {
   const location = [venue.address?.city, venue.address?.state].filter(Boolean).join(", ") || "Location not provided";
   return {
     id: venue._id,
-    name: venue.name,
+    name: venue.businessName || venue.name, // Use businessName first, fallback to name
     location,
     city: venue.address?.city || "",
     state: venue.address?.state || "",
@@ -342,7 +359,7 @@ const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<type
         {displayedVenues.map((venue) => (
           <Link
             key={venue.id}
-            href={`/allVenues/${encodeURIComponent(slugifyVenueName(venue.name) || venue.id)}`}
+            href={`/allVenues/${venue.id}`}
             className="group block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-200"
           >
             <div className="relative aspect-[16/10] overflow-hidden">

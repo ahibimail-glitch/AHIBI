@@ -36,6 +36,7 @@ interface Venue {
   _id: string;
   managedByVenueId?: string | null;
   name: string;
+  businessName: string;
   description?: string;
   address: {
     street?: string;
@@ -62,6 +63,15 @@ interface Venue {
   documents?: {
     venueImages?: Array<{ url?: string; isMain?: boolean }>;
   };
+  images?: Array<{
+    public_id?: string;
+    url: string;
+    width?: number;
+    height?: number;
+    format?: string;
+    size?: number;
+    created_at?: string;
+  }>;
   pricing?: {
     basePrice?: number;
     hourlyRate?: number;
@@ -118,9 +128,16 @@ const getVenueType = (venue: Venue): VenueType => {
 };
 
 const getVenueImageUrl = (venue: Venue) => {
+  // Check venue.images first (new Cloudinary images field)
+  const venueImages = Array.isArray(venue.images) ? venue.images : [];
+  if (venueImages.length > 0) {
+    return venueImages[0].url || "https://images.unsplash.com/photo-1519167758481-83f550bb49b3";
+  }
+  
+  // Fallback to gallery and documents.venueImages (legacy fields)
   const gallery = Array.isArray(venue.gallery) ? venue.gallery : [];
-  const venueImages = Array.isArray(venue.documents?.venueImages) ? venue.documents?.venueImages ?? [] : [];
-  const merged = [...gallery, ...venueImages];
+  const docImages = Array.isArray(venue.documents?.venueImages) ? venue.documents?.venueImages ?? [] : [];
+  const merged = [...gallery, ...docImages];
   return (
     merged.find((img) => img?.isMain && img.url)?.url ||
     merged.find((img) => img?.url)?.url ||
@@ -130,7 +147,7 @@ const getVenueImageUrl = (venue: Venue) => {
 
 const matchesFilters = (venue: Venue, filters: Filters): boolean => {
   if (filters.search) {
-    const haystack = `${venue.name} ${venue.address?.city ?? ""} ${venue.address?.state ?? ""}`.toLowerCase();
+    const haystack = `${venue.businessName} ${venue.name} ${venue.address?.city ?? ""} ${venue.address?.state ?? ""}`.toLowerCase();
     if (!haystack.includes(filters.search.toLowerCase())) return false;
   }
 
@@ -312,22 +329,21 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
     <button
       type="button"
       onClick={() => {
-        const slug = slugifyVenueName(venue.name);
-        router.push(`/allVenues/${encodeURIComponent(slug || venue._id)}`);
+        router.push(`/allVenues/${venue._id}`);
       }}
       className="group text-left w-full h-full min-h-[420px] md:min-h-[460px] bg-card rounded-2xl border border-surface-border/80 shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
           src={imageUrl}
-          alt={venue.name}
+          alt={venue.businessName || venue.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
       </div>
       <div className="p-5 space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg font-semibold text-foreground leading-tight line-clamp-2">{venue.name}</h3>
+          <h3 className="text-lg font-semibold text-foreground leading-tight line-clamp-2">{venue.businessName || venue.name}</h3>
           <div className="flex items-center gap-1 shrink-0">
             <Star className="w-3.5 h-3.5 fill-primary text-primary" />
             <span className="text-sm font-medium text-foreground">{venue.rating?.average ?? "–"}</span>

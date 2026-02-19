@@ -112,12 +112,12 @@ const {
   // Upload multiple photos
   exports.uploadMultiplePhotos = async (req, res, next) => {
     try {
-      if (!req.files || !req.files.photos) {
+      if (!req.files || req.files.length === 0) {
         return next(new AppError('Please upload photos', 400));
       }
   
       const { folder = 'ahibi', description } = req.body;
-      const files = Array.isArray(req.files.photos) ? req.files.photos : [req.files.photos];
+      const files = Array.isArray(req.files) ? req.files : [req.files];
   
       // Validate files
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -150,6 +150,7 @@ const {
       logger.info(`${results.length} photos uploaded successfully by user ${userId}`);
   
       res.status(200).json({
+        success: true,
         status: 'success',
         data: {
           photos: results
@@ -284,12 +285,12 @@ const {
   // Upload court images
   exports.uploadCourtImages = async (req, res, next) => {
     try {
-      if (!req.files || !req.files.photos) {
+      if (!req.files || req.files.length === 0) {
         return next(new AppError('Please upload court images', 400));
       }
   
       const { courtId } = req.body;
-      const files = Array.isArray(req.files.photos) ? req.files.photos : [req.files.photos];
+      const files = Array.isArray(req.files) ? req.files : [req.files];
   
       // Validate files
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];

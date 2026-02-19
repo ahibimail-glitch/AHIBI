@@ -515,12 +515,13 @@ exports.getAllVenues = async (req, res) => {
     let query = {};
     
     if (status) {
-      query.approvalStatus = status;
+      query.status = status;
     }
     
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
+        { businessName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
         { 'address.city': { $regex: search, $options: 'i' } }
@@ -528,7 +529,7 @@ exports.getAllVenues = async (req, res) => {
     }
     
     const venues = await Venue.find(query)
-      .select('_id name email phone approvalStatus createdAt description address capacity amenities contactInfo website')
+      .select('_id name businessName email phone status createdAt description address capacity amenities contactInfo website')
       .skip(skip)
       .limit(parseInt(limit, 10))
       .sort({ createdAt: -1 });
@@ -558,7 +559,7 @@ exports.getAllVenues = async (req, res) => {
 exports.getVenueById = async (req, res) => {
   try {
     const venue = await Venue.findById(req.params.id)
-      .select('_id name email phone approvalStatus createdAt updatedAt description address capacity amenities contactInfo website images rejectionReason');
+      .select('_id name businessName email phone status createdAt updatedAt description address capacity amenities contactInfo website images socialLinks rejectionReason');
     
     if (!venue) {
       return ApiResponse.notFound(res, 'Venue not found');
@@ -1025,7 +1026,7 @@ exports.approveVenue = async (req, res) => {
       return ApiResponse.notFound(res, "Venue not found");
     }
 
-    venue.approvalStatus = 'approved';
+    venue.status = 'approved';
     await venue.save();
 
     // Also update the user status if there's an associated user
@@ -1065,7 +1066,7 @@ exports.rejectVenue = async (req, res) => {
       return ApiResponse.notFound(res, "Venue not found");
     }
 
-    venue.approvalStatus = 'rejected';
+    venue.status = 'rejected';
     venue.rejectionReason = rejectionReason;
     await venue.save();
 

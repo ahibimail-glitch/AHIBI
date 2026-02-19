@@ -1,1453 +1,567 @@
 const Venue = require('../models/Venue');
-const smsService = require('../services/smsService');
-const emailService = require('../services/emailService');
+const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const ApiResponse = require('../utils/apiResponse');
-const tempOtpStore = require('../utils/tempOtpStore');
-const adminNotificationController = require('./adminNotificationController');
+const AdminNotification = require('../models/AdminNotification');
 
-/**
- * @desc    Send OTP for venue
- * @route   POST /api/venue/auth/send-otp
- * @access  Public
- */
-exports.sendVenueOtp = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, mode } = req.body;
-
-  try {
-    if (mode === 'login') {
-      const venue = await Venue.findOne({ phone, managedByVenueId: null });
-      if (!venue) {
-        return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
-      }
-
-      if (venue.approvalStatus === 'pending') {
-        return ApiResponse.forbidden(res, 'Your account is pending approval from the admin.');
-      }
-
-      if (venue.approvalStatus === 'rejected') {
-        return ApiResponse.forbidden(res, 'Your account has been rejected. Please contact support.');
-      }
-
-      let otp = await venue.setOtp();
-      const smsResponse = await smsService.sendOtp(phone, otp);
-
-      if (!smsResponse.success) {
-        return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
-      }
-
-      return ApiResponse.success(res, 'OTP sent successfully', {
-        phone,
-        otpSent: true
-      });
-    }
-
-    if (mode === 'signup' || !mode) {
-      let venue = await Venue.findOne({ phone, managedByVenueId: null });
-
-      if (venue) {
-        return ApiResponse.badRequest(res, 'Number is already registered');
-      }
-
-      let otp = Math.floor(100000 + Math.random() * 900000).toString();
-      tempOtpStore.set(phone, { otp, data: req.body });
-
-      const smsResponse = await smsService.sendOtp(phone, otp);
-
-      if (!smsResponse.success) {
-        return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
-      }
-
-      return ApiResponse.success(res, 'OTP sent successfully', {
-        phone,
-        otpSent: true
-      });
-    }
-
-  } catch (error) {
-    console.error('Send venue OTP error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
-  }
+// Helper to generate OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-/**
- * @desc    Verify OTP for venue
- * @route   POST /api/venue/auth/verify-otp
- * @access  Public
- */
-exports.verifyVenueOtp = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, otp, mode } = req.body;
-
+// Send OTP for signup
+const sendSignupOTP = async (req, res) => {
   try {
-    if (mode === 'login') {
-      const venue = await Venue.findOne({ phone, managedByVenueId: null });
-      
-      if (!venue) {
-        return ApiResponse.badRequest(res, 'Venue not found');
-      }
-
-      const isOtpValid = await venue.verifyOtp(otp);
-      if (!isOtpValid) {
-        return ApiResponse.badRequest(res, 'Invalid or expired OTP');
-      }
-
-      if (venue.approvalStatus === 'pending') {
-        return ApiResponse.accepted(res, 'Your venue account is pending approval', {
-          pending: true,
-          approvalStatus: venue.approvalStatus
-        });
-      }
-
-      if (venue.approvalStatus === 'rejected') {
-        return ApiResponse.forbidden(res, 'Your venue account has been rejected', {
-          rejected: true,
-          reason: venue.rejectionReason
-        });
-      }
-
-      const token = venue.getSignedJwtToken();
-
-      return ApiResponse.success(res, 'OTP verified successfully. Login successful.', {
-        token,
-        user: {
-          _id: venue._id,
-          name: venue.name,
-          email: venue.email,
-          phone: venue.phone,
-          role: 'venue',
-        }
-      });
-
-    } else {
-      const stored = tempOtpStore.get(phone);
-      if (!stored || stored.otp !== otp) {
-        return ApiResponse.badRequest(res, 'Invalid or expired OTP');
-      }
-
-      tempOtpStore.delete(phone);
-
-      // Prepare venue data with defaults for required fields
-      const signupData = stored.data;
-      
-      // Ensure ownerDetails has all required fields with defaults
-      // Email is required, so we must have it from signup data
-      const ownerEmail = signupData.ownerDetails?.email || signupData.email;
-      if (!ownerEmail) {
-        return ApiResponse.badRequest(res, 'Email is required for venue registration');
-      }
-
-      const ownerDetails = {
-        fullName: signupData.ownerDetails?.fullName || signupData.name || 'Not Provided',
-        primaryContact: signupData.ownerDetails?.primaryContact || signupData.phone || phone,
-        email: ownerEmail,
-        businessName: signupData.ownerDetails?.businessName || signupData.name || 'Not Provided',
-        designation: signupData.ownerDetails?.designation || 'Owner',
-        alternateContact: signupData.ownerDetails?.alternateContact || '',
-        businessRegistrationNumber: signupData.ownerDetails?.businessRegistrationNumber || '',
-        gstNumber: signupData.ownerDetails?.gstNumber || ''
-      };
-
-      // Ensure venueClassification has required fields
-      const venueClassification = {
-        venueTypes: signupData.venueClassification?.venueTypes || [],
-        venueTypeOther: signupData.venueClassification?.venueTypeOther || '',
-        indoorOutdoor: signupData.venueClassification?.indoorOutdoor || 'indoor',
-        operationMode: signupData.venueClassification?.operationMode || 'year_round'
-      };
-
-      // Ensure parking has required fields
-      const parking = {
-        carCapacity: signupData.parking?.carCapacity || 0,
-        twoWheelerAvailable: signupData.parking?.twoWheelerAvailable || false
-      };
-
-      // Ensure capacityDetails has required fields
-      const capacityDetails = {
-        standingCapacity: signupData.capacityDetails?.standingCapacity || 0,
-        seatingCapacity: signupData.capacityDetails?.seatingCapacity || {},
-        minimumBookingCapacity: signupData.capacityDetails?.minimumBookingCapacity || 0,
-        multipleEventsPerDay: signupData.capacityDetails?.multipleEventsPerDay || false,
-        timeSlots: signupData.capacityDetails?.timeSlots || [],
-        peakSeasonRates: signupData.capacityDetails?.peakSeasonRates || '',
-        offSeasonRates: signupData.capacityDetails?.offSeasonRates || '',
-        advanceBookingDays: signupData.capacityDetails?.advanceBookingDays || 30
-      };
-
-      // Ensure pricing has required fields
-      const pricing = {
-        basePrice: signupData.pricing?.basePrice || 0,
-        hourlyRate: signupData.pricing?.hourlyRate || 0,
-        fullDayRate: signupData.pricing?.fullDayRate || 0,
-        halfDayRate: signupData.pricing?.halfDayRate || 0,
-        cleaningFee: signupData.pricing?.cleaningFee || 0,
-        securityDeposit: signupData.pricing?.securityDeposit || 0,
-        rentalIncludes: signupData.pricing?.rentalIncludes || [],
-        otherEquipmentDetails: signupData.pricing?.otherEquipmentDetails || '',
-        securityDepositRequired: signupData.pricing?.securityDepositRequired || false,
-        paymentModes: signupData.pricing?.paymentModes || [],
-        cancellationPolicy: signupData.pricing?.cancellationPolicy || {
-          refundable: false,
-          timeFrame: '',
-          deductionPercentage: 0
-        }
-      };
-
-      // Provide minimal defaults so initial signup doesn't require full details
-      const minimalDefaults = {
-        description: signupData.description || 'To be updated',
-        address: {
-          street: signupData.address?.street || 'Not Provided',
-          city: signupData.address?.city || 'Unknown',
-          state: signupData.address?.state || 'Unknown',
-          pincode: signupData.address?.pincode || '000000',
-          landmark: signupData.address?.landmark || '',
-          googleMapsLink: signupData.address?.googleMapsLink || '',
-          directions: signupData.address?.directions || ''
-        },
-        location: signupData.location || { type: 'Point', coordinates: [] },
-        capacity: Number(signupData.capacity) || 0,
-        contactInfo: {
-          phone: signupData.contactInfo?.phone || signupData.phone || phone,
-          email: signupData.contactInfo?.email || signupData.email || ownerEmail,
-          website: signupData.contactInfo?.website || ''
-        }
-      };
-
-      // Merge all data with defaults and ensure top-level fields exist
-      const venueData = {
-        name: signupData.venueName || signupData.name || 'New Venue',
-        email: ownerEmail,
-        phone: signupData.phone || phone,
-        password: signupData.password,
-        approvalStatus: 'pending',
-        ownerDetails,
-        venueClassification,
-        parking,
-        capacityDetails,
-        pricing,
-        ...minimalDefaults
-      };
-
-      // Save without running full validation; details will be updated later in admin panel
-      const venue = new Venue(venueData);
-      await venue.save({ validateBeforeSave: false });
-
-      // Notify admin about new venue registration
-      adminNotificationController.notifyVenueRegistration(venue);
-
-      // Send welcome email to venue organizer
-      emailService.sendWelcomeEmail(venue).catch(err => {
-        console.error('Error sending venue welcome email:', err);
-      });
-
-      return ApiResponse.success(res, 'Venue account created successfully. Pending admin approval.', {
-        venue: {
-          id: venue._id,
-          name: venue.name,
-          approvalStatus: venue.approvalStatus
-        }
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
       });
     }
 
-  } catch (error) {
-    console.error('Verify Venue OTP Error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
-  }
-};
+    console.log('Received signup data:', req.body);
+    const { phone, email } = req.body;
 
-exports.loginVenueWithPassword = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, password } = req.body;
-
-  try {
-    const venue = await Venue.findOne({ phone, managedByVenueId: null }).select('+password');
-
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
-    }
-
-    if (venue.approvalStatus === 'pending') {
-      return ApiResponse.accepted(res, 'Your venue account is pending approval', {
-        pending: true,
-        approvalStatus: venue.approvalStatus
-      });
-    }
-
-    if (venue.approvalStatus === 'rejected') {
-      return ApiResponse.forbidden(res, 'Your venue account has been rejected', {
-        rejected: true,
-        reason: venue.rejectionReason
-      });
-    }
-
-    if (!venue.password) {
-      return ApiResponse.badRequest(res, 'Password is not set. Please reset your password using OTP.');
-    }
-
-    const isMatch = await venue.matchPassword(password);
-    if (!isMatch) {
-      return ApiResponse.badRequest(res, 'Invalid phone or password');
-    }
-
-    const token = venue.getSignedJwtToken();
-
-    return ApiResponse.success(res, 'Login successful.', {
-      token,
-      user: {
-        _id: venue._id,
-        name: venue.name,
-        email: venue.email,
-        phone: venue.phone,
-        role: 'venue',
-      }
+    // Check if venue already exists with this phone or email
+    const existingVenue = await Venue.findOne({
+      $or: [{ phone }, { email }]
     });
-  } catch (error) {
-    console.error('Venue password login error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
-  }
-};
 
-exports.sendVenuePasswordResetOtp = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone } = req.body;
-
-  try {
-    const venue = await Venue.findOne({ phone, managedByVenueId: null });
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
+    if (existingVenue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number or email is already registered'
+      });
     }
 
-    if (venue.approvalStatus === 'pending') {
-      return ApiResponse.forbidden(res, 'Your account is pending approval from the admin.');
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // For now, store OTP in memory (in production, use Redis or database)
+    // This is a simplified approach - you might want to store this in the database
+    const tempOTPStore = global.tempOTPStore || {};
+    tempOTPStore[phone] = {
+      otp,
+      expiry: otpExpiry,
+      email,
+      ...req.body // Store other signup data
+    };
+    global.tempOTPStore = tempOTPStore;
+
+    // Send OTP via SMS (using your existing SMS service)
+    try {
+      const smsService = require('../services/smsService');
+      await smsService.sendOtp(phone, otp);
+    } catch (smsError) {
+      console.error('SMS sending failed:', smsError);
+      // For development, you might want to log the OTP
+      console.log(`Venue Signup OTP for ${phone}: ${otp}`);
     }
 
-    if (venue.approvalStatus === 'rejected') {
-      return ApiResponse.forbidden(res, 'Your account has been rejected. Please contact support.');
-    }
-
-    const otp = await venue.setOtp();
-    const smsResponse = await smsService.sendOtp(phone, otp);
-
-    if (!smsResponse.success) {
-      return ApiResponse.serverError(res, 'Failed to send OTP', smsResponse.message);
-    }
-
-    return ApiResponse.success(res, 'OTP sent successfully', {
-      phone,
-      otpSent: true
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully',
+      // For development only
+      devMode: process.env.NODE_ENV !== 'production',
+      otp: process.env.NODE_ENV !== 'production' ? otp : undefined
     });
+
   } catch (error) {
-    console.error('Send venue password reset OTP error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
-  }
-};
-
-exports.verifyVenuePasswordResetOtp = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, otp } = req.body;
-
-  try {
-    const venue = await Venue.findOne({ phone, managedByVenueId: null });
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
-    }
-
-    const isOtpValid = await venue.verifyOtp(otp);
-    if (!isOtpValid) {
-      return ApiResponse.badRequest(res, 'Invalid or expired OTP');
-    }
-
-    const resetKey = `venue_password_reset:${phone}`;
-    tempOtpStore.set(resetKey, { verified: true, expiresAt: Date.now() + 5 * 60 * 1000 });
-
-    return ApiResponse.success(res, 'OTP verified successfully.', {
-      phone,
-      verified: true
+    console.error('Send signup OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP'
     });
-  } catch (error) {
-    console.error('Verify venue password reset OTP error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
   }
 };
 
-exports.resetVenuePassword = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { phone, newPassword, confirmPassword } = req.body;
-
+// Verify OTP and complete signup
+const verifySignupOTP = async (req, res) => {
   try {
-    if (confirmPassword !== undefined && newPassword !== confirmPassword) {
-      return ApiResponse.badRequest(res, 'Passwords do not match');
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
     }
 
-    const resetKey = `venue_password_reset:${phone}`;
-    const resetState = tempOtpStore.get(resetKey);
+    const { phone, otp } = req.body;
+    const tempOTPStore = global.tempOTPStore || {};
 
-    if (!resetState || !resetState.verified || !resetState.expiresAt || resetState.expiresAt < Date.now()) {
-      return ApiResponse.badRequest(res, 'Password reset session expired. Please verify OTP again.');
+    // Check if OTP exists and is valid
+    const storedData = tempOTPStore[phone];
+    if (!storedData) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP not found or expired'
+      });
     }
 
-    const venue = await Venue.findOne({ phone, managedByVenueId: null }).select('+password');
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found. Please sign up first.');
+    if (storedData.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP'
+      });
     }
 
-    venue.password = newPassword;
-    await venue.save({ validateBeforeSave: false });
-
-    tempOtpStore.delete(resetKey);
-
-    return ApiResponse.success(res, 'Password reset successful.', {
-      phone,
-      passwordReset: true
-    });
-  } catch (error) {
-    console.error('Reset venue password error:', error);
-    return ApiResponse.serverError(res, 'Server error', error);
-  }
-};
-
-/**
- * Helper: Resolve which venue ID the request is operating on.
- * If venueId query param is provided and the user has access (self or managed child), return it.
- * Otherwise return req.user.id.
- */
-const resolveVenueId = async (req) => {
-  const venueId = req.query.venueId || req.body.venueId;
-  if (!venueId) return req.user.id;
-
-  // Check if venueId is self
-  if (venueId.toString() === req.user.id.toString()) return venueId;
-
-  // Check if venueId is a managed child
-  const child = await Venue.findOne({
-    _id: venueId,
-    managedByVenueId: req.user.id
-  });
-  if (child) return venueId;
-
-  return null; // Not authorized
-};
-
-/**
- * @desc    Get all venues the logged-in venue can manage (self + children)
- * @route   GET /api/venue/venues
- * @access  Private (Venue only)
- */
-exports.getMyVenues = async (req, res) => {
-  try {
-    const owned = await Venue.find({
-      $or: [
-        { _id: req.user.id },
-        { managedByVenueId: req.user.id }
-      ]
-    })
-      .select('_id name email phone approvalStatus address city managedByVenueId')
-      .sort({ managedByVenueId: 1, name: 1 }); // Own venue first, then children
-
-    const venues = owned.map((v) => ({
-      _id: v._id,
-      name: v.name,
-      email: v.email,
-      phone: v.phone,
-      approvalStatus: v.approvalStatus,
-      city: v.address?.city || '-',
-      isManaged: !!v.managedByVenueId
-    }));
-
-    return ApiResponse.success(res, 'Venues retrieved successfully', {
-      venues
-    });
-  } catch (error) {
-    console.error('Get my venues error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving venues', error);
-  }
-};
-
-/**
- * @desc    Create a new venue (managed by current venue)
- * @route   POST /api/venue/venues
- * @access  Private (Venue only)
- */
-exports.createVenue = async (req, res) => {
-  try {
-    const { name, description, address } = req.body;
-
-    if (!name || !name.trim()) {
-      return ApiResponse.badRequest(res, 'Venue name is required');
+    if (new Date() > storedData.expiry) {
+      delete tempOTPStore[phone];
+      global.tempOTPStore = tempOTPStore;
+      return res.status(400).json({
+        success: false,
+        message: 'OTP expired'
+      });
     }
 
-    const parentVenue = await Venue.findById(req.user.id);
-    if (!parentVenue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    // Child venues use parent's email and phone - same contact can be shared
-    const parentEmail = parentVenue.email || parentVenue.ownerDetails?.email || parentVenue.contactInfo?.email;
-    const parentPhone = parentVenue.phone || parentVenue.ownerDetails?.primaryContact || parentVenue.contactInfo?.phone;
-    if (!parentEmail || !parentPhone) {
-      return ApiResponse.badRequest(res, 'Parent venue must have email and phone set');
-    }
-
-    // Deep clone parent details - child inherits everything but updates are independent
-    const toJson = (obj) => (obj && typeof obj.toObject === 'function' ? obj.toObject() : obj);
-    const parentObj = parentVenue.toObject ? parentVenue.toObject() : parentVenue;
-
+    // Create venue account
     const venueData = {
-      name: name.trim(),
-      email: parentEmail,
-      phone: parentPhone,
-      managedByVenueId: req.user.id,
-      approvalStatus: 'pending',
-      description: description && description.trim() ? description.trim() : (parentVenue.description || 'To be updated'),
-      ownerDetails: toJson(parentObj.ownerDetails) || {
-        fullName: 'Not Provided',
-        primaryContact: parentPhone,
-        email: parentEmail,
-        businessName: name.trim(),
-        designation: 'Owner',
-        alternateContact: '',
-        businessRegistrationNumber: '',
-        gstNumber: ''
-      },
-      venueClassification: toJson(parentObj.venueClassification) || {
-        venueTypes: [],
-        venueTypeOther: '',
-        indoorOutdoor: 'indoor',
-        operationMode: 'year_round'
-      },
-      address: address || toJson(parentObj.address) || {
-        street: 'To be updated',
-        city: 'Unknown',
-        state: 'Unknown',
-        pincode: '000000',
-        landmark: '',
-        googleMapsLink: '',
-        directions: ''
-      },
-      parking: toJson(parentObj.parking) || { carCapacity: 0, twoWheelerAvailable: false },
-      capacity: parentObj.capacity || 0,
-      capacityDetails: toJson(parentObj.capacityDetails) || {
-        standingCapacity: 0,
-        seatingCapacity: {},
-        advanceBookingDays: 30
-      },
-      amenities: toJson(parentObj.amenities) || {},
-      facilities: toJson(parentObj.facilities) || {},
-      policies: toJson(parentObj.policies) || {},
-      addOnServices: toJson(parentObj.addOnServices) || {},
-      terms: toJson(parentObj.terms) || {},
-      pricing: toJson(parentObj.pricing) || { basePrice: 0 },
-      contactInfo: {
-        phone: parentPhone,
-        email: parentEmail,
-        website: parentObj.contactInfo?.website || ''
-      },
-      documents: toJson(parentObj.documents) || {},
-      authorizations: toJson(parentObj.authorizations) || {}
+      ...storedData,
+      phone,
+      status: 'pending' // Requires admin approval
     };
 
     const venue = new Venue(venueData);
-    await venue.save({ validateBeforeSave: false });
+    await venue.save();
 
-    adminNotificationController.notifyVenueRegistration(venue);
+    // Create admin notification for new venue registration
+    try {
+      await AdminNotification.create({
+        type: 'venue_registration',
+        title: 'New Venue Registration',
+        message: `${venue.name} has registered a new venue "${venue.businessName || 'Unnamed Venue'}" and is awaiting approval.`,
+        priority: 'high',
+        metadata: {
+          venueId: venue._id,
+          venueName: venue.name,
+          businessName: venue.businessName,
+          email: venue.email,
+          phone: venue.phone,
+          status: venue.status
+        },
+        actionUrl: `/admin/venues/${venue._id}`
+      });
+    } catch (notificationError) {
+      console.error('Failed to create admin notification:', notificationError);
+      // Don't fail the signup if notification fails
+    }
 
-    // Send welcome email to venue organizer
-    emailService.sendWelcomeEmail(venue).catch(err => {
-      console.error('Error sending venue welcome email:', err);
-    });
+    // Clear OTP from temporary store
+    delete tempOTPStore[phone];
+    global.tempOTPStore = tempOTPStore;
 
-    return ApiResponse.success(res, 'Venue created successfully. Pending admin approval.', {
-      venue: {
-        _id: venue._id,
-        name: venue.name,
-        approvalStatus: venue.approvalStatus
+    // Generate JWT token
+    const token = venue.generateAuthToken();
+
+    res.status(201).json({
+      success: true,
+      message: 'Venue account created successfully. Please wait for admin approval.',
+      data: {
+        venue: {
+          id: venue._id,
+          name: venue.name,
+          email: venue.email,
+          phone: venue.phone,
+          businessName: venue.businessName,
+          status: venue.status,
+          isVerified: venue.isVerified,
+          address: venue.address,
+          socialLinks: venue.socialLinks || {},
+          images: venue.images || []
+        },
+        token
       }
     });
+
   } catch (error) {
-    console.error('Create venue error:', error);
-    return ApiResponse.serverError(res, 'Error creating venue', error);
+    console.error('Verify signup OTP error:', error);
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `${field} is already registered`
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create venue account'
+    });
   }
 };
 
-/**
- * @desc    Get venue profile
- * @route   GET /api/venue/profile
- * @access  Private (Venue only)
- */
-exports.getVenueProfile = async (req, res) => {
+// Send OTP for login
+const sendLoginOTP = async (req, res) => {
   try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) {
-      return ApiResponse.forbidden(res, 'Not authorized to access this venue');
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
     }
 
-    const venue = await Venue.findById(venueId);
+    const { phone } = req.body;
 
+    // Check if venue exists
+    const venue = await Venue.findOne({ phone });
     if (!venue) {
-      return ApiResponse.notFound(res, 'Venue profile not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Venue not found with this phone number'
+      });
     }
 
-    return ApiResponse.success(res, 'Venue profile retrieved successfully', {
-      venue
+    // Check if venue is approved
+    if (venue.status !== 'approved' && venue.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Venue account is not approved. Please contact admin.'
+      });
+    }
+
+    // Generate OTP
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in memory
+    const tempOTPStore = global.tempOTPStore || {};
+    tempOTPStore[`login_${phone}`] = {
+      otp,
+      expiry: otpExpiry,
+      venueId: venue._id
+    };
+    global.tempOTPStore = tempOTPStore;
+
+    // Send OTP via SMS
+    try {
+      const smsService = require('../services/smsService');
+      await smsService.sendOtp(phone, otp);
+    } catch (smsError) {
+      console.error('SMS sending failed:', smsError);
+      console.log(`Venue Login OTP for ${phone}: ${otp}`);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent successfully',
+      devMode: process.env.NODE_ENV !== 'production',
+      otp: process.env.NODE_ENV !== 'production' ? otp : undefined
     });
 
   } catch (error) {
-    console.error('Get venue profile error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving venue profile', error);
+    console.error('Send login OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send OTP'
+    });
   }
 };
 
-/**
- * @desc    Update venue profile
- * @route   PUT /api/venue/profile
- * @access  Private (Venue only)
- */
-exports.updateVenueProfile = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
+// Verify OTP and login
+const verifyLoginOTP = async (req, res) => {
   try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
 
+    const { phone, otp } = req.body;
+    const tempOTPStore = global.tempOTPStore || {};
+
+    // Check OTP
+    const storedData = tempOTPStore[`login_${phone}`];
+    if (!storedData) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP not found or expired'
+      });
+    }
+
+    if (storedData.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid OTP'
+      });
+    }
+
+    if (new Date() > storedData.expiry) {
+      delete tempOTPStore[`login_${phone}`];
+      global.tempOTPStore = tempOTPStore;
+      return res.status(400).json({
+        success: false,
+        message: 'OTP expired'
+      });
+    }
+
+    // Get venue
+    const venue = await Venue.findById(storedData.venueId);
     if (!venue) {
-      return ApiResponse.notFound(res, 'Venue profile not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Venue not found'
+      });
+    }
+
+    // Check status
+    if (venue.status !== 'approved' && venue.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Venue account is not approved'
+      });
+    }
+
+    // Update last login
+    await venue.updateLastLogin();
+
+    // Clear OTP
+    delete tempOTPStore[`login_${phone}`];
+    global.tempOTPStore = tempOTPStore;
+
+    // Generate token
+    const token = venue.generateAuthToken();
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        venue: {
+          id: venue._id,
+          name: venue.name,
+          email: venue.email,
+          phone: venue.phone,
+          businessName: venue.businessName,
+          status: venue.status,
+          isVerified: venue.isVerified,
+          isActive: venue.isActive,
+          address: venue.address,
+          socialLinks: venue.socialLinks || {},
+          images: venue.images || []
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('Verify login OTP error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to login'
+    });
+  }
+};
+
+// Update profile
+const updateProfile = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
     }
 
     const allowedFields = [
-      'name', 'description', 'address', 'location', 'capacity', 
-      'facilities', 'pricing', 'gallery', 'contactInfo', 
-      'availability', 'terms', 'ownerDetails', 'venueClassification',
-      'parking', 'accessibility', 'capacityDetails', 'amenities',
-      'policies', 'addOnServices', 'documents', 'authorizations'
+      'name', 'email', 'phone', 'businessName', 'address', 
+      'socialLinks', 'images'
     ];
 
+    const updateData = {};
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        venue[field] = req.body[field];
+        updateData[field] = req.body[field];
+      }
+    });
+
+    const venue = await Venue.findById(req.venue.id);
+    if (!venue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Venue not found'
+      });
+    }
+
+    // Update fields
+    Object.keys(updateData).forEach(field => {
+      venue[field] = updateData[field];
+      // Mark nested arrays as modified for proper saving
+      if (field === 'images') {
+        venue.markModified('images');
+      }
+      if (field === 'address') {
+        venue.markModified('address');
+      }
+      if (field === 'socialLinks') {
+        venue.markModified('socialLinks');
       }
     });
 
     await venue.save();
 
-    return ApiResponse.success(res, 'Venue profile updated successfully', {
-      venue
+    // Return updated venue without password
+    const updatedVenue = venue.toObject();
+    delete updatedVenue.password;
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: { venue: updatedVenue }
     });
 
   } catch (error) {
-    console.error('Update venue profile error:', error);
-    return ApiResponse.serverError(res, 'Error updating venue profile', error);
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile'
+    });
   }
 };
 
-/**
- * @desc    Update owner details section
- * @route   PUT /api/venue/details/owner-details
- * @access  Private (Venue only)
- */
-exports.updateOwnerDetails = async (req, res) => {
+// Password-based login
+const passwordLogin = async (req, res) => {
   try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { phone, password } = req.body;
+
+    // Find venue by phone
+    const venue = await Venue.findOne({ phone });
     if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Venue not found with this phone number'
+      });
     }
 
-    const { fullName, primaryContact, alternateContact, email, businessName, designation, businessRegistrationNumber, gstNumber, venueDescription } = req.body;
-
-    // Validation
-    if (designation && !designation.trim()) {
-      return ApiResponse.badRequest(res, 'Designation is required');
+    // Check if venue is approved
+    if (venue.status !== 'approved' && venue.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Venue account is not approved. Please contact admin.'
+      });
     }
 
-    // Update venue description if provided
-    if (venueDescription !== undefined) {
-      venue.description = venueDescription;
+    // Verify password
+    const isPasswordValid = await venue.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
+      });
     }
 
-    venue.ownerDetails = {
-      ...venue.ownerDetails,
-      fullName: fullName !== undefined ? fullName : venue.ownerDetails?.fullName,
-      primaryContact: primaryContact !== undefined ? primaryContact : venue.ownerDetails?.primaryContact,
-      alternateContact: alternateContact !== undefined ? alternateContact : venue.ownerDetails?.alternateContact,
-      email: email !== undefined ? email : venue.ownerDetails?.email,
-      businessName: businessName !== undefined ? businessName : venue.ownerDetails?.businessName,
-      designation: designation !== undefined ? designation : venue.ownerDetails?.designation,
-      businessRegistrationNumber: businessRegistrationNumber !== undefined ? businessRegistrationNumber : venue.ownerDetails?.businessRegistrationNumber,
-      gstNumber: gstNumber !== undefined ? gstNumber : venue.ownerDetails?.gstNumber
-    };
+    // Update last login
+    await venue.updateLastLogin();
 
-    await venue.save();
+    // Generate token
+    const token = venue.generateAuthToken();
 
-    return ApiResponse.success(res, 'Owner details updated successfully', {
-      ownerDetails: venue.ownerDetails,
-      description: venue.description
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        venue: {
+          id: venue._id,
+          name: venue.name,
+          email: venue.email,
+          phone: venue.phone,
+          businessName: venue.businessName,
+          status: venue.status,
+          isVerified: venue.isVerified,
+          isActive: venue.isActive,
+          address: venue.address,
+          socialLinks: venue.socialLinks || {},
+          images: venue.images || []
+        },
+        token
+      }
     });
+
   } catch (error) {
-    console.error('Update owner details error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating owner details', error);
+    console.error('Password login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to login'
+    });
   }
 };
 
-/**
- * @desc    Update venue classification section
- * @route   PUT /api/venue/details/venue-classification
- * @access  Private (Venue only)
- */
-exports.updateVenueClassification = async (req, res) => {
+// Get venue profile
+const getProfile = async (req, res) => {
   try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
+    const venue = await Venue.findById(req.venue.id).select('-password');
     if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Venue not found'
+      });
     }
 
-    const { venueTypes, venueTypeOther, indoorOutdoor, operationMode } = req.body;
-
-    // Validation
-    if (indoorOutdoor && !['indoor', 'outdoor', 'both', 'hybrid'].includes(indoorOutdoor)) {
-      return ApiResponse.badRequest(res, 'Invalid indoor/outdoor value');
-    }
-    if (operationMode && !['seasonal', 'year_round'].includes(operationMode)) {
-      return ApiResponse.badRequest(res, 'Invalid operation mode');
+    // Check if venue is approved
+    if (venue.status !== 'approved' && venue.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Venue not approved by admin'
+      });
     }
 
-    venue.venueClassification = {
-      ...venue.venueClassification,
-      venueTypes: venueTypes !== undefined ? venueTypes : venue.venueClassification?.venueTypes,
-      venueTypeOther: venueTypeOther !== undefined ? venueTypeOther : venue.venueClassification?.venueTypeOther,
-      indoorOutdoor: indoorOutdoor !== undefined ? indoorOutdoor : venue.venueClassification?.indoorOutdoor,
-      operationMode: operationMode !== undefined ? operationMode : venue.venueClassification?.operationMode
-    };
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Venue classification updated successfully', {
-      venueClassification: venue.venueClassification
-    });
-  } catch (error) {
-    console.error('Update venue classification error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating venue classification', error);
-  }
-};
-
-/**
- * @desc    Update location and accessibility section
- * @route   PUT /api/venue/details/location
- * @access  Private (Venue only)
- */
-exports.updateLocation = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const { address, parking, accessibility } = req.body;
-
-    console.log('Update Location Request:', {
-      venueId: venue._id,
-      address,
-      parking,
-      accessibility
-    });
-
-    // Validation
-    if (parking?.carCapacity !== undefined && (isNaN(parking.carCapacity) || parking.carCapacity < 0)) {
-      return ApiResponse.badRequest(res, 'Car parking capacity must be a valid number');
-    }
-
-    if (address) {
-      venue.address = {
-        ...venue.address.toObject ? venue.address.toObject() : venue.address,
-        ...address
-      };
-      console.log('Updated address:', venue.address);
-    }
-
-    if (parking) {
-      venue.parking = {
-        ...venue.parking.toObject ? venue.parking.toObject() : venue.parking,
-        ...parking
-      };
-      console.log('Updated parking:', venue.parking);
-    }
-
-    if (accessibility) {
-      venue.accessibility = {
-        ...venue.accessibility.toObject ? venue.accessibility.toObject() : venue.accessibility,
-        ...accessibility
-      };
-      console.log('Updated accessibility:', venue.accessibility);
-    }
-
-    await venue.save();
-
-    console.log('Location saved successfully');
-
-    return ApiResponse.success(res, 'Location details updated successfully', {
+    // Transform venue data to be consistent with login endpoints
+    const venueData = {
+      id: venue._id,
+      name: venue.name,
+      email: venue.email,
+      phone: venue.phone,
+      businessName: venue.businessName,
+      status: venue.status,
+      isVerified: venue.isVerified,
+      isActive: venue.isActive,
       address: venue.address,
-      parking: venue.parking,
-      accessibility: venue.accessibility
-    });
-  } catch (error) {
-    console.error('Update location error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating location details', error);
-  }
-};
-
-/**
- * @desc    Update capacity and booking options section
- * @route   PUT /api/venue/details/capacity
- * @access  Private (Venue only)
- */
-exports.updateCapacity = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const { standingCapacity, seatingCapacity, minimumBookingCapacity, multipleEventsPerDay, timeSlots, peakSeasonRates, offSeasonRates, advanceBookingDays } = req.body;
-
-    // Validation
-    if (standingCapacity !== undefined && (isNaN(standingCapacity) || standingCapacity < 0)) {
-      return ApiResponse.badRequest(res, 'Standing capacity must be a valid number');
-    }
-    if (advanceBookingDays !== undefined && (isNaN(advanceBookingDays) || advanceBookingDays < 0)) {
-      return ApiResponse.badRequest(res, 'Advance booking days must be a valid number');
-    }
-
-    venue.capacityDetails = {
-      ...venue.capacityDetails,
-      standingCapacity: standingCapacity !== undefined ? standingCapacity : venue.capacityDetails?.standingCapacity,
-      seatingCapacity: seatingCapacity !== undefined ? seatingCapacity : venue.capacityDetails?.seatingCapacity,
-      minimumBookingCapacity: minimumBookingCapacity !== undefined ? minimumBookingCapacity : venue.capacityDetails?.minimumBookingCapacity,
-      multipleEventsPerDay: multipleEventsPerDay !== undefined ? multipleEventsPerDay : venue.capacityDetails?.multipleEventsPerDay,
-      timeSlots: timeSlots !== undefined ? timeSlots : venue.capacityDetails?.timeSlots,
-      peakSeasonRates: peakSeasonRates !== undefined ? peakSeasonRates : venue.capacityDetails?.peakSeasonRates,
-      offSeasonRates: offSeasonRates !== undefined ? offSeasonRates : venue.capacityDetails?.offSeasonRates,
-      advanceBookingDays: advanceBookingDays !== undefined ? advanceBookingDays : venue.capacityDetails?.advanceBookingDays
+      socialLinks: venue.socialLinks || {},
+      images: venue.images || [],
+      createdAt: venue.createdAt,
+      updatedAt: venue.updatedAt
     };
 
-    await venue.save();
-
-    return ApiResponse.success(res, 'Capacity details updated successfully', {
-      capacityDetails: venue.capacityDetails
+    res.status(200).json({
+      success: true,
+      data: { venue: venueData }
     });
+
   } catch (error) {
-    console.error('Update capacity error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating capacity details', error);
-  }
-};
-
-/**
- * @desc    Update pricing and payment section
- * @route   PUT /api/venue/details/pricing
- * @access  Private (Venue only)
- */
-exports.updatePricing = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const { basePrice, hourlyRate, fullDayRate, halfDayRate, cleaningFee, securityDeposit, rentalIncludes, otherEquipmentDetails, securityDepositRequired, paymentModes, cancellationPolicy } = req.body;
-
-    // Validation
-    if (basePrice !== undefined && (isNaN(basePrice) || basePrice < 0)) {
-      return ApiResponse.badRequest(res, 'Base price must be a valid number');
-    }
-
-    venue.pricing = {
-      ...venue.pricing,
-      basePrice: basePrice !== undefined ? basePrice : venue.pricing?.basePrice,
-      hourlyRate: hourlyRate !== undefined ? hourlyRate : venue.pricing?.hourlyRate,
-      fullDayRate: fullDayRate !== undefined ? fullDayRate : venue.pricing?.fullDayRate,
-      halfDayRate: halfDayRate !== undefined ? halfDayRate : venue.pricing?.halfDayRate,
-      cleaningFee: cleaningFee !== undefined ? cleaningFee : venue.pricing?.cleaningFee,
-      securityDeposit: securityDeposit !== undefined ? securityDeposit : venue.pricing?.securityDeposit,
-      rentalIncludes: rentalIncludes !== undefined ? rentalIncludes : venue.pricing?.rentalIncludes,
-      otherEquipmentDetails: otherEquipmentDetails !== undefined ? otherEquipmentDetails : venue.pricing?.otherEquipmentDetails,
-      securityDepositRequired: securityDepositRequired !== undefined ? securityDepositRequired : venue.pricing?.securityDepositRequired,
-      paymentModes: paymentModes !== undefined ? paymentModes : venue.pricing?.paymentModes,
-      cancellationPolicy: cancellationPolicy !== undefined ? cancellationPolicy : venue.pricing?.cancellationPolicy
-    };
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Pricing details updated successfully', {
-      pricing: venue.pricing
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get profile'
     });
-  } catch (error) {
-    console.error('Update pricing error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating pricing details', error);
   }
 };
 
-/**
- * @desc    Update amenities section
- * @route   PUT /api/venue/details/amenities
- * @access  Private (Venue only)
- */
-exports.updateAmenities = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    // Filter out undefined values and properly merge nested objects
-    const updateData = {};
-    for (const [key, value] of Object.entries(req.body)) {
-      // Skip undefined and null values
-      if (value === undefined || value === null) {
-        continue;
-      }
-
-      // Check if this is a nested object that needs merging (like washrooms)
-      // washrooms doesn't have 'available' property, it has 'count' and 'cleanlinessStandards'
-      const isNestedObject = typeof value === 'object' && 
-                             !Array.isArray(value) && 
-                             !value.hasOwnProperty('available');
-      
-      if (isNestedObject) {
-        // This is a nested object field (like washrooms with count/cleanlinessStandards)
-        // Filter out undefined/null values from nested properties
-        const cleanValue = {};
-        for (const [nestedKey, nestedValue] of Object.entries(value)) {
-          if (nestedValue !== undefined && nestedValue !== null && nestedValue !== '') {
-            cleanValue[nestedKey] = nestedValue;
-          }
-        }
-        
-        // Only set the nested object if it has valid data
-        if (Object.keys(cleanValue).length > 0) {
-          if (venue.amenities?.[key] && typeof venue.amenities[key] === 'object') {
-            // Merge with existing data
-            updateData[key] = {
-              ...venue.amenities[key],
-              ...cleanValue
-            };
-          } else {
-            // New nested object
-            updateData[key] = cleanValue;
-          }
-        }
-        // If cleanValue is empty, we skip adding it to updateData, preserving existing value
-      } else {
-        // Regular amenity field (with available property) or other types
-        updateData[key] = value;
-      }
-    }
-
-    // Only update fields that are in updateData, preserving existing values for others
-    for (const [key, value] of Object.entries(updateData)) {
-      venue.amenities[key] = value;
-    }
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Amenities updated successfully', {
-      amenities: venue.amenities
-    });
-  } catch (error) {
-    console.error('Update amenities error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating amenities', error);
-  }
-};
-
-/**
- * @desc    Update policies section
- * @route   PUT /api/venue/details/policies
- * @access  Private (Venue only)
- */
-exports.updatePolicies = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    venue.policies = {
-      ...venue.policies,
-      ...req.body
-    };
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Policies updated successfully', {
-      policies: venue.policies
-    });
-  } catch (error) {
-    console.error('Update policies error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating policies', error);
-  }
-};
-
-/**
- * @desc    Update add-on services section
- * @route   PUT /api/venue/details/addon-services
- * @access  Private (Venue only)
- */
-exports.updateAddOnServices = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    venue.addOnServices = {
-      ...venue.addOnServices,
-      ...req.body
-    };
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Add-on services updated successfully', {
-      addOnServices: venue.addOnServices
-    });
-  } catch (error) {
-    console.error('Update add-on services error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating add-on services', error);
-  }
-};
-
-/**
- * @desc    Update documents section
- * @route   PUT /api/venue/details/documents
- * @access  Private (Venue only)
- */
-exports.updateDocuments = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    // Handle documents update - preserve existing data and merge new data
-    const { venueImages, venueVideoTour, menuCards, rateCard, businessLicense } = req.body;
-
-    if (venueImages !== undefined) {
-      venue.documents.venueImages = Array.isArray(venueImages) ? venueImages : venue.documents.venueImages || [];
-    }
-
-    if (venueVideoTour !== undefined) {
-      venue.documents.venueVideoTour = venueVideoTour || venue.documents.venueVideoTour || {};
-    }
-
-    if (menuCards !== undefined) {
-      venue.documents.menuCards = Array.isArray(menuCards) ? menuCards : venue.documents.menuCards || [];
-    }
-
-    if (rateCard !== undefined) {
-      venue.documents.rateCard = rateCard || venue.documents.rateCard || {};
-    }
-
-    if (businessLicense !== undefined) {
-      venue.documents.businessLicense = Array.isArray(businessLicense) ? businessLicense : venue.documents.businessLicense || [];
-    }
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Documents updated successfully', {
-      documents: venue.documents
-    });
-  } catch (error) {
-    console.error('Update documents error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating documents', error);
-  }
-};
-
-/**
- * @desc    Update authorizations section
- * @route   PUT /api/venue/details/authorizations
- * @access  Private (Venue only)
- */
-exports.updateAuthorizations = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const { publicListingAuthorized, onlineBookingEnabled, preferredCommunication } = req.body;
-
-    // Validation
-    if (preferredCommunication && !['whatsapp', 'email', 'phone_call'].includes(preferredCommunication)) {
-      return ApiResponse.badRequest(res, 'Invalid preferred communication channel');
-    }
-
-    venue.authorizations = {
-      ...venue.authorizations,
-      publicListingAuthorized: publicListingAuthorized !== undefined ? publicListingAuthorized : venue.authorizations?.publicListingAuthorized,
-      onlineBookingEnabled: onlineBookingEnabled !== undefined ? onlineBookingEnabled : venue.authorizations?.onlineBookingEnabled,
-      preferredCommunication: preferredCommunication !== undefined ? preferredCommunication : venue.authorizations?.preferredCommunication
-    };
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Authorizations updated successfully', {
-      authorizations: venue.authorizations
-    });
-  } catch (error) {
-    console.error('Update authorizations error:', error);
-    if (error.name === 'ValidationError') {
-      return ApiResponse.badRequest(res, Object.values(error.errors).map(e => e.message).join(', '));
-    }
-    return ApiResponse.serverError(res, 'Error updating authorizations', error);
-  }
-};
-
-/**
- * @desc    Get venue FAQs
- * @route   GET /api/venue/faqs
- * @access  Private (Venue only)
- */
-exports.getFaqs = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId).select('faqs');
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-    return ApiResponse.success(res, 'FAQs retrieved successfully', { faqs: venue.faqs || [] });
-  } catch (error) {
-    console.error('Get FAQs error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving FAQs', error);
-  }
-};
-
-/**
- * @desc    Create a new FAQ
- * @route   POST /api/venue/faqs
- * @access  Private (Venue only)
- */
-exports.createFaq = async (req, res) => {
-  try {
-    const { question, answer, isActive, order } = req.body;
-    if (!question || !answer) {
-      return ApiResponse.badRequest(res, 'Question and answer are required');
-    }
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-    const faq = {
-      question,
-      answer,
-      isActive: isActive !== undefined ? isActive : true,
-      order: order || 0,
-      createdAt: new Date()
-    };
-    venue.faqs = venue.faqs || [];
-    venue.faqs.push(faq);
-    await venue.save();
-    return ApiResponse.success(res, 'FAQ added successfully', { faqs: venue.faqs });
-  } catch (error) {
-    console.error('Create FAQ error:', error);
-    return ApiResponse.serverError(res, 'Error creating FAQ', error);
-  }
-};
-
-/**
- * @desc    Update an existing FAQ
- * @route   PUT /api/venue/faqs/:faqId
- * @access  Private (Venue only)
- */
-exports.updateFaq = async (req, res) => {
-  try {
-    const { faqId } = req.params;
-    const { question, answer, isActive, order } = req.body;
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-    const faq = (venue.faqs || []).id(faqId);
-    if (!faq) {
-      return ApiResponse.notFound(res, 'FAQ not found');
-    }
-    if (question !== undefined) faq.question = question;
-    if (answer !== undefined) faq.answer = answer;
-    if (isActive !== undefined) faq.isActive = isActive;
-    if (order !== undefined) faq.order = order;
-    await venue.save();
-    return ApiResponse.success(res, 'FAQ updated successfully', { faqs: venue.faqs });
-  } catch (error) {
-    console.error('Update FAQ error:', error);
-    return ApiResponse.serverError(res, 'Error updating FAQ', error);
-  }
-};
-
-/**
- * @desc    Delete an FAQ
- * @route   DELETE /api/venue/faqs/:faqId
- * @access  Private (Venue only)
- */
-exports.deleteFaq = async (req, res) => {
-  try {
-    const { faqId } = req.params;
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-    const before = (venue.faqs || []).length;
-    venue.faqs = (venue.faqs || []).filter(f => f._id.toString() !== faqId);
-    if (venue.faqs.length === before) {
-      return ApiResponse.notFound(res, 'FAQ not found');
-    }
-    await venue.save();
-    return ApiResponse.success(res, 'FAQ deleted successfully', { faqs: venue.faqs });
-  } catch (error) {
-    console.error('Delete FAQ error:', error);
-    return ApiResponse.serverError(res, 'Error deleting FAQ', error);
-  }
-};
-
-/**
- * @desc    Get all blocked slots for a venue
- * @route   GET /api/venue/blocked-slots
- * @access  Private (Venue only)
- */
-exports.getBlockedSlots = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-    return ApiResponse.success(res, 'Blocked slots retrieved successfully', {
-      blockedSlots: venue.blockedSlots || []
-    });
-  } catch (error) {
-    console.error('Get blocked slots error:', error);
-    return ApiResponse.serverError(res, 'Error retrieving blocked slots', error);
-  }
-};
-
-/**
- * @desc    Add a blocked slot (date/time unavailability)
- * @route   POST /api/venue/blocked-slots
- * @access  Private (Venue only)
- */
-exports.addBlockedSlot = async (req, res) => {
-  try {
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const { date, isFullDayBlocked, timeSlots, reason, notes } = req.body;
-
-    // Validation
-    if (!date) {
-      return ApiResponse.badRequest(res, 'Date is required');
-    }
-
-    if (!isFullDayBlocked && (!timeSlots || timeSlots.length === 0)) {
-      return ApiResponse.badRequest(res, 'Time slots are required when not blocking full day');
-    }
-
-    // Validate time slots format
-    if (timeSlots && timeSlots.length > 0) {
-      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-      for (const slot of timeSlots) {
-        if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
-          return ApiResponse.badRequest(res, 'Invalid time format. Use HH:MM (24-hour format)');
-        }
-      }
-    }
-
-    const blockedSlot = {
-      date: new Date(date),
-      isFullDayBlocked: isFullDayBlocked || false,
-      timeSlots: timeSlots || [],
-      reason: reason || 'offline_booking',
-      notes: notes || ''
-    };
-
-    if (!venue.blockedSlots) {
-      venue.blockedSlots = [];
-    }
-
-    venue.blockedSlots.push(blockedSlot);
-    await venue.save();
-
-    return ApiResponse.success(res, 'Blocked slot added successfully', {
-      blockedSlots: venue.blockedSlots
-    });
-  } catch (error) {
-    console.error('Add blocked slot error:', error);
-    return ApiResponse.serverError(res, 'Error adding blocked slot', error);
-  }
-};
-
-/**
- * @desc    Update a blocked slot
- * @route   PUT /api/venue/blocked-slots/:slotId
- * @access  Private (Venue only)
- */
-exports.updateBlockedSlot = async (req, res) => {
-  try {
-    const { slotId } = req.params;
-    const { date, isFullDayBlocked, timeSlots, reason, notes } = req.body;
-
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const slot = (venue.blockedSlots || []).id(slotId);
-    if (!slot) {
-      return ApiResponse.notFound(res, 'Blocked slot not found');
-    }
-
-    // Validate time slots format if provided
-    if (timeSlots && timeSlots.length > 0) {
-      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-      for (const timeSlot of timeSlots) {
-        if (!timeRegex.test(timeSlot.startTime) || !timeRegex.test(timeSlot.endTime)) {
-          return ApiResponse.badRequest(res, 'Invalid time format. Use HH:MM (24-hour format)');
-        }
-      }
-    }
-
-    if (date !== undefined) slot.date = new Date(date);
-    if (isFullDayBlocked !== undefined) slot.isFullDayBlocked = isFullDayBlocked;
-    if (timeSlots !== undefined) slot.timeSlots = timeSlots;
-    if (reason !== undefined) slot.reason = reason;
-    if (notes !== undefined) slot.notes = notes;
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Blocked slot updated successfully', {
-      blockedSlots: venue.blockedSlots
-    });
-  } catch (error) {
-    console.error('Update blocked slot error:', error);
-    return ApiResponse.serverError(res, 'Error updating blocked slot', error);
-  }
-};
-
-/**
- * @desc    Delete a blocked slot
- * @route   DELETE /api/venue/blocked-slots/:slotId
- * @access  Private (Venue only)
- */
-exports.deleteBlockedSlot = async (req, res) => {
-  try {
-    const { slotId } = req.params;
-
-    const venueId = await resolveVenueId(req);
-    if (!venueId) return ApiResponse.forbidden(res, 'Not authorized to access this venue');
-    const venue = await Venue.findById(venueId);
-    if (!venue) {
-      return ApiResponse.notFound(res, 'Venue not found');
-    }
-
-    const before = (venue.blockedSlots || []).length;
-    venue.blockedSlots = (venue.blockedSlots || []).filter(
-      slot => slot._id.toString() !== slotId
-    );
-
-    if (venue.blockedSlots.length === before) {
-      return ApiResponse.notFound(res, 'Blocked slot not found');
-    }
-
-    await venue.save();
-
-    return ApiResponse.success(res, 'Blocked slot deleted successfully', {
-      blockedSlots: venue.blockedSlots
-    });
-  } catch (error) {
-    console.error('Delete blocked slot error:', error);
-    return ApiResponse.serverError(res, 'Error deleting blocked slot', error);
-  }
+module.exports = {
+  sendSignupOTP,
+  verifySignupOTP,
+  sendLoginOTP,
+  verifyLoginOTP,
+  passwordLogin,
+  getProfile,
+  updateProfile
 };
