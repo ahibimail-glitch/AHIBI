@@ -59,27 +59,16 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
     };
     
     const duration = getDurationHours(startTime, endTime);
+    const hourlyRate = space.pricing.hourlyRate || 100; // Default to ₹100 if not set
 
-    if (startTime === "00:00" && endTime === "23:00") {
-      // Full day
-      totalAmount = space.pricing.fullDayRate || (space.pricing.hourlyRate * 23);
-    } else if (startTime === "09:00" && endTime === "17:00") {
-      // Half day
-      totalAmount = space.pricing.halfDayRate || (space.pricing.hourlyRate * 8);
-    } else {
-      // Custom time - use pricing rules from frontend
-      const hourlyRate = space.pricing.hourlyRate || 100; // Default to ₹100 if not set
-      
-      if (duration <= 4) {
-        // Up to 4 hours: hours × Hourly Rate
-        totalAmount = hourlyRate * duration;
-      } else if (duration <= 8) {
-        // Up to 8 hours: Half Day Rate
-        totalAmount = space.pricing.halfDayRate || (hourlyRate * duration);
-      } else {
-        // More than 8 hours: Full Day Rate
-        totalAmount = space.pricing.fullDayRate || (hourlyRate * duration);
-      }
+    // Default to hourly calculation
+    totalAmount = hourlyRate * duration;
+
+    // Override with special rates only for exact time matches
+    if (startTime === "00:00" && endTime === "23:00" && space.pricing.fullDayRate) {
+      totalAmount = space.pricing.fullDayRate;
+    } else if (startTime === "09:00" && endTime === "17:00" && space.pricing.halfDayRate) {
+      totalAmount = space.pricing.halfDayRate;
     }
 
     // Add cleaning fee and security deposit

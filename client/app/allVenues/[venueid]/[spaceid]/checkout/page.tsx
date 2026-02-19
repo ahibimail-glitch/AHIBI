@@ -225,7 +225,7 @@ export default function SpaceCheckoutPage() {
     return (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
   };
 
-  // Helper: compute estimated price per new rules
+  // Helper: compute estimated price per corrected rules
   const computeEstimatedPrice = (): { basePrice: number; totalPrice: number; duration: number } => {
     if (!spaceData) return { basePrice: 0, totalPrice: 0, duration: 0 };
     
@@ -239,44 +239,14 @@ export default function SpaceCheckoutPage() {
     const duration = getDurationHours(bookingForm.startTime, bookingForm.endTime);
     if (duration <= 0) return { basePrice: 0, totalPrice: 0, duration: 0 };
 
-    let basePrice = 0;
+    // Default to hourly calculation
+    let basePrice = hourly * duration;
 
-    // Special case for full day selection (00:00 - 23:00)
-    if (bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00") {
-      if (typeof fullDay === 'number' && fullDay > 0) {
-        basePrice = fullDay;
-      } else {
-        basePrice = hourly * 23;
-      }
-    }
-    // Special case for half day selection (09:00 - 17:00)
-    else if (bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00") {
-      if (typeof halfDay === 'number' && halfDay > 0) {
-        basePrice = halfDay;
-      } else {
-        basePrice = hourly * 8;
-      }
-    }
-    // General pricing rules
-    else {
-      if (duration <= 4) {
-        // Up to 4 hours: hours × Hourly Rate
-        basePrice = hourly * duration;
-      } else if (duration <= 8) {
-        // Up to 8 hours: Half Day Rate
-        if (typeof halfDay === 'number' && halfDay > 0) {
-          basePrice = halfDay;
-        } else {
-          basePrice = hourly * duration;
-        }
-      } else {
-        // More than 8 hours: Full Day Rate
-        if (typeof fullDay === 'number' && fullDay > 0) {
-          basePrice = fullDay;
-        } else {
-          basePrice = hourly * duration;
-        }
-      }
+    // Override with special rates only for exact time matches
+    if (bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00" && typeof fullDay === 'number' && fullDay > 0) {
+      basePrice = fullDay;
+    } else if (bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00" && typeof halfDay === 'number' && halfDay > 0) {
+      basePrice = halfDay;
     }
 
     // Add cleaning fee and security deposit
