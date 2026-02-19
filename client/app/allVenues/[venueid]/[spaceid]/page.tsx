@@ -148,7 +148,13 @@ interface SpaceData {
     securityDeposit?: number;
   };
   gallery: Array<{
+    public_id: string;
     url: string;
+    width?: number;
+    height?: number;
+    format?: string;
+    size?: number;
+    created_at?: string;
     caption?: string;
     isMain?: boolean;
   }>;
@@ -189,10 +195,10 @@ const extractSpaceImages = (space: SpaceData | null) => {
 
   // If cover image is set, prioritize it
   if (space.coverImage) {
-    const coverImage = gallery.find(img => img.url === space.coverImage);
+    const coverImage = gallery.find(img => img.public_id === space.coverImage);
     if (coverImage) {
       // Put cover image first, then the rest
-      const otherImages = gallery.filter(img => img.url !== space.coverImage);
+      const otherImages = gallery.filter(img => img.public_id !== space.coverImage);
       return [coverImage.url, ...otherImages.map(img => img.url).filter(Boolean)];
     }
   }
@@ -208,7 +214,7 @@ const getPrimarySpaceImage = (space: SpaceData) => {
 
   // If cover image is set, return it
   if (space.coverImage) {
-    const coverImage = gallery.find(img => img.url === space.coverImage);
+    const coverImage = gallery.find(img => img.public_id === space.coverImage);
     if (coverImage?.url) {
       return coverImage.url;
     }

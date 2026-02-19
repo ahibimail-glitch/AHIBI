@@ -99,7 +99,13 @@ interface SpaceData {
     securityDeposit?: number;
   };
   gallery: Array<{
+    public_id: string;
     url: string;
+    width?: number;
+    height?: number;
+    format?: string;
+    size?: number;
+    created_at?: string;
     caption?: string;
     isMain?: boolean;
   }>;
@@ -146,7 +152,7 @@ const getPrimaryVenueImage = (space: SpaceData) => {
   
   // If cover image is set, find it in the gallery
   if (space.coverImage) {
-    const coverImage = gallery.find((img: any) => img.url === space.coverImage);
+    const coverImage = gallery.find((img: any) => img.public_id === space.coverImage);
     if (coverImage?.url) {
       return coverImage.url;
     }
