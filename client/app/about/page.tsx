@@ -315,12 +315,14 @@ export default function AboutPage() {
                 key={index}
                 className="text-center group hover:scale-105 transition-all duration-500"
               >
-                <Card className="p-6 border border-indigo-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm hover:bg-white">
-                  <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-r ${stat.gradient} mb-4 shadow-lg`}>
-                    <stat.icon className="h-7 w-7 text-white" />
-                  </div>
-                  <div className={`text-4xl md:text-5xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-3`}>
-                    {stat.number}
+                <Card className="p-6 border border-indigo-200/50 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/80 backdrop-blur-sm hover:bg-white h-full flex flex-col justify-between">
+                  <div>
+                    <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-r ${stat.gradient} mb-4 shadow-lg`}>
+                      <stat.icon className="h-7 w-7 text-white" />
+                    </div>
+                    <div className={`text-3xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mb-3`}>
+                      {stat.number}
+                    </div>
                   </div>
                   <div className="text-base font-semibold text-gray-600">{stat.label}</div>
                 </Card>
@@ -335,7 +337,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <Badge variant="outline" className="mb-6 px-4 py-2">
+              <Badge variant="outline" className="mb-6 px-4 py-2 bg-gradient-to-r from-red-500 to-red-700 text-white">
                 What is Ahibi?
               </Badge>
               <h2 className="text-4xl font-bold mb-6">A Modern Event-Tech Platform</h2>
@@ -385,21 +387,45 @@ export default function AboutPage() {
               From a small idea in Northeast India to a pan-India platform transforming events
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {journey.map((milestone, index) => (
-              <Card
-                key={index}
-                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50"
-              >
-                <CardContent className="p-6 text-center">
-                  <div className={`inline-flex p-3 rounded-full ${milestone.color} text-white mb-4`}>
-                    <milestone.icon className="h-6 w-6" />
+              <div key={index} className="h-full"> {/* Wrapper for height consistency */}
+                <Card 
+                  className="group relative h-full border border-gray-100 shadow-md hover:shadow-2xl transition-all duration-500 bg-white overflow-hidden hover:-translate-y-2 hover:border-primary/20"
+                >
+                  {/* Decorative Background Watermark */}
+                  <div className="absolute -right-4 -top-4 text-9xl font-black text-gray-50 z-0 opacity-50 group-hover:text-gray-100 transition-colors duration-500 select-none">
+                    {index + 1}
                   </div>
-                  <div className="text-2xl font-bold text-primary mb-2">{milestone.year}</div>
-                  <h3 className="text-lg font-semibold mb-3">{milestone.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{milestone.description}</p>
-                </CardContent>
-              </Card>
+
+                  <CardContent className="relative z-10 p-8 flex flex-col h-full items-center text-center">
+                    {/* Icon Container with Glow Effect */}
+                    <div className="relative mb-6">
+                      <div className={`absolute inset-0 rounded-full blur-xl opacity-20 ${milestone.color} scale-150`}></div>
+                      <div className={`relative inline-flex items-center justify-center w-16 h-16 rounded-2xl ${milestone.color} text-white shadow-lg group-hover:scale-110 transition-transform duration-500`}>
+                        <milestone.icon className="h-7 w-7" />
+                      </div>
+                    </div>
+
+                    {/* Year Badge */}
+                    <span className="inline-block px-4 py-1.5 rounded-full bg-gray-100 text-primary font-bold text-sm mb-4 border border-gray-200 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                      {milestone.year}
+                    </span>
+
+                    {/* Text Content */}
+                    <h3 className="text-xl font-bold mb-3 text-gray-900 group-hover:text-primary transition-colors duration-300">
+                      {milestone.title}
+                    </h3>
+                    
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                      {milestone.description}
+                    </p>
+                    
+                    {/* Decorative Bottom Bar (Optional visual anchor) */}
+                    <div className={`mt-auto w-12 h-1 rounded-full ${milestone.color} opacity-30 group-hover:w-24 group-hover:opacity-100 transition-all duration-500`}></div>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         </div>
@@ -445,48 +471,71 @@ export default function AboutPage() {
       </section> */}
 
       {/* What We Offer */}
-      <section className="py-20 bg-white">
+      <section className="py-24 bg-white relative overflow-hidden">
+        {/* Decorative background element */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-primary/5 rounded-full blur-3xl -z-10" />
+
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-6">What We're Building</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Simple tools to help everyone in the event ecosystem
+          <div className="text-center mb-16 space-y-4">
+            <span className="inline-block py-1 px-3 rounded-full bg-primary/10 text-primary text-sm font-medium">
+              Our Solutions
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+              What We're Building
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              Simple, powerful tools designed to streamline every aspect of the event
+              ecosystem.
             </p>
           </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {offerings.map((offering, index) => (
               <Card
                 key={index}
-                className={`border-2 ${offering.color} hover:shadow-xl transition-all duration-300 group`}
+                className={`relative h-full flex flex-col border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group bg-card ${offering.color || 'border-border'}`}
               >
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-primary/10 p-3 rounded-lg group-hover:bg-primary/20 transition-colors">
+                <CardHeader className="pb-6">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-primary/5 p-4 rounded-xl ring-1 ring-primary/10 group-hover:bg-primary/10 group-hover:ring-primary/30 transition-all duration-300">
                         <offering.icon className="h-8 w-8 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-xl">{offering.title}</CardTitle>
-                        <p className="text-sm text-primary font-medium">{offering.subtitle}</p>
+                        <CardTitle className="text-2xl mb-1">
+                          {offering.title}
+                        </CardTitle>
+                        <p className="text-sm font-medium text-primary/80">
+                          {offering.subtitle}
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed mb-4">{offering.description}</p>
+                  <p className="text-muted-foreground leading-relaxed text-base">
+                    {offering.description}
+                  </p>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3 mb-6">
+                
+                <CardContent className="flex flex-col flex-grow">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 mb-8 flex-grow">
                     {offering.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{feature}</span>
+                      <div key={featureIndex} className="flex items-start space-x-2.5">
+                        <CheckCircle className="h-5 w-5 text-green-500/90 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground font-medium">
+                          {feature}
+                        </span>
                       </div>
                     ))}
                   </div>
-                  <Button className="w-full" asChild>
-                    <Link href={offering.link}>
-                      {offering.cta} <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  
+                  <div className="pt-4 mt-auto border-t">
+                    <Button className="w-full group/btn" size="lg" asChild>
+                      <Link href={offering.link}>
+                        {offering.cta} 
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -697,6 +746,9 @@ export default function AboutPage() {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Visit Us</h3>
                 <p className="text-muted-foreground mb-4">Our headquarters</p>
+                <a href="https://www.google.com/maps/place/KAKI/@25.8883858,93.7360938,15z/data=!3m1!4b1!4m6!3m5!1s0x3745e2884f84c2af:0x7fdf085888fbe84a!8m2!3d25.8883677!4d93.7545479!16s%2Fg%2F11kqdxf25p?entry=ttu&g_ep=EgoyMDI2MDIxMS4wIKXMDSoASAFQAw%3D%3D" 
+                  target="_blank" 
+                  rel="noopener noreferrer" className="text-muted-foreground mb-4">132 B, 2 ½ Mile Darogapather</a>
                 <p className="font-medium text-orange-600">Dimapur, Nagaland</p>
               </CardContent>
             </Card>
