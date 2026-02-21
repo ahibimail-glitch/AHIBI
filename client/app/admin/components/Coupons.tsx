@@ -22,7 +22,8 @@ type Coupon = {
   code: string;
   event: { id: string; name: string };
   ticketCategory: string;
-  discountPercentage: number;
+  discountPercentage?: number;
+  discountPrice?: number;
   status: "active" | "used";
   timesUsed: number;
   createdAt: string;
@@ -36,6 +37,7 @@ export default function Coupons() {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<EventDetail | null>(null);
   const [ticketCategory, setTicketCategory] = useState<string>("");
+  const [discountType, setDiscountType] = useState<"percentage" | "price">("percentage");
   const [discount, setDiscount] = useState<string>("10");
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [generatedByName, setGeneratedByName] = useState<string>("");
@@ -151,14 +153,21 @@ export default function Coupons() {
     }
     setLoading(true);
     try {
-      await axios.post(`/api/coupons`, {
+      const payload: any = {
         eventId: selectedEventId,
         ticketCategory,
-        discountPercentage: Number(discount),
         expiresAt: expiresAt || undefined,
         generatedBy: (generatedByName || generatedByEmail) ? { name: generatedByName || undefined, email: generatedByEmail || undefined } : undefined,
         code: manualCode.trim().toUpperCase(),
-      });
+      };
+
+      if (discountType === "percentage") {
+        payload.discountPercentage = Number(discount);
+      } else {
+        payload.discountPrice = Number(discount);
+      }
+
+      await axios.post(`/api/coupons`, payload);
       setDiscount("10");
       setExpiresAt("");
       setGeneratedByName("");
@@ -248,8 +257,29 @@ export default function Coupons() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-600">Discount %</label>
-              <Input type="number" min={0} max={100} value={discount} onChange={e => setDiscount(e.target.value)} />
+              <label className="text-sm text-gray-600">Discount Type</label>
+              <Select value={discountType} onValueChange={(value: "percentage" | "price") => setDiscountType(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage (%)</SelectItem>
+                  <SelectItem value="price">Fixed Price (₹)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-600">
+                Discount {discountType === "percentage" ? "(%)" : "(₹)"}
+              </label>
+              <Input 
+                type="number" 
+                min={0} 
+                max={discountType === "percentage" ? 100 : undefined}
+                value={discount} 
+                onChange={e => setDiscount(e.target.value)} 
+              />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -415,7 +445,14 @@ function CouponTable({ coupons, cardRefs, onRefresh, onDownloadPng, onDownloadPd
               <TableCell><div className="text-sm font-mono font-semibold">{c.code}</div></TableCell>
               <TableCell>{c.event?.name}</TableCell>
               <TableCell>{c.ticketCategory}</TableCell>
-              <TableCell>{c.discountPercentage}%</TableCell>
+              <TableCell>
+                {c.discountPercentage !== undefined 
+                  ? `${c.discountPercentage}%` 
+                  : c.discountPrice !== undefined 
+                    ? `₹${c.discountPrice}` 
+                    : '-'
+                }
+              </TableCell>
               <TableCell>{c.generatedBy?.name || c.generatedBy?.email || '-'}</TableCell>
               <TableCell>
                 <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>
@@ -469,7 +506,12 @@ function CouponTable({ coupons, cardRefs, onRefresh, onDownloadPng, onDownloadPd
 
             {/* Discount Badge */}
             <div className="absolute top-6 right-6 bg-red-500 text-white px-3 py-1 rounded-bl-lg font-bold text-xs z-10">
-              {c.discountPercentage}% OFF
+              {c.discountPercentage !== undefined 
+                ? `${c.discountPercentage}% OFF`
+                : c.discountPrice !== undefined 
+                  ? `₹${c.discountPrice} OFF`
+                  : 'DISCOUNT'
+              }
             </div>
 
             {/* Created Date */}

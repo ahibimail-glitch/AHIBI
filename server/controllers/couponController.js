@@ -16,10 +16,23 @@ function generateUniqueCode() {
 
 exports.createCoupon = async (req, res, next) => {
   try {
-    const { eventId, ticketCategory, discountPercentage, expiresAt, generatedBy, code: manualCode } = req.body;
+    const { eventId, ticketCategory, discountPercentage, discountPrice, expiresAt, generatedBy, code: manualCode } = req.body;
 
-    if (!eventId || !ticketCategory || discountPercentage === undefined) {
+    if (!eventId || !ticketCategory || (discountPercentage === undefined && discountPrice === undefined)) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Validate that only one discount type is provided
+    if (discountPercentage !== undefined && discountPrice !== undefined) {
+      return res.status(400).json({ message: 'Cannot specify both discountPercentage and discountPrice' });
+    }
+
+    if (discountPercentage !== undefined && (discountPercentage < 0 || discountPercentage > 100)) {
+      return res.status(400).json({ message: 'Discount percentage must be between 0 and 100' });
+    }
+
+    if (discountPrice !== undefined && discountPrice < 0) {
+      return res.status(400).json({ message: 'Discount price must be greater than or equal to 0' });
     }
 
     const event = await Event.findById(eventId).select('title');
@@ -65,7 +78,8 @@ exports.createCoupon = async (req, res, next) => {
       code,
       event: { id: event._id, name: event.title },
       ticketCategory,
-      discountPercentage,
+      discountPercentage: discountPercentage !== undefined ? discountPercentage : undefined,
+      discountPrice: discountPrice !== undefined ? discountPrice : undefined,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
       generatedBy: generatedBy ? {
         id: generatedBy.id || undefined,
@@ -159,7 +173,14 @@ exports.validateCoupon = async (req, res, next) => {
     // Compute discount: apply ONCE per applicable ticket category (single unit price)
     const singleTicket = applicableTickets[0];
     const unitPrice = Number(singleTicket?.price) || 0;
-    const discountAmount = Math.round((unitPrice * coupon.discountPercentage) / 100);
+    let discountAmount = 0;
+    
+    if (coupon.discountPercentage !== undefined) {
+      discountAmount = Math.round((unitPrice * coupon.discountPercentage) / 100);
+    } else if (coupon.discountPrice !== undefined) {
+      discountAmount = Math.min(coupon.discountPrice, unitPrice); // Don't discount more than the ticket price
+    }
+    
     const totalAmount = tickets.reduce((sum, t) => sum + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
     const payable = Math.max(0, totalAmount - discountAmount);
 
@@ -171,6 +192,7 @@ exports.validateCoupon = async (req, res, next) => {
       code: coupon.code,
       ticketCategory: applicableCategory,
       discountPercentage: coupon.discountPercentage,
+      discountPrice: coupon.discountPrice,
       discountAmount,
       totalAmount,
       payable,
@@ -254,7 +276,12 @@ exports.validateMelitaCoupon = async (req, res, next) => {
     }
 
     // Apply coupon percentage on AHIBI tickets (additional discount)
-    const ticketDiscountAmount = Math.round((ticketAmount * coupon.discountPercentage) / 100);
+    let ticketDiscountAmount = 0;
+    if (coupon.discountPercentage !== undefined) {
+      ticketDiscountAmount = Math.round((ticketAmount * coupon.discountPercentage) / 100);
+    } else if (coupon.discountPrice !== undefined) {
+      ticketDiscountAmount = Math.min(coupon.discountPrice, ticketAmount); // Don't discount more than the total ticket amount
+    }
 
     const totalDiscountAmount = melitaDiscountAmount + ticketDiscountAmount;
     const totalAmount = melitaProductAmount + ticketAmount;
@@ -264,13 +291,16 @@ exports.validateMelitaCoupon = async (req, res, next) => {
       valid: true,
       code: coupon.code,
       discountPercentage: coupon.discountPercentage,
+      discountPrice: coupon.discountPrice,
       discountAmount: totalDiscountAmount,
       melitaDiscountAmount,
       ticketDiscountAmount,
       totalAmount,
       payable,
       isMelita50: false,
-      message: `Coupon applied: 50% off Melita + ${coupon.discountPercentage}% off AHIBI tickets`
+      message: coupon.discountPercentage !== undefined 
+        ? `Coupon applied: 50% off Melita + ${coupon.discountPercentage}% off AHIBI tickets`
+        : `Coupon applied: 50% off Melita + ₹${coupon.discountPrice} off AHIBI tickets`
     });
 
   } catch (err) {

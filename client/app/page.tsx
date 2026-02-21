@@ -769,38 +769,44 @@ export default function HomePage() {
 
       {/* Sports Events Section */}
       {sportsEvents.length > 0 && (
-        <section className="lg:mt-48 md:mt-48 py-4 sm:py-6 md:py-8 bg-[#2b3148]">
-          <div className="container mx-auto px-3 sm:px-4">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
-                Sports Events
-              </h2>
+        <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-green-900 via-blue-900 to-indigo-900 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(34,197,94,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.1),transparent_50%)]" />
+          <div className="relative container mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
+                  Sports Events
+                </h2>
+                <p className="text-green-200 text-sm sm:text-base">Push your limits, achieve greatness</p>
+              </div>
               <Link
                 href="/sports"
-                className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+                className="group text-white hover:text-green-200 text-sm sm:text-base font-medium flex items-center gap-2 transition-colors"
               >
-                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                See All <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
               {sportsEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
-                    <div className="relative aspect-[2/3] overflow-hidden">
+                  <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-green-500/25">
+                    <div className="relative aspect-[4/5] overflow-hidden rounded-t-xl">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
                         sizes="50vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
-                    <div className="px-2 pt-2 pb-1.5">
-                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                    <div className="px-3 pt-3 pb-4">
+                      <h3 className="font-semibold text-sm sm:text-base line-clamp-2 text-white mb-1">
                         {event.title}
                       </h3>
-                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-green-200">
                         {event.location?.city}
                       </p>
                     </div>
@@ -813,38 +819,44 @@ export default function HomePage() {
       )}
       {/* Comedy Events Section */}
       {comedyEvents.length > 0 && (
-        <section className="py-4 sm:py-6 md:py-8 bg-white">
-          <div className="container mx-auto px-3 sm:px-4">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
-                Laughter Therapy
-              </h2>
+        <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_60%,rgba(251,191,36,0.2),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(249,115,22,0.2),transparent_50%)]" />
+          <div className="relative container mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <div>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
+                  Laughter Therapy
+                </h2>
+                <p className="text-yellow-100 text-sm sm:text-base">Laugh out loud, live it up</p>
+              </div>
               <Link
                 href="/events?category=comedy"
-                className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+                className="group text-white hover:text-yellow-100 text-sm sm:text-base font-medium flex items-center gap-2 transition-colors"
               >
-                See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                See All <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
               {comedyEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
-                  <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
-                    <div className="relative aspect-[2/3] overflow-hidden">
+                  <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-yellow-500/25">
+                    <div className="relative aspect-[4/5] overflow-hidden rounded-t-xl">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
                         fill
                         sizes="50vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
-                    <div className="px-2 pt-2 pb-1.5">
-                      <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                    <div className="px-3 pt-3 pb-4">
+                      <h3 className="font-semibold text-sm sm:text-base line-clamp-2 text-white mb-1">
                         {event.title}
                       </h3>
-                      <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-yellow-100">
                         {event.location?.city}
                       </p>
                     </div>

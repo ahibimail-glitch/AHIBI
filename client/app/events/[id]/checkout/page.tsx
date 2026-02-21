@@ -335,7 +335,12 @@ export default function CheckoutPage() {
         return;
       }
       setAppliedCoupon(data);
-      toast.success(`Coupon ${data.code} applied: ${data.discountPercentage}% off`);
+      const discountText = data.discountPercentage !== undefined 
+        ? `${data.discountPercentage}% off` 
+        : data.discountPrice !== undefined 
+          ? `₹${data.discountPrice} off`
+          : 'discount applied';
+      toast.success(`Coupon ${data.code} applied: ${discountText}`);
     } catch (e) {
       setCouponError('Failed to apply coupon');
       toast.error('Failed to apply coupon');
@@ -556,6 +561,7 @@ export default function CheckoutPage() {
                         code: appliedCoupon.code,
                         ticketCategory: appliedCoupon.ticketCategory,
                         discountPercentage: appliedCoupon.discountPercentage,
+                        discountPrice: appliedCoupon.discountPrice,
                         discountAmount: appliedCoupon.discountAmount,
                       }
                     } : {}),

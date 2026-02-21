@@ -17,9 +17,14 @@ const CouponSchema = new mongoose.Schema({
   },
   discountPercentage: {
     type: Number,
-    required: true,
+    required: false,
     min: 0,
     max: 100,
+  },
+  discountPrice: {
+    type: Number,
+    required: false,
+    min: 0,
   },
   status: {
     type: String,
@@ -45,6 +50,18 @@ const CouponSchema = new mongoose.Schema({
     name: { type: String },
     email: { type: String },
   },
+});
+
+CouponSchema.pre('validate', function(next) {
+  if ((this.discountPercentage === undefined || this.discountPercentage === null) && 
+      (this.discountPrice === undefined || this.discountPrice === null)) {
+    this.invalidate('discountPercentage', 'Either discountPercentage or discountPrice must be provided');
+  }
+  if (this.discountPercentage !== undefined && this.discountPercentage !== null && 
+      this.discountPrice !== undefined && this.discountPrice !== null) {
+    this.invalidate('discountPercentage', 'Cannot have both discountPercentage and discountPrice');
+  }
+  next();
 });
 
 CouponSchema.index({ code: 1 });
