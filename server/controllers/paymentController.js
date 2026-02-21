@@ -68,12 +68,19 @@ exports.createOrder = async (req, res) => {
           // Apply ONCE for the category: take the unit price of the first matching ticket
           const applicableTickets = (bookingDetails?.tickets || []).filter(t => t.ticketType === dbCoupon.ticketCategory);
           const unitPrice = applicableTickets.length > 0 ? Number(applicableTickets[0].price) || 0 : 0;
-          discountAmount = Math.round((unitPrice * dbCoupon.discountPercentage) / 100);
+          
+          if (dbCoupon.discountPercentage !== undefined) {
+            discountAmount = Math.round((unitPrice * dbCoupon.discountPercentage) / 100);
+          } else if (dbCoupon.discountPrice !== undefined) {
+            discountAmount = Math.min(dbCoupon.discountPrice, unitPrice); // Don't discount more than the ticket price
+          }
+          
           if (discountAmount > 0) {
             appliedCoupon = {
               code: dbCoupon.code,
               ticketCategory: dbCoupon.ticketCategory,
               discountPercentage: dbCoupon.discountPercentage,
+              discountPrice: dbCoupon.discountPrice,
               discountAmount,
             };
           }
