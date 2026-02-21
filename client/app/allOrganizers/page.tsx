@@ -2,10 +2,6 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check, CalendarClock, Sparkles, Wallet, Music, Mic, Headphones, MapPin, Shield, Star, ArrowRight, Search, SlidersHorizontal, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import Footer from "../Footer";
@@ -90,56 +86,56 @@ const tiers = [
 ];
 
 const Section = ({ children, id }: { children: React.ReactNode; id?: string }) => (
-  <section id={id} className="py-16 md:py-24">
-    <div className="mx-auto max-w-6xl px-4">{children}</div>
+  <section id={id} className="py-20 md:py-32">
+    <div className="mx-auto max-w-6xl px-6 md:px-8">{children}</div>
   </section>
 );
 
 const Hero = () => (
   <Section>
-    <div className="min-h-[50vh] flex items-center">
-      <div className="space-y-6 animate-fadeIn mx-auto text-center max-w-3xl">
-        <h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-500 bg-clip-text text-transparent">
+    <div className="min-h-[55vh] flex items-center justify-center">
+      <div className="space-y-8 animate-fadeIn mx-auto text-center max-w-4xl">
+        <h1 className="mt-4 text-5xl font-extrabold tracking-tight md:text-7xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 bg-clip-text text-transparent pb-2">
           AHIBI Organizer
-          <span className="block text-gray-600 text-3xl md:text-4xl mt-2">Plan. Book. Execute. Succeed.</span>
+          <span className="block text-slate-700 text-3xl md:text-5xl mt-4 font-bold tracking-tight">Plan. Book. Execute. Succeed.</span>
         </h1>
-        <p className="text-gray-600 md:text-xl leading-relaxed max-w-2xl mx-auto">
+        <p className="text-slate-600 md:text-xl leading-relaxed max-w-2xl mx-auto font-medium">
           Your all-in-one platform to discover artists, book venues, and manage
           events seamlessly. From concept to celebration — we’ve got you covered.
         </p>
 
-        <div className="flex flex-wrap justify-center gap-4 pt-2">
-          <Link href="/organizer/auth/signup">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <Link href="/organizer/auth/signup" className="w-full sm:w-auto">
             <Button
               size="lg"
-              className="rounded-2xl px-8 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              className="w-full sm:w-auto rounded-full px-10 h-14 text-lg bg-[#F4A629] hover:bg-[#e09622] text-white shadow-lg shadow-[#F4A629]/20 transform hover:-translate-y-1 transition-all duration-300 font-bold"
             >
               Start Planning
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
 
-          <Link href="/organizer/auth/login">
+          <Link href="/organizer/auth/login" className="w-full sm:w-auto">
             <Button
               size="lg"
               variant="outline"
-              className="rounded-2xl px-8 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 transition-all duration-300"
+              className="group w-full sm:w-auto rounded-full px-10 h-14 text-lg border-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 shadow-sm hover:shadow-md transition-all duration-300 font-semibold bg-white/50 backdrop-blur-sm"
             >
               Organizer Login
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Button>
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600 pt-4">
+        <div className="flex flex-wrap items-center justify-center gap-8 text-sm font-semibold text-slate-500 pt-8">
           <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-600" /> One platform
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100"><Check className="h-3.5 w-3.5 text-emerald-600" /></div> One platform
           </div>
           <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-600" /> Secure bookings
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100"><Check className="h-3.5 w-3.5 text-emerald-600" /></div> Secure bookings
           </div>
           <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-600" /> Easy management
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100"><Check className="h-3.5 w-3.5 text-emerald-600" /></div> Easy management
           </div>
         </div>
       </div>
@@ -155,56 +151,56 @@ const comingSoonFeatures = [
 
 const FeatureGrid = () => (
   <Section id="features">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">
+    <div className="mb-16 text-center">
+      <h2 className="text-3xl font-extrabold tracking-tight md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent pb-2">
         Everything you need to organize amazing events
       </h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">
+      <p className="mt-4 text-slate-600 md:text-xl max-w-3xl mx-auto font-medium">
         Powerful tools to find talent, manage bookings, and execute flawless events.
       </p>
     </div>
 
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="grid gap-6 md:gap-8 md:grid-cols-3">
       {features.map((f) => (
         <Card
           key={f.title}
-          className="relative rounded-2xl border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm"
+          className="group relative rounded-3xl border border-emerald-100 shadow-sm hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-1 bg-white/60 backdrop-blur-md overflow-hidden"
         >
-          {/* Show badge only for selected features */}
           {comingSoonFeatures.includes(f.title) && (
-            <span className="absolute top-3 right-3 text-xs font-semibold bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">
+            <span className="absolute top-5 right-5 text-[10px] uppercase tracking-widest font-black bg-[#F4A629]/10 text-[#F4A629] px-3 py-1.5 rounded-full border border-[#F4A629]/20 z-20">
               Coming Soon
             </span>
           )}
 
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600">
-                <f.icon className="h-5 w-5 text-white" />
+          <CardHeader className="relative z-10 pr-24 pt-8 pl-8">
+            <div className="flex flex-col gap-5">
+              <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-200 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
+                <f.icon className="h-6 w-6 text-white" />
               </div>
-              <CardTitle className="text-lg font-bold text-gray-800">
+              <CardTitle className="text-xl font-bold text-slate-800 leading-tight">
                 {f.title}
               </CardTitle>
             </div>
           </CardHeader>
 
-          <CardContent className="text-gray-600">
+          <CardContent className="relative z-10 text-slate-600 leading-relaxed pb-8 pl-8 pr-8">
             {f.text}
           </CardContent>
+
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-emerald-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         </Card>
       ))}
     </div>
   </Section>
 );
 
-
 const HowItWorks = () => (
   <Section id="how">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">How it works</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Three simple steps to organize your perfect event.</p>
+    <div className="mb-16 text-center">
+      <h2 className="text-3xl font-extrabold tracking-tight md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent pb-2">How it works</h2>
+      <p className="mt-4 text-slate-600 md:text-xl max-w-3xl mx-auto font-medium">Three simple steps to organize your perfect event.</p>
     </div>
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="grid gap-6 md:gap-8 md:grid-cols-3">
       {[{
         step: 1,
         title: "Search & discover",
@@ -218,13 +214,36 @@ const HowItWorks = () => (
         title: "Execute & succeed",
         text: "Coordinate with vendors, track timelines, manage guest lists, and ensure your event runs smoothly from start to finish.",
       }].map((s) => (
-        <Card key={s.step} className="rounded-2xl border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <Badge className="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0">Step {s.step}</Badge>
-            <CardTitle className="mt-3 text-xl font-bold text-gray-800">{s.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-gray-600">{s.text}</CardContent>
-        </Card>
+          <Card 
+            key={s.step} 
+            className="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white/60 shadow-sm backdrop-blur-md transition-all duration-500 hover:-translate-y-2 hover:border-emerald-500/30 hover:shadow-xl hover:shadow-emerald-900/5 p-2"
+          >
+            <div className="absolute -right-1 -top-2 select-none pointer-events-none">
+                <span className="text-[140px] font-black leading-none text-emerald-500/5 transition-colors duration-500 group-hover:text-emerald-500/10">
+                  {s.step}
+                </span>
+            </div>
+
+            <CardHeader className="relative z-10 pb-4">
+              <div className="flex items-center justify-between">
+                <Badge className="rounded-full bg-emerald-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-inset ring-emerald-700/10 transition-colors duration-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:ring-emerald-600">
+                  Step {s.step}
+                </Badge>
+                <div className="h-2 w-2 rounded-full bg-emerald-400 opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+              <CardTitle className="mt-6 text-2xl font-extrabold tracking-tight text-slate-900">
+                {s.title}
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="relative z-10">
+              <p className="text-base font-medium leading-relaxed text-slate-600">
+                {s.text}
+              </p>
+            </CardContent>
+
+            <div className="absolute bottom-0 left-0 h-1.5 w-0 bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-700 ease-out group-hover:w-full" />
+          </Card>
       ))}
     </div>
   </Section>
@@ -232,27 +251,43 @@ const HowItWorks = () => (
 
 const Plans = () => (
   <Section id="plans">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">Choose your plan</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Start free. Upgrade as your event planning needs grow.</p>
+    <div className="mb-16 text-center">
+      <h2 className="text-3xl font-extrabold tracking-tight md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent pb-2">Choose your plan</h2>
+      <p className="mt-4 text-slate-600 md:text-xl max-w-3xl mx-auto font-medium">Start free. Upgrade as your event planning needs grow.</p>
     </div>
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="grid gap-8 md:grid-cols-3 items-center">
       {tiers.map((t, index) => (
-        <Card key={t.name} className={`rounded-2xl border-emerald-200/50 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm ${index === 1 ? 'ring-2 ring-emerald-600' : ''}`}>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0">{t.tag}</Badge>
-              <CardTitle className="text-xl font-bold text-gray-800">{t.name}</CardTitle>
+        <Card 
+          key={t.name} 
+          className={`relative rounded-3xl border-slate-200/60 shadow-sm hover:shadow-xl transition-all duration-500 bg-white/70 backdrop-blur-md overflow-hidden ${index === 1 ? 'ring-2 ring-emerald-500 shadow-lg scale-105 z-10' : 'hover:-translate-y-1'}`}
+        >
+          {index === 1 && (
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+          )}
+          <CardHeader className="p-8 pb-6">
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle className="text-2xl font-extrabold text-slate-900">{t.name}</CardTitle>
+              <Badge variant="secondary" className="rounded-full bg-emerald-100 text-emerald-800 border-0 font-bold px-3">{t.tag}</Badge>
             </div>
-            <p className="text-gray-600 font-medium">{t.price}</p>
+            <p className="text-slate-500 font-semibold">{t.price}</p>
           </CardHeader>
-          <CardContent>
-            <ul className="mb-6 space-y-3 text-sm text-gray-600">
+          <CardContent className="p-8 pt-0">
+            <ul className="mb-8 space-y-4 text-base font-medium text-slate-600">
               {t.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 text-emerald-600 flex-shrink-0" />{b}</li>
+                <li key={b} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                        <Check className="h-3 w-3 text-emerald-600 font-bold" />
+                    </div>
+                    {b}
+                </li>
               ))}
             </ul>
-            <Button className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">{t.cta}</Button>
+            <Button 
+                size="lg"
+                className={`w-full rounded-full h-12 font-bold transition-all duration-300 ${index === 1 ? 'bg-[#F4A629] hover:bg-[#e09622] text-white shadow-md shadow-[#F4A629]/20 hover:-translate-y-0.5' : 'bg-slate-900 hover:bg-slate-800 text-white hover:-translate-y-0.5'}`}
+            >
+                {t.cta}
+            </Button>
           </CardContent>
         </Card>
       ))}
@@ -262,17 +297,32 @@ const Plans = () => (
 
 const FAQ = () => (
   <Section id="faq">
-    <div className="mb-12 text-center">
-      <h2 className="text-4xl font-bold md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">Questions, answered</h2>
-      <p className="mt-4 text-gray-600 md:text-xl max-w-3xl mx-auto">Everything you need to know about organizing events on AHIBI.</p>
+    <div className="mb-16 text-center">
+      <h2 className="text-3xl font-extrabold tracking-tight md:text-5xl bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent pb-2">
+        Questions, answered
+      </h2>
+      <p className="mt-4 text-slate-600 md:text-xl max-w-3xl mx-auto font-medium">
+        Everything you need to know about organizing events on AHIBI.
+      </p>
     </div>
+    
     <div className="grid gap-6 md:grid-cols-2">
       {faqs.map((f) => (
-        <Card key={f.q} className="rounded-2xl border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-gray-800">{f.q}</CardTitle>
+        <Card 
+          key={f.q} 
+          className="group relative overflow-hidden rounded-3xl border border-slate-200/50 shadow-sm hover:shadow-lg hover:shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-1 bg-white/60 backdrop-blur-md"
+        >
+          <div className="absolute left-0 top-0 h-full w-1 bg-emerald-500/20 transition-all duration-300 group-hover:w-1.5 group-hover:bg-emerald-500" />
+          
+          <CardHeader className="pl-8 pt-6 pb-2 pr-6">
+            <CardTitle className="text-lg font-bold text-slate-900 leading-snug">
+              {f.q}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="text-gray-600">{f.a}</CardContent>
+          
+          <CardContent className="pl-8 pb-6 pr-6 text-slate-600 font-medium leading-relaxed">
+            {f.a}
+          </CardContent>
         </Card>
       ))}
     </div>
@@ -281,28 +331,63 @@ const FAQ = () => (
 
 const CTA = () => (
   <Section id="join">
-    <div className="rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-blue-500 p-8 md:p-12 shadow-2xl">
-      <div className="grid items-center gap-8 md:grid-cols-2">
+    <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-emerald-600 via-teal-700 to-blue-800 p-8 sm:p-12 md:p-16 shadow-2xl">
+      
+      <div className="absolute -top-32 -right-32 h-[500px] w-[500px] rounded-full bg-teal-400/20 blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-blue-500/20 blur-[100px] pointer-events-none" />
+
+      <div className="relative z-10 grid items-center gap-12 lg:grid-cols-2">
         <div>
-          <h3 className="text-3xl font-bold md:text-5xl text-white">Ready to organize unforgettable events?</h3>
-          <p className="mt-4 text-emerald-100 md:text-xl">Join AHIBI Organizer and access the best artists, venues, and vendors. Plan smarter. Book faster. Execute flawlessly.</p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link href="/organizer/auth/signup">
-            <Button size="lg" className="rounded-2xl px-8 bg-white text-emerald-600 hover:bg-gray-100 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Start planning free</Button>
+          <h3 className="text-3xl font-extrabold tracking-tight md:text-5xl text-white leading-tight">
+            Ready to organize unforgettable events?
+          </h3>
+          <p className="mt-6 text-emerald-50 md:text-xl font-medium leading-relaxed max-w-lg">
+            Join AHIBI Organizer and access the best artists, venues, and vendors. Plan smarter. Book faster. Execute flawlessly.
+          </p>
+          <div className="mt-10 flex flex-col sm:flex-row gap-4">
+            <Link href="/organizer/auth/signup" className="w-full sm:w-auto">
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto rounded-full h-14 px-8 bg-[#F4A629] text-white hover:bg-[#e09622] shadow-lg shadow-[#F4A629]/20 transform hover:-translate-y-1 transition-all duration-300 font-bold text-lg"
+              >
+                Start planning free
+              </Button>
             </Link>
-            <Button size="lg" variant="outline" className="rounded-2xl px-8 border-2 border-white text-white hover:bg-white hover:text-emerald-600 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold">Contact support</Button>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="w-full sm:w-auto bg-transparent rounded-full h-14 px-8 border-2 border-white/80 text-white hover:bg-white hover:text-teal-900 hover:border-white shadow-lg transform hover:-translate-y-1 transition-all duration-300 font-bold text-lg"
+            >
+              Contact support
+            </Button>
           </div>
         </div>
-        <div className="rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-sm p-6">
-          <div className="mb-6 flex items-center gap-2 text-sm text-white">
-            <Shield className="h-5 w-5" />
+
+        <div className="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md p-8 sm:p-10 shadow-2xl">
+          <div className="mb-8 flex items-center gap-5 text-white font-semibold text-lg leading-snug">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 shadow-inner backdrop-blur-lg">
+              <Shield className="h-7 w-7 text-emerald-100" />
+            </div>
             Secure platform with verified artists and venues.
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Instant bookings</div>
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Budget tracking</div>
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Event timeline</div>
-            <div className="rounded-2xl border border-white/30 bg-white/10 p-3 text-white"><Check className="mr-2 inline h-4 w-4" /> Vendor coordination</div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm font-bold tracking-wide">
+            <div className="flex items-center rounded-2xl border border-white/10 bg-white/5 p-4 text-white hover:bg-white/15 transition-colors duration-300">
+              <Check className="mr-3 h-5 w-5 text-emerald-300 shrink-0" /> 
+              Instant bookings
+            </div>
+            <div className="flex items-center rounded-2xl border border-white/10 bg-white/5 p-4 text-white hover:bg-white/15 transition-colors duration-300">
+              <Check className="mr-3 h-5 w-5 text-emerald-300 shrink-0" /> 
+              Budget tracking
+            </div>
+            <div className="flex items-center rounded-2xl border border-white/10 bg-white/5 p-4 text-white hover:bg-white/15 transition-colors duration-300">
+              <Check className="mr-3 h-5 w-5 text-emerald-300 shrink-0" /> 
+              Event timeline
+            </div>
+            <div className="flex items-center rounded-2xl border border-white/10 bg-white/5 p-4 text-white hover:bg-white/15 transition-colors duration-300">
+              <Check className="mr-3 h-5 w-5 text-emerald-300 shrink-0" /> 
+              Vendor coordination
+            </div>
           </div>
         </div>
       </div>
@@ -312,9 +397,14 @@ const CTA = () => (
 
 export default function AhibiOrganizerPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/30">
+    <div className="min-h-screen bg-slate-50 relative selection:bg-emerald-200 selection:text-emerald-900">
+      {/* Decorative ambient background */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none flex justify-center z-0">
+         <div className="w-[800px] h-[800px] bg-emerald-300/20 rounded-full blur-[120px] absolute -top-40 -left-20 mix-blend-multiply opacity-70" />
+         <div className="w-[600px] h-[600px] bg-teal-300/20 rounded-full blur-[100px] absolute top-40 right-0 mix-blend-multiply opacity-70" />
+      </div>
 
-      <main>
+      <main className="relative z-10">
         <Navbar />
         <Hero />
         <FeatureGrid />
@@ -324,7 +414,9 @@ export default function AhibiOrganizerPage() {
         <CTA />
       </main>
 
-      <Footer />
+      <div className="relative z-10">
+        <Footer />
+      </div>
     </div>
   );
 }
