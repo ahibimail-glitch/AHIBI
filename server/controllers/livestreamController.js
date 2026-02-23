@@ -7,6 +7,7 @@ const asyncHandler = require('express-async-handler');
 const LiveStream = require('../models/LiveStream');
 const Booking = require('../models/Booking');
 const SportsBooking = require('../models/SportsBooking');
+const LivestreamPurchase = require('../models/LivestreamPurchase');
 const muxService = require('../services/muxService');
 
 /**
@@ -16,11 +17,11 @@ const muxService = require('../services/muxService');
  */
 const createLiveStream = asyncHandler(async (req, res) => {
   const {
-    title,
+    eventTitle,
     description,
     eventId,
     sportsEventId,
-    accessType = 'ticket_holders',
+    accessType = 'paid',
     price = 0,
     scheduledStartTime,
     scheduledEndTime,
@@ -30,10 +31,17 @@ const createLiveStream = asyncHandler(async (req, res) => {
     embedUrl
   } = req.body;
 
-  if (!title) {
+  if (!eventTitle) {
     return res.status(400).json({
       success: false,
-      message: 'Stream title is required'
+      message: 'Event title is required'
+    });
+  }
+
+  if (accessType === 'paid' && price <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Price is required for paid access'
     });
   }
 
@@ -57,7 +65,7 @@ const createLiveStream = asyncHandler(async (req, res) => {
     }
 
     const liveStream = await LiveStream.create({
-      title,
+      title: eventTitle,
       description,
       eventId: eventId || null,
       sportsEventId: sportsEventId || null,
@@ -87,6 +95,7 @@ const createLiveStream = asyncHandler(async (req, res) => {
         description: liveStream.description,
         status: liveStream.status,
         accessType: liveStream.accessType,
+        price: liveStream.price,
         scheduledStartTime: liveStream.scheduledStartTime,
         obsConfig: {
           rtmpUrl: liveStream.rtmpUrl,
@@ -418,33 +427,56 @@ const getPlaybackToken = asyncHandler(async (req, res) => {
 
   // Check access based on accessType
   if (stream.accessType !== 'public') {
-    let userBookings = [];
+    let hasAccess = false;
+    let accessReason = '';
 
-    if (stream.eventId) {
-      const eventBookings = await Booking.find({
-        user: req.user._id,
-        event: stream.eventId,
-        status: 'confirmed'
-      });
-      userBookings = [...userBookings, ...eventBookings];
+    // Check for paid access
+    if (stream.accessType === 'paid') {
+      const purchase = await LivestreamPurchase.findUserValidAccess(req.user._id, stream._id);
+      if (purchase) {
+        hasAccess = true;
+        accessReason = 'paid_access';
+      }
+    }
+    // Check for ticket holder access (legacy support)
+    else if (stream.accessType === 'ticket_holders') {
+      let userBookings = [];
+
+      if (stream.eventId) {
+        const eventBookings = await Booking.find({
+          user: req.user._id,
+          event: stream.eventId,
+          status: 'confirmed'
+        });
+        userBookings = [...userBookings, ...eventBookings];
+      }
+
+      if (stream.sportsEventId) {
+        const sportsBookings = await SportsBooking.find({
+          user: req.user._id,
+          venue: stream.sportsEventId,
+          status: 'confirmed'
+        });
+        userBookings = [...userBookings, ...sportsBookings.map(b => ({ ...b.toObject(), sportsEvent: b.venue }))];
+      }
+
+      const accessCheck = await stream.checkAccess(req.user._id, userBookings);
+      hasAccess = accessCheck.hasAccess;
+      accessReason = accessCheck.reason;
+    }
+    // Other access types (subscribers, private)
+    else {
+      const accessCheck = await stream.checkAccess(req.user._id, []);
+      hasAccess = accessCheck.hasAccess;
+      accessReason = accessCheck.reason;
     }
 
-    if (stream.sportsEventId) {
-      const sportsBookings = await SportsBooking.find({
-        user: req.user._id,
-        venue: stream.sportsEventId,
-        status: 'confirmed'
-      });
-      userBookings = [...userBookings, ...sportsBookings.map(b => ({ ...b.toObject(), sportsEvent: b.venue }))];
-    }
-
-    const accessCheck = await stream.checkAccess(req.user._id, userBookings);
-
-    if (!accessCheck.hasAccess) {
+    if (!hasAccess) {
       return res.status(403).json({
         success: false,
         message: 'You do not have access to this stream',
-        reason: accessCheck.reason
+        reason: accessReason,
+        requiresPurchase: stream.accessType === 'paid'
       });
     }
   }
@@ -504,11 +536,7 @@ const getPlaybackToken = asyncHandler(async (req, res) => {
 const getActiveStreams = asyncHandler(async (req, res) => {
   const activeStreams = await LiveStream.find({
     isDeleted: false,
-    status: { $in: ['active', 'idle'] },
-    $or: [
-      { status: 'active' },
-      { scheduledStartTime: { $gte: new Date() } }
-    ]
+    status: { $in: ['active', 'idle'] }
   })
     .select('title description status scheduledStartTime thumbnailUrl posterUrl accessType price eventId sportsEventId')
     .populate('eventId', 'title')
@@ -620,7 +648,49 @@ async function handleAssetReady(data) {
 }
 
 /**
- * @desc    Update stream analytics (Admin only)
+ * @desc    Update stream access type and price
+ * @route   PUT /api/livestream/admin/streams/:id/access
+ * @access  Private/Admin
+ */
+const updateStreamAccess = asyncHandler(async (req, res) => {
+  const { accessType, price } = req.body;
+
+  try {
+    const stream = await LiveStream.findById(req.params.id);
+
+    if (!stream) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stream not found'
+      });
+    }
+
+    // Update access type and price
+    if (accessType) stream.accessType = accessType;
+    if (price !== undefined) stream.price = price;
+
+    await stream.save();
+
+    res.json({
+      success: true,
+      message: 'Stream access updated successfully',
+      data: {
+        id: stream._id,
+        accessType: stream.accessType,
+        price: stream.price
+      }
+    });
+  } catch (error) {
+    console.error('Update stream access error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update stream access'
+    });
+  }
+});
+
+/**
+ * @desc    Update stream analytics
  * @route   POST /api/livestream/admin/streams/:id/analytics
  * @access  Private/Admin
  */
@@ -667,5 +737,6 @@ module.exports = {
   getActiveStreams,
   handleMuxWebhook,
   updateAnalytics,
-  updateEmbedUrl
+  updateEmbedUrl,
+  updateStreamAccess
 };

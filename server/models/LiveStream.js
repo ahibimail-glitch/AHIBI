@@ -113,7 +113,7 @@ const liveStreamSchema = new mongoose.Schema({
   // Access control
   accessType: {
     type: String,
-    enum: ['public', 'ticket_holders', 'subscribers', 'private'],
+    enum: ['public', 'ticket_holders', 'subscribers', 'private', 'paid'],
     default: 'ticket_holders'
   },
 

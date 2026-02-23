@@ -28,7 +28,7 @@ interface OBSConfig {
 }
 
 interface CreateStreamForm {
-  title: string;
+  eventTitle: string;
   description: string;
   eventId: string;
   sportsEventId: string;
@@ -38,6 +38,11 @@ interface CreateStreamForm {
   latencyMode: string;
   embedUrl: string;
 }
+
+const LIVESTREAM_EVENTS = [
+  "1st NWA Provisional Championship & 1st NWA Under 15 Championship cum 1st Wrestling Festival",
+  "30th NWA Naga Traditional Wrestling Championship cum 1st Wrestling Festival"
+];
 
 export default function AdminLivestreamPage() {
   const router = useRouter();
@@ -55,11 +60,11 @@ export default function AdminLivestreamPage() {
   const [savingEmbed, setSavingEmbed] = useState(false);
 
   const [formData, setFormData] = useState<CreateStreamForm>({
-    title: '',
+    eventTitle: '',
     description: '',
     eventId: '',
     sportsEventId: '',
-    accessType: 'ticket_holders',
+    accessType: 'paid',
     price: 0,
     scheduledStartTime: '',
     latencyMode: 'low',
@@ -156,11 +161,11 @@ export default function AdminLivestreamPage() {
 
       // Reset form
       setFormData({
-        title: '',
+        eventTitle: '',
         description: '',
         eventId: '',
         sportsEventId: '',
-        accessType: 'ticket_holders',
+        accessType: 'paid',
         price: 0,
         scheduledStartTime: '',
         latencyMode: 'low',
@@ -442,15 +447,20 @@ export default function AdminLivestreamPage() {
               </div>
               <form onSubmit={handleCreateStream} className="p-6 space-y-6">
                 <div>
-                  <label className="block text-gray-300 mb-2">Title *</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  <label className="block text-gray-300 mb-2">Event *</label>
+                  <select
+                    value={formData.eventTitle}
+                    onChange={(e) => setFormData({ ...formData, eventTitle: e.target.value })}
                     required
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    placeholder="Wrestling Championship 2025"
-                  />
+                  >
+                    <option value="">Select an event</option>
+                    {LIVESTREAM_EVENTS.map((event) => (
+                      <option key={event} value={event}>
+                        {event}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -472,6 +482,7 @@ export default function AdminLivestreamPage() {
                       onChange={(e) => setFormData({ ...formData, accessType: e.target.value })}
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     >
+                      <option value="paid">Paid Access</option>
                       <option value="public">Public</option>
                       <option value="ticket_holders">Ticket Holders Only</option>
                       <option value="subscribers">Subscribers Only</option>
@@ -480,17 +491,31 @@ export default function AdminLivestreamPage() {
                   </div>
 
                   <div>
-                    <label className="block text-gray-300 mb-2">Latency Mode</label>
-                    <select
-                      value={formData.latencyMode}
-                      onChange={(e) => setFormData({ ...formData, latencyMode: e.target.value })}
+                    <label className="block text-gray-300 mb-2">Price (₹) *</label>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                      min="0"
+                      step="1"
+                      required
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="low">Low Latency (~5s)</option>
-                      <option value="reduced">Reduced Latency (~10s)</option>
-                      <option value="standard">Standard (~30s)</option>
-                    </select>
+                      placeholder="299"
+                    />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-2">Latency Mode</label>
+                  <select
+                    value={formData.latencyMode}
+                    onChange={(e) => setFormData({ ...formData, latencyMode: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="low">Low Latency (~5s)</option>
+                    <option value="reduced">Reduced Latency (~10s)</option>
+                    <option value="standard">Standard (~30s)</option>
+                  </select>
                 </div>
 
                 <div>

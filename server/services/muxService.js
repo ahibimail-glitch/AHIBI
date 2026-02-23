@@ -166,6 +166,15 @@ const deleteLiveStream = async (streamId) => {
       message: 'Live stream deleted successfully'
     };
   } catch (error) {
+    // If Mux already removed the stream, treat it as a success so backend cleanup can continue
+    if (error?.status === 404 || error?.error?.error?.type === 'not_found') {
+      console.warn(`Mux stream ${streamId} already deleted.`);
+      return {
+        success: true,
+        message: 'Live stream already removed from Mux'
+      };
+    }
+
     console.error('Mux deleteLiveStream error:', error);
     throw new Error(`Failed to delete live stream: ${error.message}`);
   }

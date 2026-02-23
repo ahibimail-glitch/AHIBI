@@ -42,6 +42,8 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
   const [error, setError] = useState<string | null>(null);
   const [tokenRefreshTimer, setTokenRefreshTimer] = useState<NodeJS.Timeout | null>(null);
   const [customEmbedUrl, setCustomEmbedUrl] = useState<string | null>(null);
+  const [requiresPurchase, setRequiresPurchase] = useState(false);
+  const [streamPrice, setStreamPrice] = useState<number>(0);
 
   const fetchStreamInfo = useCallback(async () => {
     try {
@@ -54,6 +56,8 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
 
       setStreamInfo(data.data);
       setCustomEmbedUrl(data.data?.embedUrl || null);
+      setRequiresPurchase(data.data?.accessType === 'paid');
+      setStreamPrice(data.data?.price || 0);
       return data.data as StreamInfo;
     } catch (err: any) {
       console.error('Fetch stream info error:', err);
@@ -84,6 +88,7 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
         if (response.status === 403) {
           setPlayerState('unauthorized');
           setError(data.message || 'You do not have access to this stream');
+          setRequiresPurchase(data.requiresPurchase || false);
         } else {
           throw new Error(data.message || 'Failed to get playback token');
         }
@@ -209,10 +214,10 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
 
   if (playerState === 'loading') {
     return (
-      <div className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
+      <div className={`flex items-center justify-center bg-white rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading stream...</p>
+          <p className="text-gray-600">Loading stream...</p>
         </div>
       </div>
     );
@@ -236,13 +241,13 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
 
   if (playerState === 'error') {
     return (
-      <div className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
+      <div className={`flex items-center justify-center bg-white rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
         <div className="text-center p-8">
           <svg className="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-white text-lg mb-2">Something went wrong</p>
-          <p className="text-gray-400 mb-4">{error}</p>
+          <p className="text-gray-800 text-lg mb-2">Something went wrong</p>
+          <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -256,13 +261,27 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
 
   if (playerState === 'unauthorized') {
     return (
-      <div className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
+      <div className={`flex items-center justify-center bg-white rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
         <div className="text-center p-8">
-          <svg className="w-16 h-16 mx-auto text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-16 h-16 mx-auto text-orange-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
-          <p className="text-white text-lg mb-2">Access Required</p>
-          <p className="text-gray-400 mb-4">{error || 'You need a valid ticket to watch this stream'}</p>
+          <p className="text-gray-800 text-lg mb-2">Purchase Required</p>
+          <p className="text-gray-600 mb-4">
+            {requiresPurchase ? (
+              <>Buy access for ₹{streamPrice} to watch this stream</>
+            ) : (
+              error || 'You need a valid ticket to watch this stream'
+            )}
+          </p>
+          {requiresPurchase ? (
+            <button
+              onClick={() => window.location.href = `/livestream`}
+              className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors mr-2"
+            >
+              Buy Access
+            </button>
+          ) : null}
           <a
             href="/auth"
             className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -279,7 +298,7 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
 
     return (
       <div
-        className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`}
+        className={`flex items-center justify-center bg-white rounded-lg ${className}`}
         style={{
           aspectRatio: '16/9',
           backgroundImage: streamInfo.posterUrl ? `url(${streamInfo.posterUrl})` : undefined,
@@ -287,14 +306,14 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
           backgroundPosition: 'center'
         }}
       >
-        <div className="bg-black/70 p-8 rounded-lg text-center backdrop-blur-sm">
+        <div className="bg-white/90 p-8 rounded-lg text-center backdrop-blur-sm">
           <svg className="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h3 className="text-white text-xl font-bold mb-2">{streamInfo.title}</h3>
-          <p className="text-gray-300 mb-4">Stream starts soon</p>
+          <h3 className="text-gray-800 text-xl font-bold mb-2">{streamInfo.title}</h3>
+          <p className="text-gray-600 mb-4">Stream starts soon</p>
           {scheduledDate && (
-            <div className="text-blue-400 font-semibold">
+            <div className="text-blue-600 font-semibold">
               {scheduledDate.toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -313,7 +332,7 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
   if (playerState === 'offline') {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`}
+        className={`flex items-center justify-center bg-white rounded-lg ${className}`}
         style={{
           aspectRatio: '16/9',
           backgroundImage: streamInfo?.posterUrl ? `url(${streamInfo.posterUrl})` : undefined,
@@ -321,12 +340,12 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
           backgroundPosition: 'center'
         }}
       >
-        <div className="bg-black/70 p-8 rounded-lg text-center backdrop-blur-sm">
+        <div className="bg-white/90 p-8 rounded-lg text-center backdrop-blur-sm">
           <svg className="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
-          <h3 className="text-white text-xl font-bold mb-2">{streamInfo?.title || 'Stream'}</h3>
-          <p className="text-gray-400">Stream is currently offline</p>
+          <h3 className="text-gray-800 text-xl font-bold mb-2">{streamInfo?.title || 'Stream'}</h3>
+          <p className="text-gray-600">Stream is currently offline</p>
         </div>
       </div>
     );

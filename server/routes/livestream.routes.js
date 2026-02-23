@@ -47,6 +47,9 @@ router.post('/admin/streams/:id/reset-key', protect, adminOnly, livestreamContro
 // Update custom embed URL
 router.put('/admin/streams/:id/embed-url', protect, adminOnly, livestreamController.updateEmbedUrl);
 
+// Update stream access type and price
+router.put('/admin/streams/:id/access', protect, adminOnly, livestreamController.updateStreamAccess);
+
 // Delete stream
 router.delete('/admin/streams/:id', protect, adminOnly, livestreamController.deleteStream);
 
