@@ -46,6 +46,7 @@ const callApi = async (obj, methodNames, ...args) => {
 const createLiveStream = async (options = {}) => {
   try {
     const { liveStreams } = getMuxApis();
+    const muxTestMode = process.env.MUX_TEST_MODE === 'true';
 
     const {
       playbackPolicy = 'public', // 'signed' for protected, 'public' for open
@@ -58,15 +59,20 @@ const createLiveStream = async (options = {}) => {
       }
     } = options;
 
-    const liveStream = await callApi(liveStreams, ['create'], {
+    const liveStreamPayload = {
       playback_policy: [playbackPolicy],
       latency_mode: latencyMode,
       reconnect_window: reconnectWindow,
       max_continuous_duration: maxContinuousDuration,
       new_asset_settings: newAssetSettings,
       // Enable recording for VOD
-      test: process.env.NODE_ENV !== 'production'
-    });
+    };
+
+    if (muxTestMode) {
+      liveStreamPayload.test = true;
+    }
+
+    const liveStream = await callApi(liveStreams, ['create'], liveStreamPayload);
 
     return {
       success: true,
