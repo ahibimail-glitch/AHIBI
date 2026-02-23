@@ -18,6 +18,7 @@ interface LiveStream {
   createdAt: string;
   eventId?: { _id: string; title: string };
   sportsEventId?: { _id: string; name: string };
+  embedUrl?: string | null;
 }
 
 interface OBSConfig {
@@ -35,6 +36,7 @@ interface CreateStreamForm {
   price: number;
   scheduledStartTime: string;
   latencyMode: string;
+  embedUrl: string;
 }
 
 export default function AdminLivestreamPage() {
@@ -47,6 +49,10 @@ export default function AdminLivestreamPage() {
   const [selectedOBSConfig, setSelectedOBSConfig] = useState<OBSConfig | null>(null);
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [selectedStream, setSelectedStream] = useState<LiveStream | null>(null);
+  const [embedUrlInput, setEmbedUrlInput] = useState('');
+  const [savingEmbed, setSavingEmbed] = useState(false);
 
   const [formData, setFormData] = useState<CreateStreamForm>({
     title: '',
@@ -56,7 +62,8 @@ export default function AdminLivestreamPage() {
     accessType: 'ticket_holders',
     price: 0,
     scheduledStartTime: '',
-    latencyMode: 'low'
+    latencyMode: 'low',
+    embedUrl: ''
   });
 
   const getToken = () => localStorage.getItem('admin_token');
@@ -77,6 +84,44 @@ export default function AdminLivestreamPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openEmbedModal = (stream: LiveStream) => {
+    setSelectedStream(stream);
+    setEmbedUrlInput(stream.embedUrl || '');
+    setShowEmbedModal(true);
+  };
+
+  const handleSaveEmbedUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStream) return;
+
+    setSavingEmbed(true);
+    try {
+      const response = await fetch(getApiUrl(`livestream/admin/streams/${selectedStream._id}/embed-url`), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ embedUrl: embedUrlInput })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to update embed URL');
+      }
+
+      setStreams((prev) => prev.map(stream => stream._id === selectedStream._id ? { ...stream, embedUrl: data.data.embedUrl } : stream));
+
+      setShowEmbedModal(false);
+      setSelectedStream(null);
+      setEmbedUrlInput('');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSavingEmbed(false);
     }
   };
 
@@ -118,7 +163,8 @@ export default function AdminLivestreamPage() {
         accessType: 'ticket_holders',
         price: 0,
         scheduledStartTime: '',
-        latencyMode: 'low'
+        latencyMode: 'low',
+        embedUrl: ''
       });
 
       // Refresh list
@@ -358,6 +404,15 @@ export default function AdminLivestreamPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
+                        <button
+                          onClick={() => openEmbedModal(stream)}
+                          className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-gray-700 rounded transition-colors"
+                          title="Set Custom Player URL"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828m1.414-4.242a2 2 0 00-2.828 0L9 12.172V15h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                          </svg>
+                        </button>
                         <a
                           href={`/livestream/${stream._id}`}
                           target="_blank"
@@ -446,6 +501,20 @@ export default function AdminLivestreamPage() {
                     onChange={(e) => setFormData({ ...formData, scheduledStartTime: e.target.value })}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-2">Custom Stream Embed URL</label>
+                  <input
+                    type="url"
+                    value={formData.embedUrl}
+                    onChange={(e) => setFormData({ ...formData, embedUrl: e.target.value })}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    placeholder="https://player.mux.com/your-embed-id"
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Optional: Provide a direct player URL (e.g., Mux or YouTube embed). If left blank, the default configured player will be used.
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
@@ -545,6 +614,56 @@ export default function AdminLivestreamPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Embed URL Modal */}
+        {showEmbedModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-lg max-w-lg w-full">
+              <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">Custom Player URL</h2>
+                  <p className="text-gray-400 text-sm">Attach a direct embed URL for this livestream.</p>
+                </div>
+                <button onClick={() => setShowEmbedModal(false)} className="text-gray-500 hover:text-gray-300">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEmbedUrl} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-gray-300 mb-2">Player Embed URL</label>
+                  <input
+                    type="url"
+                    value={embedUrlInput}
+                    onChange={(e) => setEmbedUrlInput(e.target.value)}
+                    placeholder="https://player.mux.com/..."
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  />
+                  <p className="mt-2 text-sm text-gray-500">Leave blank to remove the custom URL and fall back to the default player.</p>
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmbedModal(false)}
+                    className="px-5 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEmbed}
+                    className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50"
+                  >
+                    {savingEmbed ? 'Saving...' : 'Save URL'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

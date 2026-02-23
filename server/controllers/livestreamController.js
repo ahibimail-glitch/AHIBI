@@ -26,7 +26,8 @@ const createLiveStream = asyncHandler(async (req, res) => {
     scheduledEndTime,
     latencyMode = 'low',
     thumbnailUrl,
-    posterUrl
+    posterUrl,
+    embedUrl
   } = req.body;
 
   if (!title) {
@@ -73,6 +74,7 @@ const createLiveStream = asyncHandler(async (req, res) => {
       scheduledEndTime: scheduledEndTime ? new Date(scheduledEndTime) : null,
       thumbnailUrl,
       posterUrl,
+      embedUrl: embedUrl?.trim() || null,
       createdBy: req.user._id
     });
 
@@ -302,6 +304,35 @@ const resetStreamKey = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Update custom embed URL for a live stream (Admin only)
+ * @route   PUT /api/livestream/admin/streams/:id/embed-url
+ * @access  Private/Admin
+ */
+const updateEmbedUrl = asyncHandler(async (req, res) => {
+  const { embedUrl } = req.body;
+
+  const stream = await LiveStream.findById(req.params.id);
+
+  if (!stream) {
+    return res.status(404).json({
+      success: false,
+      message: 'Stream not found'
+    });
+  }
+
+  stream.embedUrl = embedUrl?.trim() || null;
+  await stream.save();
+
+  res.json({
+    success: true,
+    message: 'Embed URL updated successfully',
+    data: {
+      embedUrl: stream.embedUrl
+    }
+  });
+});
+
+/**
  * @desc    Delete a live stream (Admin only)
  * @route   DELETE /api/livestream/admin/streams/:id
  * @access  Private/Admin
@@ -350,7 +381,7 @@ const getPublicStreamInfo = asyncHandler(async (req, res) => {
     _id: req.params.id,
     isDeleted: false
   })
-    .select('title description status scheduledStartTime scheduledEndTime thumbnailUrl posterUrl accessType price eventId sportsEventId')
+    .select('title description status scheduledStartTime scheduledEndTime thumbnailUrl posterUrl accessType price eventId sportsEventId embedUrl')
     .populate('eventId', 'title')
     .populate('sportsEventId', 'name');
 
@@ -635,5 +666,6 @@ module.exports = {
   getPlaybackToken,
   getActiveStreams,
   handleMuxWebhook,
-  updateAnalytics
+  updateAnalytics,
+  updateEmbedUrl
 };

@@ -14,6 +14,7 @@ interface StreamInfo {
   posterUrl?: string;
   accessType: string;
   price: number;
+  embedUrl?: string | null;
 }
 
 interface PlaybackData {
@@ -32,7 +33,7 @@ interface LiveStreamPlayerProps {
   className?: string;
 }
 
-type PlayerState = 'loading' | 'offline' | 'scheduled' | 'live' | 'vod' | 'error' | 'unauthorized';
+type PlayerState = 'loading' | 'offline' | 'scheduled' | 'live' | 'vod' | 'error' | 'unauthorized' | 'custom';
 
 export default function LiveStreamPlayer({ streamId, className = '' }: LiveStreamPlayerProps) {
   const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
@@ -40,8 +41,8 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [error, setError] = useState<string | null>(null);
   const [tokenRefreshTimer, setTokenRefreshTimer] = useState<NodeJS.Timeout | null>(null);
+  const [customEmbedUrl, setCustomEmbedUrl] = useState<string | null>(null);
 
-  // Fetch stream info (public)
   const fetchStreamInfo = useCallback(async () => {
     try {
       const response = await fetch(getApiUrl(`livestream/streams/${streamId}`));
@@ -52,8 +53,9 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
       }
 
       setStreamInfo(data.data);
-      return data.data;
-    } catch (err) {
+      setCustomEmbedUrl(data.data?.embedUrl || null);
+      return data.data as StreamInfo;
+    } catch (err: any) {
       console.error('Fetch stream info error:', err);
       setError('Failed to load stream information');
       setPlayerState('error');
@@ -61,7 +63,6 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     }
   }, [streamId]);
 
-  // Fetch playback token (authenticated)
   const fetchPlaybackToken = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -90,8 +91,8 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
       }
 
       setPlaybackData(data.data);
-      return data.data;
-    } catch (err) {
+      return data.data as PlaybackData;
+    } catch (err: any) {
       console.error('Fetch playback token error:', err);
       setError('Failed to initialize video player');
       setPlayerState('error');
@@ -99,10 +100,14 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     }
   }, [streamId]);
 
-  // Determine player state based on stream info
   const determinePlayerState = useCallback((info: StreamInfo, playback: PlaybackData | null) => {
     if (!info) {
       setPlayerState('error');
+      return;
+    }
+
+    if (info.embedUrl) {
+      setPlayerState('custom');
       return;
     }
 
@@ -110,6 +115,8 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
       case 'active':
         if (playback) {
           setPlayerState('live');
+        } else {
+          setPlayerState('offline');
         }
         break;
       case 'idle':
@@ -134,15 +141,18 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     }
   }, []);
 
-  // Initialize player
   useEffect(() => {
     const initPlayer = async () => {
       setPlayerState('loading');
-      
+
       const info = await fetchStreamInfo();
       if (!info) return;
 
-      // Only fetch playback token if stream is active or has VOD
+      if (info.embedUrl) {
+        setPlayerState('custom');
+        return;
+      }
+
       if (info.status === 'active' || info.status === 'ended') {
         const playback = await fetchPlaybackToken();
         determinePlayerState(info, playback);
@@ -153,7 +163,6 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
 
     initPlayer();
 
-    // Cleanup
     return () => {
       if (tokenRefreshTimer) {
         clearTimeout(tokenRefreshTimer);
@@ -161,14 +170,11 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     };
   }, [streamId, fetchStreamInfo, fetchPlaybackToken, determinePlayerState, tokenRefreshTimer]);
 
-  // Auto-refresh token before expiry
   useEffect(() => {
     if (playbackData?.expiresIn && (playerState === 'live' || playerState === 'vod')) {
-      // Refresh 5 minutes before expiry
-      const refreshTime = (playbackData.expiresIn - 300) * 1000;
-      
+      const refreshTime = Math.max((playbackData.expiresIn - 300) * 1000, 60000);
+
       const timer = setTimeout(async () => {
-        console.log('Refreshing playback token...');
         await fetchPlaybackToken();
       }, refreshTime);
 
@@ -178,22 +184,29 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     }
   }, [playbackData?.expiresIn, playerState, fetchPlaybackToken]);
 
-  // Poll for stream status when scheduled or offline
   useEffect(() => {
     if (playerState === 'scheduled' || playerState === 'offline') {
       const pollInterval = setInterval(async () => {
         const info = await fetchStreamInfo();
-        if (info?.status === 'active') {
+        if (!info) return;
+
+        if (info.embedUrl) {
+          setPlayerState('custom');
+          setCustomEmbedUrl(info.embedUrl);
+          clearInterval(pollInterval);
+          return;
+        }
+
+        if (info.status === 'active') {
           const playback = await fetchPlaybackToken();
           determinePlayerState(info, playback);
         }
-      }, 30000); // Poll every 30 seconds
+      }, 30000);
 
       return () => clearInterval(pollInterval);
     }
   }, [playerState, fetchStreamInfo, fetchPlaybackToken, determinePlayerState]);
 
-  // Render loading state
   if (playerState === 'loading') {
     return (
       <div className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
@@ -205,7 +218,22 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     );
   }
 
-  // Render error state
+  if (playerState === 'custom' && customEmbedUrl) {
+    return (
+      <div className={`w-full ${className}`}>
+        <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
+          <iframe
+            src={customEmbedUrl}
+            title="Live stream player"
+            style={{ width: '100%', height: '100%', border: 'none' }}
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (playerState === 'error') {
     return (
       <div className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
@@ -226,7 +254,6 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     );
   }
 
-  // Render unauthorized state
   if (playerState === 'unauthorized') {
     return (
       <div className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} style={{ aspectRatio: '16/9' }}>
@@ -247,14 +274,13 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     );
   }
 
-  // Render scheduled state
   if (playerState === 'scheduled' && streamInfo) {
     const scheduledDate = streamInfo.scheduledStartTime ? new Date(streamInfo.scheduledStartTime) : null;
-    
+
     return (
-      <div 
-        className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} 
-        style={{ 
+      <div
+        className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`}
+        style={{
           aspectRatio: '16/9',
           backgroundImage: streamInfo.posterUrl ? `url(${streamInfo.posterUrl})` : undefined,
           backgroundSize: 'cover',
@@ -284,12 +310,11 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     );
   }
 
-  // Render offline state
   if (playerState === 'offline') {
     return (
-      <div 
-        className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`} 
-        style={{ 
+      <div
+        className={`flex items-center justify-center bg-gray-900 rounded-lg ${className}`}
+        style={{
           aspectRatio: '16/9',
           backgroundImage: streamInfo?.posterUrl ? `url(${streamInfo.posterUrl})` : undefined,
           backgroundSize: 'cover',
@@ -307,7 +332,6 @@ export default function LiveStreamPlayer({ streamId, className = '' }: LiveStrea
     );
   }
 
-  // Render live or VOD player
   if ((playerState === 'live' || playerState === 'vod') && playbackData) {
     return (
       <div className={className}>

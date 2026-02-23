@@ -156,6 +156,12 @@ const liveStreamSchema = new mongoose.Schema({
     type: String
   },
 
+  // Optional external player embed URL (e.g., direct Mux player link)
+  embedUrl: {
+    type: String,
+    trim: true
+  },
+
   // Analytics
   peakViewers: {
     type: Number,
