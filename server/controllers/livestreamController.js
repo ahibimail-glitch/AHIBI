@@ -724,6 +724,141 @@ const updateAnalytics = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Check user access to a livestream
+ * @route   GET /api/livestream/streams/:id/check-access
+ * @access  Private
+ */
+const checkStreamAccess = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required'
+    });
+  }
+
+  try {
+    const stream = await LiveStream.findById(id);
+
+    if (!stream) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stream not found'
+      });
+    }
+
+    let hasAccess = false;
+    let message = '';
+    let reason = '';
+
+    // Public streams - accessible to all authenticated users
+    if (stream.accessType === 'public') {
+      hasAccess = true;
+      reason = 'public';
+      message = 'Access granted - public stream';
+    }
+    // Private streams - admin only
+    else if (stream.accessType === 'private') {
+      if (req.user?.role === 'admin') {
+        hasAccess = true;
+        reason = 'admin';
+        message = 'Access granted - administrator';
+      } else {
+        hasAccess = false;
+        reason = 'private';
+        message = 'This stream is private. Only administrators can access it.';
+      }
+    }
+    // Paid streams - require purchase
+    else if (stream.accessType === 'paid') {
+      // Check if user has purchased access
+      const LivestreamPurchase = require('../models/LivestreamPurchase');
+      const purchase = await LivestreamPurchase.findUserValidAccess(userId, stream._id);
+      
+      if (purchase || req.user?.role === 'admin') {
+        hasAccess = true;
+        reason = purchase ? 'paid_access' : 'admin';
+        message = purchase ? 'Access granted - payment confirmed' : 'Access granted - administrator';
+      } else {
+        hasAccess = false;
+        reason = 'payment_required';
+        message = `This is a paid stream. Please purchase a ticket for ₹${stream.price} to access.`;
+      }
+    }
+    // Ticket holders - check valid booking
+    else if (stream.accessType === 'ticket_holders') {
+      // Check for valid event bookings
+      let hasValidBooking = false;
+      
+      if (stream.eventId) {
+        const booking = await Booking.findOne({
+          user: userId,
+          event: stream.eventId,
+          status: 'confirmed'
+        });
+        hasValidBooking = !!booking;
+      }
+      
+      if (stream.sportsEventId) {
+        const sportsBooking = await SportsBooking.findOne({
+          user: userId,
+          sportsEvent: stream.sportsEventId,
+          status: 'confirmed'
+        });
+        hasValidBooking = hasValidBooking || !!sportsBooking;
+      }
+
+      if (hasValidBooking || req.user?.role === 'admin') {
+        hasAccess = true;
+        reason = hasValidBooking ? 'ticket_holder' : 'admin';
+        message = hasValidBooking ? 'Access granted - valid ticket' : 'Access granted - administrator';
+      } else {
+        hasAccess = false;
+        reason = 'no_ticket';
+        message = 'You need a valid ticket to access this stream.';
+      }
+    }
+    // Subscribers only
+    else if (stream.accessType === 'subscribers') {
+      if (req.user?.role === 'admin' || req.user?.role === 'subscriber') {
+        hasAccess = true;
+        reason = req.user?.role === 'admin' ? 'admin' : 'subscriber';
+        message = `Access granted - ${req.user?.role}`;
+      } else {
+        hasAccess = false;
+        reason = 'subscription_required';
+        message = 'This stream is available to subscribers only.';
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        hasAccess,
+        reason,
+        message,
+        streamInfo: {
+          title: stream.title,
+          accessType: stream.accessType,
+          price: stream.price,
+          eventId: stream.eventId,
+          sportsEventId: stream.sportsEventId
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error checking stream access:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check access'
+    });
+  }
+});
+
 module.exports = {
   createLiveStream,
   getAllStreams,
@@ -738,5 +873,6 @@ module.exports = {
   handleMuxWebhook,
   updateAnalytics,
   updateEmbedUrl,
-  updateStreamAccess
+  updateStreamAccess,
+  checkStreamAccess
 };

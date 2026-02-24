@@ -412,7 +412,7 @@ export default function AdminLivestreamPage() {
                         <button
                           onClick={() => openEmbedModal(stream)}
                           className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-gray-700 rounded transition-colors"
-                          title="Set Custom Player URL"
+                          title="Set Custom Stream ID"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828m1.414-4.242a2 2 0 00-2.828 0L9 12.172V15h2.828l7.586-7.586a2 2 0 000-2.828z" />
@@ -649,8 +649,8 @@ export default function AdminLivestreamPage() {
             <div className="bg-gray-900 rounded-lg max-w-lg w-full">
               <div className="p-6 border-b border-gray-800 flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Custom Player URL</h2>
-                  <p className="text-gray-400 text-sm">Attach a direct embed URL for this livestream.</p>
+                  <h2 className="text-xl font-bold text-white">Custom Stream ID</h2>
+                  <p className="text-gray-400 text-sm">Set a custom Mux stream ID for this livestream.</p>
                 </div>
                 <button onClick={() => setShowEmbedModal(false)} className="text-gray-500 hover:text-gray-300">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -661,15 +661,15 @@ export default function AdminLivestreamPage() {
 
               <form onSubmit={handleSaveEmbedUrl} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-gray-300 mb-2">Player Embed URL</label>
+                  <label className="block text-gray-300 mb-2">Mux Stream ID</label>
                   <input
-                    type="url"
+                    type="text"
                     value={embedUrlInput}
                     onChange={(e) => setEmbedUrlInput(e.target.value)}
-                    placeholder="https://player.mux.com/..."
+                    placeholder="b4ZwgkvTF7QtgUUDi57g5dgeZ9Wlbm7xnBLDC5MTeqI"
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   />
-                  <p className="mt-2 text-sm text-gray-500">Leave blank to remove the custom URL and fall back to the default player.</p>
+                  <p className="mt-2 text-sm text-gray-500">Leave blank to use the default stream ID. Enter a Mux playback ID to use a different stream.</p>
                 </div>
 
                 <div className="flex justify-end gap-3">
@@ -685,7 +685,7 @@ export default function AdminLivestreamPage() {
                     disabled={savingEmbed}
                     className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 transition-colors disabled:opacity-50"
                   >
-                    {savingEmbed ? 'Saving...' : 'Save URL'}
+                    {savingEmbed ? 'Saving...' : 'Save ID'}
                   </button>
                 </div>
               </form>

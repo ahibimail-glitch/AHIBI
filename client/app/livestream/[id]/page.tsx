@@ -2,15 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { LiveStreamPlayer } from '@/components/livestream';
+import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/config';
 import Link from 'next/link';
-
+import Navbar from '@/app/Navbar';
+import Footer from '@/app/Footer';
+import MuxPlayer from "@mux/mux-player-react";
 interface StreamInfo {
   _id: string;
   title: string;
   description?: string;
   status: 'idle' | 'active' | 'disabled' | 'ended';
+  muxStatus: string;
   scheduledStartTime?: string;
   scheduledEndTime?: string;
   thumbnailUrl?: string;
@@ -19,19 +22,247 @@ interface StreamInfo {
   price: number;
   eventId?: { _id: string; title: string };
   sportsEventId?: { _id: string; name: string };
+  muxPlaybackId?: string;
+  embedUrl?: string;
+}
+
+interface AccessCheck {
+  hasAccess: boolean;
+  reason: string;
+  message?: string;
 }
 
 export default function LiveStreamPage() {
   const params = useParams();
   const router = useRouter();
   const streamId = params.id as string;
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessCheck, setAccessCheck] = useState<AccessCheck | null>(null);
+
+  const handlePurchaseLivestream = async () => {
+    if (!user || !streamInfo) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push(`/auth?redirect=/livestream/${streamId}`);
+        return;
+      }
+
+      // Create Razorpay order for livestream purchase
+      const response = await fetch(getApiUrl('livestream/purchase/create-order'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          livestreamId: streamInfo._id,
+          amount: streamInfo.price
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to create payment order');
+      }
+
+      // Initialize Razorpay payment
+      const Razorpay = (window as any).Razorpay;
+      const razorpay = new Razorpay({
+        key_id: data.data.keyId,
+        key_secret: data.data.keySecret,
+        amount: data.data.amount,
+        currency: data.data.currency || 'INR',
+        name: 'AHIBI',
+        description: `Access to ${streamInfo.title}`,
+        order_id: data.data.orderId,
+        handler: async (response: any) => {
+          // Verify payment and grant access
+          try {
+            const verifyResponse = await fetch(getApiUrl('livestream/purchase/verify'), {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                livestreamId: streamInfo._id
+              })
+            });
+
+            const verifyData = await verifyResponse.json();
+            if (verifyData.success) {
+              // Refresh access check
+              const access = await checkStreamAccess(streamInfo);
+              setAccessCheck(access);
+              
+              // Show success message
+              alert('Payment successful! You now have access to this livestream.');
+            } else {
+              throw new Error(verifyData.message || 'Payment verification failed');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            alert('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: user.phone
+        },
+        theme: {
+          color: '#3B82F6'
+        }
+      });
+
+      razorpay.open();
+    } catch (error) {
+      console.error('Purchase error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.');
+    }
+  };
+
+  const checkStreamAccess = async (stream: StreamInfo) => {
+    // Public streams are accessible to all authenticated users
+    if (stream.accessType === 'public') {
+      return { hasAccess: true, reason: 'public' };
+    }
+
+    // Private streams require admin access
+    if (stream.accessType === 'private') {
+      if (user?.role === 'admin') {
+        return { hasAccess: true, reason: 'admin' };
+      }
+      return { 
+        hasAccess: false, 
+        reason: 'private',
+        message: 'This stream is private. Only administrators can access it.'
+      };
+    }
+
+    // Paid streams require payment
+    if (stream.accessType === 'paid') {
+      // Check if user has purchased access via API
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return { 
+            hasAccess: false, 
+            reason: 'auth_required',
+            message: 'Please login to purchase access to this stream.'
+          };
+        }
+
+        const response = await fetch(getApiUrl(`livestream/streams/${stream._id}/check-access`), {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+        if (data.success && data.data.hasAccess) {
+          return { 
+            hasAccess: true, 
+            reason: data.data.reason,
+            message: data.data.message || 'Access granted'
+          };
+        }
+
+        return { 
+          hasAccess: false, 
+          reason: 'payment_required',
+          message: data.data.message || `This is a paid stream. Please purchase a ticket for ₹${stream.price} to access.`
+        };
+      } catch (error) {
+        console.error('Error checking paid access:', error);
+        // Fallback: allow admin access
+        if (user?.role === 'admin') {
+          return { hasAccess: true, reason: 'admin' };
+        }
+        return { 
+          hasAccess: false, 
+          reason: 'payment_required',
+          message: `This is a paid stream. Please purchase a ticket for ₹${stream.price} to access.`
+        };
+      }
+    }
+
+    // Ticket holders need valid booking
+    if (stream.accessType === 'ticket_holders') {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          return { 
+            hasAccess: false, 
+            reason: 'auth_required',
+            message: 'Please login to check your ticket access.'
+          };
+        }
+
+        const response = await fetch(getApiUrl(`livestream/streams/${stream._id}/check-access`), {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+        if (data.success && data.data.hasAccess) {
+          return { 
+            hasAccess: true, 
+            reason: 'ticket_holder',
+            message: data.data.message || 'Access granted with valid ticket'
+          };
+        }
+
+        return { 
+          hasAccess: false, 
+          reason: 'no_ticket',
+          message: data.data.message || 'You need a valid ticket to access this stream.'
+        };
+      } catch (error) {
+        console.error('Error checking ticket access:', error);
+        return { 
+          hasAccess: false, 
+          reason: 'check_failed',
+          message: 'Unable to verify ticket access. Please try again.'
+        };
+      }
+    }
+
+    // Subscribers only
+    if (stream.accessType === 'subscribers') {
+      if (user?.role === 'admin' || user?.role === 'subscriber') {
+        return { hasAccess: true, reason: 'subscriber' };
+      }
+      return { 
+        hasAccess: false, 
+        reason: 'subscription_required',
+        message: 'This stream is available to subscribers only.'
+      };
+    }
+
+    // Default: deny access
+    return { 
+      hasAccess: false, 
+      reason: 'unknown',
+      message: 'Access denied. Please contact support.'
+    };
+  };
 
   useEffect(() => {
     const fetchStreamInfo = async () => {
+      // Wait for auth to complete
+      if (authLoading) return;
+
       try {
         const response = await fetch(getApiUrl(`livestream/streams/${streamId}`));
         const data = await response.json();
@@ -40,7 +271,13 @@ export default function LiveStreamPage() {
           throw new Error(data.message || 'Stream not found');
         }
 
-        setStreamInfo(data.data);
+        const stream = data.data;
+        setStreamInfo(stream);
+
+        // Check access permissions
+        const access = await checkStreamAccess(stream);
+        setAccessCheck(access);
+
       } catch (err: any) {
         setError(err.message || 'Failed to load stream');
       } finally {
@@ -48,12 +285,12 @@ export default function LiveStreamPage() {
       }
     };
 
-    if (streamId) {
+    if (streamId && !authLoading) {
       fetchStreamInfo();
     }
-  }, [streamId]);
+  }, [streamId, authLoading, user]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -79,6 +316,76 @@ export default function LiveStreamPage() {
           >
             Go Home
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user is authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center p-8">
+          <svg className="w-20 h-20 mx-auto text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <h1 className="text-2xl font-bold text-white mb-2">Authentication Required</h1>
+          <p className="text-gray-400 mb-6">Please login to access this livestream.</p>
+          <Link
+            href={`/auth?redirect=/livestream/${streamId}`}
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Login to Continue
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user has access
+  if (accessCheck && !accessCheck.hasAccess) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <svg className="w-20 h-20 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+          <p className="text-gray-400 mb-6">{accessCheck.message || 'You do not have permission to access this stream.'}</p>
+          
+          {/* Show specific action buttons based on access type */}
+          <div className="space-y-3">
+            {accessCheck.reason === 'payment_required' && (
+              <button
+                onClick={() => handlePurchaseLivestream()}
+                className="block w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Purchase Access - ₹{streamInfo.price}
+              </button>
+            )}
+            {accessCheck.reason === 'auth_required' && (
+              <Link
+                href={`/auth?redirect=/livestream/${streamId}`}
+                className="block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Login to Purchase Access
+              </Link>
+            )}
+            {accessCheck.reason === 'subscription_required' && (
+              <Link
+                href="/subscribe"
+                className="block px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Subscribe Now
+              </Link>
+            )}
+            <Link
+              href="/"
+              className="block px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Go Home
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -129,32 +436,19 @@ export default function LiveStreamPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-gray-900">
-              AHIBI
-            </Link>
-            <nav className="flex items-center gap-4">
-              <Link href="/events" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Events
-              </Link>
-              <Link href="/sports" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Sports
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Video Player */}
           <div className="lg:col-span-2">
-            <LiveStreamPlayer streamId={streamId} className="w-full" />
-            
+            <MuxPlayer
+              playbackId={streamInfo?.embedUrl || streamInfo?.muxPlaybackId || streamId}
+              streamType={streamInfo?.status === 'active' ? 'live' : 'on-demand'}
+              style={{ width: "100%", aspectRatio: "16/9" }}
+            />
+        
             {/* Stream Info */}
             <div className="mt-6">
               <div className="flex items-start justify-between gap-4 mb-4">
@@ -263,6 +557,7 @@ export default function LiveStreamPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

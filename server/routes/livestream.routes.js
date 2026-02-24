@@ -24,6 +24,9 @@ router.post('/webhook/mux', livestreamController.handleMuxWebhook);
 // Get signed playback token (requires authentication)
 router.get('/streams/:id/playback-token', protect, livestreamController.getPlaybackToken);
 
+// Check user access to stream (requires authentication)
+router.get('/streams/:id/check-access', protect, livestreamController.checkStreamAccess);
+
 // ==================== ADMIN ROUTES ====================
 
 // Create new live stream
