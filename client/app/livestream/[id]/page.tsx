@@ -274,9 +274,8 @@ export default function LiveStreamPage() {
         const stream = data.data;
         setStreamInfo(stream);
 
-        // Check access permissions
-        const access = await checkStreamAccess(stream);
-        setAccessCheck(access);
+        // Skip access check - allow unrestricted access
+        setAccessCheck({ hasAccess: true, reason: 'unrestricted' });
 
       } catch (err: any) {
         setError(err.message || 'Failed to load stream');
@@ -321,76 +320,7 @@ export default function LiveStreamPage() {
     );
   }
 
-  // Check if user is authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center p-8">
-          <svg className="w-20 h-20 mx-auto text-yellow-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-          <h1 className="text-2xl font-bold text-white mb-2">Authentication Required</h1>
-          <p className="text-gray-400 mb-6">Please login to access this livestream.</p>
-          <Link
-            href={`/auth?redirect=/livestream/${streamId}`}
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Login to Continue
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if user has access
-  if (accessCheck && !accessCheck.hasAccess) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center p-8 max-w-md">
-          <svg className="w-20 h-20 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-          </svg>
-          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-gray-400 mb-6">{accessCheck.message || 'You do not have permission to access this stream.'}</p>
-          
-          {/* Show specific action buttons based on access type */}
-          <div className="space-y-3">
-            {accessCheck.reason === 'payment_required' && (
-              <button
-                onClick={() => handlePurchaseLivestream()}
-                className="block w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Purchase Access - ₹{streamInfo.price}
-              </button>
-            )}
-            {accessCheck.reason === 'auth_required' && (
-              <Link
-                href={`/auth?redirect=/livestream/${streamId}`}
-                className="block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Login to Purchase Access
-              </Link>
-            )}
-            {accessCheck.reason === 'subscription_required' && (
-              <Link
-                href="/subscribe"
-                className="block px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Subscribe Now
-              </Link>
-            )}
-            <Link
-              href="/"
-              className="block px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Go Home
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  
   const getStatusBadge = () => {
     switch (streamInfo.status) {
       case 'active':
