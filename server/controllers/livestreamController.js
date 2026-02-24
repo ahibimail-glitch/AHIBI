@@ -104,7 +104,7 @@ const createLiveStream = asyncHandler(async (req, res) => {
         },
         obsRecommendedSettings: {
           encoder: 'x264 or NVENC',
-          bitrate: '4000-6000 kbps',
+          bitrate: '10000-16000 kbps',
           resolution: '1920x1080',
           framerate: '30 fps',
           keyframeInterval: '2 seconds',
