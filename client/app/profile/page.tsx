@@ -435,7 +435,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-gray-200">
                   <div>
                     <div className="text-3xl font-bold">
                       {userBookings.length + sportsBookings.length}
@@ -477,6 +477,24 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+                {/* Support CTA */}
+                <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Need help?</p>
+                    <p className="text-xs text-gray-500">
+                      Chat with the Ahibi team about your bookings or account.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300"
+                    onClick={() => router.push("/support")}
+                  >
+                    Contact Support
+                  </Button>
+                </div>
       </div>
 
 

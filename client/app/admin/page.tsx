@@ -33,6 +33,7 @@ import {
   Video,
   Heart,
   FileText,
+  HeadphonesIcon,
 } from "lucide-react";
 
 // Import child components
@@ -74,6 +75,7 @@ import AdminLivestreamPage from "./livestream/page";
 import Donations from "./components/Donations";
 import AdminNotifications from "./components/AdminNotifications";
 import TermsManager from "./components/TermsManager";
+import SupportTickets from "./components/SupportTickets";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -302,6 +304,8 @@ export default function AdminDashboard() {
         return <AdminNotifications />;
       case "terms":
         return <TermsManager />;
+      case "support":
+        return <SupportTickets />;
       // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
@@ -374,9 +378,10 @@ export default function AdminDashboard() {
 
         <nav className="flex flex-col space-y-2">
           <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => { setActiveView("dashboard"); setSidebarOpen(false); }} />
-          {/* <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} /> */}
+          <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} />
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
+          <SidebarButton icon={HeadphonesIcon} label="Support" active={activeView === "support"} onClick={() => { setActiveView("support"); setSidebarOpen(false); }} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
@@ -450,7 +455,17 @@ export default function AdminDashboard() {
             <CardContent className="pt-4 pb-4">
               <h4 className="font-bold text-blue-800 text-sm">Need Help?</h4>
               <p className="text-xs text-blue-700 mt-1">Check our documentation or contact support.</p>
-              <Button size="sm" className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-xs">Get Support</Button>
+            <Button
+              size="sm"
+              className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-xs flex items-center justify-center gap-1"
+              onClick={() => {
+                setActiveView("support");
+                setSidebarOpen(false);
+              }}
+            >
+              <HeadphonesIcon className="h-3 w-3" />
+              Get Support
+            </Button>
             </CardContent>
           </Card>
         </div>

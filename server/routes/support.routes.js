@@ -37,7 +37,8 @@ router.put('/tickets/:id/status', supportController.updateTicketStatus);
 // Admin routes
 const adminRouter = express.Router();
 
-// Protect all admin routes with admin authorization
+// Protect all admin support routes and restrict to admin users
+adminRouter.use(protect);
 adminRouter.use(authorize('admin'));
 
 adminRouter.get('/tickets', supportController.getAllTickets);
