@@ -154,7 +154,7 @@ app.use('/api/hornbill-merch', merchRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/space-booking', spaceBookingRoutes);
-app.use('/api/support', supportRoutes);
+// app.use('/api/support', supportRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/hero-images', heroImageRoutes);
 app.use('/api/annie-musical', annieMusicalRoutes);
