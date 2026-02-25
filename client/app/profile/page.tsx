@@ -123,9 +123,26 @@ export default function ProfilePage() {
     createdAt: string;
   }
 
+  interface LivestreamPurchase {
+    _id: string;
+    livestream: {
+      _id: string;
+      title: string;
+      thumbnailUrl?: string;
+      posterUrl?: string;
+    };
+    amount: number;
+    status: string;
+    paymentDate: string;
+    accessGranted: boolean;
+    paymentId?: string;
+    orderId?: string;
+  }
+
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [sportsBookings, setSportsBookings] = useState<SportsBooking[]>([]);
-  const [bookingType, setBookingType] = useState<'events' | 'sports'>('events');
+  const [livestreamPurchases, setLivestreamPurchases] = useState<LivestreamPurchase[]>([]);
+  const [bookingType, setBookingType] = useState<'events' | 'sports' | 'livestream'>('events');
 
   // Fetch user profile from backend
   React.useEffect(() => {
@@ -202,9 +219,31 @@ export default function ProfilePage() {
       }
     };
 
+    const fetchLivestreamPurchases = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(getApiUrl("/livestream/purchase/history"), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setLivestreamPurchases(data.data || []);
+        } else {
+          console.error("Failed to fetch livestream purchases:", data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching livestream purchases:", err);
+      }
+    };
+
     fetchProfile();
     fetchUserBookings();
     fetchSportsBookings();
+    fetchLivestreamPurchases();
   }, []);
 
   const handleSaveProfile = () => {
@@ -438,7 +477,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-gray-200">
                   <div>
                     <div className="text-3xl font-bold">
-                      {userBookings.length + sportsBookings.length}
+                      {userBookings.length + sportsBookings.length + livestreamPurchases.length}
                     </div>
                     <div className="text-sm text-gray-500">Total Bookings</div>
                   </div>
@@ -450,7 +489,8 @@ export default function ProfilePage() {
                           b.paymentStatus === "completed" ||
                           b.paymentStatus === "paid"
                       ).length +
-                        sportsBookings.filter(b => b.status === "completed").length}
+                        sportsBookings.filter(b => b.status === "completed").length +
+                        livestreamPurchases.filter(p => p.status === "completed").length}
                     </div>
                     <div className="text-sm text-gray-500">Completed</div>
                   </div>
@@ -465,6 +505,10 @@ export default function ProfilePage() {
                         ) +
                         sportsBookings.reduce(
                           (sum, booking) => sum + booking.pricing.totalAmount,
+                          0
+                        ) +
+                        livestreamPurchases.reduce(
+                          (sum, purchase) => sum + purchase.amount,
                           0
                         )
                       ).toLocaleString()}
@@ -511,24 +555,33 @@ export default function ProfilePage() {
             {/* Bookings Tab */}
             <TabsContent value="bookings" className="space-y-6">
               {/* Booking Type Toggle */}
-              <div className="flex gap-3 border-b border-gray-200 pb-4">
+              <div className="grid grid-cols-3 gap-3 border-b border-gray-200 pb-4">
                 <button
                   onClick={() => setBookingType('events')}
-                  className={`px-6 py-3 font-semibold transition-all rounded-lg ${bookingType === 'events'
+                  className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'events'
                       ? 'bg-black text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
-                  Event Bookings ({userBookings.length})
+                  Events ({userBookings.length})
                 </button>
                 <button
                   onClick={() => setBookingType('sports')}
-                  className={`px-6 py-3 font-semibold transition-all rounded-lg ${bookingType === 'sports'
+                  className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'sports'
                       ? 'bg-black text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
-                  Sports Bookings ({sportsBookings.length})
+                  Sports ({sportsBookings.length})
+                </button>
+                <button
+                  onClick={() => setBookingType('livestream')}
+                  className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'livestream'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                >
+                  Livestream ({livestreamPurchases.length})
                 </button>
               </div>
 
@@ -691,6 +744,95 @@ export default function ProfilePage() {
                       <p className="text-gray-500 mb-6">Book your favorite sports venue</p>
                       <Button asChild className="bg-black text-white hover:bg-gray-800">
                         <Link href="/sports">Browse Venues</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Livestream Purchases */}
+              {bookingType === 'livestream' && (
+                <div className="space-y-4">
+                  {livestreamPurchases && livestreamPurchases.length > 0 ? (
+                    livestreamPurchases.map((purchase) => (
+                      <div
+                        key={purchase._id}
+                        className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                              <Image
+                                src={purchase.livestream?.thumbnailUrl || purchase.livestream?.posterUrl || "/placeholder.jpg"}
+                                alt={purchase.livestream?.title || "Livestream"}
+                                fill
+                                className="object-cover"
+                              />
+                              {purchase.accessGranted && (
+                                <div className="absolute top-2 right-2">
+                                  <CheckCircle className="h-4 w-4 text-green-500 bg-white rounded-full p-0.5" />
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                                {purchase.livestream?.title || "Livestream"}
+                              </h3>
+
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {new Date(purchase.paymentDate).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <CreditCard className="h-4 w-4" />
+                                  {purchase.paymentId ? `ID: ${purchase.paymentId.slice(-8)}` : 'Payment Complete'}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={`${getStatusColor(purchase.status)} border font-medium`}
+                                >
+                                  {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
+                                </Badge>
+                                {purchase.accessGranted && (
+                                  <Badge className="bg-green-50 text-green-700 border border-green-200">
+                                    Access Granted
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:text-right">
+                            <div className="text-2xl font-bold">₹{purchase.amount.toLocaleString()}</div>
+                            <Button
+                              onClick={() => router.push(`/livestream/${purchase.livestream._id}`)}
+                              className="bg-black text-white hover:bg-gray-800"
+                            >
+                              {purchase.accessGranted ? 'Watch Now' : 'View Details'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-16 border border-gray-200 rounded-lg">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">No livestream purchases found</h3>
+                      <p className="text-gray-500 mb-6">Purchase access to exclusive livestream events</p>
+                      <Button asChild className="bg-black text-white hover:bg-gray-800">
+                        <Link href="/livestream">Browse Livestreams</Link>
                       </Button>
                     </div>
                   )}

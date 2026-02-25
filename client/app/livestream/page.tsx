@@ -478,7 +478,7 @@ export default function LivestreamListingPage() {
             <>
               <div className="ls-section-header">
                 <h2 className="ls-section-title">Upcoming & Live Events</h2>
-                <span className="ls-section-count">{events.length} event{events.length !== 1 ? 's' : ''}</span>
+                {/* <span className="ls-section-count">{events.length} event{events.length !== 1 ? 's' : ''}</span> */}
               </div>
 
               <div className="ls-grid">
