@@ -25,6 +25,7 @@ import {
   Tag,
   Clock,
   Ticket,
+  Play,
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -122,6 +123,7 @@ interface EventDetailPageProps {
   params: { id: string };
 }
 
+const LivstreamAvailable=["69845fef7a0a6b29df05b70b","6984618f7a0a6b29df05b794"]
 // ─── Related Event Card ───────────────────────────────────────────────────────
 
 const RelatedEventCard = ({
@@ -167,6 +169,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   // Special event IDs
   const HMF_id = ["691b1066a9a25d4fec36f96c", "691b13caa9a25d4fec36fa70", "691b146fa9a25d4fec36fb25", "691b14f1a9a25d4fec36fbd7", "691b156ea9a25d4fec36fc8d", "691b15c5a9a25d4fec36fd3a", "691b15faa9a25d4fec36fd3f", "691b162ca9a25d4fec36fd44", "691b1771a9a25d4fec36feaf", "6927db2d2cd1c48b94f5b9e5", "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
   const isHMFEvent = HMF_id.includes(params.id);
+
+  // Livestream event IDs
+  const LIVESTREAM_EVENTS = ["69845fef7a0a6b29df05b70b", "6984618f7a0a6b29df05b794"];
+  const isLivestreamEvent = LIVESTREAM_EVENTS.includes(params.id);
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -248,6 +254,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     } catch (err: any) {
       if (err?.name !== "AbortError") toast.error("Failed to share link");
     }
+  };
+
+  const handleViewLivestream = () => {
+    router.push("/livestream");
   };
 
   // ─── Data fetching ───────────────────────────────────────────────────────────
@@ -481,6 +491,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   >
                     Book Tickets
                   </button>
+
+                  {isLivestreamEvent && (
+                    <button
+                      onClick={handleViewLivestream}
+                      className="mt-3 w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px] flex items-center justify-center gap-2"
+                    >
+                      <Play size={16} />
+                      View Online
+                    </button>
+                  )}
 
                   <div className="mt-4 text-center">
                     <div className="text-xs text-gray-500">Price from</div>
@@ -745,12 +765,24 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           FIXED MOBILE BOOK BAR
       ══════════════════════════════════════════════════════════════════════════ */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 md:hidden z-50 safe-area-inset-bottom">
-        <button
-          onClick={handleBuyNow}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
-        >
-          Book Now · <span className="font-bold">{priceRange}</span>
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={handleBuyNow}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
+          >
+            Book Now · <span className="font-bold">{priceRange}</span>
+          </button>
+          
+          {isLivestreamEvent && (
+            <button
+              onClick={handleViewLivestream}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              <Play size={16} />
+              View Online
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

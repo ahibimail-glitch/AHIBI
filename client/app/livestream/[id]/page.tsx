@@ -8,6 +8,12 @@ import Link from 'next/link';
 import Navbar from '@/app/Navbar';
 import Footer from '@/app/Footer';
 import MuxPlayer from "@mux/mux-player-react";
+
+// Event name to image mapping
+const EVENT_IMAGES: Record<string, string> = {
+  "1st NWA Provisional Championship & 1st NWA Under 15 Championship cum 1st Wrestling Festival": "https://res.cloudinary.com/dovc3lfgz/image/upload/v1771518218/ahibi/ttof83dmfocmdqovcb3v.jpg",
+  "30th NWA Naga Traditional Wrestling Championship cum 1st Wrestling Festival": "https://res.cloudinary.com/dovc3lfgz/image/upload/v1771517850/ahibi/xy6prc6usk8fxgocy4ay.jpg"
+};
 interface StreamInfo {
   _id: string;
   title: string;
@@ -149,7 +155,7 @@ export default function LiveStreamPage() {
       };
     }
 
-    // Paid streams require payment
+    // Paid streams require payment (with name-based logic)
     if (stream.accessType === 'paid') {
       // Check if user has purchased access via API
       try {
@@ -170,10 +176,17 @@ export default function LiveStreamPage() {
 
         const data = await response.json();
         if (data.success && data.data.hasAccess) {
+          let message = data.data.message || 'Access granted';
+          
+          // Special message for name-based access
+          if (data.data.reason === 'paid_access_name_based') {
+            message = `Access granted - you have purchased access to "${stream.title}" livestream`;
+          }
+          
           return {
             hasAccess: true,
             reason: data.data.reason,
-            message: data.data.message || 'Access granted'
+            message
           };
         }
 
@@ -196,7 +209,7 @@ export default function LiveStreamPage() {
       }
     }
 
-    // Ticket holders need valid booking
+    // Ticket holders need valid booking (with name-based logic)
     if (stream.accessType === 'ticket_holders') {
       try {
         const token = localStorage.getItem('token');
@@ -216,10 +229,17 @@ export default function LiveStreamPage() {
 
         const data = await response.json();
         if (data.success && data.data.hasAccess) {
+          let message = data.data.message || 'Access granted with valid ticket';
+          
+          // Special message for name-based access
+          if (data.data.reason === 'ticket_holder' && !data.data.message.includes('specific')) {
+            message = `Access granted - you have a ticket for "${stream.title}" event`;
+          }
+          
           return {
             hasAccess: true,
             reason: 'ticket_holder',
-            message: data.data.message || 'Access granted with valid ticket'
+            message
           };
         }
 
@@ -391,46 +411,7 @@ export default function LiveStreamPage() {
     );
   }
 
-  const getStatusBadge = () => {
-    switch (streamInfo.status) {
-      case 'active':
-        return (
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded-full text-sm font-semibold">
-            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-            LIVE NOW
-          </span>
-        );
-      case 'idle':
-        if (streamInfo.scheduledStartTime && new Date(streamInfo.scheduledStartTime) > new Date()) {
-          return (
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-red-600 text-white rounded-full text-sm font-semibold">
-              <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-              LIVE NOW
-            </span>
-          );
-        }
-        return (
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded-full text-sm font-semibold">
-            OFFLINE
-          </span>
-        );
-      case 'ended':
-        return (
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-purple-600 text-white rounded-full text-sm font-semibold">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-            </svg>
-            REPLAY AVAILABLE
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-2 px-3 py-1 bg-gray-600 text-white rounded-full text-sm font-semibold">
-            OFFLINE
-          </span>
-        );
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -460,8 +441,8 @@ export default function LiveStreamPage() {
                 video_title: streamInfo?.title || "Live Stream",
               }}
 
-              // Poster thumbnail
-              poster={streamInfo?.thumbnailUrl}
+              // Poster thumbnail - use specific event image if available
+              poster={EVENT_IMAGES[streamInfo?.title || ''] || streamInfo?.thumbnailUrl}
 
               // Optional features
               primaryColor="#ffffff"
@@ -479,10 +460,7 @@ export default function LiveStreamPage() {
             {/* Stream Info */}
             <div className="mt-6">
               <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{streamInfo.title}</h1>
-                  {getStatusBadge()}
-                </div>
+               
               </div>
 
               {streamInfo.description && (

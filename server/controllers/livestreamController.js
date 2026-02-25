@@ -425,50 +425,118 @@ const getPlaybackToken = asyncHandler(async (req, res) => {
     });
   }
 
-  // Check access based on accessType
+  // Check access based on accessType (with name-based logic)
   if (stream.accessType !== 'public') {
     let hasAccess = false;
     let accessReason = '';
 
-    // Check for paid access
+    // Check for paid access (with name-based logic)
     if (stream.accessType === 'paid') {
+      // First try to find purchase for this specific stream
       const purchase = await LivestreamPurchase.findUserValidAccess(req.user._id, stream._id);
       if (purchase) {
         hasAccess = true;
         accessReason = 'paid_access';
+      } else {
+        // If no specific purchase, check if user has purchased any livestream with the same title
+        const allStreams = await LiveStream.find({ title: stream.title });
+        const streamIds = allStreams.map(s => s._id);
+        
+        if (streamIds.length > 0) {
+          const nameBasedPurchase = await LivestreamPurchase.findOne({
+            user: req.user._id,
+            livestream: { $in: streamIds },
+            status: 'completed',
+            accessGranted: true,
+            $or: [
+              { accessExpiresAt: { $exists: false } },
+              { accessExpiresAt: { $gt: new Date() } }
+            ]
+          });
+          
+          if (nameBasedPurchase) {
+            hasAccess = true;
+            accessReason = 'paid_access_name_based';
+          }
+        }
+      }
+      
+      // Admin override
+      if (!hasAccess && req.user?.role === 'admin') {
+        hasAccess = true;
+        accessReason = 'admin';
       }
     }
-    // Check for ticket holder access (legacy support)
+    // Check for ticket holder access (with name-based logic)
     else if (stream.accessType === 'ticket_holders') {
-      let userBookings = [];
-
+      let hasValidBooking = false;
+      
+      // First check specific event ID
       if (stream.eventId) {
-        const eventBookings = await Booking.find({
+        const booking = await Booking.findOne({
           user: req.user._id,
           event: stream.eventId,
           status: 'confirmed'
         });
-        userBookings = [...userBookings, ...eventBookings];
+        hasValidBooking = !!booking;
       }
-
+      
       if (stream.sportsEventId) {
-        const sportsBookings = await SportsBooking.find({
+        const sportsBooking = await SportsBooking.findOne({
           user: req.user._id,
-          venue: stream.sportsEventId,
+          sportsEvent: stream.sportsEventId,
           status: 'confirmed'
         });
-        userBookings = [...userBookings, ...sportsBookings.map(b => ({ ...b.toObject(), sportsEvent: b.venue }))];
+        hasValidBooking = hasValidBooking || !!sportsBooking;
+      }
+      
+      // If no specific booking found, check by event name matching
+      if (!hasValidBooking && stream.title) {
+        // Find events with matching titles
+        const Event = require('../models/Event');
+        const matchingEvents = await Event.find({ 
+          title: { $regex: new RegExp(stream.title, 'i') } 
+        });
+        
+        if (matchingEvents.length > 0) {
+          const eventIds = matchingEvents.map(e => e._id);
+          const nameBasedBooking = await Booking.findOne({
+            user: req.user._id,
+            event: { $in: eventIds },
+            status: 'confirmed'
+          });
+          hasValidBooking = !!nameBasedBooking;
+        }
+        
+        // Also check sports events
+        const SportsEvent = require('../models/SportsEvent');
+        const matchingSportsEvents = await SportsEvent.find({ 
+          name: { $regex: new RegExp(stream.title, 'i') } 
+        });
+        
+        if (matchingSportsEvents.length > 0 && !hasValidBooking) {
+          const sportsEventIds = matchingSportsEvents.map(e => e._id);
+          const nameBasedSportsBooking = await SportsBooking.findOne({
+            user: req.user._id,
+            sportsEvent: { $in: sportsEventIds },
+            status: 'confirmed'
+          });
+          hasValidBooking = hasValidBooking || !!nameBasedSportsBooking;
+        }
       }
 
-      const accessCheck = await stream.checkAccess(req.user._id, userBookings);
-      hasAccess = accessCheck.hasAccess;
-      accessReason = accessCheck.reason;
+      hasAccess = hasValidBooking || req.user?.role === 'admin';
+      accessReason = hasValidBooking ? 'ticket_holder' : 'admin';
     }
     // Other access types (subscribers, private)
     else {
-      const accessCheck = await stream.checkAccess(req.user._id, []);
-      hasAccess = accessCheck.hasAccess;
-      accessReason = accessCheck.reason;
+      if (stream.accessType === 'private') {
+        hasAccess = req.user?.role === 'admin';
+        accessReason = hasAccess ? 'admin' : 'private';
+      } else if (stream.accessType === 'subscribers') {
+        hasAccess = req.user?.role === 'admin' || req.user?.role === 'subscriber';
+        accessReason = req.user?.role === 'admin' ? 'admin' : 'subscriber';
+      }
     }
 
     if (!hasAccess) {
@@ -772,27 +840,55 @@ const checkStreamAccess = asyncHandler(async (req, res) => {
         message = 'This stream is private. Only administrators can access it.';
       }
     }
-    // Paid streams - require purchase
+    // Paid streams - require purchase (check by event name)
     else if (stream.accessType === 'paid') {
-      // Check if user has purchased access
+      // Check if user has purchased access to ANY livestream with the same event name
       const LivestreamPurchase = require('../models/LivestreamPurchase');
-      const purchase = await LivestreamPurchase.findUserValidAccess(userId, stream._id);
       
-      if (purchase || req.user?.role === 'admin') {
+      // First try to find purchase for this specific stream
+      const specificPurchase = await LivestreamPurchase.findUserValidAccess(userId, stream._id);
+      
+      if (specificPurchase || req.user?.role === 'admin') {
         hasAccess = true;
-        reason = purchase ? 'paid_access' : 'admin';
-        message = purchase ? 'Access granted - payment confirmed' : 'Access granted - administrator';
+        reason = specificPurchase ? 'paid_access' : 'admin';
+        message = specificPurchase ? 'Access granted - payment confirmed' : 'Access granted - administrator';
       } else {
-        hasAccess = false;
-        reason = 'payment_required';
-        message = `This is a paid stream. Please purchase a ticket for ₹${stream.price} to access.`;
+        // If no specific purchase, check if user has purchased any livestream with the same title
+        const allStreams = await LiveStream.find({ title: stream.title });
+        const streamIds = allStreams.map(s => s._id);
+        
+        if (streamIds.length > 0) {
+          const nameBasedPurchase = await LivestreamPurchase.findOne({
+            user: userId,
+            livestream: { $in: streamIds },
+            status: 'completed',
+            accessGranted: true,
+            $or: [
+              { accessExpiresAt: { $exists: false } },
+              { accessExpiresAt: { $gt: new Date() } }
+            ]
+          });
+          
+          if (nameBasedPurchase) {
+            hasAccess = true;
+            reason = 'paid_access_name_based';
+            message = `Access granted - you have purchased access to "${stream.title}" livestream`;
+          }
+        }
+        
+        if (!hasAccess) {
+          hasAccess = false;
+          reason = 'payment_required';
+          message = `This is a paid stream. Please purchase a ticket for ₹${stream.price} to access.`;
+        }
       }
     }
-    // Ticket holders - check valid booking
+    // Ticket holders - check valid booking (check by event name)
     else if (stream.accessType === 'ticket_holders') {
-      // Check for valid event bookings
+      // Check for valid event bookings by name matching
       let hasValidBooking = false;
       
+      // First check specific event ID
       if (stream.eventId) {
         const booking = await Booking.findOne({
           user: userId,
@@ -809,6 +905,41 @@ const checkStreamAccess = asyncHandler(async (req, res) => {
           status: 'confirmed'
         });
         hasValidBooking = hasValidBooking || !!sportsBooking;
+      }
+      
+      // If no specific booking found, check by event name matching
+      if (!hasValidBooking && stream.title) {
+        // Find events with matching titles
+        const Event = require('../models/Event');
+        const matchingEvents = await Event.find({ 
+          title: { $regex: new RegExp(stream.title, 'i') } 
+        });
+        
+        if (matchingEvents.length > 0) {
+          const eventIds = matchingEvents.map(e => e._id);
+          const nameBasedBooking = await Booking.findOne({
+            user: userId,
+            event: { $in: eventIds },
+            status: 'confirmed'
+          });
+          hasValidBooking = !!nameBasedBooking;
+        }
+        
+        // Also check sports events
+        const SportsEvent = require('../models/SportsEvent');
+        const matchingSportsEvents = await SportsEvent.find({ 
+          name: { $regex: new RegExp(stream.title, 'i') } 
+        });
+        
+        if (matchingSportsEvents.length > 0 && !hasValidBooking) {
+          const sportsEventIds = matchingSportsEvents.map(e => e._id);
+          const nameBasedSportsBooking = await SportsBooking.findOne({
+            user: userId,
+            sportsEvent: { $in: sportsEventIds },
+            status: 'confirmed'
+          });
+          hasValidBooking = hasValidBooking || !!nameBasedSportsBooking;
+        }
       }
 
       if (hasValidBooking || req.user?.role === 'admin') {
