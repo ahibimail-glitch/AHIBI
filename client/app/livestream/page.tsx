@@ -402,10 +402,10 @@ export default function LivestreamListingPage() {
 
   if (loading) {
     return (
-      <div className="ls-loading">
-        <div className="ls-loading-inner">
-          <div className="ls-loading-ring" />
-          <p className="ls-loading-text">Loading events…</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading Livestreams</p>
         </div>
       </div>
     );
