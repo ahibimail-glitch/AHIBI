@@ -38,6 +38,11 @@ interface AnnieBookingDetail {
 export default function AnnieMusicalBookingDetail() {
   const params = useParams();
   const router = useRouter();
+  
+  if (!params?.id) {
+    return <div>Loading...</div>;
+  }
+  
   const [booking, setBooking] = useState<AnnieBookingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
@@ -50,7 +55,7 @@ export default function AnnieMusicalBookingDetail() {
       const token = localStorage.getItem("token");
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       
-      const response = await fetch(`${apiUrl}/api/annie-musical/booking/${params.id}`, {
+      const response = await fetch(`${apiUrl}/api/annie-musical/booking/${params!.id}`, {
         method: 'GET',
         headers: {
           'Authorization': token ? `Bearer ${token}` : "",

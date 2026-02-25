@@ -41,7 +41,7 @@ interface AccessCheck {
 export default function LiveStreamPage() {
   const params = useParams();
   const router = useRouter();
-  const streamId = params.id as string;
+  const streamId = params?.id as string;
   const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   const [streamInfo, setStreamInfo] = useState<StreamInfo | null>(null);

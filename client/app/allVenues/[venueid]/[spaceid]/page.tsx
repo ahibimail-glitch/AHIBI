@@ -429,13 +429,18 @@ const HeroCarousel = ({ images, venueName }: HeroCarouselProps) => {
 
 export default function SpaceDetailPage() {
   const params = useParams();
-  const venueId = decodeURIComponent((params.venueid as string) || "");
-  const spaceId = decodeURIComponent((params.spaceid as string) || "");
+  const router = useRouter();
   
+  if (!params?.venueid || !params?.spaceid) {
+    return <div>Loading...</div>;
+  }
+  
+  const venueId = decodeURIComponent((params!.venueid as string) || "");
+  const spaceId = decodeURIComponent((params!.spaceid as string) || "");
+
   const [spaceData, setSpaceData] = useState<SpaceData | null>(null);
   const [venueData, setVenueData] = useState<VenueData | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     const fetchSpaceData = async () => {

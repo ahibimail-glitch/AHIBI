@@ -111,6 +111,11 @@ type Review = {
 export default function VenueManagePage() {
   const params = useParams();
   const router = useRouter();
+  
+  if (!params?.venueId) {
+    return <div>Loading...</div>;
+  }
+  
   const venueId = params.venueId as string;
 
   const [loading, setLoading] = useState(true);

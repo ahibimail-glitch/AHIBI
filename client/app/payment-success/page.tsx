@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
+
+// Force client-side rendering
+export const dynamic = 'force-dynamic';
 
 interface PaymentDetails {
   amount: number;
@@ -15,24 +18,19 @@ interface PaymentDetails {
   itemName: string;
 }
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!searchParams) {
-      setLoading(false);
-      return;
-    }
-
     // Extract payment details from URL parameters
-    const amount = searchParams.get('amount');
-    const paymentId = searchParams.get('payment_id');
-    const orderId = searchParams.get('order_id');
-    const type = searchParams.get('type') || 'livestream';
-    const itemName = searchParams.get('item_name');
+    const amount = searchParams?.get('amount');
+    const paymentId = searchParams?.get('payment_id');
+    const orderId = searchParams?.get('order_id');
+    const type = searchParams?.get('type') || 'livestream';
+    const itemName = searchParams?.get('item_name');
 
     if (amount && paymentId && orderId) {
       setPaymentDetails({
@@ -201,5 +199,20 @@ export default function PaymentSuccessPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }

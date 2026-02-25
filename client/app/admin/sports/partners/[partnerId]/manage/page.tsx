@@ -72,8 +72,7 @@ export default function PartnerManagePage() {
   const router = useRouter();
   
   if (!params?.partnerId) {
-    router.push('/admin/sports/partners');
-    return null;
+    return <div>Loading...</div>;
   }
   
   const partnerId = params.partnerId as string;

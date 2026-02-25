@@ -158,9 +158,14 @@ const TIME_SLOTS = [
 
 export default function SpaceCheckoutPage() {
   const params = useParams();
+  const router = useRouter();
+  
+  if (!params?.venueid || !params?.spaceid) {
+    return <div>Loading...</div>;
+  }
+  
   const venueId = params.venueid as string;
   const spaceId = params.spaceid as string;
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   
   const [spaceData, setSpaceData] = useState<any>(null);

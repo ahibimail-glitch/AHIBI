@@ -1,3 +1,3 @@
-export default function Loading() {
+export default function Loading(): JSX.Element {
   return null;
 }

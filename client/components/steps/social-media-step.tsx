@@ -61,7 +61,7 @@ export function SocialMediaStep({ formData, updateFormData, showErrors }: Social
         profileUrl: "",
         followerCount: 0,
         isPrimary: formData.platforms.length === 0,
-        engagementRate: undefined,
+        engagementRate: undefined as undefined,
       }
       updateFormData({
         platforms: [...formData.platforms, newPlatform],

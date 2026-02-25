@@ -124,7 +124,7 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         }
       });
 
-      const data = await response.json().catch(() => null);
+      const data = await response.json().catch((): null => null);
 
       if (!response.ok) {
         setAvailability([]);

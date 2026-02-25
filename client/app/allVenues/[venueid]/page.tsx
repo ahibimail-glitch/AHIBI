@@ -201,8 +201,13 @@ const formatVenueType = (space: SpaceData) => {
 
 export default function VenueDetailPage() {
   const params = useParams();
-  const venueId = decodeURIComponent((params.venueid as string) || "");
-  const rawParam = (params.venueid as string) || "";
+  
+  if (!params?.venueid) {
+    return <div>Loading...</div>;
+  }
+  
+  const venueId = decodeURIComponent((params!.venueid as string) || "");
+  const rawParam = (params!.venueid as string) || "";
 
   const isIdRoute = useMemo(() => {
     try {

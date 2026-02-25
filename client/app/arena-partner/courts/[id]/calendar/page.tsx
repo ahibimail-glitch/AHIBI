@@ -71,7 +71,12 @@ function addDays(base: Date, days: number) {
 export default function CourtCalendarPage() {
   const router = useRouter();
   const params = useParams();
-  const courtId = params.id as string;
+  
+  if (!params?.id) {
+    return <div>Loading...</div>;
+  }
+  
+  const courtId = params!.id as string;
 
   const [anchorDate, setAnchorDate] = useState<Date>(() => {
     const t = new Date();

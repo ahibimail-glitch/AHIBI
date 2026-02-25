@@ -28,7 +28,12 @@ interface BookingDetails {
 
 export default function BookingInvoicePage() {
   const params = useParams();
-  const bookingId = params.bookingId as string;
+  
+  if (!params?.bookingId) {
+    return <div>Loading...</div>;
+  }
+  
+  const bookingId = params!.bookingId as string;
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);

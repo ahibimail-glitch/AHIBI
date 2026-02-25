@@ -287,7 +287,7 @@ export default function ProfilePage() {
         body: formData,
       });
 
-      const uploadData = await uploadRes.json().catch(() => null);
+      const uploadData = await uploadRes.json().catch((): null => null);
 
       const uploadedUrl = uploadData?.data?.photo?.url;
       if (!uploadRes.ok || uploadData?.status !== 'success' || typeof uploadedUrl !== 'string') {
@@ -303,7 +303,7 @@ export default function ProfilePage() {
         body: JSON.stringify({ profilePic: uploadedUrl }),
       });
 
-      const updateData = await updateRes.json().catch(() => null);
+      const updateData = await updateRes.json().catch((): null => null);
       if (!updateRes.ok || !updateData?.success) {
         throw new Error(updateData?.message || 'Failed to update profile');
       }
