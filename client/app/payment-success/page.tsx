@@ -22,6 +22,11 @@ export default function PaymentSuccessPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!searchParams) {
+      setLoading(false);
+      return;
+    }
+
     // Extract payment details from URL parameters
     const amount = searchParams.get('amount');
     const paymentId = searchParams.get('payment_id');

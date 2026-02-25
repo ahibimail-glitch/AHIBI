@@ -70,7 +70,7 @@ type Dispute = {
 export default function PartnerManagePage() {
   const params = useParams();
   const router = useRouter();
-  const partnerId = params.partnerId as string;
+  const partnerId = params?.partnerId as string;
 
   const [loading, setLoading] = useState(true);
   const [partner, setPartner] = useState<Partner | null>(null);
