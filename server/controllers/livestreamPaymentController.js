@@ -528,10 +528,50 @@ async function handlePaymentFailed(payload) {
   }
 }
 
+/**
+ * @desc    Get all livestream purchases for admin
+ * @route   GET /api/livestream/purchase/admin/bookings
+ * @access  Private/Admin
+ */
+const getAdminBookings = asyncHandler(async (req, res) => {
+  const purchases = await LivestreamPurchase.find({ status: 'completed' })
+    .populate('user', 'name email phone')
+    .populate('livestream', 'title thumbnailUrl posterUrl price')
+    .sort({ createdAt: -1 });
+
+  const formattedBookings = purchases.map(purchase => ({
+    _id: purchase._id,
+    user: purchase.user || {
+      name: 'Unknown',
+      email: 'No email',
+      phone: 'No phone'
+    },
+    livestream: purchase.livestream || {
+      title: 'Unknown Livestream',
+      thumbnailUrl: '',
+      posterUrl: '',
+      price: 0
+    },
+    amount: purchase.amount,
+    status: purchase.status,
+    paymentDate: purchase.createdAt,
+    accessGranted: purchase.accessGranted,
+    paymentId: purchase.razorpayPaymentId,
+    orderId: purchase.razorpayOrderId,
+    transactionId: purchase.razorpayPaymentId
+  }));
+
+  res.json({
+    success: true,
+    data: formattedBookings
+  });
+});
+
 module.exports = {
   createPurchaseOrder,
   verifyPayment,
   getUserPurchases,
   checkAccess,
-  handleWebhook
+  handleWebhook,
+  getAdminBookings
 };

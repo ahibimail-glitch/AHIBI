@@ -65,6 +65,13 @@ interface UserProfile {
   [key: string]: any;
 }
 
+const EVENT_IMAGES: Record<string, string> = {
+  "1st NWA Provisional Championship & 1st NWA Under 15 Championship cum 1st Wrestling Festival":
+    "https://res.cloudinary.com/dovc3lfgz/image/upload/v1771518218/ahibi/ttof83dmfocmdqovcb3v.jpg",
+  "30th NWA Naga Traditional Wrestling Championship cum 1st Wrestling Festival":
+    "https://res.cloudinary.com/dovc3lfgz/image/upload/v1771517850/ahibi/xy6prc6usk8fxgocy4ay.jpg",
+};
+
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
@@ -231,7 +238,11 @@ export default function ProfilePage() {
         const data = await response.json();
 
         if (data.success) {
-          setLivestreamPurchases(data.data || []);
+          // Filter out pending payments, only show completed purchases
+          const confirmedPurchases = (data.data || []).filter(
+            (purchase: any) => purchase.status === 'completed'
+          );
+          setLivestreamPurchases(confirmedPurchases);
         } else {
           console.error("Failed to fetch livestream purchases:", data.message);
         }
@@ -763,7 +774,7 @@ export default function ProfilePage() {
                           <div className="flex items-start gap-4 flex-1">
                             <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
                               <Image
-                                src={purchase.livestream?.thumbnailUrl || purchase.livestream?.posterUrl || "/placeholder.jpg"}
+                                src={EVENT_IMAGES[purchase.livestream?.title || ""] || purchase.livestream?.thumbnailUrl || purchase.livestream?.posterUrl || "/placeholder.jpg"}
                                 alt={purchase.livestream?.title || "Livestream"}
                                 fill
                                 className="object-cover"

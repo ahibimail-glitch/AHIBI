@@ -60,6 +60,7 @@ import NISRegistrations from "./components/NISRegistrations";
 import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
+import NWAWrestlingBookings from "./components/NWAWrestlingBookings";
 import FeaturedEvents from "./components/FeaturedEvents";
 import ArtistManagement from "./components/ArtistManagement";
 import VenueManagement from "./components/VenueManagement";
@@ -280,6 +281,8 @@ export default function AdminDashboard() {
         return <Coupons />;
       case "melita-bookings":
         return <MelitaBookings />;
+      case "nwa-wrestling-bookings":
+        return <NWAWrestlingBookings />;
       case "featured-events":
         return <FeaturedEvents />;
       case "hmf-tickets":
@@ -433,6 +436,7 @@ export default function AdminDashboard() {
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Special Events</h3>
           </div>
+          <SidebarButton icon={Video} label="NWA Wrestling" active={activeView === "nwa-wrestling-bookings"} onClick={() => { setActiveView("nwa-wrestling-bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
           <SidebarButton icon={Heart} label="Donations" active={activeView === "donations"} onClick={() => { setActiveView("donations"); setSidebarOpen(false); }} />
        

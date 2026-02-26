@@ -11,10 +11,11 @@ const {
   verifyPayment,
   getUserPurchases,
   checkAccess,
-  handleWebhook
+  handleWebhook,
+  getAdminBookings
 } = require('../controllers/livestreamPaymentController');
 
-const { protect } = require('../middlewares/auth');
+const { protect, adminOnly } = require('../middlewares/auth');
 
 // Protected routes
 router.use(protect);
@@ -23,6 +24,9 @@ router.post('/create-order', createPurchaseOrder);
 router.post('/verify', verifyPayment);
 router.get('/history', getUserPurchases);
 router.get('/check-access/:livestreamId', checkAccess);
+
+// Admin routes
+router.get('/admin/bookings', adminOnly, getAdminBookings);
 
 // Public webhook route
 router.post('/webhook', handleWebhook);
