@@ -27,7 +27,12 @@ const {
   getSpaceStats,
   getVenueBookings,
   getPublicVenueSpaces,
-  getPublicSpaceById
+  getPublicSpaceById,
+  blockDateTime,
+  getBlockedSlots,
+  updateBlockedSlot,
+  deleteBlockedSlot,
+  getVenueSpacesWithBlockedSlots
 } = require('../controllers/eventSpaceController');
 
 // Import middleware
@@ -136,6 +141,26 @@ const updateSpaceValidation = [
   body('address.pincode').optional().matches(/^\d{6}$/).withMessage('Valid 6-digit pincode required')
 ];
 
+// Block date/time validation rules
+const blockDateTimeValidation = [
+  body('date').isISO8601().withMessage('Valid date is required'),
+  body('isFullDayBlocked').optional().isBoolean().withMessage('Full day block must be a boolean'),
+  body('timeSlots').optional().isArray().withMessage('Time slots must be an array'),
+  body('timeSlots.*.startTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid start time format required (HH:MM)'),
+  body('timeSlots.*.endTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid end time format required (HH:MM)'),
+  body('reason').optional().isIn(['offline_booking', 'internal_event', 'maintenance', 'holiday', 'other']).withMessage('Valid reason is required'),
+  body('notes').optional().trim().isLength({ max: 500 }).withMessage('Notes must not exceed 500 characters')
+];
+
+const updateBlockedSlotValidation = [
+  body('isFullDayBlocked').optional().isBoolean().withMessage('Full day block must be a boolean'),
+  body('timeSlots').optional().isArray().withMessage('Time slots must be an array'),
+  body('timeSlots.*.startTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid start time format required (HH:MM)'),
+  body('timeSlots.*.endTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid end time format required (HH:MM)'),
+  body('reason').optional().isIn(['offline_booking', 'internal_event', 'maintenance', 'holiday', 'other']).withMessage('Valid reason is required'),
+  body('notes').optional().trim().isLength({ max: 500 }).withMessage('Notes must not exceed 500 characters')
+];
+
 // Public routes (no authentication required)
 
 // Get all approved venues
@@ -182,6 +207,22 @@ router.put('/spaces/:id', venueAuth, updateSpaceValidation, updateSpace);
 
 // Delete space
 router.delete('/spaces/:id', venueAuth, deleteSpace);
+
+// Block date/time routes (protected)
+// Get all spaces with their blocked slots for the venue
+router.get('/spaces/blocked-slots', venueAuth, getVenueSpacesWithBlockedSlots);
+
+// Get blocked slots for a specific space
+router.get('/spaces/:id/blocked-slots', venueAuth, getBlockedSlots);
+
+// Block date/time for a space
+router.post('/spaces/:id/block', venueAuth, blockDateTimeValidation, blockDateTime);
+
+// Update blocked slot
+router.put('/spaces/:id/blocked-slots/:blockId', venueAuth, updateBlockedSlotValidation, updateBlockedSlot);
+
+// Delete blocked slot
+router.delete('/spaces/:id/blocked-slots/:blockId', venueAuth, deleteBlockedSlot);
 
 // Get venue details by ID (public view) - Must be last to avoid conflicts
 router.get('/:id', getPublicVenueById);

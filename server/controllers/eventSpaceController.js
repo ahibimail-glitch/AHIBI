@@ -3,6 +3,74 @@ const Venue = require('../models/Venue');
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
 
+const normalizeDateString = (date) => {
+  if (!date) return null;
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return null;
+  return parsedDate.toISOString().split('T')[0];
+};
+
+const timeStringToMinutes = (timeStr = '') => {
+  const [hours = '0', minutes = '0'] = timeStr.split(':');
+  const h = parseInt(hours, 10);
+  const m = parseInt(minutes, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+};
+
+const doTimeRangesOverlap = (startA, endA, startB, endB) => {
+  const aStart = timeStringToMinutes(startA);
+  const aEnd = timeStringToMinutes(endA);
+  const bStart = timeStringToMinutes(startB);
+  const bEnd = timeStringToMinutes(endB);
+
+  if ([aStart, aEnd, bStart, bEnd].some((value) => value === null)) {
+    return false;
+  }
+
+  return aStart < bEnd && bStart < aEnd;
+};
+
+const isActiveBooking = (booking = {}) => {
+  const status = (booking.status || 'confirmed').toLowerCase();
+  return ['confirmed', 'completed'].includes(status);
+};
+
+const buildOverlapChecker = (timeSlots = []) => {
+  const normalizedSlots = (timeSlots || [])
+    .map((slot) => ({
+      startTime: slot?.startTime,
+      endTime: slot?.endTime,
+    }))
+    .filter((slot) => slot.startTime && slot.endTime);
+
+  return (bookingStart, bookingEnd) =>
+    normalizedSlots.some((slot) =>
+      doTimeRangesOverlap(slot.startTime, slot.endTime, bookingStart, bookingEnd)
+    );
+};
+
+const findBookingConflict = (bookings = [], dateStr, isFullDayBlocked, timeSlots) => {
+  if (!dateStr) return null;
+
+  const normalizedDate = normalizeDateString(dateStr);
+  if (!normalizedDate) return null;
+
+  const overlaps = buildOverlapChecker(timeSlots);
+
+  return bookings.find((booking) => {
+    if (!isActiveBooking(booking)) return false;
+    const bookingDate = normalizeDateString(booking.bookingDate);
+    if (bookingDate !== normalizedDate) return false;
+
+    if (isFullDayBlocked) {
+      return true;
+    }
+
+    return overlaps(booking.startTime, booking.endTime);
+  });
+};
+
 // Get all spaces for a venue
 const getVenueSpaces = async (req, res) => {
   try {
@@ -456,6 +524,337 @@ const getVenueBookings = async (req, res) => {
   }
 };
 
+// Block dates and times for a space
+const blockDateTime = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { id: spaceId } = req.params;
+    const { date, isFullDayBlocked, timeSlots, reason, notes } = req.body;
+
+    // Find space and verify venue ownership
+    const space = await EventSpace.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({
+        success: false,
+        message: 'Space not found'
+      });
+    }
+
+    const venue = await Venue.findOne({ _id: space.venueId, _id: req.venue.id });
+    if (!venue) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Not authorized to block this space'
+      });
+    }
+
+    // Check if the date/time is already blocked
+    const normalizedRequestDate = normalizeDateString(date);
+    const existingBlock = space.blockedSlots.find(block => 
+      normalizeDateString(block.date) === normalizedRequestDate
+    );
+
+    if (existingBlock) {
+      return res.status(400).json({
+        success: false,
+        message: 'This date is already blocked. Please update the existing block instead.'
+      });
+    }
+
+    // Prevent blocking when there are confirmed bookings
+    const conflictBooking = findBookingConflict(
+      space.bookings,
+      normalizedRequestDate,
+      isFullDayBlocked,
+      timeSlots
+    );
+
+    if (conflictBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot block this date/time because there is an existing booking.',
+        data: {
+          bookingDate: conflictBooking.bookingDate,
+          startTime: conflictBooking.startTime,
+          endTime: conflictBooking.endTime,
+          bookingId: conflictBooking._id
+        }
+      });
+    }
+
+    // Create new blocked slot
+    const newBlockedSlot = {
+      date: new Date(date),
+      isFullDayBlocked: isFullDayBlocked || false,
+      timeSlots: timeSlots || [],
+      reason: reason || 'other',
+      notes: notes || '',
+      createdAt: new Date()
+    };
+
+    space.blockedSlots.push(newBlockedSlot);
+    await space.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Date/time blocked successfully',
+      data: { blockedSlot: newBlockedSlot }
+    });
+
+  } catch (error) {
+    console.error('Block date/time error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to block date/time'
+    });
+  }
+};
+
+// Get all blocked slots for a space
+const getBlockedSlots = async (req, res) => {
+  try {
+    const { id: spaceId } = req.params;
+    const { month, year } = req.query;
+
+    // Find space and verify venue ownership
+    const space = await EventSpace.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({
+        success: false,
+        message: 'Space not found'
+      });
+    }
+
+    const venue = await Venue.findOne({ _id: space.venueId, _id: req.venue.id });
+    if (!venue) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Not authorized to view this space'
+      });
+    }
+
+    let blockedSlots = space.blockedSlots || [];
+
+    // Filter by month/year if provided
+    if (month && year) {
+      const targetMonth = parseInt(month);
+      const targetYear = parseInt(year);
+      
+      blockedSlots = blockedSlots.filter(block => {
+        const blockDate = new Date(block.date);
+        return blockDate.getMonth() + 1 === targetMonth && blockDate.getFullYear() === targetYear;
+      });
+    }
+
+    // Sort by date
+    blockedSlots.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    res.status(200).json({
+      success: true,
+      data: { blockedSlots }
+    });
+
+  } catch (error) {
+    console.error('Get blocked slots error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get blocked slots'
+    });
+  }
+};
+
+// Update a blocked slot
+const updateBlockedSlot = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { id: spaceId, blockId } = req.params;
+    const { isFullDayBlocked, timeSlots, reason, notes } = req.body;
+
+    // Find space and verify venue ownership
+    const space = await EventSpace.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({
+        success: false,
+        message: 'Space not found'
+      });
+    }
+
+    const venue = await Venue.findOne({ _id: space.venueId, _id: req.venue.id });
+    if (!venue) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Not authorized to update this space'
+      });
+    }
+
+    // Find the blocked slot
+    const blockedSlot = space.blockedSlots.id(blockId);
+    if (!blockedSlot) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blocked slot not found'
+      });
+    }
+
+    const nextIsFullDay = typeof isFullDayBlocked === 'boolean' ? isFullDayBlocked : blockedSlot.isFullDayBlocked;
+    const nextTimeSlots = Array.isArray(timeSlots) ? timeSlots : blockedSlot.timeSlots;
+
+    const conflictBooking = findBookingConflict(
+      space.bookings,
+      blockedSlot.date,
+      nextIsFullDay,
+      nextTimeSlots
+    );
+
+    if (conflictBooking) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update block because there is already a booking for the selected time range.',
+        data: {
+          bookingDate: conflictBooking.bookingDate,
+          startTime: conflictBooking.startTime,
+          endTime: conflictBooking.endTime,
+          bookingId: conflictBooking._id
+        }
+      });
+    }
+
+    // Update the blocked slot
+    if (isFullDayBlocked !== undefined) blockedSlot.isFullDayBlocked = isFullDayBlocked;
+    if (timeSlots !== undefined) blockedSlot.timeSlots = timeSlots;
+    if (reason !== undefined) blockedSlot.reason = reason;
+    if (notes !== undefined) blockedSlot.notes = notes;
+
+    await space.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Blocked slot updated successfully',
+      data: { blockedSlot }
+    });
+
+  } catch (error) {
+    console.error('Update blocked slot error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update blocked slot'
+    });
+  }
+};
+
+// Delete a blocked slot
+const deleteBlockedSlot = async (req, res) => {
+  try {
+    const { id: spaceId, blockId } = req.params;
+
+    // Find space and verify venue ownership
+    const space = await EventSpace.findById(spaceId);
+    if (!space) {
+      return res.status(404).json({
+        success: false,
+        message: 'Space not found'
+      });
+    }
+
+    const venue = await Venue.findOne({ _id: space.venueId, _id: req.venue.id });
+    if (!venue) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: Not authorized to update this space'
+      });
+    }
+
+    // Find and remove the blocked slot
+    const blockedSlot = space.blockedSlots.id(blockId);
+    if (!blockedSlot) {
+      return res.status(404).json({
+        success: false,
+        message: 'Blocked slot not found'
+      });
+    }
+
+    space.blockedSlots.pull(blockId);
+    await space.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Blocked slot removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete blocked slot error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete blocked slot'
+    });
+  }
+};
+
+// Get all spaces with their blocked slots for the venue
+const getVenueSpacesWithBlockedSlots = async (req, res) => {
+  try {
+    const venueId = req.venue.id;
+    const { month, year } = req.query;
+
+    // Verify venue exists and is authenticated
+    const venue = await Venue.findById(venueId);
+    if (!venue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Venue not found'
+      });
+    }
+
+    // Get all spaces for the venue
+    const spaces = await EventSpace.find({ venueId })
+      .select('name _id blockedSlots')
+      .sort({ createdAt: -1 });
+
+    // Filter blocked slots by month/year if provided
+    if (month && year) {
+      const targetMonth = parseInt(month);
+      const targetYear = parseInt(year);
+      
+      spaces.forEach(space => {
+        if (space.blockedSlots) {
+          space.blockedSlots = space.blockedSlots.filter(block => {
+            const blockDate = new Date(block.date);
+            return blockDate.getMonth() + 1 === targetMonth && blockDate.getFullYear() === targetYear;
+          });
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { spaces }
+    });
+
+  } catch (error) {
+    console.error('Get venue spaces with blocked slots error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get venue spaces with blocked slots'
+    });
+  }
+};
+
 module.exports = {
   getVenueSpaces,
   getSpaceById,
@@ -465,5 +864,10 @@ module.exports = {
   getSpaceStats,
   getVenueBookings,
   getPublicVenueSpaces,
-  getPublicSpaceById
+  getPublicSpaceById,
+  blockDateTime,
+  getBlockedSlots,
+  updateBlockedSlot,
+  deleteBlockedSlot,
+  getVenueSpacesWithBlockedSlots
 };

@@ -378,9 +378,9 @@ export default function SpaceCheckoutPage() {
 
   // Helper function to check if a date is fully blocked
   const isDateFullyBlocked = (date: Date): boolean => {
-    if (!venueData?.blockedSlots) return false;
+    if (!spaceData?.blockedSlots) return false;
     
-    return venueData.blockedSlots.some((slot: any) => {
+    return spaceData.blockedSlots.some((slot: any) => {
       const slotDate = new Date(slot.date);
       return (
         slotDate.toDateString() === date.toDateString() &&
@@ -394,9 +394,9 @@ export default function SpaceCheckoutPage() {
     // Don't show as partially booked if it's fully blocked
     if (isDateFullyBlocked(date)) return false;
 
-    // Check venue blocked slots (partial blocks)
-    if (venueData?.blockedSlots) {
-      const hasPartialBlock = venueData.blockedSlots.some((slot: any) => {
+    // Check space blocked slots (partial blocks)
+    if (spaceData?.blockedSlots) {
+      const hasPartialBlock = spaceData.blockedSlots.some((slot: any) => {
         const slotDate = new Date(slot.date);
         return (
           slotDate.toDateString() === date.toDateString() &&
@@ -431,8 +431,8 @@ export default function SpaceCheckoutPage() {
   // Get all fully blocked dates
   const getFullyBlockedDates = (): Date[] => {
     const blockedDates: Date[] = [];
-    if (venueData?.blockedSlots) {
-      venueData.blockedSlots.forEach((slot: any) => {
+    if (spaceData?.blockedSlots) {
+      spaceData.blockedSlots.forEach((slot: any) => {
         if (slot.isFullDayBlocked) {
           blockedDates.push(new Date(slot.date));
         }
@@ -446,9 +446,9 @@ export default function SpaceCheckoutPage() {
     const partiallyBookedDates: Date[] = [];
     const dateSet = new Set<string>(); // Use Set to avoid duplicates
     
-    // From venue blocked slots (partial blocks)
-    if (venueData?.blockedSlots) {
-      venueData.blockedSlots.forEach((slot: any) => {
+    // From space blocked slots (partial blocks)
+    if (spaceData?.blockedSlots) {
+      spaceData.blockedSlots.forEach((slot: any) => {
         if (!slot.isFullDayBlocked && slot.date) {
           const slotDate = new Date(slot.date);
           if (!isNaN(slotDate.getTime())) {
@@ -782,6 +782,33 @@ export default function SpaceCheckoutPage() {
       return;
     }
 
+    // Check if selected date is fully blocked
+    if (isDateFullyBlocked(selectedDate)) {
+      setFormError('This date is fully blocked and not available for booking.');
+      toast.error('Please select a different date.');
+      return;
+    }
+
+    // Check if selected time slots are blocked
+    if (isTimeSlotBlocked(bookingForm.startTime) || isTimeSlotBlocked(bookingForm.endTime)) {
+      setFormError('One or more selected time slots are blocked. Please choose different times.');
+      toast.error('Blocked time slots cannot be booked.');
+      return;
+    }
+
+    // Check if any time in the booking range is blocked
+    const bookingStartHour = parseInt(bookingForm.startTime.split(':')[0]);
+    const bookingEndHour = parseInt(bookingForm.endTime.split(':')[0]);
+    
+    for (let hour = bookingStartHour; hour < bookingEndHour; hour++) {
+      const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+      if (isTimeSlotBlocked(timeSlot)) {
+        setFormError('The selected time range includes blocked slots. Please choose different times.');
+        toast.error('Blocked time slots cannot be booked.');
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
@@ -995,8 +1022,41 @@ export default function SpaceCheckoutPage() {
     }
   };
 
+  // Helper function to check if a time slot is blocked for the selected date
+  const isTimeSlotBlocked = (time: string): boolean => {
+    if (!selectedDate || !spaceData?.blockedSlots) return false;
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    
+    return spaceData.blockedSlots.some((block: any) => {
+      const blockDateStr = format(new Date(block.date), 'yyyy-MM-dd');
+      
+      // Check if this block is for the selected date
+      if (blockDateStr !== dateStr) return false;
+      
+      // If full day blocked, all time slots are blocked
+      if (block.isFullDayBlocked) return true;
+      
+      // Check if this time falls within any blocked time slot
+      if (block.timeSlots && block.timeSlots.length > 0) {
+        return block.timeSlots.some((timeSlot: any) => {
+          const startTime = timeSlot.startTime;
+          const endTime = timeSlot.endTime;
+          
+          // Check if the requested time falls within the blocked slot
+          return time >= startTime && time < endTime;
+        });
+      }
+      
+      return false;
+    });
+  };
+
   const isTimeSlotAvailable = (time: string): boolean => {
     if (!availabilityData) return true;
+    
+    // First check if the time slot is blocked
+    if (isTimeSlotBlocked(time)) return false;
     
     // Check if this specific time slot is marked as unavailable
     const timeSlot = availabilityData.timeSlots.find(slot => slot.time === time);
@@ -1208,7 +1268,7 @@ export default function SpaceCheckoutPage() {
                       row: "flex w-full mt-2 justify-around",
                       cell: "text-center text-sm p-0 relative flex-1 [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                       day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-gray-100 rounded-md aria-selected:opacity-100 mx-auto text-sm sm:text-base",
-                      day_selected: "bg-red-500 text-white hover:bg-red-600 hover:text-white focus:bg-red-500 focus:text-white",
+                      day_selected: "bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:bg-blue-500 focus:text-white",
                       day_today: "bg-gray-100 text-gray-900 font-semibold",
                       day_outside: "text-gray-400 opacity-50",
                       day_disabled: "text-gray-400 opacity-50 line-through",
@@ -1281,6 +1341,7 @@ export default function SpaceCheckoutPage() {
                           <SelectContent>
                             {TIME_SLOTS.map((slot) => {
                               const isAvailable = isTimeSlotAvailable(slot.value);
+                              const isBlocked = isTimeSlotBlocked(slot.value);
                               return (
                                 <SelectItem
                                   key={slot.value}
@@ -1291,7 +1352,11 @@ export default function SpaceCheckoutPage() {
                                   <div className="flex items-center gap-2 text-sm">
                                     <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     {slot.label}
-                                    {!isAvailable && <span className="text-xs text-red-500">(Booked)</span>}
+                                    {!isAvailable && (
+                                      <span className="text-xs text-red-500">
+                                        {isBlocked ? "(Blocked)" : "(Booked)"}
+                                      </span>
+                                    )}
                                   </div>
                                 </SelectItem>
                               );
@@ -1312,6 +1377,7 @@ export default function SpaceCheckoutPage() {
                           <SelectContent>
                             {TIME_SLOTS.map((slot) => {
                               const isAvailable = isTimeSlotAvailable(slot.value);
+                              const isBlocked = isTimeSlotBlocked(slot.value);
                               const isValidEndTime = slot.value > bookingForm.startTime;
                               return (
                                 <SelectItem
@@ -1323,7 +1389,11 @@ export default function SpaceCheckoutPage() {
                                   <div className="flex items-center gap-2 text-sm">
                                     <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     {slot.label}
-                                    {!isAvailable && <span className="text-xs text-red-500">(Booked)</span>}
+                                    {!isAvailable && (
+                                      <span className="text-xs text-red-500">
+                                        {isBlocked ? "(Blocked)" : "(Booked)"}
+                                      </span>
+                                    )}
                                     {!isValidEndTime && <span className="text-xs text-orange-500">(Invalid)</span>}
                                   </div>
                                 </SelectItem>

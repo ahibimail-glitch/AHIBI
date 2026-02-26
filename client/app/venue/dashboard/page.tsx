@@ -6,11 +6,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Building, Calendar as CalendarIcon, Users, DollarSign, Settings, LogOut, Plus, Menu, X, LayoutDashboard, Home, Shield } from 'lucide-react';
+import { Building, Calendar as CalendarIcon, Users, DollarSign, Settings, LogOut, Plus, Menu, X, LayoutDashboard, Home, Shield, Ban, Clock } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import EditProfileForm from './EditProfileForm';
 import SpacesSection from './SpacesSection';
+import BlockDatesTimes from './BlockDatesTimes';
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -118,6 +119,7 @@ export default function VenueDashboard() {
     { id: 'spaces', label: 'My Spaces', icon: Building },
     { id: 'bookings', label: 'Bookings', icon: CalendarIcon },
     { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+    { id: 'block-dates', label: 'Block Dates', icon: Ban },
     // { id: 'earnings', label: 'Earnings', icon: DollarSign },
     { id: 'profile', label: 'Profile Settings', icon: Settings },
   ];
@@ -140,6 +142,8 @@ export default function VenueDashboard() {
         return <BookingsSection venue={venue} />;
       case 'calendar':
         return <CalendarSection venue={venue} />;
+      case 'block-dates':
+        return <BlockDatesTimes venue={venue} />;
       // case 'earnings':
       //   return <EarningsSection venue={venue} />;
       case 'profile':
@@ -278,6 +282,7 @@ export default function VenueDashboard() {
             <SidebarButton icon={Building} label="My Spaces" active={activeSection === "spaces"} onClick={() => { setActiveSection("spaces"); setSidebarOpen(false); }} />
             <SidebarButton icon={CalendarIcon} label="Bookings" active={activeSection === "bookings"} onClick={() => { setActiveSection("bookings"); setSidebarOpen(false); }} />
             <SidebarButton icon={CalendarIcon} label="Calendar" active={activeSection === "calendar"} onClick={() => { setActiveSection("calendar"); setSidebarOpen(false); }} />
+            <SidebarButton icon={Ban} label="Block Dates" active={activeSection === "block-dates"} onClick={() => { setActiveSection("block-dates"); setSidebarOpen(false); }} />
             {/* <SidebarButton icon={DollarSign} label="Earnings" active={activeSection === "earnings"} onClick={() => { setActiveSection("earnings"); setSidebarOpen(false); }} /> */}
             
             <div className="pt-4 pb-2 px-2">
@@ -914,6 +919,7 @@ function BookingsSection({ venue }: { venue: VenueData | null }) {
 
 function CalendarSection({ venue }: { venue: VenueData | null }) {
   const [bookings, setBookings] = useState<any[]>([]);
+  const [blockedDates, setBlockedDates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
@@ -922,6 +928,8 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
     const token = localStorage.getItem('venueToken');
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     setLoading(true);
+    
+    // Fetch bookings
     fetch(`${apiUrl}/api/venue/spaces/bookings`, {
       headers: { 'Authorization': `Bearer ${token}` },
     })
@@ -931,7 +939,33 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
           setBookings(data.data.bookings);
         }
       })
-      .catch(() => setBookings([]))
+      .catch(() => setBookings([]));
+
+    // Fetch blocked dates
+    fetch('/api/venue/spaces/blocked-slots', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data?.spaces)) {
+          const allBlockedDates: any[] = [];
+          data.data.spaces.forEach((space: any) => {
+            if (space.blockedSlots) {
+              space.blockedSlots.forEach((block: any) => {
+                allBlockedDates.push({
+                  date: new Date(block.date),
+                  spaceName: space.name,
+                  isFullDayBlocked: block.isFullDayBlocked,
+                  reason: block.reason,
+                  notes: block.notes
+                });
+              });
+            }
+          });
+          setBlockedDates(allBlockedDates);
+        }
+      })
+      .catch(() => setBlockedDates([]))
       .finally(() => setLoading(false));
   }, [venue]);
 
@@ -953,6 +987,24 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
     return dates;
   }, [bookings]);
 
+  const getBlockedDatesList = useMemo(() => {
+    const dateSet = new Set<string>();
+    const dates: Date[] = [];
+    blockedDates.forEach((b) => {
+      if (b?.date) {
+        const d = new Date(b.date);
+        if (!isNaN(d.getTime())) {
+          const key = d.toDateString();
+          if (!dateSet.has(key)) {
+            dateSet.add(key);
+            dates.push(d);
+          }
+        }
+      }
+    });
+    return dates;
+  }, [blockedDates]);
+
   const bookingsOnSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -962,6 +1014,16 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
       return bStr === dateStr;
     });
   }, [bookings, selectedDate]);
+
+  const blockedOnSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    return blockedDates.filter((b) => {
+      if (!b?.date) return false;
+      const bStr = format(new Date(b.date), 'yyyy-MM-dd');
+      return bStr === dateStr;
+    });
+  }, [blockedDates, selectedDate]);
 
   if (loading) {
     return (
@@ -1028,9 +1090,11 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
                   disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                   modifiers={{
                     partiallyBooked: getPartiallyBookedDates,
+                    blocked: getBlockedDatesList,
                   }}
                   modifiersClassNames={{
                     partiallyBooked: "bg-yellow-400 text-yellow-900 hover:bg-yellow-500 hover:text-yellow-950 focus:bg-yellow-400 focus:text-yellow-900 font-semibold",
+                    blocked: "bg-red-500 text-white hover:bg-red-600 hover:text-white focus:bg-red-500 focus:text-white font-semibold",
                   }}
                   className="rounded-lg border-0 shadow-sm"
                   classNames={{
@@ -1060,6 +1124,10 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
 
             {/* Legend */}
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-red-500 border border-red-600 shadow-sm" />
+                <span className="text-sm font-medium text-gray-700">Blocked</span>
+              </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-yellow-400 border border-yellow-500 shadow-sm" />
                 <span className="text-sm font-medium text-gray-700">Has bookings</span>
@@ -1127,7 +1195,56 @@ function CalendarSection({ venue }: { venue: VenueData | null }) {
               </div>
             )}
 
-            {selectedDate && bookingsOnSelectedDate.length === 0 && (
+            {/* Selected Date Blocked Dates */}
+            {selectedDate && blockedOnSelectedDate.length > 0 && (
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border border-red-200 p-4 sm:p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                      <Ban className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Blocked on {format(selectedDate, 'PPP')}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {blockedOnSelectedDate.length} block{blockedOnSelectedDate.length !== 1 ? 's' : ''} active
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {blockedOnSelectedDate.map((block, i) => (
+                      <div key={i} className="bg-white rounded-lg border border-red-200 p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="space-y-1">
+                            <h4 className="font-semibold text-gray-900">{block.spaceName}</h4>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
+                              {block.isFullDayBlocked ? (
+                                <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                                  Full Day Blocked
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1">
+                                  <CalendarIcon className="h-3 w-3" />
+                                  Time slots blocked
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                Reason: {block.reason}
+                              </span>
+                              {block.notes && <span>Notes: {block.notes}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedDate && bookingsOnSelectedDate.length === 0 && blockedOnSelectedDate.length === 0 && (
               <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 text-center">
                 <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CalendarIcon className="h-6 w-6 text-gray-400" />
