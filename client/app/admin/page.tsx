@@ -77,6 +77,7 @@ import Donations from "./components/Donations";
 import AdminNotifications from "./components/AdminNotifications";
 import TermsManager from "./components/TermsManager";
 import SupportTickets from "./components/SupportTickets";
+import LivestreamUserManagement from "./components/LivestreamUserManagement";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -300,7 +301,9 @@ export default function AdminDashboard() {
       case "dance-league":
         return <DanceLeagueRegistrations />;
       case "live-streaming":
-        return <AdminLivestreamPage/>
+        return <AdminLivestreamPage/>;
+      case "livestream-users":
+        return <LivestreamUserManagement />;
       case "donations":
         return <Donations />;
       case "notifications":
@@ -412,6 +415,7 @@ export default function AdminDashboard() {
             onClick={() => { router.push('/admin/sports/management'); setSidebarOpen(false); }}
           />
           <SidebarButton icon={Video} label="Live Streaming" active={activeView === "live-streaming"} onClick={() => { setActiveView("live-streaming"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Users} label="Livestream Users" active={activeView === "livestream-users"} onClick={() => { setActiveView("livestream-users"); setSidebarOpen(false); }} />
 
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Events</h3>

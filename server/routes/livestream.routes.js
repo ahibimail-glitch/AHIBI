@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const livestreamController = require('../controllers/livestreamController');
+const livestreamAdminController = require('../controllers/livestreamAdminController');
 const { protect, adminOnly } = require('../middlewares/auth');
 
 // ==================== PUBLIC ROUTES ====================
@@ -15,6 +16,9 @@ router.get('/active', livestreamController.getActiveStreams);
 
 // Get public stream info
 router.get('/streams/:id', livestreamController.getPublicStreamInfo);
+
+// Public test endpoint
+router.get('/public-test', livestreamAdminController.publicTestEndpoint);
 
 // Mux webhook (must be before auth middleware)
 router.post('/webhook/mux', livestreamController.handleMuxWebhook);
@@ -34,6 +38,9 @@ router.post('/admin/create', protect, adminOnly, livestreamController.createLive
 
 // Get all streams
 router.get('/admin/streams', protect, adminOnly, livestreamController.getAllStreams);
+
+// Get all livestreams for admin selection (must come before :id route)
+router.get('/admin/streams/list', protect, adminOnly, livestreamAdminController.getLivestreamsList);
 
 // Get stream details (includes sensitive data)
 router.get('/admin/streams/:id', protect, adminOnly, livestreamController.getStreamDetails);
@@ -58,5 +65,25 @@ router.delete('/admin/streams/:id', protect, adminOnly, livestreamController.del
 
 // Update analytics
 router.post('/admin/streams/:id/analytics', protect, adminOnly, livestreamController.updateAnalytics);
+
+// ==================== ADMIN USER MANAGEMENT ROUTES ====================
+
+// Test endpoint
+router.get('/admin/test', protect, adminOnly, livestreamAdminController.testEndpoint);
+
+// Search users for manual purchase
+router.get('/admin/users/search', protect, adminOnly, livestreamAdminController.searchUsers);
+
+// Create manual livestream purchase for user
+router.post('/admin/manual-purchase', protect, adminOnly, livestreamAdminController.createManualPurchase);
+
+// Get all livestream purchases with user management
+router.get('/admin/purchases', protect, adminOnly, livestreamAdminController.getAllPurchases);
+
+// Delete a livestream purchase
+router.delete('/admin/purchases/:purchaseId', protect, adminOnly, livestreamAdminController.deletePurchase);
+
+// Get user's livestream purchase history
+router.get('/admin/users/:userId/purchases', protect, adminOnly, livestreamAdminController.getUserPurchaseHistory);
 
 module.exports = router;

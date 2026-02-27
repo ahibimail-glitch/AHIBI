@@ -96,6 +96,21 @@ const livestreamPurchaseSchema = new mongoose.Schema({
 
   userAgent: {
     type: String
+  },
+
+  // Admin purchase tracking
+  adminPurchase: {
+    type: Boolean,
+    default: false
+  },
+
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  notes: {
+    type: String
   }
 
 }, {
