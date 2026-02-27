@@ -65,14 +65,17 @@ exports.createOrder = async (req, res) => {
       if (coupon && coupon.code) {
         const dbCoupon = await Coupon.findOne({ code: String(coupon.code).trim().toUpperCase() });
         if (dbCoupon && String(dbCoupon.event?.id) === String(bookingDetails?.event?._id) && (!dbCoupon.expiresAt || new Date(dbCoupon.expiresAt) >= new Date())) {
-          // Apply ONCE for the category: take the unit price of the first matching ticket
+          // Apply discount to ALL applicable tickets
           const applicableTickets = (bookingDetails?.tickets || []).filter(t => t.ticketType === dbCoupon.ticketCategory);
-          const unitPrice = applicableTickets.length > 0 ? Number(applicableTickets[0].price) || 0 : 0;
-          
-          if (dbCoupon.discountPercentage !== undefined) {
-            discountAmount = Math.round((unitPrice * dbCoupon.discountPercentage) / 100);
-          } else if (dbCoupon.discountPrice !== undefined) {
-            discountAmount = Math.min(dbCoupon.discountPrice, unitPrice); // Don't discount more than the ticket price
+          if (applicableTickets.length > 0) {
+            const totalApplicableQuantity = applicableTickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
+            const unitPrice = Number(applicableTickets[0].price) || 0;
+            
+            if (dbCoupon.discountPercentage !== undefined) {
+              discountAmount = Math.round((unitPrice * totalApplicableQuantity * dbCoupon.discountPercentage) / 100);
+            } else if (dbCoupon.discountPrice !== undefined) {
+              discountAmount = Math.min(dbCoupon.discountPrice * totalApplicableQuantity, unitPrice * totalApplicableQuantity);
+            }
           }
           
           if (discountAmount > 0) {

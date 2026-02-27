@@ -163,22 +163,22 @@ exports.validateCoupon = async (req, res, next) => {
       return res.status(400).json({ message: 'Coupon has expired' });
     }
 
-    // Check if selected tickets contain the applicable category
+    // Compute discount: apply to ALL applicable tickets
     const applicableCategory = coupon.ticketCategory;
     const applicableTickets = tickets.filter(t => t.ticketType === applicableCategory);
     if (applicableTickets.length === 0) {
       return res.status(400).json({ message: `Coupon applies to ${applicableCategory} tickets only` });
     }
 
-    // Compute discount: apply ONCE per applicable ticket category (single unit price)
-    const singleTicket = applicableTickets[0];
-    const unitPrice = Number(singleTicket?.price) || 0;
+    // Calculate total quantity and discount for all applicable tickets
+    const totalApplicableQuantity = applicableTickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
+    const unitPrice = Number(applicableTickets[0]?.price) || 0;
     let discountAmount = 0;
     
     if (coupon.discountPercentage !== undefined) {
-      discountAmount = Math.round((unitPrice * coupon.discountPercentage) / 100);
+      discountAmount = Math.round((unitPrice * totalApplicableQuantity * coupon.discountPercentage) / 100);
     } else if (coupon.discountPrice !== undefined) {
-      discountAmount = Math.min(coupon.discountPrice, unitPrice); // Don't discount more than the ticket price
+      discountAmount = Math.min(coupon.discountPrice * totalApplicableQuantity, unitPrice * totalApplicableQuantity);
     }
     
     const totalAmount = tickets.reduce((sum, t) => sum + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
@@ -196,7 +196,7 @@ exports.validateCoupon = async (req, res, next) => {
       discountAmount,
       totalAmount,
       payable,
-      message: 'Coupon applied'
+      message: `Coupon applied to ${totalApplicableQuantity} ticket${totalApplicableQuantity > 1 ? 's' : ''}`
     });
   } catch (err) {
     next(err);
