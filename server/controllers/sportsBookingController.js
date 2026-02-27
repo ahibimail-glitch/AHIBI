@@ -41,8 +41,24 @@ exports.searchVenues = async (req, res) => {
     };
 
     // Sport filter
-    if (sport) {
-      query.sportsSupported = sport;
+    // NOTE: Do NOT rely on SportsVenue.sportsSupported because it may not be kept in sync
+    // when venues have multiple courts. Instead, filter by courts so a venue matches if
+    // it has at least one active court of the requested sport.
+    const normalizedSport = sport ? String(sport).trim().toLowerCase() : '';
+    if (normalizedSport) {
+      const sportVenueIds = await Court.distinct('venue', {
+        sportType: normalizedSport,
+        status: 'active'
+      });
+
+      if (sportVenueIds.length === 0) {
+        return ApiResponse.success(res, 'Venues retrieved successfully', {
+          venues: [],
+          count: 0
+        });
+      }
+
+      query._id = { $in: sportVenueIds };
     }
 
     // City filter
@@ -90,7 +106,13 @@ exports.searchVenues = async (req, res) => {
       const Court = mongoose.model('Court');
       const venueIds = venues.map(v => v._id);
       
-      const courtQuery = { venue: { $in: venueIds } };
+      const courtQuery = {
+        venue: { $in: venueIds },
+        status: 'active'
+      };
+      if (normalizedSport) {
+        courtQuery.sportType = normalizedSport;
+      }
       const courts = await Court.find(courtQuery).select('venue pricing');
 
       const venuesWithPrice = new Set();
@@ -129,10 +151,15 @@ exports.searchVenues = async (req, res) => {
     try {
       const venueIds = venues.map(v => v._id);
       if (venueIds.length > 0) {
-        const courts = await Court.find({
+        const courtQuery = {
           venue: { $in: venueIds },
           status: 'active'
-        }).select('venue pricing');
+        };
+        if (normalizedSport) {
+          courtQuery.sportType = normalizedSport;
+        }
+
+        const courts = await Court.find(courtQuery).select('venue pricing');
 
         const minPriceMap = new Map();
         courts.forEach(court => {
