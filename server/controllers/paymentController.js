@@ -324,11 +324,15 @@ exports.verifyPayment = async (req, res) => {
     // Increment coupon usage count if applied (keep status as active for reuse)
     try {
       if (bookingDetails?.coupon?.code) {
+        // Calculate how many tickets the coupon was applied to
+        const applicableTickets = (bookingDetails?.tickets || []).filter(t => t.ticketType === bookingDetails.coupon.ticketCategory);
+        const usageCount = applicableTickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
+        
         await Coupon.findOneAndUpdate(
           { code: bookingDetails.coupon.code },
           { 
             $set: { usedAt: new Date() },
-            $inc: { timesUsed: 1 }
+            $inc: { timesUsed: usageCount }
           }
         );
       }
