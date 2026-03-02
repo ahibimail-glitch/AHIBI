@@ -896,20 +896,20 @@ export default function ArtistDashboard() {
                     bookingRequests.map((request) => (
                       <div key={request._id} className="p-4 border rounded-lg">
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold">{request.event.name}</h3>
+                          <h3 className="font-semibold">{request.event?.name || 'Unknown Event'}</h3>
                           <Badge variant="outline">₹{request.booking.requestedAmount}</Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-1">
-                          by {request.organizer.name}
+                          by {request.organizer?.name || 'Unknown Organizer'}
                         </p>
                         <p className="text-sm text-muted-foreground mb-1">
                           <Calendar className="h-4 w-4 inline mr-1" />
-                          {formatDateDDMMYY(request.event.date)}
-                          {request.event.startTime && request.event.endTime ? ` • ${request.event.startTime} - ${request.event.endTime}` : ''}
+                          {request.event?.date ? formatDateDDMMYY(request.event.date) : 'Date not specified'}
+                          {request.event?.startTime && request.event?.endTime ? ` • ${request.event.startTime} - ${request.event.endTime}` : ''}
                         </p>
                         <p className="text-sm text-muted-foreground mb-3">
                           <MapPin className="h-4 w-4 inline mr-1" />
-                          {request.event.venue.name}
+                          {request.event.venue?.name || 'Unknown Venue'}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           <Button
@@ -974,15 +974,15 @@ export default function ArtistDashboard() {
                     <div className="space-y-4">
                       <div className="space-y-1">
                         <div className="text-sm text-muted-foreground">Event</div>
-                        <div className="font-medium">{selectedBooking.event.name}</div>
+                        <div className="font-medium">{selectedBooking.event?.name || 'Unknown Event'}</div>
                         <div className="text-sm text-muted-foreground">
-                          {formatDateDDMMYY(selectedBooking.event.date)}
-                          {selectedBooking.event.startTime && selectedBooking.event.endTime
+                          {selectedBooking.event?.date ? formatDateDDMMYY(selectedBooking.event.date) : 'Date not specified'}
+                          {selectedBooking.event?.startTime && selectedBooking.event?.endTime
                             ? ` • ${selectedBooking.event.startTime} - ${selectedBooking.event.endTime}`
                             : ''}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {selectedBooking.event.venue?.name}
+                          {selectedBooking.event?.venue?.name || 'Unknown Venue'}
                         </div>
                       </div>
 
@@ -1982,19 +1982,19 @@ export default function ArtistDashboard() {
                   bookingRequests.map((request) => (
                     <div key={request._id} className="p-4 border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{request.event.name}</h3>
+                        <h3 className="font-semibold">{request.event?.name || 'Unknown Event'}</h3>
                         <Badge variant="outline">₹{request.booking.requestedAmount}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
-                        by {request.organizer.name}
+                        by {request.organizer?.name || 'Unknown Organizer'}
                       </p>
                       <p className="text-sm text-muted-foreground mb-1">
                         <Calendar className="h-4 w-4 inline mr-1" />
-                        {new Date(request.event.date).toLocaleDateString()}
+                        {request.event?.date ? new Date(request.event.date).toLocaleDateString() : 'Date not specified'}
                       </p>
                       <p className="text-sm text-muted-foreground mb-3">
                         <MapPin className="h-4 w-4 inline mr-1" />
-                        {request.event.venue.name}
+                        {request.event.venue?.name || 'Unknown Venue'}
                       </p>
                       <div className="flex space-x-2">
                         <Button 

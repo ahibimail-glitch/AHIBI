@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, ChevronLeft, ChevronRight, Clock, DollarSign, User, MapPin } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Calendar as CalendarIcon, Clock, DollarSign, User, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -68,10 +69,11 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
   const [loading, setLoading] = useState(true);
   const [hasOrganizerToken, setHasOrganizerToken] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDateObj, setSelectedDateObj] = useState<Date | undefined>(undefined);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [manualStartTime, setManualStartTime] = useState('');
   const [manualEndTime, setManualEndTime] = useState('');
-  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [bookingForm, setBookingForm] = useState<BookingFormData>({
     eventName: '',
     eventDescription: '',
@@ -175,79 +177,27 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
     }
   };
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const days = [];
-    
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-    
-    // Add all days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day));
-    }
-    
-    return days;
-  };
-
   const getDateAvailability = (date: Date) => {
     const dateStr = toDateKey(date);
     return availability.find(avail => avail.date === dateStr);
   };
 
-  const getDayStatusColor = (date: Date) => {
-    const todayKey = getTodayKey();
-    const dateKey = toDateKey(date);
-    if (dateKey < todayKey) return 'bg-gray-100 text-gray-400 cursor-not-allowed';
+
+  const isDateDisabled = (date: Date) => {
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+    if (date < todayStart) return true;
 
     const dayAvail = getDateAvailability(date);
-    if (!dayAvail) return 'bg-green-50 text-green-800 hover:bg-green-100 cursor-pointer';
-    
-    switch (dayAvail.dayStatus) {
-      case 'available':
-        return 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer';
-      case 'partially_booked':
-        return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer';
-      case 'fully_booked':
-        return 'bg-red-100 text-red-800';
-      case 'unavailable':
-        return 'bg-gray-100 text-gray-500';
-      default:
-        return 'bg-gray-100 text-gray-400';
-    }
+    if (!dayAvail) return false;
+    return dayAvail.dayStatus === 'unavailable' || dayAvail.dayStatus === 'fully_booked';
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev);
-      if (direction === 'prev') {
-        newDate.setMonth(prev.getMonth() - 1);
-      } else {
-        newDate.setMonth(prev.getMonth() + 1);
-      }
-      return newDate;
-    });
-  };
+  const handleDateSelect = (date?: Date) => {
+    if (!date) return;
+    if (isDateDisabled(date)) return;
 
-  const handleDateClick = (date: Date) => {
-    const todayKey = getTodayKey();
     const dateKey = toDateKey(date);
-    if (dateKey < todayKey) {
-      return;
-    }
-
-    const dayAvail = getDateAvailability(date);
-    if (dayAvail && (dayAvail.dayStatus === 'unavailable' || dayAvail.dayStatus === 'fully_booked')) {
-      return;
-    }
+    setSelectedDateObj(date);
     setSelectedDate(dateKey);
     setSelectedTimeSlot(null);
     setManualStartTime('');
@@ -259,7 +209,7 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
       setSelectedTimeSlot(timeSlot);
       setManualStartTime('');
       setManualEndTime('');
-      setShowBookingForm(true);
+      // Don't show dialog, just set state to show inline form
     }
   };
 
@@ -294,7 +244,7 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
       isBooked: false,
       price: artist.basePrice,
     });
-    setShowBookingForm(true);
+    // Don't show dialog, just set state to show inline form
   };
 
   const calculatePrice = () => {
@@ -353,30 +303,67 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
       });
 
       if (response.ok) {
-        toast({
-          title: "Booking Request Sent",
-          description: "Your booking request has been sent to the artist for approval.",
-        });
-        setShowBookingForm(false);
+        // Show success modal instead of toast
+        setShowSuccessModal(true);
+        // Reset form after successful submission
         setSelectedDate(null);
         setSelectedTimeSlot(null);
         setManualStartTime('');
         setManualEndTime('');
-        setBookingForm({
-          eventName: '',
-          eventDescription: '',
-          eventLocation: '',
-          duration: 2,
-          specialRequests: ''
-        });
+        setBookingForm(prev => ({ ...prev, eventName: '', eventLocation: '', eventDescription: '', specialRequests: '', duration: 1 }));
         fetchAvailability(); // Refresh availability
       } else {
-        const errorData = await response.json();
-        toast({
-          title: "Booking Failed",
-          description: errorData.message || "Failed to create booking request",
-          variant: "destructive"
-        });
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle specific error cases
+        if (errorData.message === "Organizer not found" || response.status === 401) {
+          toast({
+            title: "Authentication Required",
+            description: "Please login as an organizer to make booking requests. Your session may have expired.",
+            variant: "destructive",
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  localStorage.removeItem('organizer_token');
+                  window.location.href = '/organizer/auth/login';
+                }}
+              >
+                Login Again
+              </Button>
+            )
+          });
+          // Clear invalid token
+          localStorage.removeItem('organizer_token');
+          setHasOrganizerToken(false);
+        } else if (errorData.message?.includes('token') || response.status === 403) {
+          toast({
+            title: "Session Expired",
+            description: "Your login session has expired. Please login again.",
+            variant: "destructive",
+            action: (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  localStorage.removeItem('organizer_token');
+                  window.location.href = '/organizer/auth/login';
+                }}
+              >
+                Login Again
+              </Button>
+            )
+          });
+          localStorage.removeItem('organizer_token');
+          setHasOrganizerToken(false);
+        } else {
+          toast({
+            title: "Booking Failed",
+            description: errorData.message || "Failed to create booking request. Please try again.",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error('Error creating booking:', error);
@@ -390,11 +377,26 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
     }
   };
 
-  const days = getDaysInMonth(currentDate);
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  const calendarModifiers = useMemo(() => {
+    const partiallyBooked: Date[] = [];
+    const fullyBooked: Date[] = [];
+    const unavailable: Date[] = [];
+
+    for (const day of availability) {
+      const d = new Date(day.date);
+      if (isNaN(d.getTime())) continue;
+
+      if (day.dayStatus === 'partially_booked') partiallyBooked.push(d);
+      if (day.dayStatus === 'fully_booked') fullyBooked.push(d);
+      if (day.dayStatus === 'unavailable') unavailable.push(d);
+    }
+
+    return {
+      partiallyBooked,
+      fullyBooked,
+      unavailable,
+    };
+  }, [availability]);
 
   const selectedDayAvailability = selectedDate ? availability.find(avail => avail.date === selectedDate) : null;
   const manualDurationHours = manualStartTime && manualEndTime
@@ -404,80 +406,88 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
 
   return (
     <div className="space-y-6">
-      {/* Calendar Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
-          {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-        </h3>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-sm">
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-          <span>Available</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
-          <span>Partially Booked</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
-          <span>Fully Booked</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
-          <span>Unavailable</span>
-        </div>
-      </div>
-
-      {!loading && !hasOrganizerToken && (
-        <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
-          Login as an organizer to view availability and book this artist.
-        </div>
-      )}
-
-      {!loading && hasOrganizerToken && availability.length === 0 && (
-        <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm">
-          All dates are open by default. Only dates explicitly marked unavailable by the artist will be blocked.
-        </div>
-      )}
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {/* Day headers */}
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="p-2 text-center font-medium text-gray-500 text-sm">
-            {day}
+      <Card className="bg-white border border-gray-200 shadow-sm">
+        <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+          <CardTitle className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4" />
+            Select a date
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
+          <div className="flex justify-center overflow-x-auto">
+            <Calendar
+              mode="single"
+              month={currentDate}
+              onMonthChange={setCurrentDate}
+              selected={selectedDateObj}
+              onSelect={handleDateSelect}
+              disabled={isDateDisabled}
+              modifiers={calendarModifiers}
+              modifiersClassNames={{
+                partiallyBooked:
+                  "bg-yellow-400 text-yellow-900 hover:bg-yellow-500 hover:text-yellow-950 focus:bg-yellow-400 focus:text-yellow-900 font-medium",
+                fullyBooked:
+                  "bg-red-500 text-white hover:bg-red-600 hover:text-white focus:bg-red-500 focus:text-white cursor-not-allowed opacity-90",
+                unavailable:
+                  "bg-gray-100 text-gray-500 cursor-not-allowed opacity-80",
+              }}
+              className="rounded-lg border-0"
+              classNames={{
+                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                month: "space-y-4 w-full",
+                caption: "flex justify-center pt-1 relative items-center px-2",
+                caption_label: "text-sm font-semibold",
+                nav: "space-x-1 flex items-center",
+                nav_button: "h-8 w-8 bg-transparent p-0 opacity-50 hover:opacity-100",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse space-y-1",
+                head_row: "flex justify-around",
+                head_cell:
+                  "text-gray-500 rounded-md w-8 sm:w-9 font-normal text-[0.75rem] sm:text-[0.8rem] flex-1 text-center",
+                row: "flex w-full mt-2 justify-around",
+                cell:
+                  "text-center text-sm p-0 relative flex-1 [&:has([aria-selected])]:bg-transparent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-gray-100 rounded-md aria-selected:opacity-100 mx-auto text-sm sm:text-base",
+                day_selected:
+                  "bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:bg-blue-500 focus:text-white",
+                day_today: "bg-gray-100 text-gray-900 font-semibold",
+                day_outside: "text-gray-400 opacity-50",
+                day_disabled: "text-gray-400 opacity-50 line-through",
+                day_hidden: "invisible",
+              }}
+            />
           </div>
-        ))}
-        
-        {/* Calendar days */}
-        {days.map((date, index) => (
-          <div key={index} className="aspect-square">
-            {date ? (
-              <div
-                className={`w-full h-full p-1 text-center text-sm rounded-lg transition-colors ${getDayStatusColor(date)} ${
-                  selectedDate === toDateKey(date) ? 'ring-2 ring-pink-500' : ''
-                }`}
-                onClick={() => handleDateClick(date)}
-              >
-                {date.getDate()}
-              </div>
-            ) : (
-              <div className="w-full h-full"></div>
-            )}
+
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-yellow-400 border border-yellow-500"></div>
+              <span className="text-gray-600">Partially Booked</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-red-500"></div>
+              <span className="text-gray-600">Fully Booked</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-gray-100 border border-gray-300"></div>
+              <span className="text-gray-600">Available</span>
+            </div>
           </div>
-        ))}
-      </div>
+
+          {!loading && !hasOrganizerToken && (
+            <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
+              Login as an organizer to view availability and book this artist.
+            </div>
+          )}
+
+          {!loading && hasOrganizerToken && availability.length === 0 && (
+            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm">
+              All dates are open by default. Only dates explicitly marked unavailable by the artist will be blocked.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Selected Date Time Slots */}
       {selectedDate && (
@@ -529,39 +539,134 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
                     Pick your preferred time
                   </div>
                   <div className="text-sm text-gray-600">
-                    This artist hasn’t set predefined slots for this date. Select a time range and send a request.
+                    This artist hasn’t set predefined slots for this date. Choose a quick duration or set a custom time range.
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="manualStartTime">From</Label>
-                    <Input
-                      id="manualStartTime"
-                      type="time"
-                      value={manualStartTime}
-                      onChange={(e) => setManualStartTime(e.target.value)}
-                    />
-                    <div className="text-xs text-gray-500 mt-1">Example: 18:30</div>
-                  </div>
-                  <div>
-                    <Label htmlFor="manualEndTime">To</Label>
-                    <Input
-                      id="manualEndTime"
-                      type="time"
-                      value={manualEndTime}
-                      onChange={(e) => setManualEndTime(e.target.value)}
-                    />
-                    <div className="text-xs text-gray-500 mt-1">Example: 21:30</div>
+
+                {/* Quick Duration Buttons */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Quick select</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { hours: 2, label: '2 hours' },
+                      { hours: 3, label: '3 hours' },
+                      { hours: 4, label: '4 hours' },
+                      { hours: 6, label: '6 hours' },
+                    ].map(({ hours, label }) => (
+                      <Button
+                        key={hours}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          const startHour = now.getHours();
+                          const start = `${String(startHour).padStart(2, '0')}:00`;
+                          const endHour = (startHour + hours) % 24;
+                          const end = `${String(endHour).padStart(2, '0')}:00`;
+                          setManualStartTime(start);
+                          setManualEndTime(end);
+                          setBookingForm(prev => ({ ...prev, duration: hours }));
+                        }}
+                        className="text-xs sm:text-sm"
+                      >
+                        {label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
+
+                {/* Common Time Presets */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Popular times</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { start: '09:00', end: '12:00', label: 'Morning (9 AM – 12 PM)' },
+                      { start: '14:00', end: '17:00', label: 'Afternoon (2 PM – 5 PM)' },
+                      { start: '17:00', end: '20:00', label: 'Evening (5 PM – 8 PM)' },
+                      { start: '18:00', end: '21:00', label: 'Dinner (6 PM – 9 PM)' },
+                    ].map(({ start, end, label }) => (
+                      <Button
+                        key={label}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setManualStartTime(start);
+                          setManualEndTime(end);
+                          const duration = (new Date(`2000-01-01T${end}:00`).getTime() - new Date(`2000-01-01T${start}:00`).getTime()) / (1000 * 60 * 60);
+                          setBookingForm(prev => ({ ...prev, duration: Math.ceil(duration) }));
+                        }}
+                        className="text-xs sm:text-sm justify-start"
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Time */}
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Or choose custom time</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="manualStartTime" className="text-xs text-gray-600">Start time</Label>
+                      <Input
+                        id="manualStartTime"
+                        type="time"
+                        value={manualStartTime}
+                        onChange={(e) => {
+                          setManualStartTime(e.target.value);
+                          // Auto-calculate duration if end time is set
+                          if (manualEndTime) {
+                            const start = new Date(`2000-01-01T${e.target.value}:00`);
+                            const end = new Date(`2000-01-01T${manualEndTime}:00`);
+                            const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                            if (duration > 0) {
+                              setBookingForm(prev => ({ ...prev, duration: Math.ceil(duration) }));
+                            }
+                          }
+                        }}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">e.g., 18:30</div>
+                    </div>
+                    <div>
+                      <Label htmlFor="manualEndTime" className="text-xs text-gray-600">End time</Label>
+                      <Input
+                        id="manualEndTime"
+                        type="time"
+                        value={manualEndTime}
+                        onChange={(e) => {
+                          setManualEndTime(e.target.value);
+                          // Auto-calculate duration if start time is set
+                          if (manualStartTime) {
+                            const start = new Date(`2000-01-01T${manualStartTime}:00`);
+                            const end = new Date(`2000-01-01T${e.target.value}:00`);
+                            const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                            if (duration > 0) {
+                              setBookingForm(prev => ({ ...prev, duration: Math.ceil(duration) }));
+                            }
+                          }
+                        }}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">e.g., 21:30</div>
+                    </div>
+                  </div>
+                </div>
+
                 {manualStartTime && manualEndTime && !isManualTimeRangeValid && (
-                  <div className="text-sm text-red-600">
+                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
                     End time must be after start time.
                   </div>
                 )}
                 {isManualTimeRangeValid && (
-                  <div className="text-sm text-gray-700">
-                    Duration: <span className="font-medium">{Math.ceil(manualDurationHours!)} hour(s)</span>
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">Duration:</span> {Math.ceil(manualDurationHours!)} hour(s)
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      You can edit this before sending the request.
+                    </div>
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-3">
@@ -578,108 +683,168 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         </Card>
       )}
 
-      {/* Booking Form Dialog */}
-      <Dialog open={showBookingForm} onOpenChange={setShowBookingForm}>
+      {/* Booking Form - Inline */}
+      {selectedDate && selectedTimeSlot && (
+        <Card className="mt-4">
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Book {artist.name}</h3>
+                <p className="text-sm text-gray-600">
+                  {formatDateDDMMYY(selectedDate)} • {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="eventName">Event Name *</Label>
+                  <Input
+                    id="eventName"
+                    value={bookingForm.eventName}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, eventName: e.target.value }))}
+                    placeholder="Enter event name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="eventLocation">Event Location *</Label>
+                  <Input
+                    id="eventLocation"
+                    value={bookingForm.eventLocation}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, eventLocation: e.target.value }))}
+                    placeholder="Enter event location"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="duration">Duration (hours) *</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={bookingForm.duration}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 1 }))}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="eventDescription">Event Description</Label>
+                <Textarea
+                  id="eventDescription"
+                  value={bookingForm.eventDescription}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, eventDescription: e.target.value }))}
+                  placeholder="Describe your event"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="specialRequests">Special Requests</Label>
+                <Textarea
+                  id="specialRequests"
+                  value={bookingForm.specialRequests}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
+                  placeholder="Any special requirements or requests"
+                  rows={2}
+                />
+              </div>
+
+              {/* Pricing Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <span>Base Price:</span>
+                  <span>₹{selectedTimeSlot?.price || artist.basePrice}/hour</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span>Duration:</span>
+                  <span>{bookingForm.duration} hours</span>
+                </div>
+                <div className="flex justify-between items-center font-semibold text-lg border-t pt-2">
+                  <span>Total:</span>
+                  <span className="text-green-600">₹{calculatePrice()}</span>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedTimeSlot(null);
+                    setManualStartTime('');
+                    setManualEndTime('');
+                    setBookingForm(prev => ({ ...prev, eventName: '', eventLocation: '', eventDescription: '', specialRequests: '', duration: 1 }));
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBookingSubmit}
+                  disabled={submitting || !bookingForm.eventName || !bookingForm.eventLocation}
+                  className="flex-1"
+                >
+                  {submitting ? 'Sending...' : 'Send Booking Request'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Book {artist.name}</DialogTitle>
-            <DialogDescription>
-              {selectedDate && selectedTimeSlot && (
-                <>
-                  {formatDateDDMMYY(selectedDate)} • {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
-                </>
-              )}
-            </DialogDescription>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Booking Request Sent!</DialogTitle>
+            </div>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="eventName">Event Name *</Label>
-              <Input
-                id="eventName"
-                value={bookingForm.eventName}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, eventName: e.target.value }))}
-                placeholder="Enter event name"
-                required
-              />
+          <div className="text-center space-y-4">
+            <p className="text-gray-600">
+              Your booking request has been successfully sent to <span className="font-medium">{artist.name}</span>.
+            </p>
+            <p className="text-gray-700 font-medium">
+              The artist team will contact you shortly to confirm the details.
+            </p>
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">What happens next?</h4>
+              <ul className="text-sm text-blue-800 space-y-1">
+                <li>• Artist team will review your request</li>
+                <li>• They'll contact you via phone or email</li>
+                <li>• You'll discuss final details and pricing</li>
+                <li>• Booking will be confirmed upon agreement</li>
+              </ul>
             </div>
-
-            <div>
-              <Label htmlFor="eventLocation">Event Location *</Label>
-              <Input
-                id="eventLocation"
-                value={bookingForm.eventLocation}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, eventLocation: e.target.value }))}
-                placeholder="Enter event location"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="duration">Duration (hours) *</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                max="12"
-                value={bookingForm.duration}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, duration: parseInt(e.target.value) || 1 }))}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="eventDescription">Event Description</Label>
-              <Textarea
-                id="eventDescription"
-                value={bookingForm.eventDescription}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, eventDescription: e.target.value }))}
-                placeholder="Describe your event"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="specialRequests">Special Requests</Label>
-              <Textarea
-                id="specialRequests"
-                value={bookingForm.specialRequests}
-                onChange={(e) => setBookingForm(prev => ({ ...prev, specialRequests: e.target.value }))}
-                placeholder="Any special requirements or requests"
-                rows={2}
-              />
-            </div>
-
-            {/* Pricing Summary */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span>Base Price:</span>
-                <span>₹{selectedTimeSlot?.price || artist.basePrice}/hour</span>
-              </div>
-              <div className="flex justify-between items-center mb-2">
-                <span>Duration:</span>
-                <span>{bookingForm.duration} hours</span>
-              </div>
-              <div className="flex justify-between items-center font-semibold text-lg border-t pt-2">
-                <span>Total:</span>
-                <span className="text-green-600">₹{calculatePrice()}</span>
-              </div>
-            </div>
-
-            <div className="flex space-x-3">
+            
+            <div className="flex space-x-3 pt-2">
               <Button
                 variant="outline"
-                onClick={() => setShowBookingForm(false)}
+                onClick={() => setShowSuccessModal(false)}
                 className="flex-1"
               >
-                Cancel
+                Close
               </Button>
               <Button
-                onClick={handleBookingSubmit}
-                disabled={submitting || !bookingForm.eventName || !bookingForm.eventLocation}
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  // Optionally redirect to artist profile or bookings page
+                  window.location.href = `/artist/profile/${artistId}`;
+                }}
                 className="flex-1"
               >
-                {submitting ? 'Sending...' : 'Send Booking Request'}
+                View Artist Profile
               </Button>
             </div>
           </div>

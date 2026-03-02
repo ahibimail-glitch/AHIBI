@@ -3,793 +3,631 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
-import { 
-  Star, MapPin, Phone, Mail, Instagram, Youtube, 
-  Calendar, Clock, Award, Play, Image as ImageIcon,
-  Music, Users, ChevronLeft, Share2, Heart, ExternalLink,
-  CheckCircle, Sparkles, Globe, Facebook, Twitter
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Star, MapPin, Phone, Mail, Instagram, Youtube,
+  Calendar, Award, Play, Music, Users, ChevronLeft,
+  Share2, Heart, CheckCircle, Sparkles, Globe, Facebook, Twitter
+} from "lucide-react";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import Image from "next/image";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import PublicBookingCalendar from "@/components/artist/PublicBookingCalendar";
 
+/* ─── Types ────────────────────────────────────────────────────────────── */
 interface Artist {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  city: string;
-  bio: string;
-  genres: string[];
-  languages: string[];
-  type: string;
-  basePrice: number;
-  profilePic?: string;
+  _id: string; name: string; email: string; phone: string; city: string;
+  bio: string; genres: string[]; languages: string[]; type: string;
+  basePrice: number; profilePic?: string;
   gallery?: {
-    photos: Array<{
-      url: string;
-      caption: string;
-      isProfileImage: boolean;
-      isCoverImage: boolean;
-    }>;
-    videos: Array<{
-      url: string;
-      thumbnail: string;
-      caption: string;
-      platform: string;
-    }>;
+    photos: Array<{ url: string; caption: string; isProfileImage: boolean; isCoverImage: boolean }>;
+    videos: Array<{ url: string; thumbnail: string; caption: string; platform: string }>;
   };
-  accolades: Array<{
-    title: string;
-    description: string;
-    year: number;
-    organization: string;
-    certificate?: string;
-  }>;
-  socialLinks?: {
-    instagram?: string;
-    youtube?: string;
-    spotify?: string;
-    facebook?: string;
-    twitter?: string;
-    website?: string;
-  };
-  rating?: {
-    average: number;
-    count: number;
-  };
+  accolades: Array<{ title: string; description: string; year: number; organization: string; certificate?: string }>;
+  socialLinks?: { instagram?: string; youtube?: string; spotify?: string; facebook?: string; twitter?: string; website?: string };
+  rating?: { average: number; count: number };
   totalBookings?: number;
-  totalEarnings?: number;
 }
 
-// Skeleton Components
-const HeroSkeleton = () => (
-  <div className="animate-pulse">
-    <div className="h-48 sm:h-64 lg:h-80 bg-gray-200" />
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 sm:-mt-20 relative z-10">
-      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-        <div className="w-28 h-28 sm:w-36 sm:h-36 lg:w-44 lg:h-44 rounded-2xl bg-gray-300 border-4 border-white shadow-xl" />
-        <div className="flex-1 pt-2 sm:pt-8">
-          <div className="h-8 bg-gray-300 rounded w-48 mb-3" />
-          <div className="h-5 bg-gray-200 rounded w-32 mb-4" />
-          <div className="flex gap-2">
-            <div className="h-6 w-20 bg-gray-200 rounded-full" />
-            <div className="h-6 w-24 bg-gray-200 rounded-full" />
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+/* ─── Shared font + CSS ─────────────────────────────────────────────────── */
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
 
-const CardSkeleton = () => (
-  <div className="animate-pulse bg-white rounded-2xl p-6 shadow-sm">
-    <div className="h-6 bg-gray-200 rounded w-32 mb-4" />
-    <div className="space-y-3">
-      <div className="h-4 bg-gray-100 rounded w-full" />
-      <div className="h-4 bg-gray-100 rounded w-5/6" />
-      <div className="h-4 bg-gray-100 rounded w-4/6" />
-    </div>
-  </div>
-);
+  .ap {
+    --cream:#FAF7F2; --cream2:#F3EFE8; --cream3:#EDE8DF;
+    --ink:#1A1714; --ink2:#3D3730; --ink3:#6B6259;
+    --red:#C8102E; --red2:#E31837; --gold:#B5892A; --border:#DDD8CF;
+    font-family:'DM Sans',sans-serif;
+    background:var(--cream); color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
 
-const GallerySkeleton = () => (
-  <div className="animate-pulse">
-    <div className="flex gap-3 overflow-hidden">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex-shrink-0 w-40 h-40 sm:w-48 sm:h-48 bg-gray-200 rounded-xl" />
+  @keyframes apFadeUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes apFadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes apShimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+
+  .ap .fu0{animation:apFadeUp .65s .00s ease both}
+  .ap .fu1{animation:apFadeUp .65s .12s ease both}
+  .ap .fu2{animation:apFadeUp .65s .24s ease both}
+  .ap .fu3{animation:apFadeUp .65s .36s ease both}
+  .ap .fi {animation:apFadeIn  .9s .05s ease both}
+
+  /* skeleton */
+  .ap .skel{background:linear-gradient(90deg,var(--cream2) 25%,var(--cream3) 50%,var(--cream2) 75%);background-size:800px 100%;animation:apShimmer 1.6s infinite linear}
+
+  /* HERO */
+  .ap .hero{position:relative;height:340px;overflow:hidden}
+  @media(min-width:768px){.ap .hero{height:440px}}
+  @media(min-width:1024px){.ap .hero{height:520px}}
+  .ap .hero-img{width:100%;height:100%;object-fit:cover;transition:transform 8s ease}
+  .ap .hero:hover .hero-img{transform:scale(1.04)}
+  .ap .hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,15,10,.88) 0%,rgba(20,15,10,.28) 55%,rgba(0,0,0,.12) 100%)}
+  .ap .hero-grain{position:absolute;inset:0;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .ap .hero-bar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:16px 20px}
+  @media(min-width:1024px){.ap .hero-bar{padding:24px 48px}}
+  .ap .icon-btn{width:40px;height:40px;background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:#fff;flex-shrink:0}
+  .ap .icon-btn:hover{background:rgba(255,255,255,.22)}
+  .ap .icon-btn.saved{background:var(--red2);border-color:var(--red2)}
+  .ap .hero-acts{display:flex;gap:8px}
+  .ap .hero-bot{position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0 20px 28px}
+  @media(min-width:1024px){.ap .hero-bot{padding:0 48px 44px}}
+  .ap .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px}
+  .ap .hero-eyebrow-line{width:24px;height:1px;background:rgba(255,255,255,.35)}
+  .ap .hero-eyebrow-txt{font-size:10px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.45)}
+  .ap .hero-name{font-family:'Playfair Display',serif;font-size:clamp(36px,6vw,80px);font-weight:900;line-height:.93;color:#fff;letter-spacing:-2px;margin-bottom:18px}
+  .ap .hero-name em{font-style:italic;color:rgba(255,255,255,.4)}
+  .ap .hero-meta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .ap .hero-meta-item{display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.6)}
+  .ap .hero-meta-item strong{color:#fff;font-weight:600}
+
+  /* PROFILE STRIP */
+  .ap .strip{background:var(--cream);border-bottom:1px solid var(--border);position:relative;z-index:30}
+  .ap .strip-in{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;align-items:flex-end;gap:20px}
+  @media(min-width:1024px){.ap .strip-in{padding:0 48px}}
+  .ap .av-wrap{flex-shrink:0;margin-top:-52px;position:relative}
+  @media(min-width:768px){.ap .av-wrap{margin-top:-68px}}
+  .ap .av{width:88px;height:88px;border:3px solid var(--cream);overflow:hidden;background:var(--cream2);box-shadow:0 8px 28px rgba(0,0,0,.18)}
+  @media(min-width:768px){.ap .av{width:112px;height:112px}}
+  .ap .av img{width:100%;height:100%;object-fit:cover}
+  .ap .av-fallback{width:100%;height:100%;background:linear-gradient(135deg,var(--ink) 0%,var(--ink2) 100%);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:34px;font-weight:700;color:#fff}
+  .ap .av-badge{position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:var(--red2);display:flex;align-items:center;justify-content:center}
+  .ap .strip-info{flex:1;padding:14px 0 18px}
+  .ap .strip-type{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px}
+  .ap .strip-name{font-family:'Playfair Display',serif;font-size:clamp(18px,2.8vw,28px);font-weight:700;color:var(--ink);letter-spacing:-.5px;line-height:1.1}
+  .ap .strip-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
+  .ap .strip-meta-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink3)}
+  .ap .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .ap .tag{padding:2px 9px;font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;border:1px solid var(--border);color:var(--ink3)}
+  .ap .tag.g{border-color:var(--red);color:var(--red);background:rgba(200,16,46,.04)}
+  .ap .strip-cta{display:none;padding:14px 0 18px;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:8px}
+  @media(min-width:1024px){.ap .strip-cta{display:flex}}
+  .ap .price-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3)}
+  .ap .price-amt{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--ink);line-height:1.1;text-align:right}
+  .ap .btn-ink{display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;border:none;padding:13px 26px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif}
+  .ap .btn-ink:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(227,24,55,.25)}
+
+  /* LAYOUT */
+  .ap .layout{max-width:1280px;margin:0 auto;padding:32px 20px 110px;display:grid;grid-template-columns:1fr;gap:2px}
+  @media(min-width:1024px){.ap .layout{grid-template-columns:1fr 332px;gap:28px;padding:36px 48px 60px;align-items:start}}
+  .ap .col-main{display:flex;flex-direction:column;gap:2px}
+  .ap .col-side{display:none}
+  @media(min-width:1024px){.ap .col-side{display:block}}
+  .ap .side-sticky{position:sticky;top:80px;display:flex;flex-direction:column;gap:2px}
+
+  /* CARDS */
+  .ap .card{background:#fff;padding:28px;border:1px solid var(--border)}
+  @media(max-width:767px){.ap .card{padding:20px 18px}}
+  .ap .card-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--ink);margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+  .ap .card-title-icon{color:var(--red);flex-shrink:0}
+
+  /* BIO */
+  .ap .bio-txt{font-size:14px;line-height:1.85;color:var(--ink3)}
+  .ap .bio-more{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif}
+  .ap .highlights{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+  @media(max-width:639px){.ap .highlights{grid-template-columns:repeat(2,1fr)}}
+  .ap .hl{padding:14px;border-right:1px solid var(--border)}
+  .ap .hl:last-child{border-right:none}
+  .ap .hl-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+  .ap .hl-val{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--ink)}
+  .ap .hl-val.green{color:#1A8A4A}
+
+  /* GALLERY */
+  .ap .gal-scroll{display:flex;gap:2px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -20px;padding-left:20px}
+  .ap .gal-scroll::-webkit-scrollbar{display:none}
+  .ap .gal-item{flex-shrink:0;width:152px;height:152px;overflow:hidden;cursor:pointer;background:var(--cream2)}
+  .ap .gal-item img{width:100%;height:100%;object-fit:cover;transition:transform .45s}
+  .ap .gal-item:hover img{transform:scale(1.07)}
+  .ap .videos{display:grid;grid-template-columns:1fr;gap:2px;margin-top:2px}
+  @media(min-width:640px){.ap .videos{grid-template-columns:repeat(2,1fr)}}
+  .ap .vid-item{position:relative;aspect-ratio:16/9;overflow:hidden;cursor:pointer;background:var(--ink);text-decoration:none;display:block}
+  .ap .vid-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s;opacity:.72}
+  .ap .vid-item:hover img{transform:scale(1.06);opacity:.5}
+  .ap .vid-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .ap .vid-play-btn{width:48px;height:48px;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;transition:all .2s}
+  .ap .vid-item:hover .vid-play-btn{background:#fff;transform:scale(1.1)}
+  .ap .vid-cap{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:linear-gradient(to top,rgba(0,0,0,.7),transparent);font-size:11px;color:rgba(255,255,255,.85);font-weight:500}
+  .ap .vid-divider{height:2px;background:var(--border);margin:22px -28px}
+  .ap .vid-section-label{display:flex;align-items:center;gap:9px;margin-bottom:14px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
+
+  /* ACCOLADES */
+  .ap .accolade{display:flex;gap:18px;align-items:flex-start;padding:22px 0;border-bottom:1px solid var(--border);transition:padding-left .3s}
+  .ap .accolade:first-child{padding-top:0}
+  .ap .accolade:last-child{border-bottom:none;padding-bottom:0}
+  .ap .accolade:hover{padding-left:8px}
+  .ap .acc-year{font-family:'DM Mono',monospace;font-size:11px;color:var(--red);font-weight:500;letter-spacing:1px;flex-shrink:0;padding-top:2px;width:40px}
+  .ap .acc-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:3px}
+  .ap .acc-org{font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+  .ap .acc-desc{font-size:12px;color:var(--ink3);line-height:1.65}
+
+  /* CONTACT */
+  .ap .contact-list{display:flex;flex-direction:column;gap:2px}
+  .ap .contact-item{display:flex;align-items:center;gap:13px;padding:14px;background:var(--cream2);transition:background .2s;text-decoration:none;color:var(--ink)}
+  .ap .contact-item:hover{background:var(--cream3)}
+  .ap .contact-icon{width:34px;height:34px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ap .contact-txt{font-size:13px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ap .social-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .ap .soc-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all .2s;border:1px solid rgba(0,0,0,.08)}
+  .ap .soc-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.14);border-color:transparent}
+
+  /* SIDEBAR */
+  .ap .booking-card{background:#fff;padding:28px;border:1px solid var(--border)}
+  .ap .bp-row{padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--border)}
+  .ap .bp-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+  .ap .bp-amt{font-family:'Playfair Display',serif;font-size:38px;font-weight:900;color:var(--ink);line-height:1}
+  .ap .book-note{font-size:11px;color:var(--ink3);margin-top:10px;text-align:center}
+  .ap .guarantees{margin-top:22px;padding-top:22px;border-top:1px solid var(--border)}
+  .ap .guar-item{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)}
+  .ap .guar-item:last-child{border-bottom:none}
+  .ap .guar-dot{width:5px;height:5px;background:var(--red2);flex-shrink:0}
+
+  /* MOBILE CTA */
+  .ap .mob-cta{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#fff;border-top:1px solid var(--border);padding:12px 18px;gap:14px;align-items:center}
+  @media(min-width:1024px){.ap .mob-cta{display:none}}
+  .ap .mob-cta-lbl{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
+  .ap .mob-cta-amt{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--ink)}
+
+  /* ERROR */
+  .ap .err-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+  .ap .err-box{text-align:center;max-width:380px}
+  .ap .err-icon{width:68px;height:68px;background:var(--cream2);display:flex;align-items:center;justify-content:center;margin:0 auto 22px}
+  .ap .err-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--ink);margin-bottom:10px}
+  .ap .err-sub{font-size:14px;color:var(--ink3);margin-bottom:28px;line-height:1.65}
+
+  /* MISC */
+  .ap .flex-between{display:flex;justify-content:space-between;align-items:center}
+  .ap .see-all{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif}
+  .ap .lbox-img{width:100%;max-height:80vh;object-fit:contain}
+  .ap .stars{display:flex;gap:2px}
+`;
+
+/* ─── Social map ──────────────────────────────────────────────────────────── */
+const SOC_COLOR: Record<string, string> = {
+  instagram: "linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)",
+  youtube: "#FF0000", facebook: "#1877F2", twitter: "#1DA1F2",
+  spotify: "#1DB954", website: "#1A1714",
+};
+const SOC_ICON: Record<string, React.ReactNode> = {
+  instagram: <Instagram size={15} />, youtube: <Youtube size={15} />,
+  facebook: <Facebook size={15} />, twitter: <Twitter size={15} />,
+  spotify: <Music size={15} />, website: <Globe size={15} />,
+};
+
+/* ─── StarRow ─────────────────────────────────────────────────────────────── */
+function Stars({ score }: { score: number }) {
+  return (
+    <span className="stars">
+      {[1,2,3,4,5].map(i => (
+        <svg key={i} width="12" height="12" viewBox="0 0 24 24"
+          fill={i <= Math.round(score) ? "#F59E0B" : "none"}
+          stroke="#F59E0B" strokeWidth="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
       ))}
-    </div>
-  </div>
-);
+    </span>
+  );
+}
 
+/* ─── ContactBlock ────────────────────────────────────────────────────────── */
+function ContactBlock({ artist }: { artist: Artist }) {
+  const socials = Object.entries(artist.socialLinks || {}).filter(([, v]) => !!v);
+  return (
+    <>
+      <div className="contact-list">
+        <a href={`tel:${artist.phone}`} className="contact-item">
+          <div className="contact-icon"><Phone size={14} /></div>
+          <span className="contact-txt">{artist.phone}</span>
+        </a>
+        <a href={`mailto:${artist.email}`} className="contact-item">
+          <div className="contact-icon"><Mail size={14} /></div>
+          <span className="contact-txt">{artist.email}</span>
+        </a>
+      </div>
+      {socials.length > 0 && (
+        <div className="social-row">
+          {socials.map(([k, url]) => (
+            <a key={k} href={url as string} target="_blank" rel="noopener noreferrer"
+              className="soc-btn" style={{ background: SOC_COLOR[k] || "#1A1714", color: "#fff" }}
+              aria-label={k}>
+              {SOC_ICON[k]}
+            </a>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ─── Main component ──────────────────────────────────────────────────────── */
 export default function PublicArtistProfile() {
   const params = useParams();
   const router = useRouter();
   const artistId = params.artistId as string;
-  const [artist, setArtist] = useState<Artist | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isOrganizerLoggedIn, setIsOrganizerLoggedIn] = useState(false);
-  const [showBookingDialog, setShowBookingDialog] = useState(false);
-  const [bioExpanded, setBioExpanded] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
 
-  useEffect(() => {
-    fetchArtistProfile();
-    checkOrganizerAuth();
-  }, [artistId]);
+  const [artist, setArtist]         = useState<Artist | null>(null);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string | null>(null);
+  const [isOrg, setIsOrg]           = useState(false);
+  const [showBook, setShowBook]     = useState(false);
+  const [bioOpen, setBioOpen]       = useState(false);
+  const [lightbox, setLightbox]     = useState<string | null>(null);
+  const [saved, setSaved]           = useState(false);
 
-  const fetchArtistProfile = async () => {
+  useEffect(() => { fetchArtist(); checkOrg(); }, [artistId]);
+
+  const fetchArtist = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/artist/public/${artistId}`);
-      
-      if (!response.ok) {
-        throw new Error('Artist not found');
-      }
-
-      const data = await response.json();
+      const res = await fetch(`/api/artist/public/${artistId}`);
+      if (!res.ok) throw new Error("not found");
+      const data = await res.json();
       setArtist(data.data.artist);
-    } catch (error) {
-      console.error('Error fetching artist profile:', error);
-      setError('Artist not found or unavailable');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Artist not found or unavailable"); }
+    finally   { setLoading(false); }
   };
 
-  const checkOrganizerAuth = () => {
-    const token = localStorage.getItem('organizer_token');
-    setIsOrganizerLoggedIn(!!token);
-  };
+  const checkOrg = () => setIsOrg(!!localStorage.getItem("organizer_token"));
 
   const handleShare = useCallback(async () => {
     if (navigator.share && artist) {
-      try {
-        await navigator.share({
-          title: `${artist.name} - Artist Profile`,
-          text: `Check out ${artist.name} on Ahibi!`,
-          url: window.location.href,
-        });
-      } catch (err) {
-        navigator.clipboard.writeText(window.location.href);
-      }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-    }
+      try { await navigator.share({ title: `${artist.name} – AHiBi`, url: window.location.href }); }
+      catch { navigator.clipboard.writeText(window.location.href); }
+    } else { navigator.clipboard.writeText(window.location.href); }
   }, [artist]);
 
-  const handleBookingClick = () => {
-    if (isOrganizerLoggedIn) {
-      setShowBookingDialog(true);
-    } else {
-      window.location.href = createRoleAuthRedirectUrl('organizer');
-    }
+  const handleBook = () => {
+    const bookingPath = `/artist/profile/${artistId}/booking`;
+    if (isOrg) router.push(bookingPath);
+    else window.location.href = createRoleAuthRedirectUrl("organizer", bookingPath);
   };
 
-  // Loading State with Skeletons
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
+  /* ── LOADING ── */
+  if (loading) return (
+    <>
+      <style>{STYLES}</style>
+      <div className="ap">
         <Navbar />
-        <HeroSkeleton />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <CardSkeleton />
-              <GallerySkeleton />
-            </div>
-            <div className="hidden lg:block">
-              <CardSkeleton />
+        <div className="skel" style={{ height: 400 }} />
+        <div style={{ background: "#fff", borderBottom: "1px solid #DDD8CF", padding: "0 20px" }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-end", paddingBottom: 18 }}>
+            <div className="skel" style={{ width: 88, height: 88, marginTop: -44, flexShrink: 0 }} />
+            <div style={{ flex: 1, paddingBottom: 8 }}>
+              <div className="skel" style={{ height: 12, width: 60, marginBottom: 10 }} />
+              <div className="skel" style={{ height: 24, width: 180, marginBottom: 8 }} />
+              <div className="skel" style={{ height: 11, width: 140 }} />
             </div>
           </div>
         </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Error State
-  if (error || !artist) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-          <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-            <Users className="w-10 h-10 text-gray-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Artist Not Found</h1>
-          <p className="text-gray-600 mb-8">{error || "The artist you're looking for doesn't exist or has been removed."}</p>
-          <Button 
-            onClick={() => router.back()}
-            variant="outline"
-            className="min-h-[44px]"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </Button>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 20px", display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
+          {[180, 140, 120].map((h, i) => <div key={i} className="skel" style={{ height: h }} />)}
         </div>
         <Footer />
       </div>
-    );
-  }
+    </>
+  );
 
-  const coverImage = artist.gallery?.photos?.find(photo => photo.isCoverImage)?.url || "/images/carausel1.jpg";
-  const profileImage = artist.gallery?.photos?.find(photo => photo.isProfileImage)?.url || artist.profilePic;
-  const galleryPhotos = artist.gallery?.photos?.filter(p => !p.isProfileImage && !p.isCoverImage) || [];
-  const hasGallery = galleryPhotos.length > 0 || (artist.gallery?.videos?.length ?? 0) > 0;
-  const bioTruncateLength = 200;
-  const shouldTruncateBio = artist.bio && artist.bio.length > bioTruncateLength;
-  const startingPrice = typeof artist.basePrice === "number" ? artist.basePrice : Number(artist.basePrice);
-  const hasStartingPrice = Number.isFinite(startingPrice) && startingPrice > 0;
-  const startingPriceLabel = hasStartingPrice ? startingPrice.toLocaleString() : "On request";
-  const artistForBooking = {
-    ...artist,
-    basePrice: hasStartingPrice ? startingPrice : 0,
-  };
+  /* ── ERROR ── */
+  if (error || !artist) return (
+    <>
+      <style>{STYLES}</style>
+      <div className="ap err-wrap">
+        <div className="err-box">
+          <div className="err-icon"><Users size={30} color="#6B6259" /></div>
+          <h1 className="err-title">Artist Not Found</h1>
+          <p className="err-sub">{error || "This artist doesn't exist or has been removed."}</p>
+          <button className="btn-ink" onClick={() => router.back()}>
+            <ChevronLeft size={15} /> Go Back
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  /* ── DERIVED ── */
+  const coverImg     = artist.gallery?.photos?.find(p => p.isCoverImage)?.url  || "/images/carausel1.jpg";
+  const profileImg   = artist.gallery?.photos?.find(p => p.isProfileImage)?.url || artist.profilePic;
+  const galleryPics  = artist.gallery?.photos?.filter(p => !p.isProfileImage && !p.isCoverImage) || [];
+  const videos       = artist.gallery?.videos || [];
+  const hasGallery   = galleryPics.length > 0 || videos.length > 0;
+  const price        = Number(artist.basePrice);
+  const hasPrice     = Number.isFinite(price) && price > 0;
+  const priceLbl     = hasPrice ? `\u20B9${price.toLocaleString()}` : "On request";
+  const BIO_MAX      = 240;
+  const longBio      = artist.bio && artist.bio.length > BIO_MAX;
+  const artistBook   = { ...artist, basePrice: hasPrice ? price : 0 };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
-      {/* Hero Section */}
-      <section className="relative">
-        {/* Cover Image */}
-        <div className="h-52 sm:h-64 lg:h-80 relative overflow-hidden">
-          <Image
-            src={coverImage}
-            alt={`${artist.name} cover`}
-            fill
-            priority
-            className="object-cover"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          
-          {/* Back Button - Mobile */}
-          <button 
-            onClick={() => router.back()}
-            className="absolute top-3 left-3 z-20 w-9 h-9 sm:w-10 sm:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
-          </button>
-          
-          {/* Action Buttons - Top Right */}
-          <div className="absolute top-3 right-3 z-20 flex gap-2">
-            <button 
-              onClick={handleShare}
-              className="w-9 h-9 sm:w-10 sm:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-              aria-label="Share"
-            >
-              <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+    <>
+      <style>{STYLES}</style>
+      <div className="ap">
+        <Navbar />
+
+        {/* ── Hero ── */}
+        <section className="hero fi">
+          <img src={coverImg} alt={artist.name} className="hero-img" />
+          <div className="hero-ov" />
+          <div className="hero-grain" />
+
+          <div className="hero-bar">
+            <button className="icon-btn" onClick={() => router.back()} aria-label="Back">
+              <ChevronLeft size={17} />
             </button>
-            <button 
-              onClick={() => setIsSaved(!isSaved)}
-              className="w-9 h-9 sm:w-10 sm:h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-colors"
-              aria-label="Save"
-            >
-              <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${isSaved ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
-            </button>
+            <div className="hero-acts">
+              <button className="icon-btn" onClick={handleShare} aria-label="Share"><Share2 size={15} /></button>
+              <button className={`icon-btn${saved ? " saved" : ""}`} onClick={() => setSaved(!saved)} aria-label="Save">
+                <Heart size={15} fill={saved ? "#fff" : "none"} />
+              </button>
+            </div>
           </div>
-        </div>
-        
-        {/* Profile Info */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-14 sm:-mt-20 relative z-10">
-          <div className="bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 rounded-3xl shadow-sm ring-1 ring-black/5 p-4 sm:p-0 sm:bg-transparent sm:backdrop-blur-none sm:shadow-none sm:ring-0">
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-            {/* Profile Image */}
-            <div className="relative flex-shrink-0 -mt-10 sm:mt-0 mx-auto sm:mx-0">
-              <div className="w-24 h-24 sm:w-36 sm:h-36 lg:w-44 lg:h-44 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-white">
-                {profileImage ? (
-                  <Image
-                    src={profileImage}
-                    alt={artist.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 112px, (max-width: 1024px) 144px, 176px"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-                      {artist.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
+
+          <div className="hero-bot fu0">
+            <div className="hero-eyebrow">
+              <div className="hero-eyebrow-line" />
+              <span className="hero-eyebrow-txt">{artist.type}&nbsp;·&nbsp;{artist.city}</span>
+            </div>
+            <h1 className="hero-name">
+              {artist.name.split(" ")[0]}<br />
+              <em>{artist.name.split(" ").slice(1).join(" ") || "\u00A0"}</em>
+            </h1>
+            <div className="hero-meta">
+              {artist.rating && artist.rating.count > 0 && (
+                <span className="hero-meta-item">
+                  <Stars score={artist.rating.average} />
+                  <strong>{artist.rating.average.toFixed(1)}</strong>
+                  <span>({artist.rating.count})</span>
+                </span>
+              )}
+              {(artist.totalBookings ?? 0) > 0 && (
+                <span className="hero-meta-item">
+                  <CheckCircle size={13} />
+                  <strong>{artist.totalBookings}+</strong>&nbsp;bookings
+                </span>
+              )}
+              <span className="hero-meta-item"><MapPin size={13} />{artist.city}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Profile Strip ── */}
+        <div className="strip fu1">
+          <div className="strip-in">
+            <div className="av-wrap">
+              <div className="av">
+                {profileImg
+                  ? <img src={profileImg} alt={artist.name} />
+                  : <div className="av-fallback">{artist.name.charAt(0)}</div>}
               </div>
               {artist.rating && artist.rating.average >= 4.5 && (
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
+                <div className="av-badge"><Sparkles size={10} color="#fff" /></div>
               )}
             </div>
-            
-            {/* Artist Info */}
-            <div className="flex-1 pt-1 sm:pt-8 lg:pt-12">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                <div>
-                  <h1 className="mt-8 text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
-                    {artist.name}
-                  </h1>
-                  <p className="text-base sm:text-lg text-gray-600 mb-3">{artist.type}</p>
-                  
-                  {/* Quick Stats */}
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      {artist.city}
-                    </span>
-                    {artist.rating && artist.rating.count > 0 && (
-                      <span className="flex items-center gap-1.5">
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                        <span className="font-medium text-gray-900">{artist.rating.average.toFixed(1)}</span>
-                        <span className="text-gray-400">({artist.rating.count})</span>
-                      </span>
-                    )}
-                    {artist.totalBookings && artist.totalBookings > 0 && (
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        {artist.totalBookings}+ bookings
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Desktop CTA - Hidden on Mobile */}
-                <div className="hidden lg:flex flex-col items-end gap-2">
-                  <div className="text-right mt-8 mb-2">
-                    <p className="text-sm text-gray-500">Starting from</p>
-                    <p className="text-2xl font-bold text-gray-900">{hasStartingPrice ? `₹${startingPriceLabel}` : startingPriceLabel}</p>
-                  </div>
-                  <Button 
-                    size="lg" 
-                    onClick={handleBookingClick}
-                    className="bg-violet-600 hover:bg-violet-700 text-white min-h-[48px] px-8 rounded-xl shadow-lg shadow-violet-200 transition-all hover:shadow-xl hover:shadow-violet-300"
-                  >
-                    <Calendar className="w-5 h-5 mr-2" />
-                    {isOrganizerLoggedIn ? 'Book Now' : 'Login to Book'}
-                  </Button>
-                </div>
+
+            <div className="strip-info">
+              <div className="strip-type">{artist.type}</div>
+              <div className="strip-name">{artist.name}</div>
+              <div className="strip-meta">
+                <span className="strip-meta-item"><MapPin size={11} color="var(--red)" />{artist.city}</span>
+                {artist.rating && artist.rating.count > 0 && (
+                  <span className="strip-meta-item">
+                    <Star size={11} fill="#F59E0B" color="#F59E0B" />
+                    {artist.rating.average.toFixed(1)}&nbsp;·&nbsp;{artist.rating.count} reviews
+                  </span>
+                )}
               </div>
-              
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                {artist.genres?.map((genre) => (
-                  <Badge 
-                    key={genre} 
-                    className="bg-violet-50 text-violet-700 hover:bg-violet-100 border-0 rounded-full px-3 py-1 text-xs sm:text-sm font-medium"
-                  >
-                    {genre}
-                  </Badge>
-                ))}
-                {artist.languages?.map((lang) => (
-                  <Badge 
-                    key={lang} 
-                    variant="outline"
-                    className="border-gray-200 text-gray-600 hover:bg-gray-50 rounded-full px-3 py-1 text-xs sm:text-sm"
-                  >
-                    {lang}
-                  </Badge>
-                ))}
+              <div className="tags">
+                {artist.genres?.map(g => <span key={g} className="tag g">{g}</span>)}
+                {artist.languages?.map(l => <span key={l} className="tag">{l}</span>)}
               </div>
             </div>
+
+            <div className="strip-cta">
+              <div>
+                <div className="price-lbl">Starting from</div>
+                <div className="price-amt">{priceLbl}</div>
+              </div>
+              <button className="btn-ink" onClick={handleBook}>
+                <Calendar size={14} />{isOrg ? "Book This Artist" : "Login to Book"}
+              </button>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* About Section */}
-            <section className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">About</h2>
-              <div className="text-gray-600 leading-relaxed">
-                {artist.bio ? (
-                  <>
-                    <p>
-                      {bioExpanded || !shouldTruncateBio 
-                        ? artist.bio 
-                        : `${artist.bio.slice(0, bioTruncateLength)}...`}
-                    </p>
-                    {shouldTruncateBio && (
-                      <button 
-                        onClick={() => setBioExpanded(!bioExpanded)}
-                        className="text-violet-600 font-medium mt-2 hover:text-violet-700 transition-colors"
-                      >
-                        {bioExpanded ? 'Show less' : 'Read more'}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-gray-400 italic">No biography available.</p>
-                )}
-              </div>
-              
-              {/* Highlights */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
-                <div className="text-center sm:text-left">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">Specialization</p>
-                  <p className="font-medium text-gray-900">{artist.type}</p>
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">Base Price</p>
-                  <p className="font-medium text-green-600">{hasStartingPrice ? `₹${startingPriceLabel}` : startingPriceLabel}</p>
-                </div>
-                <div className="text-center sm:text-left col-span-2 sm:col-span-1">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">Location</p>
-                  <p className="font-medium text-gray-900">{artist.city}</p>
-                </div>
-              </div>
-            </section>
+        {/* ── Main layout ── */}
+        <div className="layout">
 
-            {/* Gallery Section */}
-            {hasGallery && (
-              <section className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-gray-400" />
-                    Gallery
-                  </h2>
-                  {galleryPhotos.length > 4 && (
-                    <button className="text-sm text-violet-600 font-medium hover:text-violet-700">
-                      See all ({galleryPhotos.length})
+          {/* Left column */}
+          <main className="col-main fu2">
+
+            {/* About */}
+            <div className="card">
+              <div className="card-title">About</div>
+              {artist.bio ? (
+                <>
+                  <p className="bio-txt">
+                    {bioOpen || !longBio ? artist.bio : `${artist.bio.slice(0, BIO_MAX)}\u2026`}
+                  </p>
+                  {longBio && (
+                    <button className="bio-more" onClick={() => setBioOpen(!bioOpen)}>
+                      {bioOpen ? "— Read less" : "+ Read more"}
                     </button>
                   )}
+                </>
+              ) : <p className="bio-txt" style={{ opacity: 0.45, fontStyle: "italic" }}>No biography available.</p>}
+
+              <div className="highlights">
+                <div className="hl">
+                  <div className="hl-lbl">Specialisation</div>
+                  <div className="hl-val">{artist.type}</div>
                 </div>
-                
-                {/* Photos - Horizontal Scroll on Mobile, Grid on Desktop */}
-                {galleryPhotos.length > 0 && (
-                  <div className="lg:hidden -mx-5 px-5">
-                    <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide">
-                      {galleryPhotos.map((photo, index) => (
-                        <button 
-                          key={index}
-                          onClick={() => setSelectedImage(photo.url)}
-                          className="flex-shrink-0 w-40 h-40 sm:w-48 sm:h-48 rounded-xl overflow-hidden snap-start focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
-                        >
-                          <Image
-                            src={photo.url}
-                            alt={photo.caption || `Photo ${index + 1}`}
-                            width={200}
-                            height={200}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Desktop Grid */}
-                {galleryPhotos.length > 0 && (
-                  <div className="hidden lg:grid grid-cols-4 gap-3">
-                    {galleryPhotos.slice(0, 8).map((photo, index) => (
-                      <button 
-                        key={index}
-                        onClick={() => setSelectedImage(photo.url)}
-                        className="relative aspect-square rounded-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 group"
-                      >
-                        <Image
-                          src={photo.url}
-                          alt={photo.caption || `Photo ${index + 1}`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 1024px) 25vw, 200px"
-                        />
-                        {index === 7 && galleryPhotos.length > 8 && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-white font-semibold">+{galleryPhotos.length - 8}</span>
-                          </div>
-                        )}
-                      </button>
+                <div className="hl">
+                  <div className="hl-lbl">Base Price</div>
+                  <div className="hl-val green">{priceLbl}</div>
+                </div>
+                <div className="hl">
+                  <div className="hl-lbl">Location</div>
+                  <div className="hl-val">{artist.city}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Gallery */}
+            {hasGallery && (
+              <div className="card">
+                <div className="card-title flex-between">
+                  <span>Gallery</span>
+                  {galleryPics.length > 5 && (
+                    <button className="see-all">See all ({galleryPics.length})</button>
+                  )}
+                </div>
+
+                {galleryPics.length > 0 && (
+                  <div className="gal-scroll">
+                    {galleryPics.map((p, i) => (
+                      <div key={i} className="gal-item" onClick={() => setLightbox(p.url)}>
+                        <img src={p.url} alt={p.caption || `Photo ${i+1}`} />
+                      </div>
                     ))}
                   </div>
                 )}
-                
-                {/* Videos */}
-                {artist.gallery?.videos && artist.gallery.videos.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    <h3 className="text-base font-medium text-gray-900 mb-4 flex items-center gap-2">
-                      <Play className="w-4 h-4 text-gray-400" />
-                      Videos
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {artist.gallery.videos.map((video, index) => (
-                        <a 
-                          key={index}
-                          href={video.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group relative aspect-video rounded-xl overflow-hidden bg-gray-100"
-                        >
-                          <Image
-                            src={video.thumbnail}
-                            alt={video.caption || `Video ${index + 1}`}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                            <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                              <Play className="w-6 h-6 text-gray-900 ml-1" />
+
+                {videos.length > 0 && (
+                  <>
+                    <div className="vid-divider" />
+                    <div className="vid-section-label">
+                      <Play size={13} color="var(--red)" /> Performance Videos
+                    </div>
+                    <div className="videos">
+                      {videos.map((v, i) => (
+                        <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="vid-item">
+                          <img src={v.thumbnail} alt={v.caption || `Video ${i+1}`} />
+                          <div className="vid-play">
+                            <div className="vid-play-btn">
+                              <Play size={18} color="var(--ink)" fill="var(--ink)" />
                             </div>
                           </div>
-                          {video.caption && (
-                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                              <p className="text-white text-sm font-medium truncate">{video.caption}</p>
-                            </div>
-                          )}
+                          {v.caption && <div className="vid-cap">{v.caption}</div>}
                         </a>
                       ))}
                     </div>
-                  </div>
+                  </>
                 )}
-              </section>
+              </div>
             )}
 
-            {/* Accolades Section */}
-            {artist.accolades && artist.accolades.length > 0 && (
-              <section className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-500" />
-                  Awards & Recognition
-                </h2>
-                <div className="space-y-4">
-                  {artist.accolades.map((accolade, index) => (
-                    <div 
-                      key={index} 
-                      className="flex gap-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl"
-                    >
-                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-200/50">
-                        <Award className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900">{accolade.title}</h3>
-                        <p className="text-sm text-gray-600">{accolade.organization} • {accolade.year}</p>
-                        {accolade.description && (
-                          <p className="text-sm text-gray-500 mt-1">{accolade.description}</p>
-                        )}
-                      </div>
+            {/* Accolades */}
+            {artist.accolades?.length > 0 && (
+              <div className="card">
+                <div className="card-title">
+                  <Award size={17} className="card-title-icon" />
+                  <span>Awards & Recognition</span>
+                </div>
+                {artist.accolades.map((a, i) => (
+                  <div key={i} className="accolade">
+                    <div className="acc-year">{a.year}</div>
+                    <div>
+                      <div className="acc-title">{a.title}</div>
+                      <div className="acc-org">{a.organization}</div>
+                      {a.description && <div className="acc-desc">{a.description}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Contact — mobile/tablet only (sidebar hidden on mobile) */}
+            <div className="card" style={{ display: "block" }}>
+              <div className="card-title">Contact</div>
+              <ContactBlock artist={artist} />
+            </div>
+          </main>
+
+          {/* Right sidebar */}
+          <aside className="col-side fu3">
+            <div className="side-sticky">
+
+              {/* Booking card */}
+              <div className="booking-card">
+                <div className="bp-row">
+                  <div className="bp-lbl">Starting from</div>
+                  <div className="bp-amt">{priceLbl}</div>
+                </div>
+                <button className="btn-ink" style={{ width: "100%", justifyContent: "center" }} onClick={handleBook}>
+                  <Calendar size={14} />{isOrg ? "Book This Artist" : "Login to Book"}
+                </button>
+                <p className="book-note">You won't be charged yet</p>
+                <div className="guarantees">
+                  {["Free cancellation within 24 hrs","Secure booking process","Verified artist profile"].map(g => (
+                    <div key={g} className="guar-item">
+                      <div className="guar-dot" />{g}
                     </div>
                   ))}
                 </div>
-              </section>
-            )}
+              </div>
 
-            {/* Contact Section - Mobile Only in Main Flow */}
-            <section className="lg:hidden bg-white rounded-2xl p-5 sm:p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact</h2>
-              <div className="space-y-3">
-                <a href={`tel:${artist.phone}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-violet-600" />
-                  </div>
-                  <span className="text-gray-700">{artist.phone}</span>
-                </a>
-                <a href={`mailto:${artist.email}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                  <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-violet-600" />
-                  </div>
-                  <span className="text-gray-700 truncate">{artist.email}</span>
-                </a>
-              </div>
-              
-              {/* Social Links */}
-              {artist.socialLinks && Object.values(artist.socialLinks).some(v => v) && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-gray-500 mb-3">Follow</p>
-                  <div className="flex flex-wrap gap-2">
-                    {artist.socialLinks.instagram && (
-                      <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
-                        className="w-11 h-11 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
-                        <Instagram className="w-5 h-5 text-white" />
-                      </a>
-                    )}
-                    {artist.socialLinks.youtube && (
-                      <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer"
-                        className="w-11 h-11 bg-red-600 rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
-                        <Youtube className="w-5 h-5 text-white" />
-                      </a>
-                    )}
-                    {artist.socialLinks.facebook && (
-                      <a href={artist.socialLinks.facebook} target="_blank" rel="noopener noreferrer"
-                        className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
-                        <Facebook className="w-5 h-5 text-white" />
-                      </a>
-                    )}
-                    {artist.socialLinks.twitter && (
-                      <a href={artist.socialLinks.twitter} target="_blank" rel="noopener noreferrer"
-                        className="w-11 h-11 bg-sky-500 rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
-                        <Twitter className="w-5 h-5 text-white" />
-                      </a>
-                    )}
-                    {artist.socialLinks.spotify && (
-                      <a href={artist.socialLinks.spotify} target="_blank" rel="noopener noreferrer"
-                        className="w-11 h-11 bg-green-500 rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
-                        <Music className="w-5 h-5 text-white" />
-                      </a>
-                    )}
-                    {artist.socialLinks.website && (
-                      <a href={artist.socialLinks.website} target="_blank" rel="noopener noreferrer"
-                        className="w-11 h-11 bg-gray-700 rounded-xl flex items-center justify-center hover:scale-105 transition-transform">
-                        <Globe className="w-5 h-5 text-white" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-            </section>
-          </div>
-          
-          {/* Right Column - Sticky Booking Card (Desktop) */}
-          <div className="hidden lg:block">
-            <div className="sticky top-24 space-y-6">
-              {/* Booking Card */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div className="mb-6">
-                  <p className="text-sm text-gray-500">Starting from</p>
-                  <p className="text-3xl font-bold text-gray-900">{hasStartingPrice ? `₹${startingPriceLabel}` : startingPriceLabel}</p>
-                </div>
-                
-                <Button 
-                  size="lg" 
-                  onClick={handleBookingClick}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white min-h-[52px] rounded-xl shadow-lg shadow-violet-200 transition-all hover:shadow-xl hover:shadow-violet-300 text-base font-semibold"
-                >
-                  <Calendar className="w-5 h-5 mr-2" />
-                  {isOrganizerLoggedIn ? 'Book This Artist' : 'Login to Book'}
-                </Button>
-                
-                <p className="text-center text-xs text-gray-400 mt-3">
-                  You won't be charged yet
-                </p>
-                
-                <div className="mt-6 pt-6 border-t border-gray-100 space-y-3 text-sm">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Free cancellation within 24hrs</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Secure booking process</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span>Verified artist profile</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Contact Card */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h3 className="font-semibold text-gray-900 mb-4">Contact Information</h3>
-                <div className="space-y-3">
-                  <a href={`tel:${artist.phone}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <Phone className="w-5 h-5 text-violet-600" />
-                    <span className="text-gray-700">{artist.phone}</span>
-                  </a>
-                  <a href={`mailto:${artist.email}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                    <Mail className="w-5 h-5 text-violet-600" />
-                    <span className="text-gray-700 truncate text-sm">{artist.email}</span>
-                  </a>
-                </div>
-                
-                {/* Social Links */}
-                {artist.socialLinks && Object.values(artist.socialLinks).some(v => v) && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-500 mb-3">Social Links</p>
-                    <div className="flex flex-wrap gap-2">
-                      {artist.socialLinks.instagram && (
-                        <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
-                          className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <Instagram className="w-4 h-4 text-white" />
-                        </a>
-                      )}
-                      {artist.socialLinks.youtube && (
-                        <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer"
-                          className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <Youtube className="w-4 h-4 text-white" />
-                        </a>
-                      )}
-                      {artist.socialLinks.facebook && (
-                        <a href={artist.socialLinks.facebook} target="_blank" rel="noopener noreferrer"
-                          className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <Facebook className="w-4 h-4 text-white" />
-                        </a>
-                      )}
-                      {artist.socialLinks.twitter && (
-                        <a href={artist.socialLinks.twitter} target="_blank" rel="noopener noreferrer"
-                          className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <Twitter className="w-4 h-4 text-white" />
-                        </a>
-                      )}
-                      {artist.socialLinks.spotify && (
-                        <a href={artist.socialLinks.spotify} target="_blank" rel="noopener noreferrer"
-                          className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <Music className="w-4 h-4 text-white" />
-                        </a>
-                      )}
-                      {artist.socialLinks.website && (
-                        <a href={artist.socialLinks.website} target="_blank" rel="noopener noreferrer"
-                          className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center hover:scale-105 transition-transform">
-                          <Globe className="w-4 h-4 text-white" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
+              {/* Sidebar contact */}
+              <div className="card">
+                <div className="card-title" style={{ fontSize: 14, marginBottom: 14, paddingBottom: 12 }}>Contact</div>
+                <ContactBlock artist={artist} />
               </div>
             </div>
-          </div>
+          </aside>
         </div>
-      </main>
 
-      {/* Mobile Sticky CTA */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 py-3 safe-area-inset-bottom">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs text-gray-500">Starting from</p>
-            <p className="text-xl font-bold text-gray-900">{hasStartingPrice ? `₹${startingPriceLabel}` : startingPriceLabel}</p>
+        {/* Mobile CTA */}
+        <div className="mob-cta">
+          <div style={{ flex: 1 }}>
+            <div className="mob-cta-lbl">Starting from</div>
+            <div className="mob-cta-amt">{priceLbl}</div>
           </div>
-          <Button 
-            size="lg" 
-            onClick={handleBookingClick}
-            className="bg-violet-600 hover:bg-violet-700 text-white min-h-[48px] px-8 rounded-xl flex-shrink-0"
-          >
-            <Calendar className="w-5 h-5 mr-2" />
-            {isOrganizerLoggedIn ? 'Book Now' : 'Login to Book'}
-          </Button>
+          <button className="btn-ink" onClick={handleBook} style={{ flexShrink: 0, padding: "13px 22px" }}>
+            <Calendar size={14} />{isOrg ? "Book Now" : "Login to Book"}
+          </button>
         </div>
+
+        <div style={{ height: 70 }} />
+        <Footer />
+
+        {/* Booking dialog */}
+        <Dialog open={showBook} onOpenChange={setShowBook}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ borderRadius: 0, fontFamily: "'DM Sans',sans-serif" }}>
+            <DialogHeader>
+              <DialogTitle style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700 }}>
+                Book {artist.name}
+              </DialogTitle>
+              <DialogDescription style={{ fontSize: 13, color: "#6B6259" }}>
+                Select a date and time to book this artist for your event.
+              </DialogDescription>
+            </DialogHeader>
+            <PublicBookingCalendar artistId={artist._id} artist={artistBook} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Lightbox */}
+        <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
+          <DialogContent className="max-w-5xl p-0 border-0" style={{ background: "rgba(20,15,10,.97)" }}>
+            {lightbox && <img src={lightbox} alt="Gallery" className="lbox-img" />}
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Add padding at bottom for sticky CTA on mobile */}
-      <div className="lg:hidden h-24" />
-
-      <Footer />
-
-      {/* Booking Dialog */}
-      <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Book {artist.name}</DialogTitle>
-            <DialogDescription>
-              Select a date and time to book this artist for your event.
-            </DialogDescription>
-          </DialogHeader>
-          <PublicBookingCalendar artistId={artist._id} artist={artistForBooking} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Image Lightbox */}
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl p-0 bg-black/95 border-0">
-          {selectedImage && (
-            <div className="relative aspect-square sm:aspect-video w-full">
-              <Image
-                src={selectedImage}
-                alt="Gallery image"
-                fill
-                className="object-contain"
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+    </>
   );
 }

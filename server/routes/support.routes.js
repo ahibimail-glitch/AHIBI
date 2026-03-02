@@ -1,7 +1,7 @@
 const express = require('express');
 const supportController = require('../controllers/supportController');
 const { protect, authorize } = require('../middlewares/auth');
-const { check } = require('express-validator');
+const { body, check } = require('express-validator');
 
 const router = express.Router();
 
@@ -12,10 +12,10 @@ router.use(protect);
 router.post(
   '/tickets', 
   [
-    check('subject', 'Subject is required').notEmpty().trim(),
-    check('message', 'Message is required').notEmpty().trim(),
-    check('category').optional().isIn(['general', 'account', 'booking', 'payment', 'event', 'technical', 'other']),
-    check('priority').optional().isIn(['low', 'medium', 'high', 'urgent'])
+    body('subject', 'Subject is required').notEmpty().trim(),
+    body('message', 'Message is required').notEmpty().trim(),
+    body('category').optional().isIn(['general', 'account', 'booking', 'payment', 'event', 'technical', 'other']),
+    body('priority').optional({ checkFalsy: true }).isIn(['low', 'medium', 'high', 'urgent']).withMessage('Priority must be one of: low, medium, high, urgent')
   ],
   supportController.createTicket
 );
@@ -26,7 +26,7 @@ router.get('/tickets/:id', supportController.getTicket);
 router.post(
   '/tickets/:id/reply',
   [
-    check('message', 'Message is required').notEmpty().trim()
+    body('message', 'Message is required').notEmpty().trim()
   ],
   supportController.replyToTicket
 );

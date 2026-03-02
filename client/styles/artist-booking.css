@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+.ap {
+  --cream:#FAF7F2; --cream2:#F3EFE8; --cream3:#EDE8DF;
+  --ink:#1A1714; --ink2:#3D3730; --ink3:#6B6259;
+  --red:#C8102E; --red2:#E31837; --gold:#B5892A; --border:#DDD8CF;
+  font-family:'DM Sans',sans-serif;
+  background:var(--cream); color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+
+@keyframes apFadeUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+@keyframes apFadeIn { from{opacity:0} to{opacity:1} }
+@keyframes apShimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+
+.ap .fu0{animation:apFadeUp .65s .00s ease both}
+.ap .fu1{animation:apFadeUp .65s .12s ease both}
+.ap .fu2{animation:apFadeUp .65s .24s ease both}
+.ap .fu3{animation:apFadeUp .65s .36s ease both}
+.ap .fi {animation:apFadeIn  .9s .05s ease both}
+
+.ap .skel{background:linear-gradient(90deg,var(--cream2) 25%,var(--cream3) 50%,var(--cream2) 75%);background-size:800px 100%;animation:apShimmer 1.6s infinite linear}
+
+.ap .hero{position:relative;height:260px;overflow:hidden}
+@media(min-width:768px){.ap .hero{height:320px}}
+@media(min-width:1024px){.ap .hero{height:360px}}
+.ap .hero-img{width:100%;height:100%;object-fit:cover;transition:transform 8s ease}
+.ap .hero:hover .hero-img{transform:scale(1.04)}
+.ap .hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,15,10,.88) 0%,rgba(20,15,10,.28) 55%,rgba(0,0,0,.12) 100%)}
+.ap .hero-bar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:16px 20px}
+@media(min-width:1024px){.ap .hero-bar{padding:20px 48px}}
+.ap .icon-btn{width:40px;height:40px;background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:#fff;flex-shrink:0}
+.ap .icon-btn:hover{background:rgba(255,255,255,.22)}
+.ap .hero-bot{position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0 20px 22px}
+@media(min-width:1024px){.ap .hero-bot{padding:0 48px 26px}}
+.ap .hero-name{font-family:'Playfair Display',serif;font-size:clamp(26px,4.8vw,56px);font-weight:900;line-height:.95;color:#fff;letter-spacing:-1.5px;margin-bottom:10px}
+.ap .hero-meta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.ap .hero-meta-item{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.6)}
+.ap .hero-meta-item strong{color:#fff;font-weight:600}
+
+.ap .strip{background:var(--cream);border-bottom:1px solid var(--border);position:relative;z-index:30}
+.ap .strip-in{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;align-items:flex-end;gap:20px}
+@media(min-width:1024px){.ap .strip-in{padding:0 48px}}
+.ap .strip-info{flex:1;padding:14px 0 18px}
+.ap .strip-type{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px}
+.ap .strip-name{font-family:'Playfair Display',serif;font-size:clamp(18px,2.8vw,28px);font-weight:700;color:var(--ink);letter-spacing:-.5px;line-height:1.1}
+.ap .strip-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
+.ap .strip-meta-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink3)}
+
+.ap .btn-ink{display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;border:none;padding:13px 26px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif}
+.ap .btn-ink:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(227,24,55,.25)}
+
+.ap .layout{max-width:1280px;margin:0 auto;padding:28px 20px 60px;display:grid;grid-template-columns:1fr;gap:2px}
+@media(min-width:1024px){.ap .layout{grid-template-columns:1fr 332px;gap:28px;padding:32px 48px 60px;align-items:start}}
+.ap .col-main{display:flex;flex-direction:column;gap:2px}
+.ap .col-side{display:none}
+@media(min-width:1024px){.ap .col-side{display:block}}
+.ap .side-sticky{position:sticky;top:80px;display:flex;flex-direction:column;gap:2px}
+
+.ap .card{background:#fff;padding:28px;border:1px solid var(--border)}
+@media(max-width:767px){.ap .card{padding:20px 18px}}
+.ap .card-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--ink);margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
+.ap .card-sub{font-size:12px;color:var(--ink3);margin-top:-10px;margin-bottom:18px;line-height:1.6}
+
+.ap .booking-card{background:#fff;padding:28px;border:1px solid var(--border)}
+.ap .bp-row{padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--border)}
+.ap .bp-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+.ap .bp-amt{font-family:'Playfair Display',serif;font-size:38px;font-weight:900;color:var(--ink);line-height:1}
+.ap .book-note{font-size:11px;color:var(--ink3);margin-top:10px;text-align:center}

@@ -1,790 +1,683 @@
-"use client"
-
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Music,
-  Mic,
-  Camera,
-  Palette,
-  Users,
-  Trophy,
-  Sparkles,
-  Phone,
-  Mail,
-  MapPin,
-  Instagram,
-  Facebook,
-  Twitter,
-  Youtube,
-  Search,
-  ChevronRight,
-  Star,
-  Calendar,
-  Award,
-  Headphones,
-  Radio,
-  Tv,
-  Film,
-  ChevronLeft,
-  TrendingUp,
-  Clock,
-  DollarSign,
-  BarChart3,
-  Zap,
-  Target,
-  Shield,
-  Check,
-  ArrowRight,
-  Building2,
-  Heart,
-  Briefcase,
-  Globe,
-} from "lucide-react";
+"use client";
+import React, { useState, useEffect, useRef } from "react";
 import Footer from "../Footer";
 import Navbar from "../Navbar";
-import Link from "next/link";
+import { toast } from "sonner";
 
-const popularArtists = [
-  {
-    id: 1,
-    name: "Asha Sharma",
-    category: "Singer",
-    rating: 4.9,
-    bookings: 156,
-    image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 2,
-    name: "DJ Rohan",
-    category: "DJ",
-    rating: 4.8,
-    bookings: 234,
-    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: 3,
-    name: "Maya Kumar",
-    category: "Performer",
-    rating: 4.7,
-    bookings: 189,
-    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-  },
-];
+// ─── Google Fonts ──────────────────────────────────────────────────────────
+const FONT_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
 
-const categories = [
-  { icon: Mic, title: "DJ", desc: "Professional DJs for all events", count: "500+" },
-  { icon: Music, title: "Singer", desc: "Talented vocalists", count: "400+" },
-  { icon: Users, title: "Band", desc: "Live bands & musicians", count: "300+" },
-  { icon: Sparkles, title: "Dancer", desc: "Professional dancers", count: "350+" },
-  { icon: Camera, title: "Anchor/MC", desc: "Event hosts & MCs", count: "250+" },
-  { icon: Palette, title: "Comedian", desc: "Stand-up comedians", count: "150+" },
-  { icon: Trophy, title: "Magician", desc: "Magicians & illusionists", count: "100+" },
-  { icon: Award, title: "Celebrity", desc: "Celebrity appearances", count: "80+" },
-];
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+`;
 
-const whyJoin = [
-  {
-    icon: TrendingUp,
-    title: "Grow Your Career",
-    description: "Reach thousands of event organizers looking for talented artists. Get discovered and booked for events nationwide.",
-    stat: "10,000+ monthly bookings"
-  },
-  {
-    icon: DollarSign,
-    title: "Earn More Money",
-    description: "Set your own rates and keep 85-95% of your earnings. No hidden fees, transparent pricing, and direct payments.",
-    stat: "₹50,000 avg. monthly earnings"
-  },
-  {
-    icon: Shield,
-    title: "Secure & Professional",
-    description: "Protected payments, verified bookings, and contract management. We handle the logistics, you focus on performing.",
-    stat: "100% payment guarantee"
-  },
-  {
-    icon: BarChart3,
-    title: "Manage Your Brand",
-    description: "Professional profile, portfolio showcase, calendar management, and detailed analytics to grow your business.",
-    stat: "Complete business toolkit"
-  },
-];
+const FontLoader = () => <style dangerouslySetInnerHTML={{ __html: FONT_CSS }} />;
 
-const howToJoin = [
-  {
-    step: 1,
-    title: "Create Your Profile",
-    description: "Sign up and create your artist profile in minutes. Add your basic information, category, and contact details.",
-    duration: "3 minutes",
-    icon: Users
-  },
-  {
-    step: 2,
-    title: "Build Your Portfolio",
-    description: "Upload photos, videos, performance samples, and showcase your talent. Add your rates, availability, and services.",
-    duration: "20 minutes",
-    icon: Camera
-  },
-  {
-    step: 3,
-    title: "Get Verified",
-    description: "Our team reviews your profile to ensure quality. Once verified, you appear in search results and can receive bookings.",
-    duration: "24-48 hours",
-    icon: Award
-  },
-  {
-    step: 4,
-    title: "Start Performing",
-    description: "Receive booking requests, manage your schedule, and get paid directly. Build your reputation with reviews.",
-    duration: "Ongoing",
-    icon: Zap
-  },
-];
-
-const benefits = [
-  { text: "Free to create profile", icon: DollarSign },
-  { text: "Instant booking notifications", icon: Zap },
-  { text: "Secure payment processing", icon: Shield },
-  { text: "Calendar & schedule management", icon: Calendar },
-  { text: "Portfolio & media showcase", icon: Camera },
-  { text: "Direct client communication", icon: Phone },
-  { text: "Review & rating system", icon: Star },
-  { text: "Marketing & promotion", icon: TrendingUp },
-  { text: "24/7 support assistance", icon: Clock },
-];
-
-const eventTypes = [
-  {
-    title: "Corporate Events",
-    count: "5000+ bookings/month",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop",
-    color: "bg-blue-50",
-    description: "Conferences, team building, product launches"
-  },
-  {
-    title: "Weddings & Celebrations",
-    count: "3000+ bookings/month",
-    image: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop",
-    color: "bg-pink-50",
-    description: "Weddings, anniversaries, receptions"
-  },
-  {
-    title: "Private Parties",
-    count: "2000+ bookings/month",
-    image: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop",
-    color: "bg-purple-50",
-    description: "Birthdays, house parties, gatherings"
-  },
-  {
-    title: "Concerts & Festivals",
-    count: "1500+ bookings/month",
-    image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300&h=200&fit=crop",
-    color: "bg-orange-50",
-    description: "Music festivals, cultural events, concerts"
-  },
-];
-
-const faqs = [
-  {
-    q: "Who can join as an artist on AHiBi?",
-    a: "Any performing artist can join! This includes singers, musicians, DJs, dancers, bands, comedians, magicians, anchors/MCs, performers, and celebrities. If you entertain at events, you're welcome to create a profile.",
-  },
-  {
-    q: "How much does it cost to join?",
-    a: "Creating your artist profile is completely FREE. We only charge a small commission (5-15% depending on your plan) when you successfully complete a booking. No monthly fees, no hidden charges.",
-  },
-  {
-    q: "How do I get paid?",
-    a: "Payments are processed securely through Razorpay. When a booking is confirmed and the event is completed, funds are transferred to your registered bank account within 3-5 business days. You can track all earnings in your dashboard.",
-  },
-  {
-    q: "Can I set my own pricing?",
-    a: "Yes! You have full control over your rates. Set different prices for different event types, durations, and services. You can also offer package deals and custom quotes for specific requests.",
-  },
-  {
-    q: "How does the booking process work?",
-    a: "Event organizers search for artists, view your profile, and send booking requests. You receive instant notifications, can accept/decline requests, and communicate directly with clients through our platform.",
-  },
-  {
-    q: "What if I need to cancel a booking?",
-    a: "While we encourage honoring confirmed bookings, emergencies happen. You can cancel through your dashboard. Cancellation policies vary by plan and timing - check your artist agreement for details.",
-  },
-];
-
-const tiers = [
-  {
-    name: "Basic",
-    tag: "Free Forever",
-    price: "₹0/month",
-    commission: "15% per booking",
-    bullets: [
-      "Artist profile listing",
-      "Up to 5 photos/videos",
-      "Basic calendar management",
-      "Email notifications",
-      "Customer reviews",
-      "Standard search visibility"
-    ],
-    cta: "Join Free",
-    popular: false
-  },
-  {
-    name: "Professional",
-    tag: "Most Popular",
-    price: "₹1,999/month",
-    commission: "10% per booking",
-    bullets: [
-      "Everything in Basic",
-      "Priority search placement",
-      "Unlimited media uploads",
-      "Advanced analytics",
-      "Featured artist badge",
-      "Priority customer support",
-      "Promotional campaigns"
-    ],
-    cta: "Go Pro",
-    popular: true
-  },
-  {
-    name: "Premium",
-    tag: "For Top Artists",
-    price: "₹4,999/month",
-    commission: "5% per booking",
-    bullets: [
-      "Everything in Professional",
-      "Verified artist status",
-      "Dedicated account manager",
-      "Custom branding options",
-      "Top placement guarantee",
-      "Social media promotion",
-      "Exclusive event opportunities"
-    ],
-    cta: "Get Premium",
-    popular: false
-  },
-];
-
-const clients = [
-  { name: "Google", logo: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
-  { name: "Amazon", logo: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" },
-  { name: "Microsoft", logo: "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" },
-  { name: "Apple", logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" },
-  { name: "Uber", logo: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png" },
-];
-
-const Section = ({ children, id, className = "" }: { children: React.ReactNode; id?: string; className?: string }) => (
-  <section id={id} className={`py-8 md:py-16 lg:py-20 ${className}`}>
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">{children}</div>
-  </section>
+// ─── Icons (inline SVG) ───────────────────────────────────────────────────
+const IconArrow = () => (
+  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
 );
+const IconStar = ({ filled }: { filled: boolean }) => (
+  <svg width="13" height="13" fill={filled ? "#F59E0B" : "none"} stroke="#F59E0B" strokeWidth="2" viewBox="0 0 24 24">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+);
+const IconSearch = () => (
+  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+  </svg>
+);
+const IconCheck = () => (
+  <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+const IconPlus = () => (
+  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+const IconMic = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>;
+const IconMusic = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>;
+const IconUsers = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+const IconSparkle = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>;
+const IconCamera = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>;
+const IconTrophy = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><polyline points="8 21 12 17 16 21" /><line x1="12" y1="17" x2="12" y2="11" /><path d="M18 2H6l1.5 9A5 5 0 0 0 12 16a5 5 0 0 0 4.5-5L18 2z" /><path d="M2 7h4" /><path d="M18 7h4" /></svg>;
+const IconTrend = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>;
+const IconDollar = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>;
+const IconShield = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
+const IconChart = () => <svg width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>;
 
-export default function AhibiArtistPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+// ─── Data ─────────────────────────────────────────────────────────────────
+const FEATURED_ARTISTS = [
+  {
+    id: 1, name: "Asha Sharma", category: "Singer", rating: 4.9, bookings: 156,
+    image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 2, name: "DJ Rohan", category: "DJ", rating: 4.8, bookings: 234,
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80"
+  },
+  {
+    id: 3, name: "Maya Kumar", category: "Performer", rating: 4.7, bookings: 189,
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=800&q=80"
+  },
+];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form submitted:", formData);
+const ALL_ARTISTS = [
+  {
+    id: 1, name: "Asha Sharma", category: "Singer", rating: 4.9, bookings: 156, price: "₹25,000", verified: true,
+    image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: 2, name: "DJ Rohan", category: "DJ", rating: 4.8, bookings: 234, price: "₹35,000", verified: true,
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80", featured: true
+  },
+  {
+    id: 3, name: "Maya Kumar", category: "Dancer", rating: 4.7, bookings: 189, price: "₹18,000", verified: false,
+    image: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: 4, name: "Ravi Mehta", category: "Comedian", rating: 4.6, bookings: 98, price: "₹20,000", verified: true,
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: 5, name: "Priya Nair", category: "Singer", rating: 4.9, bookings: 312, price: "₹45,000", verified: true,
+    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80", featured: true
+  },
+  {
+    id: 6, name: "Arjun Band", category: "Band", rating: 4.7, bookings: 145, price: "₹80,000", verified: true,
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: 7, name: "Zara Kapoor", category: "Anchor/MC", rating: 4.8, bookings: 201, price: "₹22,000", verified: false,
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: 8, name: "Kiran Desai", category: "Magician", rating: 4.5, bookings: 67, price: "₹30,000", verified: true,
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80"
+  },
+];
+
+const CATEGORIES = ["All", "Singer", "DJ", "Band", "Dancer", "Comedian", "Magician", "Anchor/MC"];
+const WHY_JOIN = [
+  { icon: IconTrend, title: "Grow Your Career", desc: "Reach thousands of event organizers. Get discovered and booked nationwide.", stat: "10,000+ monthly bookings", num: "01" },
+  { icon: IconDollar, title: "Earn More Money", desc: "Set your own rates, keep 85–95% of your earnings. Transparent, direct payments.", stat: "₹50,000 avg. monthly", num: "02" },
+  { icon: IconShield, title: "Secure & Safe", desc: "Protected payments, verified bookings, and contract management handled for you.", stat: "100% payment guarantee", num: "03" },
+  { icon: IconChart, title: "Manage Your Brand", desc: "Pro profile, portfolio showcase, calendar management, and detailed analytics.", stat: "Complete toolkit", num: "04" },
+];
+const HOW_TO_JOIN = [
+  { step: "01", title: "Create Your Profile", desc: "Sign up and create your artist profile in minutes. Add basic info, category, and contact details.", duration: "3 min", icon: IconUsers },
+  { step: "02", title: "Build Your Portfolio", desc: "Upload photos, videos, performance samples. Add rates, availability, and services.", duration: "20 min", icon: IconCamera },
+  { step: "03", title: "Get Verified", desc: "Our team reviews your profile. Once verified, you appear in search and can receive bookings.", duration: "24–48 hrs", icon: IconTrophy },
+  { step: "04", title: "Start Performing", desc: "Receive booking requests, manage your schedule, and get paid. Build your reputation with reviews.", duration: "Ongoing", icon: IconSparkle },
+];
+const CATS = [
+  { icon: IconMic, title: "DJ", count: "500+" },
+  { icon: IconMusic, title: "Singer", count: "400+" },
+  { icon: IconUsers, title: "Band", count: "300+" },
+  { icon: IconSparkle, title: "Dancer", count: "350+" },
+  { icon: IconCamera, title: "Anchor/MC", count: "250+" },
+  { icon: IconTrophy, title: "Comedian", count: "150+" },
+  { icon: IconChart, title: "Magician", count: "100+" },
+  { icon: IconTrend, title: "Celebrity", count: "80+" },
+];
+const BENEFITS = [
+  "Free to create profile", "Instant booking notifications", "Secure payment processing",
+  "Calendar & schedule management", "Portfolio & media showcase", "Direct client communication",
+  "Review & rating system", "Marketing & promotion", "24/7 support assistance", "Analytics dashboard",
+];
+const FAQS = [
+  { q: "Who can join as an artist on AHiBi?", a: "Any performing artist can join! Singers, musicians, DJs, dancers, bands, comedians, magicians, anchors/MCs, and celebrities. If you entertain at events, you're welcome." },
+  { q: "How much does it cost to join?", a: "Creating your profile is completely FREE. We charge a small commission (5–15%) only when you complete a booking. No monthly fees, no hidden charges." },
+  { q: "How do I get paid?", a: "Payments are processed via Razorpay. When a booking is confirmed and completed, funds transfer to your bank account within 3–5 business days. Track all earnings in your dashboard." },
+  { q: "Can I set my own pricing?", a: "Yes! Full control over your rates. Set different prices for different event types, durations, and services. Offer packages and custom quotes too." },
+  { q: "How does the booking process work?", a: "Organizers search artists, view your profile, and send requests. You get instant notifications, can accept/decline, and communicate directly through our platform." },
+  { q: "What if I need to cancel a booking?", a: "While we encourage honoring bookings, emergencies happen. Cancel through your dashboard. Policies vary by plan and timing — check your artist agreement." },
+];
+const TICKER_ITEMS = ["Join Free", "10,000+ Artists", "Secure Payments", "Set Your Rates", "Verified Profiles", "24/7 Support", "Nationwide Bookings", "Free to Join"];
+
+// ─── Landing Page ─────────────────────────────────────────────────────────
+function LandingPage({ onViewList }: { onViewList: () => void }) {
+  const [openFaq, setOpenFaq] = useState(null);
+  const [topArtists, setTopArtists] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTopArtists = async () => {
+      try {
+        const params = new URLSearchParams();
+        params.append("sortBy", "rating.average");
+        params.append("limit", "3");
+        const res = await fetch(`/api/artist/public?${params.toString()}`);
+        const data = await res.json();
+        if (data?.success && Array.isArray(data?.data?.artists)) {
+          setTopArtists(data.data.artists);
+        }
+      } catch {
+        setTopArtists([]);
+      }
+    };
+
+    fetchTopArtists();
+  }, []);
+
+  const featuredTopArtists = (topArtists?.length ? topArtists : FEATURED_ARTISTS).slice(0, 3);
+
+  const shareArtist = async (artist: { _id?: string; id?: string | number; name?: string }) => {
+    const id = artist?._id || artist?.id;
+    if (!id) return;
+    const url = `${window.location.origin}/artist/profile/${id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: artist?.name || "Artist", text: `Check out ${artist?.name || "this artist"} on AHiBi`, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Couldn't share");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
+    <div className="bg-[#FAF7F2] text-[#1A1714] font-sans">
+      {/* Hero */}
+      <div className="relative flex min-h-[75vh] flex-col justify-center overflow-hidden pt-16">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#1A1714_0%,#2D2520_40%,#1A1714_100%)]" />
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-25"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1600&h=900&fit=crop')",
+          }}
+        />
+        <div className="relative z-[1] mx-auto w-full max-w-[1280px] px-6 py-8 md:px-10 lg:px-[60px]">
+          <h1 className="font-['Playfair_Display'] text-[clamp(48px,7vw,100px)] font-black leading-[0.92] tracking-[-2px] text-white">
+            Showcase Your <em className="italic">Talent,</em>
+            <br />
+            Grow Your Career.
+          </h1>
 
-      {/* Hero Section */}
-      <div className="relative h-[450px] md:h-[550px] lg:h-[650px] overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1600&h=900&fit=crop"
-            alt="Artist performing"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70"></div>
+          <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row">
+            <button
+              className="inline-flex items-center gap-2 bg-[#E31837] px-8 py-4 text-[13px] font-semibold uppercase tracking-[0.8px] text-white transition hover:bg-[#FF1F3D]"
+              onClick={() => (window.location.href = "/artist/auth/login")}
+            >
+              Join as Artist <IconArrow />
+            </button>
+            <button
+              className="inline-flex items-center gap-2 border border-white/20 bg-transparent px-8 py-4 text-[13px] font-medium uppercase tracking-[0.8px] text-white/70 transition hover:border-white/60 hover:text-white"
+              onClick={() => (window.location.href = "/allArtists/list")}
+            >
+              Browse Artists
+            </button>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-8 border-t border-white/10 pt-4">
+            {[["10K+", "Artists"], ["50K+", "Events/Year"], ["₹50K", "Avg. Monthly"], ["48hr", "Go Live"]].map(
+              ([n, l]) => (
+                <div key={l}>
+                  <div className="font-['Playfair_Display'] text-4xl font-bold leading-none text-white">{n}</div>
+                  <div className="mt-1.5 text-[11px] uppercase tracking-[1px] text-white/40">{l}</div>
+                </div>
+              )
+            )}
+          </div>
         </div>
+      </div>
 
-        <div className="relative h-full flex items-center justify-center">
-          <div className="text-center px-4 max-w-5xl mx-auto">
-
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 mt-7 md:mb-6 drop-shadow-2xl leading-tight">
-              Showcase Your Talent,<br className="hidden sm:block" />
-              <span className="text-rose-400">Grow Your Career</span>
-            </h1>
-            <p className="text-lg md:text-xl lg:text-2xl text-white/95 mb-8 md:mb-10 max-w-3xl mx-auto drop-shadow-lg">
-              Connect with event organizers nationwide. Get booked for events.<br className="hidden md:block" />
-              Build your brand and earn what you deserve.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-lg mx-auto">
-              <Link href="/artist/auth/signup" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white px-8 md:px-10 py-6 text-base md:text-lg font-semibold shadow-2xl">
-                  Join as Artist
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="#how-to-join" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-white hover:bg-white hover:text-gray-900 px-8 md:px-10 py-6 text-base md:text-lg font-semibold backdrop-blur-sm bg-white/10">
-                  See How It Works
-                </Button>
-              </Link>
-            </div>
-
-            <div className="mt-8 md:mt-10 flex flex-wrap justify-center items-center gap-4 md:gap-8 text-sm md:text-base text-white/90">
-              <div className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-rose-400" />
-                <span>Free to join</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-rose-400" />
-                <span>Set your own rates</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="h-5 w-5 text-rose-400" />
-                <span>Get verified in 48hrs</span>
-              </div>
+      {/* Ticker */}
+      <div className="overflow-hidden bg-[#1A1714] py-2.5 text-[#FAF7F2]">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="whitespace-nowrap">
+            <div className="flex w-max animate-[ticker_28s_linear_infinite]">
+              {[...TICKER_ITEMS, ...TICKER_ITEMS].map((t, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-3 px-8 py-1 text-[11px] font-medium uppercase tracking-[1.5px]"
+                >
+                  <span className="h-1 w-1 shrink-0 rounded-full bg-[#E31837]" />
+                  {t}
+                </span>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
       {/* Featured Artists */}
-      <Section className="bg-gray-50">
-        <div className="flex items-center justify-between mb-6 md:mb-8">
-          <div>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Featured Artists</h2>
-            <p className="text-gray-600 text-sm md:text-base">Successful artists already performing with AHiBi</p>
-          </div>
-          <Link href="/allArtists/list">
-            <Button variant="link" className="text-rose-600 hover:text-rose-700 hidden md:flex">
-              View all <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {popularArtists.map((artist) => (
-            <Card key={artist.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group">
-              <div className="aspect-[4/3] overflow-hidden relative">
-                <img
-                  src={artist.image}
-                  alt={artist.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <Badge className="absolute top-3 left-3 bg-rose-600 hover:bg-rose-700 text-white border-0">
-                  {artist.category}
-                </Badge>
+      <section className="bg-[#FAF7F2] py-20 md:py-28">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="mb-5 inline-flex items-center gap-2.5">
+                <span className="font-['DM_Mono'] text-[11px] font-medium tracking-[1px] text-[#C8102E]">01</span>
+                <span className="text-[11px] font-medium uppercase tracking-[2px] text-[#6B6259]">Featured Artists</span>
               </div>
-              <CardContent className="p-4 md:p-5">
-                <h3 className="font-semibold text-lg md:text-xl text-gray-900 mb-2">{artist.name}</h3>
-                <p className="text-sm text-gray-600 mb-3">{artist.category} • {artist.bookings} bookings</p>
-                <div className="flex items-center text-sm border-t pt-3">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                  <span className="font-medium">{artist.rating}</span>
-                  <span className="text-gray-500 ml-1">rating</span>
+              <h2 className="font-['Playfair_Display'] text-[clamp(32px,4vw,56px)] font-bold leading-[1.08] tracking-[-1px] text-[#1A1714]">
+                Top Performing <em className="italic text-[#C8102E]">Artists</em>
+              </h2>
+            </div>
+            <button
+              className="mt-8 inline-flex items-center gap-2 p-0 text-[12px] font-semibold uppercase tracking-[1px] text-[#1A1714] transition hover:gap-4"
+              onClick={onViewList}
+            >
+              View All Artists <IconArrow />
+            </button>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredTopArtists.map((a: any) => {
+              const key = a?._id || a?.id || a?.name;
+              const name = a?.name || "Artist";
+              const category = a?.type || a?.category || "Artist";
+              const rating = a?.rating?.average ?? a?.rating ?? "-";
+              const bookings = a?.totalBookings ?? a?.bookings ?? 0;
+              const basePrice = Number.isFinite(a?.basePrice) && a.basePrice > 0 ? a.basePrice : null;
+              const priceLbl = basePrice ? `₹${basePrice.toLocaleString()}` : "Custom";
+              const image =
+                a?.image ||
+                a?.gallery?.photos?.find?.((p: any) => p?.isProfileImage)?.url ||
+                a?.gallery?.photos?.[0]?.url ||
+                "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80";
+
+              return (
+                <div
+                  className="group relative flex cursor-pointer flex-col overflow-hidden border border-[#DDD8CF] bg-white transition hover:-translate-y-0.5 hover:border-[#1A1714] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+                  key={key}
+                  onClick={() => (window.location.href = `/artist/profile/${a?._id || ""}`)}
+                >
+                  <div className="relative aspect-[3/4] overflow-hidden bg-[#F3EFE8]">
+                    <img
+                      src={image}
+                      alt={name}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(20,15,10,0.88)] via-[rgba(20,15,10,0.1)] to-transparent" />
+
+                    <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
+                      <span
+                        className={`px-[9px] py-[3px] text-[9px] font-bold uppercase tracking-[1.5px] text-white ${
+                          bookings > 50 ? "bg-[#E31837]" : "bg-[#1A1714]"
+                        }`}
+                      >
+                        {bookings > 50 ? "Top Artist" : category}
+                      </span>
+
+                      <button
+                        type="button"
+                        className="flex h-8 w-8 items-center justify-center border border-white/20 bg-white/10 text-white backdrop-blur-sm transition hover:bg-white/20"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          shareArtist(a);
+                        }}
+                        aria-label="Share"
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+                          <path d="M16 6l-4-4-4 4" />
+                          <path d="M12 2v13" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-[1.5px] text-[#E31837]">{category}</div>
+                      <div className="font-['Playfair_Display'] text-xl font-bold leading-[1.15] text-white">{name}</div>
+                      <div className="mt-1 flex items-center gap-2.5 text-[11px] text-white/55">
+                        <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#F59E0B]">
+                          <IconStar filled /> {rating}
+                        </span>
+                        <span>{bookings}+ bookings</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-1 flex-col gap-4 p-5">
+                    <div className="mt-auto flex items-center justify-between border-t border-[#DDD8CF] py-4">
+                      <div>
+                        <div className="text-[9px] font-semibold uppercase tracking-[1.5px] text-[#6B6259]">Starting from</div>
+                        <div className="font-['Playfair_Display'] text-xl font-bold text-[#1A1714]">{priceLbl}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex">
+                    <button
+                      className="flex-1 items-center justify-center gap-2 bg-[#1A1714] px-3.5 py-3.5 text-[11px] font-semibold uppercase tracking-[1px] text-white transition hover:bg-[#E31837]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/artist/profile/${a?._id || ""}`;
+                      }}
+                    >
+                      View Profile <IconArrow />
+                    </button>
+                    <button
+                      className="items-center gap-1.5 border-l border-[#DDD8CF] px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#1A1714] transition hover:bg-[#F3EFE8]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/artist/profile/${a?._id || ""}?book=true`;
+                      }}
+                    >
+                      Book
+                    </button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              );
+            })}
+          </div>
         </div>
+      </section>
 
-        <div className="text-center mt-8">
-          <Link href="/allArtists/list">
-            <Button variant="outline" size="lg" className="border-2 border-rose-600 text-rose-600 hover:bg-rose-50">
-              Explore All Artists
-              <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+      <hr className="m-0 h-px border-0 bg-[#DDD8CF]" />
+
+      {/* Why Join */}
+      <section className="bg-[#FAF7F2] py-20 md:py-28">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="mb-5 inline-flex items-center gap-2.5">
+            <span className="font-['DM_Mono'] text-[11px] font-medium tracking-[1px] text-[#C8102E]">02</span>
+            <span className="text-[11px] font-medium uppercase tracking-[2px] text-[#6B6259]">Why Join</span>
+          </div>
+
+          <h2 className="font-['Playfair_Display'] text-[clamp(32px,4vw,56px)] font-bold leading-[1.08] tracking-[-1px] text-[#1A1714]">
+            Why Artists <em className="italic text-[#C8102E]">Choose</em> Ahibi
+          </h2>
+          <p className="mt-4 max-w-[520px] text-base leading-relaxed text-[#6B6259]">
+            Join thousands of artists growing their careers and earning more with our platform.
+          </p>
+
+          <div className="mt-14 grid grid-cols-1 border border-[#DDD8CF] sm:grid-cols-2 lg:grid-cols-4">
+            {WHY_JOIN.map((w) => (
+              <div
+                className="group relative overflow-hidden border-b border-r border-[#DDD8CF] bg-transparent p-10 transition hover:bg-[#F3EFE8]"
+                key={w.num}
+              >
+                <div className="mb-5 font-['DM_Mono'] text-[11px] font-medium tracking-[1px] text-[#C8102E]">{w.num}</div>
+                <div className="mb-5 text-[#3D3730] [&>svg]:h-10 [&>svg]:w-10">{React.createElement(w.icon)}</div>
+                <div className="mb-3 font-['Playfair_Display'] text-xl font-bold leading-snug text-[#1A1714]">{w.title}</div>
+                <div className="mb-5 text-sm leading-relaxed text-[#6B6259]">{w.desc}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[1px] text-[#C8102E]">{w.stat}</div>
+                <div className="absolute bottom-0 left-0 h-[3px] w-full origin-left scale-x-0 bg-[#E31837] transition-transform duration-300 group-hover:scale-x-100" />
+              </div>
+            ))}
+          </div>
         </div>
-      </Section>
-          {/* showcase artist */}
-      <section className="relative overflow-hidden bg-[#fff] py-16 sm:py-20">
-        {/* dotted background */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage: "radial-gradient(#e6cfc7 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-          }}
-        />
+      </section>
 
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
-            {/* badge */}
-            <div className="inline-block rounded bg-black px-4 py-1 text-lg font-semibold tracking-widest text-white">
-              ARTIST
+      <hr className="m-0 h-px border-0 bg-[#DDD8CF]" />
+
+      {/* How to Join */}
+      <section className="bg-[#F3EFE8] py-20 md:py-28">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="mb-5 inline-flex items-center gap-2.5">
+            <span className="font-['DM_Mono'] text-[11px] font-medium tracking-[1px] text-[#C8102E]">03</span>
+            <span className="text-[11px] font-medium uppercase tracking-[2px] text-[#6B6259]">Process</span>
+          </div>
+
+          <h2 className="font-['Playfair_Display'] text-[clamp(32px,4vw,56px)] font-bold leading-[1.08] tracking-[-1px] text-[#1A1714]">
+            How to Join
+            <br />
+            <em className="italic text-[#C8102E]">AHiBi</em>
+          </h2>
+          <p className="mt-4 max-w-[520px] text-base leading-relaxed text-[#6B6259]">
+            Get your artist profile live and start receiving bookings in just 4 easy steps.
+          </p>
+
+          <div className="mt-14">
+            {HOW_TO_JOIN.map((s, idx) => (
+              <div
+                className={`group flex gap-6 border-b border-[#DDD8CF] py-10 transition hover:pl-3 ${
+                  idx === 0 ? "border-t" : ""
+                }`}
+                key={s.step}
+              >
+                <div className="w-[72px] shrink-0 font-['Playfair_Display'] text-5xl font-black leading-none text-[#EDE8DF] transition group-hover:text-[#E31837]/25">
+                  {s.step}
+                </div>
+                <div className="flex-1">
+                  <div className="mb-3 inline-flex items-center gap-2 bg-[#FAF7F2] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[1.5px] text-[#6B6259]">
+                    <span className="text-[#6B6259] [&>svg]:h-5 [&>svg]:w-5">{React.createElement(s.icon)}</span>
+                    {s.duration}
+                  </div>
+                  <div className="font-['Playfair_Display'] text-2xl font-bold text-[#1A1714]">{s.title}</div>
+                  <div className="mt-2 max-w-[520px] text-sm leading-relaxed text-[#6B6259]">{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12">
+            <button
+              className="inline-flex items-center gap-2 bg-[#E31837] px-8 py-4 text-[13px] font-semibold uppercase tracking-[0.8px] text-white transition hover:bg-[#FF1F3D]"
+              onClick={() => (window.location.href = "/artist/auth/login")}
+            >
+              Start Your Journey — It's Free <IconArrow />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="bg-[#FAF7F2] py-20 md:py-28">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="mb-5 inline-flex items-center gap-2.5">
+            <span className="font-['DM_Mono'] text-[11px] font-medium tracking-[1px] text-[#C8102E]">04</span>
+            <span className="text-[11px] font-medium uppercase tracking-[2px] text-[#6B6259]">Categories</span>
+          </div>
+          <h2 className="font-['Playfair_Display'] text-[clamp(32px,4vw,56px)] font-bold leading-[1.08] tracking-[-1px] text-[#1A1714]">
+            All Artist <em className="italic text-[#C8102E]">Categories</em>
+          </h2>
+          <p className="mt-4 max-w-[520px] text-base leading-relaxed text-[#6B6259]">
+            Whatever your talent, there's demand for it on AHiBi.
+          </p>
+
+          <div className="mt-12 grid grid-cols-2 gap-0.5 sm:grid-cols-4">
+            {CATS.map((c) => (
+              <div
+                className="group cursor-pointer border border-transparent bg-[#F3EFE8] px-6 py-8 text-center transition hover:border-[#1A1714] hover:bg-[#1A1714]"
+                key={c.title}
+              >
+                <div className="mx-auto mb-4 text-[#C8102E] transition group-hover:text-white [&>svg]:h-10 [&>svg]:w-10">
+                  {React.createElement(c.icon)}
+                </div>
+                <div className="mb-1 font-['Playfair_Display'] text-lg font-bold text-[#1A1714] transition group-hover:text-white">{c.title}</div>
+                <div className="text-[11px] font-medium uppercase tracking-[1px] text-[#C8102E] transition group-hover:text-white/50">
+                  {c.count} artists
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Band */}
+      <div className="bg-[#1A1714] py-20">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
+            <div>
+              <div className="mb-5 inline-flex items-center gap-2.5">
+                <span className="text-[11px] font-medium uppercase tracking-[2px] text-white/30">05 — Benefits</span>
+              </div>
+              <h2 className="font-['Playfair_Display'] text-[clamp(32px,4vw,52px)] font-bold leading-tight tracking-[-1px] text-white">
+                Everything
+                <br />
+                You Need to <em className="italic text-[#E31837]">Succeed</em>
+              </h2>
+              <p className="mt-4 mb-8 text-[15px] leading-relaxed text-white/45">
+                We've built the complete toolkit for artist success on our platform.
+              </p>
+              <button
+                className="inline-flex items-center gap-2 bg-[#E31837] px-8 py-4 text-[13px] font-semibold uppercase tracking-[0.8px] text-white transition hover:bg-[#FF1F3D]"
+                onClick={() => (window.location.href = "/artist/auth/login")}
+              >
+                Join Now <IconArrow />
+              </button>
+            </div>
+            <div className="flex flex-col">
+              {BENEFITS.map((b) => (
+                <div
+                  className="group flex items-center gap-4 border-b border-white/10 py-[18px] transition hover:pl-2"
+                  key={b}
+                >
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center bg-[#E31837] text-[11px] font-bold text-white">
+                    <IconCheck />
+                  </div>
+                  <span className="text-sm font-normal text-white/70">{b}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <section className="bg-[#FAF7F2] py-20 md:py-28">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="flex flex-wrap items-start justify-between gap-10">
+            <div className="w-full max-w-[320px]">
+              <div className="mb-5 inline-flex items-center gap-2.5">
+                <span className="font-['DM_Mono'] text-[11px] font-medium tracking-[1px] text-[#C8102E]">06</span>
+                <span className="text-[11px] font-medium uppercase tracking-[2px] text-[#6B6259]">FAQ</span>
+              </div>
+              <h2 className="font-['Playfair_Display'] text-[clamp(32px,4vw,56px)] font-bold leading-[1.08] tracking-[-1px] text-[#1A1714]">
+                Common <em className="italic text-[#C8102E]">Questions</em>
+              </h2>
+              <p className="mt-3 max-w-[520px] text-base leading-relaxed text-[#6B6259]">
+                Everything you need to know about joining as an artist.
+              </p>
             </div>
 
-            {/* heading */}
-            <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-              Showcase your<br/>
-              <span className="text-red-600 ">artistic talent</span>
-            </h1>
+            <div className="w-full flex-1 basis-[480px]">
+              {FAQS.map((f, i) => {
+                const isOpen = openFaq === i;
+                return (
+                  <div className="border-b border-[#DDD8CF]" key={i}>
+                    <button
+                      className="flex w-full items-center justify-between gap-4 py-6 text-left"
+                      onClick={() => setOpenFaq(isOpen ? null : i)}
+                      type="button"
+                    >
+                      <span className="font-['Playfair_Display'] text-lg font-semibold leading-snug text-[#1A1714]">{f.q}</span>
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center text-[#6B6259] transition-transform ${
+                          isOpen ? "rotate-45 text-[#C8102E]" : "rotate-0"
+                        }`}
+                      >
+                        <IconPlus />
+                      </span>
+                    </button>
 
-            {/* subtext */}
-            <p className="mt-4 text-sm sm:text-base text-gray-600">
-             Reach more fans. Live in under{" "}
-              <span className="font-semibold text-gray-900">5 minutes.</span>
-            </p>
-
-            {/* CTA */}
-            <div className="mt-8">
-              <Link href="/allOrganizers">
-                <button className="rounded-full bg-red-600 px-10 py-4 text-sm sm:text-base font-semibold text-white shadow-lg hover:bg-red-700 transition">
-                  GET STARTED
-                </button>
-              </Link>
+                    <div
+                      className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                        isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                      }`}
+                    >
+                      <div
+                        className={`min-h-0 overflow-hidden text-sm leading-relaxed text-[#6B6259] transition-[opacity,transform,padding] duration-300 ease-in-out ${
+                          isOpen ? "pb-6 opacity-100 translate-y-0" : "pb-0 opacity-0 -translate-y-1"
+                        }`}
+                      >
+                        {f.a}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </section>
 
-
-      {/* Why Join Section */}
-      <Section id="why-join">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Why Artists Choose AHiBi
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            Join thousands of artists who are growing their careers and earning more with our platform
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {whyJoin.map((item, index) => (
-            <Card key={index} className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group">
-              <CardContent className="p-6 md:p-8">
-                <div className="flex items-start gap-4 md:gap-6">
-                  <div className="p-3 md:p-4 rounded-xl bg-rose-100 group-hover:bg-rose-600 transition-colors duration-300 flex-shrink-0">
-                    <item.icon className="h-6 w-6 md:h-8 md:w-8 text-rose-600 group-hover:text-white transition-colors duration-300" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{item.title}</h3>
-                    <p className="text-gray-600 mb-4 text-sm md:text-base">{item.description}</p>
-                    <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0 text-sm">
-                      {item.stat}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      {/* How to Join Section */}
-      <Section id="how-to-join" className="bg-gradient-to-br from-rose-50 via-purple-50 to-blue-50">
-        <div className="text-center mb-10 md:mb-16">
-          <Badge className="mb-4 bg-rose-600 hover:bg-rose-700 text-white border-0 px-4 py-1.5">
-            Simple Process
-          </Badge>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            How to Join AHiBi
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            Get your artist profile live and start receiving bookings in just 4 easy steps
-          </p>
-        </div>
-
-        <div className="max-w-5xl mx-auto">
-          {howToJoin.map((item, index) => (
-            <div key={index} className="relative mb-8 md:mb-12 last:mb-0">
-              {index < howToJoin.length - 1 && (
-                <div className="absolute left-6 md:left-8 top-20 md:top-24 w-0.5 h-full bg-gradient-to-b from-rose-300 to-purple-300 -z-10"></div>
-              )}
-
-              <Card className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-                <CardContent className="p-6 md:p-8">
-                  <div className="flex flex-col md:flex-row items-start gap-6">
-                    <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
-                      <div className="relative flex-shrink-0">
-                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-rose-600 to-purple-600 flex items-center justify-center text-white text-xl md:text-2xl font-bold shadow-lg">
-                          {item.step}
-                        </div>
-                      </div>
-                      <div className="md:hidden flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-1">{item.title}</h3>
-                        <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0 text-xs">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {item.duration}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 w-full">
-                      <div className="hidden md:flex items-center justify-between mb-3">
-                        <h3 className="text-2xl font-bold text-gray-900">{item.title}</h3>
-                        <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {item.duration}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-600 text-sm md:text-base leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    <div className="hidden lg:flex p-4 rounded-xl bg-rose-100 flex-shrink-0">
-                      <item.icon className="h-8 w-8 text-rose-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-10 md:mt-12">
-          <Link href="/artist/auth/signup">
-            <Button size="lg" className="bg-rose-600 hover:bg-rose-700 text-white px-10 md:px-12 py-6 text-base md:text-lg font-semibold shadow-xl">
-              Start Your Journey - It's Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-        </div>
-      </Section>
-
-      {/* Artist Categories */}
-      <Section className="bg-white">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            All Artist Categories
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            Whatever your talent, there's demand for it on AHiBi
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {categories.map((category, index) => (
-            <Card key={index} className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group bg-gray-50">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 rounded-xl bg-rose-100 group-hover:bg-rose-600 transition-colors duration-300 flex items-center justify-center mb-4">
-                    <category.icon className="h-7 w-7 text-rose-600 group-hover:text-white transition-colors duration-300" />
-                  </div>
-                  <h3 className="font-bold text-lg md:text-xl text-gray-900 mb-2">{category.title}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{category.desc}</p>
-                  <Badge variant="secondary" className="bg-rose-100 text-rose-700 border-0 text-xs">
-                    {category.count} artists
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      {/* Event Types */}
-      <Section className="bg-gray-50">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Perform at All Types of Events
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            From corporate events to private parties, find your perfect gig
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {eventTypes.map((event, index) => (
-            <Card key={index} className={`overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 group ${event.color}`}>
-              <CardContent className="p-0">
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </div>
-                <div className="p-5">
-                  <h3 className="font-bold text-lg md:text-xl text-gray-900 mb-2">{event.title}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{event.description}</p>
-                  <p className="text-xs text-rose-600 font-medium">{event.count}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      {/* Benefits Section */}
-      <Section className="bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-            Everything You Need to Succeed
-          </h2>
-          <p className="text-gray-300 text-base md:text-lg max-w-3xl mx-auto">
-            We've built the complete toolkit for artist success
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-          {benefits.map((benefit, index) => (
-            <div key={index} className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4 md:p-5 hover:bg-white/20 transition-colors duration-300">
-              <div className="p-2 rounded-lg bg-rose-600/20 flex-shrink-0">
-                <benefit.icon className="h-5 w-5 text-rose-400" />
-              </div>
-              <span className="text-sm md:text-base font-medium">{benefit.text}</span>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* Pricing Plans */}
-      {/* <Section id="plans" className="bg-gray-50">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Choose Your Plan
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            Start free, upgrade anytime. All plans include our core features.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {tiers.map((t, index) => (
-            <Card key={t.name} className={`border-0 shadow-lg hover:shadow-2xl transition-all duration-300 relative overflow-hidden ${t.popular ? 'ring-2 ring-rose-600 scale-105 md:scale-110' : ''}`}>
-              {t.popular && (
-                <div className="absolute top-0 right-0 bg-rose-600 text-white px-4 py-1 text-xs font-bold">
-                  MOST POPULAR
-                </div>
-              )}
-              <CardHeader className="pb-4">
-                <Badge variant="secondary" className={`w-fit ${t.popular ? 'bg-rose-600 text-white' : 'bg-gray-100 text-gray-700'} border-0 mb-3`}>
-                  {t.tag}
-                </Badge>
-                <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{t.name}</CardTitle>
-                <div className="mb-4">
-                  <span className="text-3xl md:text-4xl font-bold text-gray-900">{t.price}</span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-rose-600">{t.commission}</span> commission on bookings
-                </p>
-              </CardHeader>
-              <CardContent>
-                <ul className="mb-6 space-y-3 text-sm">
-                  {t.bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-3">
-                      <Check className="mt-0.5 h-5 w-5 text-rose-600 flex-shrink-0" />
-                      <span className="text-gray-700">{b}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button className={`w-full ${t.popular ? 'bg-rose-600 hover:bg-rose-700' : 'bg-gray-900 hover:bg-gray-800'} text-white py-6`}>
-                  {t.cta}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </Section> */}
-
-      {/* Our Clients */}
-      <Section className="bg-white">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Trusted By Leading Brands
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            Our artists perform at events organized by top companies worldwide
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 items-center max-w-5xl mx-auto">
-          {clients.map((client, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-center p-6 bg-gray-50 rounded-2xl hover:shadow-lg transition-all duration-300"
-            >
-              <img
-                src={client.logo}
-                alt={client.name}
-                className="h-8 w-auto object-contain opacity-60 hover:opacity-100 transition-opacity"
-              />
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* FAQ Section */}
-      <Section id="faq" className="bg-gray-50">
-        <div className="text-center mb-10 md:mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Frequently Asked Questions
-          </h2>
-          <p className="text-gray-600 text-base md:text-lg max-w-3xl mx-auto">
-            Everything you need to know about joining AHiBi as an artist
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-          {faqs.map((f, index) => (
-            <Card key={index} className="border-0 shadow-md hover:shadow-xl transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl font-bold text-gray-900 leading-tight">{f.q}</CardTitle>
-              </CardHeader>
-              <CardContent className="text-gray-600 text-sm md:text-base leading-relaxed">{f.a}</CardContent>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
       {/* Final CTA */}
-      <Section id="join" className="bg-gradient-to-br from-rose-600 via-rose-500 to-purple-600">
-        <div className="rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-sm p-6 md:p-12 lg:p-16 shadow-2xl border border-white/20">
-          <div className="text-center max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6">
-              Ready to Launch Your Artist Career?
-            </h2>
-            <p className="text-rose-50 text-base md:text-xl mb-8 md:mb-10 max-w-2xl mx-auto">
-              Join 10,000+ artists already earning and growing with AHiBi. Create your profile today and start receiving bookings within 48 hours.
-            </p>
+      <div className="bg-[#E31837] py-24">
+        <div className="mx-auto w-full max-w-[1280px] px-6 md:px-10 lg:px-[60px]">
+          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2 lg:gap-16">
+            <div className="max-w-[600px]">
+              <div className="mb-6 inline-flex items-center gap-2.5">
+                <div className="h-px w-8 bg-white/40" />
+                <span className="text-[11px] font-medium uppercase tracking-[2px] text-white/50">Get Started Today</span>
+              </div>
+              <h2 className="font-['Playfair_Display'] text-[clamp(36px,5vw,72px)] font-black leading-[1.05] tracking-[-2px] text-white">
+                Ready to Launch
+                <br />
+                Your <em className="italic">Artist</em> Career?
+              </h2>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 md:mb-10">
-              <Link href="/artist/auth/signup">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-rose-600 hover:bg-gray-100 font-semibold px-10 md:px-12 py-6 text-base md:text-lg shadow-xl">
-                  Join as Artist - Free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/artist/auth/login">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-2 border-white text-black hover:bg-white hover:text-rose-600 font-semibold px-10 md:px-12 py-6 text-base md:text-lg">
-                  Artist Login
-                </Button>
-              </Link>
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+                <button
+                  className="inline-flex items-center gap-2 bg-white px-8 py-4 text-[13px] font-semibold uppercase tracking-[0.8px] text-[#E31837] transition hover:bg-[#F3EFE8]"
+                  onClick={() => (window.location.href = "/artist/auth/login")}
+                >
+                  Join as Artist — Free <IconArrow />
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 border border-white/40 bg-transparent px-8 py-4 text-[13px] font-medium uppercase tracking-[0.8px] text-white/80 transition hover:border-white hover:text-white"
+                  onClick={() => (window.location.href = "/allArtists/list")}
+                >
+                  Browse Artists
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 text-sm max-w-3xl mx-auto">
-              <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
-                <Check className="mx-auto mb-2 h-5 w-5" />
-                <div className="font-semibold">Free to Join</div>
+            <div className="relative overflow-hidden border border-white/20 bg-white/10 p-8 text-white backdrop-blur-sm">
+              <div className="text-[11px] font-medium uppercase tracking-[2px] text-white/70">What you get</div>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {["Verified profile badge", "Direct booking requests", "Secure payouts", "Portfolio showcase"].map((t) => (
+                  <div key={t} className="flex items-start gap-3">
+                    <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center bg-white/15">
+                      <IconCheck />
+                    </div>
+                    <div className="text-sm leading-relaxed text-white/90">{t}</div>
+                  </div>
+                ))}
               </div>
-              <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
-                <Check className="mx-auto mb-2 h-5 w-5" />
-                <div className="font-semibold">Set Your Rates</div>
-              </div>
-              <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
-                <Check className="mx-auto mb-2 h-5 w-5" />
-                <div className="font-semibold">Verified Profile</div>
-              </div>
-              <div className="rounded-xl border border-white/30 bg-white/10 backdrop-blur-sm p-4 text-white">
-                <Check className="mx-auto mb-2 h-5 w-5" />
-                <div className="font-semibold">24/7 Support</div>
+
+              <div className="mt-8 border-t border-white/15 pt-6">
+                <div className="font-['Playfair_Display'] text-3xl font-bold leading-tight">
+                  Start in minutes.
+                  <br />
+                  Go live fast.
+                </div>
+                <div className="mt-3 text-sm leading-relaxed text-white/75">
+                  Create your profile, upload your best work, and start receiving requests from organizers.
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </Section>
-
-      <Footer />
+      </div>
     </div>
+  );
+}
+
+
+
+// ─── App Root ─────────────────────────────────────────────────────────────
+export default function App() {
+  const [page, setPage] = useState("landing"); // "landing" | "list"
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
+
+  return (
+    <>
+      <FontLoader />
+
+      {/* Navbar */}
+      <Navbar />
+
+
+
+
+
+      <LandingPage onViewList={() => window.location.href = '/allArtists/list'} />
+      <Footer />
+    </>
   );
 }
