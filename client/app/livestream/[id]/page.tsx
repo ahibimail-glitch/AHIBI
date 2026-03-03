@@ -139,6 +139,18 @@ export default function LiveStreamPage() {
     };
   }, [streamId]);
 
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
   const handlePurchaseLivestream = async () => {
     if (!user || !streamInfo) return;
 
