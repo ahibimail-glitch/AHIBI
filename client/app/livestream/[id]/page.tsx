@@ -240,7 +240,7 @@ export default function LiveStreamPage() {
         
         // Check if page is in an iframe (common for screen recording)
         if (window.top !== window.self) {
-          window.top.location = window.location;
+          window.top.location.href = window.location.href;
         }
       };
 
