@@ -11,6 +11,7 @@ import Footer from "./Footer"
 import type { EventsResponse, Event } from "@/types/event"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import StickyHeroCards from "@/components/StickyHeroCards"
+import NWAHeroSection from "@/components/NWA"
 
 type PublicArtist = {
   _id: string
@@ -74,7 +75,7 @@ const getArtistImage = (artist: PublicArtist) => {
 const getVenueImage = (venue: PublicVenue, idx?: number) => {
   // Check venue.images first (new Cloudinary images field)
   const venueImages = Array.isArray(venue.images) ? venue.images : [];
-  
+
   // If cover image is set, find it in the images array
   if (venue.coverImage && venueImages.length > 0) {
     const coverImage = venueImages.find(img => img.public_id === venue.coverImage);
@@ -82,13 +83,13 @@ const getVenueImage = (venue: PublicVenue, idx?: number) => {
       return resolveImageUrl(coverImage.url, "venue");
     }
   }
-  
+
   // Fallback to first image if no cover image is set or not found
   if (venueImages.length > 0) {
     const firstImage = venueImages[0].url;
     if (firstImage) return resolveImageUrl(firstImage, "venue");
   }
-  
+
   // Fallback to legacy fields
   const main = venue.documents?.venueImages?.find((i) => i?.isMain)?.url
   const anyDoc = venue.documents?.venueImages?.[0]?.url
@@ -574,6 +575,9 @@ export default function HomePage() {
       </section>
 
 
+      <NWAHeroSection />
+
+
       <section className=" bg-white">
         <div className="container mx-auto px-3 sm:px-4">
 
@@ -1039,14 +1043,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
-
-
-
-
-
-
-
 
       <Footer />
     </div>
