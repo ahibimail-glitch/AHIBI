@@ -4,10 +4,12 @@
  */
 
 const asyncHandler = require('express-async-handler');
+const crypto = require('crypto');
 const LiveStream = require('../models/LiveStream');
 const Booking = require('../models/Booking');
 const SportsBooking = require('../models/SportsBooking');
 const LivestreamPurchase = require('../models/LivestreamPurchase');
+const LivestreamSession = require('../models/LivestreamSession');
 const muxService = require('../services/muxService');
 
 /**
@@ -990,6 +992,101 @@ const checkStreamAccess = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @desc    Join a livestream session (one active session per user per stream)
+ * @route   POST /api/livestream/streams/:id/join
+ * @access  Private
+ */
+const joinStream = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { force } = req.body;
+  const userId = req.user._id;
+
+  const HEARTBEAT_EXPIRY_MS = 90 * 1000;
+
+  const existingSession = await LivestreamSession.findOne({
+    user: userId,
+    stream: id,
+    lastHeartbeat: { $gt: new Date(Date.now() - HEARTBEAT_EXPIRY_MS) },
+  });
+
+  if (existingSession) {
+    if (!force) {
+      return res.status(409).json({
+        success: false,
+        message: 'You are already watching this stream on another device or tab.',
+        code: 'ALREADY_WATCHING',
+        lastSeen: existingSession.lastHeartbeat,
+      });
+    }
+    await LivestreamSession.deleteOne({ _id: existingSession._id });
+  }
+
+  await LivestreamSession.deleteMany({ user: userId, stream: id });
+
+  const sessionToken = crypto.randomBytes(32).toString('hex');
+
+  await LivestreamSession.create({
+    user: userId,
+    stream: id,
+    sessionToken,
+    lastHeartbeat: new Date(),
+    ipAddress: req.ip,
+    userAgent: req.headers['user-agent'],
+  });
+
+  res.json({
+    success: true,
+    sessionToken,
+  });
+});
+
+/**
+ * @desc    Send heartbeat to keep session alive
+ * @route   POST /api/livestream/streams/:id/heartbeat
+ * @access  Private
+ */
+const heartbeatStream = asyncHandler(async (req, res) => {
+  const { sessionToken } = req.body;
+  const userId = req.user._id;
+
+  if (!sessionToken) {
+    return res.status(400).json({ success: false, message: 'sessionToken is required' });
+  }
+
+  const session = await LivestreamSession.findOneAndUpdate(
+    { sessionToken, user: userId },
+    { lastHeartbeat: new Date() },
+    { new: true }
+  );
+
+  if (!session) {
+    return res.status(404).json({
+      success: false,
+      message: 'Session not found or expired.',
+      code: 'SESSION_EXPIRED',
+    });
+  }
+
+  res.json({ success: true });
+});
+
+/**
+ * @desc    Leave a livestream session
+ * @route   POST /api/livestream/streams/:id/leave
+ * @access  Private
+ */
+const leaveStream = asyncHandler(async (req, res) => {
+  const { sessionToken } = req.body;
+  const userId = req.user._id;
+
+  if (sessionToken) {
+    await LivestreamSession.deleteOne({ sessionToken, user: userId });
+  }
+
+  res.json({ success: true });
+});
+
 module.exports = {
   createLiveStream,
   getAllStreams,
@@ -1005,5 +1102,8 @@ module.exports = {
   updateAnalytics,
   updateEmbedUrl,
   updateStreamAccess,
-  checkStreamAccess
+  checkStreamAccess,
+  joinStream,
+  heartbeatStream,
+  leaveStream,
 };

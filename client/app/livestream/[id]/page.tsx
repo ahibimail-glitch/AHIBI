@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiUrl } from '@/config';
@@ -8,6 +8,8 @@ import Link from 'next/link';
 import Navbar from '@/app/Navbar';
 import Footer from '@/app/Footer';
 import MuxPlayer from "@mux/mux-player-react";
+
+const HEARTBEAT_INTERVAL_MS = 25_000;
 
 // Event name to image mapping
 const EVENT_IMAGES: Record<string, string> = {
@@ -48,6 +50,94 @@ export default function LiveStreamPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accessCheck, setAccessCheck] = useState<AccessCheck | null>(null);
+
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [sessionBlocked, setSessionBlocked] = useState(false);
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionTokenRef = useRef<string | null>(null);
+
+  const joinSession = async (force = false) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setSessionLoading(true);
+    try {
+      const res = await fetch(getApiUrl(`livestream/streams/${streamId}/join`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ force }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        setSessionBlocked(true);
+        setSessionLastSeen(data.lastSeen ? new Date(data.lastSeen).toLocaleTimeString() : null);
+        return;
+      }
+      if (data.success) {
+        setSessionToken(data.sessionToken);
+        sessionTokenRef.current = data.sessionToken;
+        setSessionBlocked(false);
+        startHeartbeat(data.sessionToken);
+      }
+    } catch (e) {
+      console.error('Session join error:', e);
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const startHeartbeat = (token: string) => {
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    heartbeatRef.current = setInterval(async () => {
+      const authToken = localStorage.getItem('token');
+      if (!authToken || !token) return;
+      try {
+        const res = await fetch(getApiUrl(`livestream/streams/${streamId}/heartbeat`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({ sessionToken: token }),
+        });
+        const data = await res.json();
+        if (!data.success && data.code === 'SESSION_EXPIRED') {
+          clearInterval(heartbeatRef.current!);
+          setSessionBlocked(true);
+        }
+      } catch (e) {
+        console.error('Heartbeat error:', e);
+      }
+    }, HEARTBEAT_INTERVAL_MS);
+  };
+
+  const leaveSession = () => {
+    const token = localStorage.getItem('token');
+    const sToken = sessionTokenRef.current;
+    if (!token || !sToken) return;
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    fetch(getApiUrl(`livestream/streams/${streamId}/leave`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ sessionToken: sToken }),
+      keepalive: true,
+    }).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (accessCheck?.hasAccess && isAuthenticated && !sessionToken && !sessionBlocked) {
+      joinSession();
+    }
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    };
+  }, [accessCheck, isAuthenticated]);
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', leaveSession);
+    return () => {
+      window.removeEventListener('beforeunload', leaveSession);
+      leaveSession();
+    };
+  }, [streamId]);
 
   const handlePurchaseLivestream = async () => {
     if (!user || !streamInfo) return;
@@ -412,6 +502,60 @@ export default function LiveStreamPage() {
   }
 
 
+
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Establishing secure session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (sessionBlocked) {
+    return (
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-orange-500/10 flex items-center justify-center">
+            <svg className="w-10 h-10 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2M12 3v4" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Already Watching</h1>
+          <p className="text-gray-400 mb-2">
+            This stream is currently active on another device, browser, or tab.
+          </p>
+          {sessionLastSeen && (
+            <p className="text-gray-500 text-sm mb-6">
+              Last seen on other device at <span className="text-gray-300">{sessionLastSeen}</span>
+            </p>
+          )}
+          <p className="text-gray-500 text-sm mb-8">
+            Only one simultaneous stream session is allowed per account.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => joinSession(true)}
+              className="block w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Watch Here Instead
+            </button>
+            <p className="text-gray-600 text-xs">
+              This will end the session on the other device.
+            </p>
+            <Link
+              href="/"
+              className="block px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Go Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

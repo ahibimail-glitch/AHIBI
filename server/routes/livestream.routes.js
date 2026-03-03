@@ -31,6 +31,11 @@ router.get('/streams/:id/playback-token', protect, livestreamController.getPlayb
 // Check user access to stream (requires authentication)
 router.get('/streams/:id/check-access', protect, livestreamController.checkStreamAccess);
 
+// Session enforcement - one active session per user per stream
+router.post('/streams/:id/join', protect, livestreamController.joinStream);
+router.post('/streams/:id/heartbeat', protect, livestreamController.heartbeatStream);
+router.post('/streams/:id/leave', protect, livestreamController.leaveStream);
+
 // ==================== ADMIN ROUTES ====================
 
 // Create new live stream
