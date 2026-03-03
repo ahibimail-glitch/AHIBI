@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '@/config';
-import { Search, Users, Video, DollarSign, Calendar, Trash2, Plus, User, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Search, Users, Video, DollarSign, Calendar, Trash2, Plus, User, Clock, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
 
 interface User {
   _id: string;
@@ -107,6 +107,54 @@ export default function LivestreamUserManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadCsv = (filename: string, rows: Record<string, any>[]) => {
+    const escapeCell = (value: any) => {
+      if (value === null || value === undefined) return '';
+      const s = String(value);
+      if (/[\n\r",]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    if (!rows.length) {
+      setError('No data to export');
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const csv = [
+      headers.map(escapeCell).join(','),
+      ...rows.map((r) => headers.map((h) => escapeCell(r[h])).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPurchases = () => {
+    const rows = purchases.map((p) => ({
+      PurchaseId: p._id,
+      UserName: p.user?.name || '',
+      UserEmail: p.user?.email || '',
+      UserPhone: p.user?.phone || '',
+      LivestreamTitle: p.livestream?.title || '',
+      LivestreamPrice: p.livestream?.price ?? '',
+      AmountPaid: p.amount,
+      Status: p.adminPurchase ? 'admin' : p.status,
+      AccessGranted: p.accessGranted ? 'yes' : 'no',
+      PurchaseDate: p.createdAt ? new Date(p.createdAt).toISOString() : ''
+    }));
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`livestream-purchases-page-${pagination.page}-${stamp}.csv`, rows);
   };
 
   // Get all purchases
@@ -457,6 +505,18 @@ export default function LivestreamUserManagement() {
       {/* All Purchases Tab */}
       {activeTab === 'purchases' && (
         <div>
+          <div className="flex items-center justify-end mb-4">
+            <button
+              type="button"
+              onClick={handleDownloadPurchases}
+              disabled={purchasesLoading || purchases.length === 0}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm flex items-center gap-2 disabled:opacity-50"
+              title="Download purchases as Excel-compatible CSV"
+            >
+              <Download className="w-4 h-4" />
+              Download Excel
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
