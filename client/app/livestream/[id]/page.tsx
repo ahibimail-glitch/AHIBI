@@ -164,15 +164,109 @@ export default function LiveStreamPage() {
       }
     };
 
+    const preventScreenSharing = () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia;
+        navigator.mediaDevices.getDisplayMedia = function(options: any) {
+          return Promise.reject(new Error('Screen sharing is not allowed on this page'));
+        };
+      }
+    };
+
+    const preventScreenCapture = () => {
+      // Add CSS to prevent screen capture
+      const style = document.createElement('style');
+      style.textContent = `
+        * {
+          -webkit-touch-callout: none !important;
+          -webkit-user-select: none !important;
+          -khtml-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+        }
+        
+        body {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          body::before {
+            content: "Screen capture is not allowed" !important;
+            visibility: visible !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            font-size: 24px !important;
+            color: red !important;
+          }
+        }
+        
+        video {
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          pointer-events: none !important;
+          -webkit-pointer-events: none !important;
+        }
+        
+        .mux-player {
+          pointer-events: none !important;
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Prevent print screen
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'PrintScreen') {
+          e.preventDefault();
+          return false;
+        }
+      });
+
+      // Detect and block screen recording software
+      const detectScreenRecording = () => {
+        // Check for common screen recording indicators
+        if (window.outerHeight <= 1 || window.outerWidth <= 1) {
+          window.location.href = 'about:blank';
+        }
+        
+        // Check if page is in an iframe (common for screen recording)
+        if (window.top !== window.self) {
+          window.top.location = window.location;
+        }
+      };
+
+      const recordingInterval = setInterval(detectScreenRecording, 500);
+
+      return () => {
+        if (style.parentNode) {
+          style.parentNode.removeChild(style);
+        }
+        clearInterval(recordingInterval);
+      };
+    };
+
     const interval = setInterval(detectDevTools, 1000);
 
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
     
+    preventScreenSharing();
+    const cleanupCapture = preventScreenCapture();
+    
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       clearInterval(interval);
+      cleanupCapture();
     };
   }, []);
 
