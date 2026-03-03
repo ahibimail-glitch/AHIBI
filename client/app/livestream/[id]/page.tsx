@@ -145,9 +145,34 @@ export default function LiveStreamPage() {
       return false;
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+        (e.ctrlKey && e.key === 'u')
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    const detectDevTools = () => {
+      const threshold = 160;
+      if (window.outerHeight - window.innerHeight > threshold || 
+          window.outerWidth - window.innerWidth > threshold) {
+        window.location.href = 'about:blank';
+      }
+    };
+
+    const interval = setInterval(detectDevTools, 1000);
+
     document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      clearInterval(interval);
     };
   }, []);
 
