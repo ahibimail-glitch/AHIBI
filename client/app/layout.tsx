@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import Script from "next/script"
 import "./globals.css"
-import FloatingChatButton from "@/components/ui/FloatingChat"
+import ConditionalFloatingChat from "@/components/ConditionalFloatingChat"
 import { VenueAuthProvider } from "@/hooks/useVenueAuth"
 import { Toaster } from "@/components/ui/sonner"
 import { Toaster as HotToaster } from "react-hot-toast"
@@ -25,7 +25,7 @@ export default function RootLayout({
         <VenueAuthProvider>
           {children}
           <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 50 }}>
-            <FloatingChatButton />
+            <ConditionalFloatingChat />
           </div>
 
           {/* Razorpay */}

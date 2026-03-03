@@ -77,6 +77,7 @@ import Donations from "./components/Donations";
 import AdminNotifications from "./components/AdminNotifications";
 import TermsManager from "./components/TermsManager";
 import SupportTickets from "./components/SupportTickets";
+import SupportChat from "./components/SupportChat";
 import LivestreamUserManagement from "./components/LivestreamUserManagement";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
@@ -310,9 +311,9 @@ export default function AdminDashboard() {
         return <AdminNotifications />;
       case "terms":
         return <TermsManager />;
-      case "support":
-        return <SupportTickets />;
-      // case "aiko-hall":
+      case "support-chat":
+        return <SupportChat />;
+            // case "aiko-hall":
       //   return <AikoHallManagement />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
@@ -387,7 +388,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} />
           <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
-          <SidebarButton icon={HeadphonesIcon} label="Support" active={activeView === "support"} onClick={() => { setActiveView("support"); setSidebarOpen(false); }} />
+          <SidebarButton icon={HeadphonesIcon} label="Support Chat" active={activeView === "support-chat"} onClick={() => { setActiveView("support-chat"); setSidebarOpen(false); }} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
@@ -467,7 +468,7 @@ export default function AdminDashboard() {
               size="sm"
               className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-xs flex items-center justify-center gap-1"
               onClick={() => {
-                setActiveView("support");
+                router.push("/admin/support");
                 setSidebarOpen(false);
               }}
             >

@@ -28,6 +28,7 @@ import {
   Filter,
   User,
   Shield,
+  MessageCircle,
 } from "lucide-react";
 
 type TicketStatus = "open" | "in-progress" | "resolved" | "closed";
@@ -340,32 +341,40 @@ export default function SupportTickets() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <HeadphonesIcon className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-xl">User Support Conversations</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-xl">
+              <HeadphonesIcon className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-bold">Support Tickets</CardTitle>
+              <CardDescription className="mt-1 text-sm">
+                Manage and respond to user support conversations
+              </CardDescription>
+            </div>
           </div>
-          <CardDescription className="mt-1 text-sm">
-            View and reply to support tickets created by users across the platform.
-          </CardDescription>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-6 items-start">
         {/* Ticket list */}
-        <Card className="bg-white/90 border border-gray-200 shadow-sm rounded-2xl">
-          <CardHeader className="pb-3 border-b border-gray-100">
+        <Card className="bg-white border border-gray-200 shadow-lg rounded-2xl overflow-hidden">
+          <CardHeader className="pb-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">Tickets</CardTitle>
+                <div>
+                  <CardTitle className="text-lg font-bold">All Tickets</CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    {tickets.length} {tickets.length === 1 ? 'ticket' : 'tickets'} found
+                  </CardDescription>
+                </div>
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                   onClick={fetchTickets}
                   disabled={listLoading}
                 >
                   {listLoading ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                   ) : (
                     <span className="mr-1">⟳</span>
                   )}
@@ -374,21 +383,21 @@ export default function SupportTickets() {
               </div>
 
               <div className="flex flex-wrap gap-2 items-center">
-                <div className="relative flex-1 min-w-[120px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <div className="relative flex-1 min-w-[140px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
-                    placeholder="Search by subject or ticket ID..."
+                    placeholder="Search tickets..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 h-8 text-xs"
+                    className="pl-9 h-9 text-sm border-2"
                   />
                 </div>
                 <Select
                   value={statusFilter}
                   onValueChange={(val: "all" | TicketStatus) => setStatusFilter(val)}
                 >
-                  <SelectTrigger className="h-8 w-[110px] text-xs">
-                    <Filter className="h-3 w-3 mr-1" />
+                  <SelectTrigger className="h-9 w-[120px] text-sm border-2">
+                    <Filter className="h-4 w-4 mr-1" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -403,7 +412,7 @@ export default function SupportTickets() {
                   value={priorityFilter}
                   onValueChange={(val: "all" | TicketPriority) => setPriorityFilter(val)}
                 >
-                  <SelectTrigger className="h-8 w-[110px] text-xs">
+                  <SelectTrigger className="h-9 w-[120px] text-sm border-2">
                     <SelectValue placeholder="Priority" />
                   </SelectTrigger>
                   <SelectContent>
@@ -418,27 +427,30 @@ export default function SupportTickets() {
             </div>
             </CardHeader>
 
-            <CardContent className="pt-0">
+            <CardContent className="pt-4 px-0">
               {listLoading && tickets.length === 0 ? (
-                <div className="flex items-center justify-center py-10 text-gray-500 text-sm">
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Loading tickets...
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500 text-sm">
+                  <Loader2 className="h-6 w-6 mb-3 animate-spin text-blue-600" />
+                  <p>Loading tickets...</p>
                 </div>
               ) : listError ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center text-gray-700 text-sm">
-                  <AlertCircle className="h-5 w-5 text-red-500 mb-2" />
-                  <p className="mb-2">{listError}</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center text-gray-700 text-sm px-4">
+                  <div className="p-3 bg-red-100 rounded-full mb-3">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <p className="font-medium mb-1">{listError}</p>
                   <p className="text-xs text-gray-500">
                     Check your connection or refresh this page.
                   </p>
                 </div>
               ) : tickets.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center text-gray-500 text-sm">
-                  <HeadphonesIcon className="h-8 w-8 text-gray-300 mb-2" />
-                  <p>No support tickets found.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500 text-sm px-4">
+                  <HeadphonesIcon className="h-12 w-12 text-gray-300 mb-3" />
+                  <p className="font-medium mb-1">No tickets found</p>
+                  <p className="text-xs">Try adjusting your filters</p>
                 </div>
               ) : (
-                <div className="max-h-[480px] overflow-y-auto space-y-1 pr-1">
+                <div className="max-h-[520px] overflow-y-auto space-y-2 px-4">
                   {tickets.map((ticket) => {
                     const isActive = ticket._id === selectedTicketId;
                     return (
@@ -449,31 +461,36 @@ export default function SupportTickets() {
                           setSelectedTicketId(ticket._id);
                           setDetailError(null);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg border mb-1 transition-colors ${
+                        className={`w-full text-left px-3 py-3 rounded-xl border-2 transition-all duration-200 ${
                           isActive
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                            ? "border-blue-500 bg-blue-50 shadow-sm"
+                            : "border-transparent bg-gray-50 hover:border-gray-300 hover:shadow-sm"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-gray-900 truncate">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 truncate mb-1">
                               {ticket.subject}
                             </p>
-                            <p className="text-[11px] text-gray-500 truncate">
+                            <p className="text-xs text-gray-500 truncate mb-1">
                               {ticket.ticketId || ticket._id}
                             </p>
-                            <div className="mt-1 flex items-center gap-1 text-[10px] text-gray-500">
-                              <User className="h-3 w-3" />
-                              <span className="truncate">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <User className="h-3.5 w-3.5" />
+                              <span className="truncate font-medium">
                                 {ticket.user?.name || ticket.user?.phone || "Unknown user"}
                               </span>
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
+                          <div className="flex flex-col items-end gap-1.5">
                             <Badge
-                              variant="outline"
-                              className="text-[10px] px-2 py-0.5 rounded-full capitalize"
+                              className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
+                                ticket.status === 'resolved' || ticket.status === 'closed'
+                                  ? 'bg-green-50 text-green-700 border border-green-200'
+                                  : ticket.status === 'in-progress'
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                              }`}
                             >
                               {statusLabels[ticket.status] || ticket.status}
                             </Badge>
@@ -486,9 +503,9 @@ export default function SupportTickets() {
                             </Badge>
                           </div>
                         </div>
-                        <div className="mt-1 flex items-center justify-between text-[10px] text-gray-500">
-                          <span className="capitalize">{ticket.category}</span>
-                          <span>{formatDateTime(ticket.updatedAt)}</span>
+                        <div className="flex items-center justify-between text-[11px] text-gray-500">
+                          <span className="capitalize font-medium">{ticket.category}</span>
+                          <span>{new Date(ticket.updatedAt).toLocaleDateString()}</span>
                         </div>
                       </button>
                     );
@@ -499,47 +516,48 @@ export default function SupportTickets() {
           </Card>
 
         {/* Detail / chat column */}
-        <Card className="bg-white/95 border border-gray-200 shadow-md rounded-2xl min-h-[380px] flex flex-col">
-          <CardHeader className="pb-3 border-b border-gray-100">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <CardTitle className="text-base">
+        <Card className="bg-white border border-gray-200 shadow-lg rounded-2xl min-h-[600px] flex flex-col overflow-hidden">
+          <CardHeader className="pb-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-lg font-bold">
                   {selectedTicket
                     ? selectedTicket.subject
-                    : "Select a ticket to view the conversation"}
+                    : "Select a ticket to view"}
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs mt-1">
                   {selectedTicket
                     ? selectedTicket.ticketId
                       ? `Ticket ID: ${selectedTicket.ticketId}`
                       : selectedTicket._id
-                    : "You can reply as admin and update ticket status here."}
+                    : "Choose a ticket from the list to view details and respond"}
                 </CardDescription>
               </div>
 
               {selectedTicket && (
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1.5">
                   <Badge
-                    variant="outline"
-                    className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
+                    className={`text-xs px-2.5 py-1 rounded-full capitalize font-medium ${
                       selectedTicket.status === "resolved" || selectedTicket.status === "closed"
-                        ? "border-green-500 text-green-700"
-                        : "border-blue-500 text-blue-700"
+                        ? "bg-green-100 text-green-700 border border-green-200"
+                        : selectedTicket.status === "in-progress"
+                        ? "bg-blue-100 text-blue-700 border border-blue-200"
+                        : "bg-yellow-100 text-yellow-700 border border-yellow-200"
                     }`}
                   >
                     {statusLabels[selectedTicket.status] || selectedTicket.status}
                   </Badge>
                   <Badge
-                    className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                       priorityColors[selectedTicket.priority] || priorityColors.medium
                     }`}
                   >
                     {priorityLabels[selectedTicket.priority] || selectedTicket.priority}
                   </Badge>
                   {selectedTicket.assignedTo && (
-                    <span className="mt-1 flex items-center gap-1 text-[10px] text-gray-500">
-                      <Shield className="h-3 w-3" />
-                      Assigned to {selectedTicket.assignedTo.name || "Admin"}
+                    <span className="mt-1 flex items-center gap-1 text-xs text-gray-600">
+                      <Shield className="h-3.5 w-3.5" />
+                      {selectedTicket.assignedTo.name || "Admin"}
                     </span>
                   )}
                 </div>
@@ -547,49 +565,52 @@ export default function SupportTickets() {
             </div>
           </CardHeader>
 
-          <CardContent className="flex-1 flex flex-col gap-3 pt-0">
+          <CardContent className="flex-1 flex flex-col gap-4 pt-4">
             {detailLoading && !selectedTicket ? (
-              <div className="flex items-center justify-center flex-1 text-gray-500 text-sm">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Loading ticket...
+              <div className="flex flex-col items-center justify-center flex-1 text-gray-500 text-sm">
+                <Loader2 className="h-8 w-8 mb-3 animate-spin text-blue-600" />
+                <p>Loading ticket...</p>
               </div>
             ) : detailError ? (
               <div className="flex flex-col items-center justify-center flex-1 text-center text-gray-700 text-sm">
-                <AlertCircle className="h-5 w-5 text-red-500 mb-2" />
-                <p className="mb-2">{detailError}</p>
+                <div className="p-3 bg-red-100 rounded-full mb-3">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <p className="font-medium mb-2">{detailError}</p>
                 <p className="text-xs text-gray-500">
                   Try selecting the ticket again or refreshing the list.
                 </p>
               </div>
             ) : !selectedTicket ? (
-              <div className="flex flex-col items-center justify-center flex-1 text-center text-gray-600 text-sm">
-                <HeadphonesIcon className="h-8 w-8 text-gray-300 mb-3" />
-                <p className="font-medium mb-1">No ticket selected</p>
-                <p className="text-xs text-gray-500 max-w-sm">
-                  Choose a ticket from the list to view the full conversation and reply as an
-                  admin.
+              <div className="flex flex-col items-center justify-center flex-1 text-center text-gray-600">
+                <div className="p-4 bg-gray-100 rounded-full mb-4">
+                  <HeadphonesIcon className="h-10 w-10 text-gray-400" />
+                </div>
+                <p className="font-semibold text-lg mb-2">No ticket selected</p>
+                <p className="text-sm text-gray-500 max-w-sm">
+                  Choose a ticket from the list to view the conversation and respond as admin.
                 </p>
               </div>
             ) : (
               <>
                 {/* User info pill */}
-                <div className="flex items-center gap-3 rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <div className="font-semibold text-gray-900">
-                        {selectedTicket.user?.name || selectedTicket.user?.phone || "User"}
-                      </div>
-                      <div className="flex gap-2 text-[11px] text-gray-500">
-                        {selectedTicket.user?.email && <span>{selectedTicket.user.email}</span>}
-                        {selectedTicket.user?.phone && <span>{selectedTicket.user.phone}</span>}
-                      </div>
+                <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-3 text-sm">
+                  <div className="p-2 bg-white rounded-full">
+                    <User className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-gray-900 mb-0.5">
+                      {selectedTicket.user?.name || selectedTicket.user?.phone || "User"}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                      {selectedTicket.user?.email && <span>📧 {selectedTicket.user.email}</span>}
+                      {selectedTicket.user?.phone && <span>📱 {selectedTicket.user.phone}</span>}
                     </div>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[420px]">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 max-h-[400px] px-1">
                   {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
                     selectedTicket.messages.map((msg) => {
                       const admin = isAdminMessage(msg);
@@ -600,46 +621,48 @@ export default function SupportTickets() {
                           className={`flex w-full ${admin ? "justify-end" : "justify-start"}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs shadow-sm ${
+                            className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-md ${
                               admin
-                                ? "bg-blue-600 text-white rounded-br-sm"
-                                : "bg-gray-100 text-gray-900 rounded-bl-sm"
+                                ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-md"
+                                : "bg-white border border-gray-200 text-gray-900 rounded-bl-md"
                             }`}
                           >
-                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                            <div className="flex items-center justify-between gap-3 mb-1">
                               <span
-                                className={`font-semibold text-[11px] ${
+                                className={`font-semibold text-xs ${
                                   admin ? "text-blue-50" : "text-gray-700"
                                 }`}
                               >
                                 {senderName}
                               </span>
                               <span
-                                className={`text-[9px] ${
+                                className={`text-[10px] ${
                                   admin ? "text-blue-100/80" : "text-gray-500"
                                 }`}
                               >
-                                {formatDateTime(msg.createdAt)}
+                                {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               </span>
                             </div>
-                            <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.message}</p>
                           </div>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="flex items-center justify-center h-40 text-xs text-gray-500">
-                      No messages yet on this ticket.
+                    <div className="flex flex-col items-center justify-center h-48 text-sm text-gray-500">
+                      <MessageCircle className="h-10 w-10 mb-3 text-gray-300" />
+                      <p className="font-medium">No messages yet</p>
+                      <p className="text-xs mt-1">This ticket has no messages</p>
                     </div>
                   )}
                 </div>
 
                 {/* Status actions + reply */}
-                <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
+                <div className="mt-4 space-y-3 border-t-2 border-gray-200 pt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">Set status:</span>
-                      <div className="flex gap-1">
+                      <span className="font-semibold text-sm text-gray-700">Status:</span>
+                      <div className="flex gap-1.5">
                         {(["open", "in-progress", "resolved", "closed"] as const).map((st) => {
                           const status = st as TicketStatus;
                           return (
@@ -647,7 +670,11 @@ export default function SupportTickets() {
                               key={status}
                               size="sm"
                               variant={selectedTicket.status === status ? "default" : "outline"}
-                              className="h-6 px-2 text-[10px] capitalize"
+                              className={`h-7 px-3 text-xs capitalize ${
+                                selectedTicket.status === status
+                                  ? "bg-blue-600 hover:bg-blue-700"
+                                  : "hover:bg-gray-100"
+                              }`}
                               onClick={() => handleStatusChange(status)}
                               disabled={detailLoading}
                             >
@@ -657,36 +684,36 @@ export default function SupportTickets() {
                         })}
                       </div>
                     </div>
-                    <span>
-                      Last updated: {formatDateTime(selectedTicket.updatedAt) || "—"}
+                    <span className="text-xs text-gray-500">
+                      Updated: {new Date(selectedTicket.updatedAt).toLocaleString()}
                     </span>
                   </div>
 
                   {replyError && (
-                    <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 px-2.5 py-2 text-[11px] text-red-700">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5" />
+                    <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                       <span>{replyError}</span>
                     </div>
                   )}
 
-                  <div className="flex items-end gap-2">
+                  <div className="flex items-end gap-3">
                     <Textarea
-                      placeholder="Reply to the user as Ahibi admin..."
+                      placeholder="Type your admin response here..."
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      rows={2}
-                      className="text-xs resize-none"
+                      rows={3}
+                      className="text-sm resize-none border-2 focus:border-blue-500"
                     />
                     <Button
                       size="icon"
-                      className="h-9 w-9 rounded-full bg-blue-600 hover:bg-blue-700"
+                      className="h-11 w-11 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
                       onClick={handleSendReply}
                       disabled={replyLoading || !replyText.trim()}
                     >
                       {replyLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
-                        <Send className="h-4 w-4" />
+                        <Send className="h-5 w-5" />
                       )}
                     </Button>
                   </div>
