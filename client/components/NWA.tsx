@@ -69,9 +69,6 @@ export default function NWAHeroSection() {
   return (
     <section className="relative bg-black h-[60vh] flex items-center justify-center text-center overflow-hidden px-6 py-12">
 
-      {/* Font import */}
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600&display=swap');`}</style>
-
       {/* Canvas grid */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-80" />
 

@@ -217,6 +217,22 @@ const styles = `
   .ls-btn svg { width: 15px; height: 15px; }
   .ls-btn-watch { background: var(--ink); color: white; }
   .ls-btn-watch:hover { background: var(--ink-soft); transform: scale(1.02); }
+
+  /* Usage note */
+  .ls-usage-note {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: #fffbeb; border: 1px solid #f59e0b; border-left: 4px solid #f59e0b;
+    border-radius: 8px; padding: 16px 20px; margin: 24px 0;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .ls-usage-icon {
+    width: 20px; height: 20px; color: #f59e0b; flex-shrink: 0; margin-top: 2px;
+  }
+  .ls-usage-text {
+    font-size: 14px; line-height: 1.5; color: var(--ink);
+    margin: 0;
+  }
+  .ls-usage-text strong { color: var(--ink-soft); }
   .ls-btn-granted { background: var(--green); color: white; }
   .ls-btn-granted:hover { filter: brightness(1.1); transform: scale(1.02); }
   .ls-btn-buy { background: var(--red); color: white; }
@@ -432,6 +448,16 @@ export default function LivestreamListingPage() {
 
         {/* ── HERO ── */}
         <NWAHeroSection/>
+
+        {/* ── USAGE NOTE ── */}
+        <div className="ls-usage-note">
+          <svg className="ls-usage-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="ls-usage-text">
+            <strong>Important:</strong> Each purchase is valid for viewing on <strong>one device only</strong>. Sharing accounts or screens is not permitted.
+          </p>
+        </div>
 
         {/* ── MAIN ── */}
         <main className="ls-main">
