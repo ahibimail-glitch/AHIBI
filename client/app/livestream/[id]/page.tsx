@@ -55,8 +55,11 @@ export default function LiveStreamPage() {
   const [sessionBlocked, setSessionBlocked] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
+  const [contentObscured, setContentObscured] = useState(false);
+  const [obscureReason, setObscureReason] = useState<string | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
   const joinSession = async (force = false) => {
     const token = localStorage.getItem('token');
@@ -147,6 +150,7 @@ export default function LiveStreamPage() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
+        e.key === 'PrintScreen' ||
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
         (e.ctrlKey && e.key === 'u')
@@ -156,11 +160,49 @@ export default function LiveStreamPage() {
       }
     };
 
+    const handleCopy = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const handleCut = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const handleDragStart = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const obscureContent = (reason: string) => {
+      setContentObscured(true);
+      setObscureReason(reason);
+    };
+
+    const revealContent = () => {
+      setContentObscured(false);
+      setObscureReason(null);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        obscureContent('visibility');
+      } else {
+        revealContent();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      obscureContent('blur');
+    };
+
+    const handleWindowFocus = () => {
+      if (!document.hidden) revealContent();
+    };
+
     const detectDevTools = () => {
       const threshold = 160;
       if (window.outerHeight - window.innerHeight > threshold || 
           window.outerWidth - window.innerWidth > threshold) {
-        window.location.href = 'about:blank';
+        obscureContent('devtools');
       }
     };
 
@@ -213,29 +255,19 @@ export default function LiveStreamPage() {
           -moz-user-select: none !important;
           -ms-user-select: none !important;
           user-select: none !important;
-          pointer-events: none !important;
-          -webkit-pointer-events: none !important;
-        }
-        
-        .mux-player {
-          pointer-events: none !important;
         }
       `;
       document.head.appendChild(style);
 
-      // Prevent print screen
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'PrintScreen') {
-          e.preventDefault();
-          return false;
-        }
-      });
+      document.addEventListener('copy', handleCopy);
+      document.addEventListener('cut', handleCut);
+      document.addEventListener('dragstart', handleDragStart);
 
       // Detect and block screen recording software
       const detectScreenRecording = () => {
         // Check for common screen recording indicators
         if (window.outerHeight <= 1 || window.outerWidth <= 1) {
-          window.location.href = 'about:blank';
+          obscureContent('recording');
         }
         
         // Check if page is in an iframe (common for screen recording)
@@ -250,23 +282,72 @@ export default function LiveStreamPage() {
         if (style.parentNode) {
           style.parentNode.removeChild(style);
         }
+        document.removeEventListener('copy', handleCopy);
+        document.removeEventListener('cut', handleCut);
+        document.removeEventListener('dragstart', handleDragStart);
         clearInterval(recordingInterval);
       };
+    };
+
+    const disablePictureInPicture = () => {
+      const container = playerContainerRef.current;
+      if (!container) return;
+
+      const attemptDisable = () => {
+        const video = container.querySelector('video') as HTMLVideoElement | null;
+        if (!video) return false;
+
+        try {
+          (video as any).disablePictureInPicture = true;
+        } catch {}
+
+        const handleEnterPiP = (e: Event) => {
+          e.preventDefault();
+          try {
+            if (document.pictureInPictureElement) {
+              document.exitPictureInPicture().catch(() => {});
+            }
+          } catch {}
+        };
+
+        video.addEventListener('enterpictureinpicture', handleEnterPiP);
+        return () => video.removeEventListener('enterpictureinpicture', handleEnterPiP);
+      };
+
+      const cleanup = attemptDisable();
+      if (cleanup) return cleanup;
+
+      const interval = setInterval(() => {
+        const result = attemptDisable();
+        if (typeof result === 'function') {
+          clearInterval(interval);
+        }
+      }, 500);
+
+      return () => clearInterval(interval);
     };
 
     const interval = setInterval(detectDevTools, 1000);
 
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
     
     preventScreenSharing();
     const cleanupCapture = preventScreenCapture();
+    const cleanupPiP = disablePictureInPicture();
     
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       clearInterval(interval);
       cleanupCapture();
+      if (cleanupPiP) cleanupPiP();
     };
   }, []);
 
@@ -697,40 +778,56 @@ export default function LiveStreamPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Video Player */}
           <div className="lg:col-span-2">
-            <MuxPlayer
-              playbackId={streamInfo?.embedUrl || streamInfo?.muxPlaybackId || streamId}
-              streamType={streamInfo?.status === "active" ? "live" : "on-demand"}
+            <div ref={playerContainerRef} className="relative">
+              <MuxPlayer
+                playbackId={streamInfo?.embedUrl || streamInfo?.muxPlaybackId || streamId}
+                streamType={streamInfo?.status === "active" ? "live" : "on-demand"}
 
-              // UI / styling
-              className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg"
+                // UI / styling
+                className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg"
 
-            
-              autoPlay={false}
-              muted={false}
-              loop={false}
+              
+                autoPlay={false}
+                muted={false}
+                loop={false}
 
-              // Live-specific
-              preferPlayback="mse"
-              metadata={{
-                video_id: streamId,
-                video_title: streamInfo?.title || "Live Stream",
-              }}
+                // Live-specific
+                preferPlayback="mse"
+                metadata={{
+                  video_id: streamId,
+                  video_title: streamInfo?.title || "Live Stream",
+                }}
 
-              // Poster thumbnail - use specific event image if available
-              poster={EVENT_IMAGES[streamInfo?.title || ''] || streamInfo?.thumbnailUrl}
+                // Poster thumbnail - use specific event image if available
+                poster={EVENT_IMAGES[streamInfo?.title || ''] || streamInfo?.thumbnailUrl}
 
-              // Optional features
-              primaryColor="#ffffff"
-              secondaryColor="#000000"
+                // Optional features
+                primaryColor="#ffffff"
+                secondaryColor="#000000"
 
-             
-              // Show loading indicator properly
-              style={{
-                width: "100%",
-                aspectRatio: "16/9",
-                borderRadius: "16px",
-              }}
-            />
+               
+                // Show loading indicator properly
+                style={{
+                  width: "100%",
+                  aspectRatio: "16/9",
+                  borderRadius: "16px",
+                }}
+              />
+
+              {contentObscured && (
+                <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 backdrop-blur-md flex items-center justify-center">
+                  <div className="text-center px-6">
+                    <p className="text-white text-lg font-semibold">Secure content hidden</p>
+                    <p className="text-gray-300 text-sm mt-2">
+                      Switch back to this tab/window to continue watching.
+                    </p>
+                    {obscureReason && (
+                      <p className="text-gray-500 text-xs mt-3">Reason: {obscureReason}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Stream Info */}
             <div className="mt-6">
