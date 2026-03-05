@@ -305,7 +305,7 @@ export default function Navbar() {
               <img
                 src="/images/LogoB.png"
                 alt="Ahibi logo"
-                className="h-9 md:h-10 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                className="h-6 md:h-10 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity"
               />
             </Link>
 
@@ -401,7 +401,7 @@ export default function Navbar() {
               <img
                 src="/images/LogoB.png"
                 alt="Ahibi logo"
-                className="h-8 w-auto object-contain"
+                className="h-6 w-auto object-contain"
               />
             </Link>
             <button
