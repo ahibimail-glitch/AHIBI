@@ -8,6 +8,7 @@ import Link from 'next/link';
 import Navbar from '@/app/Navbar';
 import Footer from '@/app/Footer';
 import MuxPlayer from "@mux/mux-player-react";
+import LiveChat from '@/components/livestream/LiveChat';
 
 const HEARTBEAT_INTERVAL_MS = 25_000;
 
@@ -57,8 +58,7 @@ export default function LiveStreamPage() {
   const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
   const [contentObscured, setContentObscured] = useState(false);
   const [obscureReason, setObscureReason] = useState<string | null>(null);
-  const [watermarkNow, setWatermarkNow] = useState<number>(() => Date.now());
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -135,11 +135,7 @@ export default function LiveStreamPage() {
     };
   }, [accessCheck, isAuthenticated]);
 
-  useEffect(() => {
-    const interval = setInterval(() => setWatermarkNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+  
   useEffect(() => {
     window.addEventListener('beforeunload', leaveSession);
     return () => {
@@ -800,9 +796,9 @@ export default function LiveStreamPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Video Player */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-8">
             <div ref={playerContainerRef} className="relative">
               <MuxPlayer
                 playbackId={streamInfo?.embedUrl || streamInfo?.muxPlaybackId || streamId}
@@ -839,45 +835,7 @@ export default function LiveStreamPage() {
                 }}
               />
 
-              <div
-                aria-hidden
-                className="absolute inset-0 z-40 rounded-2xl overflow-hidden pointer-events-none select-none"
-                style={{
-                  opacity: 0.28,
-                }}
-              >
-                <div
-                  className="absolute inset-[-40%]"
-                  style={{
-                    transform: 'rotate(-22deg)',
-                  }}
-                >
-                  <div
-                    className="w-full h-full"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                      gap: '48px',
-                    }}
-                  >
-                    {Array.from({ length: 24 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="text-white/90 font-semibold"
-                        style={{
-                          fontSize: '12px',
-                          lineHeight: '16px',
-                          letterSpacing: '0.06em',
-                          textShadow: '0 1px 2px rgba(0,0,0,0.6)',
-                        }}
-                      >
-                        {(user?.email || user?.name || 'viewer').toString()} · {streamId} · {new Date(watermarkNow).toLocaleTimeString()}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
+              
               {contentObscured && (
                 <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 backdrop-blur-md flex items-center justify-center">
                   <div className="text-center px-6">
@@ -894,13 +852,11 @@ export default function LiveStreamPage() {
             </div>
 
             {/* Stream Info */}
-            <div className="mt-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-               
-              </div>
-
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{streamInfo.title}</h2>
+              
               {streamInfo.description && (
-                <p className="text-gray-600 mt-4 leading-relaxed">{streamInfo.description}</p>
+                <p className="text-gray-600 leading-relaxed">{streamInfo.description}</p>
               )}
 
               {/* Schedule Info */}
@@ -928,8 +884,24 @@ export default function LiveStreamPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
+          {/* Live Chat */}
+          <div className="lg:col-span-4">
+            <div className="sticky top-4" style={{ height: 'calc(100vh - 120px)' }}>
+              <LiveChat
+                streamId={streamId}
+                userId={user?.id || ''}
+                userName={user?.name || 'Anonymous'}
+                userEmail={user?.email || ''}
+                isAdmin={user?.role === 'admin'}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Info Section */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Stream Info - Now Below Video */}
+          <div className="lg:col-span-2">
             {/* Event Info */}
             {(streamInfo.eventId || streamInfo.sportsEventId) && (
               <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">

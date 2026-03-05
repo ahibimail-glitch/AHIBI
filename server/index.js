@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 // Import routes
@@ -42,6 +44,7 @@ const systemConfigRoutes = require('./routes/systemConfig.routes');
 const danceLeagueRoutes = require('./routes/danceLeague.routes');
 const livestreamRoutes = require('./routes/livestream.routes');
 const livestreamPaymentRoutes = require('./routes/livestreamPayment.routes');
+const livestreamChatRoutes = require('./routes/livestreamChat.routes');
 const donationRoutes = require('./routes/donation.routes');
 const adminNotificationRoutes = require('./routes/adminNotification.routes');
 const adminTermsRoutes = require('./routes/adminTermsRoutes');
@@ -49,6 +52,7 @@ const publicTermsRoutes = require('./routes/publicTermsRoutes');
 
 // Create Express app
 const app = express();
+const server = http.createServer(app);
 const paymentController = require('./controllers/paymentController');
 
 // Set up CORS with credentials support
@@ -78,6 +82,19 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
+
+// Set up Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
+// Set up livestream chat socket
+const setupLivestreamChat = require('./socket/livestreamChat');
+setupLivestreamChat(io);
 
 // Set up middleware
 app.use(cors(corsOptions));
@@ -175,6 +192,7 @@ app.use('/api/system', systemConfigRoutes);
 app.use('/api/dance-league', danceLeagueRoutes);
 app.use('/api/livestream', livestreamRoutes);
 app.use('/api/livestream/purchase', livestreamPaymentRoutes);
+app.use('/api/livestream/chat', livestreamChatRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/admin/terms', adminTermsRoutes);
@@ -183,6 +201,15 @@ app.use('/api/public/terms', publicTermsRoutes);
 // Root route
 app.get('/', (req, res) => {
   res.send('Welcome to Ahibi 3.0 API');
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Import error handler
@@ -209,7 +236,8 @@ connectDB().then(() => {
   // const bookingCleanupService = require('./services/bookingCleanupService');
   // bookingCleanupService.start();
   
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Socket.IO server ready for livestream chat`);
   });
 });
