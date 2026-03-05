@@ -58,7 +58,9 @@ export default function LiveStreamPage() {
   const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
   const [contentObscured, setContentObscured] = useState(false);
   const [obscureReason, setObscureReason] = useState<string | null>(null);
-    const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [watermarkNow, setWatermarkNow] = useState<number>(() => Date.now());
+  const [watermarkSeed, setWatermarkSeed] = useState<number>(() => Math.random());
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -135,6 +137,15 @@ export default function LiveStreamPage() {
     };
   }, [accessCheck, isAuthenticated]);
 
+  useEffect(() => {
+    const nowInterval = setInterval(() => setWatermarkNow(Date.now()), 1000);
+    const seedInterval = setInterval(() => setWatermarkSeed(Math.random()), 3000);
+    return () => {
+      clearInterval(nowInterval);
+      clearInterval(seedInterval);
+    };
+  }, []);
+
   
   useEffect(() => {
     window.addEventListener('beforeunload', leaveSession);
@@ -190,6 +201,10 @@ export default function LiveStreamPage() {
       } else {
         revealContent();
       }
+    };
+
+    const handlePageHide = () => {
+      obscureContent('pagehide');
     };
 
     const handleWindowBlur = () => {
@@ -353,6 +368,7 @@ export default function LiveStreamPage() {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
     
@@ -364,6 +380,7 @@ export default function LiveStreamPage() {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', handleWindowFocus);
       clearInterval(interval);
@@ -835,7 +852,47 @@ export default function LiveStreamPage() {
                 }}
               />
 
-              
+              <div
+                aria-hidden
+                className="absolute inset-0 z-40 rounded-2xl overflow-hidden pointer-events-none select-none"
+                style={{
+                  opacity: 0.32,
+                  transform: `translate(${Math.floor(watermarkSeed * 16) - 8}px, ${Math.floor((1 - watermarkSeed) * 16) - 8}px)`,
+                }}
+              >
+                <div
+                  className="absolute inset-[-40%]"
+                  style={{
+                    transform: `rotate(-22deg) translateX(${Math.floor(watermarkSeed * 40) - 20}px) translateY(${Math.floor(watermarkSeed * 24) - 12}px)`,
+                  }}
+                >
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: '56px',
+                    }}
+                  >
+                    {Array.from({ length: 18 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="text-white/90 font-semibold"
+                        style={{
+                          fontSize: '12px',
+                          lineHeight: '16px',
+                          letterSpacing: '0.06em',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.65)',
+                          filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))',
+                        }}
+                      >
+                        {(user?.email || user?.name || 'viewer').toString()} · {streamId} · {new Date(watermarkNow).toLocaleTimeString()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {contentObscured && (
                 <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 backdrop-blur-md flex items-center justify-center">
                   <div className="text-center px-6">
