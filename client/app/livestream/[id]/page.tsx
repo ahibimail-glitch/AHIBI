@@ -57,6 +57,7 @@ export default function LiveStreamPage() {
   const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
   const [contentObscured, setContentObscured] = useState(false);
   const [obscureReason, setObscureReason] = useState<string | null>(null);
+  const [watermarkNow, setWatermarkNow] = useState<number>(() => Date.now());
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
@@ -133,6 +134,11 @@ export default function LiveStreamPage() {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
   }, [accessCheck, isAuthenticated]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setWatermarkNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('beforeunload', leaveSession);
@@ -293,6 +299,9 @@ export default function LiveStreamPage() {
       const container = playerContainerRef.current;
       if (!container) return;
 
+      let cleanupListener: (() => void) | null = null;
+      let pollInterval: ReturnType<typeof setInterval> | null = null;
+
       const attemptDisable = () => {
         const video = container.querySelector('video') as HTMLVideoElement | null;
         if (!video) return false;
@@ -314,17 +323,33 @@ export default function LiveStreamPage() {
         return () => video.removeEventListener('enterpictureinpicture', handleEnterPiP);
       };
 
-      const cleanup = attemptDisable();
-      if (cleanup) return cleanup;
+      const initialCleanup = attemptDisable();
+      if (typeof initialCleanup === 'function') {
+        cleanupListener = initialCleanup;
+      } else {
+        pollInterval = setInterval(() => {
+          if (cleanupListener) return;
+          const result = attemptDisable();
+          if (typeof result === 'function') {
+            cleanupListener = result;
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+          }
+        }, 500);
+      }
 
-      const interval = setInterval(() => {
-        const result = attemptDisable();
-        if (typeof result === 'function') {
-          clearInterval(interval);
+      return () => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
         }
-      }, 500);
-
-      return () => clearInterval(interval);
+        if (cleanupListener) {
+          cleanupListener();
+          cleanupListener = null;
+        }
+      };
     };
 
     const interval = setInterval(detectDevTools, 1000);
@@ -813,6 +838,45 @@ export default function LiveStreamPage() {
                   borderRadius: "16px",
                 }}
               />
+
+              <div
+                aria-hidden
+                className="absolute inset-0 z-40 rounded-2xl overflow-hidden pointer-events-none select-none"
+                style={{
+                  opacity: 0.28,
+                }}
+              >
+                <div
+                  className="absolute inset-[-40%]"
+                  style={{
+                    transform: 'rotate(-22deg)',
+                  }}
+                >
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                      gap: '48px',
+                    }}
+                  >
+                    {Array.from({ length: 24 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="text-white/90 font-semibold"
+                        style={{
+                          fontSize: '12px',
+                          lineHeight: '16px',
+                          letterSpacing: '0.06em',
+                          textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                        }}
+                      >
+                        {(user?.email || user?.name || 'viewer').toString()} · {streamId} · {new Date(watermarkNow).toLocaleTimeString()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
               {contentObscured && (
                 <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 backdrop-blur-md flex items-center justify-center">

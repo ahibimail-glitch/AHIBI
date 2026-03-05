@@ -4,6 +4,18 @@ const nextConfig = {
   images: {
     domains: ['placehold.co', 'res.cloudinary.com', 'images.unsplash.com', 'ld9yt1pcwrcddoux.public.blob.vercel-storage.com', 'drive.google.com', 'lh3.googleusercontent.com'],
   },
+  async headers() {
+    return [
+      {
+        source: '/livestream/:path*',
+        headers: [
+          { key: 'Permissions-Policy', value: 'display-capture=()' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+        ],
+      },
+    ]
+  },
   async rewrites() {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5000'
     return [
