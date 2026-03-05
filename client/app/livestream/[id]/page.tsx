@@ -58,8 +58,7 @@ export default function LiveStreamPage() {
   const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
   const [contentObscured, setContentObscured] = useState(false);
   const [obscureReason, setObscureReason] = useState<string | null>(null);
-  const [watermarkNow, setWatermarkNow] = useState<number>(() => Date.now());
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -136,11 +135,7 @@ export default function LiveStreamPage() {
     };
   }, [accessCheck, isAuthenticated]);
 
-  useEffect(() => {
-    const interval = setInterval(() => setWatermarkNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+  
   useEffect(() => {
     window.addEventListener('beforeunload', leaveSession);
     return () => {
@@ -870,49 +865,7 @@ export default function LiveStreamPage() {
                 }}
               />
 
-              <div
-                aria-hidden
-                className="absolute inset-0 z-40 rounded-2xl overflow-hidden pointer-events-none select-none"
-                style={{
-                  opacity: 0.32,
-                  mixBlendMode: 'overlay',
-                }}
-              >
-                <div
-                  className="absolute inset-[-40%]"
-                  style={{
-                    transform: 'rotate(-18deg)',
-                  }}
-                >
-                  <div
-                    className="w-full h-full"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                      gap: '32px',
-                    }}
-                  >
-                    {Array.from({ length: 32 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="text-white font-bold"
-                        style={{
-                          fontSize: '11px',
-                          lineHeight: '14px',
-                          letterSpacing: '0.05em',
-                          textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(255,255,255,0.3)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {(user?.email || user?.name || 'viewer').toString().slice(0, 25)} · {streamId.slice(0, 8)} · {new Date(watermarkNow).toLocaleTimeString()}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
+              
               {contentObscured && (
                 <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 backdrop-blur-md flex items-center justify-center">
                   <div className="text-center px-6">
