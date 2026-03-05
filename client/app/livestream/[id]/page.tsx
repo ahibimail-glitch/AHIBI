@@ -155,8 +155,7 @@ export default function LiveStreamPage() {
         e.key === 'PrintScreen' ||
         e.key === 'F12' ||
         (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
-        (e.ctrlKey && e.key === 'u') ||
-        (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5'))
+        (e.ctrlKey && e.key === 'u')
       ) {
         e.preventDefault();
         return false;
@@ -199,17 +198,6 @@ export default function LiveStreamPage() {
 
     const handleWindowFocus = () => {
       if (!document.hidden) revealContent();
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length > 1) {
-        e.preventDefault();
-      }
-    };
-
-    const handleContextMenuTouch = (e: Event) => {
-      e.preventDefault();
-      return false;
     };
 
     const detectDevTools = () => {
@@ -277,18 +265,6 @@ export default function LiveStreamPage() {
       document.addEventListener('cut', handleCut);
       document.addEventListener('dragstart', handleDragStart);
 
-      (document.body.style as any).webkitTouchCallout = 'none';
-      (document.body.style as any).webkitUserSelect = 'none';
-      (document.body.style as any).userSelect = 'none';
-      
-      try {
-        (document.body.style as any).contentVisibility = 'auto';
-      } catch {}
-
-      document.addEventListener('touchstart', handleTouchStart, { passive: false });
-      document.addEventListener('contextmenu', handleContextMenuTouch);
-      document.addEventListener('selectstart', handleContextMenuTouch);
-
       // Detect and block screen recording software
       const detectScreenRecording = () => {
         // Check for common screen recording indicators
@@ -311,12 +287,6 @@ export default function LiveStreamPage() {
         document.removeEventListener('copy', handleCopy);
         document.removeEventListener('cut', handleCut);
         document.removeEventListener('dragstart', handleDragStart);
-        document.removeEventListener('touchstart', handleTouchStart);
-        document.removeEventListener('contextmenu', handleContextMenuTouch);
-        document.removeEventListener('selectstart', handleContextMenuTouch);
-        (document.body.style as any).webkitTouchCallout = '';
-        (document.body.style as any).webkitUserSelect = '';
-        (document.body.style as any).userSelect = '';
         clearInterval(recordingInterval);
       };
     };
