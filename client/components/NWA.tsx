@@ -163,7 +163,7 @@ export default function NWAHeroSection() {
         {/* CTA Buttons */}
         <div className="flex items-center gap-4 mb-6">
           <a
-            href="https://ahibi.in/livestream/699f40e05797a2d4ead1e52f"
+            href="https://ahibi.in/livestream/699f410d5797a2d4ead1e556"
             target="_blank"
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-3 px-10 py-3 border border-red-700 text-white text-sm font-bold tracking-widest uppercase relative overflow-hidden transition-all duration-300 hover:bg-red-950 hover:bg-opacity-50 hover:border-red-500"
