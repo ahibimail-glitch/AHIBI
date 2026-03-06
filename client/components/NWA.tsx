@@ -160,26 +160,50 @@ export default function NWAHeroSection() {
           <div className="h-px w-16" style={{ background: "linear-gradient(to left, transparent, rgba(239,68,68,0.6))" }} />
         </div>
 
-        {/* CTA Button */}
-        <a
-          href="/livestream"
-          className="group inline-flex items-center gap-3 px-10 py-3 border border-red-700 text-white text-sm font-bold tracking-widest uppercase relative overflow-hidden transition-all duration-300 hover:bg-red-950 hover:bg-opacity-50 hover:border-red-500"
-          style={{
-            fontFamily: "'Orbitron', monospace",
-            clipPath: "polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%)",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 24px rgba(239,68,68,0.4), 0 0 60px rgba(239,68,68,0.12)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
-        >
-          Purchase Now
-          <svg
-            className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
-            viewBox="0 0 16 16"
-            fill="none"
+        {/* CTA Buttons */}
+        <div className="flex items-center gap-4 mb-6">
+          <a
+            href="https://ahibi.in/livestream/699f40e05797a2d4ead1e52f"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-3 px-10 py-3 border border-red-700 text-white text-sm font-bold tracking-widest uppercase relative overflow-hidden transition-all duration-300 hover:bg-red-950 hover:bg-opacity-50 hover:border-red-500"
+            style={{
+              fontFamily: "'Orbitron', monospace",
+              clipPath: "polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 24px rgba(239,68,68,0.4), 0 0 60px rgba(239,68,68,0.12)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
           >
-            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </a>
+            View Live
+            <svg
+              className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
+              viewBox="0 0 16 16"
+              fill="none"
+            >
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+          
+          <a
+            href="/livestream"
+            className="group inline-flex items-center gap-3 px-10 py-3 border border-red-700 text-white text-sm font-bold tracking-widest uppercase relative overflow-hidden transition-all duration-300 hover:bg-red-950 hover:bg-opacity-50 hover:border-red-500"
+            style={{
+              fontFamily: "'Orbitron', monospace",
+              clipPath: "polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 24px rgba(239,68,68,0.4), 0 0 60px rgba(239,68,68,0.12)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+          >
+            Purchase Now
+            <svg
+              className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1"
+              viewBox="0 0 16 16"
+              fill="none"
+            >
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+        </div>
 
         {/* Stats row */}
         <div className="flex items-center gap-8 mt-8">
