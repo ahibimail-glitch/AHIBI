@@ -214,11 +214,15 @@ export default function LiveStreamPage() {
       // Mobile browsers (especially iOS Safari/Chrome) frequently report large
       // outer/inner deltas due to dynamic address/tool bars, causing false positives.
       const ua = navigator.userAgent || '';
+      const uaLower = ua.toLowerCase();
       const isIOS = /iPad|iPhone|iPod/.test(ua) ||
         (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
+      const isAndroidTV =
+        uaLower.includes('android') &&
+        /(tv|aft|bravia|googletv|google tv|smarttv|smart-tv|mibox|shield|netcast|viera)/i.test(ua);
       const isMobileViewport = window.matchMedia('(max-width: 1024px)').matches;
 
-      if (isIOS || isMobileViewport) return;
+      if (isIOS || isMobileViewport || isAndroidTV) return;
 
       const threshold = 160;
       if (
