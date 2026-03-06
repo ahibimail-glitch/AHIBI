@@ -348,17 +348,7 @@ export default function LivestreamListingPage() {
                 purchase: { id: verifyData.data.purchaseId, paymentDate: new Date().toISOString(), amount: price }
               }
             }));
-            
-            // Redirect to payment success page with payment details
-            const paymentParams = new URLSearchParams({
-              amount: price.toString(),
-              payment_id: response.razorpay_payment_id,
-              order_id: response.razorpay_order_id,
-              type: 'livestream',
-              item_name: orderData.data.livestream.title
-            });
-            
-            router.push(`/payment-success?${paymentParams.toString()}`);
+            router.push(`/livestream/${eventId}`);
           } else {
             alert('Payment verification failed. Please contact support.');
           }
