@@ -31,7 +31,7 @@ livestreamSessionSchema.index({ user: 1, stream: 1 });
 
 livestreamSessionSchema.index(
   { lastHeartbeat: 1 },
-  { expireAfterSeconds: 90 }
+  { expireAfterSeconds: 35 }
 );
 
 module.exports = mongoose.model('LivestreamSession', livestreamSessionSchema);

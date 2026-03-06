@@ -10,7 +10,7 @@ import Footer from '@/app/Footer';
 import MuxPlayer from "@mux/mux-player-react";
 import LiveChat from '@/components/livestream/LiveChat';
 
-const HEARTBEAT_INTERVAL_MS = 25_000;
+const HEARTBEAT_INTERVAL_MS = 15_000;
 
 // Event name to image mapping
 const EVENT_IMAGES: Record<string, string> = {
@@ -106,9 +106,16 @@ export default function LiveStreamPage() {
         if (!data.success && data.code === 'SESSION_EXPIRED') {
           clearInterval(heartbeatRef.current!);
           setSessionBlocked(true);
+          setSessionToken(null);
+          sessionTokenRef.current = null;
         }
       } catch (e) {
         console.error('Heartbeat error:', e);
+        // If heartbeat fails consistently, consider session expired
+        clearInterval(heartbeatRef.current!);
+        setSessionBlocked(true);
+        setSessionToken(null);
+        sessionTokenRef.current = null;
       }
     }, HEARTBEAT_INTERVAL_MS);
   };

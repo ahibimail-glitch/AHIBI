@@ -1002,7 +1002,14 @@ const joinStream = asyncHandler(async (req, res) => {
   const { force } = req.body;
   const userId = req.user._id;
 
-  const HEARTBEAT_EXPIRY_MS = 90 * 1000;
+  const HEARTBEAT_EXPIRY_MS = 35 * 1000;
+
+  // First, clean up any expired sessions for this user and stream
+  await LivestreamSession.deleteMany({
+    user: userId,
+    stream: id,
+    lastHeartbeat: { $lte: new Date(Date.now() - HEARTBEAT_EXPIRY_MS) }
+  });
 
   const existingSession = await LivestreamSession.findOne({
     user: userId,
@@ -1053,6 +1060,13 @@ const heartbeatStream = asyncHandler(async (req, res) => {
   if (!sessionToken) {
     return res.status(400).json({ success: false, message: 'sessionToken is required' });
   }
+
+  // First, clean up any expired sessions for this user
+  const HEARTBEAT_EXPIRY_MS = 35 * 1000;
+  await LivestreamSession.deleteMany({
+    user: userId,
+    lastHeartbeat: { $lte: new Date(Date.now() - HEARTBEAT_EXPIRY_MS) }
+  });
 
   const session = await LivestreamSession.findOneAndUpdate(
     { sessionToken, user: userId },
