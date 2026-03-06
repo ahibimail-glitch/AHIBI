@@ -1002,14 +1002,7 @@ const joinStream = asyncHandler(async (req, res) => {
   const { force } = req.body;
   const userId = req.user._id;
 
-  const HEARTBEAT_EXPIRY_MS = 35 * 1000;
-
-  // First, clean up any expired sessions for this user and stream
-  await LivestreamSession.deleteMany({
-    user: userId,
-    stream: id,
-    lastHeartbeat: { $lte: new Date(Date.now() - HEARTBEAT_EXPIRY_MS) }
-  });
+  const HEARTBEAT_EXPIRY_MS = 90 * 1000;
 
   const existingSession = await LivestreamSession.findOne({
     user: userId,
@@ -1055,32 +1048,31 @@ const joinStream = asyncHandler(async (req, res) => {
  */
 const heartbeatStream = asyncHandler(async (req, res) => {
   const { sessionToken } = req.body;
+  const { id } = req.params;
   const userId = req.user._id;
 
   if (!sessionToken) {
     return res.status(400).json({ success: false, message: 'sessionToken is required' });
   }
 
-  // First, clean up any expired sessions for this user
-  const HEARTBEAT_EXPIRY_MS = 35 * 1000;
-  await LivestreamSession.deleteMany({
+  // Check if this session still exists and is valid
+  const session = await LivestreamSession.findOne({
+    sessionToken,
     user: userId,
-    lastHeartbeat: { $lte: new Date(Date.now() - HEARTBEAT_EXPIRY_MS) }
+    stream: id
   });
-
-  const session = await LivestreamSession.findOneAndUpdate(
-    { sessionToken, user: userId },
-    { lastHeartbeat: new Date() },
-    { new: true }
-  );
 
   if (!session) {
     return res.status(404).json({
       success: false,
-      message: 'Session not found or expired.',
+      message: 'Session not found or expired. Another device may have taken over.',
       code: 'SESSION_EXPIRED',
     });
   }
+
+  // Update the heartbeat
+  session.lastHeartbeat = new Date();
+  await session.save();
 
   res.json({ success: true });
 });
