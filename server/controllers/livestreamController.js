@@ -1048,31 +1048,25 @@ const joinStream = asyncHandler(async (req, res) => {
  */
 const heartbeatStream = asyncHandler(async (req, res) => {
   const { sessionToken } = req.body;
-  const { id } = req.params;
   const userId = req.user._id;
 
   if (!sessionToken) {
     return res.status(400).json({ success: false, message: 'sessionToken is required' });
   }
 
-  // Check if this session still exists and is valid
-  const session = await LivestreamSession.findOne({
-    sessionToken,
-    user: userId,
-    stream: id
-  });
+  const session = await LivestreamSession.findOneAndUpdate(
+    { sessionToken, user: userId },
+    { lastHeartbeat: new Date() },
+    { new: true }
+  );
 
   if (!session) {
     return res.status(404).json({
       success: false,
-      message: 'Session not found or expired. Another device may have taken over.',
+      message: 'Session not found or expired.',
       code: 'SESSION_EXPIRED',
     });
   }
-
-  // Update the heartbeat
-  session.lastHeartbeat = new Date();
-  await session.save();
 
   res.json({ success: true });
 });

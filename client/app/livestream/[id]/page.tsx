@@ -75,13 +75,7 @@ export default function LiveStreamPage() {
       const data = await res.json();
       if (res.status === 409) {
         setSessionBlocked(true);
-        setSessionToken(null);
-        sessionTokenRef.current = null;
         setSessionLastSeen(data.lastSeen ? new Date(data.lastSeen).toLocaleTimeString() : null);
-        if (heartbeatRef.current) {
-          clearInterval(heartbeatRef.current);
-          heartbeatRef.current = null;
-        }
         return;
       }
       if (data.success) {
@@ -111,9 +105,6 @@ export default function LiveStreamPage() {
         const data = await res.json();
         if (!data.success && data.code === 'SESSION_EXPIRED') {
           clearInterval(heartbeatRef.current!);
-          heartbeatRef.current = null;
-          setSessionToken(null);
-          sessionTokenRef.current = null;
           setSessionBlocked(true);
         }
       } catch (e) {
@@ -794,18 +785,6 @@ export default function LiveStreamPage() {
               Go Home
             </Link>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Require valid session token to watch
-  if (!sessionToken) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Establishing secure session...</p>
         </div>
       </div>
     );
