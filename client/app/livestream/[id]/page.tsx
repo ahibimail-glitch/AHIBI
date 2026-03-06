@@ -74,8 +74,11 @@ export default function LiveStreamPage() {
       });
       const data = await res.json();
       if (res.status === 409) {
-        setSessionBlocked(true);
-        setSessionLastSeen(data.lastSeen ? new Date(data.lastSeen).toLocaleTimeString() : null);
+        // Only show blocked if we don't already have a session (avoids double-join race e.g. Strict Mode)
+        if (!sessionTokenRef.current) {
+          setSessionBlocked(true);
+          setSessionLastSeen(data.lastSeen ? new Date(data.lastSeen).toLocaleTimeString() : null);
+        }
         return;
       }
       if (data.success) {
@@ -126,6 +129,18 @@ export default function LiveStreamPage() {
     }).catch(() => {});
   };
 
+  // Reset session state when stream changes so we join the new stream
+  useEffect(() => {
+    setSessionToken(null);
+    setSessionBlocked(false);
+    setSessionLastSeen(null);
+    sessionTokenRef.current = null;
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+  }, [streamId]);
+
   useEffect(() => {
     if (accessCheck?.hasAccess && isAuthenticated && !sessionToken && !sessionBlocked) {
       joinSession();
@@ -133,7 +148,7 @@ export default function LiveStreamPage() {
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
-  }, [accessCheck, isAuthenticated]);
+  }, [accessCheck, isAuthenticated, sessionToken, sessionBlocked, streamId]);
 
   
   useEffect(() => {
