@@ -196,6 +196,16 @@ export default function LiveStreamPage() {
       obscureContent('blur');
     };
 
+    const handlePageHide = () => {
+      obscureContent('pagehide');
+    };
+
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement) {
+        obscureContent('fullscreen');
+      }
+    };
+
     const handleWindowFocus = () => {
       if (!document.hidden) revealContent();
     };
@@ -209,12 +219,39 @@ export default function LiveStreamPage() {
     };
 
     const preventScreenSharing = () => {
-      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-        const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia;
-        navigator.mediaDevices.getDisplayMedia = function(options: any) {
-          return Promise.reject(new Error('Screen sharing is not allowed on this page'));
-        };
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        return () => {};
       }
+
+      const mediaDevices = navigator.mediaDevices;
+      const originalGetDisplayMedia = mediaDevices.getDisplayMedia.bind(mediaDevices);
+
+      mediaDevices.getDisplayMedia = function () {
+        return Promise.reject(new Error('Screen sharing is not allowed on this page'));
+      };
+
+      return () => {
+        mediaDevices.getDisplayMedia = originalGetDisplayMedia;
+      };
+    };
+
+    const preventNativeShare = () => {
+      const nav = navigator as Navigator & {
+        share?: (data?: ShareData) => Promise<void>;
+      };
+
+      if (typeof nav.share !== 'function') {
+        return () => {};
+      }
+
+      const originalShare = nav.share.bind(nav);
+      nav.share = function () {
+        return Promise.reject(new Error('Sharing is disabled on this page'));
+      };
+
+      return () => {
+        nav.share = originalShare;
+      };
     };
 
     const preventScreenCapture = () => {
@@ -304,7 +341,14 @@ export default function LiveStreamPage() {
 
         try {
           (video as any).disablePictureInPicture = true;
+          (video as any).disableRemotePlayback = true;
         } catch {}
+
+        video.setAttribute('controlsList', 'nodownload noremoteplayback nofullscreen');
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('x-webkit-airplay', 'deny');
+        video.setAttribute('airplay', 'deny');
 
         const handleEnterPiP = (e: Event) => {
           e.preventDefault();
@@ -315,8 +359,23 @@ export default function LiveStreamPage() {
           } catch {}
         };
 
+        const handleIOSFullscreen = () => {
+          obscureContent('ios_fullscreen');
+          try {
+            const webkitExitFullscreen = (video as any).webkitExitFullscreen;
+            if (typeof webkitExitFullscreen === 'function') {
+              webkitExitFullscreen.call(video);
+            }
+          } catch {}
+        };
+
         video.addEventListener('enterpictureinpicture', handleEnterPiP);
-        return () => video.removeEventListener('enterpictureinpicture', handleEnterPiP);
+        video.addEventListener('webkitbeginfullscreen', handleIOSFullscreen as EventListener);
+
+        return () => {
+          video.removeEventListener('enterpictureinpicture', handleEnterPiP);
+          video.removeEventListener('webkitbeginfullscreen', handleIOSFullscreen as EventListener);
+        };
       };
 
       const initialCleanup = attemptDisable();
@@ -353,10 +412,13 @@ export default function LiveStreamPage() {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('pagehide', handlePageHide);
     
-    preventScreenSharing();
+    const cleanupScreenSharing = preventScreenSharing();
+    const cleanupNativeShare = preventNativeShare();
     const cleanupCapture = preventScreenCapture();
     const cleanupPiP = disablePictureInPicture();
     
@@ -364,9 +426,13 @@ export default function LiveStreamPage() {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('pagehide', handlePageHide);
       clearInterval(interval);
+      cleanupScreenSharing();
+      cleanupNativeShare();
       cleanupCapture();
       if (cleanupPiP) cleanupPiP();
     };
