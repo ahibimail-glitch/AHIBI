@@ -211,9 +211,20 @@ export default function LiveStreamPage() {
     };
 
     const detectDevTools = () => {
+      // Mobile browsers (especially iOS Safari/Chrome) frequently report large
+      // outer/inner deltas due to dynamic address/tool bars, causing false positives.
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
+      const isMobileViewport = window.matchMedia('(max-width: 1024px)').matches;
+
+      if (isIOS || isMobileViewport) return;
+
       const threshold = 160;
-      if (window.outerHeight - window.innerHeight > threshold || 
-          window.outerWidth - window.innerWidth > threshold) {
+      if (
+        window.outerHeight - window.innerHeight > threshold ||
+        window.outerWidth - window.innerWidth > threshold
+      ) {
         obscureContent('devtools');
       }
     };
