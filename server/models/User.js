@@ -53,9 +53,8 @@ const UserSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    default: null,
-    unique: true,
-    sparse: true
+    default: undefined,
+    trim: true
   },
   authProvider: {
     type: String,
@@ -201,6 +200,17 @@ UserSchema.virtual('organizer', {
 // Ensure virtual fields are serialized
 UserSchema.set('toJSON', { virtuals: true });
 UserSchema.set('toObject', { virtuals: true });
+
+// Create partial unique index for googleId
+UserSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      googleId: { $exists: true, $type: 'string' }
+    }
+  }
+);
 
 // Create geospatial index for location field
 UserSchema.index({ location: '2dsphere' });

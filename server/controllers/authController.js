@@ -3,6 +3,79 @@ const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 
 /**
+ * @desc    Signup user directly without OTP verification
+ * @route   POST /api/auth/signup
+ * @access  Public
+ */
+exports.signup = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { name, email, phone, city } = req.body;
+
+  try {
+    const existingUser = await User.findOne({
+      $or: [{ phone }, ...(email ? [{ email }] : [])]
+    });
+
+    if (existingUser) {
+      const duplicateField = existingUser.phone === phone ? 'mobile number' : 'email';
+      return res.status(400).json({
+        success: false,
+        message: `This ${duplicateField} is already registered. Please log in or use a different ${duplicateField}.`
+      });
+    }
+
+    const user = await User.create({
+      name: name.trim(),
+      email: email?.trim(),
+      phone: phone.trim(),
+      city: city.trim()
+    });
+
+    const token = user.getSignedJwtToken();
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      data: {
+        token,
+        user: {
+          id: user._id,
+          phone: user.phone,
+          name: user.name || '',
+          email: user.email || '',
+          role: user.role,
+          status: user.status,
+          profilePic: user.profilePic,
+          city: user.city,
+          address: user.address,
+          location: user.location
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0] || 'field';
+      return res.status(400).json({
+        success: false,
+        message: `${duplicateField} is already registered`
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
  * @desc    Send OTP to user's phone number
  * @route   POST /api/auth/send-otp
  * @access  Public
@@ -16,44 +89,40 @@ exports.sendOtp = async (req, res) => {
   const { phone, mode } = req.body;
 
   try {
-    // Check if user exists
     let user = await User.findOne({ phone });
 
-    // OTP logic for signup or login
     if ((mode === 'signup' || !mode) && user) {
       return res.status(400).json({
         success: false,
         message: 'Number is already registered'
       });
     }
+
     if (mode === 'login' && !user) {
       return res.status(400).json({
         success: false,
         message: 'Number is not registered'
       });
     }
-    // For login, generate OTP using user.setOtp() and store on user document
+
     let otp;
     if (mode === 'login' && user) {
       otp = await user.setOtp();
     } else {
-      // For signup, use in-memory temp store
       otp = Math.floor(100000 + Math.random() * 900000).toString();
       if (!global.tempOtps) global.tempOtps = {};
       global.tempOtps[phone] = {
         code: otp,
-        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+        expiresAt: Date.now() + 5 * 60 * 1000
       };
     }
 
-    // Store OTP and expiry in a temp store (in-memory, Redis, or DB). For now, use a simple in-memory store (for demo, not production safe)
     if (!global.tempOtps) global.tempOtps = {};
     global.tempOtps[phone] = {
       code: otp,
-      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+      expiresAt: Date.now() + 5 * 60 * 1000
     };
 
-    // Send OTP via SMS service
     const smsResponse = await smsService.sendOtp(phone, otp);
 
     if (!smsResponse.success) {
@@ -96,7 +165,6 @@ exports.loginWithPassword = async (req, res) => {
   const { phone, password } = req.body;
 
   try {
-    // First check if user exists
     const user = await User.findOne({ phone }).select('+passwordHash');
 
     if (!user) {
@@ -106,18 +174,15 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    // Check if user has password-based authentication
     if (!user.hasPasswordAuth()) {
       return res.status(400).json({
         success: false,
         message: 'Password not set for this account. Please use OTP verification.',
         requiresOtp: true,
-        phone: phone
+        phone
       });
     }
-    
 
-    // Verify password
     const isPasswordValid = await user.matchPasswordHash(password);
     if (!isPasswordValid) {
       return res.status(400).json({
@@ -126,15 +191,13 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    // Check if user is blocked
     if (user.status === 'blocked') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Your account has been blocked. Please contact support.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been blocked. Please contact support.'
       });
     }
 
-    // Check if user requires approval
     if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
       return res.status(202).json({
         success: true,
@@ -143,7 +206,6 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    // Generate JWT token
     const token = user.getSignedJwtToken();
     res.status(200).json({
       success: true,
@@ -188,8 +250,6 @@ exports.setupPassword = async (req, res) => {
   try {
     const { password } = req.body;
     const userId = req.user.id;
-
-    // Find user by ID
     const user = await User.findById(userId);
 
     if (!user) {
@@ -199,7 +259,6 @@ exports.setupPassword = async (req, res) => {
       });
     }
 
-    // Check if user already has a password
     if (user.hasPasswordAuth()) {
       return res.status(400).json({
         success: false,
@@ -207,7 +266,6 @@ exports.setupPassword = async (req, res) => {
       });
     }
 
-    // Set the password
     await user.setPassword(password);
 
     res.status(200).json({
@@ -251,7 +309,6 @@ exports.verifyOtp = async (req, res) => {
   try {
     let user = await User.findOne({ phone });
 
-    // If user does not exist, check OTP in temp store and create user
     if (!user) {
       if (!global.tempOtps || !global.tempOtps[phone]) {
         return res.status(400).json({ success: false, message: 'OTP expired or not requested' });
@@ -260,7 +317,6 @@ exports.verifyOtp = async (req, res) => {
       if (tempOtp.code !== otp || tempOtp.expiresAt < Date.now()) {
         return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
       }
-      // OTP is valid, create user
       const { name, city, email } = req.body;
       if (!name || !city) {
         return res.status(400).json({ success: false, message: 'Name and city are required for signup.' });
@@ -269,16 +325,13 @@ exports.verifyOtp = async (req, res) => {
       await user.save();
       delete global.tempOtps[phone];
     } else {
-      // If user exists, verify OTP using user's method (for login)
       const isValidOtp = await user.verifyOtp(otp);
       if (!isValidOtp) {
         return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
       }
-      // Check if user is blocked
       if (user.status === 'blocked') {
         return res.status(403).json({ success: false, message: 'Your account has been blocked. Please contact support.' });
       }
-      // Check if user requires approval
       if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
         return res.status(202).json({
           success: true,
@@ -288,11 +341,9 @@ exports.verifyOtp = async (req, res) => {
       }
     }
 
-    // Check if user needs password setup
     const needsPasswordSetup = !user.hasPasswordAuth();
-
-    // Generate JWT token
     const token = user.getSignedJwtToken();
+
     res.status(200).json({
       success: true,
       message: 'OTP verified successfully',
@@ -337,8 +388,6 @@ exports.updateProfile = async (req, res) => {
   try {
     const { name, email, profilePic } = req.body;
     const userId = req.user.id;
-
-    // Find user by ID
     const user = await User.findById(userId);
 
     if (!user) {
@@ -348,7 +397,6 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    // Update user profile
     if (name) user.name = name;
     if (email) user.email = email;
     if (typeof profilePic === 'string') user.profilePic = profilePic;

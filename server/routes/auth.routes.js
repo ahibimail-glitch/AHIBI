@@ -6,6 +6,23 @@ const { protect } = require('../middlewares/auth');
 const router = express.Router();
 
 // Validation rules
+const signupValidation = [
+  check('name', 'Name is required')
+    .notEmpty()
+    .trim(),
+  check('email', 'Please include a valid email')
+    .notEmpty()
+    .isEmail()
+    .normalizeEmail(),
+  check('phone', 'Please provide a valid 10-digit phone number')
+    .notEmpty()
+    .isLength({ min: 10, max: 10 })
+    .matches(/^\d{10}$/),
+  check('city', 'City is required')
+    .notEmpty()
+    .trim()
+];
+
 const phoneValidation = [
   check('phone', 'Please provide a valid 10-digit phone number')
     .notEmpty()
@@ -57,6 +74,7 @@ const locationValidation = [
 ];
 
 // Public routes
+router.post('/signup', signupValidation, authController.signup);
 router.post('/send-otp', phoneValidation, authController.sendOtp);
 router.post('/verify-otp', otpValidation, authController.verifyOtp);
 router.post('/login', passwordValidation, authController.loginWithPassword);

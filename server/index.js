@@ -50,6 +50,8 @@ const adminNotificationRoutes = require('./routes/adminNotification.routes');
 const adminTermsRoutes = require('./routes/adminTermsRoutes');
 const publicTermsRoutes = require('./routes/publicTermsRoutes');
 
+const User = require('./models/User');
+
 // Create Express app
 const app = express();
 const server = http.createServer(app);
@@ -223,6 +225,37 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB Connected');
+
+    await User.updateMany(
+      { googleId: null },
+      { $unset: { googleId: "" } }
+    );
+
+    await User.updateMany(
+      { googleId: '' },
+      { $unset: { googleId: "" } }
+    );
+
+    const userIndexes = await User.collection.indexes();
+    const googleIdIndex = userIndexes.find((index) => index.name === 'googleId_1');
+    const needsGoogleIdIndexMigration = !googleIdIndex || !googleIdIndex.partialFilterExpression;
+
+    if (needsGoogleIdIndexMigration) {
+      if (googleIdIndex) {
+        await User.collection.dropIndex('googleId_1');
+      }
+
+      await User.collection.createIndex(
+        { googleId: 1 },
+        {
+          name: 'googleId_1',
+          unique: true,
+          partialFilterExpression: {
+            googleId: { $exists: true, $type: 'string' }
+          }
+        }
+      );
+    }
   } catch (err) {
     console.error('MongoDB Connection Error:', err.message);
     process.exit(1);

@@ -72,110 +72,33 @@ function AuthPageContent() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-otp`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: signupData.phone })
+        body: JSON.stringify({
+          name: signupData.name,
+          email: signupData.email,
+          phone: signupData.phone.trim(),
+          city: signupData.city,
+        })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        if (data.message === 'Number is already registered') {
-          setError('This mobile number is already registered. Please log in or use a different number.');
-        } else {
-          setError(data.message || "Failed to send OTP");
-        }
+        setError(data.message || "Failed to create account");
         setLoading(false);
         return;
       }
-      setStep("otp");
-    } catch (err) {
-      setError("Network error. Please try again.");
-    }
-    setLoading(false);
-  };
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      // Send name and city for signup, only phone+otp for login
-      const payload = mode === 'signup'
-        ? { phone: signupData.phone, otp, name: signupData.name, city: signupData.city, email: signupData.email }
-        : { phone: loginData.loginId, otp };
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.message || "Invalid OTP");
-        setLoading(false);
-        return;
-      }
-      
-      // For signup, always show password setup modal
-      if (mode === 'signup') {
-        setCurrentToken(data.data.token);
-        setShowPasswordSetupModal(true);
-        setLoading(false);
-        return;
-      }
-      
-      // Check if user needs password setup (for login)
-      if (data.data.needsPasswordSetup) {
-        setCurrentToken(data.data.token);
-        setShowPasswordSetupModal(true);
-        setLoading(false);
-        return;
-      }
-      
       localStorage.setItem("token", data.data.token);
       if (rememberMe) {
-        // Set token to expire in 30 days
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 30);
         localStorage.setItem("tokenExpiry", expiryDate.toISOString());
       }
-      // Redirect to the original page or home
       window.location.href = redirectUrl;
     } catch (err) {
       setError("Network error. Please try again.");
     }
     setLoading(false);
-  };
-
-  const handlePasswordSetup = async (password: string) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/setup-password`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${currentToken}`
-        },
-        body: JSON.stringify({ password })
-      });
-      
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to set password");
-      }
-      
-      // Password set successfully, redirect to original page or home
-      localStorage.setItem("token", currentToken);
-      if (rememberMe) {
-        // Set token to expire in 30 days
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
-      }
-      setShowPasswordSetupModal(false);
-      window.location.href = redirectUrl;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set password");
-      throw err; // Re-throw to let the modal handle the error
-    }
   };
 
   const handlePhoneSubmit = async (e: React.FormEvent) => {
@@ -250,6 +173,36 @@ function AuthPageContent() {
       setError("Failed to send OTP");
     } finally {
       setSendingOtp(false);
+    }
+  };
+
+  const handlePasswordSetup = async (password: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/setup-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentToken}`
+        },
+        body: JSON.stringify({ password })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to set password");
+      }
+
+      localStorage.setItem("token", currentToken);
+      if (rememberMe) {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+      }
+      setShowPasswordSetupModal(false);
+      window.location.href = redirectUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set password");
+      throw err;
     }
   };
 
@@ -421,7 +374,6 @@ function AuthPageContent() {
             {mode === "otp-login" && step === "details" && "Login with OTP"}
             {mode === "otp-login" && step === "otp" && "Verify OTP"}
             {mode === "signup" && step === "details" && "Create Your Account"}
-            {mode === "signup" && step === "otp" && "Verify Your Phone"}
           </CardTitle>
           <CardDescription className="text-white/80">
             {mode === "login" && loginStep === "phone" && "Enter your phone number to continue"}
@@ -436,9 +388,6 @@ function AuthPageContent() {
             {mode === "signup" &&
               step === "details" &&
               "Fill in your details to get started"}
-            {mode === "signup" &&
-              step === "otp" &&
-              `We've sent a 6-digit code to ${signupData.phone}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -743,46 +692,8 @@ function AuthPageContent() {
                   !signupData.city
                 }
               >
-                Continue to Verification
+                {loading ? "Creating Account..." : "Create Account"}
               </Button>
-            </form>
-          )}
-
-          {mode === "signup" && step === "otp" && (
-            <form onSubmit={handleOtpSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="otp" className="text-white">Enter OTP</Label>
-                <Input
-                  id="otp"
-                  type="text"
-                  placeholder="6-digit code"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  maxLength={6}
-                  className="text-center text-lg tracking-widest"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Verify Phone Number
-              </Button>
-              <div className="text-center space-y-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStep("details")}
-                  type="button"
-                  className="text-white"
-                >
-                  ← Back to Details
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Didn't receive code?{" "}
-                  <button type="button" className="underline">
-                    Resend OTP
-                  </button>
-                </p>
-              </div>
             </form>
           )}
 
@@ -792,7 +703,7 @@ function AuthPageContent() {
             (mode === "signup" && step === "details")) && (
               <div className="mt-6 flex items-center justify-center text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 mr-1" />
-                {mode === "login" && loginStep === "password" ? "Secured with password authentication" : "Secured with OTP verification"}
+                {mode === "login" && loginStep === "password" ? "Secured with password authentication" : mode === "signup" ? "Secure account creation" : "Secured with OTP verification"}
               </div>
             )}
         </CardContent>
