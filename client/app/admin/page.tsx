@@ -61,6 +61,7 @@ import BikerBash from "./components/BikerBash";
 import Coupons from "./components/Coupons";
 import MelitaBookings from "./components/MelitaBookings";
 import NWAWrestlingBookings from "./components/NWAWrestlingBookings";
+import NWAFailedPayments from "./components/NWAFAILED";
 import FeaturedEvents from "./components/FeaturedEvents";
 import ArtistManagement from "./components/ArtistManagement";
 import VenueManagement from "./components/VenueManagement";
@@ -285,6 +286,8 @@ export default function AdminDashboard() {
         return <MelitaBookings />;
       case "nwa-wrestling-bookings":
         return <NWAWrestlingBookings />;
+      case "nwa-failed-payments":
+        return <NWAFailedPayments />;
       case "featured-events":
         return <FeaturedEvents />;
       case "hmf-tickets":
@@ -313,8 +316,6 @@ export default function AdminDashboard() {
         return <TermsManager />;
       case "support-chat":
         return <SupportChat />;
-            // case "aiko-hall":
-      //   return <AikoHallManagement />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -393,6 +394,7 @@ export default function AdminDashboard() {
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="NWA Failed Payments" active={activeView === "nwa-failed-payments"} onClick={() => { setActiveView("nwa-failed-payments"); setSidebarOpen(false); }} />
       
       
           <div className="pt-4 pb-2 px-2">
