@@ -1,148 +1,6 @@
 const User = require('../models/User');
-const axios = require('axios');
-const emailService = require('../services/emailService');
+const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
-
-const sendOtpEmail = async (email, name, otp) => {
-  if (!email) {
-    return {
-      success: false,
-      error: 'Email address is required to send OTP.'
-    };
-  }
-
-  return emailService.sendOtpEmail(
-    {
-      email,
-      name: name || 'there'
-    },
-    otp
-  );
-};
-
-const buildAuthSuccessResponse = (user, token, message, extraData = {}) => ({
-  success: true,
-  message,
-  data: {
-    token,
-    ...extraData,
-    user: {
-      id: user._id,
-      phone: user.phone || '',
-      name: user.name || '',
-      email: user.email || '',
-      role: user.role,
-      status: user.status,
-      profilePic: user.profilePic,
-      city: user.city || '',
-      address: user.address,
-      location: user.location,
-      authProvider: user.authProvider || 'phone_otp'
-    }
-  }
-});
-
-const verifyGoogleIdToken = async (idToken) => {
-  const response = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
-    params: {
-      id_token: idToken
-    }
-  });
-
-  const payload = response.data;
-  const allowedClientIds = [
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-  ].filter(Boolean);
-
-  if (!allowedClientIds.length) {
-    throw new Error('Google auth is not configured. GOOGLE_CLIENT_ID is missing.');
-  }
-
-  if (!allowedClientIds.includes(payload.aud)) {
-    throw new Error('Invalid Google token audience.');
-  }
-
-  if (!payload.email || payload.email_verified !== 'true') {
-    throw new Error('Google account email is not verified.');
-  }
-
-  return payload;
-};
-
-/**
- * @desc    Authenticate user with Google
- * @route   POST /api/auth/google
- * @access  Public
- */
-exports.googleAuth = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { idToken } = req.body;
-
-  try {
-    const googlePayload = await verifyGoogleIdToken(idToken);
-    const email = googlePayload.email.toLowerCase();
-
-    let user = await User.findOne({
-      $or: [
-        { googleId: googlePayload.sub },
-        { email }
-      ]
-    }).select('+passwordHash');
-
-    if (!user) {
-      user = new User({
-        email,
-        name: googlePayload.name || email.split('@')[0],
-        profilePic: googlePayload.picture || '',
-        googleId: googlePayload.sub,
-        authProvider: 'google',
-        city: ''
-      });
-    } else {
-      user.email = email;
-      user.googleId = googlePayload.sub;
-      user.name = user.name || googlePayload.name || email.split('@')[0];
-      user.profilePic = user.profilePic || googlePayload.picture || '';
-      user.authProvider = user.authProvider === 'phone_otp' ? 'mixed' : (user.authProvider || 'google');
-    }
-
-    await user.save();
-
-    if (user.status === 'blocked') {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account has been blocked. Please contact support.'
-      });
-    }
-
-    if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
-      return res.status(202).json({
-        success: true,
-        message: 'Your account is pending approval',
-        data: { pending: true, role: user.role }
-      });
-    }
-
-    const token = user.getSignedJwtToken();
-    return res.status(200).json(
-      buildAuthSuccessResponse(user, token, 'Google authentication successful', {
-        needsPasswordSetup: false
-      })
-    );
-  } catch (error) {
-    console.error('Google auth error:', error.response?.data || error.message);
-    return res.status(400).json({
-      success: false,
-      message: 'Google authentication failed',
-      error: error.message
-    });
-  }
-};
 
 /**
  * @desc    Send OTP to user's phone number
@@ -155,7 +13,7 @@ exports.sendOtp = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { phone, mode, email, name } = req.body;
+  const { phone, mode } = req.body;
 
   try {
     // Check if user exists
@@ -174,76 +32,44 @@ exports.sendOtp = async (req, res) => {
         message: 'Number is not registered'
       });
     }
-
-    if ((mode === 'signup' || !mode) && !email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email is required to send OTP'
-      });
-    }
-
-    if (mode === 'login' && user && !user.email) {
-      return res.status(400).json({
-        success: false,
-        message: 'No email is linked to this account. Please contact support.'
-      });
-    }
-
     // For login, generate OTP using user.setOtp() and store on user document
     let otp;
-    let recipientEmail;
-    let recipientName;
-
     if (mode === 'login' && user) {
       otp = await user.setOtp();
-      recipientEmail = user.email;
-      recipientName = user.name;
     } else {
       // For signup, use in-memory temp store
       otp = Math.floor(100000 + Math.random() * 900000).toString();
       if (!global.tempOtps) global.tempOtps = {};
       global.tempOtps[phone] = {
         code: otp,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-        email,
-        name,
-        city: req.body.city
+        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
       };
-      recipientEmail = email;
-      recipientName = name;
     }
 
     // Store OTP and expiry in a temp store (in-memory, Redis, or DB). For now, use a simple in-memory store (for demo, not production safe)
     if (!global.tempOtps) global.tempOtps = {};
     global.tempOtps[phone] = {
       code: otp,
-      expiresAt: Date.now() + 5 * 60 * 1000,
-      ...(mode === 'login'
-        ? {}
-        : {
-            email,
-            name,
-            city: req.body.city
-          })
+      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
     };
 
-    const emailResponse = await sendOtpEmail(recipientEmail, recipientName, otp);
+    // Send OTP via SMS service
+    const smsResponse = await smsService.sendOtp(phone, otp);
 
-    if (!emailResponse.success) {
+    if (!smsResponse.success) {
       return res.status(500).json({
         success: false,
         message: 'Failed to send OTP',
-        error: emailResponse.error || 'Email OTP could not be sent'
+        error: smsResponse.message
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully to your email',
+      message: 'OTP sent successfully',
       data: {
         phone,
-        otpSent: true,
-        email: recipientEmail
+        otpSent: true
       }
     });
   } catch (error) {
@@ -439,12 +265,7 @@ exports.verifyOtp = async (req, res) => {
       if (!name || !city) {
         return res.status(400).json({ success: false, message: 'Name and city are required for signup.' });
       }
-      user = new User({
-        phone,
-        name,
-        city,
-        email: email || tempOtp.email
-      });
+      user = new User({ phone, name, city, email });
       await user.save();
       delete global.tempOtps[phone];
     } else {
@@ -472,11 +293,26 @@ exports.verifyOtp = async (req, res) => {
 
     // Generate JWT token
     const token = user.getSignedJwtToken();
-    res.status(200).json(
-      buildAuthSuccessResponse(user, token, 'OTP verified successfully', {
-        needsPasswordSetup
-      })
-    );
+    res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully',
+      data: {
+        token,
+        needsPasswordSetup,
+        user: {
+          id: user._id,
+          phone: user.phone,
+          name: user.name || '',
+          email: user.email || '',
+          role: user.role,
+          status: user.status,
+          profilePic: user.profilePic,
+          city: user.city,
+          address: user.address,
+          location: user.location
+        }
+      }
+    });
   } catch (error) {
     console.error('Verify OTP error:', error);
     res.status(500).json({
@@ -657,33 +493,26 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    if (!user.email) {
-      return res.status(400).json({
-        success: false,
-        message: 'No email is linked to this account. Please contact support.'
-      });
-    }
-
     // Generate OTP for password reset
     const otp = await user.setOtp();
 
-    const emailResponse = await sendOtpEmail(user.email, user.name, otp);
+    // Send OTP via SMS service
+    const smsResponse = await smsService.sendOtp(phone, otp);
 
-    if (!emailResponse.success) {
+    if (!smsResponse.success) {
       return res.status(500).json({
         success: false,
         message: 'Failed to send OTP',
-        error: emailResponse.error || 'Email OTP could not be sent'
+        error: smsResponse.message
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully to your email for password reset',
+      message: 'OTP sent successfully for password reset',
       data: {
         phone,
-        otpSent: true,
-        email: user.email
+        otpSent: true
       }
     });
   } catch (error) {
