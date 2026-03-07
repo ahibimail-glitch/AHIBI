@@ -15,17 +15,19 @@ type TxItem = {
   currency?: string;
   status: string;
   createdAt: string;
-  user?: { name?: string; email?: string; phone?: string } | null;
-  userSnapshot?: { name?: string; email?: string; phone?: string } | null;
+  user?: { _id: string; name?: string; email?: string; phone?: string } | null;
+  userSnapshot?: { _id: string; name?: string; email?: string; phone?: string } | null;
   event?: { title?: string; startDate?: string } | null;
   bookingDetails?: any;
 };
+
+type PaymentUser = { _id?: string; name?: string; email?: string; phone?: string };
 
 type LivestreamPurchaseItem = {
   _id: string;
   status?: string;
   accessGranted?: boolean;
-  user?: { _id?: string; email?: string; phone?: string } | null;
+  user?: { _id: string; email?: string; phone?: string } | null;
 };
 
 const TARGET_LIVESTREAM_ID = "699f410d5797a2d4ead1e556";
@@ -34,6 +36,8 @@ export default function NWAFailedPayments() {
   const [items, setItems] = useState<TxItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [grantingAccessId, setGrantingAccessId] = useState<string | null>(null);
+  const [grantingAllAccess, setGrantingAllAccess] = useState(false);
   const [livestreamStatusByUser, setLivestreamStatusByUser] = useState<Record<string, { status: string; accessGranted: boolean }>>({});
 
   const token = useMemo(() => {
@@ -48,6 +52,13 @@ export default function NWAFailedPayments() {
 
     return [user._id, user.email?.toLowerCase(), user.phone]
       .filter((value): value is string => Boolean(value));
+  };
+
+  const getItemUserId = (item: TxItem) => item.user?._id || item.userSnapshot?._id;
+
+  const getItemLivestreamMatch = (item: TxItem) => {
+    const user = item.user || item.userSnapshot || null;
+    return getUserKeys(user).map((key) => livestreamStatusByUser[key]).find(Boolean);
   };
 
   const fetchLivestreamStatuses = async () => {
@@ -144,15 +155,103 @@ export default function NWAFailedPayments() {
     }
   };
 
+  const grantLivestreamAccessForItem = async (item: TxItem) => {
+    const userId = getItemUserId(item);
+
+    if (!userId) {
+      throw new Error("User ID not available for granting livestream access");
+    }
+
+    const res = await fetch(`${apiUrl}/api/livestream/admin/manual-purchase`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        userId,
+        livestreamId: TARGET_LIVESTREAM_ID,
+        notes: `Granted from NWA failed payments for transaction ${item._id}`,
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to grant livestream access");
+    }
+  };
+
+  const handleGrantLivestreamAccess = async (item: TxItem) => {
+    setGrantingAccessId(item._id);
+
+    try {
+      await grantLivestreamAccessForItem(item);
+      toast.success("Livestream access granted successfully");
+      await fetchLivestreamStatuses();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to grant livestream access");
+    } finally {
+      setGrantingAccessId(null);
+    }
+  };
+
+  const handleGrantAllLivestreamAccess = async () => {
+    const pendingItems = items.filter((item) => !getItemLivestreamMatch(item)?.accessGranted && Boolean(getItemUserId(item)));
+
+    if (pendingItems.length === 0) {
+      toast.error("No users available to grant livestream access");
+      return;
+    }
+
+    setGrantingAllAccess(true);
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    try {
+      for (const item of pendingItems) {
+        try {
+          await grantLivestreamAccessForItem(item);
+          successCount += 1;
+        } catch {
+          failureCount += 1;
+        }
+      }
+
+      await fetchLivestreamStatuses();
+
+      if (successCount > 0) {
+        toast.success(`Granted livestream access to ${successCount} user${successCount > 1 ? "s" : ""}`);
+      }
+
+      if (failureCount > 0) {
+        toast.error(`Failed to grant access for ${failureCount} user${failureCount > 1 ? "s" : ""}`);
+      }
+    } finally {
+      setGrantingAllAccess(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Paid but Not Booked</h2>
-            <Button variant="outline" onClick={fetchItems} disabled={loading}>
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleGrantAllLivestreamAccess}
+                disabled={grantingAllAccess || loading}
+              >
+                {grantingAllAccess ? "Granting Access..." : "Grant Access To All"}
+              </Button>
+              <Button variant="outline" onClick={fetchItems} disabled={loading || grantingAllAccess}>
+                {loading ? "Refreshing..." : "Refresh"}
+              </Button>
+            </div>
           </div>
           <div className="rounded-md border overflow-x-auto">
             <Table>
@@ -178,8 +277,8 @@ export default function NWAFailedPayments() {
                   </TableRow>
                 )}
                 {items.map((item) => {
-                  const u = item.user || item.userSnapshot || {};
-                  const livestreamMatch = getUserKeys(u).map((key) => livestreamStatusByUser[key]).find(Boolean);
+                  const u: PaymentUser = item.user || item.userSnapshot || {};
+                  const livestreamMatch = getItemLivestreamMatch(item);
                   const eventTitle = item.event?.title || 
                                    item.bookingDetails?.event?.title || 
                                    (item.bookingDetails?.event ? 'Event ID: ' + item.bookingDetails.event._id : '-');
@@ -220,9 +319,23 @@ export default function NWAFailedPayments() {
                         <Badge variant="secondary">{item.status.replace(/_/g, " ")}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" onClick={() => handleResolve(item._id)} disabled={resolvingId === item._id}>
-                          {resolvingId === item._id ? "Confirming..." : "Confirm Booking"}
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGrantLivestreamAccess(item)}
+                            disabled={grantingAccessId === item._id || Boolean(livestreamMatch?.accessGranted)}
+                          >
+                            {Boolean(livestreamMatch?.accessGranted)
+                              ? "Access Granted"
+                              : grantingAccessId === item._id
+                                ? "Granting..."
+                                : "Grant Livestream Access"}
+                          </Button>
+                          <Button size="sm" onClick={() => handleResolve(item._id)} disabled={resolvingId === item._id}>
+                            {resolvingId === item._id ? "Confirming..." : "Confirm Booking"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
