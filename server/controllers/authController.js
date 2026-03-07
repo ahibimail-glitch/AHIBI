@@ -237,6 +237,75 @@ exports.loginWithPassword = async (req, res) => {
 };
 
 /**
+ * @desc    Login with phone number only
+ * @route   POST /api/auth/phone-login
+ * @access  Public
+ */
+exports.loginWithPhone = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone } = req.body;
+
+  try {
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Phone number not registered. Please sign up first.'
+      });
+    }
+
+    if (user.status === 'blocked') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been blocked. Please contact support.'
+      });
+    }
+
+    if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
+      return res.status(202).json({
+        success: true,
+        message: 'Your account is pending approval',
+        data: { pending: true, role: user.role }
+      });
+    }
+
+    const token = user.getSignedJwtToken();
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        token,
+        user: {
+          id: user._id,
+          phone: user.phone,
+          name: user.name || '',
+          email: user.email || '',
+          role: user.role,
+          status: user.status,
+          profilePic: user.profilePic,
+          city: user.city,
+          address: user.address,
+          location: user.location
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Phone login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+/**
  * @desc    Setup password for user (after OTP verification)
  * @route   POST /api/auth/setup-password
  * @access  Private

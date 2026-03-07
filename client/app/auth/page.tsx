@@ -117,7 +117,7 @@ function AuthPageContent() {
     const trimmedPhone = loginData.loginId.trim();
     
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-user`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/phone-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -128,25 +128,20 @@ function AuthPageContent() {
       const data = await res.json();
       console.log('Check user response:', { status: res.status, data });
       
-      if (!res.ok) {
-        if (res.status === 404) {
-          setError("Phone number not registered. Please sign up first.");
-        } else {
-          setError(data.message || "Something went wrong");
-        }
+      if (!res.ok || !data.success) {
+        setError(data.message || "Something went wrong");
         setLoading(false);
         return;
       }
       
-      if (data.data.hasPassword) {
-        // User has password, proceed to password step
-        setLoginStep("password");
-      } else {
-        // User exists but no password, switch to OTP login
-        setLoginStep("otp");
-        // Send OTP for this user
-        await sendOtpForLogin(loginData.loginId);
+      localStorage.setItem("token", data.data.token);
+      if (rememberMe) {
+        // Set token to expire in 30 days
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
       }
+      window.location.href = redirectUrl;
       setLoading(false);
     } catch (err) {
       setError("Network error. Please try again.");
@@ -369,16 +364,12 @@ function AuthPageContent() {
 
           <CardTitle className="text-white">
             {mode === "login" && loginStep === "phone" && "Welcome Back"}
-            {mode === "login" && loginStep === "password" && "Enter Your Password"}
-            {mode === "login" && loginStep === "otp" && "Verify OTP"}
             {mode === "otp-login" && step === "details" && "Login with OTP"}
             {mode === "otp-login" && step === "otp" && "Verify OTP"}
             {mode === "signup" && step === "details" && "Create Your Account"}
           </CardTitle>
           <CardDescription className="text-white/80">
-            {mode === "login" && loginStep === "phone" && "Enter your phone number to continue"}
-            {mode === "login" && loginStep === "password" && "Enter your password to login"}
-            {mode === "login" && loginStep === "otp" && "We've sent a 6-digit code to your phone"}
+            {mode === "login" && loginStep === "phone" && "Enter your phone number to login instantly"}
             {mode === "otp-login" &&
               step === "details" &&
               "Enter your phone number to receive OTP"}
@@ -453,7 +444,7 @@ function AuthPageContent() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Checking..." : "Continue"}
+                  {loading ? "Logging in..." : "Login"}
                 </Button>
               </form>
             </>
@@ -703,7 +694,7 @@ function AuthPageContent() {
             (mode === "signup" && step === "details")) && (
               <div className="mt-6 flex items-center justify-center text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 mr-1" />
-                {mode === "login" && loginStep === "password" ? "Secured with password authentication" : mode === "signup" ? "Secure account creation" : "Secured with OTP verification"}
+                {mode === "login" ? "Instant phone login" : mode === "signup" ? "Secure account creation" : "Secured with OTP verification"}
               </div>
             )}
         </CardContent>

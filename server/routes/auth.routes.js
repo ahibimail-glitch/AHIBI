@@ -75,6 +75,7 @@ const locationValidation = [
 
 // Public routes
 router.post('/signup', signupValidation, authController.signup);
+router.post('/phone-login', phoneValidation, authController.loginWithPhone);
 router.post('/send-otp', phoneValidation, authController.sendOtp);
 router.post('/verify-otp', otpValidation, authController.verifyOtp);
 router.post('/login', passwordValidation, authController.loginWithPassword);
