@@ -1,6 +1,23 @@
 const User = require('../models/User');
-const smsService = require('../services/smsService');
+const emailService = require('../services/emailService');
 const { validationResult } = require('express-validator');
+
+const sendOtpEmail = async (email, name, otp) => {
+  if (!email) {
+    return {
+      success: false,
+      error: 'Email address is required to send OTP.'
+    };
+  }
+
+  return emailService.sendOtpEmail(
+    {
+      email,
+      name: name || 'there'
+    },
+    otp
+  );
+};
 
 /**
  * @desc    Send OTP to user's phone number
@@ -13,7 +30,7 @@ exports.sendOtp = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { phone, mode } = req.body;
+  const { phone, mode, email, name } = req.body;
 
   try {
     // Check if user exists
@@ -32,44 +49,76 @@ exports.sendOtp = async (req, res) => {
         message: 'Number is not registered'
       });
     }
+
+    if ((mode === 'signup' || !mode) && !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required to send OTP'
+      });
+    }
+
+    if (mode === 'login' && user && !user.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'No email is linked to this account. Please contact support.'
+      });
+    }
+
     // For login, generate OTP using user.setOtp() and store on user document
     let otp;
+    let recipientEmail;
+    let recipientName;
+
     if (mode === 'login' && user) {
       otp = await user.setOtp();
+      recipientEmail = user.email;
+      recipientName = user.name;
     } else {
       // For signup, use in-memory temp store
       otp = Math.floor(100000 + Math.random() * 900000).toString();
       if (!global.tempOtps) global.tempOtps = {};
       global.tempOtps[phone] = {
         code: otp,
-        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        email,
+        name,
+        city: req.body.city
       };
+      recipientEmail = email;
+      recipientName = name;
     }
 
     // Store OTP and expiry in a temp store (in-memory, Redis, or DB). For now, use a simple in-memory store (for demo, not production safe)
     if (!global.tempOtps) global.tempOtps = {};
     global.tempOtps[phone] = {
       code: otp,
-      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+      expiresAt: Date.now() + 5 * 60 * 1000,
+      ...(mode === 'login'
+        ? {}
+        : {
+            email,
+            name,
+            city: req.body.city
+          })
     };
 
-    // Send OTP via SMS service
-    const smsResponse = await smsService.sendOtp(phone, otp);
+    const emailResponse = await sendOtpEmail(recipientEmail, recipientName, otp);
 
-    if (!smsResponse.success) {
+    if (!emailResponse.success) {
       return res.status(500).json({
         success: false,
         message: 'Failed to send OTP',
-        error: smsResponse.message
+        error: emailResponse.error || 'Email OTP could not be sent'
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully',
+      message: 'OTP sent successfully to your email',
       data: {
         phone,
-        otpSent: true
+        otpSent: true,
+        email: recipientEmail
       }
     });
   } catch (error) {
@@ -265,7 +314,12 @@ exports.verifyOtp = async (req, res) => {
       if (!name || !city) {
         return res.status(400).json({ success: false, message: 'Name and city are required for signup.' });
       }
-      user = new User({ phone, name, city, email });
+      user = new User({
+        phone,
+        name,
+        city,
+        email: email || tempOtp.email
+      });
       await user.save();
       delete global.tempOtps[phone];
     } else {
@@ -493,26 +547,33 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
+    if (!user.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'No email is linked to this account. Please contact support.'
+      });
+    }
+
     // Generate OTP for password reset
     const otp = await user.setOtp();
 
-    // Send OTP via SMS service
-    const smsResponse = await smsService.sendOtp(phone, otp);
+    const emailResponse = await sendOtpEmail(user.email, user.name, otp);
 
-    if (!smsResponse.success) {
+    if (!emailResponse.success) {
       return res.status(500).json({
         success: false,
         message: 'Failed to send OTP',
-        error: smsResponse.message
+        error: emailResponse.error || 'Email OTP could not be sent'
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully for password reset',
+      message: 'OTP sent successfully to your email for password reset',
       data: {
         phone,
-        otpSent: true
+        otpSent: true,
+        email: user.email
       }
     });
   } catch (error) {

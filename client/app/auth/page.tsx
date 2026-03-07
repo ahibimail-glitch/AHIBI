@@ -75,7 +75,13 @@ function AuthPageContent() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: signupData.phone })
+        body: JSON.stringify({
+          phone: signupData.phone,
+          email: signupData.email,
+          name: signupData.name,
+          city: signupData.city,
+          mode: 'signup'
+        })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -245,7 +251,7 @@ function AuthPageContent() {
         return;
       }
       setError(""); // Clear any previous errors
-      setSuccessMessage("OTP sent successfully! Check your phone.");
+      setSuccessMessage("OTP sent successfully! Check your email.");
     } catch (err) {
       setError("Failed to send OTP");
     } finally {
@@ -421,24 +427,24 @@ function AuthPageContent() {
             {mode === "otp-login" && step === "details" && "Login with OTP"}
             {mode === "otp-login" && step === "otp" && "Verify OTP"}
             {mode === "signup" && step === "details" && "Create Your Account"}
-            {mode === "signup" && step === "otp" && "Verify Your Phone"}
+            {mode === "signup" && step === "otp" && "Verify Your Email OTP"}
           </CardTitle>
           <CardDescription className="text-white/80">
             {mode === "login" && loginStep === "phone" && "Enter your phone number to continue"}
             {mode === "login" && loginStep === "password" && "Enter your password to login"}
-            {mode === "login" && loginStep === "otp" && "We've sent a 6-digit code to your phone"}
+            {mode === "login" && loginStep === "otp" && "We've sent a 6-digit code to your email"}
             {mode === "otp-login" &&
               step === "details" &&
-              "Enter your phone number to receive OTP"}
+              "Enter your phone number to receive OTP on your email"}
             {mode === "otp-login" &&
               step === "otp" &&
-              `We've sent a 6-digit code to ${loginData.loginId}`}
+              "We've sent a 6-digit code to your email"}
             {mode === "signup" &&
               step === "details" &&
               "Fill in your details to get started"}
             {mode === "signup" &&
               step === "otp" &&
-              `We've sent a 6-digit code to ${signupData.phone}`}
+              `We've sent a 6-digit code to ${signupData.email}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -764,7 +770,7 @@ function AuthPageContent() {
                 />
               </div>
               <Button type="submit" className="w-full">
-                Verify Phone Number
+                Verify OTP
               </Button>
               <div className="text-center space-y-2">
                 <Button

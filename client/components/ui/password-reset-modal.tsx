@@ -61,7 +61,7 @@ export function PasswordResetModal({
         return;
       }
 
-      setSuccessMessage("OTP sent successfully! Check your phone.");
+      setSuccessMessage("OTP sent successfully! Check your email.");
       setStep("otp");
       setLoading(false);
     } catch (err) {
@@ -142,8 +142,8 @@ export function PasswordResetModal({
             {step === "newPassword" && "Password Reset Success"}
           </DialogTitle>
           <DialogDescription className="text-white/80">
-            {step === "phone" && "Enter your phone number to receive a password reset OTP"}
-            {step === "otp" && `We've sent a 6-digit code to ${phoneNumber}`}
+            {step === "phone" && "Enter your phone number to receive a password reset OTP on your email"}
+            {step === "otp" && "We've sent a 6-digit code to your email"}
             {step === "newPassword" && "Your password has been reset successfully"}
           </DialogDescription>
         </DialogHeader>
