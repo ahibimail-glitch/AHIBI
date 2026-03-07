@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const axios = require('axios');
 const emailService = require('../services/emailService');
 const { validationResult } = require('express-validator');
 
@@ -17,6 +18,130 @@ const sendOtpEmail = async (email, name, otp) => {
     },
     otp
   );
+};
+
+const buildAuthSuccessResponse = (user, token, message, extraData = {}) => ({
+  success: true,
+  message,
+  data: {
+    token,
+    ...extraData,
+    user: {
+      id: user._id,
+      phone: user.phone || '',
+      name: user.name || '',
+      email: user.email || '',
+      role: user.role,
+      status: user.status,
+      profilePic: user.profilePic,
+      city: user.city || '',
+      address: user.address,
+      location: user.location,
+      authProvider: user.authProvider || 'phone_otp'
+    }
+  }
+});
+
+const verifyGoogleIdToken = async (idToken) => {
+  const response = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
+    params: {
+      id_token: idToken
+    }
+  });
+
+  const payload = response.data;
+  const allowedClientIds = [
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+  ].filter(Boolean);
+
+  if (!allowedClientIds.length) {
+    throw new Error('Google auth is not configured. GOOGLE_CLIENT_ID is missing.');
+  }
+
+  if (!allowedClientIds.includes(payload.aud)) {
+    throw new Error('Invalid Google token audience.');
+  }
+
+  if (!payload.email || payload.email_verified !== 'true') {
+    throw new Error('Google account email is not verified.');
+  }
+
+  return payload;
+};
+
+/**
+ * @desc    Authenticate user with Google
+ * @route   POST /api/auth/google
+ * @access  Public
+ */
+exports.googleAuth = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { idToken } = req.body;
+
+  try {
+    const googlePayload = await verifyGoogleIdToken(idToken);
+    const email = googlePayload.email.toLowerCase();
+
+    let user = await User.findOne({
+      $or: [
+        { googleId: googlePayload.sub },
+        { email }
+      ]
+    }).select('+passwordHash');
+
+    if (!user) {
+      user = new User({
+        email,
+        name: googlePayload.name || email.split('@')[0],
+        profilePic: googlePayload.picture || '',
+        googleId: googlePayload.sub,
+        authProvider: 'google',
+        city: ''
+      });
+    } else {
+      user.email = email;
+      user.googleId = googlePayload.sub;
+      user.name = user.name || googlePayload.name || email.split('@')[0];
+      user.profilePic = user.profilePic || googlePayload.picture || '';
+      user.authProvider = user.authProvider === 'phone_otp' ? 'mixed' : (user.authProvider || 'google');
+    }
+
+    await user.save();
+
+    if (user.status === 'blocked') {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been blocked. Please contact support.'
+      });
+    }
+
+    if (user.status === 'pending' && ['artist', 'venue', 'organizer'].includes(user.role)) {
+      return res.status(202).json({
+        success: true,
+        message: 'Your account is pending approval',
+        data: { pending: true, role: user.role }
+      });
+    }
+
+    const token = user.getSignedJwtToken();
+    return res.status(200).json(
+      buildAuthSuccessResponse(user, token, 'Google authentication successful', {
+        needsPasswordSetup: false
+      })
+    );
+  } catch (error) {
+    console.error('Google auth error:', error.response?.data || error.message);
+    return res.status(400).json({
+      success: false,
+      message: 'Google authentication failed',
+      error: error.message
+    });
+  }
 };
 
 /**
@@ -347,26 +472,11 @@ exports.verifyOtp = async (req, res) => {
 
     // Generate JWT token
     const token = user.getSignedJwtToken();
-    res.status(200).json({
-      success: true,
-      message: 'OTP verified successfully',
-      data: {
-        token,
-        needsPasswordSetup,
-        user: {
-          id: user._id,
-          phone: user.phone,
-          name: user.name || '',
-          email: user.email || '',
-          role: user.role,
-          status: user.status,
-          profilePic: user.profilePic,
-          city: user.city,
-          address: user.address,
-          location: user.location
-        }
-      }
-    });
+    res.status(200).json(
+      buildAuthSuccessResponse(user, token, 'OTP verified successfully', {
+        needsPasswordSetup
+      })
+    );
   } catch (error) {
     console.error('Verify OTP error:', error);
     res.status(500).json({

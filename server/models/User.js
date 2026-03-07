@@ -5,10 +5,13 @@ const jwt = require('jsonwebtoken');
 const UserSchema = new mongoose.Schema({
   phone: {
     type: String,
-    required: [true, 'Phone number is required'],
+    required: function() {
+      return this.role !== 'user';
+    },
     unique: true,
+    sparse: true,
     trim: true,
-    match: [/^\d{10}$/, 'Please add a valid 10 digit phone number']
+    match: [/^(\d{10})?$/, 'Please add a valid 10 digit phone number']
   },
   name: {
     type: String,
@@ -48,9 +51,23 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  googleId: {
+    type: String,
+    default: null,
+    unique: true,
+    sparse: true
+  },
+  authProvider: {
+    type: String,
+    enum: ['phone_otp', 'google', 'mixed'],
+    default: 'phone_otp'
+  },
   city: {
     type: String,
-    required: [true, 'City is required']
+    required: function() {
+      return this.role !== 'user';
+    },
+    default: ''
   },
   location: {
     type: {

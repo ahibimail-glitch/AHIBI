@@ -40,6 +40,12 @@ const passwordSetupValidation = [
     .isLength({ min: 6 })
 ];
 
+const googleAuthValidation = [
+  check('idToken', 'Google ID token is required')
+    .notEmpty()
+    .isString()
+];
+
 const profileValidation = [
   check('name', 'Name is required').optional(),
   check('email', 'Please include a valid email').optional().isEmail(),
@@ -57,6 +63,7 @@ const locationValidation = [
 ];
 
 // Public routes
+router.post('/google', googleAuthValidation, authController.googleAuth);
 router.post('/send-otp', phoneValidation, authController.sendOtp);
 router.post('/verify-otp', otpValidation, authController.verifyOtp);
 router.post('/login', passwordValidation, authController.loginWithPassword);
