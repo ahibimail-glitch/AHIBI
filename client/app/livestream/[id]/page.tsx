@@ -56,11 +56,8 @@ export default function LiveStreamPage() {
   const [sessionBlocked, setSessionBlocked] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [sessionLastSeen, setSessionLastSeen] = useState<string | null>(null);
-  const [contentObscured, setContentObscured] = useState(false);
-  const [obscureReason, setObscureReason] = useState<string | null>(null);
-    const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionTokenRef = useRef<string | null>(null);
-  const playerContainerRef = useRef<HTMLDivElement | null>(null);
 
   const joinSession = async (force = false) => {
     const token = localStorage.getItem('token');
@@ -135,7 +132,6 @@ export default function LiveStreamPage() {
     };
   }, [accessCheck, isAuthenticated]);
 
-  
   useEffect(() => {
     window.addEventListener('beforeunload', leaveSession);
     return () => {
@@ -162,294 +158,12 @@ export default function LiveStreamPage() {
       }
     };
 
-    const handleCopy = (e: Event) => {
-      e.preventDefault();
-    };
-
-    const handleCut = (e: Event) => {
-      e.preventDefault();
-    };
-
-    const handleDragStart = (e: Event) => {
-      e.preventDefault();
-    };
-
-    const obscureContent = (reason: string) => {
-      setContentObscured(true);
-      setObscureReason(reason);
-    };
-
-    const revealContent = () => {
-      setContentObscured(false);
-      setObscureReason(null);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        obscureContent('visibility');
-      } else {
-        revealContent();
-      }
-    };
-
-    const handleWindowBlur = () => {
-      obscureContent('blur');
-    };
-
-    const handlePageHide = () => {
-      obscureContent('pagehide');
-    };
-
-    const handleFullscreenChange = () => {
-      if (document.fullscreenElement) {
-        obscureContent('fullscreen');
-      }
-    };
-
-    const handleWindowFocus = () => {
-      if (!document.hidden) revealContent();
-    };
-
-    const detectDevTools = () => {
-      // Mobile browsers (especially iOS Safari/Chrome) frequently report large
-      // outer/inner deltas due to dynamic address/tool bars, causing false positives.
-      const ua = navigator.userAgent || '';
-      const uaLower = ua.toLowerCase();
-      const isIOS = /iPad|iPhone|iPod/.test(ua) ||
-        (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1);
-      const isAndroidTV =
-        uaLower.includes('android') &&
-        /(tv|aft|bravia|googletv|google tv|smarttv|smart-tv|mibox|shield|netcast|viera)/i.test(ua);
-      const isMobileViewport = window.matchMedia('(max-width: 1024px)').matches;
-
-      if (isIOS || isMobileViewport || isAndroidTV) return;
-
-      const threshold = 160;
-      if (
-        window.outerHeight - window.innerHeight > threshold ||
-        window.outerWidth - window.innerWidth > threshold
-      ) {
-        obscureContent('devtools');
-      }
-    };
-
-    const preventScreenSharing = () => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        return () => {};
-      }
-
-      const mediaDevices = navigator.mediaDevices;
-      const originalGetDisplayMedia = mediaDevices.getDisplayMedia.bind(mediaDevices);
-
-      mediaDevices.getDisplayMedia = function () {
-        return Promise.reject(new Error('Screen sharing is not allowed on this page'));
-      };
-
-      return () => {
-        mediaDevices.getDisplayMedia = originalGetDisplayMedia;
-      };
-    };
-
-    const preventNativeShare = () => {
-      const nav = navigator as Navigator & {
-        share?: (data?: ShareData) => Promise<void>;
-      };
-
-      if (typeof nav.share !== 'function') {
-        return () => {};
-      }
-
-      const originalShare = nav.share.bind(nav);
-      nav.share = function () {
-        return Promise.reject(new Error('Sharing is disabled on this page'));
-      };
-
-      return () => {
-        nav.share = originalShare;
-      };
-    };
-
-    const preventScreenCapture = () => {
-      // Add CSS to prevent screen capture
-      const style = document.createElement('style');
-      style.textContent = `
-        * {
-          -webkit-touch-callout: none !important;
-          -webkit-user-select: none !important;
-          -khtml-user-select: none !important;
-          -moz-user-select: none !important;
-          -ms-user-select: none !important;
-          user-select: none !important;
-        }
-        
-        body {
-          -webkit-print-color-adjust: exact !important;
-          color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        
-        @media print {
-          body * {
-            visibility: hidden !important;
-          }
-          body::before {
-            content: "Screen capture is not allowed" !important;
-            visibility: visible !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            font-size: 24px !important;
-            color: red !important;
-          }
-        }
-        
-        video {
-          -webkit-user-select: none !important;
-          -moz-user-select: none !important;
-          -ms-user-select: none !important;
-          user-select: none !important;
-        }
-      `;
-      document.head.appendChild(style);
-
-      document.addEventListener('copy', handleCopy);
-      document.addEventListener('cut', handleCut);
-      document.addEventListener('dragstart', handleDragStart);
-
-      // Detect and block screen recording software
-      const detectScreenRecording = () => {
-        // Check for common screen recording indicators
-        if (window.outerHeight <= 1 || window.outerWidth <= 1) {
-          obscureContent('recording');
-        }
-        
-        // Check if page is in an iframe (common for screen recording)
-        if (window.top !== window.self) {
-          window.top.location.href = window.location.href;
-        }
-      };
-
-      const recordingInterval = setInterval(detectScreenRecording, 500);
-
-      return () => {
-        if (style.parentNode) {
-          style.parentNode.removeChild(style);
-        }
-        document.removeEventListener('copy', handleCopy);
-        document.removeEventListener('cut', handleCut);
-        document.removeEventListener('dragstart', handleDragStart);
-        clearInterval(recordingInterval);
-      };
-    };
-
-    const disablePictureInPicture = () => {
-      const container = playerContainerRef.current;
-      if (!container) return;
-
-      let cleanupListener: (() => void) | null = null;
-      let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-      const attemptDisable = () => {
-        const video = container.querySelector('video') as HTMLVideoElement | null;
-        if (!video) return false;
-
-        try {
-          (video as any).disablePictureInPicture = true;
-          (video as any).disableRemotePlayback = true;
-        } catch {}
-
-        video.setAttribute('controlsList', 'nodownload noremoteplayback nofullscreen');
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('webkit-playsinline', 'true');
-        video.setAttribute('x-webkit-airplay', 'deny');
-        video.setAttribute('airplay', 'deny');
-
-        const handleEnterPiP = (e: Event) => {
-          e.preventDefault();
-          try {
-            if (document.pictureInPictureElement) {
-              document.exitPictureInPicture().catch(() => {});
-            }
-          } catch {}
-        };
-
-        const handleIOSFullscreen = () => {
-          obscureContent('ios_fullscreen');
-          try {
-            const webkitExitFullscreen = (video as any).webkitExitFullscreen;
-            if (typeof webkitExitFullscreen === 'function') {
-              webkitExitFullscreen.call(video);
-            }
-          } catch {}
-        };
-
-        video.addEventListener('enterpictureinpicture', handleEnterPiP);
-        video.addEventListener('webkitbeginfullscreen', handleIOSFullscreen as EventListener);
-
-        return () => {
-          video.removeEventListener('enterpictureinpicture', handleEnterPiP);
-          video.removeEventListener('webkitbeginfullscreen', handleIOSFullscreen as EventListener);
-        };
-      };
-
-      const initialCleanup = attemptDisable();
-      if (typeof initialCleanup === 'function') {
-        cleanupListener = initialCleanup;
-      } else {
-        pollInterval = setInterval(() => {
-          if (cleanupListener) return;
-          const result = attemptDisable();
-          if (typeof result === 'function') {
-            cleanupListener = result;
-            if (pollInterval) {
-              clearInterval(pollInterval);
-              pollInterval = null;
-            }
-          }
-        }, 500);
-      }
-
-      return () => {
-        if (pollInterval) {
-          clearInterval(pollInterval);
-          pollInterval = null;
-        }
-        if (cleanupListener) {
-          cleanupListener();
-          cleanupListener = null;
-        }
-      };
-    };
-
-    const interval = setInterval(detectDevTools, 1000);
-
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('focus', handleWindowFocus);
-    window.addEventListener('pagehide', handlePageHide);
-    
-    const cleanupScreenSharing = preventScreenSharing();
-    const cleanupNativeShare = preventNativeShare();
-    const cleanupCapture = preventScreenCapture();
-    const cleanupPiP = disablePictureInPicture();
-    
+
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
-      window.removeEventListener('pagehide', handlePageHide);
-      clearInterval(interval);
-      cleanupScreenSharing();
-      cleanupNativeShare();
-      cleanupCapture();
-      if (cleanupPiP) cleanupPiP();
     };
   }, []);
 
@@ -782,7 +496,7 @@ export default function LiveStreamPage() {
             {accessCheck.reason === 'payment_required' && (
               <Link
                 href="/livestream"
-                className="block w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="block w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
               >
                 Buy Access
               </Link>
@@ -815,8 +529,6 @@ export default function LiveStreamPage() {
     );
   }
 
-
-
   if (sessionLoading) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -834,7 +546,7 @@ export default function LiveStreamPage() {
         <div className="text-center p-8 max-w-md">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-orange-500/10 flex items-center justify-center">
             <svg className="w-10 h-10 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2M12 3v4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-2M12 3v4" />
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Already Watching</h1>
@@ -880,7 +592,7 @@ export default function LiveStreamPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Video Player */}
           <div className="lg:col-span-8">
-            <div ref={playerContainerRef} className="relative">
+            <div className="relative">
               <MuxPlayer
                 playbackId={streamInfo?.embedUrl || streamInfo?.muxPlaybackId || streamId}
                 streamType={streamInfo?.status === "active" ? "live" : "on-demand"}
@@ -888,7 +600,7 @@ export default function LiveStreamPage() {
                 // UI / styling
                 className="w-full aspect-video rounded-2xl overflow-hidden shadow-lg"
 
-              
+                // Controls
                 autoPlay={false}
                 muted={false}
                 loop={false}
@@ -907,7 +619,6 @@ export default function LiveStreamPage() {
                 primaryColor="#ffffff"
                 secondaryColor="#000000"
 
-               
                 // Show loading indicator properly
                 style={{
                   width: "100%",
@@ -915,21 +626,6 @@ export default function LiveStreamPage() {
                   borderRadius: "16px",
                 }}
               />
-
-              
-              {contentObscured && (
-                <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 backdrop-blur-md flex items-center justify-center">
-                  <div className="text-center px-6">
-                    <p className="text-white text-lg font-semibold">Secure content hidden</p>
-                    <p className="text-gray-300 text-sm mt-2">
-                      Switch back to this tab/window to continue watching.
-                    </p>
-                    {obscureReason && (
-                      <p className="text-gray-500 text-xs mt-3">Reason: {obscureReason}</p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Mobile Chat Button - Only visible on mobile */}
