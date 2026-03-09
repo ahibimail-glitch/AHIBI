@@ -39,6 +39,7 @@ interface TournamentRegistrationResponse {
 }
 
 const emptyPlayer: PlayerData = { fullName: "", age: "", gender: "", phone: "", email: "" };
+const FIXED_ENTRY_FEE = 1500;
 
 const categoryLabels: Record<string, string> = {
     mens_doubles: "Men's Doubles",
@@ -69,7 +70,7 @@ const Index = () => {
     const [isPaying, setIsPaying] = useState(false);
     const [confirmedRegistration, setConfirmedRegistration] = useState<TournamentRegistrationResponse | null>(null);
 
-    const entryFee = useMemo(() => categories.length * 1500, [categories]);
+    const entryFee = useMemo(() => FIXED_ENTRY_FEE, []);
 
     useEffect(() => {
         if (!authLoading && user) {
@@ -333,7 +334,7 @@ const Index = () => {
                                         <div className="pt-2 border-t text-center">
                                             <p className="text-sm text-muted-foreground">
                                                 Entry Fee Paid: <span className="font-semibold text-foreground">₹{confirmedRegistration.amount.toLocaleString("en-IN")}</span>
-                                                <span className="text-xs ml-1">({confirmedRegistration.categories.length} {confirmedRegistration.categories.length === 1 ? "category" : "categories"} × ₹1,500)</span>
+                                                <span className="text-xs ml-1">(fixed tournament fee for up to 2 categories)</span>
                                             </p>
                                         </div>
                                     </CardContent>

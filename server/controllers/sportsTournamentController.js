@@ -70,7 +70,7 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'All declarations must be accepted');
     }
 
-    const amount = categories.length * 1500;
+    const amount = 1500;
 
     const razorpayOrder = await razorpay.orders.create({
       amount: amount * 100,

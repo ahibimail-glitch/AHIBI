@@ -1,5 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useId } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck } from "lucide-react";
 
@@ -15,6 +16,8 @@ const labels = [
 ];
 
 const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
+  const baseId = useId();
+
   const toggle = (i: number) => {
     const next = [...checks];
     next[i] = !next[i];
@@ -34,7 +37,7 @@ const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
       </div>
       <div className="space-y-3">
         {labels.map((label, i) => (
-          <motion.label
+          <motion.div
             key={i}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -46,9 +49,9 @@ const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
                 : "border-border bg-card hover:border-primary/15 hover:shadow-card"
             }`}
           >
-            <Checkbox checked={checks[i]} onCheckedChange={() => toggle(i)} className="mt-0.5" />
-            <Label className="font-medium cursor-pointer leading-relaxed text-sm">{label}</Label>
-          </motion.label>
+            <Checkbox id={`${baseId}-${i}`} checked={checks[i]} onCheckedChange={() => toggle(i)} className="mt-0.5" />
+            <Label htmlFor={`${baseId}-${i}`} className="font-medium cursor-pointer leading-relaxed text-sm">{label}</Label>
+          </motion.div>
         ))}
       </div>
     </div>
