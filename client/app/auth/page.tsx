@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,22 +14,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Ticket,
   Phone,
   Shield,
-  User,
-  Building,
-  Music,
-  Calendar,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -37,10 +25,22 @@ import Link from "next/link";
 import { PasswordSetupModal } from "@/components/ui/password-setup-modal";
 import { PasswordResetModal } from "@/components/ui/password-reset-modal";
 import { getSafeRedirectUrl } from "@/utils/redirectUtils";
+import { useToast } from "@/components/ui/use-toast";
+
+type SignupField = "name" | "email" | "phone" | "city" | "agreeToTerms";
+
+type SignupErrors = {
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  agreeToTerms: string;
+};
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
   const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'));
+  const { toast } = useToast();
   
   const [mode, setMode] = useState<"login" | "signup" | "otp-login">("login");
   const [step, setStep] = useState<"details" | "otp">("details");
@@ -66,37 +66,159 @@ function AuthPageContent() {
   const [successMessage, setSuccessMessage] = useState("");
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [signupErrors, setSignupErrors] = useState<SignupErrors>({
+    name: "",
+    email: "",
+    phone: "",
+    city: "",
+    agreeToTerms: "",
+  });
+
+  const validateSignupField = (field: SignupField, value?: string | boolean) => {
+    switch (field) {
+      case "name": {
+        const name = typeof value === "string" ? value.trim() : signupData.name.trim();
+        if (!name) return "Full name is required";
+        if (name.length < 3) return "Full name must be at least 3 characters long";
+        if (!/^[A-Za-z]+(?:[\s'.-][A-Za-z]+)*$/.test(name)) return "Enter a valid full name";
+        return "";
+      }
+      case "email": {
+        const email = typeof value === "string" ? value.trim() : signupData.email.trim();
+        if (!email) return "Email address is required";
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email address";
+        return "";
+      }
+      case "phone": {
+        const phone = typeof value === "string" ? value.replace(/\D/g, "") : signupData.phone.replace(/\D/g, "");
+        if (!phone) return "Mobile number is required";
+        if (phone.length !== 10) return "Mobile number must be exactly 10 digits";
+        if (!/^[6-9]\d{9}$/.test(phone)) return "Enter a valid Indian mobile number";
+        return "";
+      }
+      case "city": {
+        const city = typeof value === "string" ? value.trim() : signupData.city.trim();
+        if (!city) return "City is required";
+        if (city.length < 2) return "City must be at least 2 characters long";
+        if (!/^[A-Za-z]+(?:[\s.-][A-Za-z]+)*$/.test(city)) return "Enter a valid city name";
+        return "";
+      }
+      case "agreeToTerms": {
+        const agreed = typeof value === "boolean" ? value : signupData.agreeToTerms;
+        if (!agreed) return "You must agree to the Terms of Service and Privacy Policy";
+        return "";
+      }
+      default:
+        return "";
+    }
+  };
+
+  const showFieldToast = (field: SignupField, message: string) => {
+    toast({
+      title: `Invalid ${field === "agreeToTerms" ? "consent" : field}`,
+      description: message,
+      variant: "destructive",
+    });
+  };
+
+  const handleSignupFieldChange = (field: SignupField, value: string | boolean) => {
+    if (field === "agreeToTerms") {
+      const checked = value as boolean;
+      setSignupData((prev) => ({ ...prev, agreeToTerms: checked }));
+      setSignupErrors((prev) => ({
+        ...prev,
+        agreeToTerms: validateSignupField("agreeToTerms", checked),
+      }));
+      return;
+    }
+
+    const nextValue = value as string;
+    setSignupData((prev) => ({ ...prev, [field]: nextValue }));
+    setSignupErrors((prev) => ({
+      ...prev,
+      [field]: validateSignupField(field, nextValue),
+    }));
+  };
+
+  const handleSignupFieldBlur = (field: SignupField) => {
+    const value = field === "agreeToTerms" ? signupData.agreeToTerms : signupData[field];
+    const message = validateSignupField(field, value);
+    setSignupErrors((prev) => ({ ...prev, [field]: message }));
+    if (message) {
+      showFieldToast(field, message);
+    }
+  };
+
+  const validateSignupForm = () => {
+    const nextErrors: SignupErrors = {
+      name: validateSignupField("name"),
+      email: validateSignupField("email"),
+      phone: validateSignupField("phone"),
+      city: validateSignupField("city"),
+      agreeToTerms: validateSignupField("agreeToTerms"),
+    };
+
+    setSignupErrors(nextErrors);
+
+    const firstErrorEntry = (Object.entries(nextErrors) as [SignupField, string][]).find(([, message]) => !!message);
+    if (firstErrorEntry) {
+      const [field, message] = firstErrorEntry;
+      showFieldToast(field, message);
+      return false;
+    }
+
+    return true;
+  };
+
+  const persistTokenAndRedirect = (token: string) => {
+    localStorage.setItem("token", token);
+    if (rememberMe) {
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+    }
+    window.location.href = redirectUrl;
+  };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateSignupForm()) {
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setSuccessMessage("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: signupData.name,
-          email: signupData.email,
           phone: signupData.phone.trim(),
-          city: signupData.city,
+          mode: 'signup'
         })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.message || "Failed to create account");
+        setError(data.message || "Failed to send OTP");
+        toast({
+          title: "Signup failed",
+          description: data.message || "Failed to send OTP",
+          variant: "destructive",
+        });
         setLoading(false);
         return;
       }
-      localStorage.setItem("token", data.data.token);
-      if (rememberMe) {
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
-      }
-      window.location.href = redirectUrl;
+      setStep("otp");
+      setOtp("");
+      setSuccessMessage("OTP sent successfully! Check your phone.");
     } catch (err) {
       setError("Network error. Please try again.");
+      toast({
+        title: "Network error",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     }
     setLoading(false);
   };
@@ -105,43 +227,39 @@ function AuthPageContent() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    setSuccessMessage(""); // Clear any previous messages
-    
-    console.log('Phone submission:', { 
-      phone: loginData.loginId, 
-      phoneLength: loginData.loginId.length,
-      phoneType: typeof loginData.loginId 
-    });
-    
-    // Trim the phone number to remove any whitespace
+    setSuccessMessage("");
+
     const trimmedPhone = loginData.loginId.trim();
+    if (!/^\d{10}$/.test(trimmedPhone)) {
+      setError("Please enter a valid 10-digit phone number");
+      setLoading(false);
+      return;
+    }
     
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/phone-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          phone: trimmedPhone
-        })
+        body: JSON.stringify({ phone: trimmedPhone })
       });
       
       const data = await res.json();
-      console.log('Check user response:', { status: res.status, data });
       
       if (!res.ok || !data.success) {
         setError(data.message || "Something went wrong");
         setLoading(false);
         return;
       }
-      
-      localStorage.setItem("token", data.data.token);
-      if (rememberMe) {
-        // Set token to expire in 30 days
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+
+      if (data.data.hasPassword) {
+        setLoginStep("password");
+        setSuccessMessage("");
+      } else {
+        const otpSent = await sendOtpForLogin(trimmedPhone);
+        if (otpSent) {
+          setLoginStep("otp");
+        }
       }
-      window.location.href = redirectUrl;
       setLoading(false);
     } catch (err) {
       setError("Network error. Please try again.");
@@ -151,6 +269,7 @@ function AuthPageContent() {
 
   const sendOtpForLogin = async (phone: string) => {
     setSendingOtp(true);
+    setError("");
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-otp`, {
         method: "POST",
@@ -160,12 +279,14 @@ function AuthPageContent() {
       const data = await res.json();
       if (!res.ok || !data.success) {
         setError(data.message || "Failed to send OTP");
-        return;
+        return false;
       }
-      setError(""); // Clear any previous errors
+      setError("");
       setSuccessMessage("OTP sent successfully! Check your phone.");
+      return true;
     } catch (err) {
       setError("Failed to send OTP");
+      return false;
     } finally {
       setSendingOtp(false);
     }
@@ -187,14 +308,8 @@ function AuthPageContent() {
         throw new Error(data.message || "Failed to set password");
       }
 
-      localStorage.setItem("token", currentToken);
-      if (rememberMe) {
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
-      }
       setShowPasswordSetupModal(false);
-      window.location.href = redirectUrl;
+      persistTokenAndRedirect(currentToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set password");
       throw err;
@@ -227,13 +342,6 @@ function AuthPageContent() {
       return;
     }
     
-    console.log('Sending login request:', { 
-      phone: loginData.loginId, 
-      password: loginData.password,
-      passwordLength: loginData.password.length 
-    });
-    
-    // Trim the phone number to remove any whitespace
     const trimmedPhone = loginData.loginId.trim();
     
     try {
@@ -247,28 +355,26 @@ function AuthPageContent() {
       });
       
       const data = await res.json();
-      console.log('Login response:', { status: res.status, data });
       
       if (!res.ok || !data.success) {
         if (data.requiresOtp) {
-          // User exists but no password, switch to OTP login
-          setLoginStep("otp");
-          // Send OTP for this user
-          await sendOtpForLogin(loginData.loginId);
+          const otpSent = await sendOtpForLogin(trimmedPhone);
+          if (otpSent) {
+            setLoginStep("otp");
+          }
         } else if (data.message && data.message.includes('Password not set')) {
-          // User somehow got to password step without password, switch to OTP
-          setLoginStep("otp");
-          await sendOtpForLogin(loginData.loginId);
+          const otpSent = await sendOtpForLogin(trimmedPhone);
+          if (otpSent) {
+            setLoginStep("otp");
+          }
         } else {
           setError(data.message || "Invalid credentials");
         }
         setLoading(false);
         return;
       }
-      
-      localStorage.setItem("token", data.data.token);
-      // Redirect to the original page or home
-      window.location.href = redirectUrl;
+
+      persistTokenAndRedirect(data.data.token);
     } catch (err) {
       setError("Network error. Please try again.");
     }
@@ -278,6 +384,7 @@ function AuthPageContent() {
   const handleOtpLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
     const phone = loginData.loginId.trim();
     if (!/^\d{10}$/.test(phone)) {
       setError("Please enter a valid 10-digit phone number.");
@@ -296,6 +403,7 @@ function AuthPageContent() {
         setLoading(false);
         return;
       }
+      setSuccessMessage("OTP sent successfully! Check your phone.");
       setMode("otp-login");
       setStep("otp");
     } catch (err) {
@@ -309,10 +417,23 @@ function AuthPageContent() {
     setLoading(true);
     setError("");
     try {
+      const payload = mode === "signup"
+        ? {
+            phone: signupData.phone.trim(),
+            otp,
+            name: signupData.name.trim(),
+            email: signupData.email.trim(),
+            city: signupData.city.trim()
+          }
+        : {
+            phone: loginData.loginId.trim(),
+            otp
+          };
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: loginData.loginId, otp })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -328,24 +449,58 @@ function AuthPageContent() {
         setLoading(false);
         return;
       }
-      
-      localStorage.setItem("token", data.data.token);
-      if (rememberMe) {
-        // Set token to expire in 30 days
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
-        localStorage.setItem("tokenExpiry", expiryDate.toISOString());
-      }
-      window.location.href = redirectUrl;
+
+      persistTokenAndRedirect(data.data.token);
     } catch (err) {
       setError("Network error. Please try again.");
     }
     setLoading(false);
   };
 
+  const handleSignupResendOtp = async () => {
+    setError("");
+    setSuccessMessage("");
+
+    const phone = signupData.phone.trim();
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    setSendingOtp(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, mode: 'signup' })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || "Failed to resend OTP");
+        return;
+      }
+      setSuccessMessage("OTP resent successfully! Check your phone.");
+    } catch (err) {
+      setError("Network error. Please try again.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleLoginResendOtp = async () => {
+    const phone = loginData.loginId.trim();
+    if (!/^\d{10}$/.test(phone)) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    await sendOtpForLogin(phone);
+  };
+
   const resetLoginFlow = () => {
     setLoginStep("phone");
     setLoginData({ loginId: "", password: "" });
+    setOtp("");
     setError("");
     setSuccessMessage("");
   };
@@ -364,12 +519,17 @@ function AuthPageContent() {
 
           <CardTitle className="text-white">
             {mode === "login" && loginStep === "phone" && "Welcome Back"}
+            {mode === "login" && loginStep === "password" && "Enter Your Password"}
+            {mode === "login" && loginStep === "otp" && "Verify OTP"}
             {mode === "otp-login" && step === "details" && "Login with OTP"}
             {mode === "otp-login" && step === "otp" && "Verify OTP"}
             {mode === "signup" && step === "details" && "Create Your Account"}
+            {mode === "signup" && step === "otp" && "Verify Your Number"}
           </CardTitle>
           <CardDescription className="text-white/80">
-            {mode === "login" && loginStep === "phone" && "Enter your phone number to login instantly"}
+            {mode === "login" && loginStep === "phone" && "Enter your phone number to continue"}
+            {mode === "login" && loginStep === "password" && `Enter the password for ${loginData.loginId}`}
+            {mode === "login" && loginStep === "otp" && `We've sent a 6-digit code to ${loginData.loginId}`}
             {mode === "otp-login" &&
               step === "details" &&
               "Enter your phone number to receive OTP"}
@@ -379,6 +539,9 @@ function AuthPageContent() {
             {mode === "signup" &&
               step === "details" &&
               "Fill in your details to get started"}
+            {mode === "signup" &&
+              step === "otp" &&
+              `We've sent a 6-digit code to ${signupData.phone}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -444,7 +607,20 @@ function AuthPageContent() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Logging in..." : "Login"}
+                  {loading ? "Checking..." : "Continue"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setMode("otp-login");
+                    setStep("details");
+                    setError("");
+                    setSuccessMessage("");
+                  }}
+                >
+                  Login with OTP Instead
                 </Button>
               </form>
             </>
@@ -543,7 +719,7 @@ function AuthPageContent() {
                   <p className="text-xs ">
                     {sendingOtp ? "Sending OTP..." : "Didn't receive code?"}{" "}
                     {!sendingOtp && (
-                      <button type="button" className="underline">
+                      <button type="button" className="underline" onClick={handleLoginResendOtp}>
                         Resend OTP
                       </button>
                     )}
@@ -551,6 +727,49 @@ function AuthPageContent() {
                 </div>
               </form>
             </>
+          )}
+
+          {mode === "otp-login" && step === "details" && (
+            <form onSubmit={handleOtpLoginSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otpLoginPhone" className="text-white">Phone Number</Label>
+                <Input
+                  id="otpLoginPhone"
+                  type="text"
+                  placeholder="Enter your phone number"
+                  value={loginData.loginId}
+                  onChange={(e) =>
+                    setLoginData({ ...loginData, loginId: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="flex items-center space-x-2 mt-4">
+                <Checkbox
+                  id="otp-login-remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
+                <Label htmlFor="otp-login-remember" className="text-sm text-white">
+                  Remember me for 30 days
+                </Label>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Sending OTP..." : "Send OTP"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full text-white"
+                onClick={() => {
+                  setMode("login");
+                  setStep("details");
+                  resetLoginFlow();
+                }}
+              >
+                ← Back to Login
+              </Button>
+            </form>
           )}
 
           {mode === "otp-login" && step === "otp" && (
@@ -583,9 +802,59 @@ function AuthPageContent() {
                 </Button>
                 <p className="text-xs ">
                   Didn't receive code?{" "}
-                  <button type="button" className="underline">
+                  <button type="button" className="underline" onClick={handleLoginResendOtp}>
                     Resend OTP
                   </button>
+                </p>
+              </div>
+            </form>
+          )}
+
+          {mode === "signup" && step === "otp" && (
+            <form onSubmit={handleOtpLoginVerify} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signupOtp" className="text-white">Enter OTP</Label>
+                <Input
+                  id="signupOtp"
+                  type="text"
+                  placeholder="6-digit code"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  maxLength={6}
+                  className="text-center text-lg tracking-widest"
+                  required
+                />
+              </div>
+              <div className="flex items-center space-x-2 mt-4">
+                <Checkbox
+                  id="signup-remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
+                <Label htmlFor="signup-remember" className="text-sm text-white">
+                  Remember me for 30 days
+                </Label>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Verifying..." : "Verify & Create Account"}
+              </Button>
+              <div className="text-center space-y-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStep("details")}
+                  type="button"
+                  className="text-white"
+                >
+                  ← Edit Details
+                </Button>
+                <p className="text-xs ">
+                  {sendingOtp ? "Sending OTP..." : "Didn't receive code?"}{" "}
+                  {!sendingOtp && (
+                    <button type="button" className="underline" onClick={handleSignupResendOtp}>
+                      Resend OTP
+                    </button>
+                  )}
                 </p>
               </div>
             </form>
@@ -601,10 +870,15 @@ function AuthPageContent() {
                   placeholder="Enter your full name"
                   value={signupData.name}
                   onChange={(e) =>
-                    setSignupData({ ...signupData, name: e.target.value })
+                    handleSignupFieldChange("name", e.target.value)
                   }
+                  onBlur={() => handleSignupFieldBlur("name")}
+                  className={signupErrors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
                   required
                 />
+                {signupErrors.name && (
+                  <p className="text-xs text-red-400">{signupErrors.name}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white">Email Address *</Label>
@@ -614,10 +888,15 @@ function AuthPageContent() {
                   placeholder="Enter your email"
                   value={signupData.email}
                   onChange={(e) =>
-                    setSignupData({ ...signupData, email: e.target.value })
+                    handleSignupFieldChange("email", e.target.value)
                   }
+                  onBlur={() => handleSignupFieldBlur("email")}
+                  className={signupErrors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
                   required
                 />
+                {signupErrors.email && (
+                  <p className="text-xs text-red-400">{signupErrors.email}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-white">Mobile Number *</Label>
@@ -632,34 +911,42 @@ function AuthPageContent() {
                     placeholder="Enter mobile number"
                     value={signupData.phone}
                     onChange={(e) =>
-                      setSignupData({ ...signupData, phone: e.target.value })
+                      handleSignupFieldChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))
                     }
-                    className="rounded-l-none"
+                    onBlur={() => handleSignupFieldBlur("phone")}
+                    className={`rounded-l-none ${signupErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                    inputMode="numeric"
+                    maxLength={10}
                     required
                   />
                 </div>
+                {signupErrors.phone && (
+                  <p className="text-xs text-red-400">{signupErrors.phone}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-white">City *</Label>
                 <Input
                   id="city"
                   placeholder="Enter your city"
-                 
                   value={signupData.city}
-                  onChange={(e) => setSignupData({ ...signupData, city: e.target.value })}
+                  onChange={(e) => handleSignupFieldChange("city", e.target.value)}
+                  onBlur={() => handleSignupFieldBlur("city")}
+                  className={signupErrors.city ? "border-red-500 focus-visible:ring-red-500" : ""}
                   required
                 />
+                {signupErrors.city && (
+                  <p className="text-xs text-red-400">{signupErrors.city}</p>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="terms"
                   checked={signupData.agreeToTerms}
                   onCheckedChange={(checked) =>
-                    setSignupData({
-                      ...signupData,
-                      agreeToTerms: checked as boolean,
-                    })
+                    handleSignupFieldChange("agreeToTerms", checked as boolean)
                   }
+                  onBlur={() => handleSignupFieldBlur("agreeToTerms")}
                 />
                 <Label htmlFor="terms" className="text-sm text-white">
                   I agree to the{" "}
@@ -672,18 +959,23 @@ function AuthPageContent() {
                   </Link>
                 </Label>
               </div>
+              {signupErrors.agreeToTerms && (
+                <p className="text-xs text-red-400">{signupErrors.agreeToTerms}</p>
+              )}
               <Button
                 type="submit"
                 className="w-full"
                 disabled={
+                  loading ||
                   !signupData.agreeToTerms ||
-                  !signupData.name ||
-                  !signupData.email ||
-                  !signupData.phone ||
-                  !signupData.city
+                  !signupData.name.trim() ||
+                  !signupData.email.trim() ||
+                  !signupData.phone.trim() ||
+                  !signupData.city.trim() ||
+                  Object.values(signupErrors).some(Boolean)
                 }
               >
-                {loading ? "Creating Account..." : "Create Account"}
+                {loading ? "Sending OTP..." : "Continue with OTP"}
               </Button>
             </form>
           )}
@@ -694,7 +986,7 @@ function AuthPageContent() {
             (mode === "signup" && step === "details")) && (
               <div className="mt-6 flex items-center justify-center text-sm text-muted-foreground">
                 <Shield className="h-4 w-4 mr-1" />
-                {mode === "login" ? "Instant phone login" : mode === "signup" ? "Secure account creation" : "Secured with OTP verification"}
+                {mode === "login" ? "Password or OTP-secured login" : mode === "signup" ? "Secure account creation with OTP" : "Secured with OTP verification"}
               </div>
             )}
         </CardContent>
