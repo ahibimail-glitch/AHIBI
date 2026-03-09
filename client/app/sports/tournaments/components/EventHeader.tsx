@@ -1,12 +1,13 @@
+"use client";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Trophy, MapPin, Calendar, IndianRupee, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 const EventHeader = () => (
     <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut" }}>
-        <Card className="border-0 shadow-card overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/40 via-transparent to-transparent pointer-events-none" />
-            <div className="h-1 gradient-shine" />
+        <Card className="bg-background overflow-hidden relative rounded-none shadow-none border-0">
+        
             <CardContent className="p-6 md:p-10 text-center space-y-5 relative">
                 <motion.div
                     initial={{ scale: 0 }}

@@ -2,12 +2,20 @@ const express = require('express');
 const router = express.Router();
 const sportsBookingController = require('../controllers/sportsBookingController');
 const sportsSlotController = require('../controllers/sportsSlotController');
+const sportsTournamentController = require('../controllers/sportsTournamentController');
 const { protect } = require('../middlewares/auth');
 
 // ============ VENUE DISCOVERY ROUTES (PUBLIC) ============
 router.get('/venues', sportsBookingController.searchVenues);
 router.get('/venues/:id', sportsBookingController.getVenueDetails);
 router.get('/venues/:id/courts', sportsBookingController.getAvailableCourts);
+
+// ============ TOURNAMENT REGISTRATION ROUTES (PUBLIC) ============
+router.post('/tournaments/register', sportsTournamentController.createRegistrationOrder);
+router.post('/tournaments/verify-payment', sportsTournamentController.verifyPayment);
+router.get('/tournaments/registration/number/:registrationNumber', sportsTournamentController.getRegistrationByNumber);
+router.get('/tournaments/registration/:id', sportsTournamentController.getRegistrationById);
+router.get('/tournaments/invoice/:invoiceNumber', sportsTournamentController.downloadInvoice);
 
 // ============ COURT ROUTES (PUBLIC) ============
 router.get('/courts/:courtId', sportsBookingController.getCourtDetails);

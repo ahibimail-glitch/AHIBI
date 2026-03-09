@@ -417,6 +417,12 @@ export default function AdminDashboard() {
             active={false}
             onClick={() => { router.push('/admin/sports/management'); setSidebarOpen(false); }}
           />
+          <SidebarButton
+            icon={ListOrdered}
+            label="Tournament Registrations"
+            active={false}
+            onClick={() => { router.push('/admin/sports/tournaments/registrations'); setSidebarOpen(false); }}
+          />
           <SidebarButton icon={Video} label="Live Streaming" active={activeView === "live-streaming"} onClick={() => { setActiveView("live-streaming"); setSidebarOpen(false); }} />
           <SidebarButton icon={Users} label="Livestream Users" active={activeView === "livestream-users"} onClick={() => { setActiveView("livestream-users"); setSidebarOpen(false); }} />
 

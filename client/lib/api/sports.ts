@@ -249,6 +249,9 @@ export const adminSportsApi = {
 
   getBookingById: (id: string) => api.get(`/api/admin/sports/bookings/${id}`),
 
+  // Tournament Registrations
+  getTournamentRegistrations: (params?: any) => api.get('/api/admin/sports/tournaments/registrations', { params }),
+
   // Payouts
   getAllPayouts: (params?: any) => api.get('/api/admin/sports/payouts', { params }),
 

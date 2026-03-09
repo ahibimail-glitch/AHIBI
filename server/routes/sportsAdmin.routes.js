@@ -7,6 +7,9 @@ const { protect, adminOnly } = require('../middlewares/auth');
 router.use(protect);
 router.use(adminOnly);
 
+// ============ TOURNAMENT REGISTRATION ROUTES ============
+router.get('/tournaments/registrations', sportsAdminController.getTournamentRegistrations);
+
 // ============ ARENA PARTNER MANAGEMENT ROUTES ============
 router.get('/arena-partners', sportsAdminController.getAllArenaPartners);
 router.get('/arena-partners/:id', sportsAdminController.getArenaPartnerById);

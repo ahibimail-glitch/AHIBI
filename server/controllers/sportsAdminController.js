@@ -4,6 +4,7 @@ const SportsVenue = require('../models/SportsVenue');
 const Court = require('../models/Court');
 const SportsBooking = require('../models/SportsBooking');
 const Payout = require('../models/Payout');
+const SportsTournamentRegistration = require('../models/SportsTournamentRegistration');
 const ApiResponse = require('../utils/apiResponse');
 const notificationService = require('../services/notificationService');
 
@@ -92,6 +93,45 @@ exports.getArenaPartnerById = async (req, res) => {
   } catch (error) {
     console.error('Get arena partner error:', error);
     return ApiResponse.serverError(res, 'Error retrieving arena partner', error);
+  }
+};
+
+/**
+ * @desc    Get all sports tournament registrations
+ * @route   GET /api/admin/sports/tournaments/registrations
+ * @access  Private (Admin)
+ */
+exports.getTournamentRegistrations = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    const query = {};
+
+    if (status && status !== 'all') {
+      query.paymentStatus = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { registrationNumber: new RegExp(search, 'i') },
+        { invoiceNumber: new RegExp(search, 'i') },
+        { 'players.fullName': new RegExp(search, 'i') },
+        { 'players.email': new RegExp(search, 'i') },
+        { 'players.phone': new RegExp(search, 'i') },
+      ];
+    }
+
+    const registrations = await SportsTournamentRegistration.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return ApiResponse.success(res, 'Tournament registrations retrieved successfully', {
+      registrations,
+      count: registrations.length,
+    });
+  } catch (error) {
+    console.error('Get tournament registrations error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving tournament registrations', error);
   }
 };
 
