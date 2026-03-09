@@ -40,7 +40,7 @@ export default function SportsTournamentRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [registrations, setRegistrations] = useState<TournamentRegistration[]>([]);
   const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<'all' | 'pending' | 'confirmed' | 'failed'>('all');
+  const [status, setStatus] = useState<'all' | 'pending' | 'confirmed' | 'failed'>('confirmed');
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
@@ -94,7 +94,7 @@ export default function SportsTournamentRegistrationsPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Tournament Registrations</h1>
-            <p className="text-sm text-gray-600">View and track paid and pending registrations for the sports tournament</p>
+            <p className="text-sm text-gray-600">View confirmed tournament registrations and download receipts</p>
           </div>
           <div className="flex gap-3">
             <Link href="/admin/sports/management" className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium">
@@ -114,8 +114,8 @@ export default function SportsTournamentRegistrationsPage() {
             <div className="text-2xl font-bold text-green-600">{registrations.filter((item) => item.paymentStatus === 'confirmed').length}</div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="text-sm text-gray-600">Pending</div>
-            <div className="text-2xl font-bold text-yellow-600">{registrations.filter((item) => item.paymentStatus === 'pending').length}</div>
+            <div className="text-sm text-gray-600">Failed</div>
+            <div className="text-2xl font-bold text-red-600">{registrations.filter((item) => item.paymentStatus === 'failed').length}</div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="text-sm text-gray-600">Revenue</div>
@@ -138,10 +138,9 @@ export default function SportsTournamentRegistrationsPage() {
               onChange={(e) => setStatus(e.target.value as 'all' | 'pending' | 'confirmed' | 'failed')}
               className="px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none"
             >
-              <option value="all">All</option>
               <option value="confirmed">Confirmed</option>
-              <option value="pending">Pending</option>
               <option value="failed">Failed</option>
+              <option value="all">All</option>
             </select>
             <button
               onClick={fetchRegistrations}

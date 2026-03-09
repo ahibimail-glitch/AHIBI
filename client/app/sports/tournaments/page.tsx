@@ -4,8 +4,9 @@ import "./App.css";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Send, CheckCircle2, PartyPopper, RotateCcw, Download, CreditCard } from "lucide-react";
+import { ArrowLeft, ArrowRight, Send, CheckCircle2, PartyPopper, RotateCcw, Download, CreditCard, Loader2 } from "lucide-react";
 import EventHeader from "./components/EventHeader";
 import StepIndicator from "./components/StepIndicator";
 import StepCategory from "./components/StepCategory";
@@ -57,6 +58,7 @@ const validatePlayer = (p: PlayerData): Partial<Record<keyof PlayerData, string>
 };
 
 const Index = () => {
+    const { user, loading: authLoading } = useAuth();
     const [step, setStep] = useState(0);
     const [categories, setCategories] = useState<string[]>([]);
     const [player1, setPlayer1] = useState<PlayerData>({ ...emptyPlayer });
@@ -68,6 +70,17 @@ const Index = () => {
     const [confirmedRegistration, setConfirmedRegistration] = useState<TournamentRegistrationResponse | null>(null);
 
     const entryFee = useMemo(() => categories.length * 1500, [categories]);
+
+    useEffect(() => {
+        if (!authLoading && user) {
+            setPlayer1((current) => ({
+                ...current,
+                fullName: current.fullName || user.name || "",
+                email: current.email || user.email || "",
+                phone: current.phone || user.phone || "",
+            }));
+        }
+    }, [authLoading, user]);
 
     useEffect(() => {
         const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
@@ -86,6 +99,34 @@ const Index = () => {
             }
         };
     }, []);
+
+    if (authLoading) {
+        return (
+            <div>
+                <Navbar />
+                <EventHeader />
+                <div id="root" className="min-h-screen bg-background py-8 px-4">
+                    <div className="mx-auto w-full max-w-3xl space-y-6 card">
+                        <Card className="border-0 shadow-lg overflow-hidden">
+                            <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-400 to-primary" />
+                            <CardContent className="p-10 md:p-12 flex flex-col items-center justify-center gap-4 text-center">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                <div>
+                                    <h2 className="text-xl font-semibold text-foreground">Checking login</h2>
+                                    <p className="text-sm text-muted-foreground">Please wait while we verify your account.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    if (!user) {
+        return null;
+    }
 
     const next = () => {
         if (step === 0 && categories.length === 0) {

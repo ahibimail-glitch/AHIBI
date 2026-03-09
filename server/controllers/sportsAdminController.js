@@ -105,10 +105,14 @@ exports.getTournamentRegistrations = async (req, res) => {
   try {
     const { status, search } = req.query;
 
-    const query = {};
+    const query = {
+      paymentStatus: 'confirmed',
+    };
 
     if (status && status !== 'all') {
       query.paymentStatus = status;
+    } else if (status === 'all') {
+      delete query.paymentStatus;
     }
 
     if (search) {
