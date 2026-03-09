@@ -575,7 +575,7 @@ export default function HomePage() {
       </section>
 
 
-      <NWAHeroSection />
+    
 
 
       <section className=" bg-white">

@@ -566,7 +566,7 @@ export default function ProfilePage() {
             {/* Bookings Tab */}
             <TabsContent value="bookings" className="space-y-6">
               {/* Booking Type Toggle */}
-              <div className="grid grid-cols-3 gap-3 border-b border-gray-200 pb-4">
+              <div className="grid grid-cols-2 gap-3 border-b border-gray-200 pb-4">
                 <button
                   onClick={() => setBookingType('events')}
                   className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'events'
@@ -585,15 +585,7 @@ export default function ProfilePage() {
                 >
                   Sports ({sportsBookings.length})
                 </button>
-                <button
-                  onClick={() => setBookingType('livestream')}
-                  className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'livestream'
-                      ? 'bg-black text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                >
-                  Livestream ({livestreamPurchases.length})
-                </button>
+                
               </div>
 
               {/* Event Bookings */}
@@ -761,94 +753,7 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Livestream Purchases */}
-              {bookingType === 'livestream' && (
-                <div className="space-y-4">
-                  {livestreamPurchases && livestreamPurchases.length > 0 ? (
-                    livestreamPurchases.map((purchase) => (
-                      <div
-                        key={purchase._id}
-                        className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
-                      >
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
-                              <Image
-                                src={EVENT_IMAGES[purchase.livestream?.title || ""] || purchase.livestream?.thumbnailUrl || purchase.livestream?.posterUrl || "/placeholder.jpg"}
-                                alt={purchase.livestream?.title || "Livestream"}
-                                fill
-                                className="object-cover"
-                              />
-                              {purchase.accessGranted && (
-                                <div className="absolute top-2 right-2">
-                                  <CheckCircle className="h-4 w-4 text-green-500 bg-white rounded-full p-0.5" />
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-lg mb-2 line-clamp-1">
-                                {purchase.livestream?.title || "Livestream"}
-                              </h3>
-
-                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
-                                  {new Date(purchase.paymentDate).toLocaleDateString('en-IN', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                  })}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <CreditCard className="h-4 w-4" />
-                                  {purchase.paymentId ? `ID: ${purchase.paymentId.slice(-8)}` : 'Payment Complete'}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  className={`${getStatusColor(purchase.status)} border font-medium`}
-                                >
-                                  {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
-                                </Badge>
-                                {purchase.accessGranted && (
-                                  <Badge className="bg-green-50 text-green-700 border border-green-200">
-                                    Access Granted
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:text-right">
-                            <div className="text-2xl font-bold">₹{purchase.amount.toLocaleString()}</div>
-                            <Button
-                              onClick={() => router.push(`/livestream/${purchase.livestream._id}`)}
-                              className="bg-black text-white hover:bg-gray-800"
-                            >
-                              {purchase.accessGranted ? 'Watch Now' : 'View Details'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-16 border border-gray-200 rounded-lg">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <h3 className="text-xl font-semibold mb-2">No livestream purchases found</h3>
-                      <p className="text-gray-500 mb-6">Purchase access to exclusive livestream events</p>
-                      <Button asChild className="bg-black text-white hover:bg-gray-800">
-                        <Link href="/livestream">Browse Livestreams</Link>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+          
             </TabsContent>
 
             {/* Personal Info Tab */}
