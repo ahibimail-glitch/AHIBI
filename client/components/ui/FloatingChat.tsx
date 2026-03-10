@@ -14,6 +14,7 @@ const BLOCKED_PATHS = [
   '/admin/booking',
   '/HORNBILL/ManualBooking',
   '/HORNBILL/eventsScanner',
+  '/sports/tournaments'
 ];
 
 export const FloatingChatButton = () => {
@@ -88,10 +89,7 @@ export const FloatingChatButton = () => {
         ))}
       </div>
 
-      {/* Ping ring behind FAB */}
-      {!isOpen && (
-        <span className="absolute bottom-0 right-0 h-14 w-14 rounded-full bg-rose-600 opacity-30 animate-ping" />
-      )}
+
 
       {/* FAB toggle */}
       <button
