@@ -2,8 +2,6 @@ import { Users, User, UserCheck, Shuffle, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 
 const individualCategories = [
-  { id: "mens_singles", label: "Men's Singles", desc: "Single male player", icon: User },
-  { id: "womens_singles", label: "Women's Singles", desc: "Single female player", icon: UserCheck },
   { id: "mens_doubles", label: "Men's Doubles", desc: "Two male players", icon: Users },
   { id: "womens_doubles", label: "Women's Doubles", desc: "Two female players", icon: Users },
   { id: "mixed_doubles", label: "Mixed Doubles", desc: "One male and one female player", icon: Shuffle },

@@ -10,8 +10,6 @@ const razorpay = new Razorpay({
 });
 
 const categoryLabels = {
-  mens_singles: "Men's Singles",
-  womens_singles: "Women's Singles",
   mens_doubles: "Men's Doubles",
   womens_doubles: "Women's Doubles",
   mixed_doubles: "Mixed Doubles",
@@ -92,6 +90,10 @@ exports.createRegistrationOrder = async (req, res) => {
     const uniqueCategories = [...new Set(categories)];
     if (uniqueCategories.length !== categories.length) {
       return ApiResponse.badRequest(res, 'Duplicate categories are not allowed');
+    }
+
+    if (categories.some((category) => singlePlayerCategories.has(category))) {
+      return ApiResponse.badRequest(res, 'Singles categories are not available for tournament registration');
     }
 
     if (registrationType === 'team' && categories.some((category) => singlePlayerCategories.has(category))) {
