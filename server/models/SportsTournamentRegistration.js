@@ -8,7 +8,9 @@ const playerSchema = new mongoose.Schema({
   },
   age: {
     type: Number,
-    required: true,
+    required() {
+      return this.ownerDocument()?.registrationType !== 'team';
+    },
     min: 5,
     max: 99,
   },
@@ -19,12 +21,16 @@ const playerSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    required: true,
+    required() {
+      return this.ownerDocument()?.registrationType !== 'team';
+    },
     trim: true,
   },
   email: {
     type: String,
-    required: true,
+    required() {
+      return this.ownerDocument()?.registrationType !== 'team';
+    },
     trim: true,
     lowercase: true,
   },
@@ -46,16 +52,28 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
   },
   categories: [{
     type: String,
-    enum: ['mens_singles', 'womens_singles', 'mens_doubles', 'womens_doubles', 'mixed_doubles', 'team_event'],
+    enum: ['mens_singles', 'mens_doubles', 'mixed_doubles'],
     required: true,
   }],
   players: {
     type: [playerSchema],
     validate: {
       validator(value) {
-        return Array.isArray(value) && value.length >= 1 && value.length <= 2;
+        if (!Array.isArray(value) || value.length === 0) {
+          return false;
+        }
+
+        if (this.registrationType === 'team') {
+          return value.length >= 1;
+        }
+
+        return value.length >= 1 && value.length <= 2;
       },
-      message: 'One or two player entries are required',
+      message(props) {
+        return this.registrationType === 'team'
+          ? 'At least one team player entry is required'
+          : 'One or two player entries are required';
+      },
     },
     required: true,
   },

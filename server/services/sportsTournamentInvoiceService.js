@@ -2,11 +2,8 @@ const PDFDocument = require('pdfkit');
 
 const categoryLabels = {
   mens_singles: "Men's Singles",
-  womens_singles: "Women's Singles",
   mens_doubles: "Men's Doubles",
-  womens_doubles: "Women's Doubles",
   mixed_doubles: "Mixed Doubles",
-  team_event: 'Team Event',
 };
 
 class SportsTournamentInvoiceService {
@@ -71,19 +68,57 @@ class SportsTournamentInvoiceService {
         doc.moveTo(40, y).lineTo(doc.page.width - 40, y).stroke('#CBD5E1');
         y += 16;
 
-        registration.players.forEach((player, index) => {
-          doc.roundedRect(40, y, doc.page.width - 80, 85, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
-          doc.font('Helvetica-Bold').fontSize(11).fillColor('#15803D').text(`Player ${index + 1}`, 55, y + 12);
-          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Name', 55, y + 34);
-          doc.font('Helvetica').fillColor('#0F172A').text(player.fullName, 120, y + 34);
-          doc.font('Helvetica-Bold').fillColor('#475569').text('Age / Gender', 300, y + 34);
-          doc.font('Helvetica').fillColor('#0F172A').text(`${player.age} / ${player.gender}`, 390, y + 34);
-          doc.font('Helvetica-Bold').fillColor('#475569').text('Phone', 55, y + 56);
-          doc.font('Helvetica').fillColor('#0F172A').text(player.phone, 120, y + 56);
-          doc.font('Helvetica-Bold').fillColor('#475569').text('Email', 300, y + 56);
-          doc.font('Helvetica').fillColor('#0F172A').text(player.email, 390, y + 56, { width: 150 });
-          y += 102;
-        });
+        const isTeamRegistration = registration.registrationType === 'team';
+        
+        if (isTeamRegistration) {
+          // Group players by category for team registrations
+          const getRequiredPlayers = (cat) => cat === 'mens_singles' ? 1 : 2;
+          let playerIndex = 0;
+          
+          registration.categories.forEach((category) => {
+            const requiredPlayers = getRequiredPlayers(category);
+            const categoryLabel = categoryLabels[category] || category;
+            
+            // Category header
+            doc.font('Helvetica-Bold').fontSize(11).fillColor('#F97316').text(categoryLabel.toUpperCase(), 50, y);
+            y += 20;
+            
+            // Players for this category
+            for (let i = 0; i < requiredPlayers && playerIndex < registration.players.length; i++) {
+              const player = registration.players[playerIndex];
+              const boxHeight = 60;
+              
+              doc.roundedRect(50, y, doc.page.width - 90, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
+              doc.font('Helvetica-Bold').fontSize(10).fillColor('#15803D').text(requiredPlayers === 1 ? 'Player' : `Player ${i + 1}`, 65, y + 12);
+              doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Name', 65, y + 34);
+              doc.font('Helvetica').fillColor('#0F172A').text(player.fullName, 130, y + 34);
+              doc.font('Helvetica-Bold').fillColor('#475569').text('Gender', 310, y + 34);
+              doc.font('Helvetica').fillColor('#0F172A').text(player.gender === 'male' ? 'Male' : 'Female', 400, y + 34);
+              
+              y += 77;
+              playerIndex++;
+            }
+            
+            y += 10; // Extra space between categories
+          });
+        } else {
+          // Individual registration - show all details in flat list
+          registration.players.forEach((player, index) => {
+            const boxHeight = 85;
+            
+            doc.roundedRect(40, y, doc.page.width - 80, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
+            doc.font('Helvetica-Bold').fontSize(11).fillColor('#15803D').text(`Player ${index + 1}`, 55, y + 12);
+            doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Name', 55, y + 34);
+            doc.font('Helvetica').fillColor('#0F172A').text(player.fullName, 120, y + 34);
+            doc.font('Helvetica-Bold').fillColor('#475569').text('Age / Gender', 300, y + 34);
+            doc.font('Helvetica').fillColor('#0F172A').text(`${player.age} / ${player.gender === 'male' ? 'Male' : 'Female'}`, 390, y + 34);
+            doc.font('Helvetica-Bold').fillColor('#475569').text('Phone', 55, y + 56);
+            doc.font('Helvetica').fillColor('#0F172A').text(player.phone, 120, y + 56);
+            doc.font('Helvetica-Bold').fillColor('#475569').text('Email', 300, y + 56);
+            doc.font('Helvetica').fillColor('#0F172A').text(player.email, 390, y + 56, { width: 150 });
+            y += 102;
+          });
+        }
 
         doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Transaction Details', 40, y);
         y += 24;

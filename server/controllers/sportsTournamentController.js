@@ -10,13 +10,13 @@ const razorpay = new Razorpay({
 });
 
 const categoryLabels = {
+  mens_singles: "Men's Singles",
   mens_doubles: "Men's Doubles",
-  womens_doubles: "Women's Doubles",
   mixed_doubles: "Mixed Doubles",
-  team_event: 'Team Event',
 };
 
-const singlePlayerCategories = new Set(['mens_singles', 'womens_singles']);
+const supportedCategories = new Set(['mens_singles', 'mens_doubles', 'mixed_doubles']);
+const singlePlayerCategories = new Set(['mens_singles']);
 
 const validatePlayer = (player) => {
   if (!player || typeof player !== 'object') return 'Invalid player details';
@@ -69,7 +69,7 @@ const finalizeDirectRegistration = async (registration) => {
 
 exports.createRegistrationOrder = async (req, res) => {
   try {
-    const { registrationType, teamName, categories, player1, player2, checks } = req.body;
+    const { registrationType, teamName, categories, players, checks } = req.body;
 
     if (!['individual', 'team'].includes(registrationType)) {
       return ApiResponse.badRequest(res, 'Registration type must be individual or team');
@@ -83,8 +83,15 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'At least one category must be selected');
     }
 
-    if (categories.length > 2) {
-      return ApiResponse.badRequest(res, 'Maximum 2 categories are allowed');
+    // Check category limits based on registration type
+    if (registrationType === 'team') {
+      if (categories.length > 3) {
+        return ApiResponse.badRequest(res, 'Maximum 3 categories are allowed for team registration');
+      }
+    } else {
+      if (categories.length > 2) {
+        return ApiResponse.badRequest(res, 'Maximum 2 categories are allowed for individual registration');
+      }
     }
 
     const uniqueCategories = [...new Set(categories)];
@@ -92,32 +99,39 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'Duplicate categories are not allowed');
     }
 
-    if (categories.some((category) => singlePlayerCategories.has(category))) {
-      return ApiResponse.badRequest(res, 'Singles categories are not available for tournament registration');
+    if (categories.some((category) => !supportedCategories.has(category))) {
+      return ApiResponse.badRequest(res, 'Only Men\'s Singles, Men\'s Doubles, and Mixed Doubles are available for tournament registration');
     }
 
-    if (registrationType === 'team' && categories.some((category) => singlePlayerCategories.has(category))) {
-      return ApiResponse.badRequest(res, 'Singles categories are not allowed for team registration');
-    }
+    // Validate players based on registration type
+    if (registrationType === 'team') {
+      // For team registration, players should have only name and gender
+      if (!Array.isArray(players) || players.length === 0) {
+        return ApiResponse.badRequest(res, 'At least one player must be provided for team registration');
+      }
+      
+      // Validate each team player (only name and gender required)
+      for (const player of players) {
+        if (!player.fullName || !player.fullName.trim()) {
+          return ApiResponse.badRequest(res, 'Player name is required');
+        }
+        if (!player.gender) {
+          return ApiResponse.badRequest(res, 'Player gender is required');
+        }
+      }
+    } else {
+      // For individual registration, use the original validation
+      const requiresTwoPlayers = !categories.every((category) => singlePlayerCategories.has(category));
+      const playerList = requiresTwoPlayers ? [players[0], players[1]] : [players[0]];
 
-    if (registrationType === 'team' && categories.includes('team_event')) {
-      return ApiResponse.badRequest(res, 'Team Event is not allowed for team registration');
-    }
+      if (requiresTwoPlayers && !players[1]) {
+        return ApiResponse.badRequest(res, 'Second player details are required for the selected category');
+      }
 
-    if (registrationType === 'individual' && categories.includes('team_event')) {
-      return ApiResponse.badRequest(res, 'Team Event is not allowed for individual registration');
-    }
-
-    const requiresTwoPlayers = !categories.every((category) => singlePlayerCategories.has(category));
-    const players = requiresTwoPlayers ? [player1, player2] : [player1];
-
-    if (requiresTwoPlayers && !player2) {
-      return ApiResponse.badRequest(res, 'Second player details are required for the selected category');
-    }
-
-    for (const player of players) {
-      const error = validatePlayer(player);
-      if (error) return ApiResponse.badRequest(res, error);
+      for (const player of playerList) {
+        const error = validatePlayer(player);
+        if (error) return ApiResponse.badRequest(res, error);
+      }
     }
 
     if (!Array.isArray(checks) || checks.length !== 3 || !checks.every(Boolean)) {
@@ -126,7 +140,7 @@ exports.createRegistrationOrder = async (req, res) => {
 
     const playerCount = players.length;
     const amountPerPlayer = 1500;
-    const isDirectRegistration = registrationType === 'team' || categories.includes('team_event');
+    const isDirectRegistration = registrationType === 'team';
     const amount = isDirectRegistration ? 0 : playerCount * amountPerPlayer;
 
     let razorpayOrder = null;
@@ -143,8 +157,8 @@ exports.createRegistrationOrder = async (req, res) => {
           categories: categories.join(','),
           playerCount: String(playerCount),
           amountPerPlayer: String(amountPerPlayer),
-          player1Name: player1.fullName,
-          player2Name: player2?.fullName || '',
+          player1Name: players[0]?.fullName || '',
+          player2Name: players[1]?.fullName || '',
         },
       });
     }
@@ -153,10 +167,17 @@ exports.createRegistrationOrder = async (req, res) => {
       registrationType,
       teamName: registrationType === 'team' ? String(teamName).trim() : undefined,
       categories,
-      players: players.map((player) => ({
-        ...player,
-        age: Number(player.age),
-      })),
+      players: players.map((player) => (
+        registrationType === 'team'
+          ? {
+              fullName: String(player.fullName || '').trim(),
+              gender: player.gender,
+            }
+          : {
+              ...player,
+              age: Number(player.age),
+            }
+      )),
       declarationsAccepted: true,
       amount,
       currency: 'INR',

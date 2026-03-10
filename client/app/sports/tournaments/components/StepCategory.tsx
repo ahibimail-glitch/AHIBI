@@ -2,15 +2,15 @@ import { Users, User, UserCheck, Shuffle, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 
 const individualCategories = [
+  { id: "mens_singles", label: "Men's Singles", desc: "Single male player", icon: User },
   { id: "mens_doubles", label: "Men's Doubles", desc: "Two male players", icon: Users },
-  { id: "womens_doubles", label: "Women's Doubles", desc: "Two female players", icon: Users },
   { id: "mixed_doubles", label: "Mixed Doubles", desc: "One male and one female player", icon: Shuffle },
 ];
 
 const teamCategories = [
+  { id: "mens_singles", label: "Men's Singles", desc: "Single male player under one team", icon: User },
   { id: "mens_doubles", label: "Men's Doubles", desc: "Two male players under one team", icon: Users },
-  { id: "womens_doubles", label: "Women's Doubles", desc: "Two female players under one team", icon: Users },
-  { id: "mixed_doubles", label: "Mixed Doubles", desc: "One male and one female player", icon: Shuffle },
+  { id: "mixed_doubles", label: "Mixed Doubles", desc: "One male and one female player under one team", icon: Shuffle },
 ];
 
 interface StepCategoryProps {
@@ -25,8 +25,11 @@ const StepCategory = ({ registrationType, selected, onChange }: StepCategoryProp
   const toggle = (id: string) => {
     if (selected.includes(id)) {
       onChange(selected.filter((s) => s !== id));
-    } else if (selected.length < 2) {
-      onChange([...selected, id]);
+    } else {
+      const maxAllowed = registrationType === "team" ? 3 : 2;
+      if (selected.length < maxAllowed) {
+        onChange([...selected, id]);
+      }
     }
   };
 
@@ -36,7 +39,7 @@ const StepCategory = ({ registrationType, selected, onChange }: StepCategoryProp
         <p className="text-xs font-black uppercase tracking-[0.3em] text-orange-300">Category Selection</p>
         <h2 className="mt-2 text-2xl font-black text-white">Choose Tournament Event</h2>
         <p className="text-sm text-white/70 mt-1.5">
-          Select up to <span className="font-bold text-orange-400">2 categories</span>. Singles require 1 player, while doubles or team events require 2 players.
+          Select up to <span className="font-bold text-orange-400">{registrationType === "team" ? "3" : "2"} categories</span>. Men's Singles requires 1 player, while Men's Doubles and Mixed Doubles require 2 players.
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -101,7 +104,7 @@ const StepCategory = ({ registrationType, selected, onChange }: StepCategoryProp
           animate={{ opacity: 1 }}
           className="text-xs text-center font-semibold text-slate-500 uppercase tracking-[0.18em]"
         >
-          {selected.length}/2 categories selected
+          {selected.length}/{registrationType === "team" ? "3" : "2"} categories selected
         </motion.p>
       )}
     </div>

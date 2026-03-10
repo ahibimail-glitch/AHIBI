@@ -10,7 +10,7 @@ const options = [
   {
     id: "individual" as const,
     label: "Player Entry",
-    description: "Register as an individual participant for doubles or partner-based events.",
+    description: "Register as a player for Men's Singles, Men's Doubles, or Mixed Doubles events.",
     icon: User,
   },
   {

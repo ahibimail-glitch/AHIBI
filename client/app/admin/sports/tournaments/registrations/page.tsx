@@ -32,11 +32,8 @@ type TournamentRegistration = {
 
 const categoryLabels: Record<string, string> = {
   mens_singles: "Men's Singles",
-  womens_singles: "Women's Singles",
   mens_doubles: "Men's Doubles",
-  womens_doubles: "Women's Doubles",
   mixed_doubles: 'Mixed Doubles',
-  team_event: 'Team Event',
 };
 
 export default function SportsTournamentRegistrationsPage() {
@@ -195,14 +192,46 @@ export default function SportsTournamentRegistrationsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="space-y-2">
-                          {registration.players.map((player, index) => (
-                            <div key={`${registration._id}-${index}`}>
-                              <div className="text-sm font-medium text-gray-900">Player {index + 1}: {player.fullName}</div>
-                              <div className="text-xs text-gray-600">{player.email}</div>
-                              <div className="text-xs text-gray-600">{player.phone}</div>
-                              <div className="text-xs text-gray-500">{player.age} yrs • {player.gender}</div>
-                            </div>
-                          ))}
+                          {registration.registrationType === 'team' ? (
+                            (() => {
+                              const getRequiredPlayers = (cat: string) => cat === 'mens_singles' ? 1 : 2;
+                              let playerIndex = 0;
+                              
+                              return registration.categories.map((category) => {
+                                const requiredPlayers = getRequiredPlayers(category);
+                                const categoryLabel = categoryLabels[category] || category;
+                                const categoryPlayers = [];
+                                
+                                for (let i = 0; i < requiredPlayers && playerIndex < registration.players.length; i++) {
+                                  categoryPlayers.push(registration.players[playerIndex]);
+                                  playerIndex++;
+                                }
+                                
+                                return (
+                                  <div key={category} className="mb-3">
+                                    <div className="text-xs font-bold uppercase text-orange-600 mb-1">{categoryLabel}</div>
+                                    {categoryPlayers.map((player, idx) => (
+                                      <div key={`${category}-${idx}`} className="ml-3 mb-2">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {requiredPlayers === 1 ? 'Player' : `Player ${idx + 1}`}: {player.fullName}
+                                        </div>
+                                        <div className="text-xs text-gray-500">{player.gender === 'male' ? 'Male' : 'Female'}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              });
+                            })()
+                          ) : (
+                            registration.players.map((player, index) => (
+                              <div key={`${registration._id}-${index}`}>
+                                <div className="text-sm font-medium text-gray-900">Player {index + 1}: {player.fullName}</div>
+                                <div className="text-xs text-gray-600">{player.email}</div>
+                                <div className="text-xs text-gray-600">{player.phone}</div>
+                                <div className="text-xs text-gray-500">{player.age} yrs • {player.gender === 'male' ? 'Male' : 'Female'}</div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
