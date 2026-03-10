@@ -9,8 +9,8 @@ interface StepRegistrationTypeProps {
 const options = [
   {
     id: "individual" as const,
-    label: "Individual",
-    description: "Register as an individual participant for singles or partner-based events.",
+    label: "Player Entry",
+    description: "Register as an individual participant for doubles or partner-based events.",
     icon: User,
   },
   {

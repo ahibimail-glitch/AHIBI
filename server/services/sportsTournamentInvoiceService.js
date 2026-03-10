@@ -52,7 +52,7 @@ class SportsTournamentInvoiceService {
         doc.font('Helvetica').fillColor('#0F172A').text(registration.tournamentName, 160, y);
         y += 18;
         doc.font('Helvetica-Bold').fillColor('#475569').text('Registration Type', 50, y);
-        doc.font('Helvetica').fillColor('#0F172A').text(registration.registrationType === 'team' ? 'Team' : 'Individual', 160, y);
+        doc.font('Helvetica').fillColor('#0F172A').text(registration.registrationType === 'team' ? 'Team Entry' : 'Player Entry', 160, y);
         y += 18;
         if (registration.teamName) {
           doc.font('Helvetica-Bold').fillColor('#475569').text('Team Name', 50, y);

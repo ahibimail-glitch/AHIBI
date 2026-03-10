@@ -388,7 +388,7 @@ const Index = () => {
                                             <div className="rounded-2xl bg-orange-50 p-4">
                                                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-700">Registration ID</p>
                                                 <p className="mt-2 text-2xl font-black text-[#071126]">{confirmedRegistration.registrationNumber || "Pending"}</p>
-                                                <p className="mt-1 text-sm text-slate-600">Invoice: {confirmedRegistration.invoiceNumber || "Will be available shortly"}</p>
+                                                <p className="mt-1 text-sm text-slate-600">Invoice Number: {confirmedRegistration.invoiceNumber || "Will be available shortly"}</p>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -402,9 +402,9 @@ const Index = () => {
                                             <CheckCircle2 className="h-7 w-7" />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-400">Registration Successful</p>
-                                            <h2 className="mt-2 text-3xl font-black text-white">Tournament Registration Confirmed</h2>
-                                            <p className="mt-2 text-sm text-white/70">Your registration has been completed successfully. Review the details below and download the PDF receipt for your records.</p>
+                                            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-400">Entry Confirmed</p>
+                                            <h2 className="mt-2 text-3xl font-black text-white">Your Tournament Entry Is Confirmed</h2>
+                                            <p className="mt-2 text-sm text-white/70">Check your registration details below and download the PDF receipt for your reference.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -420,7 +420,7 @@ const Index = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Registration Type</p>
-                                                        <p className="mt-1 text-sm font-semibold capitalize text-slate-900">{confirmedRegistration.registrationType || "individual"}</p>
+                                                        <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.registrationType === "team" ? "Team Entry" : "Player Entry"}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Date</p>

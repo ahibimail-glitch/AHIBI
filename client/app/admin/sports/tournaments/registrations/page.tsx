@@ -99,8 +99,8 @@ export default function SportsTournamentRegistrationsPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tournament Registrations</h1>
-            <p className="text-sm text-gray-600">View confirmed tournament registrations and download receipts</p>
+            <h1 className="text-2xl font-bold text-gray-900">Tournament Entry Registrations</h1>
+            <p className="text-sm text-gray-600">Review player and team entries, payment status, and downloadable registration receipts</p>
           </div>
           <div className="flex gap-3">
             <Link href="/admin/sports/management" className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium">
@@ -184,11 +184,11 @@ export default function SportsTournamentRegistrationsPage() {
                     <tr key={registration._id} className="hover:bg-gray-50/60 align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{registration.registrationNumber || 'Pending Confirmation'}</div>
-                        <div className="text-xs text-gray-500">Invoice: {registration.invoiceNumber || '—'}</div>
+                        <div className="text-xs text-gray-500">Invoice Number: {registration.invoiceNumber || '—'}</div>
                         <div className="text-xs text-gray-500 mt-1">{registration.tournamentName}</div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${registration.registrationType === 'team' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
-                            {(registration.registrationType || 'individual').toUpperCase()}
+                            {registration.registrationType === 'team' ? 'TEAM ENTRY' : 'PLAYER ENTRY'}
                           </span>
                           {registration.teamName ? <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">Team: {registration.teamName}</span> : null}
                         </div>
