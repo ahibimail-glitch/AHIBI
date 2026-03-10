@@ -119,6 +119,8 @@ exports.getTournamentRegistrations = async (req, res) => {
       query.$or = [
         { registrationNumber: new RegExp(search, 'i') },
         { invoiceNumber: new RegExp(search, 'i') },
+        { registrationType: new RegExp(search, 'i') },
+        { teamName: new RegExp(search, 'i') },
         { 'players.fullName': new RegExp(search, 'i') },
         { 'players.email': new RegExp(search, 'i') },
         { 'players.phone': new RegExp(search, 'i') },

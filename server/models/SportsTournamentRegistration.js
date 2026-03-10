@@ -35,18 +35,27 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
     type: String,
     default: 'Nagaland Pickleball Classic Tournament 2026',
   },
+  registrationType: {
+    type: String,
+    enum: ['individual', 'team'],
+    required: true,
+  },
+  teamName: {
+    type: String,
+    trim: true,
+  },
   categories: [{
     type: String,
-    enum: ['mens_doubles', 'womens_doubles', 'mixed_doubles', 'team_event'],
+    enum: ['mens_singles', 'womens_singles', 'mens_doubles', 'womens_doubles', 'mixed_doubles', 'team_event'],
     required: true,
   }],
   players: {
     type: [playerSchema],
     validate: {
       validator(value) {
-        return Array.isArray(value) && value.length === 2;
+        return Array.isArray(value) && value.length >= 1 && value.length <= 2;
       },
-      message: 'Exactly two player entries are required',
+      message: 'One or two player entries are required',
     },
     required: true,
   },
@@ -75,7 +84,6 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
   },
   razorpayOrderId: {
     type: String,
-    required: true,
     index: true,
   },
   razorpayPaymentId: String,

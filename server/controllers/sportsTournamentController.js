@@ -10,11 +10,15 @@ const razorpay = new Razorpay({
 });
 
 const categoryLabels = {
+  mens_singles: "Men's Singles",
+  womens_singles: "Women's Singles",
   mens_doubles: "Men's Doubles",
   womens_doubles: "Women's Doubles",
   mixed_doubles: "Mixed Doubles",
   team_event: 'Team Event',
 };
+
+const singlePlayerCategories = new Set(['mens_singles', 'womens_singles']);
 
 const validatePlayer = (player) => {
   if (!player || typeof player !== 'object') return 'Invalid player details';
@@ -29,6 +33,8 @@ const validatePlayer = (player) => {
 const serializeRegistration = (registration) => ({
   id: registration._id,
   tournamentName: registration.tournamentName,
+  registrationType: registration.registrationType,
+  teamName: registration.teamName,
   registrationNumber: registration.registrationNumber,
   invoiceNumber: registration.invoiceNumber,
   invoiceUrl: registration.invoiceUrl,
@@ -43,9 +49,37 @@ const serializeRegistration = (registration) => ({
   razorpayOrderId: registration.razorpayOrderId,
 });
 
+const finalizeDirectRegistration = async (registration) => {
+  registration.paymentStatus = 'confirmed';
+  registration.status = 'confirmed';
+  registration.transactionId = 'DIRECT_REGISTRATION';
+  await registration.save();
+
+  try {
+    const invoiceData = await sportsTournamentInvoiceService.generateInvoice(registration);
+    registration.invoicePdf = invoiceData.buffer;
+    registration.invoicePdfContentType = invoiceData.contentType || 'application/pdf';
+    registration.invoiceGeneratedAt = new Date();
+    registration.invoiceUrl = `/api/sports/tournaments/invoice/${registration.invoiceNumber}`;
+    await registration.save();
+  } catch (invoiceError) {
+    console.error('Tournament invoice generation error:', invoiceError);
+  }
+
+  return registration;
+};
+
 exports.createRegistrationOrder = async (req, res) => {
   try {
-    const { categories, player1, player2, checks } = req.body;
+    const { registrationType, teamName, categories, player1, player2, checks } = req.body;
+
+    if (!['individual', 'team'].includes(registrationType)) {
+      return ApiResponse.badRequest(res, 'Registration type must be individual or team');
+    }
+
+    if (registrationType === 'team' && !String(teamName || '').trim()) {
+      return ApiResponse.badRequest(res, 'Team name is required for team registration');
+    }
 
     if (!Array.isArray(categories) || categories.length === 0) {
       return ApiResponse.badRequest(res, 'At least one category must be selected');
@@ -60,7 +94,25 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'Duplicate categories are not allowed');
     }
 
-    const players = [player1, player2];
+    if (registrationType === 'team' && categories.some((category) => singlePlayerCategories.has(category))) {
+      return ApiResponse.badRequest(res, 'Singles categories are not allowed for team registration');
+    }
+
+    if (registrationType === 'team' && categories.includes('team_event')) {
+      return ApiResponse.badRequest(res, 'Team Event is not allowed for team registration');
+    }
+
+    if (registrationType === 'individual' && categories.includes('team_event')) {
+      return ApiResponse.badRequest(res, 'Team Event is not allowed for individual registration');
+    }
+
+    const requiresTwoPlayers = !categories.every((category) => singlePlayerCategories.has(category));
+    const players = requiresTwoPlayers ? [player1, player2] : [player1];
+
+    if (requiresTwoPlayers && !player2) {
+      return ApiResponse.badRequest(res, 'Second player details are required for the selected category');
+    }
+
     for (const player of players) {
       const error = validatePlayer(player);
       if (error) return ApiResponse.badRequest(res, error);
@@ -70,22 +122,34 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'All declarations must be accepted');
     }
 
-    const amount = 1500;
+    const playerCount = players.length;
+    const amountPerPlayer = 1500;
+    const isDirectRegistration = registrationType === 'team' || categories.includes('team_event');
+    const amount = isDirectRegistration ? 0 : playerCount * amountPerPlayer;
 
-    const razorpayOrder = await razorpay.orders.create({
-      amount: amount * 100,
-      currency: 'INR',
-      receipt: `SPTREG_${Date.now()}`,
-      notes: {
-        tournament: 'Nagaland Pickleball Classic Tournament 2026',
-        categoryCount: String(categories.length),
-        categories: categories.join(','),
-        player1Name: player1.fullName,
-        player2Name: player2.fullName,
-      },
-    });
+    let razorpayOrder = null;
+    if (!isDirectRegistration) {
+      razorpayOrder = await razorpay.orders.create({
+        amount: amount * 100,
+        currency: 'INR',
+        receipt: `SPTREG_${Date.now()}`,
+        notes: {
+          tournament: 'Nagaland Pickleball Classic Tournament 2026',
+          registrationType,
+          teamName: registrationType === 'team' ? String(teamName).trim() : '',
+          categoryCount: String(categories.length),
+          categories: categories.join(','),
+          playerCount: String(playerCount),
+          amountPerPlayer: String(amountPerPlayer),
+          player1Name: player1.fullName,
+          player2Name: player2?.fullName || '',
+        },
+      });
+    }
 
     const registration = await SportsTournamentRegistration.create({
+      registrationType,
+      teamName: registrationType === 'team' ? String(teamName).trim() : undefined,
       categories,
       players: players.map((player) => ({
         ...player,
@@ -94,12 +158,22 @@ exports.createRegistrationOrder = async (req, res) => {
       declarationsAccepted: true,
       amount,
       currency: 'INR',
-      paymentStatus: 'pending',
-      status: 'pending',
-      razorpayOrderId: razorpayOrder.id,
+      paymentStatus: isDirectRegistration ? 'confirmed' : 'pending',
+      status: isDirectRegistration ? 'confirmed' : 'pending',
+      razorpayOrderId: razorpayOrder?.id,
     });
 
+    if (isDirectRegistration) {
+      const finalizedRegistration = await finalizeDirectRegistration(registration);
+      return ApiResponse.success(res, 'Tournament registration completed successfully', {
+        requiresPayment: false,
+        registrationId: finalizedRegistration._id,
+        registration: serializeRegistration(finalizedRegistration),
+      }, 201);
+    }
+
     return ApiResponse.success(res, 'Tournament registration order created successfully', {
+      requiresPayment: true,
       orderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,

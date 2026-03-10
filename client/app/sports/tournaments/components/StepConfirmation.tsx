@@ -26,13 +26,16 @@ const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-md">
+      <div className="rounded-[24px] bg-slate-950 p-5 text-white">
+        <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-[#f56210] flex items-center justify-center shadow-md">
           <ShieldCheck className="w-5 h-5 text-primary-foreground" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Confirmation</h2>
-          <p className="text-sm text-muted-foreground">Review and confirm before submitting</p>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-orange-300">Final Step</p>
+          <h2 className="text-2xl font-black text-white">Confirmation</h2>
+          <p className="text-sm text-white/70">Review and confirm before submitting</p>
+        </div>
         </div>
       </div>
       <div className="space-y-3">
@@ -43,14 +46,15 @@ const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1 }}
             whileHover={{ x: 2 }}
-            className={`flex items-start gap-3.5 p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+            onClick={() => toggle(i)}
+            className={`flex items-start gap-3.5 p-4 rounded-[24px] border-2 cursor-pointer transition-all duration-200 ${
               checks[i]
-                ? "border-primary/40 bg-accent shadow-card"
-                : "border-border bg-card hover:border-primary/15 hover:shadow-card"
+                ? "border-[#f56210] bg-orange-50 shadow-[0_12px_28px_rgba(245,98,16,0.14)]"
+                : "border-slate-200 bg-white hover:border-orange-200 hover:shadow-md"
             }`}
           >
-            <Checkbox id={`${baseId}-${i}`} checked={checks[i]} onCheckedChange={() => toggle(i)} className="mt-0.5" />
-            <Label htmlFor={`${baseId}-${i}`} className="font-medium cursor-pointer leading-relaxed text-sm">{label}</Label>
+            <Checkbox id={`${baseId}-${i}`} checked={checks[i]} onCheckedChange={() => toggle(i)} onClick={(event) => event.stopPropagation()} className="mt-0.5" />
+            <Label htmlFor={`${baseId}-${i}`} onClick={(event) => event.stopPropagation()} className="font-semibold cursor-pointer leading-relaxed text-sm text-slate-700">{label}</Label>
           </motion.div>
         ))}
       </div>
