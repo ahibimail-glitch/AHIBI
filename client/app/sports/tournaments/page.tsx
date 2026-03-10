@@ -508,8 +508,8 @@ const Index = () => {
                             </Card>
                         {/* </div> */}
                     </div>
-                    <Footer />
                 </div>
+                    <Footer />
             </div>
         );
     }
