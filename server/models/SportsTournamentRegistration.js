@@ -52,7 +52,7 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
   },
   categories: [{
     type: String,
-    enum: ['mens_singles', 'mens_doubles', 'mixed_doubles'],
+    enum: ['mixed_doubles', 'mens_doubles', 'womens_doubles'],
     required: true,
   }],
   players: {

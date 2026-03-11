@@ -33,16 +33,15 @@ const StepTeamPlayerDetails = ({ category, playerNumber, data, onChange, errors 
 
   const getCategoryLabel = (categoryId: string) => {
     const labels: Record<string, string> = {
-      mens_singles: "Men's Singles",
-      mens_doubles: "Men's Doubles",
       mixed_doubles: "Mixed Doubles",
+      mens_doubles: "Men's Doubles",
+      womens_doubles: "Women's Doubles",
     };
     return labels[categoryId] || categoryId;
   };
 
   const getRequiredPlayers = (categoryId: string) => {
-    if (categoryId === 'mens_singles') return 1;
-    return 2; // mens_doubles and mixed_doubles
+    return 2; // All categories require 2 players
   };
 
   const requiredPlayers = getRequiredPlayers(category);

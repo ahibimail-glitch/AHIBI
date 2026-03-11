@@ -31,9 +31,9 @@ type TournamentRegistration = {
 };
 
 const categoryLabels: Record<string, string> = {
-  mens_singles: "Men's Singles",
-  mens_doubles: "Men's Doubles",
   mixed_doubles: 'Mixed Doubles',
+  mens_doubles: "Men's Doubles",
+  womens_doubles: "Women's Doubles",
 };
 
 export default function SportsTournamentRegistrationsPage() {
@@ -194,7 +194,7 @@ export default function SportsTournamentRegistrationsPage() {
                         <div className="space-y-2">
                           {registration.registrationType === 'team' ? (
                             (() => {
-                              const getRequiredPlayers = (cat: string) => cat === 'mens_singles' ? 1 : 2;
+                              const getRequiredPlayers = (cat: string) => 2; // All categories require 2 players
                               let playerIndex = 0;
                               
                               return registration.categories.map((category) => {

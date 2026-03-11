@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Button } from "@/components/ui/button";
@@ -162,10 +163,10 @@ const Hero = () => (
 const SportsCardSection = () => (
     <section className="relative overflow-hidden bg-black py-24">
         <div className="absolute inset-0 opacity-10"
-             style={{
+            style={{
                 backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
                 backgroundSize: "40px 40px"
-             }}
+            }}
         />
         <div className="relative z-10 container mx-auto px-6 text-center">
             <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter">
@@ -325,10 +326,113 @@ const ForOwners = () => (
 );
 
 /* ----------------------------- */
+/* Upcoming Tournaments */
+/* ----------------------------- */
+const UpcomingTournaments = () => (
+    <Section muted className="border-y border-white/5">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+            <div className="text-left">
+                <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white uppercase italic">
+                    Upcoming Tournaments
+                </h2>
+                <p className="mt-2 text-gray-500 uppercase tracking-[0.2em] text-sm">Compete at the Highest Level</p>
+            </div>
+            <Link href="/sports/tournaments" className="text-red-500 font-bold uppercase tracking-widest text-sm hover:underline flex items-center gap-2">
+                Register Now <ArrowRight className="h-4 w-4" />
+            </Link>
+        </div>
+
+        <div className="flex justify-center">
+            {[{
+                name: "Nagaland Pickleball Classic",
+                date: "March 15-17, 2026",
+                image: "/images/npatournament.jpeg",
+                location: "Dimapur Sports Complex",
+                categories: ["Mixed Doubles", "Men's Doubles", "Women's Doubles"],
+                entryFee: "₹1,500 per player",
+                status: "Open"
+            }].map((tournament, index) => (
+                <Card key={index} className="w-full max-w-2xl group rounded-none bg-[#111] border-white/5 overflow-hidden hover:border-red-600 transition-all duration-500">
+                    <CardContent className="p-0">
+                        <div className="relative h-64 overflow-hidden">
+                            <Image
+                                src={tournament.image}
+                                alt={tournament.name}
+                                fill
+                                className="object-contain"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                            <div className="absolute top-4 right-4 z-10">
+                                <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest ${tournament.status === "Open"
+                                        ? "bg-red-600 text-white"
+                                        : "bg-white/10 text-gray-400"
+                                    }`}>
+                                    {tournament.status}
+                                </span>
+                            </div>
+                          
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <h3 className="text-xl font-bold text-white uppercase italic tracking-tight group-hover:text-red-600 transition-colors">
+                                    {tournament.name}
+                                </h3>
+                            </div>
+
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-start gap-2 text-gray-400">
+                                    <CalendarClock className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-600" />
+                                    <span>{tournament.date}</span>
+                                </div>
+                                <div className="flex items-start gap-2 text-gray-400">
+                                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-600" />
+                                    <span>{tournament.location}</span>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-white/5">
+                                <p className="text-xs font-bold text-red-600 uppercase tracking-widest mb-2">Categories</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {tournament.categories.map((category, idx) => (
+                                        <span key={idx} className="px-2 py-1 text-xs bg-white/5 text-gray-400 font-medium">
+                                            {category}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-white/5 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase tracking-widest">Entry Fee</p>
+                                    <p className="text-sm font-bold text-white">{tournament.entryFee}</p>
+                                </div>
+                                <Link href="/sports/tournaments">
+                                    <Button
+                                        size="sm"
+                                        disabled={tournament.status !== "Open"}
+                                        className={`rounded-none font-bold uppercase tracking-tighter ${tournament.status === "Open"
+                                                ? "bg-red-600 hover:bg-white text-white hover:text-red-600"
+                                                : "bg-white/5 text-gray-600 cursor-not-allowed"
+                                            } transition-all duration-300`}
+                                    >
+                                        {tournament.status === "Open" ? "Register" : "Soon"}
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
 /* CTA - Fixed Black Line Issue */
 /* ----------------------------- */
 const CTA = () => (
-    <section className="bg-white py-0"> 
+    <section className="bg-white py-0">
         <div className="mx-auto max-w-7xl px-6 md:px-10 pb-24">
             <div className="relative overflow-hidden bg-red-600 p-12 md:p-20 transform skew-y-[-2deg]">
                 <div className="transform skew-y-[2deg] grid md:grid-cols-2 gap-12 items-center">
@@ -343,8 +447,8 @@ const CTA = () => (
                                 </Button>
                             </Link>
                             <Link href="/arena-partner/auth">
-                                <Button 
-                                    size="lg" 
+                                <Button
+                                    size="lg"
                                     className="rounded-none bg-transparent border-2 border-white text-white px-10 font-bold uppercase tracking-tighter hover:bg-white hover:text-red-600 transition-colors duration-300"
                                 >
                                     List Facility
@@ -377,6 +481,7 @@ export default function SportsPage() {
         <div className="min-h-screen bg-white text-black selection:bg-red-600 selection:text-white">
             <Navbar />
             <Hero />
+            <UpcomingTournaments />
             <SportsCardSection />
             <Facilities />
             <HowItWorks />

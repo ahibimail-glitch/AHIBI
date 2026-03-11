@@ -1,9 +1,9 @@
 const PDFDocument = require('pdfkit');
 
 const categoryLabels = {
-  mens_singles: "Men's Singles",
-  mens_doubles: "Men's Doubles",
   mixed_doubles: "Mixed Doubles",
+  mens_doubles: "Men's Doubles",
+  womens_doubles: "Women's Doubles",
 };
 
 class SportsTournamentInvoiceService {
@@ -72,7 +72,7 @@ class SportsTournamentInvoiceService {
         
         if (isTeamRegistration) {
           // Group players by category for team registrations
-          const getRequiredPlayers = (cat) => cat === 'mens_singles' ? 1 : 2;
+          const getRequiredPlayers = (cat) => 2; // All categories require 2 players
           let playerIndex = 0;
           
           registration.categories.forEach((category) => {

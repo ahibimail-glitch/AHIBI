@@ -48,12 +48,12 @@ const emptyPlayer: PlayerData = { fullName: "", age: "", gender: "", phone: "", 
 const emptyTeamPlayer: TeamPlayerData = { fullName: "", gender: "" };
 const ENTRY_FEE_PER_PLAYER = 1500;
 
-const singlePlayerCategories = new Set(["mens_singles"]);
+const singlePlayerCategories = new Set([]); // All categories require 2 players
 
 const categoryLabels: Record<string, string> = {
-    mens_singles: "Men's Singles",
-    mens_doubles: "Men's Doubles",
     mixed_doubles: "Mixed Doubles",
+    mens_doubles: "Men's Doubles",
+    womens_doubles: "Women's Doubles",
 };
 
 const validatePlayer = (p: PlayerData): Partial<Record<keyof PlayerData, string>> => {
@@ -74,8 +74,7 @@ const validateTeamPlayer = (p: TeamPlayerData): Partial<Record<keyof TeamPlayerD
 };
 
 const getRequiredPlayersForCategory = (categoryId: string) => {
-    if (categoryId === 'mens_singles') return 1;
-    return 2; // mens_doubles and mixed_doubles
+    return 2; // All categories require 2 players
 };
 
 const Index = () => {
@@ -549,11 +548,11 @@ if (confirmedRegistration) {
                                             {confirmedRegistration.registrationType === "team" ? (
                                                 (() => {
                                                     const categoryLabelsMap: Record<string, string> = {
-                                                        mens_singles: "Men's Singles",
-                                                        mens_doubles: "Men's Doubles",
                                                         mixed_doubles: "Mixed Doubles",
+                                                        mens_doubles: "Men's Doubles",
+                                                        womens_doubles: "Women's Doubles",
                                                     };
-                                                    const getRequiredPlayers = (cat: string) => cat === 'mens_singles' ? 1 : 2;
+                                                    const getRequiredPlayers = (cat: string) => 2; // All categories require 2 players
                                                     
                                                     let playerIndex = 0;
                                                     return confirmedRegistration.categories.map((category: string) => {
