@@ -10,13 +10,14 @@ const razorpay = new Razorpay({
 });
 
 const categoryLabels = {
+  mens_singles: "Men's Singles",
   mixed_doubles: "Mixed Doubles",
   mens_doubles: "Men's Doubles",
   womens_doubles: "Women's Doubles",
 };
 
-const supportedCategories = new Set(['mixed_doubles', 'mens_doubles', 'womens_doubles']);
-const singlePlayerCategories = new Set([]); // No single player categories anymore
+const supportedCategories = new Set(['mens_singles', 'mixed_doubles', 'mens_doubles', 'womens_doubles']);
+const singlePlayerCategories = new Set(['mens_singles']); // Men's Singles requires 1 player
 
 const validatePlayer = (player) => {
   if (!player || typeof player !== 'object') return 'Invalid player details';
