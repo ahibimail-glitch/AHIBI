@@ -87,10 +87,13 @@ const Index = () => {
     const [player1, setPlayer1] = useState<PlayerData>({ ...emptyPlayer });
     const [player2, setPlayer2] = useState<PlayerData>({ ...emptyPlayer });
 
+    // Individual player state for individual registrations (per category)
+    const [individualPlayers, setIndividualPlayers] = useState<Record<string, PlayerData[]>>({});
     // Team player state for team registrations
     const [teamPlayers, setTeamPlayers] = useState<Record<string, TeamPlayerData[]>>({});
     const [p1Errors, setP1Errors] = useState<Partial<Record<keyof PlayerData, string>>>({});
     const [p2Errors, setP2Errors] = useState<Partial<Record<keyof PlayerData, string>>>({});
+    const [individualPlayerErrors, setIndividualPlayerErrors] = useState<Record<string, Partial<Record<keyof PlayerData, string>>[]>>({});
     const [teamPlayerErrors, setTeamPlayerErrors] = useState<Record<string, Partial<Record<keyof TeamPlayerData, string>>[]>>({});
     const [checks, setChecks] = useState([false, false, false]);
     const [isPaying, setIsPaying] = useState(false);
@@ -127,10 +130,17 @@ const Index = () => {
                 }
             });
         } else {
-            labels.push("Player 1");
-            if (requiredPlayerCount === 2) {
-                labels.push("Player 2");
-            }
+            // Add player details steps for each selected category (individual registration)
+            categories.forEach((category) => {
+                const requiredPlayers = getRequiredPlayersForCategory(category);
+                const categoryLabel = categoryLabels[category];
+                if (requiredPlayers === 1) {
+                    labels.push(`${categoryLabel} Player`);
+                } else {
+                    labels.push(`${categoryLabel} Player 1`);
+                    labels.push(`${categoryLabel} Player 2`);
+                }
+            });
         }
 
         labels.push("Confirm");
@@ -143,17 +153,38 @@ const Index = () => {
 
     // Calculate confirm step based on registration type and selected categories
     const confirmStep = useMemo(() => {
-        if (registrationType === "team") {
-            let stepCount = categoryStep + 1; // Start after category step
-            for (const category of categories) {
-                const requiredPlayers = getRequiredPlayersForCategory(category);
-                stepCount += requiredPlayers;
-            }
-            return stepCount;
-        } else {
-            return requiredPlayerCount === 2 ? player1Step + 2 : player1Step + 1;
+        let stepCount = categoryStep + 1; // Start after category step
+        for (const category of categories) {
+            const requiredPlayers = getRequiredPlayersForCategory(category);
+            stepCount += requiredPlayers;
         }
-    }, [registrationType, categories, categoryStep, player1Step, requiredPlayerCount]);
+        return stepCount;
+    }, [registrationType, categories, categoryStep]);
+
+    // Calculate unique players and total amount for pricing summary
+    const pricingSummary = useMemo(() => {
+        if (registrationType !== "individual") {
+            return { uniquePlayerCount: 0, totalAmount: 0 };
+        }
+
+        // Collect all player names from all categories
+        const allPlayerNames: string[] = [];
+        for (const category of categories) {
+            const categoryPlayers = individualPlayers[category] || [];
+            categoryPlayers.forEach(player => {
+                if (player?.fullName?.trim()) {
+                    allPlayerNames.push(player.fullName.trim().toLowerCase());
+                }
+            });
+        }
+
+        // Count unique players
+        const uniquePlayerNames = new Set(allPlayerNames);
+        const uniquePlayerCount = uniquePlayerNames.size;
+        const totalAmount = uniquePlayerCount * ENTRY_FEE_PER_PLAYER;
+
+        return { uniquePlayerCount, totalAmount };
+    }, [registrationType, categories, individualPlayers]);
 
     const entryFee = useMemo(() => ENTRY_FEE_PER_PLAYER * requiredPlayerCount, [requiredPlayerCount]);
     const hasSelectedCategory = categories.length > 0;
@@ -204,6 +235,35 @@ const Index = () => {
             });
         }
     }, [registrationType, categories]);
+
+    useEffect(() => {
+        if (registrationType === "individual" && categories.length > 0) {
+            setIndividualPlayers((prevIndividualPlayers) => {
+                const newIndividualPlayers: Record<string, PlayerData[]> = {};
+                for (const category of categories) {
+                    const requiredPlayers = getRequiredPlayersForCategory(category);
+                    if (!prevIndividualPlayers[category] || prevIndividualPlayers[category].length !== requiredPlayers) {
+                        newIndividualPlayers[category] = Array(requiredPlayers).fill(null).map((_, idx) => {
+                            // Pre-fill first player of first category with user data if available
+                            if (idx === 0 && category === categories[0] && user) {
+                                return {
+                                    fullName: user.name || "",
+                                    email: user.email || "",
+                                    phone: user.phone || "",
+                                    age: "",
+                                    gender: ""
+                                };
+                            }
+                            return { ...emptyPlayer };
+                        });
+                    } else {
+                        newIndividualPlayers[category] = prevIndividualPlayers[category];
+                    }
+                }
+                return newIndividualPlayers;
+            });
+        }
+    }, [registrationType, categories, user]);
 
     useEffect(() => {
         const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
@@ -278,17 +338,35 @@ const Index = () => {
             return;
         }
 
-        // Individual registration player validation
-        if (registrationType === "individual" && step === player1Step) {
-            const errs = validatePlayer(player1);
-            setP1Errors(errs);
-            if (Object.keys(errs).length) return;
-        }
+        // Individual registration player validation (per category)
+        if (registrationType === "individual" && step > categoryStep && step < confirmStep) {
+            let currentStepIndex = categoryStep + 1;
+            for (const category of categories) {
+                const requiredPlayers = getRequiredPlayersForCategory(category);
 
-        if (registrationType === "individual" && requiredPlayerCount === 2 && step === player2Step) {
-            const errs = validatePlayer(player2);
-            setP2Errors(errs);
-            if (Object.keys(errs).length) return;
+                for (let playerIndex = 0; playerIndex < requiredPlayers; playerIndex++) {
+                    if (step === currentStepIndex) {
+                        const playerData = individualPlayers[category]?.[playerIndex];
+                        if (playerData) {
+                            const errs = validatePlayer(playerData);
+                            const newErrors = { ...individualPlayerErrors };
+                            if (!newErrors[category]) {
+                                newErrors[category] = Array(requiredPlayers).fill(null).map(() => ({} as Partial<Record<keyof PlayerData, string>>));
+                            }
+                            newErrors[category][playerIndex] = errs;
+                            setIndividualPlayerErrors(newErrors);
+
+                            if (Object.keys(errs).length) {
+                                return;
+                            }
+                        } else {
+                            toast.error("Please fill in all required player details");
+                            return;
+                        }
+                    }
+                    currentStepIndex++;
+                }
+            }
         }
 
         // Team registration player validation
@@ -355,7 +433,9 @@ const Index = () => {
         setIsPaying(true);
 
         // Prepare players data based on registration type
-        let playersData;
+        let playersData: (PlayerData | TeamPlayerData)[];
+        let firstPlayerData: PlayerData | null = null;
+        
         if (registrationType === "team") {
             // Flatten team players data for backend
             playersData = [];
@@ -372,8 +452,23 @@ const Index = () => {
                 return;
             }
         } else {
-            // Individual registration
-            playersData = requiredPlayerCount === 2 ? [player1, player2] : [player1];
+            // Individual registration - flatten players from all categories
+            playersData = [];
+            for (const category of categories) {
+                const categoryPlayers = individualPlayers[category] || [];
+                // Only include players with valid data
+                const validPlayers = categoryPlayers.filter(p => p && p.fullName && p.fullName.trim() && p.email && p.phone && p.age && p.gender);
+                playersData.push(...validPlayers);
+                if (validPlayers.length > 0 && !firstPlayerData) {
+                    firstPlayerData = validPlayers[0];
+                }
+            }
+            
+            if (playersData.length === 0) {
+                toast.error("Please fill in all player details");
+                setIsPaying(false);
+                return;
+            }
         }
 
         fetch("/api/sports/tournaments/register", {
@@ -439,9 +534,9 @@ const Index = () => {
                         }
                     },
                     prefill: {
-                        name: requiredPlayerCount === 2 ? `${player1.fullName} & ${player2.fullName}` : player1.fullName,
-                        email: player1.email,
-                        contact: player1.phone,
+                        name: firstPlayerData ? firstPlayerData.fullName : "",
+                        email: firstPlayerData ? firstPlayerData.email : "",
+                        contact: firstPlayerData ? firstPlayerData.phone : "",
                     },
                     notes: {
                         tournament: "Nagaland Pickleball Classic Tournament 2026",
@@ -474,9 +569,11 @@ const Index = () => {
         setCategories([]);
         setPlayer1({ ...emptyPlayer });
         setPlayer2({ ...emptyPlayer });
+        setIndividualPlayers({});
         setChecks([false, false, false]);
         setP1Errors({});
         setP2Errors({});
+        setIndividualPlayerErrors({});
         setConfirmedRegistration(null);
         setIsPaying(false);
     };
@@ -669,9 +766,43 @@ return (
                                 {registrationType === "team" && step === 1 && <StepTeamInfo teamName={teamName} onChange={setTeamName} error={teamNameError} />}
                                 {step === categoryStep && <StepCategory registrationType={registrationType} selected={categories} onChange={setCategories} />}
                                 
-                                {/* Individual registration player details */}
-                                {registrationType === "individual" && step === player1Step && <StepPlayerDetails title="Player 1 Details" data={player1} onChange={setPlayer1} errors={p1Errors} />}
-                                {registrationType === "individual" && requiredPlayerCount === 2 && step === player2Step && <StepPlayerDetails title="Player 2 Details" data={player2} onChange={setPlayer2} errors={p2Errors} />}
+                                {/* Individual registration player details for each category */}
+                                {registrationType === "individual" && step > categoryStep && step < confirmStep && (() => {
+                                    let currentStepIndex = categoryStep + 1;
+
+                                    for (const category of categories) {
+                                        const requiredPlayers = getRequiredPlayersForCategory(category);
+                                        const categoryLabel = categoryLabels[category];
+
+                                        for (let playerIndex = 0; playerIndex < requiredPlayers; playerIndex++) {
+                                            if (step === currentStepIndex) {
+                                                const playerNumber = playerIndex + 1;
+                                                const title = requiredPlayers === 1 ? `${categoryLabel} Player Details` : `${categoryLabel} - Player ${playerNumber} Details`;
+
+                                                return (
+                                                    <StepPlayerDetails
+                                                        key={`${category}-${playerIndex}`}
+                                                        title={title}
+                                                        data={individualPlayers[category]?.[playerIndex] || { ...emptyPlayer }}
+                                                        onChange={(data) => {
+                                                            const newIndividualPlayers = { ...individualPlayers };
+                                                            if (!newIndividualPlayers[category]) {
+                                                                newIndividualPlayers[category] = Array(requiredPlayers).fill(null).map(() => ({ ...emptyPlayer }));
+                                                            }
+                                                            newIndividualPlayers[category][playerIndex] = data;
+                                                            setIndividualPlayers(newIndividualPlayers);
+                                                        }}
+                                                        errors={individualPlayerErrors[category]?.[playerIndex] || {}}
+                                                    />
+                                                );
+                                            }
+
+                                            currentStepIndex++;
+                                        }
+                                    }
+
+                                    return null;
+                                })()}
                                 
                                 {/* Team registration player details for each category */}
                                 {registrationType === "team" && step > categoryStep && step < confirmStep && (() => {
@@ -710,7 +841,15 @@ return (
                                     return null;
                                 })()}
                                 
-                                {step === confirmStep && <StepConfirmation checks={checks} onChange={setChecks} />}
+                                {step === confirmStep && (
+                                    <StepConfirmation 
+                                        checks={checks} 
+                                        onChange={setChecks}
+                                        registrationType={registrationType}
+                                        uniquePlayerCount={pricingSummary.uniquePlayerCount}
+                                        totalAmount={pricingSummary.totalAmount}
+                                    />
+                                )}
                             </div>
 
                             <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-200">

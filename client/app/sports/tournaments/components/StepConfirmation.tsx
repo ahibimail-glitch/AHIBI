@@ -2,11 +2,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useId } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, IndianRupee } from "lucide-react";
 
 interface StepConfirmationProps {
   checks: boolean[];
   onChange: (checks: boolean[]) => void;
+  registrationType?: "individual" | "team" | "";
+  uniquePlayerCount?: number;
+  totalAmount?: number;
 }
 
 const labels = [
@@ -15,7 +18,7 @@ const labels = [
   "I understand each player can only participate in a maximum of 2 categories",
 ];
 
-const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
+const StepConfirmation = ({ checks, onChange, registrationType, uniquePlayerCount = 0, totalAmount = 0 }: StepConfirmationProps) => {
   const baseId = useId();
 
   const toggle = (i: number) => {
@@ -23,6 +26,9 @@ const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
     next[i] = !next[i];
     onChange(next);
   };
+
+  const isIndividual = registrationType === "individual";
+  const showPricing = isIndividual && uniquePlayerCount > 0;
 
   return (
     <div className="space-y-6">
@@ -38,6 +44,31 @@ const StepConfirmation = ({ checks, onChange }: StepConfirmationProps) => {
         </div>
         </div>
       </div>
+
+      {showPricing && (
+        <div className="rounded-[24px] border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-white p-5 shadow-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <IndianRupee className="w-5 h-5 text-orange-600" />
+            <h3 className="text-sm font-black uppercase tracking-[0.24em] text-orange-600">Pricing Summary</h3>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600">Unique Players</span>
+              <span className="font-bold text-slate-900">{uniquePlayerCount}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-slate-600">Rate per Player</span>
+              <span className="font-bold text-slate-900">₹1,500</span>
+            </div>
+            <div className="border-t-2 border-orange-200 my-2"></div>
+            <div className="flex justify-between items-center">
+              <span className="text-base font-black text-slate-900">Total Amount</span>
+              <span className="text-2xl font-black text-orange-600">₹{totalAmount.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         {labels.map((label, i) => (
           <motion.div

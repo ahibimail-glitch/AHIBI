@@ -67,12 +67,21 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
           return value.length >= 1;
         }
 
-        return value.length >= 1 && value.length <= 2;
+        // For individual registration, validate based on number of categories
+        // Each category requires 2 players (all current categories are doubles)
+        const categoriesCount = this.categories?.length || 0;
+        const expectedPlayers = categoriesCount * 2;
+        
+        // Allow the expected number of players (2 per category)
+        return value.length >= 1 && value.length <= expectedPlayers;
       },
       message(props) {
-        return this.registrationType === 'team'
-          ? 'At least one team player entry is required'
-          : 'One or two player entries are required';
+        if (this.registrationType === 'team') {
+          return 'At least one team player entry is required';
+        }
+        const categoriesCount = this.categories?.length || 0;
+        const expectedPlayers = categoriesCount * 2;
+        return `Player entries must match selected categories (${expectedPlayers} players for ${categoriesCount} ${categoriesCount === 1 ? 'category' : 'categories'})`;
       },
     },
     required: true,

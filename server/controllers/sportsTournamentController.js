@@ -138,10 +138,14 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'All declarations must be accepted');
     }
 
-    const playerCount = players.length;
+    // Calculate unique players by name (case-insensitive, trimmed)
+    const uniquePlayerNames = new Set(
+      players.map(p => String(p.fullName || '').trim().toLowerCase())
+    );
+    const uniquePlayerCount = uniquePlayerNames.size;
     const amountPerPlayer = 1500;
     const isDirectRegistration = registrationType === 'team';
-    const amount = isDirectRegistration ? 0 : playerCount * amountPerPlayer;
+    const amount = isDirectRegistration ? 0 : uniquePlayerCount * amountPerPlayer;
 
     let razorpayOrder = null;
     if (!isDirectRegistration) {
@@ -155,7 +159,8 @@ exports.createRegistrationOrder = async (req, res) => {
           teamName: registrationType === 'team' ? String(teamName).trim() : '',
           categoryCount: String(categories.length),
           categories: categories.join(','),
-          playerCount: String(playerCount),
+          playerCount: String(players.length),
+          uniquePlayerCount: String(uniquePlayerCount),
           amountPerPlayer: String(amountPerPlayer),
           player1Name: players[0]?.fullName || '',
           player2Name: players[1]?.fullName || '',

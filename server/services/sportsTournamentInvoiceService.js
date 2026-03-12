@@ -59,8 +59,18 @@ class SportsTournamentInvoiceService {
         doc.font('Helvetica-Bold').fillColor('#475569').text('Categories', 50, y);
         doc.font('Helvetica').fillColor('#0F172A').text(registration.categories.map((category) => categoryLabels[category] || category).join(', '), 160, y, { width: 360 });
         y += 32;
+        // Calculate unique players and show pricing breakdown
+        let pricingText = '₹0 (Direct registration - no payment required)';
+        if (registration.amount > 0) {
+          const uniquePlayerNames = new Set(
+            registration.players.map(p => String(p.fullName || '').trim().toLowerCase())
+          );
+          const uniquePlayerCount = uniquePlayerNames.size;
+          pricingText = `₹${registration.amount.toLocaleString('en-IN')} (${uniquePlayerCount} unique player${uniquePlayerCount > 1 ? 's' : ''} × ₹1,500)`;
+        }
+        
         doc.font('Helvetica-Bold').fillColor('#475569').text('Player Fee Paid', 50, y);
-        doc.font('Helvetica').fillColor('#0F172A').text(registration.amount > 0 ? `₹${registration.amount.toLocaleString('en-IN')} (${registration.players.length} players × ₹1,500)` : '₹0 (Direct registration - no payment required)', 160, y);
+        doc.font('Helvetica').fillColor('#0F172A').text(pricingText, 160, y);
         y += 36;
 
         doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Player Details', 40, y);
@@ -102,21 +112,55 @@ class SportsTournamentInvoiceService {
             y += 10; // Extra space between categories
           });
         } else {
-          // Individual registration - show all details in flat list
-          registration.players.forEach((player, index) => {
-            const boxHeight = 85;
+          // Individual registration - group players by category and show pricing breakdown
+          const getRequiredPlayers = (cat) => 2; // All categories require 2 players
+          let playerIndex = 0;
+          
+          // Add pricing breakdown section
+          if (registration.amount > 0) {
+            const uniquePlayerNames = new Set(
+              registration.players.map(p => String(p.fullName || '').trim().toLowerCase())
+            );
+            const uniquePlayerCount = uniquePlayerNames.size;
             
-            doc.roundedRect(40, y, doc.page.width - 80, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
-            doc.font('Helvetica-Bold').fontSize(11).fillColor('#15803D').text(`Player ${index + 1}`, 55, y + 12);
-            doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Name', 55, y + 34);
-            doc.font('Helvetica').fillColor('#0F172A').text(player.fullName, 120, y + 34);
-            doc.font('Helvetica-Bold').fillColor('#475569').text('Age / Gender', 300, y + 34);
-            doc.font('Helvetica').fillColor('#0F172A').text(`${player.age} / ${player.gender === 'male' ? 'Male' : 'Female'}`, 390, y + 34);
-            doc.font('Helvetica-Bold').fillColor('#475569').text('Phone', 55, y + 56);
-            doc.font('Helvetica').fillColor('#0F172A').text(player.phone, 120, y + 56);
-            doc.font('Helvetica-Bold').fillColor('#475569').text('Email', 300, y + 56);
-            doc.font('Helvetica').fillColor('#0F172A').text(player.email, 390, y + 56, { width: 150 });
-            y += 102;
+            doc.roundedRect(40, y, doc.page.width - 80, 60, 8).fillAndStroke('#FEF3C7', '#F59E0B');
+            doc.font('Helvetica-Bold').fontSize(11).fillColor('#92400E').text('PRICING BREAKDOWN', 55, y + 12);
+            doc.font('Helvetica-Bold').fontSize(10).fillColor('#78350F').text('Unique Players', 55, y + 34);
+            doc.font('Helvetica').fillColor('#92400E').text(String(uniquePlayerCount), 160, y + 34);
+            doc.font('Helvetica-Bold').fillColor('#78350F').text('Rate per Player', 300, y + 34);
+            doc.font('Helvetica').fillColor('#92400E').text('₹1,500', 400, y + 34);
+            y += 75;
+          }
+          
+          registration.categories.forEach((category) => {
+            const requiredPlayers = getRequiredPlayers(category);
+            const categoryLabel = categoryLabels[category] || category;
+            
+            // Category header
+            doc.font('Helvetica-Bold').fontSize(11).fillColor('#F97316').text(categoryLabel.toUpperCase(), 50, y);
+            y += 20;
+            
+            // Players for this category
+            for (let i = 0; i < requiredPlayers && playerIndex < registration.players.length; i++) {
+              const player = registration.players[playerIndex];
+              const boxHeight = 85;
+              
+              doc.roundedRect(50, y, doc.page.width - 90, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
+              doc.font('Helvetica-Bold').fontSize(10).fillColor('#15803D').text(requiredPlayers === 1 ? 'Player' : `Player ${i + 1}`, 65, y + 12);
+              doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Name', 65, y + 34);
+              doc.font('Helvetica').fillColor('#0F172A').text(player.fullName, 130, y + 34);
+              doc.font('Helvetica-Bold').fillColor('#475569').text('Age / Gender', 310, y + 34);
+              doc.font('Helvetica').fillColor('#0F172A').text(`${player.age} / ${player.gender === 'male' ? 'Male' : 'Female'}`, 400, y + 34);
+              doc.font('Helvetica-Bold').fillColor('#475569').text('Phone', 65, y + 56);
+              doc.font('Helvetica').fillColor('#0F172A').text(player.phone, 130, y + 56);
+              doc.font('Helvetica-Bold').fillColor('#475569').text('Email', 310, y + 56);
+              doc.font('Helvetica').fillColor('#0F172A').text(player.email, 400, y + 56, { width: 150 });
+              
+              y += 102;
+              playerIndex++;
+            }
+            
+            y += 10; // Extra space between categories
           });
         }
 
