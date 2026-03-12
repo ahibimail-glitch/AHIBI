@@ -31,6 +31,19 @@ const StepTeamInfo = ({ teamName, onChange, error }: StepTeamInfoProps) => {
         />
         {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
       </div>
+       <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4">
+        <div className="flex gap-3">
+          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800">
+            <span className="text-xs font-black">i</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-900">Important Note</p>
+            <p className="mt-1 text-sm text-amber-800 leading-relaxed">
+              Players registered for open categories are qualified to register for team events.
+            </p>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 };
