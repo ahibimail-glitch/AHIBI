@@ -123,13 +123,15 @@ class SportsTournamentInvoiceService {
             );
             const uniquePlayerCount = uniquePlayerNames.size;
             
-            doc.roundedRect(40, y, doc.page.width - 80, 60, 8).fillAndStroke('#FEF3C7', '#F59E0B');
-            doc.font('Helvetica-Bold').fontSize(11).fillColor('#92400E').text('PRICING BREAKDOWN', 55, y + 12);
-            doc.font('Helvetica-Bold').fontSize(10).fillColor('#78350F').text('Unique Players', 55, y + 34);
-            doc.font('Helvetica').fillColor('#92400E').text(String(uniquePlayerCount), 160, y + 34);
-            doc.font('Helvetica-Bold').fillColor('#78350F').text('Rate per Player', 300, y + 34);
-            doc.font('Helvetica').fillColor('#92400E').text('₹1,500', 400, y + 34);
-            y += 75;
+            doc.roundedRect(40, y, doc.page.width - 80, 40, 8).fillAndStroke('#FEF3C7', '#F59E0B');
+            doc.font('Helvetica-Bold').fontSize(10).fillColor('#92400E').text('PRICING BREAKDOWN', 55, y + 8);
+            doc.font('Helvetica-Bold').fontSize(9).fillColor('#78350F').text('Unique Players:', 55, y + 22);
+            doc.font('Helvetica').fillColor('#92400E').text(String(uniquePlayerCount), 150, y + 22);
+            doc.font('Helvetica-Bold').fillColor('#78350F').text('Rate:', 250, y + 22);
+            doc.font('Helvetica').fillColor('#92400E').text('₹1,500', 290, y + 22);
+            doc.font('Helvetica-Bold').fillColor('#78350F').text('Total:', 350, y + 22);
+            doc.font('Helvetica').fillColor('#92400E').text(`₹${registration.amount.toLocaleString('en-IN')}`, 390, y + 22);
+            y += 50;
           }
           
           registration.categories.forEach((category) => {
@@ -140,27 +142,31 @@ class SportsTournamentInvoiceService {
             doc.font('Helvetica-Bold').fontSize(11).fillColor('#F97316').text(categoryLabel.toUpperCase(), 50, y);
             y += 20;
             
-            // Players for this category
+            // Players for this category - compact layout
             for (let i = 0; i < requiredPlayers && playerIndex < registration.players.length; i++) {
               const player = registration.players[playerIndex];
-              const boxHeight = 85;
+              const boxHeight = 50;
               
               doc.roundedRect(50, y, doc.page.width - 90, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
-              doc.font('Helvetica-Bold').fontSize(10).fillColor('#15803D').text(requiredPlayers === 1 ? 'Player' : `Player ${i + 1}`, 65, y + 12);
-              doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Name', 65, y + 34);
-              doc.font('Helvetica').fillColor('#0F172A').text(player.fullName, 130, y + 34);
-              doc.font('Helvetica-Bold').fillColor('#475569').text('Age / Gender', 310, y + 34);
-              doc.font('Helvetica').fillColor('#0F172A').text(`${player.age} / ${player.gender === 'male' ? 'Male' : 'Female'}`, 400, y + 34);
-              doc.font('Helvetica-Bold').fillColor('#475569').text('Phone', 65, y + 56);
-              doc.font('Helvetica').fillColor('#0F172A').text(player.phone, 130, y + 56);
-              doc.font('Helvetica-Bold').fillColor('#475569').text('Email', 310, y + 56);
-              doc.font('Helvetica').fillColor('#0F172A').text(player.email, 400, y + 56, { width: 150 });
+              doc.font('Helvetica-Bold').fontSize(9).fillColor('#15803D').text(requiredPlayers === 1 ? 'Player' : `Player ${i + 1}`, 65, y + 8);
               
-              y += 102;
+              // First row: Name and Age/Gender
+              doc.font('Helvetica-Bold').fontSize(8).fillColor('#475569').text('Name:', 65, y + 22);
+              doc.font('Helvetica').fontSize(8).fillColor('#0F172A').text(player.fullName, 100, y + 22, { width: 180 });
+              doc.font('Helvetica-Bold').fontSize(8).fillColor('#475569').text('Age/Gender:', 280, y + 22);
+              doc.font('Helvetica').fontSize(8).fillColor('#0F172A').text(`${player.age} / ${player.gender === 'male' ? 'Male' : 'Female'}`, 340, y + 22);
+              
+              // Second row: Phone and Email
+              doc.font('Helvetica-Bold').fontSize(8).fillColor('#475569').text('Phone:', 65, y + 35);
+              doc.font('Helvetica').fontSize(8).fillColor('#0F172A').text(player.phone, 100, y + 35);
+              doc.font('Helvetica-Bold').fontSize(8).fillColor('#475569').text('Email:', 280, y + 35);
+              doc.font('Helvetica').fontSize(8).fillColor('#0F172A').text(player.email, 320, y + 35, { width: 220 });
+              
+              y += 60;
               playerIndex++;
             }
             
-            y += 10; // Extra space between categories
+            y += 5; // Extra space between categories
           });
         }
 

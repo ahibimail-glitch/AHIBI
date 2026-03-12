@@ -746,22 +746,51 @@ if (confirmedRegistration) {
 return (
     <div>
         <Navbar />
-        <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-8 px-4 md:px-6">
-            <div className="mx-auto w-full max-w-7xl space-y-8">
-                <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
-                    <div className="space-y-6 xl:sticky xl:top-24">
-                        <Image src="/images/npatournament.jpeg" alt="Tournament Poster" width={500} height={500} />
+        <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-4 px-3 sm:py-6 sm:px-4 md:py-8 md:px-6">
+            <div className="mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">
+                <div className="grid gap-6 sm:gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
+                    {/* Tournament Poster - hidden on mobile, shown on xl+ */}
+                    <div className="hidden xl:block xl:sticky xl:top-24">
+                        <div className="space-y-6">
+                            <Image 
+                                src="/images/npatournament.jpeg" 
+                                alt="Tournament Poster" 
+                                width={500} 
+                                height={500}
+                                className="w-full rounded-2xl shadow-lg"
+                            />
+                        </div>
                     </div>
 
-                    <Card className="overflow-hidden rounded-[32px] border border-orange-500/20 bg-white/95 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
-                        <div className="bg-[#071126] px-6 py-5 md:px-8 border-b border-white/10 text-white">
-                            <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-400">Official Player Registration</p>
-                            <h2 className="mt-2 text-3xl font-black text-white">Complete Tournament Registration</h2>
-                            <p className="mt-2 text-sm text-white/70">{isTeamRegistration ? `Fill out all steps carefully. Team registration is direct and no payment is collected.` : hasSelectedCategory ? `Fill out all steps carefully. Entry fee is ₹1,500 per player, with ${requiredPlayerCount} players required for this registration.` : `Choose your event type first to see the correct registration fee and player requirement.`}</p>
+                    {/* Mobile poster - compact banner shown only on small screens */}
+                    <div className="xl:hidden">
+                        <div className="mb-6 sm:mb-8">
+                            <Image 
+                                src="/images/npatournament.jpeg" 
+                                alt="Tournament Poster" 
+                                width={800} 
+                                height={400}
+                                className="w-full rounded-xl sm:rounded-2xl shadow-lg object-cover max-h-48 sm:max-h-64"
+                            />
                         </div>
-                        <CardContent className="p-6 md:p-8">
+                    </div>
+
+                    <Card className="overflow-hidden rounded-2xl sm:rounded-[32px] border border-orange-500/20 bg-white/95 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
+                        <div className="bg-[#071126] px-4 py-4 sm:px-6 sm:py-5 md:px-8 border-b border-white/10 text-white">
+                            <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.22em] sm:tracking-[0.32em] text-orange-400">Official Player Registration</p>
+                            <h2 className="mt-1.5 sm:mt-2 text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight">Complete Tournament Registration</h2>
+                            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-white/70 leading-relaxed">
+                                {isTeamRegistration 
+                                    ? "Fill out all steps carefully. Team registration is direct and no payment is collected." 
+                                    : hasSelectedCategory 
+                                        ? `Fill out all steps carefully. Entry fee is ₹1,500 per player, with ${requiredPlayerCount} players required for this registration.` 
+                                        : "Choose your event type first to see the correct registration fee and player requirement."
+                                }
+                            </p>
+                        </div>
+                        <CardContent className="p-4 sm:p-6 md:p-8">
                             <StepIndicator currentStep={step} steps={stepLabels} />
-                            <div className="mt-8 min-h-[320px]">
+                            <div className="mt-6 sm:mt-8 min-h-[280px] sm:min-h-[320px]">
                                 {step === 0 && <StepRegistrationType value={registrationType} onChange={setRegistrationType} />}
                                 {registrationType === "team" && step === 1 && <StepTeamInfo teamName={teamName} onChange={setTeamName} error={teamNameError} />}
                                 {step === categoryStep && <StepCategory registrationType={registrationType} selected={categories} onChange={setCategories} />}
@@ -852,18 +881,41 @@ return (
                                 )}
                             </div>
 
-                            <div className="flex justify-between gap-3 pt-6 mt-6 border-t border-slate-200">
-                                <Button variant="ghost" onClick={back} disabled={step === 0} className="gap-2 text-slate-700 hover:text-slate-950">
-                                    <ArrowLeft className="w-4 h-4" /> Back
+                            <div className="flex items-center justify-between gap-2 sm:gap-3 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-slate-200">
+                                <Button 
+                                    variant="ghost" 
+                                    onClick={back} 
+                                    disabled={step === 0} 
+                                    className="gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-700 hover:text-slate-950 px-3 sm:px-4 h-9 sm:h-10"
+                                >
+                                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                    <span className="hidden xs:inline">Back</span>
+                              
                                 </Button>
                                 {step < confirmStep ? (
-                                    <Button onClick={next} size="lg" className="gap-2 bg-[#f56210] text-white hover:bg-[#d84f03] shadow-md hover:shadow-lg transition-shadow">
-                                        Next <ArrowRight className="w-4 h-4" />
+                                    <Button 
+                                        onClick={next} 
+                                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm bg-[#f56210] text-white hover:bg-[#d84f03] shadow-md hover:shadow-lg transition-shadow px-4 sm:px-6 h-9 sm:h-11 active:scale-[0.98]"
+                                    >
+                                        <span>Next</span>
+                                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     </Button>
                                 ) : (
-                                    <Button onClick={submit} size="lg" className="gap-2 bg-[#071126] text-white hover:bg-[#0c1d37] shadow-md hover:shadow-lg transition-shadow" disabled={isPaying}>
-                                        {isPaying ? <CreditCard className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                                        {isPaying ? (isDirectRegistration ? "Completing Registration..." : "Processing Payment...") : (isDirectRegistration ? "Complete Registration" : "Pay & Complete Registration")}
+                                    <Button 
+                                        onClick={submit} 
+                                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm bg-[#071126] text-white hover:bg-[#0c1d37] shadow-md hover:shadow-lg transition-shadow px-3 sm:px-5 h-9 sm:h-11 active:scale-[0.98]" 
+                                        disabled={isPaying}
+                                    >
+                                        {isPaying ? <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                                        <span className="hidden xs:inline">
+                                            {isPaying 
+                                                ? (isDirectRegistration ? "Completing..." : "Processing...") 
+                                                : (isDirectRegistration ? "Complete" : "Pay & Register")
+                                            }
+                                        </span>
+                                        <span className="xs:hidden">
+                                            {isPaying ? "..." : (isDirectRegistration ? "Complete" : "Pay")}
+                                        </span>
                                     </Button>
                                 )}
                             </div>
