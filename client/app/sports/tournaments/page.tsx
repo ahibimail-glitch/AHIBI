@@ -48,10 +48,9 @@ const emptyPlayer: PlayerData = { fullName: "", age: "", gender: "", phone: "", 
 const emptyTeamPlayer: TeamPlayerData = { fullName: "", gender: "" };
 const ENTRY_FEE_PER_PLAYER = 1500;
 
-const singlePlayerCategories = new Set(["mens_singles"]); // All categories require 2 players
+const singlePlayerCategories = new Set([]); // All categories require 2 players
 
 const categoryLabels: Record<string, string> = {
-    mens_singles: "Men's Singles",
     mixed_doubles: "Mixed Doubles",
     mens_doubles: "Men's Doubles",
     womens_doubles: "Women's Doubles",
@@ -75,7 +74,7 @@ const validateTeamPlayer = (p: TeamPlayerData): Partial<Record<keyof TeamPlayerD
 };
 
 const getRequiredPlayersForCategory = (categoryId: string) => {
-    return singlePlayerCategories.has(categoryId) ? 1 : 2; // Singles require 1 player, doubles require 2
+    return 2; // All categories require 2 players
 };
 
 const Index = () => {
