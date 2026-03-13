@@ -13,9 +13,10 @@ const categoryLabels = {
   mixed_doubles: "Mixed Doubles",
   mens_doubles: "Men's Doubles",
   womens_doubles: "Women's Doubles",
+  veterans_battle: 'Veterans Battle',
 };
 
-const supportedCategories = new Set(['mixed_doubles', 'mens_doubles', 'womens_doubles']);
+const supportedCategories = new Set(['mixed_doubles', 'mens_doubles', 'womens_doubles', 'veterans_battle']);
 const singlePlayerCategories = new Set([]); // No single player categories anymore
 
 const validatePlayer = (player) => {
@@ -38,6 +39,7 @@ const serializeRegistration = (registration) => ({
   currency: registration.currency,
   categories: registration.categories,
   categoryLabels: registration.categories.map((category) => categoryLabels[category] || category),
+  partnerNames: registration.partnerNames ? Object.fromEntries(registration.partnerNames) : {},
   player: registration.player,
   registrationDate: registration.registrationDate,
   razorpayPaymentId: registration.razorpayPaymentId,
@@ -66,7 +68,7 @@ const finalizeDirectRegistration = async (registration) => {
 
 exports.createRegistrationOrder = async (req, res) => {
   try {
-    const { player, categories } = req.body;
+    const { player, categories, partnerNames } = req.body;
 
     if (!Array.isArray(categories) || categories.length === 0) {
       return ApiResponse.badRequest(res, 'At least one category must be selected');
@@ -82,7 +84,18 @@ exports.createRegistrationOrder = async (req, res) => {
     }
 
     if (categories.some((category) => !supportedCategories.has(category))) {
-      return ApiResponse.badRequest(res, 'Only Mixed Doubles, Men\'s Doubles, and Women\'s Doubles are available for tournament registration');
+      return ApiResponse.badRequest(res, 'Only Mixed Doubles, Men\'s Doubles, Women\'s Doubles, and Veterans Battle are available for tournament registration');
+    }
+
+    // Validate partner names for all selected categories
+    if (!partnerNames || typeof partnerNames !== 'object') {
+      return ApiResponse.badRequest(res, 'Partner names are required for all selected categories');
+    }
+
+    for (const category of categories) {
+      if (!partnerNames[category] || !partnerNames[category].trim()) {
+        return ApiResponse.badRequest(res, `Partner name is required for ${categoryLabels[category]}`);
+      }
     }
 
     const error = validatePlayer(player);
@@ -105,6 +118,7 @@ exports.createRegistrationOrder = async (req, res) => {
 
     const registration = await SportsTournamentRegistration.create({
       categories,
+      partnerNames: new Map(Object.entries(partnerNames || {})),
       player: {
         fullName: String(player.fullName || '').trim(),
         age: Number(player.age),

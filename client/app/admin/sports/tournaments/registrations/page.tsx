@@ -15,6 +15,7 @@ type TournamentRegistration = {
   amount: number;
   currency: string;
   categories: string[];
+  partnerNames?: Record<string, string>;
   player: {
     fullName: string;
     age: number;
@@ -31,6 +32,7 @@ const categoryLabels: Record<string, string> = {
   mixed_doubles: 'Mixed Doubles',
   mens_doubles: "Men's Doubles",
   womens_doubles: "Women's Doubles",
+  veterans_battle: 'Veterans Battle',
 };
 
 export default function SportsTournamentRegistrationsPage() {
@@ -187,11 +189,18 @@ export default function SportsTournamentRegistrationsPage() {
                         <div className="text-xs text-gray-500 mt-1">{registration.player.age} years old</div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
+                        <div className="space-y-2">
                           {registration.categories.map((category) => (
-                            <span key={`${registration._id}-${category}`} className="px-2 py-1 text-xs rounded-full bg-orange-50 text-orange-700">
-                              {categoryLabels[category] || category}
-                            </span>
+                            <div key={`${registration._id}-${category}`} className="space-y-1">
+                              <span className="px-2 py-1 text-xs rounded-full bg-orange-50 text-orange-700">
+                                {categoryLabels[category] || category}
+                              </span>
+                              {registration.partnerNames?.[category] && (
+                                <div className="text-xs text-gray-600 ml-2">
+                                  Partner: {registration.partnerNames[category]}
+                                </div>
+                              )}
+                            </div>
                           ))}
                         </div>
                       </td>

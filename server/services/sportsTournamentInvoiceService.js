@@ -4,6 +4,7 @@ const categoryLabels = {
   mixed_doubles: "Mixed Doubles",
   mens_doubles: "Men's Doubles",
   womens_doubles: "Women's Doubles",
+  veterans_battle: 'Veterans Battle',
 };
 
 class SportsTournamentInvoiceService {
@@ -83,6 +84,43 @@ class SportsTournamentInvoiceService {
         }
         
         y += boxHeight + 20;
+
+        // Categories and Partners Section
+        doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Categories & Partners', 40, y);
+        y += 24;
+        doc.moveTo(40, y).lineTo(doc.page.width - 40, y).stroke('#CBD5E1');
+        y += 16;
+        
+        registration.categories.forEach((category) => {
+          const categoryLabel = categoryLabels[category] || category;
+          let partnerName = null;
+          
+          // Handle both Map and Object formats for partnerNames
+          if (registration.partnerNames) {
+            if (typeof registration.partnerNames.get === 'function') {
+              // It's a Map
+              partnerName = registration.partnerNames.get(category);
+            } else if (typeof registration.partnerNames === 'object') {
+              // It's an Object
+              partnerName = registration.partnerNames[category];
+            }
+          }
+          
+          // Category header
+          doc.font('Helvetica-Bold').fontSize(11).fillColor('#F97316').text(categoryLabel.toUpperCase(), 50, y);
+          y += 18;
+          
+          // Partner name
+          if (partnerName) {
+            doc.font('Helvetica').fontSize(10).fillColor('#475569').text('Partner:', 65, y);
+            doc.font('Helvetica').fillColor('#0F172A').text(partnerName, 120, y);
+            y += 16;
+          }
+          
+          y += 8; // Space between categories
+        });
+        
+        y += 12;
 
         doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Payment Details', 40, y);
         y += 24;

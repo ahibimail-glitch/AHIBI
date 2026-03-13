@@ -31,9 +31,13 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
   },
   categories: [{
     type: String,
-    enum: ['mixed_doubles', 'mens_doubles', 'womens_doubles'],
+    enum: ['mixed_doubles', 'mens_doubles', 'womens_doubles', 'veterans_battle'],
     required: true,
   }],
+  partnerNames: {
+    type: Map,
+    of: String,
+  },
   player: {
     type: playerSchema,
     required: true,

@@ -27,6 +27,10 @@ interface PlayerData {
     email: string;
 }
 
+interface PartnerData {
+    [key: string]: string;
+}
+
 interface TournamentRegistrationResponse {
     id: string;
     tournamentName: string;
@@ -48,6 +52,7 @@ const categoryLabels: Record<string, string> = {
     mixed_doubles: "Mixed Doubles",
     mens_doubles: "Men's Doubles",
     womens_doubles: "Women's Doubles",
+    veterans_battle: "Veterans Battle",
 };
 
 const REGISTRATION_FEE = 1000;
@@ -61,6 +66,7 @@ const Index = () => {
         email: "",
     });
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [partnerNames, setPartnerNames] = useState<PartnerData>({});
     const [errors, setErrors] = useState<Partial<Record<keyof PlayerData, string>>>({});
     const [isPaying, setIsPaying] = useState(false);
     const [confirmedRegistration, setConfirmedRegistration] = useState<TournamentRegistrationResponse | null>(null);
@@ -136,6 +142,10 @@ const Index = () => {
         );
     };
 
+    const handlePartnerNameChange = (category: string, value: string) => {
+        setPartnerNames((prev) => ({ ...prev, [category]: value }));
+    };
+
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof PlayerData, string>> = {};
 
@@ -154,6 +164,14 @@ const Index = () => {
         if (selectedCategories.length === 0) {
             toast.error("Please select at least one category");
             return false;
+        }
+
+        // Validate partner names for selected categories
+        for (const category of selectedCategories) {
+            if (!partnerNames[category]?.trim()) {
+                toast.error(`Partner name is required for ${categoryLabels[category]}`);
+                return false;
+            }
         }
 
         setErrors(newErrors);
@@ -196,6 +214,7 @@ const Index = () => {
                         email: formData.email.trim() || undefined,
                     },
                     categories: selectedCategories,
+                    partnerNames: partnerNames,
                 }),
             });
 
@@ -275,6 +294,7 @@ const Index = () => {
             email: user?.email || "",
         });
         setSelectedCategories([]);
+        setPartnerNames({});
         setErrors({});
         setConfirmedRegistration(null);
         setIsPaying(false);
@@ -326,11 +346,20 @@ const Index = () => {
 
                                         <div className="rounded-[24px] border border-slate-200 bg-white p-5">
                                             <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Selected Categories</p>
-                                            <div className="mt-4 flex flex-wrap gap-2">
-                                                {confirmedRegistration.categoryLabels.map((label: string) => (
-                                                    <span key={label} className="rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">
-                                                        {label}
-                                                    </span>
+                                            <div className="mt-4 space-y-3">
+                                                {confirmedRegistration.categories.map((category: string, index: number) => (
+                                                    <div key={category} className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">
+                                                                {confirmedRegistration.categoryLabels[index]}
+                                                            </span>
+                                                        </div>
+                                                        {confirmedRegistration.partnerNames?.[category] && (
+                                                            <div className="ml-2 text-sm text-slate-600">
+                                                                Partner: <span className="font-medium">{confirmedRegistration.partnerNames[category]}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 ))}
                                             </div>
                                         </div>
@@ -498,25 +527,42 @@ const Index = () => {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         <Label className="text-sm font-semibold text-slate-700">
                                             Select Categories <span className="text-red-500">*</span>
                                         </Label>
                                         <p className="text-xs text-slate-500">Select all categories you want to participate in. ₹1,000 covers all selected categories.</p>
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             {Object.entries(categoryLabels).map(([key, label]) => (
-                                                <div key={key} className="flex items-center space-x-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition">
-                                                    <Checkbox
-                                                        id={key}
-                                                        checked={selectedCategories.includes(key)}
-                                                        onCheckedChange={() => handleCategoryToggle(key)}
-                                                    />
-                                                    <Label
-                                                        htmlFor={key}
-                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                                                    >
-                                                        {label}
-                                                    </Label>
+                                                <div key={key} className="space-y-2">
+                                                    <div className="flex items-center space-x-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition">
+                                                        <Checkbox
+                                                            id={key}
+                                                            checked={selectedCategories.includes(key)}
+                                                            onCheckedChange={() => handleCategoryToggle(key)}
+                                                        />
+                                                        <Label
+                                                            htmlFor={key}
+                                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                                        >
+                                                            {label}
+                                                        </Label>
+                                                    </div>
+                                                    {selectedCategories.includes(key) && (
+                                                        <div className="ml-6">
+                                                            <Label htmlFor={`${key}-partner`} className="text-sm font-semibold text-slate-700">
+                                                                Partner Name <span className="text-red-500">*</span>
+                                                            </Label>
+                                                            <Input
+                                                                id={`${key}-partner`}
+                                                                type="text"
+                                                                placeholder={`Enter partner name for ${label}`}
+                                                                value={partnerNames[key] || ""}
+                                                                onChange={(e) => handlePartnerNameChange(key, e.target.value)}
+                                                                className="mt-1"
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
