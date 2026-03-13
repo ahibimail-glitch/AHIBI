@@ -398,29 +398,29 @@ const Index = () => {
     return (
         <div>
             <Navbar />
-            <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-4 px-3 sm:py-6 sm:px-4 md:py-8 md:px-6">
-                <div className="mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">
-                    <div className="grid gap-6 sm:gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
+            <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-2 px-3 sm:py-3 sm:px-4 md:py-4 md:px-6">
+                <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-6">
+                    <div className="grid gap-4 sm:gap-6 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
                         <div className="hidden xl:block xl:sticky xl:top-24">
                             <div className="space-y-6">
                                 <Image 
                                     src="/images/npatournament.jpeg" 
                                     alt="Tournament Poster" 
                                     width={500} 
-                                    height={500}
-                                    className="w-full rounded-2xl shadow-lg"
+                                    height={320}
+                                    className="w-full rounded-2xl shadow-lg object-cover"
                                 />
                             </div>
                         </div>
 
                         <div className="xl:hidden">
-                            <div className="mb-6 sm:mb-8">
+                            <div className="mb-4 sm:mb-6">
                                 <Image 
                                     src="/images/npatournament.jpeg" 
                                     alt="Tournament Poster" 
                                     width={800} 
                                     height={400}
-                                    className="w-full rounded-xl sm:rounded-2xl shadow-lg object-cover max-h-48 sm:max-h-64"
+                                    className="w-full rounded-xl sm:rounded-2xl shadow-lg object-cover h-auto"
                                 />
                             </div>
                         </div>
@@ -433,9 +433,9 @@ const Index = () => {
                                     Pay ₹1,000 registration fee to be eligible to play in all categories (Mixed Doubles, Men's Doubles, Women's Doubles).
                                 </p>
                             </div>
-                            <CardContent className="p-4 sm:p-6 md:p-8">
+                            <CardContent className="p-3 sm:p-4 md:p-6">
                                 <div className="space-y-6">
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <div className="space-y-2">
                                             <Label htmlFor="fullName" className="text-sm font-semibold text-slate-700">
                                                 Full Name <span className="text-red-500">*</span>
@@ -498,14 +498,14 @@ const Index = () => {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                         <Label className="text-sm font-semibold text-slate-700">
                                             Select Categories <span className="text-red-500">*</span>
                                         </Label>
-                                        <p className="text-xs text-slate-500">You can select all categories you want to participate in. The ₹1,000 fee covers all selected categories.</p>
-                                        <div className="space-y-3">
+                                        <p className="text-xs text-slate-500">Select all categories you want to participate in. ₹1,000 covers all selected categories.</p>
+                                        <div className="space-y-2">
                                             {Object.entries(categoryLabels).map(([key, label]) => (
-                                                <div key={key} className="flex items-center space-x-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition">
+                                                <div key={key} className="flex items-center space-x-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 transition">
                                                     <Checkbox
                                                         id={key}
                                                         checked={selectedCategories.includes(key)}
@@ -522,18 +522,16 @@ const Index = () => {
                                         </div>
                                     </div>
 
-                                    <div className="rounded-lg bg-orange-50 border border-orange-200 p-4">
+                                    <div className="rounded-lg bg-orange-50 border border-orange-200 p-3">
                                         <div className="flex items-start gap-3">
-                                            <div className="flex-shrink-0 mt-0.5">
-                                                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
-                                                    <span className="text-orange-600 font-bold text-sm">₹</span>
+                                            <div className="flex-shrink-0">
+                                                <div className="h-7 w-7 rounded-full bg-orange-100 flex items-center justify-center">
+                                                    <span className="text-orange-600 font-bold text-xs">₹</span>
                                                 </div>
                                             </div>
                                             <div className="flex-1">
                                                 <p className="text-sm font-bold text-orange-900">Registration Fee: ₹{REGISTRATION_FEE.toLocaleString("en-IN")}</p>
-                                                <p className="text-xs text-orange-700 mt-1">
-                                                    With this single payment, you are eligible to play in all the categories you've selected above.
-                                                </p>
+                                                <p className="text-xs text-orange-700 mt-1">Single payment covers all selected categories</p>
                                             </div>
                                         </div>
                                     </div>
@@ -541,7 +539,7 @@ const Index = () => {
                                     <Button
                                         onClick={handleSubmit}
                                         disabled={isPaying}
-                                        className="w-full gap-2 text-sm bg-[#f56210] text-white hover:bg-[#d84f03] shadow-md hover:shadow-lg transition-shadow h-11 active:scale-[0.98]"
+                                        className="w-full gap-2 text-sm bg-[#f56210] text-white hover:bg-[#d84f03] shadow-md hover:shadow-lg transition-shadow h-10 active:scale-[0.98]"
                                     >
                                         {isPaying ? (
                                             <>
