@@ -349,7 +349,7 @@ const UpcomingTournaments = () => (
                 image: "/images/npatournament.jpeg",
                 location: "Dimapur Sports Complex",
                 categories: ["Mixed Doubles", "Men's Doubles", "Women's Doubles"],
-                entryFee: "₹1,500 per player",
+                entryFee: "₹1,000 per player",
                 status: "Open"
             }].map((tournament, index) => (
                 <Card key={index} className="w-full max-w-2xl group rounded-none bg-[#111] border-white/5 overflow-hidden hover:border-red-600 transition-all duration-500">

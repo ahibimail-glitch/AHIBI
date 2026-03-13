@@ -206,6 +206,7 @@ export default function Navbar() {
     { href: "/allVenues", label: "Venues" },
     { href: "/allOrganizers", label: "Organizers" },
     { href: "/about", label: "About" },
+    {href:"/sports/tournaments",label:"Tournament Registration"}
   ];
 
   const LocationButton = ({ isMobile = false }: { isMobile?: boolean }) => (

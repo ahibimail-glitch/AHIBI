@@ -79,7 +79,7 @@ const EventHeader = () => (
                         <div className="rounded-[24px] bg-[#071126] p-5 text-white shadow-xl">
                             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-300">Player Entry Fee</p>
                             <p className="mt-2 text-4xl font-black text-orange-400">₹1,500</p>
-                            <p className="mt-2 text-sm text-white/75">₹1,500 per player. Two players register together.</p>
+                            <p className="mt-2 text-sm text-white/75">₹1,000 per player. Two players register together.</p>
                         </div>
                     </div>
                 </div>
