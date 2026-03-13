@@ -42,6 +42,7 @@ interface TournamentRegistrationResponse {
     currency: string;
     categories: string[];
     categoryLabels: string[];
+    partnerNames?: Record<string, string>;
     player: PlayerData;
     registrationDate?: string;
     razorpayPaymentId?: string;
