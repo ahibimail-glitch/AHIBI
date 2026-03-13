@@ -8,29 +8,17 @@ const playerSchema = new mongoose.Schema({
   },
   age: {
     type: Number,
-    required() {
-      return this.ownerDocument()?.registrationType !== 'team';
-    },
+    required: true,
     min: 5,
     max: 99,
   },
-  gender: {
-    type: String,
-    required: true,
-    enum: ['male', 'female'],
-  },
   phone: {
     type: String,
-    required() {
-      return this.ownerDocument()?.registrationType !== 'team';
-    },
+    required: true,
     trim: true,
   },
   email: {
     type: String,
-    required() {
-      return this.ownerDocument()?.registrationType !== 'team';
-    },
     trim: true,
     lowercase: true,
   },
@@ -41,49 +29,13 @@ const sportsTournamentRegistrationSchema = new mongoose.Schema({
     type: String,
     default: 'Nagaland Pickleball Classic Tournament 2026',
   },
-  registrationType: {
-    type: String,
-    enum: ['individual', 'team'],
-    required: true,
-  },
-  teamName: {
-    type: String,
-    trim: true,
-  },
   categories: [{
     type: String,
     enum: ['mixed_doubles', 'mens_doubles', 'womens_doubles'],
     required: true,
   }],
-  players: {
-    type: [playerSchema],
-    validate: {
-      validator(value) {
-        if (!Array.isArray(value) || value.length === 0) {
-          return false;
-        }
-
-        if (this.registrationType === 'team') {
-          return value.length >= 1;
-        }
-
-        // For individual registration, validate based on number of categories
-        // Each category requires 2 players (all current categories are doubles)
-        const categoriesCount = this.categories?.length || 0;
-        const expectedPlayers = categoriesCount * 2;
-        
-        // Allow the expected number of players (2 per category)
-        return value.length >= 1 && value.length <= expectedPlayers;
-      },
-      message(props) {
-        if (this.registrationType === 'team') {
-          return 'At least one team player entry is required';
-        }
-        const categoriesCount = this.categories?.length || 0;
-        const expectedPlayers = categoriesCount * 2;
-        return `Player entries must match selected categories (${expectedPlayers} players for ${categoriesCount} ${categoriesCount === 1 ? 'category' : 'categories'})`;
-      },
-    },
+  player: {
+    type: playerSchema,
     required: true,
   },
   declarationsAccepted: {

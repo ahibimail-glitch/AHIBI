@@ -1,23 +1,18 @@
 "use client";
 import "./index.css";
 import "./App.css";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Send, CheckCircle2, PartyPopper, RotateCcw, Download, CreditCard, Loader2, Calendar, MapPin, IndianRupee } from "lucide-react";
-import EventHeader from "./components/EventHeader";
-import StepIndicator from "./components/StepIndicator";
-import StepRegistrationType from "./components/StepRegistrationType";
-import StepTeamInfo from "./components/StepTeamInfo";
-import StepCategory from "./components/StepCategory";
-import StepPlayerDetails, { type PlayerData } from "./components/StepPlayerDetails";
-import StepTeamPlayerDetails, { type TeamPlayerData } from "./components/StepTeamPlayerDetails";
-import StepConfirmation from "./components/StepConfirmation";
-import Footer from "@/app/Footer";
+import { CheckCircle2, Loader2, Download, RotateCcw, PartyPopper, CreditCard } from "lucide-react";
 import Navbar from "@/app/Navbar";
+import Footer from "@/app/Footer";
 
 declare global {
     interface Window {
@@ -25,11 +20,16 @@ declare global {
     }
 }
 
+interface PlayerData {
+    fullName: string;
+    age: string;
+    phone: string;
+    email: string;
+}
+
 interface TournamentRegistrationResponse {
     id: string;
     tournamentName: string;
-    registrationType?: "individual" | "team";
-    teamName?: string;
     registrationNumber?: string;
     invoiceNumber?: string;
     invoiceUrl?: string;
@@ -38,17 +38,11 @@ interface TournamentRegistrationResponse {
     currency: string;
     categories: string[];
     categoryLabels: string[];
-    players: PlayerData[];
+    player: PlayerData;
     registrationDate?: string;
     razorpayPaymentId?: string;
     razorpayOrderId?: string;
 }
-
-const emptyPlayer: PlayerData = { fullName: "", age: "", gender: "", phone: "", email: "" };
-const emptyTeamPlayer: TeamPlayerData = { fullName: "", gender: "" };
-const ENTRY_FEE_PER_PLAYER = 1500;
-
-const singlePlayerCategories = new Set([]); // All categories require 2 players
 
 const categoryLabels: Record<string, string> = {
     mixed_doubles: "Mixed Doubles",
@@ -56,147 +50,24 @@ const categoryLabels: Record<string, string> = {
     womens_doubles: "Women's Doubles",
 };
 
-const validatePlayer = (p: PlayerData): Partial<Record<keyof PlayerData, string>> => {
-    const e: Partial<Record<keyof PlayerData, string>> = {};
-    if (!p.fullName.trim()) e.fullName = "Required";
-    if (!p.age || Number(p.age) < 5 || Number(p.age) > 99) e.age = "Enter valid age";
-    if (!p.gender) e.gender = "Select gender";
-    if (!p.phone.match(/^\d{10}$/)) e.phone = "Enter 10-digit number";
-    if (!p.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) e.email = "Enter valid email";
-    return e;
-};
-
-const validateTeamPlayer = (p: TeamPlayerData): Partial<Record<keyof TeamPlayerData, string>> => {
-    const e: Partial<Record<keyof TeamPlayerData, string>> = {};
-    if (!p.fullName.trim()) e.fullName = "Required";
-    if (!p.gender) e.gender = "Select gender";
-    return e;
-};
-
-const getRequiredPlayersForCategory = (categoryId: string) => {
-    return 2; // All categories require 2 players
-};
+const REGISTRATION_FEE = 1000;
 
 const Index = () => {
     const { user, loading: authLoading } = useAuth();
-    const [step, setStep] = useState(0);
-    const [registrationType, setRegistrationType] = useState<"individual" | "team" | "">("");
-    const [teamName, setTeamName] = useState("");
-    const [teamNameError, setTeamNameError] = useState("");
-    const [categories, setCategories] = useState<string[]>([]);
-    const [player1, setPlayer1] = useState<PlayerData>({ ...emptyPlayer });
-    const [player2, setPlayer2] = useState<PlayerData>({ ...emptyPlayer });
-
-    // Individual player state for individual registrations (per category)
-    const [individualPlayers, setIndividualPlayers] = useState<Record<string, PlayerData[]>>({});
-    // Team player state for team registrations
-    const [teamPlayers, setTeamPlayers] = useState<Record<string, TeamPlayerData[]>>({});
-    const [p1Errors, setP1Errors] = useState<Partial<Record<keyof PlayerData, string>>>({});
-    const [p2Errors, setP2Errors] = useState<Partial<Record<keyof PlayerData, string>>>({});
-    const [individualPlayerErrors, setIndividualPlayerErrors] = useState<Record<string, Partial<Record<keyof PlayerData, string>>[]>>({});
-    const [teamPlayerErrors, setTeamPlayerErrors] = useState<Record<string, Partial<Record<keyof TeamPlayerData, string>>[]>>({});
-    const [checks, setChecks] = useState([false, false, false]);
+    const [formData, setFormData] = useState<PlayerData>({
+        fullName: "",
+        age: "",
+        phone: "",
+        email: "",
+    });
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [errors, setErrors] = useState<Partial<Record<keyof PlayerData, string>>>({});
     const [isPaying, setIsPaying] = useState(false);
     const [confirmedRegistration, setConfirmedRegistration] = useState<TournamentRegistrationResponse | null>(null);
 
-    const requiredPlayerCount = useMemo(() => {
-        if (categories.length === 0) {
-            return registrationType === "individual" ? 1 : 2;
-        }
-
-        const hasOnlySingles = categories.every((category) => singlePlayerCategories.has(category));
-        return hasOnlySingles ? 1 : 2;
-    }, [categories, registrationType]);
-
-    const stepLabels = useMemo(() => {
-        const labels = ["Type"];
-
-        if (registrationType === "team") {
-            labels.push("Team");
-        }
-
-        labels.push("Event");
-
-        if (registrationType === "team") {
-            // Add player details steps for each selected category
-            categories.forEach((category) => {
-                const requiredPlayers = getRequiredPlayersForCategory(category);
-                const categoryLabel = categoryLabels[category];
-                if (requiredPlayers === 1) {
-                    labels.push(`${categoryLabel} Player`);
-                } else {
-                    labels.push(`${categoryLabel} Player 1`);
-                    labels.push(`${categoryLabel} Player 2`);
-                }
-            });
-        } else {
-            // Add player details steps for each selected category (individual registration)
-            categories.forEach((category) => {
-                const requiredPlayers = getRequiredPlayersForCategory(category);
-                const categoryLabel = categoryLabels[category];
-                if (requiredPlayers === 1) {
-                    labels.push(`${categoryLabel} Player`);
-                } else {
-                    labels.push(`${categoryLabel} Player 1`);
-                    labels.push(`${categoryLabel} Player 2`);
-                }
-            });
-        }
-
-        labels.push("Confirm");
-        return labels;
-    }, [registrationType, requiredPlayerCount, categories]);
-
-    const categoryStep = registrationType === "team" ? 2 : 1;
-    const player1Step = categoryStep + 1;
-    const player2Step = requiredPlayerCount === 2 ? player1Step + 1 : -1;
-
-    // Calculate confirm step based on registration type and selected categories
-    const confirmStep = useMemo(() => {
-        let stepCount = categoryStep + 1; // Start after category step
-        for (const category of categories) {
-            const requiredPlayers = getRequiredPlayersForCategory(category);
-            stepCount += requiredPlayers;
-        }
-        return stepCount;
-    }, [registrationType, categories, categoryStep]);
-
-    // Calculate unique players and total amount for pricing summary
-    const pricingSummary = useMemo(() => {
-        if (registrationType !== "individual") {
-            return { uniquePlayerCount: 0, totalAmount: 0 };
-        }
-
-        // Collect all player names from all categories
-        const allPlayerNames: string[] = [];
-        for (const category of categories) {
-            const categoryPlayers = individualPlayers[category] || [];
-            categoryPlayers.forEach(player => {
-                if (player?.fullName?.trim()) {
-                    allPlayerNames.push(player.fullName.trim().toLowerCase());
-                }
-            });
-        }
-
-        // Count unique players
-        const uniquePlayerNames = new Set(allPlayerNames);
-        const uniquePlayerCount = uniquePlayerNames.size;
-        const totalAmount = uniquePlayerCount * ENTRY_FEE_PER_PLAYER;
-
-        return { uniquePlayerCount, totalAmount };
-    }, [registrationType, categories, individualPlayers]);
-
-    const entryFee = useMemo(() => ENTRY_FEE_PER_PLAYER * requiredPlayerCount, [requiredPlayerCount]);
-    const hasSelectedCategory = categories.length > 0;
-    const isTeamRegistration = registrationType === "team";
-    const isDirectRegistration = isTeamRegistration;
-    const feeSummaryText = isDirectRegistration
-        ? "Team registration does not require any payment."
-        : `₹1,500 per player for ${requiredPlayerCount} registered player${requiredPlayerCount > 1 ? "s" : ""}`;
-
     useEffect(() => {
         if (!authLoading && user) {
-            setPlayer1((current) => ({
+            setFormData((current) => ({
                 ...current,
                 fullName: current.fullName || user.name || "",
                 email: current.email || user.email || "",
@@ -204,66 +75,6 @@ const Index = () => {
             }));
         }
     }, [authLoading, user]);
-
-    useEffect(() => {
-        if (registrationType !== "team") {
-            setTeamName("");
-            setTeamNameError("");
-        }
-    }, [registrationType]);
-
-    useEffect(() => {
-        if (requiredPlayerCount === 1) {
-            setPlayer2((prevPlayer2) => ({ ...prevPlayer2, ...emptyPlayer }));
-            setP2Errors({});
-        }
-    }, [requiredPlayerCount]);
-
-    useEffect(() => {
-        if (registrationType === "team" && categories.length > 0) {
-            setTeamPlayers((prevTeamPlayers) => {
-                const newTeamPlayers: Record<string, TeamPlayerData[]> = {};
-                for (const category of categories) {
-                    const requiredPlayers = getRequiredPlayersForCategory(category);
-                    if (!prevTeamPlayers[category] || prevTeamPlayers[category].length !== requiredPlayers) {
-                        newTeamPlayers[category] = Array(requiredPlayers).fill(null).map(() => ({ ...emptyTeamPlayer }));
-                    } else {
-                        newTeamPlayers[category] = prevTeamPlayers[category];
-                    }
-                }
-                return newTeamPlayers;
-            });
-        }
-    }, [registrationType, categories]);
-
-    useEffect(() => {
-        if (registrationType === "individual" && categories.length > 0) {
-            setIndividualPlayers((prevIndividualPlayers) => {
-                const newIndividualPlayers: Record<string, PlayerData[]> = {};
-                for (const category of categories) {
-                    const requiredPlayers = getRequiredPlayersForCategory(category);
-                    if (!prevIndividualPlayers[category] || prevIndividualPlayers[category].length !== requiredPlayers) {
-                        newIndividualPlayers[category] = Array(requiredPlayers).fill(null).map((_, idx) => {
-                            // Pre-fill first player of first category with user data if available
-                            if (idx === 0 && category === categories[0] && user) {
-                                return {
-                                    fullName: user.name || "",
-                                    email: user.email || "",
-                                    phone: user.phone || "",
-                                    age: "",
-                                    gender: ""
-                                };
-                            }
-                            return { ...emptyPlayer };
-                        });
-                    } else {
-                        newIndividualPlayers[category] = prevIndividualPlayers[category];
-                    }
-                }
-                return newIndividualPlayers;
-            });
-        }
-    }, [registrationType, categories, user]);
 
     useEffect(() => {
         const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
@@ -287,8 +98,7 @@ const Index = () => {
         return (
             <div>
                 <Navbar />
-                {/* <EventHeader /> */}
-                <div id="root" className=" bg-background py-8 px-4">
+                <div id="root" className="bg-background py-8 px-4">
                     <div className="mx-auto w-full max-w-3xl space-y-6 card">
                         <Card className="border-0 shadow-lg overflow-hidden">
                             <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-400 to-primary" />
@@ -311,621 +121,448 @@ const Index = () => {
         return null;
     }
 
-    const next = () => {
-        if (step === 0) {
-            if (!registrationType) {
-                toast.error("Please choose individual or team registration");
-                return;
-            }
-
-            setStep((s) => Math.min(s + 1, confirmStep));
-            return;
+    const handleInputChange = (field: keyof PlayerData, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+            setErrors((prev) => ({ ...prev, [field]: "" }));
         }
-
-        if (registrationType === "team" && step === 1) {
-            if (!teamName.trim()) {
-                setTeamNameError("Team name is required");
-                return;
-            }
-
-            setTeamNameError("");
-            setStep((s) => Math.min(s + 1, confirmStep));
-            return;
-        }
-
-        if (step === categoryStep && categories.length === 0) {
-            toast.error("Please select at least one category");
-            return;
-        }
-
-        // Individual registration player validation (per category)
-        if (registrationType === "individual" && step > categoryStep && step < confirmStep) {
-            let currentStepIndex = categoryStep + 1;
-            for (const category of categories) {
-                const requiredPlayers = getRequiredPlayersForCategory(category);
-
-                for (let playerIndex = 0; playerIndex < requiredPlayers; playerIndex++) {
-                    if (step === currentStepIndex) {
-                        const playerData = individualPlayers[category]?.[playerIndex];
-                        if (playerData) {
-                            const errs = validatePlayer(playerData);
-                            const newErrors = { ...individualPlayerErrors };
-                            if (!newErrors[category]) {
-                                newErrors[category] = Array(requiredPlayers).fill(null).map(() => ({} as Partial<Record<keyof PlayerData, string>>));
-                            }
-                            newErrors[category][playerIndex] = errs;
-                            setIndividualPlayerErrors(newErrors);
-
-                            if (Object.keys(errs).length) {
-                                return;
-                            }
-                        } else {
-                            toast.error("Please fill in all required player details");
-                            return;
-                        }
-                    }
-                    currentStepIndex++;
-                }
-            }
-        }
-
-        // Team registration player validation
-        if (registrationType === "team" && step > categoryStep && step < confirmStep) {
-            let currentStepIndex = categoryStep + 1;
-            for (const category of categories) {
-                const requiredPlayers = getRequiredPlayersForCategory(category);
-
-                for (let playerIndex = 0; playerIndex < requiredPlayers; playerIndex++) {
-                    if (step === currentStepIndex) {
-                        const playerData = teamPlayers[category]?.[playerIndex];
-                        if (playerData) {
-                            const errs = validateTeamPlayer(playerData);
-                            const newErrors = { ...teamPlayerErrors };
-                            if (!newErrors[category]) {
-                                newErrors[category] = Array(requiredPlayers).fill(null).map(() => ({} as Partial<Record<keyof TeamPlayerData, string>>));
-                            }
-                            newErrors[category][playerIndex] = errs;
-                            setTeamPlayerErrors(newErrors);
-
-                            if (Object.keys(errs).length) {
-                                return;
-                            }
-                        } else {
-                            toast.error("Please fill in all required player details");
-                            return;
-                        }
-                    }
-                    currentStepIndex++;
-                }
-            }
-        }
-
-        setStep((s) => Math.min(s + 1, confirmStep));
     };
 
-    const back = () => setStep((s) => Math.max(s - 1, 0));
+    const handleCategoryToggle = (category: string) => {
+        setSelectedCategories((prev) =>
+            prev.includes(category)
+                ? prev.filter((c) => c !== category)
+                : [...prev, category]
+        );
+    };
 
-    const submit = () => {
-        if (isPaying) {
+    const validateForm = (): boolean => {
+        const newErrors: Partial<Record<keyof PlayerData, string>> = {};
+
+        if (!formData.fullName.trim()) {
+            newErrors.fullName = "Name is required";
+        }
+
+        if (!formData.age || Number(formData.age) < 5 || Number(formData.age) > 99) {
+            newErrors.age = "Enter valid age (5-99)";
+        }
+
+        if (!formData.phone.match(/^\d{10}$/)) {
+            newErrors.phone = "Enter 10-digit phone number";
+        }
+
+        if (selectedCategories.length === 0) {
+            toast.error("Please select at least one category");
+            return false;
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async () => {
+        if (isPaying) return;
+
+        if (!validateForm()) {
+            toast.error("Please fill in all required fields");
             return;
         }
 
-        if (!checks.every(Boolean)) {
-            toast.error("Please confirm all checkboxes");
-            return;
-        }
-
-        const isDirectRegistration = isTeamRegistration;
         const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
-        if (!isDirectRegistration) {
-            if (!razorpayKey) {
-                toast.error("Razorpay is not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID.");
-                return;
-            }
+        if (!razorpayKey) {
+            toast.error("Razorpay is not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID.");
+            return;
+        }
 
-            if (!window.Razorpay) {
-                toast.error("Payment gateway is still loading. Please try again.");
-                return;
-            }
+        if (!window.Razorpay) {
+            toast.error("Payment gateway is still loading. Please try again.");
+            return;
         }
 
         setIsPaying(true);
 
-        // Prepare players data based on registration type
-        let playersData: (PlayerData | TeamPlayerData)[];
-        let firstPlayerData: PlayerData | null = null;
-        
-        if (registrationType === "team") {
-            // Flatten team players data for backend
-            playersData = [];
-            for (const category of categories) {
-                const categoryPlayers = teamPlayers[category] || [];
-                // Only include players with valid data
-                const validPlayers = categoryPlayers.filter(p => p && p.fullName && p.fullName.trim() && p.gender);
-                playersData.push(...validPlayers);
-            }
-            
-            if (playersData.length === 0) {
-                toast.error("Please fill in all team player details");
-                setIsPaying(false);
-                return;
-            }
-        } else {
-            // Individual registration - flatten players from all categories
-            playersData = [];
-            for (const category of categories) {
-                const categoryPlayers = individualPlayers[category] || [];
-                // Only include players with valid data
-                const validPlayers = categoryPlayers.filter(p => p && p.fullName && p.fullName.trim() && p.email && p.phone && p.age && p.gender);
-                playersData.push(...validPlayers);
-                if (validPlayers.length > 0 && !firstPlayerData) {
-                    firstPlayerData = validPlayers[0];
-                }
-            }
-            
-            if (playersData.length === 0) {
-                toast.error("Please fill in all player details");
-                setIsPaying(false);
-                return;
-            }
-        }
-
-        fetch("/api/sports/tournaments/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                registrationType,
-                teamName: registrationType === "team" ? teamName.trim() : undefined,
-                categories,
-                players: playersData,
-                checks,
-            }),
-        })
-            .then(async (response) => {
-                const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.message || "Failed to create registration order");
-                }
-                return data.data;
-            })
-            .then((orderData: any) => {
-                if (!orderData.requiresPayment) {
-                    setConfirmedRegistration(orderData.registration);
-                    toast.success("Registration completed successfully");
-                    setIsPaying(false);
-                    return;
-                }
-
-                const razorpay = new window.Razorpay({
-                    key: razorpayKey,
-                    amount: orderData.amount,
-                    currency: orderData.currency,
-                    name: "Nagaland Pickleball Classic",
-                    description: "Tournament Registration",
-                    order_id: orderData.orderId,
-                    handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; }) => {
-                        try {
-                            const verifyResponse = await fetch("/api/sports/tournaments/verify-payment", {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                    ...response,
-                                    registrationId: orderData.registrationId,
-                                }),
-                            });
-
-                            const verifyData = await verifyResponse.json();
-                            if (!verifyResponse.ok || !verifyData.success) {
-                                throw new Error(verifyData.message || "Payment verification failed");
-                            }
-
-                            setConfirmedRegistration(verifyData.data.registration);
-                            toast.success("Payment successful and player registration confirmed");
-                        } catch (error: any) {
-                            const errorMessage = error instanceof Error ? error.message : "Payment verification failed";
-                            toast.error(errorMessage);
-                        } finally {
-                            setIsPaying(false);
-                        }
+        try {
+            const response = await fetch("/api/sports/tournaments/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    player: {
+                        fullName: formData.fullName.trim(),
+                        age: Number(formData.age),
+                        phone: formData.phone,
+                        email: formData.email.trim() || undefined,
                     },
-                    prefill: {
-                        name: firstPlayerData ? firstPlayerData.fullName : "",
-                        email: firstPlayerData ? firstPlayerData.email : "",
-                        contact: firstPlayerData ? firstPlayerData.phone : "",
-                    },
-                    notes: {
-                        tournament: "Nagaland Pickleball Classic Tournament 2026",
-                    },
-                    theme: {
-                        color: "#15803D",
-                    },
-                    modal: {
-                        ondismiss: () => {
-                            setIsPaying(false);
-                            toast.error("Payment cancelled");
-                        },
-                    },
-                });
-
-                razorpay.open();
-            })
-            .catch((error: any) => {
-                const errorMessage = error instanceof Error ? error.message : "Failed to start payment";
-                toast.error(errorMessage);
-                setIsPaying(false);
+                    categories: selectedCategories,
+                }),
             });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Failed to create registration order");
+            }
+
+            const orderData = data.data;
+
+            const razorpay = new window.Razorpay({
+                key: razorpayKey,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "Nagaland Pickleball Classic",
+                description: "Tournament Registration",
+                order_id: orderData.orderId,
+                handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; }) => {
+                    try {
+                        const verifyResponse = await fetch("/api/sports/tournaments/verify-payment", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                ...response,
+                                registrationId: orderData.registrationId,
+                            }),
+                        });
+
+                        const verifyData = await verifyResponse.json();
+                        if (!verifyResponse.ok || !verifyData.success) {
+                            throw new Error(verifyData.message || "Payment verification failed");
+                        }
+
+                        setConfirmedRegistration(verifyData.data.registration);
+                        toast.success("Payment successful and registration confirmed");
+                    } catch (error: any) {
+                        const errorMessage = error instanceof Error ? error.message : "Payment verification failed";
+                        toast.error(errorMessage);
+                    } finally {
+                        setIsPaying(false);
+                    }
+                },
+                prefill: {
+                    name: formData.fullName,
+                    email: formData.email,
+                    contact: formData.phone,
+                },
+                notes: {
+                    tournament: "Nagaland Pickleball Classic Tournament 2026",
+                },
+                theme: {
+                    color: "#15803D",
+                },
+                modal: {
+                    ondismiss: () => {
+                        setIsPaying(false);
+                        toast.error("Payment cancelled");
+                    },
+                },
+            });
+
+            razorpay.open();
+        } catch (error: any) {
+            const errorMessage = error instanceof Error ? error.message : "Failed to start payment";
+            toast.error(errorMessage);
+            setIsPaying(false);
+        }
     };
 
     const reset = () => {
-        setStep(0);
-        setRegistrationType("");
-        setTeamName("");
-        setTeamNameError("");
-        setCategories([]);
-        setPlayer1({ ...emptyPlayer });
-        setPlayer2({ ...emptyPlayer });
-        setIndividualPlayers({});
-        setChecks([false, false, false]);
-        setP1Errors({});
-        setP2Errors({});
-        setIndividualPlayerErrors({});
+        setFormData({
+            fullName: user?.name || "",
+            age: "",
+            phone: user?.phone || "",
+            email: user?.email || "",
+        });
+        setSelectedCategories([]);
+        setErrors({});
         setConfirmedRegistration(null);
         setIsPaying(false);
     };
 
-if (confirmedRegistration) {
-    return (
-        <div>
-            <Navbar />
-            <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-8 px-4 md:px-6">
-                <div className="mx-auto w-full max-w-7xl space-y-8">
-                    <Card className="overflow-hidden rounded-[32px] border border-orange-500/20 bg-white/95 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
-                        <div className="bg-[#071126] px-6 py-5 md:px-8 border-b border-white/10 text-white">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f56210] text-white shadow-lg">
-                                    <CheckCircle2 className="h-7 w-7" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-400">Entry Confirmed</p>
-                                    <h2 className="mt-2 text-3xl font-black text-white">Your Tournament Entry Is Confirmed</h2>
-                                    <p className="mt-2 text-sm text-white/70">Check your registration details below and download the PDF receipt for your reference.</p>
+    if (confirmedRegistration) {
+        return (
+            <div>
+                <Navbar />
+                <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-8 px-4 md:px-6">
+                    <div className="mx-auto w-full max-w-7xl space-y-8">
+                        <Card className="overflow-hidden rounded-[32px] border border-orange-500/20 bg-white/95 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
+                            <div className="bg-[#071126] px-6 py-5 md:px-8 border-b border-white/10 text-white">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f56210] text-white shadow-lg">
+                                        <CheckCircle2 className="h-7 w-7" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-[0.32em] text-orange-400">Entry Confirmed</p>
+                                        <h2 className="mt-2 text-3xl font-black text-white">Your Tournament Entry Is Confirmed</h2>
+                                        <p className="mt-2 text-sm text-white/70">Check your registration details below and download the PDF receipt for your reference.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <CardContent className="p-6 md:p-8">
-                            <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                                <div className="space-y-6">
-                                    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Registration Details</p>
-                                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                                            <div>
-                                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Tournament</p>
-                                                <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.tournamentName}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Registration Type</p>
-                                                <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.registrationType === "team" ? "Team Entry" : "Player Entry"}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Date</p>
-                                                <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.registrationDate ? new Date(confirmedRegistration.registrationDate).toLocaleDateString("en-IN") : "Confirmed"}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Amount</p>
-                                                <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.amount > 0 ? `₹${confirmedRegistration.amount.toLocaleString("en-IN")}` : "Direct Registration"}</p>
-                                            </div>
-                                            {confirmedRegistration.teamName ? (
-                                                <div className="sm:col-span-2">
-                                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Team Name</p>
-                                                    <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.teamName}</p>
+                            <CardContent className="p-6 md:p-8">
+                                <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                                    <div className="space-y-6">
+                                        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+                                            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Registration Details</p>
+                                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Tournament</p>
+                                                    <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.tournamentName}</p>
                                                 </div>
-                                            ) : null}
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Registration Number</p>
+                                                    <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.registrationNumber}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Date</p>
+                                                    <p className="mt-1 text-sm font-semibold text-slate-900">{confirmedRegistration.registrationDate ? new Date(confirmedRegistration.registrationDate).toLocaleDateString("en-IN") : "Confirmed"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Amount Paid</p>
+                                                    <p className="mt-1 text-sm font-semibold text-slate-900">₹{confirmedRegistration.amount.toLocaleString("en-IN")}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-[24px] border border-slate-200 bg-white p-5">
+                                            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Selected Categories</p>
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {confirmedRegistration.categoryLabels.map((label: string) => (
+                                                    <span key={label} className="rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">
+                                                        {label}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-[24px] border border-slate-200 bg-white p-5">
+                                            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Player Details</p>
+                                            <div className="mt-4 space-y-2">
+                                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                                    <p className="text-sm font-black text-slate-900">{confirmedRegistration.player.fullName}</p>
+                                                    <div className="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                                                        <p>Phone: {confirmedRegistration.player.phone}</p>
+                                                        <p>Age: {confirmedRegistration.player.age}</p>
+                                                        {confirmedRegistration.player.email && <p className="sm:col-span-2">Email: {confirmedRegistration.player.email}</p>}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="rounded-[24px] border border-slate-200 bg-white p-5">
-                                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Selected Events</p>
-                                        <div className="mt-4 flex flex-wrap gap-2">
-                                            {confirmedRegistration.categoryLabels.map((label: string) => (
-                                                <span key={label} className="rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">
-                                                    {label}
-                                                </span>
+                                    <div className="space-y-5">
+                                        <div className="rounded-[24px] bg-slate-950 p-5 text-white">
+                                            <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-300">Receipt & Invoice</p>
+                                            <p className="mt-3 text-sm text-white/75">Download your tournament registration PDF and keep your registration details handy.</p>
+                                            <div className="mt-5 space-y-3">
+                                                {confirmedRegistration.invoiceUrl ? (
+                                                    <a
+                                                        href={confirmedRegistration.invoiceUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#f56210] px-4 py-3 text-sm font-black text-white transition hover:bg-[#d84f03]"
+                                                    >
+                                                        <Download className="h-4 w-4" /> Download PDF
+                                                    </a>
+                                                ) : (
+                                                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+                                                        PDF will be available shortly.
+                                                    </div>
+                                                )}
+                                                <Button onClick={reset} variant="ghost" className="w-full gap-2 text-white hover:bg-white/10 hover:text-white">
+                                                    <RotateCcw className="h-4 w-4" /> Register Another Entry
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-[24px] border border-slate-200 bg-orange-50 p-5">
+                                            <div className="flex items-start gap-3">
+                                                <PartyPopper className="mt-0.5 h-5 w-5 text-[#f56210]" />
+                                                <div>
+                                                    <p className="text-sm font-black text-[#071126]">Registration saved successfully</p>
+                                                    <p className="mt-1 text-sm text-slate-600">You can use the registration number to track this entry from the admin or support team.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    return (
+        <div>
+            <Navbar />
+            <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-4 px-3 sm:py-6 sm:px-4 md:py-8 md:px-6">
+                <div className="mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">
+                    <div className="grid gap-6 sm:gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
+                        <div className="hidden xl:block xl:sticky xl:top-24">
+                            <div className="space-y-6">
+                                <Image 
+                                    src="/images/npatournament.jpeg" 
+                                    alt="Tournament Poster" 
+                                    width={500} 
+                                    height={500}
+                                    className="w-full rounded-2xl shadow-lg"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="xl:hidden">
+                            <div className="mb-6 sm:mb-8">
+                                <Image 
+                                    src="/images/npatournament.jpeg" 
+                                    alt="Tournament Poster" 
+                                    width={800} 
+                                    height={400}
+                                    className="w-full rounded-xl sm:rounded-2xl shadow-lg object-cover max-h-48 sm:max-h-64"
+                                />
+                            </div>
+                        </div>
+
+                        <Card className="overflow-hidden rounded-2xl sm:rounded-[32px] border border-orange-500/20 bg-white/95 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
+                            <div className="bg-[#071126] px-4 py-4 sm:px-6 sm:py-5 md:px-8 border-b border-white/10 text-white">
+                                <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.22em] sm:tracking-[0.32em] text-orange-400">Official Player Registration</p>
+                                <h2 className="mt-1.5 sm:mt-2 text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight">Tournament Registration</h2>
+                                <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-white/70 leading-relaxed">
+                                    Pay ₹1,000 registration fee to be eligible to play in all categories (Mixed Doubles, Men's Doubles, Women's Doubles).
+                                </p>
+                            </div>
+                            <CardContent className="p-4 sm:p-6 md:p-8">
+                                <div className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="fullName" className="text-sm font-semibold text-slate-700">
+                                                Full Name <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="fullName"
+                                                type="text"
+                                                placeholder="Enter your full name"
+                                                value={formData.fullName}
+                                                onChange={(e) => handleInputChange("fullName", e.target.value)}
+                                                className={errors.fullName ? "border-red-500" : ""}
+                                            />
+                                            {errors.fullName && <p className="text-xs text-red-500">{errors.fullName}</p>}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="age" className="text-sm font-semibold text-slate-700">
+                                                Age <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="age"
+                                                type="number"
+                                                placeholder="Enter your age"
+                                                value={formData.age}
+                                                onChange={(e) => handleInputChange("age", e.target.value)}
+                                                className={errors.age ? "border-red-500" : ""}
+                                                min="5"
+                                                max="99"
+                                            />
+                                            {errors.age && <p className="text-xs text-red-500">{errors.age}</p>}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">
+                                                Phone Number <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="phone"
+                                                type="tel"
+                                                placeholder="Enter 10-digit phone number"
+                                                value={formData.phone}
+                                                onChange={(e) => handleInputChange("phone", e.target.value)}
+                                                className={errors.phone ? "border-red-500" : ""}
+                                                maxLength={10}
+                                            />
+                                            {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="email" className="text-sm font-semibold text-slate-700">
+                                                Email <span className="text-slate-400">(Optional)</span>
+                                            </Label>
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                placeholder="Enter your email (optional)"
+                                                value={formData.email}
+                                                onChange={(e) => handleInputChange("email", e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label className="text-sm font-semibold text-slate-700">
+                                            Select Categories <span className="text-red-500">*</span>
+                                        </Label>
+                                        <p className="text-xs text-slate-500">You can select all categories you want to participate in. The ₹1,000 fee covers all selected categories.</p>
+                                        <div className="space-y-3">
+                                            {Object.entries(categoryLabels).map(([key, label]) => (
+                                                <div key={key} className="flex items-center space-x-3 rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition">
+                                                    <Checkbox
+                                                        id={key}
+                                                        checked={selectedCategories.includes(key)}
+                                                        onCheckedChange={() => handleCategoryToggle(key)}
+                                                    />
+                                                    <Label
+                                                        htmlFor={key}
+                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                                                    >
+                                                        {label}
+                                                    </Label>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="rounded-[24px] border border-slate-200 bg-white p-5">
-                                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-600">Player Details</p>
-                                        <div className="mt-4 space-y-4">
-                                            {confirmedRegistration.registrationType === "team" ? (
-                                                (() => {
-                                                    const categoryLabelsMap: Record<string, string> = {
-                                                        mixed_doubles: "Mixed Doubles",
-                                                        mens_doubles: "Men's Doubles",
-                                                        womens_doubles: "Women's Doubles",
-                                                    };
-                                                    const getRequiredPlayers = (cat: string) => 2; // All categories require 2 players
-                                                    
-                                                    let playerIndex = 0;
-                                                    return confirmedRegistration.categories.map((category: string) => {
-                                                        const requiredPlayers = getRequiredPlayers(category);
-                                                        const categoryLabel = categoryLabelsMap[category] || category;
-                                                        const categoryPlayers = [];
-                                                        
-                                                        for (let i = 0; i < requiredPlayers; i++) {
-                                                            if (playerIndex < confirmedRegistration.players.length) {
-                                                                categoryPlayers.push(confirmedRegistration.players[playerIndex]);
-                                                                playerIndex++;
-                                                            }
-                                                        }
-                                                        
-                                                        return (
-                                                            <div key={category} className="space-y-2">
-                                                                <p className="text-xs font-bold uppercase tracking-wider text-orange-600">{categoryLabel}</p>
-                                                                {categoryPlayers.map((player: PlayerData, idx: number) => (
-                                                                    <div key={`${category}-${idx}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 ml-4">
-                                                                        <p className="text-sm font-black text-slate-900">
-                                                                            {requiredPlayers === 1 ? 'Player' : `Player ${idx + 1}`}: {player.fullName}
-                                                                        </p>
-                                                                        <div className="mt-2 text-sm text-slate-600">
-                                                                            <p>Gender: {player.gender === 'male' ? 'Male' : 'Female'}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        );
-                                                    });
-                                                })()
-                                            ) : (
-                                                confirmedRegistration.players.map((player: PlayerData, index: number) => (
-                                                    <div key={`${player.email}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                                        <p className="text-sm font-black text-slate-900">Player {index + 1}: {player.fullName}</p>
-                                                        <div className="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                                                            <p>Email: {player.email}</p>
-                                                            <p>Phone: {player.phone}</p>
-                                                            <p>Age: {player.age}</p>
-                                                            <p>Gender: {player.gender === 'male' ? 'Male' : 'Female'}</p>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-5">
-                                    <div className="rounded-[24px] bg-slate-950 p-5 text-white">
-                                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-300">Receipt & Invoice</p>
-                                        <p className="mt-3 text-sm text-white/75">Download your tournament registration PDF and keep your registration details handy.</p>
-                                        <div className="mt-5 space-y-3">
-                                            {confirmedRegistration.invoiceUrl ? (
-                                                <a
-                                                    href={confirmedRegistration.invoiceUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#f56210] px-4 py-3 text-sm font-black text-white transition hover:bg-[#d84f03]"
-                                                >
-                                                    <Download className="h-4 w-4" /> Download PDF
-                                                </a>
-                                            ) : (
-                                                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
-                                                    PDF will be available shortly.
-                                                </div>
-                                            )}
-                                            <Button onClick={reset} variant="ghost" className="w-full gap-2 text-white hover:bg-white/10 hover:text-white">
-                                                <RotateCcw className="h-4 w-4" /> Register Another Entry
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    <div className="rounded-[24px] border border-slate-200 bg-orange-50 p-5">
+                                    <div className="rounded-lg bg-orange-50 border border-orange-200 p-4">
                                         <div className="flex items-start gap-3">
-                                            <PartyPopper className="mt-0.5 h-5 w-5 text-[#f56210]" />
-                                            <div>
-                                                <p className="text-sm font-black text-[#071126]">Registration saved successfully</p>
-                                                <p className="mt-1 text-sm text-slate-600">You can use the registration number and invoice number to track this entry from the admin or support team.</p>
+                                            <div className="flex-shrink-0 mt-0.5">
+                                                <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                                    <span className="text-orange-600 font-bold text-sm">₹</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-orange-900">Registration Fee: ₹{REGISTRATION_FEE.toLocaleString("en-IN")}</p>
+                                                <p className="text-xs text-orange-700 mt-1">
+                                                    With this single payment, you are eligible to play in all the categories you've selected above.
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-            <Footer />
-        </div>
-    );
-}
 
-return (
-    <div>
-        <Navbar />
-        <div id="root" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,98,16,0.18),_transparent_28%),linear-gradient(180deg,#060d1a_0%,#09162a_52%,#0d1b30_100%)] py-4 px-3 sm:py-6 sm:px-4 md:py-8 md:px-6">
-            <div className="mx-auto w-full max-w-7xl space-y-6 sm:space-y-8">
-                <div className="grid gap-6 sm:gap-8 xl:grid-cols-[0.92fr_1.08fr] xl:items-start">
-                    {/* Tournament Poster - hidden on mobile, shown on xl+ */}
-                    <div className="hidden xl:block xl:sticky xl:top-24">
-                        <div className="space-y-6">
-                            <Image 
-                                src="/images/npatournament.jpeg" 
-                                alt="Tournament Poster" 
-                                width={500} 
-                                height={500}
-                                className="w-full rounded-2xl shadow-lg"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Mobile poster - compact banner shown only on small screens */}
-                    <div className="xl:hidden">
-                        <div className="mb-6 sm:mb-8">
-                            <Image 
-                                src="/images/npatournament.jpeg" 
-                                alt="Tournament Poster" 
-                                width={800} 
-                                height={400}
-                                className="w-full rounded-xl sm:rounded-2xl shadow-lg object-cover max-h-48 sm:max-h-64"
-                            />
-                        </div>
-                    </div>
-
-                    <Card className="overflow-hidden rounded-2xl sm:rounded-[32px] border border-orange-500/20 bg-white/95 shadow-[0_30px_100px_rgba(0,0,0,0.32)]">
-                        <div className="bg-[#071126] px-4 py-4 sm:px-6 sm:py-5 md:px-8 border-b border-white/10 text-white">
-                            <p className="text-[10px] sm:text-xs font-black uppercase tracking-[0.22em] sm:tracking-[0.32em] text-orange-400">Official Player Registration</p>
-                            <h2 className="mt-1.5 sm:mt-2 text-xl sm:text-2xl md:text-3xl font-black text-white leading-tight">Complete Tournament Registration</h2>
-                            <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-white/70 leading-relaxed">
-                                {isTeamRegistration 
-                                    ? "Fill out all steps carefully. Team registration is direct and no payment is collected." 
-                                    : hasSelectedCategory 
-                                        ? `Fill out all steps carefully. Entry fee is ₹1,500 per player, with ${requiredPlayerCount} players required for this registration.` 
-                                        : "Choose your event type first to see the correct registration fee and player requirement."
-                                }
-                            </p>
-                        </div>
-                        <CardContent className="p-4 sm:p-6 md:p-8">
-                            <StepIndicator currentStep={step} steps={stepLabels} />
-                            <div className="mt-6 sm:mt-8 min-h-[280px] sm:min-h-[320px]">
-                                {step === 0 && <StepRegistrationType value={registrationType} onChange={setRegistrationType} />}
-                                {registrationType === "team" && step === 1 && <StepTeamInfo teamName={teamName} onChange={setTeamName} error={teamNameError} />}
-                                {step === categoryStep && <StepCategory registrationType={registrationType} selected={categories} onChange={setCategories} />}
-                                
-                                {/* Individual registration player details for each category */}
-                                {registrationType === "individual" && step > categoryStep && step < confirmStep && (() => {
-                                    let currentStepIndex = categoryStep + 1;
-
-                                    for (const category of categories) {
-                                        const requiredPlayers = getRequiredPlayersForCategory(category);
-                                        const categoryLabel = categoryLabels[category];
-
-                                        for (let playerIndex = 0; playerIndex < requiredPlayers; playerIndex++) {
-                                            if (step === currentStepIndex) {
-                                                const playerNumber = playerIndex + 1;
-                                                const title = requiredPlayers === 1 ? `${categoryLabel} Player Details` : `${categoryLabel} - Player ${playerNumber} Details`;
-
-                                                return (
-                                                    <StepPlayerDetails
-                                                        key={`${category}-${playerIndex}`}
-                                                        title={title}
-                                                        data={individualPlayers[category]?.[playerIndex] || { ...emptyPlayer }}
-                                                        onChange={(data) => {
-                                                            const newIndividualPlayers = { ...individualPlayers };
-                                                            if (!newIndividualPlayers[category]) {
-                                                                newIndividualPlayers[category] = Array(requiredPlayers).fill(null).map(() => ({ ...emptyPlayer }));
-                                                            }
-                                                            newIndividualPlayers[category][playerIndex] = data;
-                                                            setIndividualPlayers(newIndividualPlayers);
-                                                        }}
-                                                        errors={individualPlayerErrors[category]?.[playerIndex] || {}}
-                                                    />
-                                                );
-                                            }
-
-                                            currentStepIndex++;
-                                        }
-                                    }
-
-                                    return null;
-                                })()}
-                                
-                                {/* Team registration player details for each category */}
-                                {registrationType === "team" && step > categoryStep && step < confirmStep && (() => {
-                                    let currentStepIndex = categoryStep + 1;
-
-                                    for (const category of categories) {
-                                        const requiredPlayers = getRequiredPlayersForCategory(category);
-
-                                        for (let playerIndex = 0; playerIndex < requiredPlayers; playerIndex++) {
-                                            if (step === currentStepIndex) {
-                                                const playerNumber = playerIndex + 1;
-
-                                                return (
-                                                    <StepTeamPlayerDetails
-                                                        key={`${category}-${playerIndex}`}
-                                                        category={category}
-                                                        playerNumber={playerNumber}
-                                                        data={teamPlayers[category]?.[playerIndex] || { ...emptyTeamPlayer }}
-                                                        onChange={(data) => {
-                                                            const newTeamPlayers = { ...teamPlayers };
-                                                            if (!newTeamPlayers[category]) {
-                                                                newTeamPlayers[category] = Array(requiredPlayers).fill(null).map(() => ({ ...emptyTeamPlayer }));
-                                                            }
-                                                            newTeamPlayers[category][playerIndex] = data;
-                                                            setTeamPlayers(newTeamPlayers);
-                                                        }}
-                                                        errors={teamPlayerErrors[category]?.[playerIndex] || {}}
-                                                    />
-                                                );
-                                            }
-
-                                            currentStepIndex++;
-                                        }
-                                    }
-
-                                    return null;
-                                })()}
-                                
-                                {step === confirmStep && (
-                                    <StepConfirmation 
-                                        checks={checks} 
-                                        onChange={setChecks}
-                                        registrationType={registrationType}
-                                        uniquePlayerCount={pricingSummary.uniquePlayerCount}
-                                        totalAmount={pricingSummary.totalAmount}
-                                    />
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between gap-2 sm:gap-3 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-slate-200">
-                                <Button 
-                                    variant="ghost" 
-                                    onClick={back} 
-                                    disabled={step === 0} 
-                                    className="gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-700 hover:text-slate-950 px-3 sm:px-4 h-9 sm:h-10"
-                                >
-                                    <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    <span className="hidden xs:inline">Back</span>
-                              
-                                </Button>
-                                {step < confirmStep ? (
-                                    <Button 
-                                        onClick={next} 
-                                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm bg-[#f56210] text-white hover:bg-[#d84f03] shadow-md hover:shadow-lg transition-shadow px-4 sm:px-6 h-9 sm:h-11 active:scale-[0.98]"
-                                    >
-                                        <span>Next</span>
-                                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    </Button>
-                                ) : (
-                                    <Button 
-                                        onClick={submit} 
-                                        className="gap-1.5 sm:gap-2 text-xs sm:text-sm bg-[#071126] text-white hover:bg-[#0c1d37] shadow-md hover:shadow-lg transition-shadow px-3 sm:px-5 h-9 sm:h-11 active:scale-[0.98]" 
+                                    <Button
+                                        onClick={handleSubmit}
                                         disabled={isPaying}
+                                        className="w-full gap-2 text-sm bg-[#f56210] text-white hover:bg-[#d84f03] shadow-md hover:shadow-lg transition-shadow h-11 active:scale-[0.98]"
                                     >
-                                        {isPaying ? <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                                        <span className="hidden xs:inline">
-                                            {isPaying 
-                                                ? (isDirectRegistration ? "Completing..." : "Processing...") 
-                                                : (isDirectRegistration ? "Complete" : "Pay & Register")
-                                            }
-                                        </span>
-                                        <span className="xs:hidden">
-                                            {isPaying ? "..." : (isDirectRegistration ? "Complete" : "Pay")}
-                                        </span>
+                                        {isPaying ? (
+                                            <>
+                                                <CreditCard className="w-4 h-4 animate-pulse" />
+                                                Processing Payment...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CreditCard className="w-4 h-4" />
+                                                Pay ₹{REGISTRATION_FEE.toLocaleString("en-IN")} & Register
+                                            </>
+                                        )}
                                     </Button>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
             <Footer />
         </div>
-    </div>
     );
 };
 

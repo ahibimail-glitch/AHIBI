@@ -22,17 +22,14 @@ const validatePlayer = (player) => {
   if (!player || typeof player !== 'object') return 'Invalid player details';
   if (!player.fullName?.trim()) return 'Player full name is required';
   if (!player.age || Number(player.age) < 5 || Number(player.age) > 99) return 'Player age must be between 5 and 99';
-  if (!['male', 'female'].includes(player.gender)) return 'Player gender is invalid';
   if (!/^\d{10}$/.test(String(player.phone || ''))) return 'Player phone must be a 10-digit number';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(player.email || ''))) return 'Player email is invalid';
+  if (player.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(player.email))) return 'Player email is invalid';
   return null;
 };
 
 const serializeRegistration = (registration) => ({
   id: registration._id,
   tournamentName: registration.tournamentName,
-  registrationType: registration.registrationType,
-  teamName: registration.teamName,
   registrationNumber: registration.registrationNumber,
   invoiceNumber: registration.invoiceNumber,
   invoiceUrl: registration.invoiceUrl,
@@ -41,7 +38,7 @@ const serializeRegistration = (registration) => ({
   currency: registration.currency,
   categories: registration.categories,
   categoryLabels: registration.categories.map((category) => categoryLabels[category] || category),
-  players: registration.players,
+  player: registration.player,
   registrationDate: registration.registrationDate,
   razorpayPaymentId: registration.razorpayPaymentId,
   razorpayOrderId: registration.razorpayOrderId,
@@ -69,29 +66,14 @@ const finalizeDirectRegistration = async (registration) => {
 
 exports.createRegistrationOrder = async (req, res) => {
   try {
-    const { registrationType, teamName, categories, players, checks } = req.body;
-
-    if (!['individual', 'team'].includes(registrationType)) {
-      return ApiResponse.badRequest(res, 'Registration type must be individual or team');
-    }
-
-    if (registrationType === 'team' && !String(teamName || '').trim()) {
-      return ApiResponse.badRequest(res, 'Team name is required for team registration');
-    }
+    const { player, categories } = req.body;
 
     if (!Array.isArray(categories) || categories.length === 0) {
       return ApiResponse.badRequest(res, 'At least one category must be selected');
     }
 
-    // Check category limits based on registration type
-    if (registrationType === 'team') {
-      if (categories.length > 3) {
-        return ApiResponse.badRequest(res, 'Maximum 3 categories are allowed for team registration');
-      }
-    } else {
-      if (categories.length > 2) {
-        return ApiResponse.badRequest(res, 'Maximum 2 categories are allowed for individual registration');
-      }
+    if (categories.length > 3) {
+      return ApiResponse.badRequest(res, 'Maximum 3 categories are allowed');
     }
 
     const uniqueCategories = [...new Set(categories)];
@@ -100,105 +82,42 @@ exports.createRegistrationOrder = async (req, res) => {
     }
 
     if (categories.some((category) => !supportedCategories.has(category))) {
-      return ApiResponse.badRequest(res, 'Only Men\'s Singles, Men\'s Doubles, and Mixed Doubles are available for tournament registration');
+      return ApiResponse.badRequest(res, 'Only Mixed Doubles, Men\'s Doubles, and Women\'s Doubles are available for tournament registration');
     }
 
-    // Validate players based on registration type
-    if (registrationType === 'team') {
-      // For team registration, players should have only name and gender
-      if (!Array.isArray(players) || players.length === 0) {
-        return ApiResponse.badRequest(res, 'At least one player must be provided for team registration');
-      }
-      
-      // Validate each team player (only name and gender required)
-      for (const player of players) {
-        if (!player.fullName || !player.fullName.trim()) {
-          return ApiResponse.badRequest(res, 'Player name is required');
-        }
-        if (!player.gender) {
-          return ApiResponse.badRequest(res, 'Player gender is required');
-        }
-      }
-    } else {
-      // For individual registration, use the original validation
-      const requiresTwoPlayers = !categories.every((category) => singlePlayerCategories.has(category));
-      const playerList = requiresTwoPlayers ? [players[0], players[1]] : [players[0]];
+    const error = validatePlayer(player);
+    if (error) return ApiResponse.badRequest(res, error);
 
-      if (requiresTwoPlayers && !players[1]) {
-        return ApiResponse.badRequest(res, 'Second player details are required for the selected category');
-      }
+    const amount = 1000;
 
-      for (const player of playerList) {
-        const error = validatePlayer(player);
-        if (error) return ApiResponse.badRequest(res, error);
-      }
-    }
-
-    if (!Array.isArray(checks) || checks.length !== 3 || !checks.every(Boolean)) {
-      return ApiResponse.badRequest(res, 'All declarations must be accepted');
-    }
-
-    // Calculate unique players by name (case-insensitive, trimmed)
-    const uniquePlayerNames = new Set(
-      players.map(p => String(p.fullName || '').trim().toLowerCase())
-    );
-    const uniquePlayerCount = uniquePlayerNames.size;
-    const amountPerPlayer = 1500;
-    const isDirectRegistration = registrationType === 'team';
-    const amount = isDirectRegistration ? 0 : uniquePlayerCount * amountPerPlayer;
-
-    let razorpayOrder = null;
-    if (!isDirectRegistration) {
-      razorpayOrder = await razorpay.orders.create({
-        amount: amount * 100,
-        currency: 'INR',
-        receipt: `SPTREG_${Date.now()}`,
-        notes: {
-          tournament: 'Nagaland Pickleball Classic Tournament 2026',
-          registrationType,
-          teamName: registrationType === 'team' ? String(teamName).trim() : '',
-          categoryCount: String(categories.length),
-          categories: categories.join(','),
-          playerCount: String(players.length),
-          uniquePlayerCount: String(uniquePlayerCount),
-          amountPerPlayer: String(amountPerPlayer),
-          player1Name: players[0]?.fullName || '',
-          player2Name: players[1]?.fullName || '',
-        },
-      });
-    }
+    const razorpayOrder = await razorpay.orders.create({
+      amount: amount * 100,
+      currency: 'INR',
+      receipt: `SPTREG_${Date.now()}`,
+      notes: {
+        tournament: 'Nagaland Pickleball Classic Tournament 2026',
+        categoryCount: String(categories.length),
+        categories: categories.join(','),
+        playerName: player.fullName,
+        playerPhone: player.phone,
+      },
+    });
 
     const registration = await SportsTournamentRegistration.create({
-      registrationType,
-      teamName: registrationType === 'team' ? String(teamName).trim() : undefined,
       categories,
-      players: players.map((player) => (
-        registrationType === 'team'
-          ? {
-              fullName: String(player.fullName || '').trim(),
-              gender: player.gender,
-            }
-          : {
-              ...player,
-              age: Number(player.age),
-            }
-      )),
+      player: {
+        fullName: String(player.fullName || '').trim(),
+        age: Number(player.age),
+        phone: String(player.phone || '').trim(),
+        email: player.email ? String(player.email).trim() : undefined,
+      },
       declarationsAccepted: true,
       amount,
       currency: 'INR',
-      paymentStatus: isDirectRegistration ? 'confirmed' : 'pending',
-      status: isDirectRegistration ? 'confirmed' : 'pending',
-      razorpayOrderId: razorpayOrder?.id,
+      paymentStatus: 'pending',
+      status: 'pending',
+      razorpayOrderId: razorpayOrder.id,
     });
-
-    if (isDirectRegistration) {
-      const finalizedRegistration = await finalizeDirectRegistration(registration);
-      return ApiResponse.success(res, 'Tournament registration completed successfully', {
-        requiresPayment: false,
-        registrationId: finalizedRegistration._id,
-        registration: serializeRegistration(finalizedRegistration),
-      }, 201);
-    }
 
     return ApiResponse.success(res, 'Tournament registration order created successfully', {
       requiresPayment: true,
