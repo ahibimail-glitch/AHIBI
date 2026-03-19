@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import { adminSportsApi } from '@/lib/api/sports';
 
 type TournamentRegistration = {
@@ -89,6 +90,57 @@ export default function SportsTournamentRegistrationsPage() {
     });
   }, [registrations, query]);
 
+  const handleDownloadExcel = () => {
+    if (filtered.length === 0) {
+      toast.error('No registrations to export');
+      return;
+    }
+
+    // Flatten each registration into a row-per-category structure
+    const rows = filtered.flatMap((reg) =>
+      reg.categories.map((category) => ({
+        'Registration No.': reg.registrationNumber || 'Pending',
+        'Invoice No.': reg.invoiceNumber || '—',
+        'Tournament': reg.tournamentName,
+        'Player Name': reg.player.fullName,
+        'Age': reg.player.age,
+        'Phone': reg.player.phone,
+        'Email': reg.player.email || '—',
+        'Category': categoryLabels[category] || category,
+        'Partner Name': reg.partnerNames?.[category] || '—',
+        'Amount (₹)': reg.amount,
+        'Payment Status': reg.paymentStatus,
+        'Razorpay Payment ID': reg.razorpayPaymentId || '—',
+        'Razorpay Order ID': reg.razorpayOrderId || '—',
+        'Date': reg.registrationDate
+          ? new Date(reg.registrationDate).toLocaleDateString('en-IN')
+          : reg.createdAt
+            ? new Date(reg.createdAt).toLocaleDateString('en-IN')
+            : '—',
+      }))
+    );
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-size columns based on content width
+    const colWidths = Object.keys(rows[0] || {}).map((key) => ({
+      wch: Math.max(
+        key.length,
+        ...rows.map((row) => String(row[key as keyof typeof row] ?? '').length)
+      ) + 2,
+    }));
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Registrations');
+
+    const statusLabel = status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Tournament_Registrations_${statusLabel}_${dateStr}.xlsx`);
+
+    toast.success(`Exported ${rows.length} row(s) to Excel`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -148,6 +200,17 @@ export default function SportsTournamentRegistrationsPage() {
               className="px-4 py-2.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700"
             >
               Refresh
+            </button>
+            {/* ── Excel export button ── */}
+            <button
+              onClick={handleDownloadExcel}
+              disabled={loading || filtered.length === 0}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium whitespace-nowrap"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              Export Excel {filtered.length > 0 && `(${filtered.length})`}
             </button>
           </div>
         </div>
