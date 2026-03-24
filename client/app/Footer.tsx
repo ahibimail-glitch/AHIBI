@@ -66,7 +66,9 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-200 mt-10 pt-5 text-center">
-          <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Ahibi. All rights reserved.</p>
+          <p className="text-gray-500 text-sm" suppressHydrationWarning>
+            © {new Date().getFullYear()} Ahibi. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

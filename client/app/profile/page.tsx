@@ -75,6 +75,7 @@ const EVENT_IMAGES: Record<string, string> = {
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,11 +86,18 @@ export default function ProfilePage() {
 
   interface Booking {
     _id: string;
-    event: {
+    event?: {
       _id: string;
       title: string;
       banner: string;
     };
+    dailyEvent?: {
+      _id: string;
+      title: string;
+      banner: string;
+    };
+    isDailyEvent?: boolean;
+    selectedDate?: string;
     ticketType: string;
     quantity: number;
     price: number;
@@ -149,7 +157,14 @@ export default function ProfilePage() {
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [sportsBookings, setSportsBookings] = useState<SportsBooking[]>([]);
   const [livestreamPurchases, setLivestreamPurchases] = useState<LivestreamPurchase[]>([]);
-  const [bookingType, setBookingType] = useState<'events' | 'sports' | 'livestream'>('events');
+  const [bookingType, setBookingType] = useState<'events' | 'daily-events' | 'sports' | 'livestream'>('events');
+  
+  const regularEventBookings = userBookings.filter(b => !b.isDailyEvent);
+  const dailyEventBookings = userBookings.filter(b => b.isDailyEvent);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch user profile from backend
   React.useEffect(() => {
@@ -335,8 +350,10 @@ export default function ProfilePage() {
   const handleViewTicket = (booking: any) => {
     if (booking.bookingType === 'annie-musical') {
       router.push(`/annie-musical/bookings/${booking._id}`);
-    } else {
-      router.push(`/events/${booking._id}/bookings`);
+    } else if (booking.isDailyEvent && booking.dailyEvent) {
+      router.push(`/events/daily/${booking.dailyEvent._id}/bookings`);
+    } else if (booking.event) {
+      router.push(`/events/${booking.event._id}/bookings`);
     }
   }
 
@@ -363,6 +380,14 @@ export default function ProfilePage() {
         return "bg-red-50 text-red-700 border-red-200";
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-white flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -566,7 +591,7 @@ export default function ProfilePage() {
             {/* Bookings Tab */}
             <TabsContent value="bookings" className="space-y-6">
               {/* Booking Type Toggle */}
-              <div className="grid grid-cols-2 gap-3 border-b border-gray-200 pb-4">
+              <div className="grid grid-cols-3 gap-3 border-b border-gray-200 pb-4">
                 <button
                   onClick={() => setBookingType('events')}
                   className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'events'
@@ -574,7 +599,16 @@ export default function ProfilePage() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                 >
-                  Events ({userBookings.length})
+                  Events ({regularEventBookings.length})
+                </button>
+                <button
+                  onClick={() => setBookingType('daily-events')}
+                  className={`px-4 py-3 font-semibold transition-all rounded-lg text-sm ${bookingType === 'daily-events'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                >
+                  Daily Events ({dailyEventBookings.length})
                 </button>
                 <button
                   onClick={() => setBookingType('sports')}
@@ -585,14 +619,13 @@ export default function ProfilePage() {
                 >
                   Sports ({sportsBookings.length})
                 </button>
-                
               </div>
 
-              {/* Event Bookings */}
+              {/* Regular Event Bookings */}
               {bookingType === 'events' && (
                 <div className="space-y-4">
-                  {userBookings && userBookings.length > 0 ? (
-                    userBookings.map((booking) => (
+                  {regularEventBookings && regularEventBookings.length > 0 ? (
+                    regularEventBookings.map((booking) => (
                       <div
                         key={booking._id}
                         className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
@@ -610,7 +643,7 @@ export default function ProfilePage() {
 
                             <div className="flex-1 min-w-0">
                               <h3 className="font-bold text-lg mb-2 line-clamp-1">
-                                {booking.event?.title || "Event"}
+                                {booking.event?.title || booking.dailyEvent?.title || "Event"}
                               </h3>
 
                               <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
@@ -665,6 +698,92 @@ export default function ProfilePage() {
                       <p className="text-gray-500 mb-6">Start exploring amazing events</p>
                       <Button asChild className="bg-black text-white hover:bg-gray-800">
                         <Link href="/events">Explore Events</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Daily Event Bookings */}
+              {bookingType === 'daily-events' && (
+                <div className="space-y-4">
+                  {dailyEventBookings && dailyEventBookings.length > 0 ? (
+                    dailyEventBookings.map((booking) => (
+                      <div
+                        key={booking._id}
+                        className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                              <Image
+                                src={booking.dailyEvent?.banner || "/placeholder.jpg"}
+                                alt={booking.dailyEvent?.title || "Daily Event"}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                                {booking.dailyEvent?.title || "Daily Event"}
+                              </h3>
+
+                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {booking.selectedDate 
+                                    ? new Date(booking.selectedDate).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })
+                                    : new Date(booking.bookedAt).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Ticket className="h-4 w-4" />
+                                  {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={`${getStatusColor(booking.paymentStatus)} border font-medium`}
+                                >
+                                  {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                                </Badge>
+                                <Badge className="bg-purple-50 text-purple-700 border border-purple-200">
+                                  Daily Event
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:text-right">
+                            <div className="text-2xl font-bold">₹{booking.total.toLocaleString()}</div>
+                            {booking.paymentStatus === 'completed' && (
+                              <Button
+                                onClick={() => handleViewTicket(booking)}
+                                className="bg-black text-white hover:bg-gray-800"
+                              >
+                                View Ticket
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-16 border border-gray-200 rounded-lg">
+                      <Ticket className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold mb-2">No daily event bookings found</h3>
+                      <p className="text-gray-500 mb-6">Discover recurring daily events</p>
+                      <Button asChild className="bg-black text-white hover:bg-gray-800">
+                        <Link href="/events/daily">Explore Daily Events</Link>
                       </Button>
                     </div>
                   )}

@@ -123,6 +123,19 @@ router.post('/daily-events', [
 ], dailyEventController.createOrganizerDailyEvent);
 
 router.get('/daily-events', protect, dailyEventController.getOrganizerDailyEvents);
+router.get('/daily-events/:id', protect, dailyEventController.getOrganizerDailyEventById);
+router.put('/daily-events/:id', [
+  protect,
+  check('title', 'Event title is required').optional().notEmpty(),
+  check('description', 'Event description is required').optional().notEmpty(),
+  check('category', 'Event category is required').optional().notEmpty(),
+  check('periodStartDate', 'Period start date is required').optional().notEmpty(),
+  check('periodEndDate', 'Period end date is required').optional().notEmpty(),
+  check('startTime', 'Start time is required').optional().notEmpty(),
+  check('activeDates', 'Active dates are required').optional().isArray({ min: 1 }),
+  check('location.address', 'Venue address is required').optional().notEmpty(),
+  check('ticketTypes').optional().isArray()
+], dailyEventController.updateOrganizerDailyEvent);
 router.put('/daily-events/:id/pause', protect, dailyEventController.pauseOrganizerDailyEvent);
 router.put('/daily-events/:id/resume', protect, dailyEventController.resumeOrganizerDailyEvent);
 

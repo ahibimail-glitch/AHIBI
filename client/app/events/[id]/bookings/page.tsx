@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { motion } from 'framer-motion';
-import { CheckCircle, ArrowLeft, Download } from 'lucide-react';
+import { CheckCircle, ArrowLeft } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { createAuthRedirectUrl } from '@/utils/redirectUtils';
 import { Button } from '@/components/ui/button';
@@ -30,28 +30,10 @@ export default function BookingSuccessPage() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [autoDownloaded, setAutoDownloaded] = useState(false);
 
   useEffect(() => {
     const fetchBookingData = async () => {
-      // Get event ID from URL params
       const eventId = params?.id as string;
-      
-      let bookingIdToUse = eventId;
-      
-      // If we have an event ID from URL params, use it
-      if (!bookingIdToUse) {
-        // Fallback to localStorage for backward compatibility
-        const lastBookingId = localStorage.getItem('lastBookingId');
-        if (!lastBookingId) {
-          // Redirect to home if no ID is available
-          router.push('/');
-          return;
-        }
-        bookingIdToUse = lastBookingId;
-      }
-
-      setBookingId(bookingIdToUse);
 
       try {
         const token = localStorage.getItem("token");
@@ -60,7 +42,34 @@ export default function BookingSuccessPage() {
           return;
         }
 
-        // Fetch booking details
+        // /events/[id]/bookings uses event ID in URL, so fetch user's bookings and match event.
+        const myBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/my-bookings`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          }
+        });
+
+        if (!myBookingsRes.ok) {
+          throw new Error('Failed to fetch bookings.');
+        }
+
+        const myBookingsData = await myBookingsRes.json();
+        const allBookings = myBookingsData?.bookings || [];
+        const matchedBooking = allBookings.find((b: any) => {
+          const bEventId = typeof b?.event === "string" ? b.event : b?.event?._id;
+          return bEventId === eventId;
+        });
+
+        if (!matchedBooking?._id) {
+          setBooking(null);
+          setBookingId(null);
+          return;
+        }
+
+        const bookingIdToUse = matchedBooking._id as string;
+        setBookingId(bookingIdToUse);
+
+        // Fetch complete booking details by resolved booking ID.
         const bookingRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/${bookingIdToUse}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -111,58 +120,6 @@ export default function BookingSuccessPage() {
 
     fetchBookingData();
   }, [router, params]);
-
-  useEffect(() => {
-    // After booking is loaded, auto-click the first ticket's Download button once
-    if (!loading && booking && !autoDownloaded) {
-      let attempts = 0;
-      const maxAttempts = 20; // ~10s with 500ms interval
-
-      const tryClick = () => {
-        attempts += 1;
-        try {
-          const tickets = document.querySelectorAll('#booking-ticket');
-          const firstTicket = tickets && tickets.length > 0 ? (tickets[0] as HTMLElement) : null;
-          if (!firstTicket) return false;
-
-          const buttons = firstTicket.querySelectorAll('button');
-          for (const btn of Array.from(buttons)) {
-            const text = (btn as HTMLButtonElement).textContent?.toLowerCase() || '';
-            if (text.includes('download')) {
-              (btn as HTMLButtonElement).click();
-              setAutoDownloaded(true);
-              return true;
-            }
-          }
-          return false;
-        } catch {
-          return false;
-        }
-      };
-
-      if (tryClick()) return;
-
-      const interval = setInterval(() => {
-        if (tryClick() || attempts >= maxAttempts) {
-          clearInterval(interval);
-          if (observer) observer.disconnect();
-        }
-      }, 500);
-
-      const observer = new MutationObserver(() => {
-        if (tryClick()) {
-          clearInterval(interval);
-          observer.disconnect();
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-
-      return () => {
-        clearInterval(interval);
-        observer.disconnect();
-      };
-    }
-  }, [loading, booking, autoDownloaded]);
 
   // Fire Meta Pixel Purchase for Nasquerade on success page
   useEffect(() => {
@@ -222,6 +179,7 @@ export default function BookingSuccessPage() {
               bookingId={relatedBooking._id} 
               ticketIndex={relatedBooking.ticketIndex || i + 1}
               totalTickets={quantity}
+              autoDownload={i === 0}
             />
           </div>
         );
@@ -240,6 +198,7 @@ export default function BookingSuccessPage() {
               bookingId={bookingId} 
               ticketIndex={i + 1}
               totalTickets={quantity}
+              autoDownload={i === 0}
             />
           </div>
         );

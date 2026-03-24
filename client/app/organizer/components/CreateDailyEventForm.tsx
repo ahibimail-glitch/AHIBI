@@ -66,6 +66,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
     instagram: "",
     twitter: "",
     youtube: "",
+    bookingDeadlineHours: "0",
   });
 
   const [activeDates, setActiveDates] = useState<Date[]>([]);
@@ -420,7 +421,8 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
           instagram: eventData.instagram,
           twitter: eventData.twitter,
           youtube: eventData.youtube
-        }
+        },
+        bookingDeadlineHours: parseInt(eventData.bookingDeadlineHours) || 0
       };
 
       const response = await axios.post(
@@ -573,6 +575,21 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
               </div>
 
               <div>
+                <Label htmlFor="bookingDeadlineHours">Booking Deadline (Hours before event)</Label>
+                <Input
+                  id="bookingDeadlineHours"
+                  type="number"
+                  min="0"
+                  value={eventData.bookingDeadlineHours}
+                  onChange={handleChange}
+                  placeholder="0"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Set how many hours before the event start time bookings will close. Set to 0 for no deadline.
+                </p>
+              </div>
+
+              <div>
                 <Label>Active Dates (Select dates when event will happen) *</Label>
                 <Popover open={showActiveDatePicker} onOpenChange={setShowActiveDatePicker}>
                   <PopoverTrigger asChild>
@@ -618,7 +635,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                 )}
               </div>
 
-              <div>
+              {/* <div>
                 <Label>Excluded Dates (Optional - dates when event will NOT happen)</Label>
                 <Popover open={showExcludedDatePicker} onOpenChange={setShowExcludedDatePicker}>
                   <PopoverTrigger asChild>
@@ -662,7 +679,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                     ))}
                   </div>
                 )}
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

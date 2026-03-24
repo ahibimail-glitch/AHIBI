@@ -51,6 +51,9 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  ticketTypeId: {
+    type: mongoose.Schema.Types.ObjectId
+  },
   quantity: {
     type: Number,
     required: true,

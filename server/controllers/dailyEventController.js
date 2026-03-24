@@ -40,7 +40,8 @@ const createOrganizerDailyEvent = async (req, res) => {
       faqs = [],
       convenience = {},
       isFreeEvent = false,
-      socialLinks = {}
+      socialLinks = {},
+      bookingDeadlineHours = 0
     } = req.body;
 
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
@@ -89,7 +90,8 @@ const createOrganizerDailyEvent = async (req, res) => {
       },
       approvalStatus: 'pending',
       convenience: isFreeEvent ? { percentage: 0, fixedAmount: 0 } : (convenience || {}),
-      socialLinks: socialLinks || {}
+      socialLinks: socialLinks || {},
+      bookingDeadlineHours: bookingDeadlineHours || 0
     });
 
     await dailyEvent.save();
@@ -158,7 +160,8 @@ const createDailyEvent = async (req, res) => {
       isFreeEvent = false,
       organizerInfo = {},
       convenience = {},
-      socialLinks = {}
+      socialLinks = {},
+      bookingDeadlineHours = 0
     } = req.body;
 
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
@@ -229,7 +232,8 @@ const createDailyEvent = async (req, res) => {
       approvalStatus: 'approved',
       approvedBy: req.user.id,
       approvedAt: new Date(),
-      socialLinks: socialLinks || {}
+      socialLinks: socialLinks || {},
+      bookingDeadlineHours: bookingDeadlineHours || 0
     });
 
     await dailyEvent.save();
@@ -751,6 +755,122 @@ const getOrganizerDailyEvents = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get organizer's own daily event by ID
+ * @route   GET /api/organizer/daily-events/:id
+ * @access  Private (Organizer only)
+ */
+const getOrganizerDailyEventById = async (req, res) => {
+  try {
+    const dailyEvent = await DailyEvent.findOne({ 
+      _id: req.params.id, 
+      organizer: req.user.id 
+    }).lean();
+
+    if (!dailyEvent) {
+      return ApiResponse.notFound(res, 'Daily event not found');
+    }
+
+    return ApiResponse.success(res, 'Daily event fetched successfully', { dailyEvent });
+  } catch (error) {
+    console.error('Error fetching organizer daily event:', error);
+    return ApiResponse.serverError(res, 'Error fetching daily event', error);
+  }
+};
+
+/**
+ * @desc    Update organizer's own daily event
+ * @route   PUT /api/organizer/daily-events/:id
+ * @access  Private (Organizer only)
+ */
+const updateOrganizerDailyEvent = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return ApiResponse.error(res, 'Validation error', { errors: errors.array() }, 400);
+    }
+
+    const dailyEvent = await DailyEvent.findOne({ 
+      _id: req.params.id, 
+      organizer: req.user.id 
+    });
+
+    if (!dailyEvent) {
+      return ApiResponse.notFound(res, 'Daily event not found');
+    }
+
+    if (dailyEvent.status === 'completed') {
+      return ApiResponse.error(res, 'Cannot modify completed daily events', {}, 400);
+    }
+
+    const fieldsToUpdate = { ...req.body };
+
+    if (req.body.location) {
+      fieldsToUpdate.location = {
+        ...dailyEvent.location,
+        ...req.body.location,
+        coordinates: req.body.location.coordinates ? {
+          type: 'Point',
+          coordinates: [
+            parseFloat(req.body.location.coordinates[0]) || dailyEvent.location.coordinates.coordinates[0],
+            parseFloat(req.body.location.coordinates[1]) || dailyEvent.location.coordinates.coordinates[1]
+          ]
+        } : dailyEvent.location.coordinates
+      };
+    }
+
+    if (req.body.activeDates) {
+      fieldsToUpdate.activeDates = req.body.activeDates.map(date => new Date(date));
+    }
+
+    if (req.body.excludedDates) {
+      fieldsToUpdate.excludedDates = req.body.excludedDates.map(date => new Date(date));
+    }
+
+    if (req.body.ticketTypes) {
+      fieldsToUpdate.ticketTypes = req.body.ticketTypes.map(ticket => {
+        if (ticket._id) {
+          const existingTicket = dailyEvent.ticketTypes.find(t => t._id.toString() === ticket._id);
+          return {
+            ...ticket,
+            sold: existingTicket?.sold || 0
+          };
+        } else {
+          return {
+            ...ticket,
+            sold: 0
+          };
+        }
+      });
+    }
+
+    if (req.body.duration) {
+      fieldsToUpdate.duration = req.body.duration;
+    }
+
+    if (req.body.convenience) {
+      fieldsToUpdate.convenience = req.body.convenience;
+    }
+
+    if (req.body.socialLinks) {
+      fieldsToUpdate.socialLinks = req.body.socialLinks;
+    }
+
+    fieldsToUpdate.updatedAt = new Date();
+
+    const updatedDailyEvent = await DailyEvent.findByIdAndUpdate(
+      req.params.id,
+      { $set: fieldsToUpdate },
+      { new: true, runValidators: true }
+    );
+
+    return ApiResponse.success(res, 'Daily event updated successfully', { dailyEvent: updatedDailyEvent });
+  } catch (error) {
+    console.error('Error updating organizer daily event:', error);
+    return ApiResponse.serverError(res, 'Error updating daily event', error);
+  }
+};
+
 module.exports = {
   createOrganizerDailyEvent,
   createDailyEvent,
@@ -765,5 +885,7 @@ module.exports = {
   resumeOrganizerDailyEvent,
   pauseDailyEvent,
   resumeDailyEvent,
-  getOrganizerDailyEvents
+  getOrganizerDailyEvents,
+  getOrganizerDailyEventById,
+  updateOrganizerDailyEvent
 };

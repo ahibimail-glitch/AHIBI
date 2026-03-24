@@ -312,6 +312,7 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
     const bookings = await Booking.find({ user: req.user._id })
       .sort({ bookedAt: -1 })
       .populate('event', 'title banner startDate')
+      .populate('dailyEvent', 'title banner startTime duration location')
       .lean();
 
     const normalizedBookings = bookings.map(b => ({
@@ -1043,6 +1044,96 @@ router.get("/daily-event/:eventId", auth.protect, async (req, res) => {
   }
 });
 
+// @route   GET /api/bookings/:bookingId/ticket
+// @desc    Download ticket as PDF
+// @access  Private
+router.get("/:bookingId/ticket", auth.protect, async (req, res) => {
+  try {
+    const booking = await Booking.findOne({
+      _id: req.params.bookingId,
+      user: req.user._id
+    })
+      .populate('event', 'title banner startDate endDate location')
+      .populate('dailyEvent', 'title banner startTime duration location')
+      .lean();
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ margin: 50 });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=ticket-${booking._id}.pdf`);
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(24).font('Helvetica-Bold').text('AHIBI', { align: 'center' });
+    doc.fontSize(12).font('Helvetica').text('Event Ticket', { align: 'center' });
+    doc.moveDown(2);
+
+    // Event details
+    const event = booking.isDailyEvent ? booking.dailyEvent : booking.event;
+    if (event) {
+      doc.fontSize(18).font('Helvetica-Bold').text(event.title);
+      doc.moveDown(0.5);
+
+      if (booking.isDailyEvent && booking.selectedDate) {
+        doc.fontSize(12).font('Helvetica').text(`Date: ${new Date(booking.selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
+        if (event.startTime) {
+          doc.text(`Time: ${event.startTime}`);
+        }
+      } else if (event.startDate) {
+        doc.fontSize(12).font('Helvetica').text(`Date: ${new Date(event.startDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
+      }
+
+      if (event.location) {
+        doc.text(`Venue: ${event.location.address || ''}`);
+        if (event.location.city) {
+          doc.text(`City: ${event.location.city}`);
+        }
+      }
+    }
+
+    doc.moveDown(1);
+
+    // Ticket details
+    doc.fontSize(14).font('Helvetica-Bold').text('Ticket Details');
+    doc.fontSize(12).font('Helvetica');
+    doc.text(`Ticket Type: ${booking.ticketType}`);
+    doc.text(`Quantity: ${booking.quantity}`);
+    doc.text(`Total: ₹${booking.total.toFixed(2)}`);
+    doc.moveDown(0.5);
+    doc.text(`Booking ID: ${booking._id}`);
+    doc.text(`Status: ${booking.status.toUpperCase()}`);
+    doc.moveDown(1);
+
+    // QR Code
+    if (booking.qrCode) {
+      try {
+        const qrImageData = booking.qrCode.replace(/^data:image\/png;base64,/, '');
+        const qrBuffer = Buffer.from(qrImageData, 'base64');
+        doc.image(qrBuffer, {
+          fit: [200, 200],
+          align: 'center'
+        });
+      } catch (err) {
+        console.error('Error adding QR code to PDF:', err);
+      }
+    }
+
+    doc.moveDown(2);
+    doc.fontSize(10).text('Please present this ticket at the venue entrance.', { align: 'center' });
+    doc.text('Thank you for booking with Ahibi!', { align: 'center' });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating ticket PDF:', error);
+    res.status(500).json({ message: "Error generating ticket", error: error.message });
+  }
+});
+
 // @route   POST /api/bookings/free
 // @desc    Create free booking (RSVP) for events or daily events
 // @access  Private
@@ -1236,16 +1327,20 @@ router.post("/initiate", auth.protect, async (req, res) => {
         };
       }
 
-      // Resolve ticket type name if it's an ID
+      // Validate and get ticket type ID
+      let ticketTypeId = ticketType;
       let ticketTypeName = ticketType;
+      
       if (dailyEvent && ticketType) {
         const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
         if (ticketTypeObj) {
+          ticketTypeId = ticketTypeObj._id;
           ticketTypeName = ticketTypeObj.name;
         }
       } else if (event && ticketType) {
         const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
         if (ticketTypeObj) {
+          ticketTypeId = ticketTypeObj._id;
           ticketTypeName = ticketTypeObj.name;
         }
       }
@@ -1261,6 +1356,7 @@ router.post("/initiate", auth.protect, async (req, res) => {
         status: "pending",
         paymentStatus: "pending",
         ticketType: ticketTypeName,
+        ticketTypeId: ticketTypeId,
       });
 
       await booking.save();
@@ -1326,14 +1422,14 @@ router.post("/verify", auth.protect, async (req, res) => {
       await booking.save();
 
       // Update ticket sold count
-      if (booking.isDailyEvent && booking.dailyEvent) {
+      if (booking.isDailyEvent && booking.dailyEvent && booking.ticketTypeId) {
         await DailyEvent.updateOne(
-          { _id: booking.dailyEvent, "ticketTypes._id": booking.ticketType },
+          { _id: booking.dailyEvent, "ticketTypes._id": booking.ticketTypeId },
           { $inc: { "ticketTypes.$.sold": booking.quantity, totalRevenue: booking.total } }
         );
-      } else if (booking.event) {
+      } else if (booking.event && booking.ticketTypeId) {
         await Event.updateOne(
-          { _id: booking.event, "ticketTypes._id": booking.ticketType },
+          { _id: booking.event, "ticketTypes._id": booking.ticketTypeId },
           { $inc: { "ticketTypes.$.sold": booking.quantity, totalRevenue: booking.total } }
         );
       }

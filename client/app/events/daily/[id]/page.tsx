@@ -66,6 +66,7 @@ interface DailyEvent {
   convenience: { percentage: number; fixedAmount: number };
   termsAndConditions?: string;
   isFreeEvent?: boolean;
+  bookingDeadlineHours?: number;
   socialLinks?: {
     website?: string;
     facebook?: string;

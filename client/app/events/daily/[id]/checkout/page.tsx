@@ -68,6 +68,7 @@ interface DailyEvent {
   };
   isFreeEvent?: boolean;
   termsAndConditions?: string;
+  bookingDeadlineHours?: number;
 }
 
 interface UserProfile {
@@ -177,6 +178,20 @@ export default function DailyEventCheckoutPage() {
     if (!selectedDate) {
       toast.error("Please select a date first");
       return;
+    }
+
+    if (event?.bookingDeadlineHours && event.bookingDeadlineHours > 0) {
+      const eventDateTime = new Date(selectedDate);
+      const [hours, minutes] = event.startTime.split(':').map(Number);
+      eventDateTime.setHours(hours, minutes, 0, 0);
+      
+      const deadlineTime = new Date(eventDateTime.getTime() - (event.bookingDeadlineHours * 60 * 60 * 1000));
+      const now = new Date();
+      
+      if (now >= deadlineTime) {
+        toast.error(`Booking deadline has passed. Bookings close ${event.bookingDeadlineHours} hours before the event.`);
+        return;
+      }
     }
 
     if (isFreeEvent && ticket.price === 0) {
@@ -292,6 +307,20 @@ export default function DailyEventCheckoutPage() {
     if (!acceptedTerms) {
       toast.error("Please accept the terms and conditions");
       return;
+    }
+
+    if (event?.bookingDeadlineHours && event.bookingDeadlineHours > 0) {
+      const eventDateTime = new Date(selectedDate);
+      const [hours, minutes] = event.startTime.split(':').map(Number);
+      eventDateTime.setHours(hours, minutes, 0, 0);
+      
+      const deadlineTime = new Date(eventDateTime.getTime() - (event.bookingDeadlineHours * 60 * 60 * 1000));
+      const now = new Date();
+      
+      if (now >= deadlineTime) {
+        toast.error(`Booking deadline has passed. Bookings close ${event.bookingDeadlineHours} hours before the event.`);
+        return;
+      }
     }
 
     if (isFreeEvent) {
@@ -514,6 +543,13 @@ export default function DailyEventCheckoutPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {event.bookingDeadlineHours && event.bookingDeadlineHours > 0 && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <strong>Note:</strong> Bookings close {event.bookingDeadlineHours} hour{event.bookingDeadlineHours !== 1 ? 's' : ''} before the event start time.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white rounded-lg shadow-sm p-6">

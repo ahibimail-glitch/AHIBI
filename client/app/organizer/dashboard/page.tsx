@@ -43,6 +43,7 @@ import Events from "../components/Events"
 import Bookings from "../components/Bookings"
 import CreateEventForm from "../components/CreateEventForm"
 import CreateDailyEventForm from "../components/CreateDailyEventForm"
+import EditDailyEventForm from "../components/EditDailyEventForm"
 import DailyEvents from "../components/DailyEvents"
 import Analytics from "../components/Analytics"
 import SettingsComponent from "../components/Settings"
@@ -95,6 +96,7 @@ export default function OrganizerDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shouldWarnOnExit, setShouldWarnOnExit] = useState(true)
   const [showExitDialog, setShowExitDialog] = useState(false)
+  const [editingDailyEventId, setEditingDailyEventId] = useState<string | null>(null)
 
   // Load organizer data from localStorage
   useEffect(() => {
@@ -154,13 +156,32 @@ export default function OrganizerDashboard() {
       case "pending-events":
         return <Events filterStatus="pending" />
       case "daily-events":
-        return <DailyEvents />
+        return <DailyEvents onEdit={(eventId) => {
+          setEditingDailyEventId(eventId);
+          setActiveView("edit-daily-event");
+        }} />
       case "approved-daily-events":
-        return <DailyEvents filterStatus="approved" />
+        return <DailyEvents filterStatus="approved" onEdit={(eventId) => {
+          setEditingDailyEventId(eventId);
+          setActiveView("edit-daily-event");
+        }} />
       case "pending-daily-events":
-        return <DailyEvents filterStatus="pending" />
+        return <DailyEvents filterStatus="pending" onEdit={(eventId) => {
+          setEditingDailyEventId(eventId);
+          setActiveView("edit-daily-event");
+        }} />
       case "create-daily-event":
         return <CreateDailyEventForm onSuccess={() => setActiveView("dashboard")} />
+      case "edit-daily-event":
+        return editingDailyEventId ? (
+          <EditDailyEventForm 
+            eventId={editingDailyEventId} 
+            onSuccess={() => {
+              setEditingDailyEventId(null);
+              setActiveView("daily-events");
+            }} 
+          />
+        ) : <DailyEvents />
       case "bookings":
         return <Bookings />
       case "artist-booking":

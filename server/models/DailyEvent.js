@@ -131,6 +131,12 @@ const DailyEventSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Booking deadline in hours before event start time
+  bookingDeadlineHours: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   category: {
     type: String,
     required: [true, 'Event category is required'],

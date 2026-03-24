@@ -5,7 +5,7 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Clock, Pause, Play, Loader2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Pause, Play, Loader2, Edit } from "lucide-react";
 import { format } from "date-fns";
 
 interface DailyEvent {
@@ -37,9 +37,10 @@ interface DailyEvent {
 
 interface DailyEventsProps {
   filterStatus?: string;
+  onEdit?: (eventId: string) => void;
 }
 
-export default function DailyEvents({ filterStatus }: DailyEventsProps) {
+export default function DailyEvents({ filterStatus, onEdit }: DailyEventsProps) {
   const [dailyEvents, setDailyEvents] = useState<DailyEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -220,26 +221,40 @@ export default function DailyEvents({ filterStatus }: DailyEventsProps) {
                 </div>
               )}
 
-              {(event.status === "approved" || event.status === "paused") && (
-                <Button
-                  onClick={() => handlePauseResume(event._id, event.status)}
-                  variant={event.status === "paused" ? "default" : "outline"}
-                  className="w-full mt-2"
-                  size="sm"
-                >
-                  {event.status === "paused" ? (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Resume Event
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="h-4 w-4 mr-2" />
-                      Pause Event
-                    </>
-                  )}
-                </Button>
-              )}
+              <div className="space-y-2">
+                {onEdit && event.status !== "completed" && (
+                  <Button
+                    onClick={() => onEdit(event._id)}
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Event
+                  </Button>
+                )}
+                
+                {(event.status === "approved" || event.status === "paused") && (
+                  <Button
+                    onClick={() => handlePauseResume(event._id, event.status)}
+                    variant={event.status === "paused" ? "default" : "outline"}
+                    className="w-full"
+                    size="sm"
+                  >
+                    {event.status === "paused" ? (
+                      <>
+                        <Play className="h-4 w-4 mr-2" />
+                        Resume Event
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="h-4 w-4 mr-2" />
+                        Pause Event
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}

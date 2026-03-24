@@ -14,15 +14,17 @@ interface ModernBookingTicketProps {
     bookingId: string;
     ticketIndex?: number;
     totalTickets?: number;
+    autoDownload?: boolean;
 }
 
-const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ticketIndex = 1, totalTickets = 1 }) => {
+const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ticketIndex = 1, totalTickets = 1, autoDownload = false }) => {
     const [booking, setBooking] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>("");
     const [user, setUser] = useState<UserProfile | null>(null);
     const ticketRef = useRef<HTMLDivElement>(null);
     const [showVoucherPopup, setShowVoucherPopup] = useState(false);
+    const [hasAutoDownloaded, setHasAutoDownloaded] = useState(false);
 
     useEffect(() => {
         if (
@@ -92,6 +94,17 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
 
         fetchBookingAndProfileData();
     }, [bookingId]);
+
+    useEffect(() => {
+        if (!autoDownload || loading || !booking || hasAutoDownloaded) return;
+
+        const runAutoDownload = async () => {
+            await handleDownloadTicket();
+            setHasAutoDownloaded(true);
+        };
+
+        runAutoDownload();
+    }, [autoDownload, loading, booking, hasAutoDownloaded]);
 
     const formatDate = (date: string | number | Date) => {
         return new Date(date).toLocaleDateString('en-US', {
@@ -348,7 +361,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({ bookingId, ti
 
 
 
-            <div ref={ticketRef} id="booking-ticket" className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div ref={ticketRef} className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 px-6 py-6 relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
