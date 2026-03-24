@@ -55,8 +55,8 @@ export default function Footer() {
               <li><Link href="/about" className="hover:text-[#ff0e0e] transition">About</Link></li>
               <li><Link href="mailto:connect@ahibi.in" className="hover:text-[#ff0e0e] transition">Contact</Link></li>
               <li><Link href="/privacy" className="hover:text-[#ff0e0e] transition">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-[#ff0e0e] transition">Terms & Conditions</Link></li>
-              <li><Link href="/shipping" className="hover:text-[#ff0e0e] transition">Shipping Policy</Link></li>
+              {/* <li><Link href="/terms" className="hover:text-[#ff0e0e] transition">Terms & Conditions</Link></li> */}
+              {/* <li><Link href="/shipping" className="hover:text-[#ff0e0e] transition">Shipping Policy</Link></li> */}
               <li><Link href="/refund" className="hover:text-[#ff0e0e] transition">Refund Policy</Link></li>
               <li><Link href="/accessibility" className="hover:text-[#ff0e0e] transition">Accessibility</Link></li>
               <li><Link href="/faq" className="hover:text-[#ff0e0e] transition">FAQs</Link></li>
