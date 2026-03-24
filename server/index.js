@@ -15,6 +15,7 @@ const artistRoutes = require('./routes/artist.routes');
 const venueRoutes = require('./routes/venue.routes');
 const organizerRoutes = require('./routes/organizer.routes');
 const eventRoutes = require('./routes/event.routes');
+const dailyEventRoutes = require('./routes/dailyEvent.routes');
 
 const uploadRoutes = require('./routes/upload.routes');
 // const ticketRoutes = require('./routes/ticket.routes');
@@ -165,6 +166,7 @@ app.use('/api/artist', artistRoutes);
 app.use('/api/venue', venueRoutes);
 app.use('/api/organizer', organizerRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/daily-events', dailyEventRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/qrs', qrRoutes);
 app.use('/api/payments', paymentRoutes);

@@ -4,7 +4,20 @@ const BookingSchema = new mongoose.Schema({
   event: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Event',
-    required: true
+    required: function() {
+      return !this.dailyEvent;
+    }
+  },
+  dailyEvent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DailyEvent'
+  },
+  isDailyEvent: {
+    type: Boolean,
+    default: false
+  },
+  selectedDate: {
+    type: Date
   },
   // Snapshot of event details at the time of booking to preserve info if the event is later deleted/changed
   eventSnapshot: {

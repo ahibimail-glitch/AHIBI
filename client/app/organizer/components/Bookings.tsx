@@ -56,6 +56,7 @@ export default function Bookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDailyEvents, setShowDailyEvents] = useState(false);
 
   // Fetch bookings data
   useEffect(() => {
@@ -68,7 +69,11 @@ export default function Bookings() {
           return;
         }
 
-        const response = await fetch('/api/bookings/organizer-bookings', {
+        const endpoint = showDailyEvents 
+          ? '/api/bookings/organizer-daily-bookings'
+          : '/api/bookings/organizer-bookings';
+
+        const response = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -90,7 +95,7 @@ export default function Bookings() {
     };
 
     fetchBookings();
-  }, []);
+  }, [showDailyEvents]);
 
   const filteredBookings = bookings.filter((booking) =>
     booking.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -189,10 +194,25 @@ export default function Bookings() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Event Bookings</h2>
-          <p className="text-sm sm:text-base text-gray-600">Manage and track all bookings for your events</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {showDailyEvents ? "Daily Event Bookings" : "Event Bookings"}
+          </h2>
+          <p className="text-sm sm:text-base text-gray-600">
+            Manage and track all bookings for your {showDailyEvents ? "daily events" : "events"}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <Button 
+            variant={showDailyEvents ? "default" : "outline"}
+            onClick={() => {
+              setShowDailyEvents(!showDailyEvents);
+              setLoading(true);
+            }}
+            className={showDailyEvents ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 w-full sm:w-auto" : "w-full sm:w-auto"}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            {showDailyEvents ? "Show Regular Events" : "Show Daily Events"}
+          </Button>
           <Button variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Export

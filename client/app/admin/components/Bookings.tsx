@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Download, Search, X } from "lucide-react";
+import { Eye, Download, Search, X, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import * as XLSX from 'xlsx';
+import { toast } from "sonner";
 
 interface Booking {
   _id: string;
@@ -182,6 +183,37 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     setPhoneFilter("");
     setTicketTypeFilter("all");
     setDateFilter(undefined);
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to delete this booking? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("admin_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${apiUrl}/api/admin/bookings/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : "",
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      // Remove the booking from the list
+      setBookings(prevBookings => prevBookings.filter(b => b._id !== bookingId));
+      toast.success("Booking deleted successfully");
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error("Failed to delete booking");
+    }
   };
   
   // Export to Excel function
@@ -437,6 +469,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
               <TableHead>Ticket Type</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Total Amount</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -452,6 +485,16 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
                 <TableCell>{booking.ticketType || "NA"}</TableCell>
                 <TableCell>{booking.quantity}</TableCell>
                 <TableCell>₹{booking.total}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteBooking(booking._id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

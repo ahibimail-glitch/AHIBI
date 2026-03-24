@@ -42,6 +42,7 @@ import UsersComponent from "./components/Users";
 import Bookings from "./components/Bookings";
 import Artists from "./components/Artists";
 import Events from "./components/Events";
+import DailyEvents from "./components/DailyEvents";
 import OrganizerManagement from "./components/OrganizerManagement";
 import System from "./components/System";
 import CreateEventForm from "./components/CreateEventForm";
@@ -242,6 +243,8 @@ export default function AdminDashboard() {
         return <VenueManagement />;
       case "event-approvals":
         return <Events />;
+      case "daily-events":
+        return <DailyEvents />;
       case "approved-events":
         return <ApprovedEvents />;
       case "users":
@@ -432,6 +435,13 @@ export default function AdminDashboard() {
           <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => { setActiveView("schedule-event"); setSidebarOpen(false); }} />
           <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => { setActiveView("create-event"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => { setActiveView("event-approvals"); setSidebarOpen(false); }} />
+          
+          <SidebarButton 
+            icon={CalendarCheck2} 
+            label="Daily Events" 
+            active={activeView === "daily-events"} 
+            onClick={() => { setActiveView("daily-events"); setSidebarOpen(false); }} 
+          />
           
           <SidebarButton
             icon={CalendarCheck2}

@@ -422,11 +422,23 @@ export default function EventsPage() {
                     <Button asChild variant="outline" className="w-full border-red-300 text-red-600 hover:bg-red-50">
                       <Link href="/allVenues">Browse by Venues</Link>
                     </Button>
+                    <Button asChild variant="outline" className="w-full border-blue-300 text-blue-600 hover:bg-blue-50">
+                      <Link href="/events/daily">Daily Events</Link>
+                    </Button>
                   </div>
                 </div>
               </aside>
 
               <div>
+                <div className="mb-4">
+                  <Button asChild className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                    <Link href="/events/daily">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      View Daily Events
+                    </Link>
+                  </Button>
+                </div>
+
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <div>
                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900">

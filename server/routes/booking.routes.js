@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Booking = require("../models/Booking");
 const Event = require("../models/Event");
+const DailyEvent = require("../models/DailyEvent");
 const User = require("../models/User");
 const auth = require("../middlewares/auth");
 const QRCode = require('qrcode'); // Import QRCode library
@@ -401,6 +402,52 @@ router.get("/organizer-bookings", auth.protect, async (req, res) => {
     res.json({ bookings: normalized });
   } catch (error) {
     console.error('Error fetching organizer bookings:', error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   GET /api/bookings/organizer-daily-bookings
+// @desc    Get all bookings for daily events created by the logged-in organizer
+// @access  Private (Organizer only)
+router.get("/organizer-daily-bookings", auth.protect, async (req, res) => {
+  try {
+    // Check if user is an organizer
+    if (req.user.role !== 'organizer') {
+      return res.status(403).json({ 
+        message: "Access denied. Organizer role required." 
+      });
+    }
+
+    // First get all daily events created by this organizer
+    const organizerDailyEvents = await DailyEvent.find({ organizer: req.user._id }).select('_id');
+    const dailyEventIds = organizerDailyEvents.map(event => event._id);
+
+    if (dailyEventIds.length === 0) {
+      return res.json({ bookings: [] });
+    }
+
+    // Get all bookings for these daily events
+    const bookings = await Booking.find({ dailyEvent: { $in: dailyEventIds }, isDailyEvent: true })
+      .sort({ bookedAt: -1 })
+      .populate('dailyEvent', 'title banner periodStartDate periodEndDate startTime duration location organizer')
+      .populate('user', 'name email phone')
+      .lean();
+
+    // Normalize the bookings to match the regular event booking structure
+    const normalized = bookings.map(b => ({
+      ...b,
+      event: {
+        _id: b.dailyEvent?._id,
+        title: b.dailyEvent?.title,
+        banner: b.dailyEvent?.banner,
+        startDate: b.selectedDate || b.dailyEvent?.periodStartDate,
+        organizer: b.dailyEvent?.organizer
+      }
+    }));
+
+    res.json({ bookings: normalized });
+  } catch (error) {
+    console.error('Error fetching organizer daily event bookings:', error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
@@ -967,6 +1014,363 @@ router.post("/admin-manual-booking",  async (req, res) => {
     }
   } catch (error) {
     console.error("[Admin Booking] Error creating manual booking:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   GET /api/bookings/daily-event/:eventId
+// @desc    Get all bookings for a specific daily event by the logged-in user
+// @access  Private
+router.get("/daily-event/:eventId", auth.protect, async (req, res) => {
+  try {
+    const bookings = await Booking.find({ 
+      dailyEvent: req.params.eventId,
+      user: req.user._id 
+    })
+      .sort({ bookedAt: -1 })
+      .populate('dailyEvent', 'title banner location startTime duration ticketTypes')
+      .lean();
+
+    const normalized = bookings.map(b => ({
+      ...b,
+      dailyEvent: b.dailyEvent || {}
+    }));
+
+    res.json({ success: true, data: { bookings: normalized } });
+  } catch (error) {
+    console.error('Error fetching daily event bookings:', error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   POST /api/bookings/free
+// @desc    Create free booking (RSVP) for events or daily events
+// @access  Private
+router.post("/free", auth.protect, async (req, res) => {
+  try {
+    const { bookings } = req.body;
+
+    if (!Array.isArray(bookings) || bookings.length === 0) {
+      return res.status(400).json({ message: "Please provide bookings array" });
+    }
+
+    const createdBookings = [];
+
+    for (const bookingData of bookings) {
+      const { dailyEvent, event, selectedDate, ticketType, quantity } = bookingData;
+
+      // Validate that either dailyEvent or event is provided
+      if (!dailyEvent && !event) {
+        return res.status(400).json({ message: "Please provide either event or dailyEvent" });
+      }
+
+      let eventDoc;
+      let eventSnapshot;
+
+      if (dailyEvent) {
+        // Handle daily event booking
+        eventDoc = await DailyEvent.findById(dailyEvent);
+        if (!eventDoc) {
+          return res.status(404).json({ message: "Daily event not found" });
+        }
+
+        if (!selectedDate) {
+          return res.status(400).json({ message: "Please provide selectedDate for daily event" });
+        }
+
+        eventSnapshot = {
+          _id: eventDoc._id,
+          title: eventDoc.title,
+          banner: eventDoc.banner,
+          startDate: selectedDate,
+          endDate: selectedDate,
+          location: {
+            address: eventDoc.location?.address,
+            city: eventDoc.location?.city
+          }
+        };
+      } else {
+        // Handle regular event booking
+        eventDoc = await Event.findById(event);
+        if (!eventDoc) {
+          return res.status(404).json({ message: "Event not found" });
+        }
+
+        eventSnapshot = {
+          _id: eventDoc._id,
+          title: eventDoc.title,
+          banner: eventDoc.banner,
+          startDate: eventDoc.startDate,
+          endDate: eventDoc.endDate,
+          location: {
+            address: eventDoc.location?.address,
+            city: eventDoc.location?.city
+          }
+        };
+      }
+
+      // Create booking
+      // Resolve ticket type name if it's an ID
+      let ticketTypeName = ticketType || 'Free RSVP';
+      if (dailyEvent && ticketType) {
+        const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
+        if (ticketTypeObj) {
+          ticketTypeName = ticketTypeObj.name;
+        }
+      } else if (event && ticketType) {
+        const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
+        if (ticketTypeObj) {
+          ticketTypeName = ticketTypeObj.name;
+        }
+      }
+
+      const booking = new Booking({
+        ...(dailyEvent && { dailyEvent, isDailyEvent: true, selectedDate }),
+        ...(event && { event }),
+        eventSnapshot,
+        user: req.user._id,
+        quantity: quantity || 1,
+        price: 0,
+        total: 0,
+        status: "confirmed",
+        paymentStatus: "free",
+        ticketType: ticketTypeName,
+      });
+
+      await booking.save();
+      createdBookings.push(booking);
+
+      // Update ticket sold count
+      if (dailyEvent) {
+        await DailyEvent.updateOne(
+          { _id: dailyEvent, "ticketTypes._id": ticketType },
+          { $inc: { "ticketTypes.$.sold": quantity || 1 } }
+        );
+      } else {
+        await Event.updateOne(
+          { _id: event, "ticketTypes._id": ticketType },
+          { $inc: { "ticketTypes.$.sold": quantity || 1 } }
+        );
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "RSVP confirmed successfully",
+      data: { bookings: createdBookings }
+    });
+  } catch (error) {
+    console.error("Error creating free booking:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   POST /api/bookings/initiate
+// @desc    Initiate payment for bookings (supports both events and daily events)
+// @access  Private
+router.post("/initiate", auth.protect, async (req, res) => {
+  try {
+    const { bookings, couponCode } = req.body;
+    const Razorpay = require('razorpay');
+
+    if (!Array.isArray(bookings) || bookings.length === 0) {
+      return res.status(400).json({ message: "Please provide bookings array" });
+    }
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
+    let totalAmount = 0;
+    const createdBookings = [];
+    const bookingIds = [];
+
+    for (const bookingData of bookings) {
+      const { dailyEvent, event, selectedDate, ticketType, quantity, price, total } = bookingData;
+
+      if (!dailyEvent && !event) {
+        return res.status(400).json({ message: "Please provide either event or dailyEvent" });
+      }
+
+      let eventDoc;
+      let eventSnapshot;
+
+      if (dailyEvent) {
+        eventDoc = await DailyEvent.findById(dailyEvent);
+        if (!eventDoc) {
+          return res.status(404).json({ message: "Daily event not found" });
+        }
+
+        if (!selectedDate) {
+          return res.status(400).json({ message: "Please provide selectedDate for daily event" });
+        }
+
+        eventSnapshot = {
+          _id: eventDoc._id,
+          title: eventDoc.title,
+          banner: eventDoc.banner,
+          startDate: selectedDate,
+          endDate: selectedDate,
+          location: {
+            address: eventDoc.location?.address,
+            city: eventDoc.location?.city
+          }
+        };
+      } else {
+        eventDoc = await Event.findById(event);
+        if (!eventDoc) {
+          return res.status(404).json({ message: "Event not found" });
+        }
+
+        eventSnapshot = {
+          _id: eventDoc._id,
+          title: eventDoc.title,
+          banner: eventDoc.banner,
+          startDate: eventDoc.startDate,
+          endDate: eventDoc.endDate,
+          location: {
+            address: eventDoc.location?.address,
+            city: eventDoc.location?.city
+          }
+        };
+      }
+
+      // Resolve ticket type name if it's an ID
+      let ticketTypeName = ticketType;
+      if (dailyEvent && ticketType) {
+        const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
+        if (ticketTypeObj) {
+          ticketTypeName = ticketTypeObj.name;
+        }
+      } else if (event && ticketType) {
+        const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
+        if (ticketTypeObj) {
+          ticketTypeName = ticketTypeObj.name;
+        }
+      }
+
+      const booking = new Booking({
+        ...(dailyEvent && { dailyEvent, isDailyEvent: true, selectedDate }),
+        ...(event && { event }),
+        eventSnapshot,
+        user: req.user._id,
+        quantity,
+        price,
+        total,
+        status: "pending",
+        paymentStatus: "pending",
+        ticketType: ticketTypeName,
+      });
+
+      await booking.save();
+      createdBookings.push(booking);
+      bookingIds.push(booking._id);
+      totalAmount += total;
+    }
+
+    // Create Razorpay order
+    const order = await razorpay.orders.create({
+      amount: Math.round(totalAmount * 100), // Convert to paise
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`,
+      notes: {
+        bookingIds: bookingIds.join(','),
+        userId: req.user._id.toString(),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      order,
+      bookingIds,
+    });
+  } catch (error) {
+    console.error("Error initiating payment:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// @route   POST /api/bookings/verify
+// @desc    Verify payment and confirm bookings
+// @access  Private
+router.post("/verify", auth.protect, async (req, res) => {
+  try {
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, bookingIds } = req.body;
+    const crypto = require('crypto');
+
+    // Verify signature
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      // Mark bookings as failed
+      await Booking.updateMany(
+        { _id: { $in: bookingIds } },
+        { status: "failed", paymentStatus: "failed" }
+      );
+      return res.status(400).json({ message: "Invalid payment signature" });
+    }
+
+    // Update bookings to confirmed
+    const updatedBookings = await Booking.find({ _id: { $in: bookingIds } });
+
+    for (const booking of updatedBookings) {
+      booking.status = "confirmed";
+      booking.paymentStatus = "completed";
+      booking.razorpayPaymentId = razorpay_payment_id;
+      booking.razorpayOrderId = razorpay_order_id;
+      await booking.save();
+
+      // Update ticket sold count
+      if (booking.isDailyEvent && booking.dailyEvent) {
+        await DailyEvent.updateOne(
+          { _id: booking.dailyEvent, "ticketTypes._id": booking.ticketType },
+          { $inc: { "ticketTypes.$.sold": booking.quantity, totalRevenue: booking.total } }
+        );
+      } else if (booking.event) {
+        await Event.updateOne(
+          { _id: booking.event, "ticketTypes._id": booking.ticketType },
+          { $inc: { "ticketTypes.$.sold": booking.quantity, totalRevenue: booking.total } }
+        );
+      }
+
+      // Generate QR code
+      try {
+        const bookingData = JSON.stringify({
+          bookingId: booking._id,
+          eventId: booking.isDailyEvent ? booking.dailyEvent : booking.event,
+          ticketType: booking.ticketType,
+          quantity: booking.quantity,
+          selectedDate: booking.selectedDate
+        });
+
+        const qrCodeDataUrl = await QRCode.toDataURL(bookingData, {
+          errorCorrectionLevel: 'H',
+          margin: 2,
+          color: {
+            dark: '#4a154b',
+            light: '#ffffff'
+          }
+        });
+
+        booking.qrCode = qrCodeDataUrl;
+        await booking.save();
+      } catch (qrError) {
+        console.error('Error generating QR code:', qrError);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Payment verified and bookings confirmed",
+      bookings: updatedBookings,
+    });
+  } catch (error) {
+    console.error("Error verifying payment:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });

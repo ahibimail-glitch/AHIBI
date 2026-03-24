@@ -3,6 +3,7 @@ const Artist = require('../models/Artist');
 const Venue = require('../models/Venue');
 const Organizer = require('../models/Organizer');
 const Event = require('../models/Event');
+const DailyEvent = require('../models/DailyEvent');
 const Ticket = require('../models/Ticket');
 const ArtistAvailability = require('../models/ArtistAvailability');
 const ArtistBooking = require('../models/ArtistBooking');
@@ -48,6 +49,10 @@ exports.getDashboardStats = async (req, res) => {
     });
     
     const pendingEvents = await Event.countDocuments({ 
+      status: 'pending' 
+    });
+    
+    const pendingDailyEvents = await DailyEvent.countDocuments({ 
       status: 'pending' 
     });
 
@@ -133,7 +138,8 @@ exports.getDashboardStats = async (req, res) => {
         artists: pendingArtists,
         venues: pendingVenues,
         events: pendingEvents,
-        total: pendingOrganizers + pendingArtists + pendingVenues + pendingEvents
+        dailyEvents: pendingDailyEvents,
+        total: pendingOrganizers + pendingArtists + pendingVenues + pendingEvents + pendingDailyEvents
       },
       events: {
         total: totalEvents,
@@ -790,6 +796,11 @@ exports.getPendingApprovals = async (req, res) => {
       .select('_id title description startDate endDate category location status createdAt banner organizerInfo ticketTypes totalTickets ticketsSold')
       .sort({ createdAt: -1 });
     
+    const dailyEvents = await DailyEvent.find({})
+      .populate('organizer', 'name email phone companyName')
+      .select('_id title description periodStartDate periodEndDate startTime duration category location status createdAt banner organizerInfo ticketTypes totalTickets ticketsSold activeDates excludedDates')
+      .sort({ createdAt: -1 });
+    
     // Transform events to include organizer details
     const transformedEvents = events.map(event => ({
       _id: event._id,
@@ -813,13 +824,42 @@ exports.getPendingApprovals = async (req, res) => {
       }
     }));
     
+    // Transform daily events to include organizer details
+    const transformedDailyEvents = dailyEvents.map(event => ({
+      _id: event._id,
+      title: event.title,
+      description: event.description,
+      startDate: event.periodStartDate, // Map to same field for UI compatibility
+      endDate: event.periodEndDate,
+      category: event.category,
+      location: event.location,
+      status: event.status,
+      createdAt: event.createdAt,
+      banner: event.banner,
+      ticketTypes: event.ticketTypes,
+      totalTickets: event.totalTickets,
+      ticketsSold: event.ticketsSold,
+      isDailyEvent: true,
+      startTime: event.startTime,
+      duration: event.duration,
+      activeDates: event.activeDates,
+      excludedDates: event.excludedDates,
+      organizerInfo: {
+        name: event.organizer?.name || event.organizerInfo?.name || 'Unknown',
+        email: event.organizer?.email || 'No email',
+        phone: event.organizer?.phone || 'No phone',
+        companyName: event.organizer?.companyName || 'No company'
+      }
+    }));
+    
     return ApiResponse.success(res, 'All approvals retrieved successfully', {
       organizers,
       artists,
       venues,
       events: transformedEvents,
+      dailyEvents: transformedDailyEvents,
       pagination: {
-        total: organizers.length + artists.length + venues.length + events.length,
+        total: organizers.length + artists.length + venues.length + events.length + dailyEvents.length,
         page: 1,
         limit: 1000,
         pages: 1

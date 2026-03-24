@@ -46,7 +46,7 @@ const primaryNavLinks = [
 const moreNavLinks = [
   { href: "/allOrganizers",        label: "Organizers",             Icon: Users        },
   { href: "/about",                label: "About",                  Icon: Info         },
-  { href: "/sports/tournaments",   label: "Tournament Registration", Icon: ClipboardList },
+  // { href: "/sports/tournaments",   label: "Tournament Registration", Icon: ClipboardList },
 ];
 
 export default function Navbar() {

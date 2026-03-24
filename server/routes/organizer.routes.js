@@ -2,6 +2,7 @@ const express = require('express');
 const { check } = require('express-validator');
 const organizerAuthController = require('../controllers/organizerAuthController');
 const eventController = require('../controllers/eventController');
+const dailyEventController = require('../controllers/dailyEventController');
 const organizerBookingController = require('../controllers/organizerBookingController');
 const { protect, authorize } = require('../middlewares/auth');
 
@@ -98,6 +99,32 @@ router.put('/events/:id', [
 router.put('/events/:id/pause', protect, eventController.pauseOrganizerEvent);
 router.put('/events/:id/resume', protect, eventController.resumeOrganizerEvent);
 router.delete('/events/:id', protect, eventController.deleteOrganizerEvent);
+
+// Organizer daily event routes
+router.post('/daily-events', [
+  protect,
+  check('title', 'Event title is required').notEmpty(),
+  check('description', 'Event description is required').notEmpty(),
+  check('category', 'Event category is required').notEmpty(),
+  check('periodStartDate', 'Period start date is required').notEmpty(),
+  check('periodEndDate', 'Period end date is required').notEmpty(),
+  check('startTime', 'Start time is required').notEmpty(),
+  check('activeDates', 'Active dates are required').isArray({ min: 1 }),
+  check('location.address', 'Venue address is required').notEmpty(),
+  check('ticketTypes').custom((value, { req }) => {
+    if (req.body.isFreeEvent) {
+      return true;
+    }
+    if (!Array.isArray(value) || value.length === 0) {
+      throw new Error('At least one ticket type is required');
+    }
+    return true;
+  })
+], dailyEventController.createOrganizerDailyEvent);
+
+router.get('/daily-events', protect, dailyEventController.getOrganizerDailyEvents);
+router.put('/daily-events/:id/pause', protect, dailyEventController.pauseOrganizerDailyEvent);
+router.put('/daily-events/:id/resume', protect, dailyEventController.resumeOrganizerDailyEvent);
 
 // Artist booking routes for organizers
 router.get('/artists/search', protect, authorize('organizer'), organizerBookingController.searchArtistsWithAvailability);

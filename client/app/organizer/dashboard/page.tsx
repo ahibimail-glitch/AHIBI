@@ -42,6 +42,8 @@ import Dashboard from "../components/Dashboard"
 import Events from "../components/Events"
 import Bookings from "../components/Bookings"
 import CreateEventForm from "../components/CreateEventForm"
+import CreateDailyEventForm from "../components/CreateDailyEventForm"
+import DailyEvents from "../components/DailyEvents"
 import Analytics from "../components/Analytics"
 import SettingsComponent from "../components/Settings"
 import ArtistBookingCalendar from "@/components/organizer/ArtistBookingCalendar"
@@ -151,6 +153,14 @@ export default function OrganizerDashboard() {
         return <Events filterStatus="approved" />
       case "pending-events":
         return <Events filterStatus="pending" />
+      case "daily-events":
+        return <DailyEvents />
+      case "approved-daily-events":
+        return <DailyEvents filterStatus="approved" />
+      case "pending-daily-events":
+        return <DailyEvents filterStatus="pending" />
+      case "create-daily-event":
+        return <CreateDailyEventForm onSuccess={() => setActiveView("dashboard")} />
       case "bookings":
         return <Bookings />
       case "artist-booking":
@@ -310,6 +320,24 @@ export default function OrganizerDashboard() {
               active={activeView === "create-event"} 
               onClick={() => {
                 setActiveView("create-event")
+                setSidebarOpen(false)
+              }} 
+            />
+            <SidebarButton 
+              icon={Calendar} 
+              label="Daily Events" 
+              active={activeView === "daily-events"} 
+              onClick={() => {
+                setActiveView("daily-events")
+                setSidebarOpen(false)
+              }} 
+            />
+            <SidebarButton 
+              icon={PlusCircle} 
+              label="Create Daily Event" 
+              active={activeView === "create-daily-event"} 
+              onClick={() => {
+                setActiveView("create-daily-event")
                 setSidebarOpen(false)
               }} 
             />

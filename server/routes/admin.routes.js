@@ -2,6 +2,7 @@ const express = require('express');
 const { check } = require('express-validator');
 const adminController = require('../controllers/adminController');
 const eventController = require('../controllers/eventController');
+const dailyEventController = require('../controllers/dailyEventController');
 const { protect, authorize } = require('../middlewares/auth');
 const { validateEvent } = require('../middlewares/validation');
 const Booking = require('../models/Booking');
@@ -54,6 +55,16 @@ router.put('/events/:id/reject', eventController.rejectEvent);
 router.put('/events/:id/pause', eventController.pauseEvent);
 router.put('/events/:id/resume', eventController.resumeEvent);
 router.delete('/events/:id', eventController.deleteEvent);
+
+// Daily event management
+router.get('/daily-events', dailyEventController.getDailyEvents);
+router.post('/daily-events', dailyEventController.createDailyEvent);
+router.put('/daily-events/:id', dailyEventController.updateDailyEvent);
+router.put('/daily-events/:id/approve', dailyEventController.approveDailyEvent);
+router.put('/daily-events/:id/reject', dailyEventController.rejectDailyEvent);
+router.put('/daily-events/:id/pause', dailyEventController.pauseDailyEvent);
+router.put('/daily-events/:id/resume', dailyEventController.resumeDailyEvent);
+router.delete('/daily-events/:id', dailyEventController.deleteDailyEvent);
 
 // FC25 participants
 router.get('/fc25/players', eventController.getFC25PlayersAdmin);
@@ -109,6 +120,31 @@ router.put('/users/:id/status', [
 
 
 //Booking management routes
+
+// Delete a booking
+router.delete("/bookings/:id", async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    
+    // Find and delete the booking
+    const booking = await Booking.findByIdAndDelete(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    
+    res.status(200).json({ 
+      message: "Booking deleted successfully",
+      deletedBooking: booking
+    });
+  } catch (error) {
+    console.error('Error deleting booking:', error);
+    res.status(500).json({ 
+      message: "Server error while deleting booking", 
+      error: error.message 
+    });
+  }
+});
 
 router.get("/bookings/all",  async (req, res) => {
   try {
