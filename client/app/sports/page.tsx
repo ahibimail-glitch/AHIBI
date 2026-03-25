@@ -16,7 +16,8 @@ import {
     Activity,
     CreditCard,
     Target,
-    Zap
+    Zap,
+    ChevronDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -63,24 +64,33 @@ const Hero = () => (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/10 border border-red-600/20 text-red-500 text-xs font-bold uppercase tracking-widest">
                     <Activity className="h-3 w-3" /> Live Booking Now Available
                 </div>
-                {/* Updated Heading */}
                 <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-white uppercase italic leading-[0.9]">
                     AHIBI <br /> <span className="text-red-600">Sports</span>
                 </h1>
                 <p className="max-w-lg text-gray-400 md:text-xl leading-relaxed font-light">
-                    The ultimate arena network. Book elite facilities or monetize your ground with the industry's most powerful booking engine.
+                    Find and book verified sports courts and grounds — or list your facility and manage bookings online.
                 </p>
 
                 <div className="flex flex-wrap gap-5">
-                    <Link href="/arena-partner/auth">
+                    <Link href="/sports/list">
                         <Button
                             size="lg"
                             className="group rounded-none px-10 bg-red-600 hover:bg-white text-white hover:text-red-600 transition-all duration-300 transform skew-x-[-12deg] border-none"
                         >
                             <span className="inline-block skew-x-[12deg] font-bold uppercase tracking-tighter">
-                                List Your Facility
+                                Explore Facilities
                             </span>
                             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform skew-x-[12deg]" />
+                        </Button>
+                    </Link>
+                    <Link href="/arena-partner/auth">
+                        <Button
+                            size="lg"
+                            className="group rounded-none px-10 bg-transparent border-2 border-white text-white hover:bg-white hover:text-black transition-all duration-300 transform skew-x-[-12deg]"
+                        >
+                            <span className="inline-block skew-x-[12deg] font-bold uppercase tracking-tighter">
+                                List Your Facility
+                            </span>
                         </Button>
                     </Link>
                 </div>
@@ -195,9 +205,9 @@ const Facilities = () => (
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div className="text-left">
                 <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white uppercase italic">
-                    The Roster
+                    What You Can Book
                 </h2>
-                <p className="mt-2 text-gray-500 uppercase tracking-[0.2em] text-sm">Elite Tier Facilities Only</p>
+                <p className="mt-2 text-gray-500 uppercase tracking-[0.2em] text-sm">Book by the hour. Check availability instantly.</p>
             </div>
             <Link href="/sports/list" className="text-red-500 font-bold uppercase tracking-widest text-sm hover:underline flex items-center gap-2">
                 View All Arenas <ArrowRight className="h-4 w-4" />
@@ -206,12 +216,12 @@ const Facilities = () => (
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-                { label: "Futsal & Football", sport: "football", icon: "⚽" },
-                { label: "Badminton Pro", sport: "badminton", icon: "🏸" },
+                { label: "Futsal & Football Grounds", sport: "football", icon: "⚽" },
+                { label: "Badminton Courts", sport: "badminton", icon: "🏸" },
                 { label: "Tennis Courts", sport: "tennis", icon: "🎾" },
-                { label: "Basketball Hub", sport: "basketball", icon: "🏀" },
-                { label: "Cricket Nets", sport: "cricket", icon: "🏏" },
-                { label: "Volleyball Pro", sport: "volleyball", icon: "🏐" },
+                { label: "Basketball Courts", sport: "basketball", icon: "🏀" },
+                { label: "Cricket Nets & Grounds", sport: "cricket", icon: "🏏" },
+                { label: "Volleyball Courts", sport: "volleyball", icon: "🏐" },
                 { label: "Table Tennis", sport: "table_tennis", icon: "🏓" },
                 { label: "Swimming Pools", sport: "swimming", icon: "🏊" },
                 { label: "Pickleball", sport: "pickleball", icon: "🎾" },
@@ -239,7 +249,7 @@ const HowItWorks = () => (
     <Section className="bg-white">
         <div className="text-center mb-20">
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-black uppercase italic">
-                The Playbook
+                How It Works
             </h2>
         </div>
 
@@ -302,7 +312,7 @@ const ForOwners = () => (
     <Section className="bg-white">
         <div className="flex items-center gap-4 mb-12 justify-end">
             <h3 className="text-3xl md:text-5xl font-black text-black uppercase italic tracking-tighter text-right">
-                For Venue Owners
+                For Venue Owners & Organizers
             </h3>
             <div className="h-10 w-2 bg-black" />
         </div>
@@ -310,7 +320,7 @@ const ForOwners = () => (
         <div className="grid gap-4 md:grid-cols-4">
             {[
                 { t: "List your facility", icon: <Activity className="h-5 w-5" /> },
-                { t: "Manage bookings", icon: <CalendarClock className="h-5 w-5" /> },
+                { t: "Manage bookings & availability", icon: <CalendarClock className="h-5 w-5" /> },
                 { t: "Accept online payments", icon: <CreditCard className="h-5 w-5" /> },
                 { t: "Host tournaments", icon: <Trophy className="h-5 w-5" /> },
             ].map((item) => (
@@ -370,7 +380,6 @@ const UpcomingTournaments = () => (
                                     {tournament.status}
                                 </span>
                             </div>
-                          
                         </div>
 
                         <div className="p-6 space-y-4">
@@ -429,7 +438,63 @@ const UpcomingTournaments = () => (
 );
 
 /* ----------------------------- */
-/* CTA - Fixed Black Line Issue */
+/* FAQ */
+/* ----------------------------- */
+const faqs = [
+    {
+        q: "How can I book a sports facility online?",
+        a: "Simply search by sport and location, choose an available slot, and complete your booking online.",
+    },
+    {
+        q: "Can I book courts by the hour?",
+        a: "Yes. Most facilities on AHIBI allow hourly bookings.",
+    },
+    {
+        q: "Which sports facilities are available on AHIBI?",
+        a: "Futsal, badminton, tennis, basketball, cricket, volleyball, table tennis, swimming, and more.",
+    },
+    {
+        q: "Is AHIBI only for Dimapur?",
+        a: "Currently focused on Dimapur, but expanding across Nagaland.",
+    },
+    {
+        q: "How can venue owners list their facilities?",
+        a: "Use the \"List Your Facility\" option, complete verification, and start receiving bookings.",
+    },
+    {
+        q: "Can tournaments and sports events be hosted on AHIBI?",
+        a: "Yes. Organizers and venue owners can list and manage tournaments through AHIBI Organizer.",
+    },
+];
+
+const FAQ = () => (
+    <Section className="bg-white">
+        <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-black uppercase italic">
+                Frequently Asked <span className="text-red-600">Questions</span>
+            </h2>
+        </div>
+
+        <div className="max-w-3xl mx-auto divide-y divide-black/10">
+            {faqs.map((faq, index) => (
+                <details key={index} className="group py-6 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                    <summary className="flex items-center justify-between gap-4">
+                        <span className="font-black uppercase italic tracking-tight text-black text-lg leading-snug group-open:text-red-600 transition-colors">
+                            {faq.q}
+                        </span>
+                        <ChevronDown className="h-5 w-5 flex-shrink-0 text-black/40 group-open:rotate-180 group-open:text-red-600 transition-all duration-300" />
+                    </summary>
+                    <p className="mt-4 text-gray-500 leading-relaxed font-light text-base">
+                        {faq.a}
+                    </p>
+                </details>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
+/* CTA - Get Started */
 /* ----------------------------- */
 const CTA = () => (
     <section className="bg-white py-0">
@@ -437,13 +502,17 @@ const CTA = () => (
             <div className="relative overflow-hidden bg-red-600 p-12 md:p-20 transform skew-y-[-2deg]">
                 <div className="transform skew-y-[2deg] grid md:grid-cols-2 gap-12 items-center">
                     <div>
+                        <p className="text-xs font-bold text-white/60 uppercase tracking-[0.25em] mb-4">Get Started with AHIBI Sports</p>
                         <h3 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none">
                             Ready to <br /> Play?
                         </h3>
-                        <div className="mt-10 flex flex-wrap gap-4">
+                        <p className="mt-4 text-white/70 font-light leading-relaxed">
+                            Looking to play? Find and book sports facilities near you.
+                        </p>
+                        <div className="mt-8 flex flex-wrap gap-4">
                             <Link href="/sports/list">
                                 <Button size="lg" className="rounded-none bg-black text-white px-10 font-bold uppercase tracking-tighter hover:bg-white hover:text-black border-none transition-colors duration-300">
-                                    Explore Now
+                                    Explore Facilities
                                 </Button>
                             </Link>
                             <Link href="/arena-partner/auth">
@@ -451,19 +520,20 @@ const CTA = () => (
                                     size="lg"
                                     className="rounded-none bg-transparent border-2 border-white text-white px-10 font-bold uppercase tracking-tighter hover:bg-white hover:text-red-600 transition-colors duration-300"
                                 >
-                                    List Facility
+                                    List Your Facility
                                 </Button>
                             </Link>
                         </div>
                     </div>
                     <div className="space-y-4">
+                        <p className="text-xs font-bold text-white/60 uppercase tracking-[0.25em] mb-6">Own or manage a sports venue?</p>
                         {[
-                            "Instant Arena Confirmation",
-                            "Elite Turf Standards",
-                            "Zero Hidden Fees"
+                            "List your facility",
+                            "Manage bookings & grow your reach",
+                            "Zero hidden fees",
                         ].map((text) => (
                             <div key={text} className="flex items-center gap-3 text-white font-bold uppercase tracking-tighter text-lg">
-                                <Trophy className="h-6 w-6" /> {text}
+                                <Trophy className="h-6 w-6 flex-shrink-0" /> {text}
                             </div>
                         ))}
                     </div>
@@ -487,6 +557,7 @@ export default function SportsPage() {
             <HowItWorks />
             <ForPlayers />
             <ForOwners />
+            <FAQ />
             <CTA />
             <div className="bg-white">
                 <Footer />
