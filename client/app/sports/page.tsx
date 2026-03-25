@@ -16,7 +16,9 @@ import {
     Activity,
     CreditCard,
     Target,
-    Zap
+    Zap,
+    Phone,
+    Headset
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -61,21 +63,32 @@ const Hero = () => (
         <div className="relative z-10 grid items-center gap-16 md:grid-cols-2">
             <div className="space-y-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/10 border border-red-600/20 text-red-500 text-xs font-bold uppercase tracking-widest">
-                    <Activity className="h-3 w-3" /> Live Booking Now Available
+                    <Activity className="h-3 w-3" /> Book Sports Facilities. List Your Ground.
                 </div>
                 {/* Updated Heading */}
                 <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-white uppercase italic leading-[0.9]">
                     AHIBI <br /> <span className="text-red-600">Sports</span>
                 </h1>
                 <p className="max-w-lg text-gray-400 md:text-xl leading-relaxed font-light">
-                    The ultimate arena network. Book elite facilities or monetize your ground with the industry's most powerful booking engine.
+                    Find and book verified sports courts and grounds — or list your facility and manage bookings online.
                 </p>
 
                 <div className="flex flex-wrap gap-5">
                     <Link href="/arena-partner/auth">
                         <Button
                             size="lg"
-                            className="group rounded-none px-10 bg-red-600 hover:bg-white text-white hover:text-red-600 transition-all duration-300 transform skew-x-[-12deg] border-none"
+                            className="group rounded-none px-8 bg-red-600 hover:bg-white text-white hover:text-red-600 transition-all duration-300 transform skew-x-[-12deg] border-none"
+                        >
+                            <span className="inline-block skew-x-[12deg] font-bold uppercase tracking-tighter">
+                                Explore Facilities
+                            </span>
+                            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform skew-x-[12deg]" />
+                        </Button>
+                    </Link>
+                    <Link href="/arena-partner/auth">
+                        <Button
+                            size="lg"
+                            className="group rounded-none px-8 bg-white hover:bg-red-600 text-red-600 hover:text-white transition-all duration-300 transform skew-x-[-12deg] border-none"
                         >
                             <span className="inline-block skew-x-[12deg] font-bold uppercase tracking-tighter">
                                 List Your Facility
@@ -170,15 +183,17 @@ const SportsCardSection = () => (
         />
         <div className="relative z-10 container mx-auto px-6 text-center">
             <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter">
-                Fill Your Stands. <span className="text-red-600">Fast.</span>
+                Fill Your Venues. <span className="text-red-600">Fast.</span>
             </h2>
             <p className="mt-4 text-gray-400 font-medium tracking-wide">
                 Professional management tools for venue owners.
             </p>
             <div className="mt-10">
                 <Link href="/arena-partner/auth">
-                    <button className="relative group overflow-hidden bg-white px-12 py-5 text-black font-black uppercase tracking-tighter transform skew-x-[-12deg] hover:scale-105 transition-all">
-                        <span className="relative z-10 inline-block skew-x-[12deg]">Get Started</span>
+                    <button className="relative group overflow-hidden bg-white px-6 py-3 text-sm font-black uppercase tracking-tighter transform skew-x-[-6deg] transition-all hover:scale-105 active:scale-95 md:px-12 md:py-5 md:text-base md:skew-x-[-12deg] text-black">
+                        <span className="relative z-10 inline-block skew-x-[6deg] md:skew-x-[12deg]">
+                            Get Started
+                        </span>
                         <div className="absolute inset-0 bg-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                     </button>
                 </Link>
@@ -195,9 +210,9 @@ const Facilities = () => (
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div className="text-left">
                 <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white uppercase italic">
-                    The Roster
+                    What You Can Book
                 </h2>
-                <p className="mt-2 text-gray-500 uppercase tracking-[0.2em] text-sm">Elite Tier Facilities Only</p>
+                <p className="mt-2 text-gray-500 uppercase tracking-[0.2em] text-sm">Book by the hour. Check availability instantly.</p>
             </div>
             <Link href="/sports/list" className="text-red-500 font-bold uppercase tracking-widest text-sm hover:underline flex items-center gap-2">
                 View All Arenas <ArrowRight className="h-4 w-4" />
@@ -206,15 +221,15 @@ const Facilities = () => (
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-                { label: "Futsal & Football", sport: "football", icon: "⚽" },
-                { label: "Badminton Pro", sport: "badminton", icon: "🏸" },
+                { label: "Futsal & Football Grounds", sport: "football", icon: "⚽" },
+                { label: "Badminton Courts", sport: "badminton", icon: "🏸" },
                 { label: "Tennis Courts", sport: "tennis", icon: "🎾" },
-                { label: "Basketball Hub", sport: "basketball", icon: "🏀" },
+                { label: "Basketball Courts", sport: "basketball", icon: "🏀" },
                 { label: "Cricket Nets", sport: "cricket", icon: "🏏" },
-                { label: "Volleyball Pro", sport: "volleyball", icon: "🏐" },
+                { label: "Volleyball Courts", sport: "volleyball", icon: "🏐" },
                 { label: "Table Tennis", sport: "table_tennis", icon: "🏓" },
                 { label: "Swimming Pools", sport: "swimming", icon: "🏊" },
-                { label: "Pickleball", sport: "pickleball", icon: "🎾" },
+                { label: "Pickleball Courts", sport: "pickleball", icon: "🎾" },
             ].map((item) => (
                 <Link key={item.label} href={`/sports/list?sport=${encodeURIComponent(item.sport)}`}>
                     <Card className="group relative rounded-none bg-[#111] border-white/5 overflow-hidden hover:border-red-600 transition-colors duration-500">
@@ -239,7 +254,7 @@ const HowItWorks = () => (
     <Section className="bg-white">
         <div className="text-center mb-20">
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-black uppercase italic">
-                The Playbook
+                How It Works
             </h2>
         </div>
 
@@ -364,13 +379,13 @@ const UpcomingTournaments = () => (
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                             <div className="absolute top-4 right-4 z-10">
                                 <span className={`px-3 py-1 text-xs font-bold uppercase tracking-widest ${tournament.status === "Open"
-                                        ? "bg-red-600 text-white"
-                                        : "bg-white/10 text-gray-400"
+                                    ? "bg-red-600 text-white"
+                                    : "bg-white/10 text-gray-400"
                                     }`}>
                                     {tournament.status}
                                 </span>
                             </div>
-                          
+
                         </div>
 
                         <div className="p-6 space-y-4">
@@ -412,8 +427,8 @@ const UpcomingTournaments = () => (
                                         size="sm"
                                         disabled={tournament.status !== "Open"}
                                         className={`rounded-none font-bold uppercase tracking-tighter ${tournament.status === "Open"
-                                                ? "bg-red-600 hover:bg-white text-white hover:text-red-600"
-                                                : "bg-white/5 text-gray-600 cursor-not-allowed"
+                                            ? "bg-red-600 hover:bg-white text-white hover:text-red-600"
+                                            : "bg-white/5 text-gray-600 cursor-not-allowed"
                                             } transition-all duration-300`}
                                     >
                                         {tournament.status === "Open" ? "Register" : "Soon"}
@@ -429,43 +444,141 @@ const UpcomingTournaments = () => (
 );
 
 /* ----------------------------- */
+/* FAQ */
+/* ----------------------------- */
+const FAQ = () => (
+    <Section muted className="border-y border-white/5">
+        <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white uppercase italic">
+                Frequently Asked <span className="text-red-600">Questions</span>
+            </h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 max-w-5xl mx-auto">
+            {[
+                {
+                    q: "How can I book a sports facility online?",
+                    a: "Simply search by sport and location, choose an available slot, and complete your booking online."
+                },
+                {
+                    q: "Can I book courts by the hour?",
+                    a: "Yes. Most facilities on AHIBI allow hourly bookings."
+                },
+                {
+                    q: "Which sports facilities are available on AHIBI?",
+                    a: "Futsal, badminton, tennis, basketball, cricket, volleyball, table tennis, swimming, and more."
+                },
+                {
+                    q: "Is AHIBI only for Dimapur?",
+                    a: "Currently focused on Dimapur, but expanding across Nagaland."
+                },
+                {
+                    q: "How can venue owners list their facilities?",
+                    a: "Use the “List Your Facility” option, complete verification, and start receiving bookings."
+                },
+                {
+                    q: "Can tournaments and sports events be hosted on AHIBI?",
+                    a: "Yes. Organizers and venue owners can list and manage tournaments through AHiBi Organizer."
+                }
+            ].map((faq, index) => (
+                <Card key={index} className="rounded-none border-white/5 bg-[#111] hover:border-red-600 transition-colors duration-300">
+                    <CardContent className="p-8">
+                        <h3 className="text-lg font-bold text-white uppercase italic tracking-tight mb-3">
+                            {faq.q}
+                        </h3>
+                        <p className="text-gray-400 leading-relaxed">
+                            {faq.a}
+                        </p>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    </Section>
+);
+
+/* ----------------------------- */
 /* CTA - Fixed Black Line Issue */
 /* ----------------------------- */
 const CTA = () => (
     <section className="bg-white py-0">
-        <div className="mx-auto max-w-7xl px-6 md:px-10 pb-24">
+        <div className="mx-auto max-w-7xl px-6 md:px-10 pt-20 pb-24">
             <div className="relative overflow-hidden bg-red-600 p-12 md:p-20 transform skew-y-[-2deg]">
                 <div className="transform skew-y-[2deg] grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <h3 className="text-4xl md:text-7xl font-black text-white uppercase italic tracking-tighter leading-none">
-                            Ready to <br /> Play?
+                    <div className="space-y-8">
+                        <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-white uppercase italic tracking-tighter leading-tight pr-4">
+                            Get Started&nbsp;<br />
+                            With AHIBI Sports&nbsp;
                         </h3>
-                        <div className="mt-10 flex flex-wrap gap-4">
+                        <div className="flex flex-wrap gap-4">
                             <Link href="/sports/list">
-                                <Button size="lg" className="rounded-none bg-black text-white px-10 font-bold uppercase tracking-tighter hover:bg-white hover:text-black border-none transition-colors duration-300">
-                                    Explore Now
+                                <Button size="lg" className="rounded-none bg-black text-white px-8 font-bold uppercase tracking-tighter hover:bg-white hover:text-black border-none transition-colors duration-300">
+                                    Explore Facilities
                                 </Button>
                             </Link>
                             <Link href="/arena-partner/auth">
                                 <Button
                                     size="lg"
-                                    className="rounded-none bg-transparent border-2 border-white text-white px-10 font-bold uppercase tracking-tighter hover:bg-white hover:text-red-600 transition-colors duration-300"
+                                    className="rounded-none bg-transparent border-2 border-white text-white px-8 font-bold uppercase tracking-tighter hover:bg-white hover:text-red-600 transition-colors duration-300"
                                 >
-                                    List Facility
+                                    List Your Facility
                                 </Button>
                             </Link>
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        {[
-                            "Instant Arena Confirmation",
-                            "Elite Turf Standards",
-                            "Zero Hidden Fees"
-                        ].map((text) => (
-                            <div key={text} className="flex items-center gap-3 text-white font-bold uppercase tracking-tighter text-lg">
-                                <Trophy className="h-6 w-6" /> {text}
-                            </div>
-                        ))}
+                    <div className="space-y-8 pl-0 md:pl-12 md:border-l border-white/20">
+                        <div className="space-y-2">
+                            <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                                <Activity className="h-6 w-6" /> Looking to play?
+                            </h4>
+                            <p className="text-lg text-red-100 font-medium">Find and book sports facilities near you.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter flex items-center gap-3">
+                                <Trophy className="h-6 w-6" /> Own or manage a sports venue?
+                            </h4>
+                            <p className="text-lg text-red-100 font-medium">List your facility, manage bookings, and grow your reach.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="mt-20 mx-auto max-w-5xl">
+                <div className="grid md:grid-cols-[1fr_1.2fr] gap-8 items-center border border-black/10 bg-gray-50 p-8 md:p-12 hover:border-black transition-colors duration-300">
+                    <div className="space-y-5 text-center md:text-left md:border-r border-black/10 pr-0 md:pr-8">
+                        <div className="inline-flex h-14 w-14 items-center justify-center bg-black text-white rounded-none">
+                            <Headset className="h-7 w-7" />
+                        </div>
+                        <div>
+                            <h4 className="text-3xl font-black text-black uppercase italic tracking-tighter">
+                                Need Assistance?
+                            </h4>
+                            <p className="mt-3 text-gray-600 font-medium leading-relaxed">
+                                Questions about facility bookings, reservations, or hosting a tournament? Our support team is here.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col space-y-5">
+                        <p className="text-xs font-bold text-red-600 uppercase tracking-widest text-center md:text-left">Support Lines</p>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                            <a href="tel:7005427394" className="group flex flex-col items-center sm:items-start gap-3 p-5 border border-black/5 bg-white hover:border-red-600 hover:bg-red-50 hover:-translate-y-1 transition-all duration-300">
+                                <div className="bg-gray-100 p-2.5 rounded-full group-hover:bg-white group-hover:shadow-sm transition-all">
+                                    <Phone className="h-5 w-5 text-gray-500 group-hover:text-red-600" />
+                                </div>
+                                <div>
+                                    <span className="block text-2xl font-black text-black uppercase italic tracking-tighter group-hover:text-red-600 transition-colors">
+                                        7005427394
+                                    </span>
+                                </div>
+                            </a>
+                            <a href="tel:7005727288" className="group flex flex-col items-center sm:items-start gap-3 p-5 border border-black/5 bg-white hover:border-red-600 hover:bg-red-50 hover:-translate-y-1 transition-all duration-300">
+                                <div className="bg-gray-100 p-2.5 rounded-full group-hover:bg-white group-hover:shadow-sm transition-all">
+                                    <Phone className="h-5 w-5 text-gray-500 group-hover:text-red-600" />
+                                </div>
+                                <div>
+                                    <span className="block text-2xl font-black text-black uppercase italic tracking-tighter group-hover:text-red-600 transition-colors">
+                                        7005727288
+                                    </span>
+                                </div>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -487,6 +600,7 @@ export default function SportsPage() {
             <HowItWorks />
             <ForPlayers />
             <ForOwners />
+            <FAQ />
             <CTA />
             <div className="bg-white">
                 <Footer />

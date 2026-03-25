@@ -8,6 +8,7 @@ A professional real-time live chat feature has been successfully integrated into
 ### Backend (Server)
 1. **Socket.IO Integration**
    - Added Socket.IO server setup in `server/index.js`
+   - 
    - Created dedicated namespace `/livestream-chat` for chat functionality
    - JWT authentication for socket connections
 
