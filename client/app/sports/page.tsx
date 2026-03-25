@@ -551,7 +551,7 @@ export default function SportsPage() {
         <div className="min-h-screen bg-white text-black selection:bg-red-600 selection:text-white">
             <Navbar />
             <Hero />
-            <UpcomingTournaments />
+        
             <SportsCardSection />
             <Facilities />
             <HowItWorks />
