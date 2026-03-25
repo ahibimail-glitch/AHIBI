@@ -183,15 +183,17 @@ const SportsCardSection = () => (
         />
         <div className="relative z-10 container mx-auto px-6 text-center">
             <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter">
-                Fill Your Stands. <span className="text-red-600">Fast.</span>
+                Fill Your Venues. <span className="text-red-600">Fast.</span>
             </h2>
             <p className="mt-4 text-gray-400 font-medium tracking-wide">
                 Professional management tools for venue owners.
             </p>
             <div className="mt-10">
                 <Link href="/arena-partner/auth">
-                    <button className="relative group overflow-hidden bg-white px-12 py-5 text-black font-black uppercase tracking-tighter transform skew-x-[-12deg] hover:scale-105 transition-all">
-                        <span className="relative z-10 inline-block skew-x-[12deg]">Get Started</span>
+                    <button className="relative group overflow-hidden bg-white px-6 py-3 text-sm font-black uppercase tracking-tighter transform skew-x-[-6deg] transition-all hover:scale-105 active:scale-95 md:px-12 md:py-5 md:text-base md:skew-x-[-12deg] text-black">
+                        <span className="relative z-10 inline-block skew-x-[6deg] md:skew-x-[12deg]">
+                            Get Started
+                        </span>
                         <div className="absolute inset-0 bg-red-600 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                     </button>
                 </Link>

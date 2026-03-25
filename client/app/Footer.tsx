@@ -69,6 +69,8 @@ export default function Footer() {
           <p className="text-gray-500 text-sm">© {new Date().getFullYear()} Ahibi. All rights reserved.</p>
         </div>
       </div>
+      {/* ── Spacer so page content isn't hidden behind bottom nav on mobile ── */}
+      <div className="lg:hidden h-16" aria-hidden="true" />
     </footer>
   );
 }

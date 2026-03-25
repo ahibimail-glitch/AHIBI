@@ -493,8 +493,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Spacer so page content isn't hidden behind bottom nav on mobile ── */}
-      <div className="lg:hidden h-16" aria-hidden="true" />
     </>
   );
 }
