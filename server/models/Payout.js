@@ -245,27 +245,26 @@ PayoutSchema.statics.calculatePayout = async function(arenaPartnerId, startDate,
   
   // Calculate totals
   let totalRevenue = 0;
-  let platformCommission = 0;
+  const platformCommission = 0;
   
   bookings.forEach(booking => {
     totalRevenue += booking.pricing.totalAmount;
-    platformCommission += booking.pricing.platformCommission;
   });
   
-  // Calculate taxes (example: 18% GST on commission, 10% TDS)
-  const gst = Math.round(platformCommission * 0.18);
-  const tds = Math.round((totalRevenue - platformCommission) * 0.10);
-  const totalTaxes = gst + tds;
+  // Calculate taxes (10% TDS on earnings)
+  const gst = 0;
+  const tds = Math.round(totalRevenue * 0.10);
+  const totalTaxes = tds;
   
   // Calculate net amount
-  const arenaEarnings = totalRevenue - platformCommission;
+  const arenaEarnings = totalRevenue;
   const netAmount = arenaEarnings - tds;
   
   return {
     bookings: bookings.map(b => b._id),
     totalRevenue,
     platformCommission,
-    commissionRate: arenaPartner.commissionSettings.commissionRate,
+    commissionRate: 0,
     taxes: {
       gst,
       tds,

@@ -242,72 +242,6 @@ exports.suspendArenaPartner = async (req, res) => {
   }
 };
 
-/**
- * @desc    Update arena partner commission rate
- * @route   PUT /api/admin/sports/arena-partners/:id/commission
- * @access  Private (Admin)
- */
-exports.updateCommissionRate = async (req, res) => {
-  try {
-    const { commissionRate } = req.body;
-
-    if (!commissionRate || commissionRate < 0 || commissionRate > 100) {
-      return ApiResponse.badRequest(res, 'Valid commission rate (0-100) is required');
-    }
-
-    const partner = await ArenaPartner.findById(req.params.id);
-
-    if (!partner) {
-      return ApiResponse.notFound(res, 'Arena partner not found');
-    }
-
-    partner.commissionSettings.commissionRate = commissionRate;
-    partner.commissionSettings.customRate = true;
-
-    await partner.save();
-
-    return ApiResponse.success(res, 'Commission rate updated successfully', { partner });
-
-  } catch (error) {
-    console.error('Update commission error:', error);
-    return ApiResponse.serverError(res, 'Error updating commission rate', error);
-  }
-};
-
-/**
- * @desc    Update arena partner advance payment percent (booking-time pay-now %)
- * @route   PUT /api/admin/sports/arena-partners/:id/advance-payment
- * @access  Private (Admin)
- */
-exports.updateAdvancePaymentPercent = async (req, res) => {
-  try {
-    const { advancePaymentPercent } = req.body;
-
-    const value = Number(advancePaymentPercent);
-    if (!Number.isFinite(value) || value < 1 || value > 100) {
-      return ApiResponse.badRequest(res, 'Valid advance payment percent (1-100) is required');
-    }
-
-    const partner = await ArenaPartner.findById(req.params.id);
-
-    if (!partner) {
-      return ApiResponse.notFound(res, 'Arena partner not found');
-    }
-
-    partner.paymentSettings = partner.paymentSettings || {};
-    partner.paymentSettings.advancePaymentPercent = Math.round(value);
-    partner.markModified('paymentSettings');
-
-    await partner.save();
-
-    return ApiResponse.success(res, 'Advance payment percent updated successfully', { partner });
-
-  } catch (error) {
-    console.error('Update advance payment percent error:', error);
-    return ApiResponse.serverError(res, 'Error updating advance payment percent', error);
-  }
-};
-
 // ============ VENUE MANAGEMENT ============
 
 /**
@@ -651,8 +585,8 @@ exports.createManualPayout = async (req, res) => {
       bookings: payoutData.bookings,
       financials: {
         totalRevenue: payoutData.totalRevenue,
-        platformCommission: payoutData.platformCommission,
-        commissionRate: payoutData.commissionRate,
+        platformCommission: 0,
+        commissionRate: 0,
         taxes: payoutData.taxes,
         adjustments: {
           refunds: 0,

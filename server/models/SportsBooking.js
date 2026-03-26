@@ -139,10 +139,6 @@ const SportsBookingSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
-    advancePaymentPercent: {
-      type: Number,
-      default: 0
-    },
     paymentMethod: {
       type: String,
       enum: ['online', 'cash', 'wallet', 'upi']

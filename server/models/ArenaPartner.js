@@ -133,31 +133,7 @@ const ArenaPartnerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'
   },
-  
-  // Financial Settings
-  commissionSettings: {
-    commissionRate: {
-      type: Number,
-      default: 15, // 15% platform commission
-      min: 0,
-      max: 100
-    },
-    customRate: {
-      type: Boolean,
-      default: false
-    }
-  },
 
-  // Payment Settings (for booking-time advance/partial payment)
-  paymentSettings: {
-    advancePaymentPercent: {
-      type: Number,
-      default: 10,
-      min: 1,
-      max: 100
-    }
-  },
-  
   // Statistics
   statistics: {
     totalVenues: {

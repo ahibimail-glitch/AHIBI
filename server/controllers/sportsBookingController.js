@@ -243,25 +243,14 @@ exports.getVenueDetails = async (req, res) => {
 exports.getCourtDetails = async (req, res) => {
   try {
     const court = await Court.findById(req.params.courtId)
-      .populate('venue')
-      .populate('arenaPartner', 'paymentSettings');
+      .populate('venue');
 
     if (!court) {
       return ApiResponse.notFound(res, 'Court not found');
     }
 
-    const venueAdvancePaymentPercentRaw = Number(court.venue?.paymentSettings?.advancePaymentPercent);
-    const partnerAdvancePaymentPercentRaw = Number(court.arenaPartner?.paymentSettings?.advancePaymentPercent);
-
-    const chosenAdvancePaymentPercentRaw = Number.isFinite(partnerAdvancePaymentPercentRaw)
-      ? partnerAdvancePaymentPercentRaw
-      : (Number.isFinite(venueAdvancePaymentPercentRaw) ? venueAdvancePaymentPercentRaw : 10);
-
-    const advancePaymentPercent = Math.min(100, Math.max(1, Math.round(chosenAdvancePaymentPercentRaw)));
-
     return ApiResponse.success(res, 'Court details retrieved successfully', {
-      court,
-      advancePaymentPercent
+      court
     });
 
   } catch (error) {
@@ -531,23 +520,9 @@ exports.createBookingOrder = async (req, res) => {
     const taxes = 0;
     const totalAmount = subtotal;
 
-    // Get arena partner (needed for both: advance payment fallback + platform commission)
-    const arenaPartner = await ArenaPartner.findById(venue.arenaPartner);
-
-    const venueAdvancePaymentPercentRaw = Number(venue.paymentSettings?.advancePaymentPercent);
-    const partnerAdvancePaymentPercentRaw = Number(arenaPartner?.paymentSettings?.advancePaymentPercent);
-
-    // Partner-level setting should apply by default; venue-level can be used as an override.
-    const chosenAdvancePaymentPercentRaw = Number.isFinite(partnerAdvancePaymentPercentRaw)
-      ? partnerAdvancePaymentPercentRaw
-      : (Number.isFinite(venueAdvancePaymentPercentRaw) ? venueAdvancePaymentPercentRaw : 10);
-
-    const advancePaymentPercent = Math.min(100, Math.max(1, Math.round(chosenAdvancePaymentPercentRaw)));
-    const payableAmount = Math.max(0, Math.round((totalAmount * advancePaymentPercent) / 100));
-
-    const commissionRate = arenaPartner?.commissionSettings?.commissionRate || 15;
-    const platformCommission = Math.round((baseAmount * commissionRate) / 100);
-    const arenaEarnings = baseAmount - platformCommission;
+    const payableAmount = totalAmount;
+    const platformCommission = 0;
+    const arenaEarnings = totalAmount;
 
     // Create Razorpay order
     const receipt = `SPT_${Date.now()}_${req.user.id.toString().slice(-6)}`;
@@ -565,7 +540,6 @@ exports.createBookingOrder = async (req, res) => {
         baseAmount,
         totalAmount,
         payableAmount,
-        advancePaymentPercent,
         platformCommission,
         arenaEarnings
       }
@@ -583,7 +557,6 @@ exports.createBookingOrder = async (req, res) => {
         platformFee,
         taxes,
         totalAmount,
-        advancePaymentPercent,
         payableAmount
       },
       slots: slots.map(s => ({
@@ -639,9 +612,8 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
     const baseAmount = parseInt(notes.baseAmount) || 0;
     const totalAmountFromNotes = parseInt(notes.totalAmount) || 0;
     const payableAmountFromNotes = parseInt(notes.payableAmount) || 0;
-    const advancePaymentPercentFromNotes = parseInt(notes.advancePaymentPercent) || 0;
-    const platformCommission = parseInt(notes.platformCommission) || 0;
-    const arenaEarnings = parseInt(notes.arenaEarnings) || 0;
+    const platformCommission = 0;
+    const arenaEarnings = parseInt(notes.arenaEarnings) || payableAmountFromNotes;
 
     // Get slots
     const slots = await TimeSlot.find({
@@ -707,7 +679,6 @@ exports.verifyPaymentAndConfirm = async (req, res) => {
         razorpayPaymentId: razorpay_payment_id,
         razorpaySignature: razorpay_signature,
         amountPaid: paidAmount,
-        advancePaymentPercent: advancePaymentPercentFromNotes,
         paymentMethod: 'online',
         paymentStatus: 'completed',
         paidAt: Date.now()

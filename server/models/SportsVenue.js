@@ -189,16 +189,6 @@ const SportsVenueSchema = new mongoose.Schema({
     available: { type: Boolean, default: true }
   }],
 
-  // Payment Settings
-  paymentSettings: {
-    advancePaymentPercent: {
-      type: Number,
-      default: 10,
-      min: 1,
-      max: 100
-    }
-  },
-  
   // Media Gallery
   gallery: {
     images: [{

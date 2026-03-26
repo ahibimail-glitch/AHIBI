@@ -191,15 +191,6 @@ export const adminSportsApi = {
   suspendPartner: (id: string, reason: string) =>
     api.put(`/api/admin/sports/arena-partners/${id}/suspend`, { reason }),
 
-  updateCommission: (id: string, commissionRate: number) =>
-    api.put(`/api/admin/sports/arena-partners/${id}/commission`, { commissionRate }),
-
-  updatePartnerCommission: (id: string, commissionRate: number) =>
-    api.put(`/api/admin/sports/arena-partners/${id}/commission`, { commissionRate }),
-
-  updateAdvancePaymentPercent: (id: string, advancePaymentPercent: number) =>
-    api.put(`/api/admin/sports/arena-partners/${id}/advance-payment`, { advancePaymentPercent }),
-
   getPartnerVenues: (id: string) => api.get(`/api/admin/sports/arena-partners/${id}/venues`),
 
   getPartnerBookings: (id: string) => api.get(`/api/admin/sports/arena-partners/${id}/bookings`),

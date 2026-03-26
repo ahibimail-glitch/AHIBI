@@ -648,10 +648,8 @@ exports.createWalkInBooking = async (req, res) => {
     const pricePerHour = court.getPricing(bookingDate, startTime);
     const baseAmount = Math.round((pricePerHour * duration) / 60);
 
-    const partner = await ArenaPartner.findById(req.user.id);
-    const commissionRate = partner.commissionSettings.commissionRate;
-    const platformCommission = Math.round((baseAmount * commissionRate) / 100);
-    const arenaEarnings = baseAmount - platformCommission;
+    const platformCommission = 0;
+    const arenaEarnings = baseAmount;
 
     // Create booking
     const booking = await SportsBooking.create({
@@ -730,10 +728,6 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const partnerId = req.user.id;
 
-    // Get partner details for advance payment percentage
-    const partner = await ArenaPartner.findById(partnerId);
-    const advancePaymentPercent = partner?.paymentSettings?.advancePaymentPercent || 10;
-
     // Total venues
     const totalVenues = await SportsVenue.countDocuments({
       arenaPartner: partnerId,
@@ -800,8 +794,7 @@ exports.getDashboardStats = async (req, res) => {
         totalCourts,
         todayBookings,
         monthlyRevenue: revenue.totalRevenue,
-        monthlyEarnings: revenue.arenaEarnings,
-        advancePaymentPercent
+        monthlyEarnings: revenue.arenaEarnings
       },
       upcomingBookings
     });

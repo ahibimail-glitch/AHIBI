@@ -67,7 +67,6 @@ interface ArenaPartnerBookingDetail {
     baseAmount: number;
     totalAmount: number;
     arenaEarnings: number;
-    platformCommission: number;
   };
   payment: {
     paymentMethod: string;
@@ -75,7 +74,6 @@ interface ArenaPartnerBookingDetail {
     paidAt: string;
     transactionId?: string;
     amountPaid?: number;
-    advancePaymentPercent?: number;
   };
   contactDetails?: {
     name: string;
@@ -262,9 +260,7 @@ ${booking.user ? `
 ║                        PAYMENT DETAILS                        ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Base Amount:    ₹${booking.pricing.baseAmount.toLocaleString().padEnd(40)} ║
-║  Platform Fee:   ₹${booking.pricing.platformCommission.toLocaleString().padEnd(40)} ║
 ║  Total Amount:   ₹${booking.pricing.totalAmount.toLocaleString().padEnd(40)} ║
-║  Your Earnings:  ₹${booking.pricing.arenaEarnings.toLocaleString().padEnd(40)} ║
 ║  Payment Method: ${booking.payment.paymentMethod.toUpperCase().padEnd(38)} ║
 ║  Payment Status: ${booking.payment.paymentStatus.toUpperCase().padEnd(38)} ║
 ║  Paid At:        ${new Date(booking.payment.paidAt).toLocaleString('en-IN').padEnd(39)} ║
@@ -282,15 +278,15 @@ ${booking.specialRequests ? `║  Special Requests: ${booking.specialRequests.pa
 ╠══════════════════════════════════════════════════════════════╣
 ║                     COURT SPECIFICATIONS                      ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Surface: ${booking.court.specifications.surface.padEnd(47)} ║
-║  Dimensions: ${formatDimensions(booking.court.specifications.dimensions).padEnd(43)} ║
-║  Lighting: ${booking.court.specifications.lighting ? 'Available' : 'Not Available'.padEnd(42)} ║
-║  Covered: ${booking.court.specifications.covered ? 'Yes' : 'No'.padEnd(49)} ║
+║  Surface: ${(booking.court.specifications?.surface || 'N/A').padEnd(47)} ║
+║  Dimensions: ${formatDimensions(booking.court.specifications?.dimensions || 'N/A').padEnd(43)} ║
+║  Lighting: ${(booking.court.specifications?.lighting ? 'Available' : 'Not Available').padEnd(42)} ║
+║  Covered: ${(booking.court.specifications?.covered ? 'Yes' : 'No').padEnd(49)} ║
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Thank you for choosing AHIBI Sports!                       ║
-║  For support, contact: ${booking.venue.contactInfo.phone.padEnd(25)} ║
-║  Email: ${booking.venue.contactInfo.email.padEnd(47)} ║
+║  For support, contact: ${(booking.venue.contactInfo?.phone || 'N/A').padEnd(25)} ║
+║  Email: ${(booking.venue.contactInfo?.email || 'N/A').padEnd(47)} ║
 ╚══════════════════════════════════════════════════════════════╝
     `;
 
@@ -637,33 +633,9 @@ ${booking.specialRequests ? `║  Special Requests: ${booking.specialRequests.pa
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Base Amount</span>
-                    <span className="font-medium">₹{booking.pricing.baseAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Platform Commission</span>
-                    <span className="font-medium">₹{booking.pricing.platformCommission.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                    <span>Total Amount</span>
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total Booking Amount</span>
                     <span>₹{booking.pricing.totalAmount.toLocaleString()}</span>
-                  </div>
-                  {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && (
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span>Paid now ({booking.payment.advancePaymentPercent || 0}%)</span>
-                      <span className="font-medium">₹{booking.payment.amountPaid.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && booking.payment.amountPaid < booking.pricing.totalAmount && (
-                    <div className="flex justify-between text-sm font-semibold text-orange-700">
-                      <span>Remaining to be paid</span>
-                      <span>₹{Math.max(0, booking.pricing.totalAmount - booking.payment.amountPaid).toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-green-600 font-bold">
-                    <span>Your Earnings</span>
-                    <span>₹{booking.pricing.arenaEarnings.toLocaleString()}</span>
                   </div>
                 </div>
 

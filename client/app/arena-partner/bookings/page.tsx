@@ -60,14 +60,12 @@ interface ArenaPartnerBooking {
     baseAmount: number;
     totalAmount: number;
     arenaEarnings: number;
-    platformCommission: number;
   };
   payment: {
     paymentMethod: string;
     paymentStatus: string;
     paidAt: string;
     amountPaid?: number;
-    advancePaymentPercent?: number;
   };
   contactDetails?: {
     name: string;
@@ -615,19 +613,7 @@ export default function ArenaPartnerBookings() {
                       {/* Right Section - Price and Actions */}
                       <div className="lg:text-right min-w-[180px] sm:min-w-[220px]">
                         <div className="mb-3 sm:mb-4">
-                          <p className="text-base sm:text-lg font-semibold text-gray-900">Total: ₹{booking.pricing.totalAmount.toLocaleString()}</p>
-
-
-                          {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && (
-                            <p className="text-xs sm:text-sm text-gray-500">
-                              Paid earlier: ({booking.payment.advancePaymentPercent || 0}%): ₹{booking.payment.amountPaid.toLocaleString()}
-                            </p>
-                          )}
-                          {typeof booking.payment?.amountPaid === 'number' && booking.payment.amountPaid > 0 && booking.payment.amountPaid < booking.pricing.totalAmount && booking.status !== 'completed' && (
-                            <p className="text-sm sm:text-base font-medium text-orange-700">
-                              Amount to be paid: ₹{Math.max(0, booking.pricing.totalAmount - booking.payment.amountPaid).toLocaleString()}
-                            </p>
-                          )}
+                          <p className="text-base sm:text-lg font-semibold text-green-600">₹{booking.pricing.totalAmount.toLocaleString()}</p>
                         </div>
 
                         <div className="flex flex-col gap-2">

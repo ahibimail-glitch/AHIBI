@@ -385,10 +385,6 @@ export default function ArenaPartnerProfile() {
                   </span>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">Commission Rate</p>
-                  <p className="text-lg font-bold text-gray-900">{profile.commissionSettings?.commissionRate || 15}%</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
                   <p className="text-xs sm:text-sm text-gray-600 mb-1">Member Since</p>
                   <p className="text-sm font-medium text-gray-900">
                     {new Date(profile.createdAt).toLocaleDateString()}

@@ -12,12 +12,6 @@ type Partner = {
   email: string;
   phone: string;
   approvalStatus: 'pending' | 'approved' | 'rejected';
-  paymentSettings?: {
-    advancePaymentPercent?: number;
-  };
-  commissionSettings?: {
-    commissionRate?: number;
-  };
   businessDetails?: { businessName?: string };
   createdAt?: string;
 };
@@ -29,7 +23,6 @@ export default function SportsAdminPartnersPage() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [advancePaymentEdit, setAdvancePaymentEdit] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // Guard: ensure admin token exists
@@ -112,25 +105,6 @@ export default function SportsAdminPartnersPage() {
     }
   };
 
-  const updateCommission = async (id: string) => {
-    const valueStr = advancePaymentEdit[id];
-    const value = Number(valueStr);
-    if (Number.isNaN(value) || value < 1 || value > 100) {
-      toast.error('Enter a valid advance payment percent (1-100)');
-      return;
-    }
-    setActionLoading(id + ':commission');
-    try {
-      await adminSportsApi.updateAdvancePaymentPercent(id, value);
-      toast.success('Advance payment percent updated');
-      await fetchPartners();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to update advance payment percent');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -207,18 +181,17 @@ export default function SportsAdminPartnersPage() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Contact</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Business</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Advance % (Booking)</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td className="px-4 py-6 text-center text-gray-500" colSpan={6}>Loading partners...</td>
+                    <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>Loading partners...</td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-6 text-center text-gray-500" colSpan={6}>No partners found</td>
+                    <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>No partners found</td>
                   </tr>
                 ) : (
                   filtered.map((p) => (
@@ -242,26 +215,6 @@ export default function SportsAdminPartnersPage() {
                         }`}>
                           {p.approvalStatus}
                         </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            placeholder="10"
-                            value={advancePaymentEdit[p._id] ?? String(p.paymentSettings?.advancePaymentPercent ?? 10)}
-                            onChange={(e) => setAdvancePaymentEdit((s) => ({ ...s, [p._id]: e.target.value }))}
-                            className="w-24 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none text-sm"
-                          />
-                          <button
-                            onClick={() => updateCommission(p._id)}
-                            disabled={actionLoading === p._id + ':commission'}
-                            className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white disabled:opacity-60"
-                          >
-                            {actionLoading === p._id + ':commission' ? 'Saving...' : 'Save'}
-                          </button>
-                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">

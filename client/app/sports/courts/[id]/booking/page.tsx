@@ -135,13 +135,6 @@ export default function CourtBookingPage() {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [error, setError] = useState("");
 
-  const [previewAdvancePaymentPercent, setPreviewAdvancePaymentPercent] = useState<number>(10);
-
-  const [paymentSummary, setPaymentSummary] = useState<{
-    advancePaymentPercent: number;
-    payableAmount: number;
-    totalAmount: number;
-  } | null>(null);
 
   // Fetch court details
   useEffect(() => {
@@ -153,7 +146,6 @@ export default function CourtBookingPage() {
 
         if (data.success && data.data.court) {
           setCourt(data.data.court);
-          setPreviewAdvancePaymentPercent(Number(data.data.advancePaymentPercent) || 10);
         } else {
           setError("Court not found");
         }
@@ -408,12 +400,6 @@ export default function CourtBookingPage() {
         throw new Error(orderData.message || "Failed to create order");
       }
 
-      setPaymentSummary({
-        advancePaymentPercent: Number(orderData.data?.pricing?.advancePaymentPercent) || 10,
-        payableAmount: Number(orderData.data?.pricing?.payableAmount) || Math.round(Number(orderData.data?.amount || 0) / 100),
-        totalAmount: Number(orderData.data?.pricing?.totalAmount) || pricing.totalAmount,
-      });
-
       // Step 3: Load Razorpay
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
@@ -515,8 +501,7 @@ export default function CourtBookingPage() {
   const pricing = calculateTotalPrice();
   const selectedDuration = selectedSlots.reduce((sum, slot) => sum + slot.duration, 0);
 
-  const advancePaymentPercent = paymentSummary?.advancePaymentPercent ?? previewAdvancePaymentPercent ?? 10;
-  const payNowAmount = paymentSummary?.payableAmount ?? Math.max(0, Math.round((pricing.totalAmount * advancePaymentPercent) / 100));
+  const payNowAmount = pricing.totalAmount;
 
   return (
     <>
@@ -924,13 +909,6 @@ export default function CourtBookingPage() {
                     <div className="border-t pt-3 flex justify-between text-lg font-bold text-slate-900">
                       <span>Total Amount</span>
                       <span>₹{pricing.totalAmount}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200">
-                    <div className="flex justify-between text-slate-700">
-                      <span>Advance to pay now ({advancePaymentPercent}%)</span>
-                      <span className="font-bold">₹{payNowAmount}</span>
                     </div>
                   </div>
 

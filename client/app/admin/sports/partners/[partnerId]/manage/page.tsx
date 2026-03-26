@@ -25,7 +25,6 @@ type Partner = {
     accountHolderName?: string;
   };
   kycDocuments?: Record<string, { url: string; verified?: boolean }>;
-  commission?: number;
   createdAt?: string;
   totalRevenue?: number;
   totalBookings?: number;
@@ -148,19 +147,6 @@ export default function PartnerManagePage() {
       fetchPartnerData();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Suspension failed');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleUpdateCommission = async (commission: number) => {
-    setActionLoading('commission');
-    try {
-      await adminSportsApi.updatePartnerCommission(partnerId, commission);
-      toast.success('Commission updated successfully');
-      fetchPartnerData();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to update commission');
     } finally {
       setActionLoading(null);
     }
@@ -305,10 +291,6 @@ export default function PartnerManagePage() {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="text-2xl font-bold text-gray-900">₹{partner.totalRevenue || 0}</div>
                 <div className="text-sm text-gray-500">Total Revenue</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="text-2xl font-bold text-gray-900">{partner.commission || 0}%</div>
-                <div className="text-sm text-gray-500">Commission Rate</div>
               </div>
             </div>
 
@@ -469,43 +451,6 @@ export default function PartnerManagePage() {
         {activeTab === 'financial' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Commission Management */}
-              <div className="bg-white rounded-lg shadow">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900">Commission Management</h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Current Commission Rate
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          defaultValue={partner.commission || 0}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                          id="commission-input"
-                        />
-                        <span className="text-gray-500">%</span>
-                        <button
-                          onClick={() => {
-                            const input = document.getElementById('commission-input') as HTMLInputElement;
-                            handleUpdateCommission(parseFloat(input.value));
-                          }}
-                          disabled={actionLoading === 'commission'}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
-                        >
-                          {actionLoading === 'commission' ? 'Updating...' : 'Update'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Bank Details */}
               <div className="bg-white rounded-lg shadow">
                 <div className="px-6 py-4 border-b border-gray-200">
@@ -528,17 +473,13 @@ export default function PartnerManagePage() {
                 <h3 className="text-lg font-medium text-gray-900">Revenue Summary</h3>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-gray-900">₹{partner.totalRevenue || 0}</div>
                     <div className="text-sm text-gray-500">Total Revenue</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">₹{Math.floor((partner.totalRevenue || 0) * (partner.commission || 0) / 100)}</div>
-                    <div className="text-sm text-gray-500">Platform Commission</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">₹{Math.floor((partner.totalRevenue || 0) * (100 - (partner.commission || 0)) / 100)}</div>
+                    <div className="text-2xl font-bold text-blue-600">₹{partner.totalRevenue || 0}</div>
                     <div className="text-sm text-gray-500">Partner Earnings</div>
                   </div>
                 </div>
