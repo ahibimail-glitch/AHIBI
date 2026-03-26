@@ -74,7 +74,7 @@ const Hero = () => (
                 </p>
 
                 <div className="flex flex-wrap gap-5">
-                    <Link href="/arena-partner/auth">
+                    <Link href="/sports/list">
                         <Button
                             size="lg"
                             className="group rounded-none px-8 bg-red-600 hover:bg-white text-white hover:text-red-600 transition-all duration-300 transform skew-x-[-12deg] border-none"
