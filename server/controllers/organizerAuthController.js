@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const Organizer = require('../models/Organizer');
 const Event = require('../models/Event');
 const Booking = require('../models/Booking');
@@ -53,11 +54,13 @@ exports.verifyOrganizerOtp = async (req, res) => {
       }
 
       // Generate JWT token
+      const organizer_with_pw = await Organizer.findOne({ phone }).select('+passwordHash');
       const token = organizer.getSignedJwtToken();
 
       // Respond with token and user data
       return ApiResponse.success(res, 'OTP verified successfully. Login successful.', {
         token,
+        hasPassword: organizer_with_pw ? organizer_with_pw.hasPasswordAuth() : false,
         user: {
           _id: organizer._id,
           name: organizer.name,
@@ -258,6 +261,131 @@ exports.sendOrganizerOtp = async (req, res) => {
 
   } catch (error) {
     console.error('Send organizer OTP error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+/**
+ * @desc    Set or update organizer password (requires JWT auth)
+ * @route   POST /api/organizer/auth/setup-password
+ * @access  Private (Organizer)
+ */
+exports.setupPassword = async (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return ApiResponse.badRequest(res, 'Password must be at least 6 characters');
+  }
+
+  try {
+    const organizer = await Organizer.findById(req.user._id);
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer not found');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    organizer.passwordHash = await bcrypt.hash(password, salt);
+    await organizer.save({ validateBeforeSave: false });
+
+    return ApiResponse.success(res, 'Password set successfully');
+  } catch (error) {
+    console.error('Setup organizer password error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+/**
+ * @desc    Check if organizer exists and whether they have a password set
+ * @route   POST /api/organizer/auth/check-organizer
+ * @access  Public
+ */
+exports.checkOrganizerExists = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone } = req.body;
+
+  try {
+    const organizer = await Organizer.findOne({ phone }).select('+passwordHash');
+
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer not found. Please sign up first.');
+    }
+
+    return ApiResponse.success(res, 'Organizer found', {
+      exists: true,
+      hasPassword: organizer.hasPasswordAuth()
+    });
+  } catch (error) {
+    console.error('Check organizer exists error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+/**
+ * @desc    Login organizer with password
+ * @route   POST /api/organizer/auth/login
+ * @access  Public
+ */
+exports.loginWithPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, password } = req.body;
+
+  try {
+    const organizer = await Organizer.findOne({ phone }).select('+passwordHash');
+
+    if (!organizer) {
+      return ApiResponse.notFound(res, 'Organizer not found. Please sign up first.');
+    }
+
+    if (!organizer.hasPasswordAuth()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password not set for this account. Please use OTP login.',
+        requiresOtp: true
+      });
+    }
+
+    const isPasswordValid = await organizer.matchPasswordHash(password);
+    if (!isPasswordValid) {
+      return ApiResponse.badRequest(res, 'Invalid password');
+    }
+
+    if (organizer.approvalStatus === 'pending') {
+      return ApiResponse.accepted(res, 'Your organizer account is pending approval', {
+        pending: true,
+        approvalStatus: organizer.approvalStatus
+      });
+    }
+
+    if (organizer.approvalStatus === 'rejected') {
+      return ApiResponse.forbidden(res, 'Your organizer account has been rejected', {
+        rejected: true,
+        reason: organizer.rejectionReason
+      });
+    }
+
+    const token = organizer.getSignedJwtToken();
+
+    return ApiResponse.success(res, 'Login successful', {
+      token,
+      user: {
+        _id: organizer._id,
+        name: organizer.name,
+        email: organizer.email,
+        phone: organizer.phone,
+        role: 'organizer',
+        status: organizer.status
+      }
+    });
+  } catch (error) {
+    console.error('Organizer password login error:', error);
     return ApiResponse.serverError(res, 'Server error', error);
   }
 };

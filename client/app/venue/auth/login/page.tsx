@@ -8,24 +8,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Building, Phone, Loader2 } from 'lucide-react';
+import { Phone, Loader2, Eye, EyeOff, Shield } from 'lucide-react';
+
+type LoginStep = 'login' | 'otp-verify' | 'set-password' | 'pending' | 'rejected';
 
 export default function VenueLogin() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [showOTP, setShowOTP] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('otp');
+  const [step, setStep] = useState<LoginStep>('login');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
+  const [tempToken, setTempToken] = useState('');
+  const [error, setError] = useState('');
 
   const handlePasswordLogin = async () => {
+    setError('');
     if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
-      toast.error('Please enter a valid Indian phone number');
+      setError('Please enter a valid Indian phone number');
       return;
     }
     if (!password || password.length < 6) {
-      toast.error('Please enter a valid password');
+      setError('Password must be at least 6 characters');
       return;
     }
 
@@ -33,35 +42,36 @@ export default function VenueLogin() {
     try {
       const response = await fetch('/api/venue/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        // Store token and user data
+      if (response.status === 202) {
+        setStep('pending');
+      } else if (response.status === 403) {
+        setStep('rejected');
+      } else if (data.success) {
         localStorage.setItem('venueToken', data.data.token);
         localStorage.setItem('venueData', JSON.stringify(data.data.venue));
-        
         toast.success(data.message);
         router.push('/venue/dashboard');
       } else {
-        toast.error(data.message || 'Failed to login');
+        setError(data.message || 'Failed to login');
       }
     } catch (error) {
       console.error('Password login error:', error);
-      toast.error('Failed to login');
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSendOTP = async () => {
+    setError('');
     if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
-      toast.error('Please enter a valid Indian phone number');
+      setError('Please enter a valid Indian phone number');
       return;
     }
 
@@ -69,34 +79,37 @@ export default function VenueLogin() {
     try {
       const response = await fetch('/api/venue/auth/send-login-otp', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        setShowOTP(true);
-        toast.success(data.message);
+      if (response.status === 202) {
+        setStep('pending');
+      } else if (response.status === 403) {
+        setStep('rejected');
+      } else if (data.success) {
+        setStep('otp-verify');
+        toast.success('OTP sent successfully!');
         if (data.devMode && data.otp) {
           console.log('Development OTP:', data.otp);
         }
       } else {
-        toast.error(data.message || 'Failed to send OTP');
+        setError(data.message || 'Failed to send OTP');
       }
     } catch (error) {
       console.error('Send OTP error:', error);
-      toast.error('Failed to send OTP');
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVerifyOTP = async () => {
+    setError('');
     if (!otp || otp.length !== 6) {
-      toast.error('Please enter a valid 6-digit OTP');
+      setError('Please enter a valid 6-digit OTP');
       return;
     }
 
@@ -104,38 +117,74 @@ export default function VenueLogin() {
     try {
       const response = await fetch('/api/venue/auth/verify-login-otp', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone,
-          otp
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        // Store token and user data
-        localStorage.setItem('venueToken', data.data.token);
-        localStorage.setItem('venueData', JSON.stringify(data.data.venue));
-        
-        toast.success(data.message);
-        router.push('/venue/dashboard');
+      if (response.status === 202) {
+        setStep('pending');
+      } else if (response.status === 403) {
+        setStep('rejected');
+      } else if (data.success) {
+        setTempToken(data.data.token);
+        if (isPasswordReset) {
+          setStep('set-password');
+        } else {
+          localStorage.setItem('venueToken', data.data.token);
+          localStorage.setItem('venueData', JSON.stringify(data.data.venue));
+          toast.success(data.message);
+          router.push('/venue/dashboard');
+        }
       } else {
-        toast.error(data.message || 'Failed to verify OTP');
+        setError(data.message || 'Failed to verify OTP');
       }
     } catch (error) {
       console.error('Verify OTP error:', error);
-      toast.error('Failed to verify OTP');
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackToPhone = () => {
-    setShowOTP(false);
-    setOtp('');
+  const handleSetPassword = async () => {
+    setError('');
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/venue/auth/setup-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tempToken}`,
+        },
+        body: JSON.stringify({ password: newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('venueToken', tempToken);
+        toast.success('Password updated! Redirecting...');
+        router.push('/venue/dashboard');
+      } else {
+        setError(data.message || 'Failed to set password');
+      }
+    } catch (error) {
+      console.error('Set password error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -143,57 +192,44 @@ export default function VenueLogin() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <img 
-              src="/images/LogoB.png" 
-              alt="AHIBI Logo" 
+            <img
+              src="/images/LogoB.png"
+              alt="AHIBI Logo"
               className="h-16 w-auto"
             />
           </div>
-          {/* <Building className="mx-auto h-12 w-12 text-blue-600 mb-4" /> */}
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
             Venue Sign In
           </h2>
-        
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>
-              {showOTP ? 'Verify OTP' : 'Venue Sign In'}
+              {step === 'login' && 'Venue Sign In'}
+              {step === 'otp-verify' && (isPasswordReset ? 'Reset Password' : 'Verify OTP')}
+              {step === 'set-password' && (isPasswordReset ? 'Set New Password' : 'Set Your Password')}
+              {step === 'pending' && 'Account Pending'}
+              {step === 'rejected' && 'Account Rejected'}
             </CardTitle>
             <CardDescription>
-              {showOTP ? 'Enter the OTP sent to your phone' : 'Choose your sign in method'}
+              {step === 'login' && 'Sign in to your venue dashboard'}
+              {step === 'otp-verify' && `OTP sent to ${phone}`}
+              {step === 'set-password' && (isPasswordReset ? 'Create a new password for your account' : 'Set a password to speed up future logins')}
+              {step === 'pending' && 'Your account is pending admin approval'}
+              {step === 'rejected' && 'Your account has been rejected'}
             </CardDescription>
           </CardHeader>
-          
-          <CardContent className="space-y-4">
-            {!showOTP && (
-              <div className="flex space-x-2 p-1 bg-gray-100 rounded-lg">
-                <button
-                  onClick={() => setLoginMethod('otp')}
-                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                    loginMethod === 'otp'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  OTP Login
-                </button>
-                <button
-                  onClick={() => setLoginMethod('password')}
-                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                    loginMethod === 'password'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Password Login
-                </button>
-              </div>
-            )}
 
-            {!showOTP ? (
+          <CardContent className="space-y-4">
+            {step === 'login' && (
               <div className="space-y-4">
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+                    {error}
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input
@@ -205,38 +241,117 @@ export default function VenueLogin() {
                     maxLength={10}
                   />
                 </div>
-                
-                {loginMethod === 'password' && (
-                  <div>
-                    <Label htmlFor="password">Password</Label>
+
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
+                      className="pr-10"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
-                )}
-                
+                </div>
+
                 <Button
-                  onClick={loginMethod === 'password' ? handlePasswordLogin : handleSendOTP}
-                  disabled={isLoading || !phone || (loginMethod === 'password' && (!password || password.length < 6))}
+                  onClick={handlePasswordLogin}
+                  disabled={isLoading || !phone}
                   className="w-full"
                 >
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {loginMethod === 'password' ? 'Sign In' : 'Send OTP'}
+                  Sign In
+                </Button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
+                        setError('Please enter your phone number first');
+                        return;
+                      }
+                      setIsPasswordReset(true);
+                      await handleSendOTP();
+                    }}
+                    disabled={isLoading}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Forgot password? Reset via OTP
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 'set-password' && (
+              <div className="space-y-4">
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="new-password">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                  />
+                </div>
+
+                <Button onClick={handleSetPassword} disabled={isLoading} className="w-full">
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Save Password & Continue
                 </Button>
               </div>
-            ) : (
+            )}
+
+            {step === 'otp-verify' && (
               <div className="space-y-4">
                 <div className="text-center">
                   <Phone className="mx-auto h-12 w-12 text-blue-600 mb-4" />
-                  <p className="text-gray-600">
-                    OTP sent to {phone}
-                  </p>
+                  <p className="text-gray-600">OTP sent to {phone}</p>
                 </div>
-                
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+                    {error}
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="otp">Enter OTP</Label>
                   <Input
@@ -248,7 +363,7 @@ export default function VenueLogin() {
                     className="text-center text-lg"
                   />
                 </div>
-                
+
                 <Button
                   onClick={handleVerifyOTP}
                   disabled={isLoading || otp.length !== 6}
@@ -257,16 +372,49 @@ export default function VenueLogin() {
                   {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   Verify OTP & Sign In
                 </Button>
-                
+
                 <div className="flex justify-between items-center">
-                  <Button variant="outline" onClick={handleBackToPhone}>
+                  <Button variant="outline" onClick={() => { setStep('login'); setOtp(''); setError(''); }}>
                     Back
                   </Button>
-                  
                   <Button variant="link" onClick={handleSendOTP} disabled={isLoading}>
                     Resend OTP
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {step === 'pending' && (
+              <div className="space-y-6 text-center py-4">
+                <div className="w-16 h-16 bg-yellow-100 border border-yellow-300 rounded-full flex items-center justify-center mx-auto">
+                  <Shield className="h-8 w-8 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Account Pending Approval</h3>
+                  <p className="text-gray-500 mt-2">
+                    Your venue account is currently under review by our admin team. You will be notified once approved.
+                  </p>
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => setStep('login')}>
+                  Back to Sign In
+                </Button>
+              </div>
+            )}
+
+            {step === 'rejected' && (
+              <div className="space-y-6 text-center py-4">
+                <div className="w-16 h-16 bg-red-100 border border-red-300 rounded-full flex items-center justify-center mx-auto">
+                  <Shield className="h-8 w-8 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Account Rejected</h3>
+                  <p className="text-gray-500 mt-2">
+                    Your venue account has been rejected. Please contact support for more information.
+                  </p>
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => setStep('login')}>
+                  Back to Sign In
+                </Button>
               </div>
             )}
           </CardContent>

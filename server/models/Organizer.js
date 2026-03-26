@@ -245,6 +245,10 @@ const OrganizerSchema = new mongoose.Schema({
     code: { type: String, default: null },
     expiresAt: { type: Date, default: null }
   },
+  passwordHash: {
+    type: String,
+    select: false
+  },
   profilePic: {
     type: String,
     default: ''
@@ -304,6 +308,17 @@ OrganizerSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Check if organizer has password-based authentication
+OrganizerSchema.methods.hasPasswordAuth = function() {
+  return !!this.passwordHash;
+};
+
+// Compare entered password to hashed password
+OrganizerSchema.methods.matchPasswordHash = async function(enteredPassword) {
+  if (!this.passwordHash) return false;
+  return await bcrypt.compare(enteredPassword, this.passwordHash);
+};
 
 // Calculate average rating when a new review is added
 OrganizerSchema.methods.calculateAverageRating = async function() {

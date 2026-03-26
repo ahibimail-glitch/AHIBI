@@ -10,7 +10,8 @@ const {
   verifyLoginOTP,
   passwordLogin,
   getProfile,
-  updateProfile
+  updateProfile,
+  setupPassword
 } = require('../controllers/venueAuthController');
 
 const {
@@ -180,6 +181,12 @@ router.post('/auth/verify-login-otp', otpValidation, verifyLoginOTP);
 
 // Password-based login
 router.post('/auth/login', passwordLoginValidation, passwordLogin);
+
+// Set / reset password (requires venue JWT)
+router.post('/auth/setup-password', [
+  venueAuth,
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], setupPassword);
 
 // Protected routes (require authentication)
 

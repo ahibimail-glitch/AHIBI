@@ -91,13 +91,14 @@ export default function SportsTournamentRegistrationsPage() {
   }, [registrations, query]);
 
   const handleDownloadExcel = () => {
-    if (filtered.length === 0) {
-      toast.error('No registrations to export');
+    const confirmedOnly = filtered.filter((reg) => reg.paymentStatus === 'confirmed');
+    if (confirmedOnly.length === 0) {
+      toast.error('No confirmed registrations to export');
       return;
     }
 
     // Flatten each registration into a row-per-category structure
-    const rows = filtered.flatMap((reg) =>
+    const rows = confirmedOnly.flatMap((reg) =>
       reg.categories.map((category) => ({
         'Registration No.': reg.registrationNumber || 'Pending',
         'Invoice No.': reg.invoiceNumber || '—',

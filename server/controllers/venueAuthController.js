@@ -219,11 +219,20 @@ const sendLoginOTP = async (req, res) => {
       });
     }
 
-    // Check if venue is approved
-    if (venue.status !== 'approved' && venue.status !== 'active') {
+    // Check approval status
+    if (venue.status === 'pending') {
+      return res.status(202).json({
+        success: true,
+        message: 'Your venue account is pending approval',
+        data: { pending: true }
+      });
+    }
+
+    if (venue.status === 'rejected') {
       return res.status(403).json({
         success: false,
-        message: 'Venue account is not approved. Please contact admin.'
+        message: 'Your venue account has been rejected',
+        data: { rejected: true }
       });
     }
 
@@ -315,10 +324,19 @@ const verifyLoginOTP = async (req, res) => {
     }
 
     // Check status
-    if (venue.status !== 'approved' && venue.status !== 'active') {
+    if (venue.status === 'pending') {
+      return res.status(202).json({
+        success: true,
+        message: 'Your venue account is pending approval',
+        data: { pending: true }
+      });
+    }
+
+    if (venue.status === 'rejected') {
       return res.status(403).json({
         success: false,
-        message: 'Venue account is not approved'
+        message: 'Your venue account has been rejected',
+        data: { rejected: true }
       });
     }
 
@@ -336,6 +354,7 @@ const verifyLoginOTP = async (req, res) => {
       success: true,
       message: 'Login successful',
       data: {
+        hasPassword: true,
         venue: {
           id: venue._id,
           name: venue.name,
@@ -453,11 +472,20 @@ const passwordLogin = async (req, res) => {
       });
     }
 
-    // Check if venue is approved
-    if (venue.status !== 'approved' && venue.status !== 'active') {
+    // Check approval status
+    if (venue.status === 'pending') {
+      return res.status(202).json({
+        success: true,
+        message: 'Your venue account is pending approval',
+        data: { pending: true }
+      });
+    }
+
+    if (venue.status === 'rejected') {
       return res.status(403).json({
         success: false,
-        message: 'Venue account is not approved. Please contact admin.'
+        message: 'Your venue account has been rejected',
+        data: { rejected: true }
       });
     }
 
@@ -556,6 +584,30 @@ const getProfile = async (req, res) => {
   }
 };
 
+// Set or reset venue password (called after OTP verification)  
+const setupPassword = async (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+  }
+
+  try {
+    const venue = await Venue.findById(req.venue.id);
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Venue not found' });
+    }
+
+    venue.password = password;
+    await venue.save();
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Setup venue password error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   sendSignupOTP,
   verifySignupOTP,
@@ -563,5 +615,6 @@ module.exports = {
   verifyLoginOTP,
   passwordLogin,
   getProfile,
-  updateProfile
+  updateProfile,
+  setupPassword
 };

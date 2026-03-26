@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const ArenaPartner = require('../models/ArenaPartner');
 const ApiResponse = require('../utils/apiResponse');
 const notificationService = require('../services/notificationService');
@@ -107,12 +108,36 @@ exports.verifyOtp = async (req, res) => {
 
       // Notify admin about new sports partner registration
       adminNotificationController.notifySportsPartnerRegistration(partner);
+
+      const token = partner.getSignedJwtToken();
+      return ApiResponse.success(res, 'Registration successful', {
+        token,
+        partner: {
+          id: partner._id,
+          name: partner.name,
+          email: partner.email,
+          phone: partner.phone,
+          businessName: partner.businessDetails?.businessName,
+          approvalStatus: partner.approvalStatus
+        }
+      });
     }
 
+    // Login mode — check approval status
+    if (partner.approvalStatus === 'pending') {
+      return ApiResponse.accepted(res, 'Your account is pending approval', { pending: true });
+    }
+
+    if (partner.approvalStatus === 'rejected') {
+      return ApiResponse.forbidden(res, 'Your account has been rejected', { rejected: true });
+    }
+
+    const partnerWithPw = await ArenaPartner.findOne({ phone }).select('+passwordHash');
     const token = partner.getSignedJwtToken();
 
-    return ApiResponse.success(res, mode === 'signup' ? 'Registration successful' : 'Login successful', {
+    return ApiResponse.success(res, 'Login successful', {
       token,
+      hasPassword: partnerWithPw ? partnerWithPw.hasPasswordAuth() : false,
       partner: {
         id: partner._id,
         name: partner.name,
@@ -126,6 +151,97 @@ exports.verifyOtp = async (req, res) => {
   } catch (error) {
     console.error('Verify OTP error:', error);
     return ApiResponse.serverError(res, 'Error verifying OTP', error);
+  }
+};
+
+/**
+ * @desc    Login arena partner with password
+ * @route   POST /api/arena-partner/auth/login
+ * @access  Public
+ */
+exports.loginWithPassword = async (req, res) => {
+  const { phone, password } = req.body;
+
+  if (!phone || !/^\d{10}$/.test(phone)) {
+    return ApiResponse.badRequest(res, 'Valid 10-digit phone number is required');
+  }
+  if (!password || password.length < 6) {
+    return ApiResponse.badRequest(res, 'Password must be at least 6 characters');
+  }
+
+  try {
+    const partner = await ArenaPartner.findOne({ phone }).select('+passwordHash');
+
+    if (!partner) {
+      return ApiResponse.notFound(res, 'Arena partner not found. Please sign up first.');
+    }
+
+    if (!partner.hasPasswordAuth()) {
+      return res.status(400).json({
+        success: false,
+        message: 'No password set. Use "Forgot password?" to set one via OTP.',
+        requiresOtp: true
+      });
+    }
+
+    const isValid = await partner.matchPasswordHash(password);
+    if (!isValid) {
+      return ApiResponse.badRequest(res, 'Invalid password');
+    }
+
+    if (partner.approvalStatus === 'pending') {
+      return ApiResponse.accepted(res, 'Your account is pending approval', { pending: true });
+    }
+
+    if (partner.approvalStatus === 'rejected') {
+      return ApiResponse.forbidden(res, 'Your account has been rejected', { rejected: true });
+    }
+
+    const token = partner.getSignedJwtToken();
+
+    return ApiResponse.success(res, 'Login successful', {
+      token,
+      partner: {
+        id: partner._id,
+        name: partner.name,
+        email: partner.email,
+        phone: partner.phone,
+        businessName: partner.businessDetails?.businessName,
+        approvalStatus: partner.approvalStatus
+      }
+    });
+  } catch (error) {
+    console.error('Arena partner password login error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+/**
+ * @desc    Set or update arena partner password (requires JWT)
+ * @route   POST /api/arena-partner/auth/setup-password
+ * @access  Private (Arena Partner)
+ */
+exports.setupPassword = async (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return ApiResponse.badRequest(res, 'Password must be at least 6 characters');
+  }
+
+  try {
+    const partner = await ArenaPartner.findById(req.user._id || req.user.id);
+    if (!partner) {
+      return ApiResponse.notFound(res, 'Arena partner not found');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    partner.passwordHash = await bcrypt.hash(password, salt);
+    await partner.save({ validateBeforeSave: false });
+
+    return ApiResponse.success(res, 'Password set successfully');
+  } catch (error) {
+    console.error('Setup arena partner password error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
   }
 };
 

@@ -30,6 +30,20 @@ router.post('/auth/verify-otp', [
   check('mode', 'Mode must be signup or login').isIn(['signup', 'login'])
 ], organizerAuthController.verifyOrganizerOtp);
 
+router.post('/auth/check-organizer', [
+  check('phone', 'Phone number is required').matches(/^\d{10}$/)
+], organizerAuthController.checkOrganizerExists);
+
+router.post('/auth/login', [
+  check('phone', 'Phone number is required').matches(/^\d{10}$/),
+  check('password', 'Password must be at least 6 characters').isLength({ min: 6 })
+], organizerAuthController.loginWithPassword);
+
+router.post('/auth/setup-password', [
+  protect,
+  check('password', 'Password must be at least 6 characters').isLength({ min: 6 })
+], organizerAuthController.setupPassword);
+
 // Protected routes (require authentication)
 router.get('/dashboard', protect, organizerAuthController.getOrganizerDashboard);
 router.get('/profile', protect, organizerAuthController.getOrganizerProfile);

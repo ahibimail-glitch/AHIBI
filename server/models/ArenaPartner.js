@@ -25,6 +25,12 @@ const ArenaPartnerSchema = new mongoose.Schema({
   // OTP Authentication
   otp: String,
   otpExpires: Date,
+
+  // Password Authentication
+  passwordHash: {
+    type: String,
+    select: false
+  },
   
   // Business Details
   businessDetails: {
@@ -251,6 +257,17 @@ ArenaPartnerSchema.methods.verifyOtp = async function(enteredOtp) {
     await this.save({ validateBeforeSave: false });
   }
   return isMatch;
+};
+
+// Check if partner has password-based authentication
+ArenaPartnerSchema.methods.hasPasswordAuth = function() {
+  return !!this.passwordHash;
+};
+
+// Compare entered password to hashed password
+ArenaPartnerSchema.methods.matchPasswordHash = async function(enteredPassword) {
+  if (!this.passwordHash) return false;
+  return await bcrypt.compare(enteredPassword, this.passwordHash);
 };
 
 // Generate JWT token

@@ -7,6 +7,8 @@ const { protect } = require('../middlewares/auth');
 // ============ AUTHENTICATION ROUTES ============
 router.post('/auth/send-otp', arenaPartnerAuthController.sendOtp);
 router.post('/auth/verify-otp', arenaPartnerAuthController.verifyOtp);
+router.post('/auth/login', arenaPartnerAuthController.loginWithPassword);
+router.post('/auth/setup-password', protect, arenaPartnerAuthController.setupPassword);
 router.get('/auth/profile', protect, arenaPartnerAuthController.getProfile);
 router.put('/auth/profile', protect, arenaPartnerAuthController.updateProfile);
 router.post('/auth/kyc-upload', protect, arenaPartnerAuthController.uploadKycDocuments);
