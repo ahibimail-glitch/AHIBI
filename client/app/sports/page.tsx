@@ -63,14 +63,14 @@ const Hero = () => (
         <div className="relative z-10 grid items-center gap-16 md:grid-cols-2">
             <div className="space-y-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/10 border border-red-600/20 text-red-500 text-xs font-bold uppercase tracking-widest">
-                    <Activity className="h-3 w-3" /> Book Sports Facilities. List Your Ground.
+                    <Activity className="h-3 w-3" /> Book Sports Venues. List Your Venue.
                 </div>
                 {/* Updated Heading */}
                 <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-white uppercase italic leading-[0.9]">
                     AHIBI <br /> <span className="text-red-600">Sports</span>
                 </h1>
                 <p className="max-w-lg text-gray-400 md:text-xl leading-relaxed font-light">
-                    Find and book verified sports courts and grounds — or list your facility and manage bookings online.
+                    Find and book verified sports venues — or list your venue and manage bookings online.
                 </p>
 
                 <div className="flex flex-wrap gap-5">
@@ -80,7 +80,7 @@ const Hero = () => (
                             className="group rounded-none px-8 bg-red-600 hover:bg-white text-white hover:text-red-600 transition-all duration-300 transform skew-x-[-12deg] border-none"
                         >
                             <span className="inline-block skew-x-[12deg] font-bold uppercase tracking-tighter">
-                                Explore Facilities
+                                Explore Venues
                             </span>
                             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform skew-x-[12deg]" />
                         </Button>

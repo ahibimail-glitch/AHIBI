@@ -8,17 +8,30 @@ import KakiMarketingBanner from '@/components/KakiMarketingBanner';
 
 interface Payout {
   _id: string;
-  amount: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   period: {
     startDate: string;
     endDate: string;
   };
+  financials: {
+    totalRevenue: number;
+    netAmount: number;
+    taxes?: {
+      tds?: number;
+      total?: number;
+    };
+  };
+  transaction?: {
+    transactionId?: string;
+    utr?: string;
+    processedAt?: string;
+    completedAt?: string;
+  };
+  failure?: {
+    reason?: string;
+  };
   bookings: any[];
-  processedAt?: string;
-  completedAt?: string;
-  failureReason?: string;
-  transactionId?: string;
+  invoiceNumber?: string;
   createdAt: string;
 }
 
@@ -82,13 +95,13 @@ export default function ArenaPartnerPayouts() {
     }
   };
 
-  const getTotalAmount = () => payouts.reduce((sum, payout) => sum + payout.amount, 0);
+  const getTotalAmount = () => payouts.reduce((sum, payout) => sum + (payout.financials?.netAmount || 0), 0);
   const getCompletedAmount = () => payouts
     .filter(p => p.status === 'completed')
-    .reduce((sum, payout) => sum + payout.amount, 0);
+    .reduce((sum, payout) => sum + (payout.financials?.netAmount || 0), 0);
   const getPendingAmount = () => payouts
     .filter(p => p.status === 'pending' || p.status === 'processing')
-    .reduce((sum, payout) => sum + payout.amount, 0);
+    .reduce((sum, payout) => sum + (payout.financials?.netAmount || 0), 0);
 
   const exportToCSV = () => {
     const csvContent = [
@@ -96,9 +109,9 @@ export default function ArenaPartnerPayouts() {
       ...payouts.map(payout => [
         new Date(payout.createdAt).toLocaleDateString(),
         `${new Date(payout.period.startDate).toLocaleDateString()} - ${new Date(payout.period.endDate).toLocaleDateString()}`,
-        payout.amount.toString(),
+        (payout.financials?.netAmount || 0).toString(),
         payout.status,
-        payout.transactionId || 'N/A'
+        payout.transaction?.transactionId || 'N/A'
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -268,7 +281,7 @@ export default function ArenaPartnerPayouts() {
                         </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ₹{payout.amount.toLocaleString()}
+                        ₹{(payout.financials?.netAmount || 0).toLocaleString()}
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                         <span className={`inline-block px-2.5 py-1 text-xs rounded-full font-medium ${getStatusColor(payout.status)}`}>
@@ -276,7 +289,7 @@ export default function ArenaPartnerPayouts() {
                         </span>
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden sm:table-cell">
-                        {payout.transactionId || '-'}
+                        {payout.transaction?.transactionId || '-'}
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm">
                         <button
@@ -319,7 +332,7 @@ export default function ArenaPartnerPayouts() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Amount</p>
-                    <p className="font-medium text-lg">₹{selectedPayout.amount.toLocaleString()}</p>
+                    <p className="font-medium text-lg">₹{(selectedPayout.financials?.netAmount || 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Status</p>
@@ -333,28 +346,46 @@ export default function ArenaPartnerPayouts() {
                       {new Date(selectedPayout.period.startDate).toLocaleDateString()} - {new Date(selectedPayout.period.endDate).toLocaleDateString()}
                     </p>
                   </div>
-                  {selectedPayout.transactionId && (
+                  {selectedPayout.invoiceNumber && (
+                    <div>
+                      <p className="text-sm text-gray-600">Invoice Number</p>
+                      <p className="font-medium">{selectedPayout.invoiceNumber}</p>
+                    </div>
+                  )}
+                  {selectedPayout.transaction?.transactionId && (
                     <div>
                       <p className="text-sm text-gray-600">Transaction ID</p>
-                      <p className="font-medium">{selectedPayout.transactionId}</p>
+                      <p className="font-medium">{selectedPayout.transaction.transactionId}</p>
                     </div>
                   )}
-                  {selectedPayout.processedAt && (
+                  {selectedPayout.transaction?.utr && (
+                    <div>
+                      <p className="text-sm text-gray-600">UTR</p>
+                      <p className="font-medium">{selectedPayout.transaction.utr}</p>
+                    </div>
+                  )}
+                  {selectedPayout.transaction?.processedAt && (
                     <div>
                       <p className="text-sm text-gray-600">Processed At</p>
-                      <p className="font-medium">{new Date(selectedPayout.processedAt).toLocaleString()}</p>
+                      <p className="font-medium">{new Date(selectedPayout.transaction.processedAt).toLocaleString()}</p>
                     </div>
                   )}
-                  {selectedPayout.completedAt && (
+                  {selectedPayout.transaction?.completedAt && (
                     <div>
                       <p className="text-sm text-gray-600">Completed At</p>
-                      <p className="font-medium">{new Date(selectedPayout.completedAt).toLocaleString()}</p>
+                      <p className="font-medium">{new Date(selectedPayout.transaction.completedAt).toLocaleString()}</p>
                     </div>
                   )}
-                  {selectedPayout.failureReason && (
+                  {selectedPayout.financials?.taxes?.tds != null && selectedPayout.financials.taxes.tds > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-600">TDS Deducted</p>
+                      <p className="font-medium text-red-600">₹{selectedPayout.financials.taxes.tds.toLocaleString()}</p>
+                    </div>
+                  )}
+                  {selectedPayout.failure?.reason && (
                     <div className="col-span-2">
                       <p className="text-sm text-gray-600">Failure Reason</p>
-                      <p className="font-medium text-red-600">{selectedPayout.failureReason}</p>
+                      <p className="font-medium text-red-600">{selectedPayout.failure.reason}</p>
                     </div>
                   )}
                 </div>
@@ -376,7 +407,7 @@ export default function ArenaPartnerPayouts() {
                             <tr key={booking._id}>
                               <td className="px-3 py-2">{booking._id.slice(-8)}</td>
                               <td className="px-3 py-2">{new Date(booking.bookingDate).toLocaleDateString()}</td>
-                              <td className="px-3 py-2">₹{booking.pricing?.arenaEarnings?.toLocaleString() || 0}</td>
+                              <td className="px-3 py-2">₹{(booking.pricing?.totalAmount || booking.pricing?.arenaEarnings || 0).toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
