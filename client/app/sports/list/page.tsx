@@ -16,6 +16,7 @@ const SPORTS = [
   'Badminton',
   'Tennis',
   'Swimming',
+  'Pickleball'
 ];
 
 function toMinutes(hhmm?: string) {
