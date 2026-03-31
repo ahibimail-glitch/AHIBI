@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PlusCircle, Trash2, Plus } from "lucide-react";
+import PriceBreakdown from "@/components/PriceBreakdown";
 
 interface TicketType {
   name: string;
@@ -436,21 +437,30 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
           ]
         }
       },
-      ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => ({
-        name: ticket.name,
-        description: ticket.description || "",
-        price: parseFloat(ticket.price) || 0,
-        quantity: parseInt(ticket.quantity, 10) || 0,
-        benefits: ticket.benefits.filter(benefit => benefit.trim() !== ""),
-        sold: 0,
-        capacity: parseInt(ticket.capacity, 10) || 1,
-      })),
+      ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => {
+        const basePrice = parseFloat(ticket.price) || 0;
+        const finalPrice = calculateFinalPrice(basePrice);
+        return {
+          name: ticket.name,
+          description: ticket.description || "",
+          price: finalPrice, // Save final price instead of base price
+          basePrice: basePrice, // Keep base price for reference
+          quantity: parseInt(ticket.quantity, 10) || 0,
+          benefits: ticket.benefits.filter(benefit => benefit.trim() !== ""),
+          sold: 0,
+          capacity: parseInt(ticket.capacity, 10) || 1,
+        };
+      }),
       convenience: eventData.isFreeEvent ? {
         percentage: 0,
-        fixedAmount: 0
+        fixedAmount: 0,
+        includeGst: false,
+        gstPercentage: 0
       } : {
         percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
-        fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0
+        fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0,
+        includeGst: fees.includeGst,
+        gstPercentage: fees.includeGst ? fees.gstPercentage : 0
       },
       socialLinks: Object.fromEntries(
         Object.entries({
@@ -1008,79 +1018,112 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                 <CardHeader>
                   <CardTitle className="text-base">Fee Configuration</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* GST Configuration */}
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="includeGst"
-                          checked={fees.includeGst}
-                          onCheckedChange={(checked) => handleFeeChange('includeGst', checked as boolean)}
+                <CardContent className="space-y-6">
+                  {/* GST Configuration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="includeGst"
+                        checked={fees.includeGst}
+                        onCheckedChange={(checked) => handleFeeChange('includeGst', checked as boolean)}
+                      />
+                      <Label htmlFor="includeGst" className="text-sm font-medium">
+                        Include GST
+                      </Label>
+                    </div>
+                    {fees.includeGst && (
+                      <div className="space-y-2 pl-6">
+                        <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
+                        <Input
+                          id="gstPercentage"
+                          type="number"
+                          value={fees.gstPercentage}
+                          onChange={(e) => handleFeeChange('gstPercentage', parseFloat(e.target.value) || 0)}
+                          placeholder="18"
+                          min="0"
+                          max="100"
+                          step="0.1"
                         />
-                        <Label htmlFor="includeGst" className="text-sm font-medium">
-                          Include GST
-                        </Label>
                       </div>
-                      {fees.includeGst && (
+                    )}
+                  </div>
+
+                  {/* Convenience Fee Configuration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="includeConvenience"
+                        checked={fees.includeConvenience}
+                        onCheckedChange={(checked) => handleFeeChange('includeConvenience', checked as boolean)}
+                      />
+                      <Label htmlFor="includeConvenience" className="text-sm font-medium">
+                        Include Convenience Fee
+                      </Label>
+                    </div>
+                    {fees.includeConvenience && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
                         <div className="space-y-2">
-                          <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
+                          <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
                           <Input
-                            id="gstPercentage"
+                            id="conveniencePercentage"
                             type="number"
-                            value={fees.gstPercentage}
-                            onChange={(e) => handleFeeChange('gstPercentage', parseFloat(e.target.value) || 0)}
-                            placeholder="18"
+                            value={fees.conveniencePercentage}
+                            onChange={(e) => handleFeeChange('conveniencePercentage', parseFloat(e.target.value) || 0)}
+                            placeholder="5"
                             min="0"
                             max="100"
                             step="0.1"
                           />
                         </div>
-                      )}
-                    </div>
-
-                    {/* Convenience Fee Configuration */}
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="includeConvenience"
-                          checked={fees.includeConvenience}
-                          onCheckedChange={(checked) => handleFeeChange('includeConvenience', checked as boolean)}
-                        />
-                        <Label htmlFor="includeConvenience" className="text-sm font-medium">
-                          Include Convenience Fee
-                        </Label>
-                      </div>
-                      {fees.includeConvenience && (
                         <div className="space-y-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
-                            <Input
-                              id="conveniencePercentage"
-                              type="number"
-                              value={fees.conveniencePercentage}
-                              onChange={(e) => handleFeeChange('conveniencePercentage', parseFloat(e.target.value) || 0)}
-                              placeholder="5"
-                              min="0"
-                              max="100"
-                              step="0.1"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="convenienceFixed">Fixed Amount (₹)</Label>
-                            <Input
-                              id="convenienceFixed"
-                              type="number"
-                              value={fees.convenienceFixedAmount}
-                              onChange={(e) => handleFeeChange('convenienceFixedAmount', parseFloat(e.target.value) || 0)}
-                              placeholder="0"
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
+                          <Label htmlFor="convenienceFixed">Fixed Amount (₹)</Label>
+                          <Input
+                            id="convenienceFixed"
+                            type="number"
+                            value={fees.convenienceFixedAmount}
+                            onChange={(e) => handleFeeChange('convenienceFixedAmount', parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                            min="0"
+                            step="0.01"
+                          />
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Price Breakdown Example - Only for paid events with fees */}
+            {!eventData.isFreeEvent && (fees.includeGst || fees.includeConvenience) && (
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-base">Price Breakdown Example</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {ticketTypes.map((ticket, index) => (
+                      ticket.price && (
+                        <div key={index} className="space-y-2">
+                          <div className="text-sm font-medium text-gray-700">
+                            {ticket.name || `Ticket ${index + 1}`} - Base Price: ₹{parseFloat(ticket.price).toFixed(2)}
+                          </div>
+                          <PriceBreakdown
+                            basePrice={parseFloat(ticket.price) || 0}
+                            includeGst={fees.includeGst}
+                            gstPercentage={fees.gstPercentage}
+                            includeConvenience={fees.includeConvenience}
+                            conveniencePercentage={fees.conveniencePercentage}
+                            convenienceFixedAmount={fees.convenienceFixedAmount}
+                          />
+                        </div>
+                      )
+                    ))}
+                    {ticketTypes.every(ticket => !ticket.price) && (
+                      <div className="text-sm text-gray-500">
+                        Enter ticket prices above to see price breakdown examples
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

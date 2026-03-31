@@ -42,7 +42,62 @@ export default function BookingSuccessPage() {
           return;
         }
 
-        // /events/[id]/bookings uses event ID in URL, so fetch user's bookings and match event.
+        // Try to get the last booking ID from localStorage first
+        const lastBookingId = localStorage.getItem('lastBookingId');
+        
+        if (lastBookingId) {
+          // Fetch the specific booking by ID
+          const bookingRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/${lastBookingId}`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            }
+          });
+
+          if (bookingRes.ok) {
+            const bookingData = await bookingRes.json();
+            const booking = bookingData.data;
+            
+            // Verify this booking belongs to the current event
+            const bookingEventId = typeof booking.event === "string" ? booking.event : booking.event?._id;
+            if (bookingEventId === eventId) {
+              setBookingId(lastBookingId);
+              setBooking(booking);
+              
+              // Check if this is a parent booking (has related tickets)
+              if (booking.totalTickets > 1) {
+                // Fetch all related bookings
+                try {
+                  const relatedBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/related/${lastBookingId}`, {
+                    headers: {
+                      "Authorization": `Bearer ${token}`,
+                    }
+                  });
+
+                  if (relatedBookingsRes.ok) {
+                    const relatedBookingsData = await relatedBookingsRes.json();
+                    setBooking({
+                      ...booking,
+                      relatedBookings: relatedBookingsData.data
+                    });
+                  } else {
+                    // If related bookings endpoint doesn't exist, use the current booking
+                    console.log('Related bookings endpoint not available, using current booking');
+                    setBooking(booking);
+                  }
+                } catch (error) {
+                  console.log('Error fetching related bookings, using current booking:', error);
+                  setBooking(booking);
+                }
+              } else {
+                setBooking(booking);
+              }
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        // Fallback: /events/[id]/bookings uses event ID in URL, so fetch user's bookings and match event.
         const myBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/my-bookings`, {
           headers: {
             "Authorization": `Bearer ${token}`,

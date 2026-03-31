@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { PlusCircle, Trash2, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import PriceBreakdown from "@/components/PriceBreakdown";
 
 interface TicketType {
   name: string;
@@ -58,6 +59,7 @@ interface Event {
     name: string;
     description: string;
     price: number;
+    basePrice?: number; // Add basePrice field for backward compatibility
     quantity: number;
     sold: number;
     capacity: number;
@@ -131,7 +133,24 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
     includeConvenience: true,
     conveniencePercentage: 5,
     convenienceFixedAmount: 0,
+    includeGst: false,
+    gstPercentage: 18,
   });
+
+  const calculateFinalPrice = (basePrice: number) => {
+    let finalPrice = basePrice;
+
+    if (fees.includeGst) {
+      finalPrice += (basePrice * fees.gstPercentage) / 100;
+    }
+
+    if (fees.includeConvenience) {
+      finalPrice += (basePrice * fees.conveniencePercentage) / 100;
+      finalPrice += fees.convenienceFixedAmount;
+    }
+
+    return finalPrice;
+  };
 
   // Fetch event data on component mount
   useEffect(() => {
@@ -189,7 +208,7 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
       setTicketTypes(event.ticketTypes.map(ticket => ({
         name: ticket.name,
         description: ticket.description || "",
-        price: ticket.price.toString(),
+        price: (ticket.basePrice || ticket.price).toString(), // Use basePrice if available, fallback to price for backward compatibility
         quantity: ticket.quantity.toString(),
         capacity: ticket.capacity.toString(),
         benefits: ticket.benefits || []
@@ -203,6 +222,8 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
         includeConvenience: (event as any)?.convenience?.percentage !== 0 || (event as any)?.convenience?.fixedAmount !== 0,
         conveniencePercentage: (event as any)?.convenience?.percentage ?? 5,
         convenienceFixedAmount: (event as any)?.convenience?.fixedAmount ?? 0,
+        includeGst: (event as any)?.convenience?.includeGst ?? false,
+        gstPercentage: (event as any)?.convenience?.gstPercentage ?? 18,
       });
       // Load existing gallery images
       setGalleryImages(event.gallery || []);
@@ -482,18 +503,30 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
             coordinates: [0, 0] // [longitude, latitude] - default coordinates
           }
         },
-        ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => ({
+        ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => {
+        const basePrice = parseFloat(ticket.price);
+        const finalPrice = calculateFinalPrice(basePrice);
+        return {
           name: ticket.name,
           description: ticket.description,
-          price: parseFloat(ticket.price),
+          price: finalPrice, // Save final price instead of base price
+          basePrice: basePrice, // Keep base price for reference
           quantity: parseInt(ticket.quantity),
           capacity: parseInt(ticket.capacity),
           benefits: ticket.benefits.filter(benefit => benefit.trim() !== '')
-        })),
-        convenience: eventData.isFreeEvent ? { percentage: 0, fixedAmount: 0 } : {
-          percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
-          fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0,
-        },
+        };
+      }),
+        convenience: eventData.isFreeEvent ? { 
+        percentage: 0, 
+        fixedAmount: 0,
+        includeGst: false,
+        gstPercentage: 0
+      } : {
+        percentage: fees.includeConvenience ? fees.conveniencePercentage : 0,
+        fixedAmount: fees.includeConvenience ? fees.convenienceFixedAmount : 0,
+        includeGst: fees.includeGst,
+        gstPercentage: fees.includeGst ? fees.gstPercentage : 0,
+      },
         termsAndConditions,
         faqs: faqs.filter(faq => faq.question.trim() !== '' && faq.answer.trim() !== ''),
         socialLinks: Object.fromEntries(
@@ -960,6 +993,12 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
                         min="0"
                         required
                       />
+                      {ticket.price && (
+                        <div className="text-xs text-gray-500 pt-1">
+                          Final Price: ₹{calculateFinalPrice(parseFloat(ticket.price) || 0).toFixed(2)}
+                              {(fees.includeGst || fees.includeConvenience) && " (incl. fees)"}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1043,44 +1082,108 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
             <CardHeader>
               <CardTitle>Fee Configuration</CardTitle>
-              <CardDescription>Optional platform/convenience fee settings</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeConvenience"
-                  checked={fees.includeConvenience}
-                  onCheckedChange={(checked) => setFees(prev => ({ ...prev, includeConvenience: !!checked }))}
-                />
-                <Label htmlFor="includeConvenience" className="text-sm font-medium">Include Convenience Fee</Label>
-              </div>
-              {fees.includeConvenience && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
+            <CardContent className="space-y-6">
+              {/* GST Configuration */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeGst"
+                    checked={fees.includeGst}
+                    onCheckedChange={(checked) => setFees(prev => ({ ...prev, includeGst: !!checked }))}
+                  />
+                  <Label htmlFor="includeGst" className="text-sm font-medium">Include GST</Label>
+                </div>
+                {fees.includeGst && (
+                  <div className="space-y-2 pl-6">
+                    <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
                     <Input
-                      id="conveniencePercentage"
+                      id="gstPercentage"
                       type="number"
-                      value={fees.conveniencePercentage}
-                      onChange={(e) => setFees(prev => ({ ...prev, conveniencePercentage: parseFloat(e.target.value) || 0 }))}
+                      value={fees.gstPercentage}
+                      onChange={(e) => setFees(prev => ({ ...prev, gstPercentage: parseFloat(e.target.value) || 0 }))}
+                      placeholder="18"
                       min="0"
                       max="100"
                       step="0.1"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="convenienceFixedAmount">Convenience Fixed Amount</Label>
-                    <Input
-                      id="convenienceFixedAmount"
-                      type="number"
-                      value={fees.convenienceFixedAmount}
-                      onChange={(e) => setFees(prev => ({ ...prev, convenienceFixedAmount: parseFloat(e.target.value) || 0 }))}
-                      min="0"
-                      step="1"
-                    />
-                  </div>
+                )}
+              </div>
+
+              {/* Convenience Fee Configuration */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeConvenience"
+                    checked={fees.includeConvenience}
+                    onCheckedChange={(checked) => setFees(prev => ({ ...prev, includeConvenience: !!checked }))}
+                  />
+                  <Label htmlFor="includeConvenience" className="text-sm font-medium">Include Convenience Fee</Label>
                 </div>
-              )}
+                {fees.includeConvenience && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="conveniencePercentage">Convenience Percentage (%)</Label>
+                      <Input
+                        id="conveniencePercentage"
+                        type="number"
+                        value={fees.conveniencePercentage}
+                        onChange={(e) => setFees(prev => ({ ...prev, conveniencePercentage: parseFloat(e.target.value) || 0 }))}
+                        min="0"
+                        max="100"
+                        step="0.1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="convenienceFixedAmount">Fixed Amount (₹)</Label>
+                      <Input
+                        id="convenienceFixedAmount"
+                        type="number"
+                        value={fees.convenienceFixedAmount}
+                        onChange={(e) => setFees(prev => ({ ...prev, convenienceFixedAmount: parseFloat(e.target.value) || 0 }))}
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Price Breakdown Example - Only for paid events with fees */}
+        {!eventData.isFreeEvent && (fees.includeGst || fees.includeConvenience) && (
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle>Price Breakdown Example</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {ticketTypes.map((ticket, index) => (
+                  ticket.price && (
+                    <div key={index} className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700">
+                        {ticket.name || `Ticket ${index + 1}`} - Base Price: ₹{parseFloat(ticket.price).toFixed(2)}
+                      </div>
+                      <PriceBreakdown
+                        basePrice={parseFloat(ticket.price) || 0}
+                        includeGst={fees.includeGst}
+                        gstPercentage={fees.gstPercentage}
+                        includeConvenience={fees.includeConvenience}
+                        conveniencePercentage={fees.conveniencePercentage}
+                        convenienceFixedAmount={fees.convenienceFixedAmount}
+                      />
+                    </div>
+                  )
+                ))}
+                {ticketTypes.every(ticket => !ticket.price) && (
+                  <div className="text-sm text-gray-500">
+                    Enter ticket prices above to see price breakdown examples
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}

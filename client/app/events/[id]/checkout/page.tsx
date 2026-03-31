@@ -476,13 +476,14 @@ export default function CheckoutPage() {
         if (createdBookingIds.length > 0) {
           toast.success('Booking confirmed!');
           localStorage.setItem('lastBookingId', createdBookingIds[0]);
-          router.push(`/events/${createdBookingIds[0]}/bookings`);
+          router.push(`/events/${event._id}/bookings`);
           return;
         } else {
           throw new Error('No booking was created');
         }
       }
 
+// ...
       // Create Razorpay order
       const orderResponse = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/create-order`,
@@ -575,7 +576,7 @@ export default function CheckoutPage() {
             if (verificationResponse.ok && verificationData.success) {
               toast.success("Booking confirmed!");
               localStorage.setItem('lastBookingId', verificationData.booking._id);
-              router.push(`/events/${verificationData.booking._id}/bookings`);
+              router.push(`/events/${eventId}/bookings`);
             } else {
               toast.error(verificationData.message || "Payment verification failed");
               setIsProcessingPayment(false);

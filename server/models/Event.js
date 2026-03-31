@@ -13,6 +13,10 @@ const TicketTypeSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Ticket price is required']
   },
+  basePrice: {
+    type: Number,
+    required: [true, 'Base price is required']
+  },
   quantity: {
     type: Number,
     required: [true, 'Ticket quantity is required']
@@ -263,6 +267,14 @@ const EventSchema = new mongoose.Schema({
     fixedAmount: {
       type: Number,
       default: 0
+    },
+    includeGst: {
+      type: Boolean,
+      default: false
+    },
+    gstPercentage: {
+      type: Number,
+      default: 18
     }
   },
   rating: {
