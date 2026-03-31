@@ -33,12 +33,14 @@ import {
 import HMFTermsContent from "@/components/HMFTermsContent";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
+import CheckoutDetailedBreakdown from "@/components/CheckoutDetailedBreakdown";
 
 // Types
 interface TicketType {
   _id: string;
   name: string;
   price: number;
+  basePrice?: number;
   quantity: number;
   sold: number;
   description: string;
@@ -56,6 +58,12 @@ interface Event {
   bookingEndTime?: string | null;
   category: string;
   ticketTypes: TicketType[];
+  convenience?: {
+    percentage?: number;
+    fixedAmount?: number;
+    includeGst?: boolean;
+    gstPercentage?: number;
+  };
   location: {
     address: string;
     city: string;
@@ -210,10 +218,21 @@ export default function CheckoutPage() {
   }, [eventId, router]);
 
   const subtotalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
+  const baseSubtotalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => {
+    const base = typeof item.ticket.basePrice === "number" ? item.ticket.basePrice : item.ticket.price;
+    return sum + (base * item.quantity);
+  }, 0);
+  const totalTicketQuantity = Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0);
   const discountAmount = appliedCoupon?.discountAmount || 0;
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
   const isFreeEvent = event?.isFreeEvent || false;
+
+  const conveniencePercentage = event?.convenience?.percentage ?? 0;
+  const convenienceFixedAmount = event?.convenience?.fixedAmount ?? 0;
+  const includeConvenience = conveniencePercentage !== 0 || convenienceFixedAmount !== 0;
+  const includeGst = event?.convenience?.includeGst ?? false;
+  const gstPercentage = event?.convenience?.gstPercentage ?? 18;
 
   // Add free ticket for RSVP events
   useEffect(() => {
@@ -961,6 +980,13 @@ export default function CheckoutPage() {
                       <span>Discount</span>
                       <span>-₹{discountAmount.toLocaleString()}</span>
                     </div>
+                  )}
+
+                  {!isFreeEvent && subtotalAmount > 0 && (
+                    <CheckoutDetailedBreakdown
+                      selectedTickets={selectedTickets}
+                      convenience={event?.convenience}
+                    />
                   )}
 
                   <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2">
