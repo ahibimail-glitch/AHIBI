@@ -9,22 +9,16 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  Calendar,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import Script from "next/script";
-import { format } from "date-fns";
+import { format, isSameDay, startOfDay } from "date-fns";
 
 // UI Components
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +155,33 @@ export default function DailyEventCheckoutPage() {
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
   const isFreeEvent = event?.isFreeEvent || false;
+
+  const activeDates = event?.activeDates ?? [];
+  const sortedActiveDates = [...activeDates].sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime()
+  );
+
+  const today = startOfDay(new Date());
+  const futureActiveDates = sortedActiveDates.filter((d) => startOfDay(new Date(d)).getTime() >= today.getTime());
+  const minFutureActiveDate = futureActiveDates.length ? new Date(futureActiveDates[0]) : undefined;
+  const maxFutureActiveDate = futureActiveDates.length ? new Date(futureActiveDates[futureActiveDates.length - 1]) : undefined;
+
+  const selectedDay = selectedDate ? new Date(selectedDate) : undefined;
+
+  const isDateAvailable = (date: Date) =>
+    startOfDay(date).getTime() >= today.getTime() && futureActiveDates.some((d) => isSameDay(new Date(d), date));
+
+  const handleSelectDate = (day: Date | undefined) => {
+    if (!day) return;
+    if (startOfDay(day).getTime() < today.getTime()) return;
+    const match = futureActiveDates.find((d) => isSameDay(new Date(d), day));
+    if (match) setSelectedDate(match);
+  };
+
+  const handleClearDate = () => {
+    setSelectedDate("");
+    setSelectedTickets(new Map());
+  };
 
   const toggleTicketExpansion = (ticketId: string) => {
     setExpandedTickets(prev => {
@@ -520,7 +541,7 @@ export default function DailyEventCheckoutPage() {
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h1>
                 <p className="text-gray-600 mb-4">{event.category}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="h-4 w-4" />
+                  <CalendarIcon className="h-4 w-4" />
                   <span>
                     {format(new Date(event.periodStartDate), "MMM dd")} - {format(new Date(event.periodEndDate), "MMM dd, yyyy")}
                   </span>
@@ -531,25 +552,43 @@ export default function DailyEventCheckoutPage() {
 
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Select Date</h2>
-                <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {event.activeDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime()).map((date) => (
-                      <SelectItem key={date} value={date}>
-                        {format(new Date(date), "EEEE, MMMM dd, yyyy")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {event.bookingDeadlineHours && event.bookingDeadlineHours > 0 && (
+                <div className="space-y-3 ">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDay}
+                    onSelect={handleSelectDate}
+                    disabled={(date) => !isDateAvailable(date)}
+                    showOutsideDays={false}
+                    defaultMonth={minFutureActiveDate ?? today}
+                    fromDate={today}
+                    toDate={maxFutureActiveDate}
+                    className="rounded-md border bg-white lg:px-52"
+                  />
+                  <p className="text-sm text-gray-600">
+                    {selectedDate
+                      ? format(new Date(selectedDate), "EEEE, MMMM dd, yyyy")
+                      : "Select a  date"}
+                  </p>
+
+                  {selectedDate && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearDate}
+                      className="w-fit"
+                    >
+                      Clear date
+                    </Button>
+                  )}
+                </div>
+                {/* {event.bookingDeadlineHours && event.bookingDeadlineHours > 0 && (
                   <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm text-amber-800">
                       <strong>Note:</strong> Bookings close {event.bookingDeadlineHours} hour{event.bookingDeadlineHours !== 1 ? 's' : ''} before the event start time.
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
 
               <div className="bg-white rounded-lg shadow-sm p-6">
@@ -571,7 +610,7 @@ export default function DailyEventCheckoutPage() {
                             <p className="font-bold text-gray-900">
                               {ticket.price === 0 ? "Free" : `₹${ticket.price}`}
                             </p>
-                            <p className="text-xs text-gray-500">{available} available</p>
+                            {/* <p className="text-xs text-gray-500">{available} available</p> */}
                           </div>
                         </div>
 

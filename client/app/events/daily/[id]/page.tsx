@@ -8,19 +8,18 @@ import {
   MapPin,
   Calendar as CalendarIcon,
   Share2,
+  AlertCircle,
   Clock,
   Ticket,
   ChevronDown,
   ChevronUp,
-  ArrowLeft,
   Tag,
 } from "lucide-react";
 
 import { format } from "date-fns";
-import Link from "next/link";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 import Navbar from "@/app/Navbar";
@@ -88,7 +87,6 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
 
   const [descExpanded, setDescExpanded] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
-  const [venueOpen, setVenueOpen] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -151,6 +149,13 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
     }
   };
 
+  const getEventImageUrl = (url?: string) => {
+    if (!url) return "/placeholder.svg";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const base = process.env.NEXT_PUBLIC_API_URL || "";
+    return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
+  };
+
   const getEventPriceRange = () => {
     if (!event) return "TBA";
     if (event.isFreeEvent) return "Free";
@@ -187,148 +192,176 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
   }
 
   const descriptionText = event.description || "";
-  const shouldTruncate = descriptionText.length > 300;
+  const shouldTruncate = descriptionText.length > 280;
   const displayedDescription = descExpanded || !shouldTruncate 
     ? descriptionText 
-    : descriptionText.slice(0, 300) + "...";
+    : descriptionText.slice(0, 280) + "...";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
-      <main className="flex-1 pb-8">
-        <div className="container mx-auto px-4 py-6">
-          <Button asChild variant="ghost" size="sm" className="mb-4">
-            <Link href="/events/daily">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Daily Events
-            </Link>
-          </Button>
+      <main className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-10">
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg">
-                <img
-                  src={event.banner}
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-sm">
+                <Image
+                  src={getEventImageUrl(event.coverImage || event.banner)}
                   alt={event.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-contain"
+                  priority
                 />
-                <div className="absolute top-4 right-4">
-                  <Badge className="bg-blue-600 text-white">Daily Event</Badge>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-start justify-between gap-3 mb-6">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 leading-tight flex-1">
+                    {event.title}
+                  </h1>
+                  <button
+                    onClick={handleShare}
+                    className="shrink-0 w-11 h-11 flex items-center justify-center bg-gray-100 border border-gray-200 text-gray-700 rounded-full hover:bg-gray-200 active:scale-[0.96] transition-all"
+                    aria-label="Share event"
+                  >
+                    <Share2 size={18} />
+                  </button>
                 </div>
               </div>
 
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="flex-1">
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">{event.title}</h1>
-                      <Badge variant="secondary" className="mb-4">{event.category}</Badge>
-                    </div>
-                    <Button variant="outline" size="icon" onClick={handleShare}>
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+              <section className="w-full border-t border-gray-100 pt-6">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">About The Event</h2>
+                <p className="text-sm md:text-base text-gray-600 leading-relaxed whitespace-pre-line">
+                  {displayedDescription}
+                </p>
 
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <CalendarIcon className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Event Period</p>
-                        <p className="text-gray-600">
-                          {format(new Date(event.periodStartDate), "MMMM d, yyyy")} - {format(new Date(event.periodEndDate), "MMMM d, yyyy")}
-                        </p>
-                        <p className="text-sm text-blue-600 mt-1">
-                          {event.activeDates.length} active dates
-                          {event.excludedDates.length > 0 && ` (${event.excludedDates.length} excluded)`}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Clock className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Time & Duration</p>
-                        <p className="text-gray-600">
-                          Starts at {event.startTime}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Duration: {event.duration.hours}h {event.duration.minutes}m
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Venue</p>
-                        <p className="text-gray-600">{event.location.address}</p>
-                        <p className="text-sm text-gray-500">
-                          {event.location.city}
-                          {event.location.state && `, ${event.location.state}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Tag className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-semibold text-gray-900">Price Range</p>
-                        <p className="text-gray-600">{getEventPriceRange()}</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">About This Event</h2>
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-gray-700 whitespace-pre-wrap">{displayedDescription}</p>
-                    {shouldTruncate && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDescExpanded(!descExpanded)}
-                        className="mt-2"
-                      >
-                        {descExpanded ? (
-                          <>
-                            <ChevronUp className="h-4 w-4 mr-1" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-4 w-4 mr-1" />
-                            Read More
-                          </>
-                        )}
-                      </Button>
+                {shouldTruncate && (
+                  <button
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    className="text-red-600 text-sm font-medium mt-2 hover:underline inline-flex items-center gap-1"
+                  >
+                    {descExpanded ? (
+                      <>
+                        <ChevronUp size={16} />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={16} />
+                        Read More
+                      </>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+                  </button>
+                )}
 
-              {event.activeDates && event.activeDates.length > 0 && (
-                <Card>
-                  <CardContent className="p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Active Dates</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                      {event.activeDates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime()).map((date, index) => (
-                        <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                          <p className="text-sm font-semibold text-blue-900">
-                            {format(new Date(date), "MMM dd")}
-                          </p>
-                          <p className="text-xs text-blue-700">
-                            {format(new Date(date), "EEEE")}
-                          </p>
-                        </div>
-                      ))}
+                {event.tags && event.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {event.tags.map((tag, i) => (
+                      <span key={i} className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6">
+                  <h3 className="text-base font-bold text-gray-900 mb-3">You Should Know</h3>
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
+                      <AlertCircle size={17} className="text-red-500 mt-0.5 shrink-0" />
+                      <p className="text-sm text-gray-600">
+                        Carry a valid photo ID — it may be required at the venue. No refund on purchased tickets.
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
+                      <Tag size={17} className="text-red-500 mt-0.5 shrink-0" />
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold text-gray-900">Ticket Info: </span>
+                        If your payment has been successfully completed but the ticket is not yet visible, please don’t worry — it will be generated automatically.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Venue Details + Map */}
+              <section className="w-full border-t border-gray-100 pt-6">
+                <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Venue Details</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <MapPin size={17} className="text-red-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{event.location.address}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {[event.location.city, event.location.state, event.location.country].filter(Boolean).join(", ")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={`https://www.google.com/maps?q=${encodeURIComponent(`${event.location.address}, ${event.location.city}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:underline"
+                    >
+                      <MapPin size={14} /> Get Directions
+                    </a>
+                  </div>
+
+                  <div className="relative h-56 rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                    <iframe
+                      title="Daily Event Location"
+                      className="absolute inset-0 w-full h-full border-0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://www.google.com/maps?q=${encodeURIComponent(`${event.location.address}, ${event.location.city}`)}&output=embed`}
+                    />
+                    <div className="absolute bottom-3 left-3 right-3 bg-white/90 backdrop-blur-md rounded-lg px-3 py-2.5 shadow-lg flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-gray-800 truncate">{event.location.address}</p>
+                        <p className="text-[11px] text-gray-400">{event.location.city}</p>
+                      </div>
+                      <a
+                        href={`https://www.google.com/maps?q=${encodeURIComponent(`${event.location.address}, ${event.location.city}`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Directions
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Gallery */}
+              {event.gallery && event.gallery.length > 0 && (
+                <section className="w-full border-t border-gray-100 pt-6">
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Event Maps & Gallery</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {event.gallery.map((image, index) => (
+                      <div key={index} className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                        <Image
+                          src={getEventImageUrl(image.url)}
+                          alt={image.caption || `Event image ${index + 1}`}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        {image.caption && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                            <p className="text-white text-sm font-medium line-clamp-2">{image.caption}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
+
 
               {event.termsAndConditions && (
                 <Card>
@@ -352,104 +385,104 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
             </div>
 
             <div className="lg:col-span-1">
-              <div className="sticky top-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Book Tickets</h3>
-                    
-                    {event.isFreeEvent ? (
-                      <div className="mb-6">
-                        <p className="text-3xl font-bold text-green-600">Free Entry</p>
+              <div className="lg:sticky lg:top-24">
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm w-full">
+                  <div className="space-y-3.5">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 text-gray-400">
+                        <CalendarIcon size={18} />
                       </div>
-                    ) : (
-                      <div className="mb-6">
-                        <p className="text-sm text-gray-600 mb-2">Starting from</p>
-                        <p className="text-3xl font-bold text-gray-900">{getEventPriceRange()}</p>
+                      <div className="text-sm leading-snug text-gray-700">
+                        {format(new Date(event.periodStartDate), "MMMM d, yyyy")} -{" "}
+                        {format(new Date(event.periodEndDate), "MMMM d, yyyy")}
                       </div>
-                    )}
+                    </div>
 
-                    {event.ticketTypes && event.ticketTypes.length > 0 && (
-                      <div className="space-y-3 mb-6">
-                        {event.ticketTypes.map((ticket) => {
-                          const available = ticket.quantity - ticket.sold;
-                          const isAvailable = available > 0;
-
-                          return (
-                            <div key={ticket._id} className="border border-gray-200 rounded-lg p-3">
-                              <div className="flex justify-between items-start mb-1">
-                                <div>
-                                  <p className="font-semibold text-gray-900">{ticket.name}</p>
-                                  {ticket.description && (
-                                    <p className="text-xs text-gray-600">{ticket.description}</p>
-                                  )}
-                                </div>
-                                <p className="font-bold text-gray-900">₹{ticket.price}</p>
-                              </div>
-                              <p className="text-xs text-gray-500">
-                                {isAvailable ? `${available} available` : "Sold out"}
-                              </p>
-                              {ticket.benefits && ticket.benefits.length > 0 && (
-                                <ul className="mt-2 space-y-1">
-                                  {ticket.benefits.map((benefit, idx) => (
-                                    <li key={idx} className="text-xs text-gray-600 flex items-start gap-1">
-                                      <span className="text-green-600">✓</span>
-                                      {benefit}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          );
-                        })}
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 text-gray-400">
+                        <Clock size={18} />
                       </div>
-                    )}
-
-                    <Button
-                      onClick={handleBuyNow}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                      size="lg"
-                    >
-                      <Ticket className="h-5 w-5 mr-2" />
-                      {event.isFreeEvent ? "Register Now" : "Book Now"}
-                    </Button>
-
-                    {event.socialLinks && (
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <p className="text-sm font-semibold text-gray-900 mb-3">Follow Event</p>
-                        <div className="flex gap-2">
-                          {event.socialLinks.website && (
-                            <Button asChild variant="outline" size="icon">
-                              <a href={event.socialLinks.website} target="_blank" rel="noopener noreferrer">
-                                <Share2 className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {event.socialLinks.facebook && (
-                            <Button asChild variant="outline" size="icon">
-                              <a href={event.socialLinks.facebook} target="_blank" rel="noopener noreferrer">
-                                <Share2 className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {event.socialLinks.instagram && (
-                            <Button asChild variant="outline" size="icon">
-                              <a href={event.socialLinks.instagram} target="_blank" rel="noopener noreferrer">
-                                <Share2 className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                        </div>
+                      <div className="text-sm leading-snug text-gray-700">
+                        Starts at {event.startTime} • {event.duration.hours}h {event.duration.minutes}m
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 text-gray-400">
+                        <MapPin size={18} />
+                      </div>
+                      <div className="text-sm leading-snug text-gray-700">
+                        {event.location.address}, {event.location.city}
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 text-red-600">
+                        <Ticket size={18} />
+                      </div>
+                      <div className="text-sm leading-snug text-red-600 font-semibold text-base">
+                        {getEventPriceRange()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleBuyNow}
+                    className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
+                  >
+                    {event.isFreeEvent ? "Register Now" : "Book Tickets"}
+                  </button>
+
+                  <div className="mt-4 text-center">
+                    <div className="text-xs text-gray-500">Price from</div>
+                    <div className="text-lg font-semibold text-gray-900">{getEventPriceRange()}</div>
+                    <div className={`mt-1 text-sm ${event.isFreeEvent ? "text-green-600 font-semibold" : "text-gray-500"}`}>
+                      {event.isFreeEvent ? "Free Entry" : "Available"}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
 
+      {/* Sticky footer summary (desktop) */}
+      <section className="w-full border-t border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-gray-900">{event.title}</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {format(new Date(event.periodStartDate), "MMM d, yyyy")} · {event.startTime}
+              </p>
+              <p className="text-sm text-gray-400 mt-0.5">{event.location.city}</p>
+            </div>
+            <button
+              onClick={handleBuyNow}
+              className="shrink-0 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+            >
+              {event.isFreeEvent ? "Register Now" : "Book Now"} ·{" "}
+              <span className="font-bold">{getEventPriceRange()}</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <Footer />
+
+      {/* Fixed mobile book bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 md:hidden z-50 safe-area-inset-bottom">
+        <div className="space-y-2">
+          <button
+            onClick={handleBuyNow}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
+          >
+            {event.isFreeEvent ? "Register Now" : "Book Now"} ·{" "}
+            <span className="font-bold">{getEventPriceRange()}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
