@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef, type ReactNode, type TouchEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Building2, Calendar, ChevronRight, Clock, Loader2, MapPin, Star, TrendingUp, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -12,6 +13,7 @@ import type { EventsResponse, Event } from "@/types/event"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import StickyHeroCards from "@/components/StickyHeroCards"
 import NWAHeroSection from "@/components/NWA"
+import { format } from "date-fns"
 
 type PublicArtist = {
   _id: string
@@ -37,6 +39,31 @@ type PublicVenue = {
     created_at?: string;
   }>;
   coverImage?: string;
+}
+
+type DailyEvent = {
+  _id: string;
+  title: string;
+  description: string;
+  banner: string;
+  category: string;
+  periodStartDate: string;
+  periodEndDate: string;
+  startTime: string;
+  duration: {
+    hours: number;
+    minutes: number;
+  };
+  activeDates: string[];
+  excludedDates: string[];
+  location: {
+    address: string;
+    city: string;
+    state?: string;
+  };
+  ticketTypes: any[];
+  isFreeEvent: boolean;
+  slug: string;
 }
 
 const FALLBACK_IMAGES = {
@@ -118,6 +145,57 @@ const formatDayDate = (dateString?: string | Date) => {
   return `${dayDate} • ${time}`
 }
 
+const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
+  if (!ticketTypes || ticketTypes.length === 0) return 'Free';
+  const prices = ticketTypes.map(t => t.price);
+  const minPrice = Math.min(...prices);
+  return minPrice === 0 ? 'Free' : `₹${minPrice.toFixed(2)}`;
+};
+
+const DailyEventCard = ({ event }: { event: DailyEvent }) => {
+  return (
+    <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
+      {/* POSTER */}
+      <div className="relative aspect-[2/3] overflow-hidden">
+        <Image
+          src={event.banner || "/placeholder.svg"}
+          alt={event.title}
+          fill
+          sizes="50vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+          <p className="text-[10px] text-white text-center font-medium truncate">
+            {event.startTime} • {event.duration.hours}h {event.duration.minutes}m
+          </p>
+        </div>
+        <div className="absolute top-2 right-2">
+          <Badge className="bg-blue-600 text-white text-[10px]">Daily</Badge>
+        </div>
+      </div>
+
+      {/* TEXT */}
+      <div className="px-2 pt-2 pb-1.5">
+        <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+          {event.title}
+        </h3>
+        <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+          {event.category || "Event"}{event.location?.city ? ` | ${event.location.city}` : ""}
+        </p>
+        <p className="text-[11px] text-gray-400 mt-1">
+          {event.periodStartDate && event.periodEndDate ? (
+            <>
+              {format(new Date(event.periodStartDate), "MMM dd")} - {format(new Date(event.periodEndDate), "MMM dd, yyyy")}
+            </>
+          ) : (
+            "Date TBA"
+          )}
+        </p>
+      </div>
+    </Card>
+  );
+};
+
 const Section = ({
   title,
   subtitle,
@@ -148,6 +226,7 @@ const Section = ({
 export default function HomePage() {
   const [events, setEvents] = useState<Event[]>([])
   const [featuredEvents, setFeaturedEvents] = useState<Event[]>([])
+  const [dailyEvents, setDailyEvents] = useState<DailyEvent[]>([])
   const [venues, setVenues] = useState<PublicVenue[]>([])
   const [artists, setArtists] = useState<PublicArtist[]>([])
   const [loading, setLoading] = useState(true)
@@ -221,10 +300,11 @@ export default function HomePage() {
       setLoading(true)
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        const [eventsRes, venuesRes, artistsRes] = await Promise.all([
+        const [eventsRes, venuesRes, artistsRes, dailyEventsRes] = await Promise.all([
           fetch(`${apiUrl}/api/events?limit=30`),
           fetch(`${apiUrl}/api/venue`),
           fetch(`${apiUrl}/api/artist/public?limit=12`),
+          fetch(`${apiUrl}/api/daily-events?limit=10`)
         ])
 
         if (eventsRes.ok) {
@@ -237,6 +317,11 @@ export default function HomePage() {
             return isUpcoming && isNotExcluded
           })
           setEvents(normalized)
+        }
+
+        if (dailyEventsRes.ok) {
+          const data = await dailyEventsRes.json()
+          setDailyEvents(data.data?.dailyEvents || [])
         }
 
         if (venuesRes.ok) {
@@ -716,6 +801,29 @@ export default function HomePage() {
               )}
             </div>
           </section>
+        </div>
+      </section>
+      <section className="py-4 sm:py-6 md:py-8 bg-white">
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
+              Daily Events
+            </h2>
+            <Link
+              href="/events/daily"
+              className="text-[#ff0e0e] hover:underline text-xs sm:text-sm font-medium flex items-center gap-0.5"
+            >
+              See All <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {dailyEvents.slice(0, 10).map((event) => (
+              <Link key={event._id} href={`/events/daily/${event._id}`}>
+                <DailyEventCard event={event} />
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
       <StickyHeroCards />
