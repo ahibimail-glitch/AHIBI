@@ -17,12 +17,23 @@ type Partner = {
     businessType?: string;
     registrationNumber?: string;
     gstNumber?: string;
+    panNumber?: string;
+    yearEstablished?: number;
+    website?: string;
+    description?: string;
+  };
+  contactInfo?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
   };
   bankDetails?: {
     accountNumber?: string;
     bankName?: string;
     ifscCode?: string;
     accountHolderName?: string;
+    branchName?: string;
   };
   kycDocuments?: Record<string, { url: string; verified?: boolean }>;
   createdAt?: string;
@@ -275,7 +286,7 @@ export default function PartnerManagePage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Overview Tab */}
+          {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Stats Cards */}
@@ -300,7 +311,7 @@ export default function PartnerManagePage() {
                 <h3 className="text-lg font-medium text-gray-900">Partner Details</h3>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-2">Contact Information</h4>
                     <div className="space-y-2">
@@ -310,14 +321,31 @@ export default function PartnerManagePage() {
                     </div>
                   </div>
                   <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Address</h4>
+                    <div className="space-y-2">
+                      <div>{partner.contactInfo?.address || '—'}</div>
+                      <div>{partner.contactInfo?.city}{partner.contactInfo?.city && partner.contactInfo?.state ? ', ' : ''}{partner.contactInfo?.state}</div>
+                      <div>{partner.contactInfo?.pincode || '—'}</div>
+                    </div>
+                  </div>
+                  <div>
                     <h4 className="text-sm font-medium text-gray-500 mb-2">Business Information</h4>
                     <div className="space-y-2">
                       <div><strong>Business Name:</strong> {partner.businessDetails?.businessName || '—'}</div>
                       <div><strong>Business Type:</strong> {partner.businessDetails?.businessType || '—'}</div>
+                      <div><strong>Year Established:</strong> {partner.businessDetails?.yearEstablished || '—'}</div>
                       <div><strong>GST Number:</strong> {partner.businessDetails?.gstNumber || '—'}</div>
+                      <div><strong>PAN Number:</strong> {partner.businessDetails?.panNumber || '—'}</div>
+                      <div><strong>Website:</strong> {partner.businessDetails?.website ? <a href={partner.businessDetails.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{partner.businessDetails.website}</a> : '—'}</div>
                     </div>
                   </div>
                 </div>
+                {partner.businessDetails?.description && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Business Description</h4>
+                    <p className="text-gray-700">{partner.businessDetails.description}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -460,6 +488,7 @@ export default function PartnerManagePage() {
                   <div className="space-y-2">
                     <div><strong>Account Holder:</strong> {partner.bankDetails?.accountHolderName || '—'}</div>
                     <div><strong>Bank Name:</strong> {partner.bankDetails?.bankName || '—'}</div>
+                    <div><strong>Branch Name:</strong> {partner.bankDetails?.branchName || '—'}</div>
                     <div><strong>Account Number:</strong> {partner.bankDetails?.accountNumber || '—'}</div>
                     <div><strong>IFSC Code:</strong> {partner.bankDetails?.ifscCode || '—'}</div>
                   </div>

@@ -280,17 +280,33 @@ exports.updateProfile = async (req, res) => {
       return ApiResponse.notFound(res, 'Arena partner not found');
     }
 
-    const allowedFields = ['name', 'email', 'businessDetails', 'bankDetails', 'preferences'];
+    const allowedFields = ['name', 'email', 'phone', 'contactInfo', 'businessDetails', 'bankDetails', 'preferences'];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        if (field === 'businessDetails' || field === 'bankDetails' || field === 'preferences') {
+        if (field === 'businessDetails' || field === 'bankDetails' || field === 'preferences' || field === 'contactInfo') {
           partner[field] = { ...partner[field], ...req.body[field] };
         } else {
           partner[field] = req.body[field];
         }
       }
     });
+
+    // Handle businessName sent from frontend (mapped to businessDetails.businessName)
+    if (req.body.businessName !== undefined) {
+      partner.businessDetails = {
+        ...partner.businessDetails,
+        businessName: req.body.businessName
+      };
+    }
+
+    // Handle establishedYear sent from frontend (mapped to businessDetails.yearEstablished)
+    if (req.body.businessDetails?.establishedYear !== undefined) {
+      partner.businessDetails = {
+        ...partner.businessDetails,
+        yearEstablished: parseInt(req.body.businessDetails.establishedYear) || undefined
+      };
+    }
 
     await partner.save();
 

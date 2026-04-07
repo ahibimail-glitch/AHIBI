@@ -58,9 +58,37 @@ const ArenaPartnerSchema = new mongoose.Schema({
     },
     yearEstablished: {
       type: Number
+    },
+    description: {
+      type: String,
+      trim: true
+    },
+    website: {
+      type: String,
+      trim: true
     }
   },
   
+  // Contact Information
+  contactInfo: {
+    address: {
+      type: String,
+      trim: true
+    },
+    city: {
+      type: String,
+      trim: true
+    },
+    state: {
+      type: String,
+      trim: true
+    },
+    pincode: {
+      type: String,
+      trim: true
+    }
+  },
+
   // KYC Documents
   kycDocuments: {
     aadhaarCard: {
