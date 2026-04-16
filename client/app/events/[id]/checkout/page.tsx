@@ -234,6 +234,46 @@ export default function CheckoutPage() {
   const includeGst = event?.convenience?.includeGst ?? false;
   const gstPercentage = event?.convenience?.gstPercentage ?? 18;
 
+  const getGroup10ValidationError = (codeToValidate?: string | null) => {
+    const effectiveCode = (codeToValidate ?? couponCode ?? appliedCoupon?.code ?? "").trim().toUpperCase();
+    if (effectiveCode !== "GROUP10") return null;
+
+    const selectedItems = Array.from(selectedTickets.values());
+
+    const generalAdmissionItems = selectedItems.filter((item) => {
+      const name = item.ticket.name.trim().toLowerCase();
+      return name === "general admission" || name.includes("general admission");
+    });
+
+    const generalAdmissionQuantity = generalAdmissionItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    const hasOnlyGeneralAdmissionTickets =
+      selectedItems.length > 0 && generalAdmissionItems.length === selectedItems.length;
+
+    if (!hasOnlyGeneralAdmissionTickets) {
+      return "This coupon is only valid for General Admission tickets";
+    }
+
+    if (generalAdmissionQuantity < 4) {
+      return "Please select 4 or more tickets to apply this coupon";
+    }
+
+    return null;
+  };
+
+  // If GROUP10 was applied, but the user later changes ticket selection below the rule,
+  // remove the coupon immediately so the discount can't be used.
+  useEffect(() => {
+    if (!appliedCoupon) return;
+
+    const validationError = getGroup10ValidationError(appliedCoupon.code);
+    if (!validationError) return;
+
+    setAppliedCoupon(null);
+    setCouponError(validationError);
+    toast.error(validationError);
+  }, [selectedTickets, appliedCoupon]);
+
   // Add free ticket for RSVP events
   useEffect(() => {
     if (event && isFreeEvent && event.ticketTypes.length === 0) {
@@ -332,6 +372,15 @@ export default function CheckoutPage() {
         return;
       }
       if (!event?._id) return;
+
+      const group10ValidationError = getGroup10ValidationError(couponCode);
+      if (group10ValidationError) {
+        setAppliedCoupon(null);
+        setCouponError(group10ValidationError);
+        toast.error(group10ValidationError);
+        return;
+      }
+
       const tickets = Array.from(selectedTickets.values()).map(item => ({
         ticketType: item.ticket.name,
         quantity: item.quantity,
@@ -395,6 +444,16 @@ export default function CheckoutPage() {
     if (!acceptedTerms) {
       toast.error("Please accept the terms and conditions");
       return;
+    }
+
+    if (appliedCoupon?.code?.trim().toUpperCase() === "GROUP10") {
+      const group10ValidationError = getGroup10ValidationError(appliedCoupon.code);
+      if (group10ValidationError) {
+        setAppliedCoupon(null);
+        setCouponError(group10ValidationError);
+        toast.error(group10ValidationError);
+        return;
+      }
     }
     if (!event || !event._id || !user) {
       toast.error("Event information is missing");

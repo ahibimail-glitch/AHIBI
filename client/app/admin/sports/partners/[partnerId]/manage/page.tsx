@@ -354,16 +354,7 @@ export default function PartnerManagePage() {
         {/* Manage Venues Tab */}
         {activeTab === 'venues' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-medium text-gray-900">Partner Venues</h2>
-              <h3>Click on view All Venues to manage all venues</h3>
-              <Link
-                href={`/admin/sports/venues?partner=${partnerId}`}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-              >
-                View All Venues
-              </Link>
-            </div>
+            <h2 className="text-lg font-medium text-gray-900">Partner Venues</h2>
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">

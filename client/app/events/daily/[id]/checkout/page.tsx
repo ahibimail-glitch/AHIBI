@@ -171,6 +171,36 @@ export default function DailyEventCheckoutPage() {
   const isDateAvailable = (date: Date) =>
     startOfDay(date).getTime() >= today.getTime() && futureActiveDates.some((d) => isSameDay(new Date(d), date));
 
+  const getGroup10ValidationError = () => {
+    const normalizedCode = couponCode.trim().toUpperCase();
+    const appliedCode = appliedCoupon?.code?.trim().toUpperCase();
+
+    if (normalizedCode !== "GROUP10" && appliedCode !== "GROUP10") {
+      return null;
+    }
+
+    const selectedItems = Array.from(selectedTickets.values());
+    const generalAdmissionItems = selectedItems.filter(
+      (item) => item.ticket.name.trim().toLowerCase() === "general admission"
+    );
+    const generalAdmissionQuantity = generalAdmissionItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+    const hasOnlyGeneralAdmissionTickets =
+      selectedItems.length > 0 && generalAdmissionItems.length === selectedItems.length;
+
+    if (!hasOnlyGeneralAdmissionTickets) {
+      return "This coupon is only valid for General Admission tickets";
+    }
+
+    if (generalAdmissionQuantity < 4) {
+      return "Please select 4 or more tickets to apply this coupon";
+    }
+
+    return null;
+  };
+
   const handleSelectDate = (day: Date | undefined) => {
     if (!day) return;
     if (startOfDay(day).getTime() < today.getTime()) return;
@@ -182,6 +212,17 @@ export default function DailyEventCheckoutPage() {
     setSelectedDate("");
     setSelectedTickets(new Map());
   };
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+
+    const validationError = getGroup10ValidationError();
+    if (!validationError) return;
+
+    setAppliedCoupon(null);
+    setCouponError(validationError);
+    toast.error(validationError);
+  }, [selectedTickets, appliedCoupon]);
 
   const toggleTicketExpansion = (ticketId: string) => {
     setExpandedTickets(prev => {
@@ -271,6 +312,15 @@ export default function DailyEventCheckoutPage() {
         return;
       }
       if (!event?._id) return;
+
+      const group10ValidationError = getGroup10ValidationError();
+      if (group10ValidationError) {
+        setAppliedCoupon(null);
+        setCouponError(group10ValidationError);
+        toast.error(group10ValidationError);
+        return;
+      }
+
       const tickets = Array.from(selectedTickets.values()).map(item => ({
         ticketType: item.ticket.name,
         quantity: item.quantity,
@@ -405,6 +455,15 @@ export default function DailyEventCheckoutPage() {
       const token = localStorage.getItem("token");
       if (!token) {
         toast.error("Please login to continue");
+        return;
+      }
+
+      const group10ValidationError = getGroup10ValidationError();
+      if (group10ValidationError) {
+        setAppliedCoupon(null);
+        setCouponError(group10ValidationError);
+        toast.error(group10ValidationError);
+        setIsBooking(false);
         return;
       }
 
