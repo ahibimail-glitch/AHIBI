@@ -161,6 +161,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [venueOpen, setVenueOpen] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [interested, setInterested] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; caption: string } | null>(null);
 
   const [relatedEvents, setRelatedEvents] = useState<
     Array<{ id: string; title: string; date: string; image: string; price: string; location: string }>
@@ -559,7 +560,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
                 <AlertCircle size={17} className="text-red-500 mt-0.5 shrink-0" />
                 <p className="text-sm text-gray-600">
-                  Carry a valid photo ID — it may be required at the venue. No refund on purchased tickets.
+                  {event._id=="69e0b9650d43584f4c39482a" ? "Carry a valid photo ID — it may be required at the venue. Refund only applicable if cancelled before 48 hours. For cancellation contact us." : "Carry a valid photo ID — it may be required at the venue. No refund on purchased tickets."}
                 </p>
               </div>
               <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
@@ -654,7 +655,11 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
             <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Event Maps & Gallery</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {event.gallery.map((image, index) => (
-                <div key={index} className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                <div
+                  key={index}
+                  onClick={() => setSelectedImage(image)}
+                  className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100 cursor-pointer"
+                >
                   <Image
                     src={image.url}
                     alt={image.caption || `Event image ${index + 1}`}
@@ -758,6 +763,33 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          IMAGE MODAL
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white p-2"
+          >
+            <XCircle size={32} />
+          </button>
+          <div className="relative max-w-5xl max-h-[90vh] w-full flex flex-col items-center">
+            <img
+              src={selectedImage.url}
+              alt={selectedImage.caption || 'Gallery image'}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+            />
+            {selectedImage.caption && (
+              <p className="text-white text-center mt-4 text-sm font-medium">{selectedImage.caption}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <Footer />
 
