@@ -236,9 +236,47 @@ export default function CheckoutPage() {
 
   const getGroup10ValidationError = (codeToValidate?: string | null) => {
     const effectiveCode = (codeToValidate ?? couponCode ?? appliedCoupon?.code ?? "").trim().toUpperCase();
-    if (effectiveCode !== "GROUP10") return null;
-
     const selectedItems = Array.from(selectedTickets.values());
+    const getTicketQuantityByName = (ticketName: string) =>
+      selectedItems
+        .filter((item) => item.ticket.name.trim().toLowerCase() === ticketName.trim().toLowerCase())
+        .reduce((sum, item) => sum + item.quantity, 0);
+
+    if (
+      (effectiveCode === "GROUP10D1" || effectiveCode === "GROUP10D2") &&
+      eventId === "69e87ca50d43584f4c39846d"
+    ) {
+      const day1TicketName = "DAY 1 General Admission (SINGLE)";
+      const day2TicketName = "DAY 2 General Admission (SINGLE)";
+      const allowedCategories = new Set([
+        day1TicketName.toLowerCase(),
+        day2TicketName.toLowerCase(),
+      ]);
+
+      const hasInvalidSelectedCategory = selectedItems.some(
+        (item) => !allowedCategories.has(item.ticket.name.trim().toLowerCase())
+      );
+
+      if (hasInvalidSelectedCategory) {
+        return "This coupon is not applicable for selected ticket category";
+      }
+
+      const day1Quantity = getTicketQuantityByName(day1TicketName);
+      const day2Quantity = getTicketQuantityByName(day2TicketName);
+      const combinedQuantity = day1Quantity + day2Quantity;
+
+      if (selectedItems.length > 0 && combinedQuantity === 0) {
+        return "This coupon is not applicable for selected ticket category";
+      }
+
+      if (combinedQuantity < 4) {
+        return "Please select 4 or more tickets to apply this coupon";
+      }
+
+      return null;
+    }
+
+    if (effectiveCode !== "GROUP10") return null;
 
     const generalAdmissionItems = selectedItems.filter((item) => {
       const name = item.ticket.name.trim().toLowerCase();
@@ -261,6 +299,18 @@ export default function CheckoutPage() {
     return null;
   };
 
+  const getNormalizedSpecialGroupCouponCode = (code?: string | null) => {
+    if (eventId !== "69e87ca50d43584f4c39846d") return null;
+    const normalized = (code ?? "").trim().toUpperCase();
+    if (normalized === "GROUP10D1" || normalized === "GROUP10D2") return normalized;
+    return null;
+  };
+
+  const getSpecialGroupDiscountAmount = () => {
+    const amount = subtotalAmount * 0.1;
+    return Number(amount.toFixed(2));
+  };
+
   // If GROUP10 was applied, but the user later changes ticket selection below the rule,
   // remove the coupon immediately so the discount can't be used.
   useEffect(() => {
@@ -273,6 +323,26 @@ export default function CheckoutPage() {
     setCouponError(validationError);
     toast.error(validationError);
   }, [selectedTickets, appliedCoupon]);
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+
+    const specialCouponCode = getNormalizedSpecialGroupCouponCode(appliedCoupon.code);
+    if (!specialCouponCode) return;
+
+    const recalculatedDiscountAmount = getSpecialGroupDiscountAmount();
+    if (appliedCoupon.discountAmount === recalculatedDiscountAmount) return;
+
+    setAppliedCoupon((prev: any) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        code: specialCouponCode,
+        discountPercentage: 10,
+        discountAmount: recalculatedDiscountAmount,
+      };
+    });
+  }, [selectedTickets, subtotalAmount, appliedCoupon, eventId]);
 
   // Add free ticket for RSVP events
   useEffect(() => {
@@ -402,13 +472,23 @@ export default function CheckoutPage() {
         toast.error(data?.message || 'Invalid coupon');
         return;
       }
-      setAppliedCoupon(data);
-      const discountText = data.discountPercentage !== undefined 
-        ? `${data.discountPercentage}% off` 
-        : data.discountPrice !== undefined 
-          ? `₹${data.discountPrice} off`
+      const specialCouponCode = getNormalizedSpecialGroupCouponCode(data?.code || couponCode);
+      const normalizedCouponData = specialCouponCode
+        ? {
+            ...data,
+            code: specialCouponCode,
+            discountPercentage: 10,
+            discountAmount: getSpecialGroupDiscountAmount(),
+          }
+        : data;
+
+      setAppliedCoupon(normalizedCouponData);
+      const discountText = normalizedCouponData.discountPercentage !== undefined
+        ? `${normalizedCouponData.discountPercentage}% off`
+        : normalizedCouponData.discountPrice !== undefined
+          ? `₹${normalizedCouponData.discountPrice} off`
           : 'discount applied';
-      toast.success(`Coupon ${data.code} applied: ${discountText}`);
+      toast.success(`Coupon ${normalizedCouponData.code} applied: ${discountText}`);
     } catch (e) {
       setCouponError('Failed to apply coupon');
       toast.error('Failed to apply coupon');
@@ -446,14 +526,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (appliedCoupon?.code?.trim().toUpperCase() === "GROUP10") {
-      const group10ValidationError = getGroup10ValidationError(appliedCoupon.code);
-      if (group10ValidationError) {
-        setAppliedCoupon(null);
-        setCouponError(group10ValidationError);
-        toast.error(group10ValidationError);
-        return;
-      }
+    const couponValidationError = getGroup10ValidationError(appliedCoupon?.code);
+    if (couponValidationError) {
+      setAppliedCoupon(null);
+      setCouponError(couponValidationError);
+      toast.error(couponValidationError);
+      return;
     }
     if (!event || !event._id || !user) {
       toast.error("Event information is missing");
