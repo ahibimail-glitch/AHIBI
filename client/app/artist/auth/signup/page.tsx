@@ -330,50 +330,16 @@ export default function ArtistSignupPage() {
                 <Label htmlFor="city" className="text-gray-200">
                   City *
                 </Label>
-                <Select
+                <Input
+                  id="city"
+                  placeholder="Enter your city"
                   value={signupData.city}
-                  onValueChange={(value) =>
-                    setSignupData({ ...signupData, city: value })
+                  onChange={(e) =>
+                    setSignupData({ ...signupData, city: e.target.value })
                   }
-                >
-                  <SelectTrigger className={triggerBase} aria-label="Select city">
-                    <SelectValue placeholder="Select your city" />
-                  </SelectTrigger>
-
-                  <SelectContent className={selectContentBase}>
-               
-                    <SelectItem value="mumbai" className={selectItemBase}>
-                      Mumbai
-                    </SelectItem>
-                    <SelectItem value="delhi" className={selectItemBase}>
-                      Delhi
-                    </SelectItem>
-                    <SelectItem value="bangalore" className={selectItemBase}>
-                      Bangalore
-                    </SelectItem>
-                    <SelectItem value="pune" className={selectItemBase}>
-                      Pune
-                    </SelectItem>
-                    <SelectItem value="chennai" className={selectItemBase}>
-                      Chennai
-                    </SelectItem>
-                    <SelectItem value="hyderabad" className={selectItemBase}>
-                      Hyderabad
-                    </SelectItem>
-                    <SelectItem value="kolkata" className={selectItemBase}>
-                      Kolkata
-                    </SelectItem>
-                    <SelectItem value="ahmedabad" className={selectItemBase}>
-                      Ahmedabad
-                    </SelectItem>
-                    <SelectItem value="dimapur" className={selectItemBase}>
-                      Dimapur
-                    </SelectItem>
-                    <SelectItem value="kohima" className={selectItemBase}>
-                      Kohima
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  className={`${inputBase}`}
+                  required
+                />
               </div>
 
               {/* Specialization */}

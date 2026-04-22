@@ -561,12 +561,7 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
 
         <div className="relative mx-auto grid w-full max-w-[1280px] items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-6">
           <div>
-            {/* <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#F2D8DC] bg-white px-4 py-2 shadow-[0_10px_28px_rgba(17,17,17,0.05)]">
-              <span className="h-2 w-2 rounded-full bg-[#E31837]" />
-              <span className="text-[11px] font-semibold uppercase tracking-[1.6px] text-[#7A6F66]">
-                Book artists for your next event
-              </span>
-            </div> */}
+
 
             <h1 className="max-w-3xl font-['Playfair_Display'] text-[clamp(42px,6.5vw,86px)] font-black leading-[0.95] tracking-[-2px] text-[#191513]">
               Discover
@@ -581,34 +576,9 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
               Find singers, DJs, bands, dancers, anchors, and more in one clean, fast interface.
             </p>
 
-            {/* <div className="mt-8 rounded-[28px] border border-[#E9E4DB] bg-white p-3 shadow-[0_18px_45px_rgba(17,17,17,0.08)]">
-              <div className="grid gap-3 lg:grid-cols-[1.4fr_0.8fr_0.7fr_auto]">
-                <div className="flex items-center gap-3 rounded-2xl bg-[#F8F4EF] px-4 py-3">
-                  <IconSearch />
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search artists, categories, or style"
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-[#9B9087]"
-                  />
-                </div>
 
-                <button className="rounded-2xl border border-[#E9E4DB] px-4 py-3 text-left text-sm font-medium text-[#191513] hover:bg-[#FFF7F8]">
-                  All cities
-                </button>
 
-                <button className="rounded-2xl border border-[#E9E4DB] px-4 py-3 text-left text-sm font-medium text-[#191513] hover:bg-[#FFF7F8]">
-                  Event type
-                </button>
 
-                <button
-                  onClick={onViewList}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#E31837] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#C8102E]"
-                >
-                  Explore Now <IconArrow />
-                </button>
-              </div>
-            </div> */}
 
             <div className="mt-6 flex flex-wrap gap-3">
               {["Wedding", "College fest", "Corporate", "Birthday", "Concert", "Club night"].map((item) => (
@@ -621,6 +591,22 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
               ))}
             </div>
 
+            {/* CTA */}
+            <div className="mt-5 flex items-center justify-center gap-6">
+              <button
+                className="inline-flex items-center gap-2 rounded-full bg-[#E31837] px-8 py-3.5 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-[#C8102E]"
+                onClick={() => (window.location.href = "/allArtists/list")}
+              >
+                Explore Artists <IconArrow />
+              </button>
+
+              <button
+                className="inline-flex items-center gap-2 rounded-full border border-[#E31837] px-8 py-3.5 text-sm font-semibold text-[#E31837] shadow-lg transition-all duration-200 hover:scale-105 hover:bg-[#E31837] hover:text-white"
+                onClick={() => (window.location.href = "/artist/auth/login")}
+              >
+                List Your Profile <IconArrow />
+              </button>
+            </div>
 
           </div>
 
@@ -678,7 +664,7 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
 
                   </div>
 
-                 
+
                 </div>
 
                 <div className="overflow-hidden rounded-[26px] border border-[#E9E4DB] bg-[#FFF7F8] p-4">
@@ -766,8 +752,8 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeCategory === cat
-                    ? "bg-[#191513] text-white shadow-[0_10px_24px_rgba(17,17,17,0.16)]"
-                    : "border border-[#E9E4DB] bg-white text-[#5F564F] hover:bg-[#FFF7F8]"
+                  ? "bg-[#191513] text-white shadow-[0_10px_24px_rgba(17,17,17,0.16)]"
+                  : "border border-[#E9E4DB] bg-white text-[#5F564F] hover:bg-[#FFF7F8]"
                   }`}
               >
                 {cat}

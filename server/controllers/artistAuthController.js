@@ -1,4 +1,5 @@
 const Artist = require('../models/Artist');
+const bcrypt = require('bcryptjs');
 const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
 const ApiResponse = require('../utils/apiResponse');
@@ -177,9 +178,14 @@ exports.verifyArtistOtp = async (req, res) => {
       // Generate JWT token
       const token = artist.getSignedJwtToken();
 
+      // Check if artist has password set
+      const artistWithPw = await Artist.findOne({ phone }).select('+passwordHash');
+      const hasPassword = artistWithPw ? artistWithPw.hasPasswordAuth() : false;
+
       // Respond with token
       return ApiResponse.success(res, 'OTP verified successfully. Login successful.', {
         token,
+        hasPassword,
         user: {
           _id: artist._id,
           name: artist.name,
@@ -425,5 +431,130 @@ exports.updateArtistProfile = async (req, res) => {
   } catch (error) {
     console.error('Update Artist Profile Error:', error);
     return ApiResponse.serverError(res, 'Error updating artist profile', error.message);
+  }
+};
+
+/**
+ * @desc    Login artist with password
+ * @route   POST /api/artist/auth/login
+ * @access  Public
+ */
+exports.loginWithPassword = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone, password } = req.body;
+
+  try {
+    const artist = await Artist.findOne({ phone }).select('+passwordHash');
+
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found. Please sign up first.');
+    }
+
+    if (!artist.hasPasswordAuth()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password not set for this account. Please use OTP login.',
+        requiresOtp: true
+      });
+    }
+
+    const isPasswordValid = await artist.matchPasswordHash(password);
+    if (!isPasswordValid) {
+      return ApiResponse.badRequest(res, 'Invalid password');
+    }
+
+    if (artist.approvalStatus === 'pending') {
+      return ApiResponse.accepted(res, 'Your artist account is pending approval', {
+        pending: true,
+        approvalStatus: artist.approvalStatus
+      });
+    }
+
+    if (artist.approvalStatus === 'rejected') {
+      return ApiResponse.forbidden(res, 'Your artist account has been rejected', {
+        rejected: true,
+        reason: artist.rejectionReason
+      });
+    }
+
+    const token = artist.getSignedJwtToken();
+
+    return ApiResponse.success(res, 'Login successful', {
+      token,
+      user: {
+        _id: artist._id,
+        name: artist.name,
+        email: artist.email,
+        phone: artist.phone,
+        role: 'artist',
+        status: artist.status
+      }
+    });
+  } catch (error) {
+    console.error('Artist password login error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+/**
+ * @desc    Set or update artist password (requires JWT auth)
+ * @route   POST /api/artist/auth/setup-password
+ * @access  Private (Artist)
+ */
+exports.setupPassword = async (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password.length < 6) {
+    return ApiResponse.badRequest(res, 'Password must be at least 6 characters');
+  }
+
+  try {
+    const artist = await Artist.findById(req.user._id);
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    artist.passwordHash = await bcrypt.hash(password, salt);
+    await artist.save({ validateBeforeSave: false });
+
+    return ApiResponse.success(res, 'Password set successfully');
+  } catch (error) {
+    console.error('Setup artist password error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
+  }
+};
+
+/**
+ * @desc    Check if artist exists and whether they have a password set
+ * @route   POST /api/artist/auth/check-artist
+ * @access  Public
+ */
+exports.checkArtistExists = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  const { phone } = req.body;
+
+  try {
+    const artist = await Artist.findOne({ phone }).select('+passwordHash');
+
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found. Please sign up first.');
+    }
+
+    return ApiResponse.success(res, 'Artist found', {
+      exists: true,
+      hasPassword: artist.hasPasswordAuth()
+    });
+  } catch (error) {
+    console.error('Check artist exists error:', error);
+    return ApiResponse.serverError(res, 'Server error', error);
   }
 };

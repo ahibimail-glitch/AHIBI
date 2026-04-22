@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Camera, Video, Plus, Trash2, Edit, Star } from "lucide-react";
+import { Camera, Video, Plus, Trash2, Star, Upload, Loader2, X } from "lucide-react";
 import Image from "next/image";
+import { uploadFile, validateFile, createImagePreview } from "@/lib/cloudinary";
 
 interface Photo {
   _id: string;
@@ -36,70 +37,154 @@ interface GalleryManagerProps {
 export default function GalleryManager({ photos, videos, onUpdate }: GalleryManagerProps) {
   const [isAddingPhoto, setIsAddingPhoto] = useState(false);
   const [isAddingVideo, setIsAddingVideo] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [photoForm, setPhotoForm] = useState({
-    url: '',
-    caption: '',
+    url: "",
+    caption: "",
     isProfileImage: false,
     isCoverImage: false
   });
   const [videoForm, setVideoForm] = useState({
-    url: '',
-    thumbnail: '',
-    caption: '',
-    platform: 'youtube'
+    url: "",
+    caption: "",
+    platform: "youtube"
   });
 
-  const handleAddPhoto = async () => {
+  // Auto-generate thumbnail from video URL based on platform
+  const generateThumbnail = (url: string, platform: string): string => {
     try {
-      const token = localStorage.getItem('artist_token');
-      const response = await fetch('/api/artist/gallery/photo', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(photoForm)
-      });
+      if (platform === "youtube") {
+        // Extract video ID from various YouTube URL formats
+        const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+        if (match) {
+          return `https://img.youtube.com/vi/${match[1]}/maxresdefault.jpg`;
+        }
+      } else if (platform === "vimeo") {
+        // Vimeo requires API call, return placeholder for now
+        const match = url.match(/vimeo\.com\/(\d+)/);
+        if (match) {
+          // Vimeo thumbnail API (will be fetched on backend or use default)
+          return `https://vumbnail.com/${match[1]}.jpg`;
+        }
+      } else if (platform === "instagram") {
+        // Instagram doesn't provide easy thumbnails, use platform icon
+        return "/images/instagram-video-placeholder.jpg";
+      }
+    } catch {
+      // fall through to default
+    }
+    // Default placeholder for other platforms
+    return "/images/video-placeholder.jpg";
+  };
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
-      if (response.ok) {
-        setPhotoForm({ url: '', caption: '', isProfileImage: false, isCoverImage: false });
-        setIsAddingPhoto(false);
-        onUpdate();
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const error = validateFile(file, 10 * 1024 * 1024); // 10MB max
+    if (error) {
+      setUploadError(error);
+      return;
+    }
+
+    setUploadError(null);
+    setSelectedFile(file);
+    const preview = await createImagePreview(file);
+    setPreviewUrl(preview);
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setUploadError(null);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!selectedFile) {
+      setUploadError("Please select a file to upload");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+
+      const result = await uploadFile(selectedFile);
+
+      if (result.status === "success" && result.data?.photo) {
+        const token = localStorage.getItem("artist_token");
+        const response = await fetch("/api/artist/gallery/photo", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            url: result.data.photo.url,
+            caption: photoForm.caption,
+            isProfileImage: photoForm.isProfileImage,
+            isCoverImage: photoForm.isCoverImage
+          })
+        });
+
+        if (response.ok) {
+          setPhotoForm({ url: "", caption: "", isProfileImage: false, isCoverImage: false });
+          setSelectedFile(null);
+          setPreviewUrl(null);
+          setIsAddingPhoto(false);
+          onUpdate();
+        }
+      } else {
+        setUploadError(result.message || "Upload failed");
       }
     } catch (error) {
-      console.error('Error adding photo:', error);
+      console.error("Error uploading photo:", error);
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleAddVideo = async () => {
     try {
-      const token = localStorage.getItem('artist_token');
-      const response = await fetch('/api/artist/gallery/video', {
-        method: 'POST',
+      const token = localStorage.getItem("artist_token");
+      
+      // Auto-generate thumbnail based on platform
+      const thumbnail = generateThumbnail(videoForm.url, videoForm.platform);
+      
+      const response = await fetch("/api/artist/gallery/video", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(videoForm)
+        body: JSON.stringify({
+          ...videoForm,
+          thumbnail
+        })
       });
 
       if (response.ok) {
-        setVideoForm({ url: '', thumbnail: '', caption: '', platform: 'youtube' });
+        setVideoForm({ url: "", caption: "", platform: "youtube" });
         setIsAddingVideo(false);
         onUpdate();
       }
     } catch (error) {
-      console.error('Error adding video:', error);
+      console.error("Error adding video:", error);
     }
   };
 
   const handleRemovePhoto = async (photoId: string) => {
     try {
-      const token = localStorage.getItem('artist_token');
+      const token = localStorage.getItem("artist_token");
       const response = await fetch(`/api/artist/gallery/photo/${photoId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`
+          "Authorization": `Bearer ${token}`
         }
       });
 
@@ -107,17 +192,55 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
         onUpdate();
       }
     } catch (error) {
-      console.error('Error removing photo:', error);
+      console.error("Error removing photo:", error);
+    }
+  };
+
+  const handleSetProfileImage = async (photoId: string) => {
+    try {
+      const token = localStorage.getItem("artist_token");
+      const response = await fetch(`/api/artist/gallery/photo/${photoId}/profile`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.ok) {
+        onUpdate();
+      }
+    } catch (error) {
+      console.error("Error setting profile image:", error);
+    }
+  };
+
+  const handleSetCoverImage = async (photoId: string) => {
+    try {
+      const token = localStorage.getItem("artist_token");
+      const response = await fetch(`/api/artist/gallery/photo/${photoId}/cover`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.ok) {
+        onUpdate();
+      }
+    } catch (error) {
+      console.error("Error setting cover image:", error);
     }
   };
 
   const handleRemoveVideo = async (videoId: string) => {
     try {
-      const token = localStorage.getItem('artist_token');
+      const token = localStorage.getItem("artist_token");
       const response = await fetch(`/api/artist/gallery/video/${videoId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`
+          "Authorization": `Bearer ${token}`
         }
       });
 
@@ -125,7 +248,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
         onUpdate();
       }
     } catch (error) {
-      console.error('Error removing video:', error);
+      console.error("Error removing video:", error);
     }
   };
 
@@ -146,20 +269,57 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                   Add Photo
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Add New Photo</DialogTitle>
+                  <DialogTitle>Upload Photo to Gallery</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="photo-url">Photo URL</Label>
-                    <Input
-                      id="photo-url"
-                      value={photoForm.url}
-                      onChange={(e) => setPhotoForm({ ...photoForm, url: e.target.value })}
-                      placeholder="https://example.com/photo.jpg"
+                  {/* File Upload Area */}
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-pink-500 transition-colors">
+                    <input
+                      type="file"
+                      id="photo-upload"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={uploading}
                     />
+                    <label htmlFor="photo-upload" className="cursor-pointer block">
+                      {previewUrl ? (
+                        <div className="relative">
+                          <Image
+                            src={previewUrl}
+                            alt="Preview"
+                            width={300}
+                            height={200}
+                            className="w-full h-48 object-cover rounded-lg mx-auto"
+                          />
+                          {!uploading && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                clearSelectedFile();
+                              }}
+                              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600">Click to select an image</p>
+                          <p className="text-xs text-gray-400 mt-1">JPEG, PNG, GIF, WebP up to 10MB</p>
+                        </>
+                      )}
+                    </label>
                   </div>
+
+                  {uploadError && (
+                    <p className="text-sm text-red-500">{uploadError}</p>
+                  )}
+
                   <div>
                     <Label htmlFor="photo-caption">Caption</Label>
                     <Textarea
@@ -167,14 +327,17 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                       value={photoForm.caption}
                       onChange={(e) => setPhotoForm({ ...photoForm, caption: e.target.value })}
                       placeholder="Photo description..."
+                      disabled={uploading}
                     />
                   </div>
+
                   <div className="flex space-x-4">
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         checked={photoForm.isProfileImage}
                         onChange={(e) => setPhotoForm({ ...photoForm, isProfileImage: e.target.checked })}
+                        disabled={uploading}
                       />
                       <span>Set as Profile Image</span>
                     </label>
@@ -183,12 +346,28 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                         type="checkbox"
                         checked={photoForm.isCoverImage}
                         onChange={(e) => setPhotoForm({ ...photoForm, isCoverImage: e.target.checked })}
+                        disabled={uploading}
                       />
                       <span>Set as Cover Image</span>
                     </label>
                   </div>
-                  <Button onClick={handleAddPhoto} className="w-full">
-                    Add Photo
+
+                  <Button 
+                    onClick={handleUploadPhoto} 
+                    className="w-full"
+                    disabled={!selectedFile || uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading to Cloudinary...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Photo
+                      </>
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -207,22 +386,53 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                   className="w-full h-48 object-cover rounded-lg"
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                  <div className="flex space-x-2">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex space-x-2">
+                      {!photo.isProfileImage && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleSetProfileImage(photo._id)}
+                          title="Set as Profile Image"
+                        >
+                          <Star className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!photo.isCoverImage && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleSetCoverImage(photo._id)}
+                          title="Set as Cover Image"
+                        >
+                          <Camera className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     <Button
                       size="sm"
-                      variant="secondary"
+                      variant="destructive"
                       onClick={() => handleRemovePhoto(photo._id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remove
                     </Button>
                   </div>
                 </div>
                 {(photo.isProfileImage || photo.isCoverImage) && (
-                  <div className="absolute top-2 left-2">
-                    <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs flex items-center">
-                      <Star className="h-3 w-3 mr-1" />
-                      {photo.isProfileImage ? 'Profile' : 'Cover'}
-                    </span>
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    {photo.isProfileImage && (
+                      <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs flex items-center">
+                        <Star className="h-3 w-3 mr-1" />
+                        Profile
+                      </span>
+                    )}
+                    {photo.isCoverImage && (
+                      <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs flex items-center">
+                        <Camera className="h-3 w-3 mr-1" />
+                        Cover
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-2 rounded-b-lg">
@@ -251,49 +461,46 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Video</DialogTitle>
+                  <DialogTitle>Add Video Link</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="video-platform">Platform</Label>
+                    <Select value={videoForm.platform} onValueChange={(value) => setVideoForm({ ...videoForm, platform: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select platform" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="youtube">YouTube</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="vimeo">Vimeo</SelectItem>
+                        <SelectItem value="tiktok">TikTok</SelectItem>
+                        <SelectItem value="twitter">Twitter / X</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label htmlFor="video-url">Video URL</Label>
                     <Input
                       id="video-url"
                       value={videoForm.url}
                       onChange={(e) => setVideoForm({ ...videoForm, url: e.target.value })}
-                      placeholder="https://youtube.com/watch?v=..."
+                      placeholder={`https://${videoForm.platform === "youtube" ? "youtube.com/watch?v=" : videoForm.platform === "instagram" ? "instagram.com/p/" : videoForm.platform === "tiktok" ? "tiktok.com/@user/video/" : "..."}`}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Thumbnail will be auto-generated from the {videoForm.platform} URL
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="video-thumbnail">Thumbnail URL</Label>
-                    <Input
-                      id="video-thumbnail"
-                      value={videoForm.thumbnail}
-                      onChange={(e) => setVideoForm({ ...videoForm, thumbnail: e.target.value })}
-                      placeholder="https://example.com/thumbnail.jpg"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="video-caption">Caption</Label>
+                    <Label htmlFor="video-caption">Caption (optional)</Label>
                     <Textarea
                       id="video-caption"
                       value={videoForm.caption}
                       onChange={(e) => setVideoForm({ ...videoForm, caption: e.target.value })}
                       placeholder="Video description..."
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="video-platform">Platform</Label>
-                    <Select value={videoForm.platform} onValueChange={(value) => setVideoForm({ ...videoForm, platform: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="youtube">YouTube</SelectItem>
-                        <SelectItem value="vimeo">Vimeo</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </div>
                   <Button onClick={handleAddVideo} className="w-full">
                     Add Video
@@ -309,11 +516,12 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
               <div key={video._id} className="relative group">
                 <div className="relative">
                   <Image
-                    src={video.thumbnail}
+                    src={video.thumbnail || "/images/video-placeholder.jpg"}
                     alt={video.caption}
                     width={300}
                     height={200}
                     className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => { (e.target as HTMLImageElement).src = "/images/video-placeholder.jpg"; }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-black/50 rounded-full p-3">
@@ -326,7 +534,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => window.open(video.url, '_blank')}
+                      onClick={() => window.open(video.url, "_blank")}
                     >
                       <Video className="h-4 w-4" />
                     </Button>

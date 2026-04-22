@@ -6,7 +6,8 @@ import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import {
   Star, MapPin, Phone, Mail, Instagram, Youtube,
   Calendar, Award, Play, Music, Users, ChevronLeft,
-  Share2, Heart, CheckCircle, Sparkles, Globe, Facebook, Twitter
+  Share2, Heart, CheckCircle, Sparkles, Globe, Facebook, Twitter,
+  FileText, Volume2, Zap, Download, Info
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -16,6 +17,18 @@ import Footer from "@/app/Footer";
 import PublicBookingCalendar from "@/components/artist/PublicBookingCalendar";
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
+interface TechRider {
+  soundRequirements?: string;
+  lightingRequirements?: string;
+  powerRequirements?: string;
+  specialNotes?: string;
+  file?: {
+    url: string;
+    fileType: 'pdf' | 'image';
+    uploadedAt: string;
+  };
+}
+
 interface Artist {
   _id: string; name: string; email: string; phone: string; city: string;
   bio: string; genres: string[]; languages: string[]; type: string;
@@ -28,6 +41,7 @@ interface Artist {
   socialLinks?: { instagram?: string; youtube?: string; spotify?: string; facebook?: string; twitter?: string; website?: string };
   rating?: { average: number; count: number };
   totalBookings?: number;
+  techRider?: TechRider;
 }
 
 /* ─── Shared font + CSS ─────────────────────────────────────────────────── */
@@ -199,6 +213,27 @@ const STYLES = `
   .ap .see-all{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif}
   .ap .lbox-img{width:100%;max-height:80vh;object-fit:contain}
   .ap .stars{display:flex;gap:2px}
+
+  /* TECH RIDER */
+  .ap .tech-rider-card{background:#fff;padding:28px;border:1px solid var(--border)}
+  .ap .tr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px}
+  .ap .tr-item{padding:14px;border-bottom:1px solid var(--border)}
+  .ap .tr-item:last-child{border-bottom:none}
+  .ap .tr-item.tr-full{grid-column:1/-1}
+  .ap .tr-lbl{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
+  .ap .tr-txt{font-size:12px;color:var(--ink3)}
+  .ap .tr-file{display:flex;align-items:center;gap:20px;margin-top:20px}
+  .ap .tr-file-info{display:flex;align-items:center;gap:10px}
+  .ap .tr-file-meta{display:flex;flex-direction:column;gap:4px}
+  .ap .tr-file-name{font-size:12px;font-weight:600;color:var(--ink)}
+  .ap .tr-file-type{font-size:10px;color:var(--ink3)}
+  .ap .tr-file-actions{display:flex;gap:10px}
+  .ap .tr-btn{display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;border:none;padding:13px 26px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif}
+  .ap .tr-btn:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(227,24,55,.25)}
+  .ap .tr-btn-view{background:var(--ink2);color:var(--ink)}
+  .ap .tr-btn-view:hover{background:var(--ink3)}
+  .ap .tr-btn-download{background:var(--red);color:#fff}
+  .ap .tr-btn-download:hover{background:var(--red2)}
 `;
 
 /* ─── Social map ──────────────────────────────────────────────────────────── */
@@ -226,6 +261,33 @@ function Stars({ score }: { score: number }) {
       ))}
     </span>
   );
+}
+
+/* ─── Video Thumbnail Helper ──────────────────────────────────────────────── */
+function getVideoThumbnail(url: string, platform: string, existingThumbnail?: string): string {
+  // If thumbnail exists and is not a placeholder, use it
+  if (existingThumbnail && !existingThumbnail.includes("placeholder")) {
+    return existingThumbnail;
+  }
+  
+  try {
+    if (platform === "youtube") {
+      const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+      if (match) {
+        return `https://img.youtube.com/vi/${match[1]}/maxresdefault.jpg`;
+      }
+    } else if (platform === "vimeo") {
+      const match = url.match(/vimeo\.com\/(\d+)/);
+      if (match) {
+        return `https://vumbnail.com/${match[1]}.jpg`;
+      }
+    }
+  } catch {
+    // Fall through to default
+  }
+  
+  // Return default placeholder based on platform
+  return "/images/video-placeholder.jpg";
 }
 
 /* ─── ContactBlock ────────────────────────────────────────────────────────── */
@@ -303,7 +365,7 @@ export default function PublicArtistProfile() {
   /* ── LOADING ── */
   if (loading) return (
     <>
-      <style>{STYLES}</style>
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       <div className="ap">
         <Navbar />
         <div className="skel" style={{ height: 400 }} />
@@ -328,7 +390,7 @@ export default function PublicArtistProfile() {
   /* ── ERROR ── */
   if (error || !artist) return (
     <>
-      <style>{STYLES}</style>
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       <div className="ap err-wrap">
         <div className="err-box">
           <div className="err-icon"><Users size={30} color="#6B6259" /></div>
@@ -357,7 +419,7 @@ export default function PublicArtistProfile() {
 
   return (
     <>
-      <style>{STYLES}</style>
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       <div className="ap">
         <Navbar />
 
@@ -518,7 +580,11 @@ export default function PublicArtistProfile() {
                     <div className="videos">
                       {videos.map((v, i) => (
                         <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="vid-item">
-                          <img src={v.thumbnail} alt={v.caption || `Video ${i+1}`} />
+                          <img 
+                            src={getVideoThumbnail(v.url, v.platform || "other", v.thumbnail)} 
+                            alt={v.caption || `Video ${i+1}`}
+                            onError={(e) => { (e.target as HTMLImageElement).src = "/images/video-placeholder.jpg"; }}
+                          />
                           <div className="vid-play">
                             <div className="vid-play-btn">
                               <Play size={18} color="var(--ink)" fill="var(--ink)" />
@@ -529,6 +595,78 @@ export default function PublicArtistProfile() {
                       ))}
                     </div>
                   </>
+                )}
+              </div>
+            )}
+
+            {/* Tech Rider / EPK */}
+            {artist.techRider && (
+              <div className="tech-rider-card card">
+                <div className="card-title">
+                  <FileText size={17} className="card-title-icon" />
+                  <span>Tech Rider / EPK</span>
+                </div>
+                
+                {/* Requirements Grid */}
+                {(artist.techRider.soundRequirements || artist.techRider.lightingRequirements || 
+                  artist.techRider.powerRequirements || artist.techRider.specialNotes) && (
+                  <div className="tr-grid">
+                    {artist.techRider.soundRequirements && (
+                      <div className="tr-item">
+                        <div className="tr-lbl"><Volume2 size={12} /> Sound</div>
+                        <div className="tr-txt">{artist.techRider.soundRequirements}</div>
+                      </div>
+                    )}
+                    {artist.techRider.lightingRequirements && (
+                      <div className="tr-item">
+                        <div className="tr-lbl"><Sparkles size={12} /> Lighting</div>
+                        <div className="tr-txt">{artist.techRider.lightingRequirements}</div>
+                      </div>
+                    )}
+                    {artist.techRider.powerRequirements && (
+                      <div className="tr-item">
+                        <div className="tr-lbl"><Zap size={12} /> Power</div>
+                        <div className="tr-txt">{artist.techRider.powerRequirements}</div>
+                      </div>
+                    )}
+                    {artist.techRider.specialNotes && (
+                      <div className="tr-item tr-full">
+                        <div className="tr-lbl"><Info size={12} /> Special Notes</div>
+                        <div className="tr-txt">{artist.techRider.specialNotes}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* File Download */}
+                {artist.techRider.file?.url && (
+                  <div className="tr-file">
+                    <div className="tr-file-info">
+                      <FileText size={20} color="var(--red)" />
+                      <div className="tr-file-meta">
+                        <div className="tr-file-name">Tech Rider / EPK Document</div>
+                        <div className="tr-file-type">{artist.techRider.file.fileType === 'pdf' ? 'PDF Document' : 'Image File'}</div>
+                      </div>
+                    </div>
+                    <div className="tr-file-actions">
+                      <a 
+                        href={artist.techRider.file.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="tr-btn tr-btn-view "
+                      >
+                        View
+                      </a>
+                      <a 
+                        href={artist.techRider.file.url}
+                        download="Tech-Rider-EPK.pdf"
+                        className="tr-btn tr-btn-download"
+                      >
+                        <Download size={14} />
+                        Download
+                      </a>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

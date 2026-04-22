@@ -55,6 +55,10 @@ const ArtistSchema = new mongoose.Schema({
     code: { type: String, default: null },
     expiresAt: { type: Date, default: null }
   },
+  passwordHash: {
+    type: String,
+    select: false
+  },
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
@@ -371,6 +375,17 @@ ArtistSchema.methods.verifyOtp = async function(otp) {
     await this.save({ validateBeforeSave: false });
   }
   return isMatch;
+};
+
+// Check if artist has password-based authentication
+ArtistSchema.methods.hasPasswordAuth = function() {
+  return !!this.passwordHash;
+};
+
+// Compare entered password to hashed password
+ArtistSchema.methods.matchPasswordHash = async function(enteredPassword) {
+  if (!this.passwordHash) return false;
+  return await bcrypt.compare(enteredPassword, this.passwordHash);
 };
 
 // Update the updatedAt timestamp before saving

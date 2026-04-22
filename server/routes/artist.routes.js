@@ -28,6 +28,20 @@ router.post('/auth/verify-otp', [
   check('mode', 'Mode must be either login or signup').isIn(['login', 'signup'])
 ], artistAuthController.verifyArtistOtp);
 
+router.post('/auth/check-artist', [
+  check('phone', 'Please include a valid phone number').isMobilePhone('any')
+], artistAuthController.checkArtistExists);
+
+router.post('/auth/login', [
+  check('phone', 'Please include a valid phone number').isMobilePhone('any'),
+  check('password', 'Password must be at least 6 characters').isLength({ min: 6 })
+], artistAuthController.loginWithPassword);
+
+router.post('/auth/setup-password', [
+  protect,
+  check('password', 'Password must be at least 6 characters').isLength({ min: 6 })
+], artistAuthController.setupPassword);
+
 // Public artist profiles
 router.get('/public', artistProfileController.getApprovedArtists);
 router.get('/public/:artistId', artistProfileController.getPublicArtistProfile);
