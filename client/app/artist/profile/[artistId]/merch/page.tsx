@@ -1,16 +1,32 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { SlidersHorizontal, ChevronDown, ShoppingBag } from "lucide-react";
 import { ProductCard, ProductCardSkeleton } from "./components/ProductCard";
-import { mockProducts } from "./data/mockProducts";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 
 const categories = ["All", "Clothing", "Accessories", "Digital"];
 const sortOptions = ["Popular", "Newest", "Price: Low", "Price: High"];
+const CART_STORAGE_KEY = 'merch_cart';
+
+interface MerchProduct {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  variants: any[];
+  images: string[];
+  isDraft: boolean;
+  createdAt: string;
+  artist: {
+    _id: string;
+    name: string;
+  };
+}
 
 export default function MerchStore() {
   const params = useParams();
@@ -18,18 +34,47 @@ export default function MerchStore() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [sort, setSort] = useState("Popular");
   const [showFilters, setShowFilters] = useState(false);
+  const [products, setProducts] = useState<MerchProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cartCount, setCartCount] = useState(0);
 
-  const published = mockProducts.filter((p) => p.status === "published");
+  useEffect(() => {
+    fetchProducts();
+    updateCartCount();
+  }, [artistId]);
+
+  const updateCartCount = () => {
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (savedCart) {
+      const cart = JSON.parse(savedCart);
+      setCartCount(cart.length);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch(`/api/hornbill-merch/products?artistId=${artistId}&isDraft=false`);
+      const data = await response.json();
+      if (data.success) {
+        setProducts(data.data.products || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filtered =
     activeCategory === "All"
-      ? published
-      : published.filter((p) => p.category === activeCategory);
+      ? products
+      : products.filter((p) => p.category === activeCategory);
 
   const sorted = [...filtered].sort((a, b) => {
-    if (sort === "Newest") return b.createdAt.localeCompare(a.createdAt);
+    if (sort === "Newest") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     if (sort === "Price: Low") return a.price - b.price;
     if (sort === "Price: High") return b.price - a.price;
-    return b.reviews - a.reviews;
+    return 0;
   });
 
   return (
@@ -58,9 +103,14 @@ export default function MerchStore() {
           <div className="flex gap-2 items-center">
             <Link
               href={`/artist/profile/${artistId}/merch/cart`}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground hover:bg-primary hover:text-primary-foreground transition-all"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground hover:bg-primary hover:text-primary-foreground transition-all"
             >
               <ShoppingBag className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  {cartCount}
+                </span>
+              )}
             </Link>
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -85,9 +135,18 @@ export default function MerchStore() {
 
         {/* Product Grid */}
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {sorted.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {loading ? (
+            <>
+              <ProductCardSkeleton />
+              <ProductCardSkeleton />
+              <ProductCardSkeleton />
+              <ProductCardSkeleton />
+            </>
+          ) : (
+            sorted.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))
+          )}
         </div>
 
         {sorted.length === 0 && (

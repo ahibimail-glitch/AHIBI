@@ -7,6 +7,47 @@ const { validationResult } = require('express-validator');
 const whatsappService = require('../services/whatsappService');
 
 /**
+ * @desc    Get all approved artists
+ * @route   GET /api/organizer/artists/list
+ * @access  Private (Organizer only)
+ */
+exports.getAllArtists = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, city, type } = req.query;
+
+    let query = { approvalStatus: 'approved' };
+    
+    if (city) {
+      query.city = new RegExp(city, 'i');
+    }
+    if (type) {
+      query.type = new RegExp(type, 'i');
+    }
+
+    const artists = await Artist.find(query)
+      .select('name email phone city type profilePic rating totalBookings basePrice genres')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Artist.countDocuments(query);
+
+    return ApiResponse.success(res, 'Artists retrieved successfully', {
+      artists,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total
+      }
+    });
+
+  } catch (error) {
+    console.error('Get All Artists Error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving artists', error.message);
+  }
+};
+
+/**
  * @desc    Search artists with availability
  * @route   GET /api/organizer/artists/search
  * @access  Private (Organizer only)
@@ -350,7 +391,7 @@ exports.getOrganizerBookings = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     const query = { organizer: req.user.id };
-    
+
     if (status) {
       query['booking.status'] = status;
     }
@@ -375,6 +416,47 @@ exports.getOrganizerBookings = async (req, res) => {
   } catch (error) {
     console.error('Get Organizer Bookings Error:', error);
     return ApiResponse.serverError(res, 'Error retrieving bookings', error.message);
+  }
+};
+
+/**
+ * @desc    Get organizer's latest bookings with discussion status
+ * @route   GET /api/organizer/bookings/latest
+ * @access  Private (Organizer only)
+ */
+exports.getLatestBookingsWithDiscussion = async (req, res) => {
+  try {
+    const { limit = 20 } = req.query;
+
+    const bookings = await ArtistBooking.find({ organizer: req.user.id })
+      .populate('artist', 'name email phone profilePic rating city')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    // Add discussion status (has unread messages or active discussion)
+    const bookingsWithStatus = bookings.map(booking => {
+      const hasDiscussion = booking.communication.messages.length > 0;
+      const unreadCount = booking.communication.messages.filter(
+        msg => msg.sender === 'artist' && !msg.isRead
+      ).length;
+
+      return {
+        ...booking.toObject(),
+        hasDiscussion,
+        unreadCount,
+        lastMessage: booking.communication.messages.length > 0
+          ? booking.communication.messages[booking.communication.messages.length - 1]
+          : null
+      };
+    });
+
+    return ApiResponse.success(res, 'Latest bookings retrieved successfully', {
+      bookings: bookingsWithStatus
+    });
+
+  } catch (error) {
+    console.error('Get Latest Bookings Error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving latest bookings', error.message);
   }
 };
 
@@ -600,10 +682,12 @@ exports.addBookingMessage = async (req, res) => {
 };
 
 module.exports = {
+  getAllArtists: exports.getAllArtists,
   searchArtistsWithAvailability: exports.searchArtistsWithAvailability,
   getArtistCalendar: exports.getArtistCalendar,
   createBookingRequest: exports.createBookingRequest,
   getOrganizerBookings: exports.getOrganizerBookings,
+  getLatestBookingsWithDiscussion: exports.getLatestBookingsWithDiscussion,
   getBookingDetails: exports.getBookingDetails,
   acceptCounterOffer: exports.acceptCounterOffer,
   rejectCounterOffer: exports.rejectCounterOffer,

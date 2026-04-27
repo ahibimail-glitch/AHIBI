@@ -69,15 +69,13 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
           // Vimeo thumbnail API (will be fetched on backend or use default)
           return `https://vumbnail.com/${match[1]}.jpg`;
         }
-      } else if (platform === "instagram") {
-        // Instagram doesn't provide easy thumbnails, use platform icon
-        return "/images/instagram-video-placeholder.jpg";
       }
+      // For Instagram and other platforms, return empty string to use fallback UI
     } catch {
       // fall through to default
     }
-    // Default placeholder for other platforms
-    return "/images/video-placeholder.jpg";
+    // Return empty string to trigger fallback UI
+    return "";
   };
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -339,7 +337,10 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                         onChange={(e) => setPhotoForm({ ...photoForm, isProfileImage: e.target.checked })}
                         disabled={uploading}
                       />
-                      <span>Set as Profile Image</span>
+                      <div className="flex flex-col">
+                        <span>Set as Profile Image</span>
+                        <span className="text-xs text-muted-foreground">Recommended: 124x124px (square)</span>
+                      </div>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
@@ -348,7 +349,10 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                         onChange={(e) => setPhotoForm({ ...photoForm, isCoverImage: e.target.checked })}
                         disabled={uploading}
                       />
-                      <span>Set as Cover Image</span>
+                      <div className="flex flex-col">
+                        <span>Set as Cover Image</span>
+                        <span className="text-xs text-muted-foreground">Recommended: 1920x1080px (16:9)</span>
+                      </div>
                     </label>
                   </div>
 
@@ -515,14 +519,20 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
             {videos.map((video) => (
               <div key={video._id} className="relative group">
                 <div className="relative">
-                  <Image
-                    src={video.thumbnail || "/images/video-placeholder.jpg"}
-                    alt={video.caption}
-                    width={300}
-                    height={200}
-                    className="w-full h-48 object-cover rounded-lg"
-                    onError={(e) => { (e.target as HTMLImageElement).src = "/images/video-placeholder.jpg"; }}
-                  />
+                  {video.thumbnail ? (
+                    <Image
+                      src={video.thumbnail}
+                      alt={video.caption}
+                      width={300}
+                      height={200}
+                      className="w-full h-48 object-cover rounded-lg"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
+                      <Video className="h-12 w-12 text-slate-400" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-black/50 rounded-full p-3">
                       <Video className="h-8 w-8 text-white" />

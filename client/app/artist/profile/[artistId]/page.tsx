@@ -1,22 +1,49 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
-import {
-  Star, MapPin, Phone, Mail, Instagram, Youtube,
-  Calendar, Award, Play, Music, Users, ChevronLeft,
-  Share2, Heart, CheckCircle, Sparkles, Globe, Facebook, Twitter,
-  FileText, Volume2, Zap, Download, Info
-} from "lucide-react";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import PublicBookingCalendar from "@/components/artist/PublicBookingCalendar";
+import {
+  Calendar,
+  Camera,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  Facebook,
+  FileText,
+  Globe,
+  Heart,
+  Instagram,
+  Info,
+  Mail,
+  MapPin,
+  Music,
+  Phone,
+  Play,
+  Share2,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  Twitter,
+  Users,
+  Volume2,
+  Youtube,
+  Zap,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-/* ─── Types ────────────────────────────────────────────────────────────── */
 interface TechRider {
   soundRequirements?: string;
   lightingRequirements?: string;
@@ -24,745 +51,2047 @@ interface TechRider {
   specialNotes?: string;
   file?: {
     url: string;
-    fileType: 'pdf' | 'image';
+    fileType: "pdf" | "image";
     uploadedAt: string;
   };
 }
 
 interface Artist {
-  _id: string; name: string; email: string; phone: string; city: string;
-  bio: string; genres: string[]; languages: string[]; type: string;
-  basePrice: number; profilePic?: string;
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  bio: string;
+  genres: string[];
+  languages: string[];
+  type: string;
+  basePrice: number;
+  profilePic?: string;
   gallery?: {
-    photos: Array<{ url: string; caption: string; isProfileImage: boolean; isCoverImage: boolean }>;
-    videos: Array<{ url: string; thumbnail: string; caption: string; platform: string }>;
+    photos: Array<{
+      url: string;
+      caption: string;
+      isProfileImage: boolean;
+      isCoverImage: boolean;
+    }>;
+    videos: Array<{
+      url: string;
+      thumbnail: string;
+      caption: string;
+      platform: string;
+    }>;
   };
-  accolades: Array<{ title: string; description: string; year: number; organization: string; certificate?: string }>;
-  socialLinks?: { instagram?: string; youtube?: string; spotify?: string; facebook?: string; twitter?: string; website?: string };
-  rating?: { average: number; count: number };
+  accolades: Array<{
+    title: string;
+    description: string;
+    year: number;
+    organization: string;
+    certificate?: string;
+  }>;
+  socialLinks?: {
+    instagram?: string;
+    youtube?: string;
+    spotify?: string;
+    facebook?: string;
+    twitter?: string;
+    website?: string;
+  };
+  rating?: {
+    average: number;
+    count: number;
+  };
   totalBookings?: number;
   techRider?: TechRider;
 }
 
-/* ─── Shared font + CSS ─────────────────────────────────────────────────── */
-const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
-
-  .ap {
-    --cream:#FAF7F2; --cream2:#F3EFE8; --cream3:#EDE8DF;
-    --ink:#1A1714; --ink2:#3D3730; --ink3:#6B6259;
-    --red:#C8102E; --red2:#E31837; --gold:#B5892A; --border:#DDD8CF;
-    font-family:'DM Sans',sans-serif;
-    background:var(--cream); color:var(--ink);
-    -webkit-font-smoothing:antialiased;
+const SOCIALS: Record<
+  string,
+  {
+    icon: ReactNode;
+    color: string;
   }
+> = {
+  instagram: { icon: <Instagram size={15} />, color: "#E1306C" },
+  youtube: { icon: <Youtube size={15} />, color: "#FF0000" },
+  facebook: { icon: <Facebook size={15} />, color: "#1877F2" },
+  twitter: { icon: <Twitter size={15} />, color: "#1DA1F2" },
+  spotify: { icon: <Music size={15} />, color: "#1DB954" },
+  website: { icon: <Globe size={15} />, color: "#111827" },
+};
 
-  @keyframes apFadeUp { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes apFadeIn { from{opacity:0} to{opacity:1} }
-  @keyframes apShimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap');
 
-  .ap .fu0{animation:apFadeUp .65s .00s ease both}
-  .ap .fu1{animation:apFadeUp .65s .12s ease both}
-  .ap .fu2{animation:apFadeUp .65s .24s ease both}
-  .ap .fu3{animation:apFadeUp .65s .36s ease both}
-  .ap .fi {animation:apFadeIn  .9s .05s ease both}
+:root{
+  --bg:#f7f8fc;
+  --bg2:#eef2ff;
+  --card:#ffffff;
+  --card2:#fbfcff;
+  --text:#111827;
+  --text2:#4b5563;
+  --text3:#6b7280;
+  --line:rgba(15, 23, 42, 0.08);
+  --line2:rgba(15, 23, 42, 0.12);
+  --shadow:0 20px 60px rgba(15, 23, 42, 0.08);
+  --shadow2:0 12px 30px rgba(15, 23, 42, 0.10);
+  --accent:#5b6cff;
+  --accent2:#7c3aed;
+  --accentSoft:rgba(91,108,255,0.10);
+  --success:#16a34a;
+  --successSoft:rgba(22,163,74,0.10);
+  --warn:#f59e0b;
+  --warnSoft:rgba(245,158,11,0.12);
+  --radius-xl:28px;
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:12px;
+}
 
-  /* skeleton */
-  .ap .skel{background:linear-gradient(90deg,var(--cream2) 25%,var(--cream3) 50%,var(--cream2) 75%);background-size:800px 100%;animation:apShimmer 1.6s infinite linear}
+.pap {
+  background:
+    radial-gradient(circle at top left, rgba(91,108,255,0.10), transparent 30%),
+    radial-gradient(circle at top right, rgba(124,58,237,0.08), transparent 26%),
+    linear-gradient(180deg, #fbfdff 0%, var(--bg) 42%, #f5f7ff 100%);
+  color: var(--text);
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-  /* HERO */
-  .ap .hero{position:relative;height:340px;overflow:hidden}
-  @media(min-width:768px){.ap .hero{height:440px}}
-  @media(min-width:1024px){.ap .hero{height:520px}}
-  .ap .hero-img{width:100%;height:100%;object-fit:cover;transition:transform 8s ease}
-  .ap .hero:hover .hero-img{transform:scale(1.04)}
-  .ap .hero-ov{position:absolute;inset:0;background:linear-gradient(to top,rgba(20,15,10,.88) 0%,rgba(20,15,10,.28) 55%,rgba(0,0,0,.12) 100%)}
-  .ap .hero-grain{position:absolute;inset:0;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-  .ap .hero-bar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:16px 20px}
-  @media(min-width:1024px){.ap .hero-bar{padding:24px 48px}}
-  .ap .icon-btn{width:40px;height:40px;background:rgba(255,255,255,.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:#fff;flex-shrink:0}
-  .ap .icon-btn:hover{background:rgba(255,255,255,.22)}
-  .ap .icon-btn.saved{background:var(--red2);border-color:var(--red2)}
-  .ap .hero-acts{display:flex;gap:8px}
-  .ap .hero-bot{position:absolute;bottom:0;left:0;right:0;z-index:10;padding:0 20px 28px}
-  @media(min-width:1024px){.ap .hero-bot{padding:0 48px 44px}}
-  .ap .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px}
-  .ap .hero-eyebrow-line{width:24px;height:1px;background:rgba(255,255,255,.35)}
-  .ap .hero-eyebrow-txt{font-size:10px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,.45)}
-  .ap .hero-name{font-family:'Playfair Display',serif;font-size:clamp(36px,6vw,80px);font-weight:900;line-height:.93;color:#fff;letter-spacing:-2px;margin-bottom:18px}
-  .ap .hero-name em{font-style:italic;color:rgba(255,255,255,.4)}
-  .ap .hero-meta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-  .ap .hero-meta-item{display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.6)}
-  .ap .hero-meta-item strong{color:#fff;font-weight:600}
+@keyframes papFadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-  /* PROFILE STRIP */
-  .ap .strip{background:var(--cream);border-bottom:1px solid var(--border);position:relative;z-index:30}
-  .ap .strip-in{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;align-items:flex-end;gap:20px}
-  @media(min-width:1024px){.ap .strip-in{padding:0 48px}}
-  .ap .av-wrap{flex-shrink:0;margin-top:-52px;position:relative}
-  @media(min-width:768px){.ap .av-wrap{margin-top:-68px}}
-  .ap .av{width:88px;height:88px;border:3px solid var(--cream);overflow:hidden;background:var(--cream2);box-shadow:0 8px 28px rgba(0,0,0,.18)}
-  @media(min-width:768px){.ap .av{width:112px;height:112px}}
-  .ap .av img{width:100%;height:100%;object-fit:cover}
-  .ap .av-fallback{width:100%;height:100%;background:linear-gradient(135deg,var(--ink) 0%,var(--ink2) 100%);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:34px;font-weight:700;color:#fff}
-  .ap .av-badge{position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:var(--red2);display:flex;align-items:center;justify-content:center}
-  .ap .strip-info{flex:1;padding:14px 0 18px}
-  .ap .strip-type{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:3px}
-  .ap .strip-name{font-family:'Playfair Display',serif;font-size:clamp(18px,2.8vw,28px);font-weight:700;color:var(--ink);letter-spacing:-.5px;line-height:1.1}
-  .ap .strip-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
-  .ap .strip-meta-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink3)}
-  .ap .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-  .ap .tag{padding:2px 9px;font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;border:1px solid var(--border);color:var(--ink3)}
-  .ap .tag.g{border-color:var(--red);color:var(--red);background:rgba(200,16,46,.04)}
-  .ap .strip-cta{display:none;padding:14px 0 18px;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:8px}
-  @media(min-width:1024px){.ap .strip-cta{display:flex}}
-  .ap .price-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3)}
-  .ap .price-amt{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--ink);line-height:1.1;text-align:right}
-  .ap .btn-ink{display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;border:none;padding:13px 26px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif}
-  .ap .btn-ink:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(227,24,55,.25)}
+@keyframes papFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
-  /* LAYOUT */
-  .ap .layout{max-width:1280px;margin:0 auto;padding:32px 20px 110px;display:grid;grid-template-columns:1fr;gap:2px}
-  @media(min-width:1024px){.ap .layout{grid-template-columns:1fr 332px;gap:28px;padding:36px 48px 60px;align-items:start}}
-  .ap .col-main{display:flex;flex-direction:column;gap:2px}
-  .ap .col-side{display:none}
-  @media(min-width:1024px){.ap .col-side{display:block}}
-  .ap .side-sticky{position:sticky;top:80px;display:flex;flex-direction:column;gap:2px}
+@keyframes papPulse {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
 
-  /* CARDS */
-  .ap .card{background:#fff;padding:28px;border:1px solid var(--border)}
-  @media(max-width:767px){.ap .card{padding:20px 18px}}
-  .ap .card-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--ink);margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px}
-  .ap .card-title-icon{color:var(--red);flex-shrink:0}
+@keyframes papShimmer {
+  0% { background-position: -900px 0; }
+  100% { background-position: 900px 0; }
+}
 
-  /* BIO */
-  .ap .bio-txt{font-size:14px;line-height:1.85;color:var(--ink3)}
-  .ap .bio-more{display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif}
-  .ap .highlights{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
-  @media(max-width:639px){.ap .highlights{grid-template-columns:repeat(2,1fr)}}
-  .ap .hl{padding:14px;border-right:1px solid var(--border)}
-  .ap .hl:last-child{border-right:none}
-  .ap .hl-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
-  .ap .hl-val{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--ink)}
-  .ap .hl-val.green{color:#1A8A4A}
+.pap .fade-up-1 { animation: papFadeUp .65s cubic-bezier(.2,.8,.2,1) both; }
+.pap .fade-up-2 { animation: papFadeUp .65s .08s cubic-bezier(.2,.8,.2,1) both; }
+.pap .fade-up-3 { animation: papFadeUp .65s .16s cubic-bezier(.2,.8,.2,1) both; }
+.pap .fade-in { animation: papFadeIn .5s ease both; }
 
-  /* GALLERY */
-  .ap .gal-scroll{display:flex;gap:2px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:0 -20px;padding-left:20px}
-  .ap .gal-scroll::-webkit-scrollbar{display:none}
-  .ap .gal-item{flex-shrink:0;width:152px;height:152px;overflow:hidden;cursor:pointer;background:var(--cream2)}
-  .ap .gal-item img{width:100%;height:100%;object-fit:cover;transition:transform .45s}
-  .ap .gal-item:hover img{transform:scale(1.07)}
-  .ap .videos{display:grid;grid-template-columns:1fr;gap:2px;margin-top:2px}
-  @media(min-width:640px){.ap .videos{grid-template-columns:repeat(2,1fr)}}
-  .ap .vid-item{position:relative;aspect-ratio:16/9;overflow:hidden;cursor:pointer;background:var(--ink);text-decoration:none;display:block}
-  .ap .vid-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s;opacity:.72}
-  .ap .vid-item:hover img{transform:scale(1.06);opacity:.5}
-  .ap .vid-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-  .ap .vid-play-btn{width:48px;height:48px;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;transition:all .2s}
-  .ap .vid-item:hover .vid-play-btn{background:#fff;transform:scale(1.1)}
-  .ap .vid-cap{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:linear-gradient(to top,rgba(0,0,0,.7),transparent);font-size:11px;color:rgba(255,255,255,.85);font-weight:500}
-  .ap .vid-divider{height:2px;background:var(--border);margin:22px -28px}
-  .ap .vid-section-label{display:flex;align-items:center;gap:9px;margin-bottom:14px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
+.pap .shell{
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+@media (min-width: 768px){
+  .pap .shell{ padding: 0 24px; }
+}
+@media (min-width: 1024px){
+  .pap .shell{ padding: 0 32px; }
+}
 
-  /* ACCOLADES */
-  .ap .accolade{display:flex;gap:18px;align-items:flex-start;padding:22px 0;border-bottom:1px solid var(--border);transition:padding-left .3s}
-  .ap .accolade:first-child{padding-top:0}
-  .ap .accolade:last-child{border-bottom:none;padding-bottom:0}
-  .ap .accolade:hover{padding-left:8px}
-  .ap .acc-year{font-family:'DM Mono',monospace;font-size:11px;color:var(--red);font-weight:500;letter-spacing:1px;flex-shrink:0;padding-top:2px;width:40px}
-  .ap .acc-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:3px}
-  .ap .acc-org{font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
-  .ap .acc-desc{font-size:12px;color:var(--ink3);line-height:1.65}
+.pap .hero{
+  position: relative;
+  min-height: 82vh;
+  max-height: 920px;
+  overflow: hidden;
+  background: #0f172a;
+}
+.pap .hero-media{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center 18%;
+  transform: scale(1.01);
+  filter: saturate(1.02) contrast(1.02);
+}
+.pap .hero-overlay{
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg, rgba(15,23,42,0.12) 0%, rgba(15,23,42,0.22) 28%, rgba(15,23,42,0.72) 78%, rgba(15,23,42,0.92) 100%),
+    linear-gradient(90deg, rgba(91,108,255,0.22), transparent 36%, rgba(124,58,237,0.20));
+}
+.pap .hero-glow{
+  position:absolute;
+  width: 560px;
+  height: 560px;
+  border-radius: 999px;
+  filter: blur(72px);
+  background: rgba(91,108,255,0.18);
+  top: -140px;
+  right: -120px;
+  pointer-events:none;
+}
 
-  /* CONTACT */
-  .ap .contact-list{display:flex;flex-direction:column;gap:2px}
-  .ap .contact-item{display:flex;align-items:center;gap:13px;padding:14px;background:var(--cream2);transition:background .2s;text-decoration:none;color:var(--ink)}
-  .ap .contact-item:hover{background:var(--cream3)}
-  .ap .contact-icon{width:34px;height:34px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .ap .contact-txt{font-size:13px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ap .social-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
-  .ap .soc-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all .2s;border:1px solid rgba(0,0,0,.08)}
-  .ap .soc-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.14);border-color:transparent}
+.pap .hero-top{
+  position:absolute;
+  inset:0 0 auto 0;
+  z-index:20;
+  padding: 16px 0;
+}
+@media (min-width: 768px){
+  .pap .hero-top{ padding: 24px 0; }
+}
+.pap .hero-top-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.pap .icon-btn{
+  width:44px;
+  height:44px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.10);
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+.pap .icon-btn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.26);
+}
+.pap .hero-actions{
+  display:flex;
+  gap:10px;
+}
 
-  /* SIDEBAR */
-  .ap .booking-card{background:#fff;padding:28px;border:1px solid var(--border)}
-  .ap .bp-row{padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--border)}
-  .ap .bp-lbl{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
-  .ap .bp-amt{font-family:'Playfair Display',serif;font-size:38px;font-weight:900;color:var(--ink);line-height:1}
-  .ap .book-note{font-size:11px;color:var(--ink3);margin-top:10px;text-align:center}
-  .ap .guarantees{margin-top:22px;padding-top:22px;border-top:1px solid var(--border)}
-  .ap .guar-item{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--ink3)}
-  .ap .guar-item:last-child{border-bottom:none}
-  .ap .guar-dot{width:5px;height:5px;background:var(--red2);flex-shrink:0}
+.pap .hero-content{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:20;
+  padding: 0 0 26px 0;
+}
+@media (min-width: 768px){
+  .pap .hero-content{ padding-bottom: 40px; }
+}
+.pap .hero-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items:end;
+}
+@media (min-width: 1024px){
+  .pap .hero-grid{
+    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 380px);
+    gap: 28px;
+  }
+}
 
-  /* MOBILE CTA */
-  .ap .mob-cta{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:100;background:#fff;border-top:1px solid var(--border);padding:12px 18px;gap:14px;align-items:center}
-  @media(min-width:1024px){.ap .mob-cta{display:none}}
-  .ap .mob-cta-lbl{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
-  .ap .mob-cta-amt{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--ink)}
+.pap .hero-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+  border:1px solid rgba(255,255,255,0.16);
+  width: fit-content;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.pap .hero-badge-text{
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.pap .hero-title{
+  margin-top: 14px;
+  font-family: 'Cormorant Garamond', serif;
+  color:#fff;
+  font-size: clamp(42px, 8vw, 92px);
+  line-height: .92;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  text-wrap: balance;
+}
+.pap .hero-title em{
+  font-style: italic;
+  font-weight: 500;
+  opacity: .78;
+}
+.pap .hero-meta{
+  margin-top: 16px;
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pap .pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.10);
+  border:1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  font-size: 13px;
+  line-height: 1;
+}
+.pap .pill strong{ font-weight: 800; }
+.pap .pill--star{
+  background: rgba(245,158,11,0.16);
+  border-color: rgba(245,158,11,0.25);
+}
+.pap .pill--success{
+  background: rgba(34,197,94,0.14);
+  border-color: rgba(34,197,94,0.24);
+}
+.pap .hero-cta-card{
+  display:none;
+  background: rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 18px;
+  color:#fff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.16);
+}
+@media (min-width: 1024px){
+  .pap .hero-cta-card{
+    display:block;
+  }
+}
+.pap .hero-cta-label{
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.72);
+  font-weight: 700;
+}
+.pap .hero-cta-price{
+  margin-top: 8px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 700;
+}
+.pap .hero-cta-sub{
+  margin-top: 8px;
+  color: rgba(255,255,255,0.82);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.pap .hero-cta-row{
+  display:flex;
+  gap:10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
 
-  /* ERROR */
-  .ap .err-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
-  .ap .err-box{text-align:center;max-width:380px}
-  .ap .err-icon{width:68px;height:68px;background:var(--cream2);display:flex;align-items:center;justify-content:center;margin:0 auto 22px}
-  .ap .err-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--ink);margin-bottom:10px}
-  .ap .err-sub{font-size:14px;color:var(--ink3);margin-bottom:28px;line-height:1.65}
+.pap .identity{
+  margin-top: -34px;
+  position: relative;
+  z-index: 10;
+}
+@media (min-width: 768px){
+  .pap .identity{ margin-top: -58px; }
+}
+.pap .identity-card{
+  background: rgba(255,255,255,0.92);
+  border:1px solid rgba(255,255,255,0.9);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+@media (min-width: 768px){
+  .pap .identity-card{ padding: 20px; }
+}
+.pap .identity-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items:center;
+}
+@media (min-width: 1024px){
+  .pap .identity-grid{
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px;
+  }
+}
+.pap .identity-left{
+  display:flex;
+  gap: 16px;
+  align-items:flex-start;
+  min-width:0;
+}
+.pap .avatar-wrap{
+  position:relative;
+  flex-shrink:0;
+  margin-top: -52px;
+}
+@media (min-width: 768px){
+  .pap .avatar-wrap{ margin-top: -66px; }
+}
+.pap .avatar{
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  overflow:hidden;
+  border: 5px solid rgba(255,255,255,0.96);
+  background:#e5e7eb;
+  box-shadow: 0 12px 30px rgba(15,23,42,0.14);
+}
+@media (min-width: 768px){
+  .pap .avatar{ width: 124px; height: 124px; }
+}
+.pap .avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.pap .avatar-fallback{
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(135deg, #1f2937, #4f46e5);
+  color:#fff;
+  font-size: 42px;
+  font-family:'Cormorant Garamond', serif;
+  font-weight:700;
+}
+.pap .verified{
+  position:absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius:999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  border: 3px solid #fff;
+}
+.pap .identity-copy{ min-width:0; padding-top: 4px; }
+.pap .identity-type{
+  color: var(--accent);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 800;
+}
+.pap .identity-name{
+  margin-top: 6px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(26px, 3.7vw, 42px);
+  line-height: 1.04;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+}
+.pap .identity-sub{
+  margin-top: 10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px 16px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pap .sub-item{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+}
+.pap .tag-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.pap .tag{
+  border:1px solid rgba(15,23,42,0.10);
+  background: #f8fafc;
+  color: #334155;
+  border-radius:999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height:1;
+}
+.pap .tag--accent{
+  background: var(--accentSoft);
+  color: #3346d6;
+  border-color: rgba(91,108,255,0.18);
+}
+.pap .identity-right{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (min-width: 1024px){
+  .pap .identity-right{
+    justify-content:flex-end;
+    flex-wrap: nowrap;
+    gap: 14px;
+  }
+}
+.pap .price-card{
+  flex: 1;
+  min-width: 220px;
+  background: linear-gradient(180deg, #ffffff, #f9fbff);
+  border:1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+}
+@media (min-width: 1024px){
+  .pap .price-card{
+    min-width: 250px;
+  }
+}
+.pap .price-label{
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.pap .price-value{
+  margin-top: 8px;
+  font-family:'Cormorant Garamond', serif;
+  font-size: 38px;
+  line-height:1;
+  font-weight:700;
+  color: var(--text);
+}
+.pap .price-note{
+  margin-top: 6px;
+  color: var(--text3);
+  font-size: 13px;
+}
+.pap .action-stack{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+}
+@media (min-width: 1024px){
+  .pap .action-stack{
+    justify-content:flex-end;
+  }
+}
 
-  /* MISC */
-  .ap .flex-between{display:flex;justify-content:space-between;align-items:center}
-  .ap .see-all{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif}
-  .ap .lbox-img{width:100%;max-height:80vh;object-fit:contain}
-  .ap .stars{display:flex;gap:2px}
+.pap .btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+  border:none;
+  border-radius: 16px;
+  padding: 13px 18px;
+  cursor:pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+  white-space: nowrap;
+}
+.pap .btn:hover{
+  transform: translateY(-1px);
+}
+.pap .btn-primary{
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color:#fff;
+  box-shadow: 0 12px 26px rgba(91,108,255,0.25);
+}
+.pap .btn-primary:hover{
+  box-shadow: 0 16px 30px rgba(91,108,255,0.30);
+}
+.pap .btn-secondary{
+  background:#fff;
+  color: var(--text);
+  border:1px solid var(--line2);
+}
+.pap .btn-secondary:hover{
+  border-color: rgba(91,108,255,0.22);
+  background:#f8faff;
+}
+.pap .btn-soft{
+  background: var(--accentSoft);
+  color: #3346d6;
+  border:1px solid rgba(91,108,255,0.12);
+}
+.pap .btn-soft:hover{
+  background: rgba(91,108,255,0.14);
+}
 
-  /* TECH RIDER */
-  .ap .tech-rider-card{background:#fff;padding:28px;border:1px solid var(--border)}
-  .ap .tr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:20px}
-  .ap .tr-item{padding:14px;border-bottom:1px solid var(--border)}
-  .ap .tr-item:last-child{border-bottom:none}
-  .ap .tr-item.tr-full{grid-column:1/-1}
-  .ap .tr-lbl{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px}
-  .ap .tr-txt{font-size:12px;color:var(--ink3)}
-  .ap .tr-file{display:flex;align-items:center;gap:20px;margin-top:20px}
-  .ap .tr-file-info{display:flex;align-items:center;gap:10px}
-  .ap .tr-file-meta{display:flex;flex-direction:column;gap:4px}
-  .ap .tr-file-name{font-size:12px;font-weight:600;color:var(--ink)}
-  .ap .tr-file-type{font-size:10px;color:var(--ink3)}
-  .ap .tr-file-actions{display:flex;gap:10px}
-  .ap .tr-btn{display:inline-flex;align-items:center;gap:9px;background:var(--ink);color:#fff;border:none;padding:13px 26px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif}
-  .ap .tr-btn:hover{background:var(--red2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(227,24,55,.25)}
-  .ap .tr-btn-view{background:var(--ink2);color:var(--ink)}
-  .ap .tr-btn-view:hover{background:var(--ink3)}
-  .ap .tr-btn-download{background:var(--red);color:#fff}
-  .ap .tr-btn-download:hover{background:var(--red2)}
+.pap .layout{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-top: 18px;
+  padding-bottom: 120px;
+}
+@media (min-width: 1024px){
+  .pap .layout{
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 24px;
+    margin-top: 24px;
+    padding-bottom: 70px;
+  }
+}
+.pap .main{
+  display:flex;
+  flex-direction:column;
+  gap: 18px;
+}
+.pap .side{
+  display:none;
+}
+@media (min-width: 1024px){
+  .pap .side{
+    display:block;
+  }
+}
+.pap .sticky{
+  position: sticky;
+  top: 100px;
+  display:flex;
+  flex-direction:column;
+  gap: 16px;
+}
+
+.pap .section{
+  background: rgba(255,255,255,0.90);
+  border:1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.04);
+  overflow:hidden;
+}
+.pap .section-inner{
+  padding: 18px;
+}
+@media (min-width: 768px){
+  .pap .section-inner{
+    padding: 24px;
+  }
+}
+.pap .section-head{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.pap .section-dot{
+  width: 10px;
+  height: 10px;
+  border-radius:999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 0 0 6px rgba(91,108,255,0.09);
+}
+.pap .section-kicker{
+  font-size: 11px;
+  letter-spacing: .20em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--accent);
+}
+.pap .section-title{
+  font-family:'Cormorant Garamond', serif;
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.03em;
+}
+.pap .section-sub{
+  margin-top: 8px;
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.8;
+  max-width: 72ch;
+}
+.pap .read-more{
+  margin-top: 10px;
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  border:none;
+  background:none;
+  padding:0;
+  color: var(--accent);
+  font-weight: 700;
+  cursor:pointer;
+}
+
+.pap .mini-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
+@media (min-width: 640px){
+  .pap .mini-grid{
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.pap .mini-card{
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  border:1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+}
+.pap .mini-label{
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.pap .mini-value{
+  margin-top: 8px;
+  font-family:'Cormorant Garamond', serif;
+  font-size: 26px;
+  line-height:1.1;
+  font-weight:700;
+  color: var(--text);
+}
+.pap .mini-value.success{
+  color: var(--success);
+}
+
+.pap .scroll-row{
+  display:flex;
+  gap: 12px;
+  overflow-x:auto;
+  padding-bottom: 8px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling: touch;
+}
+.pap .scroll-row::-webkit-scrollbar{ display:none; }
+.pap .thumb{
+  flex: 0 0 auto;
+  width: 186px;
+  height: 232px;
+  border-radius: 20px;
+  overflow:hidden;
+  position:relative;
+  background:#e5e7eb;
+  border:1px solid var(--line);
+  cursor:pointer;
+}
+@media (min-width: 640px){
+  .pap .thumb{ width: 208px; height: 246px; }
+}
+.pap .thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition: transform .5s ease;
+}
+.pap .thumb:hover img{
+  transform: scale(1.05);
+}
+.pap .thumb-overlay{
+  position:absolute;
+  inset:0;
+  background: linear-gradient(180deg, rgba(15,23,42,0.0), rgba(15,23,42,0.18));
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  padding: 12px;
+}
+.pap .thumb-caption{
+  color:#fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.pap .thumb-icon{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.94);
+  color: #111827;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.pap .video-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px){
+  .pap .video-grid{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.pap .video{
+  position:relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 22px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  background:#111827;
+  display:block;
+  text-decoration:none;
+}
+.pap .video img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  opacity:.72;
+  transition: transform .45s ease, opacity .45s ease;
+}
+.pap .video:hover img{
+  transform: scale(1.04);
+  opacity:.60;
+}
+.pap .video-center{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.pap .video-play{
+  width:58px;
+  height:58px;
+  border-radius:999px;
+  background: rgba(255,255,255,0.96);
+  color:#111827;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.22);
+}
+.pap .video-caption{
+  position:absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 14px 12px;
+  background: linear-gradient(to top, rgba(15,23,42,.88), rgba(15,23,42,0));
+  color: rgba(255,255,255,.94);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pap .section-divider{
+  height:1px;
+  background: var(--line);
+  margin: 18px 0;
+}
+
+.pap .rider-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 768px){
+  .pap .rider-grid{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.pap .rider-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+}
+.pap .rider-card.full{
+  grid-column: 1 / -1;
+}
+.pap .rider-label{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  font-size: 11px;
+  font-weight: 800;
+}
+.pap .rider-text{
+  margin-top: 10px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.pap .file-card{
+  margin-top: 14px;
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  border:1px solid var(--line);
+  border-radius: 22px;
+}
+@media (min-width: 768px){
+  .pap .file-card{
+    align-items:center;
+    justify-content:space-between;
+    flex-direction:row;
+  }
+}
+.pap .file-left{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+}
+.pap .file-icon{
+  width:48px;
+  height:48px;
+  border-radius: 16px;
+  background: var(--accentSoft);
+  color: var(--accent);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+.pap .file-name{
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.pap .file-type{
+  margin-top: 2px;
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.pap .award-list{
+  display:flex;
+  flex-direction:column;
+  gap: 0;
+}
+.pap .award{
+  display:grid;
+  grid-template-columns: 64px 1fr;
+  gap: 14px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.pap .award:first-child{
+  border-top:none;
+  padding-top: 0;
+}
+.pap .award-year{
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-family: 'Inter', sans-serif;
+  padding-top: 3px;
+}
+.pap .award-title{
+  font-family:'Cormorant Garamond', serif;
+  font-size: 28px;
+  line-height:1.1;
+  font-weight:700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.pap .award-org{
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.pap .award-desc{
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text2);
+}
+
+.pap .contact-list{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.pap .contact-item{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  text-decoration:none;
+  color: var(--text2);
+  background: #fff;
+  border:1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 16px;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+.pap .contact-item:hover{
+  transform: translateY(-1px);
+  background: #f8fbff;
+  border-color: rgba(91,108,255,0.18);
+}
+.pap .contact-icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: var(--accent);
+  flex-shrink:0;
+}
+.pap .contact-text{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space: nowrap;
+}
+.pap .social-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pap .social{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: #fff;
+  border:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.pap .social:hover{
+  transform: translateY(-2px);
+  box-shadow: var(--shadow2);
+}
+
+.pap .sidebar-card{
+  background: rgba(255,255,255,0.94);
+  border:1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.04);
+  padding: 18px;
+}
+.pap .sidebar-heading{
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.pap .sidebar-price{
+  margin-top: 8px;
+  font-family:'Cormorant Garamond', serif;
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--text);
+}
+.pap .sidebar-note{
+  margin-top: 10px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.pap .sidebar-actions{
+  margin-top: 18px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.pap .guarantees{
+  margin-top: 18px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.pap .guarantee{
+  display:flex;
+  align-items:flex-start;
+  gap: 10px;
+  color: var(--text2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.pap .guarantee-badge{
+  width: 22px;
+  height: 22px;
+  border-radius:999px;
+  background: var(--successSoft);
+  color: var(--success);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  margin-top: 1px;
+}
+
+.pap .mobile-bar{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index: 80;
+  background: rgba(255,255,255,0.90);
+  border-top:1px solid var(--line);
+  box-shadow: 0 -10px 40px rgba(15,23,42,0.08);
+  padding: 12px 14px max(12px, env(safe-area-inset-bottom)) 14px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+@media (min-width: 1024px){
+  .pap .mobile-bar{ display:none; }
+}
+.pap .mobile-bar-inner{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+}
+.pap .mobile-price{
+  flex: 1;
+  min-width: 0;
+}
+.pap .mobile-label{
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.pap .mobile-amount{
+  margin-top: 4px;
+  font-family:'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight:700;
+  color: var(--text);
+  line-height:1;
+}
+.pap .mobile-actions{
+  display:flex;
+  gap: 8px;
+  flex-shrink:0;
+}
+.pap .mobile-actions .btn{
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.pap .empty{
+  padding: 24px;
+  color: var(--text3);
+  background: #fff;
+  border:1px dashed var(--line2);
+  border-radius: 22px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.pap .skeleton{
+  background: linear-gradient(90deg, #eef2ff 25%, #f8fafc 50%, #eef2ff 75%);
+  background-size: 900px 100%;
+  animation: papShimmer 1.4s infinite linear;
+  border-radius: 20px;
+}
+
+.pap .error-wrap{
+  min-height: 60vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 48px 0;
+}
+.pap .error-card{
+  max-width: 460px;
+  width: 100%;
+  text-align:center;
+  background: rgba(255,255,255,0.94);
+  border:1px solid var(--line);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+.pap .error-icon{
+  width: 76px;
+  height: 76px;
+  border-radius: 999px;
+  margin: 0 auto 18px;
+  background: var(--accentSoft);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: var(--accent);
+}
+.pap .error-title{
+  font-family:'Cormorant Garamond', serif;
+  font-size: 34px;
+  font-weight:700;
+  line-height:1.1;
+  color: var(--text);
+}
+.pap .error-sub{
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text2);
+  font-weight: 500;
+}
+.pap .lb-img{
+  width:100%;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: 16px;
+}
 `;
 
-/* ─── Social map ──────────────────────────────────────────────────────────── */
-const SOC_COLOR: Record<string, string> = {
-  instagram: "linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)",
-  youtube: "#FF0000", facebook: "#1877F2", twitter: "#1DA1F2",
-  spotify: "#1DB954", website: "#1A1714",
-};
-const SOC_ICON: Record<string, React.ReactNode> = {
-  instagram: <Instagram size={15} />, youtube: <Youtube size={15} />,
-  facebook: <Facebook size={15} />, twitter: <Twitter size={15} />,
-  spotify: <Music size={15} />, website: <Globe size={15} />,
-};
-
-/* ─── StarRow ─────────────────────────────────────────────────────────────── */
 function Stars({ score }: { score: number }) {
+  const rating = Math.round(score);
   return (
-    <span className="stars">
-      {[1,2,3,4,5].map(i => (
-        <svg key={i} width="12" height="12" viewBox="0 0 24 24"
-          fill={i <= Math.round(score) ? "#F59E0B" : "none"}
-          stroke="#F59E0B" strokeWidth="2">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    <span className="inline-flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg
+          key={i}
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill={i <= rating ? "#f59e0b" : "none"}
+          stroke={i <= rating ? "#f59e0b" : "#cbd5e1"}
+          strokeWidth="1.7"
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       ))}
     </span>
   );
 }
 
-/* ─── Video Thumbnail Helper ──────────────────────────────────────────────── */
-function getVideoThumbnail(url: string, platform: string, existingThumbnail?: string): string {
-  // If thumbnail exists and is not a placeholder, use it
-  if (existingThumbnail && !existingThumbnail.includes("placeholder")) {
-    return existingThumbnail;
-  }
-  
+function getVideoThumbnail(
+  url: string,
+  platform: string,
+  existing?: string,
+  profilePic?: string
+): string {
+  if (existing && !existing.includes("placeholder")) return existing;
   try {
     if (platform === "youtube") {
-      const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-      if (match) {
-        return `https://img.youtube.com/vi/${match[1]}/maxresdefault.jpg`;
-      }
-    } else if (platform === "vimeo") {
-      const match = url.match(/vimeo\.com\/(\d+)/);
-      if (match) {
-        return `https://vumbnail.com/${match[1]}.jpg`;
-      }
+      const m = url.match(
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/
+      );
+      if (m) return `https://img.youtube.com/vi/${m[1]}/maxresdefault.jpg`;
+    }
+    if (platform === "vimeo") {
+      const m = url.match(/vimeo\.com\/(\d+)/);
+      if (m) return `https://vumbnail.com/${m[1]}.jpg`;
     }
   } catch {
-    // Fall through to default
+    // ignore
   }
-  
-  // Return default placeholder based on platform
-  return "/images/video-placeholder.jpg";
+  return profilePic || "/images/video-placeholder.jpg";
 }
 
-/* ─── ContactBlock ────────────────────────────────────────────────────────── */
-function ContactBlock({ artist }: { artist: Artist }) {
-  const socials = Object.entries(artist.socialLinks || {}).filter(([, v]) => !!v);
+function SocialLinks({ artist }: { artist: Artist }) {
+  const socials = Object.entries(artist.socialLinks || {}).filter(([, url]) => !!url);
+  if (!socials.length) return null;
+
   return (
-    <>
-      <div className="contact-list">
-        <a href={`tel:${artist.phone}`} className="contact-item">
-          <div className="contact-icon"><Phone size={14} /></div>
-          <span className="contact-txt">{artist.phone}</span>
-        </a>
-        <a href={`mailto:${artist.email}`} className="contact-item">
-          <div className="contact-icon"><Mail size={14} /></div>
-          <span className="contact-txt">{artist.email}</span>
-        </a>
-      </div>
-      {socials.length > 0 && (
-        <div className="social-row">
-          {socials.map(([k, url]) => (
-            <a key={k} href={url as string} target="_blank" rel="noopener noreferrer"
-              className="soc-btn" style={{ background: SOC_COLOR[k] || "#1A1714", color: "#fff" }}
-              aria-label={k}>
-              {SOC_ICON[k]}
-            </a>
-          ))}
-        </div>
-      )}
-    </>
+    <div className="social-row">
+      {socials.map(([key, url]) => {
+        const meta = SOCIALS[key];
+        return (
+          <a
+            key={key}
+            href={url as string}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="social"
+            aria-label={key}
+            style={{
+              color: meta?.color || "#111827",
+              backgroundColor: meta ? `${meta.color}12` : undefined,
+            }}
+          >
+            {meta?.icon}
+          </a>
+        );
+      })}
+    </div>
   );
 }
 
-/* ─── Main component ──────────────────────────────────────────────────────── */
+function ContactBlock({ artist }: { artist: Artist }) {
+  return (
+    <div className="contact-list">
+      <a href={`tel:${artist.phone}`} className="contact-item">
+        <div className="contact-icon">
+          <Phone size={15} />
+        </div>
+        <span className="contact-text">{artist.phone}</span>
+      </a>
+
+      <a href={`mailto:${artist.email}`} className="contact-item">
+        <div className="contact-icon">
+          <Mail size={15} />
+        </div>
+        <span className="contact-text">{artist.email}</span>
+      </a>
+
+      <SocialLinks artist={artist} />
+    </div>
+  );
+}
+
+function EmptyState({ children }: { children: ReactNode }) {
+  return <div className="empty">{children}</div>;
+}
+
+function Section({
+  kicker,
+  title,
+  subtitle,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="section fade-up-1">
+      <div className="section-inner">
+        <div className="section-head">
+          <div className="section-dot" />
+          <div className="section-kicker">{kicker}</div>
+        </div>
+        <h2 className="section-title">{title}</h2>
+        {subtitle ? <p className="section-sub">{subtitle}</p> : null}
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function GuaranteeItem({ text }: { text: string }) {
+  return (
+    <div className="guarantee">
+      <div className="guarantee-badge">
+        <CheckCircle2 size={14} />
+      </div>
+      <span>{text}</span>
+    </div>
+  );
+}
+
 export default function PublicArtistProfile() {
   const params = useParams();
   const router = useRouter();
   const artistId = params.artistId as string;
 
-  const [artist, setArtist]         = useState<Artist | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [isOrg, setIsOrg]           = useState(false);
-  const [showBook, setShowBook]     = useState(false);
-  const [bioOpen, setBioOpen]       = useState(false);
-  const [lightbox, setLightbox]     = useState<string | null>(null);
-  const [saved, setSaved]           = useState(false);
+  const [artist, setArtist] = useState<Artist | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isOrg, setIsOrg] = useState(false);
+  const [bioOpen, setBioOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showBook, setShowBook] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
-  useEffect(() => { fetchArtist(); checkOrg(); }, [artistId]);
+  useEffect(() => {
+    let mounted = true;
 
-  const fetchArtist = async () => {
-    try {
-      const res = await fetch(`/api/artist/public/${artistId}`);
-      if (!res.ok) throw new Error("not found");
-      const data = await res.json();
-      setArtist(data.data.artist);
-    } catch { setError("Artist not found or unavailable"); }
-    finally   { setLoading(false); }
-  };
+    async function fetchArtist() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/artist/public/${artistId}`);
+        if (!res.ok) throw new Error("Artist not found");
+        const data = await res.json();
+        if (mounted) setArtist(data?.data?.artist ?? null);
+      } catch {
+        if (mounted) setError("Artist not found or unavailable.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
 
-  const checkOrg = () => setIsOrg(!!localStorage.getItem("organizer_token"));
+    fetchArtist();
+
+    if (typeof window !== "undefined") {
+      setIsOrg(!!localStorage.getItem("organizer_token"));
+      setSaved(localStorage.getItem(`saved-artist-${artistId}`) === "1");
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [artistId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (saved) localStorage.setItem(`saved-artist-${artistId}`, "1");
+    else localStorage.removeItem(`saved-artist-${artistId}`);
+  }, [saved, artistId]);
 
   const handleShare = useCallback(async () => {
-    if (navigator.share && artist) {
-      try { await navigator.share({ title: `${artist.name} – AHiBi`, url: window.location.href }); }
-      catch { navigator.clipboard.writeText(window.location.href); }
-    } else { navigator.clipboard.writeText(window.location.href); }
+    if (!artist || typeof window === "undefined") return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${artist.name} — AHiBi`,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+      } catch {
+        // ignore
+      }
+    }
   }, [artist]);
 
-  const handleBook = () => {
+  const handleBook = useCallback(() => {
     const bookingPath = `/artist/profile/${artistId}/booking`;
-    if (isOrg) router.push(bookingPath);
-    else window.location.href = createRoleAuthRedirectUrl("organizer", bookingPath);
-  };
+    if (isOrg) {
+      router.push(bookingPath);
+      return;
+    }
+    if (typeof window !== "undefined") {
+      window.location.href = createRoleAuthRedirectUrl("organizer", bookingPath);
+    }
+  }, [artistId, isOrg, router]);
 
-  /* ── LOADING ── */
-  if (loading) return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <div className="ap">
-        <Navbar />
-        <div className="skel" style={{ height: 400 }} />
-        <div style={{ background: "#fff", borderBottom: "1px solid #DDD8CF", padding: "0 20px" }}>
-          <div style={{ display: "flex", gap: 16, alignItems: "flex-end", paddingBottom: 18 }}>
-            <div className="skel" style={{ width: 88, height: 88, marginTop: -44, flexShrink: 0 }} />
-            <div style={{ flex: 1, paddingBottom: 8 }}>
-              <div className="skel" style={{ height: 12, width: 60, marginBottom: 10 }} />
-              <div className="skel" style={{ height: 24, width: 180, marginBottom: 8 }} />
-              <div className="skel" style={{ height: 11, width: 140 }} />
+  const coverImg = useMemo(
+    () =>
+      artist?.gallery?.photos?.find((p) => p.isCoverImage)?.url ||
+      "/images/carausel1.jpg",
+    [artist]
+  );
+
+  const profileImg = useMemo(
+    () =>
+      artist?.gallery?.photos?.find((p) => p.isProfileImage)?.url ||
+      artist?.profilePic,
+    [artist]
+  );
+
+  const galleryPics = useMemo(
+    () => artist?.gallery?.photos || [],
+    [artist]
+  );
+
+  const videos = useMemo(() => artist?.gallery?.videos || [], [artist]);
+
+  const price = Number(artist?.basePrice ?? 0);
+  const hasPrice = Number.isFinite(price) && price > 0;
+  const priceLabel = hasPrice ? `₹${price.toLocaleString()}` : "On request";
+  const bio = artist?.bio || "";
+  const longBio = bio.length > 260;
+  const artistBook = useMemo(
+    () => (artist ? { ...artist, basePrice: hasPrice ? price : 0 } : null),
+    [artist, hasPrice, price]
+  );
+
+  const nameParts = artist?.name?.trim().split(/\s+/) || [];
+  const firstName = nameParts[0] || "";
+  const restName = nameParts.slice(1).join(" ");
+
+  if (loading) {
+    return (
+      <>
+          <Navbar />
+        <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+        <div className="pap">
+          <div className="hero">
+            <div className="skeleton w-full h-full" />
+          </div>
+          <div className="shell">
+            <div className="identity">
+              <div className="identity-card">
+                <div className="identity-grid">
+                  <div className="identity-left">
+                    <div className="avatar-wrap">
+                      <div className="avatar skeleton" />
+                    </div>
+                    <div className="identity-copy" style={{ width: "100%" }}>
+                      <div className="skeleton" style={{ height: 10, width: 82, borderRadius: 999 }} />
+                      <div className="skeleton" style={{ height: 40, width: "60%", marginTop: 10, borderRadius: 12 }} />
+                      <div className="skeleton" style={{ height: 18, width: "72%", marginTop: 12, borderRadius: 12 }} />
+                      <div className="skeleton" style={{ height: 32, width: "82%", marginTop: 14, borderRadius: 999 }} />
+                    </div>
+                  </div>
+                  <div className="price-card skeleton" style={{ minHeight: 170 }} />
+                </div>
+              </div>
+            </div>
+            <div className="layout">
+              <div className="main">
+                <div className="skeleton" style={{ height: 280, borderRadius: 28 }} />
+                <div className="skeleton" style={{ height: 320, borderRadius: 28 }} />
+              </div>
+              <div className="side">
+                <div className="skeleton" style={{ height: 360, borderRadius: 28 }} />
+              </div>
             </div>
           </div>
+          <Footer />
         </div>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 20px", display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-          {[180, 140, 120].map((h, i) => <div key={i} className="skel" style={{ height: h }} />)}
-        </div>
-        <Footer />
-      </div>
-    </>
-  );
+      </>
+    );
+  }
 
-  /* ── ERROR ── */
-  if (error || !artist) return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <div className="ap err-wrap">
-        <div className="err-box">
-          <div className="err-icon"><Users size={30} color="#6B6259" /></div>
-          <h1 className="err-title">Artist Not Found</h1>
-          <p className="err-sub">{error || "This artist doesn't exist or has been removed."}</p>
-          <button className="btn-ink" onClick={() => router.back()}>
-            <ChevronLeft size={15} /> Go Back
-          </button>
+  if (error || !artist) {
+    return (
+      <>
+          <Navbar />
+        <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+        <div className="pap">
+          <div className="shell error-wrap">
+            <div className="error-card">
+              <div className="error-icon">
+                <Users size={28} />
+              </div>
+              <h1 className="error-title">Artist not found</h1>
+              <p className="error-sub">
+                {error || "This artist doesn't exist or has been removed from the platform."}
+              </p>
+              <div style={{ marginTop: 22, display: "flex", justifyContent: "center" }}>
+                <button className="btn btn-primary" onClick={() => router.back()}>
+                  <ChevronLeft size={16} />
+                  Go back
+                </button>
+              </div>
+            </div>
+          </div>
+          <Footer />
         </div>
-      </div>
-    </>
-  );
-
-  /* ── DERIVED ── */
-  const coverImg     = artist.gallery?.photos?.find(p => p.isCoverImage)?.url  || "/images/carausel1.jpg";
-  const profileImg   = artist.gallery?.photos?.find(p => p.isProfileImage)?.url || artist.profilePic;
-  const galleryPics  = artist.gallery?.photos?.filter(p => !p.isProfileImage && !p.isCoverImage) || [];
-  const videos       = artist.gallery?.videos || [];
-  const hasGallery   = galleryPics.length > 0 || videos.length > 0;
-  const price        = Number(artist.basePrice);
-  const hasPrice     = Number.isFinite(price) && price > 0;
-  const priceLbl     = hasPrice ? `\u20B9${price.toLocaleString()}` : "On request";
-  const BIO_MAX      = 240;
-  const longBio      = artist.bio && artist.bio.length > BIO_MAX;
-  const artistBook   = { ...artist, basePrice: hasPrice ? price : 0 };
+      </>
+    );
+  }
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <div className="ap">
         <Navbar />
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+      <div className="pap">
 
-        {/* ── Hero ── */}
-        <section className="hero fi">
-          <img src={coverImg} alt={artist.name} className="hero-img" />
-          <div className="hero-ov" />
-          <div className="hero-grain" />
+        <section className="hero fade-in">
+          <img src={coverImg} alt={artist.name} className="hero-media" />
+          <div className="hero-overlay" />
+          <div className="hero-glow" />
 
-          <div className="hero-bar">
-            <button className="icon-btn" onClick={() => router.back()} aria-label="Back">
-              <ChevronLeft size={17} />
-            </button>
-            <div className="hero-acts">
-              <button className="icon-btn" onClick={handleShare} aria-label="Share"><Share2 size={15} /></button>
-              <button className={`icon-btn${saved ? " saved" : ""}`} onClick={() => setSaved(!saved)} aria-label="Save">
-                <Heart size={15} fill={saved ? "#fff" : "none"} />
-              </button>
+          <div className="hero-top">
+            <div className="shell">
+              <div className="hero-top-inner">
+                <button className="icon-btn" onClick={() => router.back()} aria-label="Go back">
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="hero-actions">
+                  <button className="icon-btn" onClick={handleShare} aria-label="Share profile">
+                    <Share2 size={16} />
+                  </button>
+                  <button
+                    className="icon-btn"
+                    onClick={() => setSaved((prev) => !prev)}
+                    aria-label={saved ? "Unsave artist" : "Save artist"}
+                    style={{
+                      background: saved ? "rgba(91,108,255,0.22)" : undefined,
+                      borderColor: saved ? "rgba(255,255,255,0.32)" : undefined,
+                    }}
+                  >
+                    <Heart size={16} fill={saved ? "#fff" : "none"} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="hero-bot fu0">
-            <div className="hero-eyebrow">
-              <div className="hero-eyebrow-line" />
-              <span className="hero-eyebrow-txt">{artist.type}&nbsp;·&nbsp;{artist.city}</span>
-            </div>
-            <h1 className="hero-name">
-              {artist.name.split(" ")[0]}<br />
-              <em>{artist.name.split(" ").slice(1).join(" ") || "\u00A0"}</em>
-            </h1>
-            <div className="hero-meta">
-              {artist.rating && artist.rating.count > 0 && (
-                <span className="hero-meta-item">
-                  <Stars score={artist.rating.average} />
-                  <strong>{artist.rating.average.toFixed(1)}</strong>
-                  <span>({artist.rating.count})</span>
-                </span>
-              )}
-              {(artist.totalBookings ?? 0) > 0 && (
-                <span className="hero-meta-item">
-                  <CheckCircle size={13} />
-                  <strong>{artist.totalBookings}+</strong>&nbsp;bookings
-                </span>
-              )}
-              <span className="hero-meta-item"><MapPin size={13} />{artist.city}</span>
+          <div className="hero-content">
+            <div className="shell">
+              <div className="hero-grid">
+                <div>
+                  <div className="hero-badge fade-up-1">
+                    <Sparkles size={14} />
+                    <span className="hero-badge-text">
+                      {artist.type} · {artist.city}
+                    </span>
+                  </div>
+
+                  <h1 className="hero-title fade-up-2">
+                    {firstName}
+                    <br />
+                    {restName ? <em>{restName}</em> : null}
+                  </h1>
+
+                  <div className="hero-meta fade-up-3">
+                    {artist.rating && artist.rating.count > 0 ? (
+                      <span className="pill pill--star">
+                        <Stars score={artist.rating.average} />
+                        <strong>{artist.rating.average.toFixed(1)}</strong>
+                        <span>({artist.rating.count})</span>
+                      </span>
+                    ) : null}
+
+                    {(artist.totalBookings ?? 0) > 0 ? (
+                      <span className="pill pill--success">
+                        <CheckCircle2 size={12} />
+                        <strong>{artist.totalBookings}+</strong>
+                        <span>bookings</span>
+                      </span>
+                    ) : null}
+
+                    <span className="pill">
+                      <MapPin size={12} />
+                      {artist.city}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── Profile Strip ── */}
-        <div className="strip fu1">
-          <div className="strip-in">
-            <div className="av-wrap">
-              <div className="av">
-                {profileImg
-                  ? <img src={profileImg} alt={artist.name} />
-                  : <div className="av-fallback">{artist.name.charAt(0)}</div>}
-              </div>
-              {artist.rating && artist.rating.average >= 4.5 && (
-                <div className="av-badge"><Sparkles size={10} color="#fff" /></div>
-              )}
-            </div>
+        <div className="shell">
+          <div className="identity">
+            <div className="identity-card fade-up-1">
+              <div className="identity-grid">
+                <div className="identity-left">
+                  <div className="avatar-wrap">
+                    <div className="avatar">
+                      {profileImg ? (
+                        <img src={profileImg} alt={artist.name} />
+                      ) : (
+                        <div className="avatar-fallback">{artist.name.charAt(0)}</div>
+                      )}
+                    </div>
+                    {artist.rating && artist.rating.average >= 4.5 ? (
+                      <div className="verified">
+                        <Sparkles size={12} />
+                      </div>
+                    ) : null}
+                  </div>
 
-            <div className="strip-info">
-              <div className="strip-type">{artist.type}</div>
-              <div className="strip-name">{artist.name}</div>
-              <div className="strip-meta">
-                <span className="strip-meta-item"><MapPin size={11} color="var(--red)" />{artist.city}</span>
-                {artist.rating && artist.rating.count > 0 && (
-                  <span className="strip-meta-item">
-                    <Star size={11} fill="#F59E0B" color="#F59E0B" />
-                    {artist.rating.average.toFixed(1)}&nbsp;·&nbsp;{artist.rating.count} reviews
-                  </span>
-                )}
-              </div>
-              <div className="tags">
-                {artist.genres?.map(g => <span key={g} className="tag g">{g}</span>)}
-                {artist.languages?.map(l => <span key={l} className="tag">{l}</span>)}
-              </div>
-            </div>
+                  <div className="identity-copy">
+                    <div className="identity-type">{artist.type}</div>
+                    <div className="identity-name">{artist.name}</div>
+                    <div className="identity-sub">
+                      <span className="sub-item">
+                        <MapPin size={13} color="#5b6cff" />
+                        {artist.city}
+                      </span>
+                      {artist.rating && artist.rating.count > 0 ? (
+                        <span className="sub-item">
+                          <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                          {artist.rating.average.toFixed(1)} · {artist.rating.count} reviews
+                        </span>
+                      ) : null}
+                    </div>
 
-            <div className="strip-cta">
-              <div>
-                <div className="price-lbl">Starting from</div>
-                <div className="price-amt">{priceLbl}</div>
+                    <div className="tag-row">
+                      {artist.genres?.map((g) => (
+                        <span key={g} className="tag tag--accent">
+                          {g}
+                        </span>
+                      ))}
+                      {artist.languages?.map((l) => (
+                        <span key={l} className="tag">
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="identity-right">
+                  <div className="price-card">
+                    <div className="price-label">Starting from</div>
+                    <div className="price-value">{priceLabel}</div>
+                    <div className="price-note">
+                      Transparent pricing for events, performances, and bookings.
+                    </div>
+                  </div>
+
+                  <div className="action-stack">
+                    <button className="btn btn-soft" onClick={() => router.push(`/artist/profile/${artistId}/merch`)}>
+                      <ShoppingBag size={14} />
+                      View merch
+                    </button>
+                    <button className="btn btn-primary" onClick={handleBook}>
+                      <Calendar size={14} />
+                      {isOrg ? "Book this artist" : "Login to book"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button className="btn-ink" onClick={handleBook}>
-                <Calendar size={14} />{isOrg ? "Book This Artist" : "Login to Book"}
-              </button>
             </div>
           </div>
-        </div>
 
-        {/* ── Main layout ── */}
-        <div className="layout">
-
-          {/* Left column */}
-          <main className="col-main fu2">
-
-            {/* About */}
-            <div className="card">
-              <div className="card-title">About</div>
-              {artist.bio ? (
-                <>
-                  <p className="bio-txt">
-                    {bioOpen || !longBio ? artist.bio : `${artist.bio.slice(0, BIO_MAX)}\u2026`}
-                  </p>
-                  {longBio && (
-                    <button className="bio-more" onClick={() => setBioOpen(!bioOpen)}>
-                      {bioOpen ? "— Read less" : "+ Read more"}
-                    </button>
-                  )}
-                </>
-              ) : <p className="bio-txt" style={{ opacity: 0.45, fontStyle: "italic" }}>No biography available.</p>}
-
-              <div className="highlights">
-                <div className="hl">
-                  <div className="hl-lbl">Specialisation</div>
-                  <div className="hl-val">{artist.type}</div>
-                </div>
-                <div className="hl">
-                  <div className="hl-lbl">Base Price</div>
-                  <div className="hl-val green">{priceLbl}</div>
-                </div>
-                <div className="hl">
-                  <div className="hl-lbl">Location</div>
-                  <div className="hl-val">{artist.city}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Gallery */}
-            {hasGallery && (
-              <div className="card">
-                <div className="card-title flex-between">
-                  <span>Gallery</span>
-                  {galleryPics.length > 5 && (
-                    <button className="see-all">See all ({galleryPics.length})</button>
-                  )}
-                </div>
-
-                {galleryPics.length > 0 && (
-                  <div className="gal-scroll">
-                    {galleryPics.map((p, i) => (
-                      <div key={i} className="gal-item" onClick={() => setLightbox(p.url)}>
-                        <img src={p.url} alt={p.caption || `Photo ${i+1}`} />
-                      </div>
-                    ))}
-                  </div>
+          <div className="layout">
+            <main className="main">
+              <Section
+                kicker="About"
+                title="Artist overview"
+                subtitle="A cleaner, lighter presentation with mobile-first spacing, readable typography, and stronger visual hierarchy."
+              >
+                {bio ? (
+                  <>
+                    <p className="section-sub" style={{ marginTop: 0 }}>
+                      {bioOpen || !longBio ? bio : `${bio.slice(0, 260)}…`}
+                    </p>
+                    {longBio ? (
+                      <button className="read-more" onClick={() => setBioOpen((v) => !v)}>
+                        {bioOpen ? "Read less" : "Read more"}
+                        <ChevronRight size={15} style={{ transform: bioOpen ? "rotate(90deg)" : undefined }} />
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <EmptyState>No biography is available for this artist yet.</EmptyState>
                 )}
 
-                {videos.length > 0 && (
-                  <>
-                    <div className="vid-divider" />
-                    <div className="vid-section-label">
-                      <Play size={13} color="var(--red)" /> Performance Videos
-                    </div>
-                    <div className="videos">
-                      {videos.map((v, i) => (
-                        <a key={i} href={v.url} target="_blank" rel="noopener noreferrer" className="vid-item">
-                          <img 
-                            src={getVideoThumbnail(v.url, v.platform || "other", v.thumbnail)} 
-                            alt={v.caption || `Video ${i+1}`}
-                            onError={(e) => { (e.target as HTMLImageElement).src = "/images/video-placeholder.jpg"; }}
-                          />
-                          <div className="vid-play">
-                            <div className="vid-play-btn">
-                              <Play size={18} color="var(--ink)" fill="var(--ink)" />
+                <div className="mini-grid">
+                  <div className="mini-card">
+                    <div className="mini-label">Specialisation</div>
+                    <div className="mini-value">{artist.type}</div>
+                  </div>
+                  <div className="mini-card">
+                    <div className="mini-label">Base price</div>
+                    <div className="mini-value success">{priceLabel}</div>
+                  </div>
+                  <div className="mini-card">
+                    <div className="mini-label">Based in</div>
+                    <div className="mini-value">{artist.city}</div>
+                  </div>
+                </div>
+              </Section>
+
+              {(galleryPics.length > 0 || videos.length > 0) && (
+                <Section
+                  kicker="Gallery"
+                  title="Photos and performance videos"
+                  subtitle="Horizontal media lanes work better on mobile than dense grids, so the layout stays smooth and swipe-friendly."
+                >
+                  {galleryPics.length > 0 ? (
+                    <div className="scroll-row">
+                      {galleryPics.map((photo, index) => (
+                        <button
+                          key={`${photo.url}-${index}`}
+                          className="thumb"
+                          onClick={() => setLightbox(photo.url)}
+                          style={{ padding: 0, border: "none", background: "transparent" }}
+                        >
+                          <img src={photo.url} alt={photo.caption || `Photo ${index + 1}`} />
+                          <div className="thumb-overlay">
+                            <div className="thumb-caption">{photo.caption || `Photo ${index + 1}`}</div>
+                            <div className="thumb-icon">
+                              <ExternalLink size={16} />
                             </div>
                           </div>
-                          {v.caption && <div className="vid-cap">{v.caption}</div>}
+                          {photo.isProfileImage && (
+                            <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                              <Star size={12} /> Profile
+                            </div>
+                          )}
+                          {photo.isCoverImage && (
+                            <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                              <Camera size={12} /> Cover
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {galleryPics.length > 0 && videos.length > 0 ? <div className="section-divider" /> : null}
+
+                  {videos.length > 0 ? (
+                    <div className="video-grid">
+                      {videos.map((video, index) => (
+                        <a
+                          key={`${video.url}-${index}`}
+                          href={video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="video"
+                        >
+                          <img
+                            src={getVideoThumbnail(
+                              video.url,
+                              video.platform || "other",
+                              video.thumbnail,
+                              profileImg
+                            )}
+                            alt={video.caption || `Video ${index + 1}`}
+                          />
+                          <div className="video-center">
+                            <div className="video-play">
+                              <Play size={20} fill="#111827" />
+                            </div>
+                          </div>
+                          {video.caption ? (
+                            <div className="video-caption">{video.caption}</div>
+                          ) : null}
                         </a>
                       ))}
                     </div>
-                  </>
-                )}
-              </div>
-            )}
+                  ) : null}
+                </Section>
+              )}
 
-            {/* Tech Rider / EPK */}
-            {artist.techRider && (
-              <div className="tech-rider-card card">
-                <div className="card-title">
-                  <FileText size={17} className="card-title-icon" />
-                  <span>Tech Rider / EPK</span>
-                </div>
-                
-                {/* Requirements Grid */}
-                {(artist.techRider.soundRequirements || artist.techRider.lightingRequirements || 
-                  artist.techRider.powerRequirements || artist.techRider.specialNotes) && (
-                  <div className="tr-grid">
-                    {artist.techRider.soundRequirements && (
-                      <div className="tr-item">
-                        <div className="tr-lbl"><Volume2 size={12} /> Sound</div>
-                        <div className="tr-txt">{artist.techRider.soundRequirements}</div>
+              {artist.techRider ? (
+                <Section
+                  kicker="Tech rider"
+                  title="Stage and event requirements"
+                  subtitle="This section is organized for fast scanning on smaller screens with simple cards and readable blocks."
+                >
+                  {artist.techRider.soundRequirements ||
+                  artist.techRider.lightingRequirements ||
+                  artist.techRider.powerRequirements ||
+                  artist.techRider.specialNotes ? (
+                    <div className="rider-grid">
+                      {artist.techRider.soundRequirements ? (
+                        <div className="rider-card">
+                          <div className="rider-label">
+                            <Volume2 size={12} />
+                            Sound
+                          </div>
+                          <div className="rider-text">{artist.techRider.soundRequirements}</div>
+                        </div>
+                      ) : null}
+                      {artist.techRider.lightingRequirements ? (
+                        <div className="rider-card">
+                          <div className="rider-label">
+                            <Sparkles size={12} />
+                            Lighting
+                          </div>
+                          <div className="rider-text">{artist.techRider.lightingRequirements}</div>
+                        </div>
+                      ) : null}
+                      {artist.techRider.powerRequirements ? (
+                        <div className="rider-card">
+                          <div className="rider-label">
+                            <Zap size={12} />
+                            Power
+                          </div>
+                          <div className="rider-text">{artist.techRider.powerRequirements}</div>
+                        </div>
+                      ) : null}
+                      {artist.techRider.specialNotes ? (
+                        <div className="rider-card full">
+                          <div className="rider-label">
+                            <Info size={12} />
+                            Special notes
+                          </div>
+                          <div className="rider-text">{artist.techRider.specialNotes}</div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <EmptyState>No technical details were added to this profile.</EmptyState>
+                  )}
+
+                  {artist.techRider.file?.url ? (
+                    <div className="file-card">
+                      <div className="file-left">
+                        <div className="file-icon">
+                          <FileText size={20} />
+                        </div>
+                        <div>
+                          <div className="file-name">Tech rider / EPK document</div>
+                          <div className="file-type">
+                            {artist.techRider.file.fileType === "pdf"
+                              ? "PDF document"
+                              : "Image file"}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {artist.techRider.lightingRequirements && (
-                      <div className="tr-item">
-                        <div className="tr-lbl"><Sparkles size={12} /> Lighting</div>
-                        <div className="tr-txt">{artist.techRider.lightingRequirements}</div>
+
+                      <div className="action-stack" style={{ justifyContent: "flex-end" }}>
+                        <a
+                          href={artist.techRider.file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary"
+                          style={{ textDecoration: "none" }}
+                        >
+                          <ExternalLink size={14} />
+                          View
+                        </a>
+                        <a
+                          href={artist.techRider.file.url}
+                          download="Tech-Rider-EPK"
+                          className="btn btn-primary"
+                          style={{ textDecoration: "none" }}
+                        >
+                          <Download size={14} />
+                          Download
+                        </a>
                       </div>
-                    )}
-                    {artist.techRider.powerRequirements && (
-                      <div className="tr-item">
-                        <div className="tr-lbl"><Zap size={12} /> Power</div>
-                        <div className="tr-txt">{artist.techRider.powerRequirements}</div>
+                    </div>
+                  ) : null}
+                </Section>
+              ) : null}
+
+              {artist.accolades?.length > 0 ? (
+                <Section
+                  kicker="Awards"
+                  title="Recognition and achievements"
+                  subtitle="A vertical timeline format keeps this readable and elegant on both desktop and mobile."
+                >
+                  <div className="award-list">
+                    {artist.accolades.map((award, index) => (
+                      <div className="award" key={`${award.title}-${index}`}>
+                        <div className="award-year">{award.year}</div>
+                        <div>
+                          <div className="award-title">{award.title}</div>
+                          <div className="award-org">{award.organization}</div>
+                          {award.description ? (
+                            <div className="award-desc">{award.description}</div>
+                          ) : null}
+                        </div>
                       </div>
-                    )}
-                    {artist.techRider.specialNotes && (
-                      <div className="tr-item tr-full">
-                        <div className="tr-lbl"><Info size={12} /> Special Notes</div>
-                        <div className="tr-txt">{artist.techRider.specialNotes}</div>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                )}
-                
-                {/* File Download */}
-                {artist.techRider.file?.url && (
-                  <div className="tr-file">
-                    <div className="tr-file-info">
-                      <FileText size={20} color="var(--red)" />
-                      <div className="tr-file-meta">
-                        <div className="tr-file-name">Tech Rider / EPK Document</div>
-                        <div className="tr-file-type">{artist.techRider.file.fileType === 'pdf' ? 'PDF Document' : 'Image File'}</div>
-                      </div>
-                    </div>
-                    <div className="tr-file-actions">
-                      <a 
-                        href={artist.techRider.file.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="tr-btn tr-btn-view "
-                      >
-                        View
-                      </a>
-                      <a 
-                        href={artist.techRider.file.url}
-                        download="Tech-Rider-EPK.pdf"
-                        className="tr-btn tr-btn-download"
-                      >
-                        <Download size={14} />
-                        Download
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                </Section>
+              ) : null}
 
-            {/* Accolades */}
-            {artist.accolades?.length > 0 && (
-              <div className="card">
-                <div className="card-title">
-                  <Award size={17} className="card-title-icon" />
-                  <span>Awards & Recognition</span>
-                </div>
-                {artist.accolades.map((a, i) => (
-                  <div key={i} className="accolade">
-                    <div className="acc-year">{a.year}</div>
-                    <div>
-                      <div className="acc-title">{a.title}</div>
-                      <div className="acc-org">{a.organization}</div>
-                      {a.description && <div className="acc-desc">{a.description}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Contact — mobile/tablet only (sidebar hidden on mobile) */}
-            <div className="card" style={{ display: "block" }}>
-              <div className="card-title">Contact</div>
-              <ContactBlock artist={artist} />
-            </div>
-          </main>
-
-          {/* Right sidebar */}
-          <aside className="col-side fu3">
-            <div className="side-sticky">
-
-              {/* Booking card */}
-              <div className="booking-card">
-                <div className="bp-row">
-                  <div className="bp-lbl">Starting from</div>
-                  <div className="bp-amt">{priceLbl}</div>
-                </div>
-                <button className="btn-ink" style={{ width: "100%", justifyContent: "center" }} onClick={handleBook}>
-                  <Calendar size={14} />{isOrg ? "Book This Artist" : "Login to Book"}
-                </button>
-                <p className="book-note">You won't be charged yet</p>
-                <div className="guarantees">
-                  {["Free cancellation within 24 hrs","Secure booking process","Verified artist profile"].map(g => (
-                    <div key={g} className="guar-item">
-                      <div className="guar-dot" />{g}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sidebar contact */}
-              <div className="card">
-                <div className="card-title" style={{ fontSize: 14, marginBottom: 14, paddingBottom: 12 }}>Contact</div>
+              <Section
+                kicker="Contact"
+                title="Get in touch"
+                subtitle="Quick contact options remain visible here and in the desktop sidebar for easy access."
+              >
                 <ContactBlock artist={artist} />
+              </Section>
+            </main>
+
+            <aside className="side">
+              <div className="sticky">
+                <div className="sidebar-card">
+                  <div className="sidebar-heading">Starting from</div>
+                  <div className="sidebar-price">{priceLabel}</div>
+                  <div className="sidebar-note">
+                    Secure booking, verified profile, and lightweight navigation for mobile users.
+                  </div>
+
+                  <div className="sidebar-actions">
+                    <button className="btn btn-primary" onClick={handleBook}>
+                      <Calendar size={14} />
+                      {isOrg ? "Book artist" : "Login to book"}
+                    </button>
+                    <button
+                      className="btn btn-soft"
+                      onClick={() => router.push(`/artist/profile/${artistId}/merch`)}
+                    >
+                      <ShoppingBag size={14} />
+                      Explore merch
+                    </button>
+                  </div>
+
+                  <div className="guarantees">
+                    <GuaranteeItem text="Free cancellation within 24 hours" />
+                    <GuaranteeItem text="Secure booking process" />
+                    <GuaranteeItem text="Verified artist profile" />
+                  </div>
+                </div>
+
+                <div className="sidebar-card">
+                  <div className="sidebar-heading">Contact</div>
+                  <div style={{ marginTop: 12 }}>
+                    <ContactBlock artist={artist} />
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div className="mobile-bar">
+          <div className="shell">
+            <div className="mobile-bar-inner">
+              <div className="mobile-price">
+                <div className="mobile-label">Starting from</div>
+                <div className="mobile-amount">{priceLabel}</div>
+              </div>
+              <div className="mobile-actions">
+                <button
+                  className="btn btn-soft"
+                  onClick={() => router.push(`/artist/profile/${artistId}/merch`)}
+                  aria-label="View merch"
+                >
+                  <ShoppingBag size={14} />
+                </button>
+                <button className="btn btn-primary" onClick={handleBook}>
+                  <Calendar size={14} />
+                  {isOrg ? "Book" : "Login"}
+                </button>
               </div>
             </div>
-          </aside>
-        </div>
-
-        {/* Mobile CTA */}
-        <div className="mob-cta">
-          <div style={{ flex: 1 }}>
-            <div className="mob-cta-lbl">Starting from</div>
-            <div className="mob-cta-amt">{priceLbl}</div>
           </div>
-          <button className="btn-ink" onClick={handleBook} style={{ flexShrink: 0, padding: "13px 22px" }}>
-            <Calendar size={14} />{isOrg ? "Book Now" : "Login to Book"}
-          </button>
         </div>
 
-        <div style={{ height: 70 }} />
+        <div style={{ height: 96 }} />
+
         <Footer />
 
-        {/* Booking dialog */}
         <Dialog open={showBook} onOpenChange={setShowBook}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" style={{ borderRadius: 0, fontFamily: "'DM Sans',sans-serif" }}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 md:p-6">
             <DialogHeader>
-              <DialogTitle style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700 }}>
+              <DialogTitle
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: 30,
+                  fontWeight: 700,
+                  letterSpacing: "-0.03em",
+                }}
+              >
                 Book {artist.name}
               </DialogTitle>
-              <DialogDescription style={{ fontSize: 13, color: "#6B6259" }}>
-                Select a date and time to book this artist for your event.
+              <DialogDescription style={{ color: "#64748b", fontSize: 14, lineHeight: 1.7 }}>
+                Choose a date and time to request this artist for your event.
               </DialogDescription>
             </DialogHeader>
-            <PublicBookingCalendar artistId={artist._id} artist={artistBook} />
+
+            {artistBook ? (
+              <PublicBookingCalendar artistId={artist._id} artist={artistBook} />
+            ) : null}
           </DialogContent>
         </Dialog>
 
-        {/* Lightbox */}
         <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
-          <DialogContent className="max-w-5xl p-0 border-0" style={{ background: "rgba(20,15,10,.97)" }}>
-            {lightbox && <img src={lightbox} alt="Gallery" className="lbox-img" />}
+          <DialogContent className="max-w-6xl border-0 bg-slate-950/96 p-3 md:p-4 rounded-[20px]">
+            {lightbox ? <img src={lightbox} alt="Gallery preview" className="lb-img" /> : null}
           </DialogContent>
         </Dialog>
       </div>

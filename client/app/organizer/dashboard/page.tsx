@@ -54,6 +54,7 @@ import ScheduleEvent from "../components/ScheduleEvent"
 import KakiMarketingBanner from "@/components/KakiMarketingBanner"
 import TermsDisplay from "@/components/TermsDisplay"
 import OrganizerTerms from "../components/OrganizerTerms"
+import Artists from "../components/Artists"
 
 interface OrganizerUser {
   id: string
@@ -174,16 +175,18 @@ export default function OrganizerDashboard() {
         return <CreateDailyEventForm onSuccess={() => setActiveView("dashboard")} />
       case "edit-daily-event":
         return editingDailyEventId ? (
-          <EditDailyEventForm 
-            eventId={editingDailyEventId} 
+          <EditDailyEventForm
+            eventId={editingDailyEventId}
             onSuccess={() => {
               setEditingDailyEventId(null);
               setActiveView("daily-events");
-            }} 
+            }}
           />
         ) : <DailyEvents />
       case "bookings":
         return <Bookings />
+      case "artists":
+        return <Artists />
       case "artist-booking":
         return <ArtistBookingCalendar />
       case "booking-management":
@@ -315,14 +318,23 @@ export default function OrganizerDashboard() {
                 setSidebarOpen(false)
               }} 
             />
-            <SidebarButton 
-              icon={Ticket} 
-              label="Bookings" 
-              active={activeView === "bookings"} 
+            <SidebarButton
+              icon={Ticket}
+              label="Bookings"
+              active={activeView === "bookings"}
               onClick={() => {
                 setActiveView("bookings")
                 setSidebarOpen(false)
-              }} 
+              }}
+            />
+            <SidebarButton
+              icon={Music}
+              label="Artists"
+              active={activeView === "artists"}
+              onClick={() => {
+                setActiveView("artists")
+                setSidebarOpen(false)
+              }}
             />
 
             <SidebarButton

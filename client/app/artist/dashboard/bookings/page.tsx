@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useDashboard } from "../layout";
 import { BookingRequest } from "../types";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -20,10 +21,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, CheckCircle2, MessageSquare } from "lucide-react";
 
 export default function BookingsPage() {
   const { profile } = useDashboard();
+  const router = useRouter();
   const [pendingBookings, setPendingBookings] = useState<BookingRequest[]>([]);
   const [acceptedBookings, setAcceptedBookings] = useState<BookingRequest[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -159,8 +161,17 @@ export default function BookingsPage() {
         >
           View Details
         </Button>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => router.push(`/artist/chat/${request._id}`)}
+          className="flex items-center gap-2"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Chat
+        </Button>
+        <Button
+          size="sm"
           className="flex-1 min-w-[120px]"
           onClick={() => handleBookingAction(request._id, "accept")}
         >
@@ -183,8 +194,8 @@ export default function BookingsPage() {
         >
           Counter Offer
         </Button>
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           variant="outline"
           onClick={() => handleBookingAction(request._id, "decline")}
         >
@@ -227,6 +238,15 @@ export default function BookingsPage() {
           className="border-green-300 hover:bg-green-100"
         >
           View Details
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => router.push(`/artist/chat/${request._id}`)}
+          className="flex items-center gap-2 border-green-300 hover:bg-green-100"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Chat
         </Button>
       </div>
     </div>

@@ -14,11 +14,11 @@ class EmailService {
       ...(Number.isFinite(port) ? { secure: port === 465 } : {}),
       ...(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
         ? {
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASSWORD,
-            },
-          }
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD,
+          },
+        }
         : {}),
     };
 
@@ -46,7 +46,7 @@ class EmailService {
 
       const info = await this.transporter.sendMail(mailOptions);
       console.log('Email sent:', info.messageId);
-      
+
       return {
         success: true,
         messageId: info.messageId
@@ -166,12 +166,12 @@ class EmailService {
    * @returns {Promise<Object>} - Send result
    */
   async sendOrganizerApprovalNotification(organizer, approved, rejectionReason = '') {
-    const subject = approved 
-      ? 'Your Organizer Account Has Been Approved!' 
+    const subject = approved
+      ? 'Your Organizer Account Has Been Approved!'
       : 'Your Organizer Account Application Requires Changes';
 
     let html;
-    
+
     if (approved) {
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -231,25 +231,25 @@ class EmailService {
    * @returns {Promise<Object>} - Send result
    */
   async sendEventApprovalNotification(event, approved, rejectionReason = '') {
-    const subject = approved 
-      ? 'Your Event Has Been Approved!' 
+    const subject = approved
+      ? 'Your Event Has Been Approved!'
       : 'Your Event Requires Changes';
 
     let html;
-    
+
     if (approved) {
-      const eventDate = event.startDate ? 
-        new Date(event.startDate).toLocaleDateString('en-IN', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+      const eventDate = event.startDate ?
+        new Date(event.startDate).toLocaleDateString('en-IN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
         }) : 'TBA';
-        
-      const eventTime = event.startDate ? 
-        new Date(event.startDate).toLocaleTimeString('en-IN', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+
+      const eventTime = event.startDate ?
+        new Date(event.startDate).toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit'
         }) : 'TBA';
 
       const eventLocation = event.location?.address || event.location?.city || 'Location details available in dashboard';
@@ -324,15 +324,15 @@ class EmailService {
    * @returns {Promise<Object>} - Send result
    */
   async sendVenueApprovalNotification(venue, approved, rejectionReason = '') {
-    const subject = approved 
-      ? 'Your Venue Account Has Been Approved!' 
+    const subject = approved
+      ? 'Your Venue Account Has Been Approved!'
       : 'Your Venue Account Application Requires Changes';
 
     const venueName = venue.ownerDetails?.businessName || venue.name;
     const ownerName = venue.ownerDetails?.fullName || 'Venue Owner';
 
     let html;
-    
+
     if (approved) {
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -504,31 +504,31 @@ class EmailService {
       }
 
       const subject = 'Your Ticket for ' + ((booking?.event && booking.event.title) || 'Upcoming Event');
-      
+
       // Format date and time
-      const eventDate = booking?.event?.startDate ? 
-        new Date(booking.event.startDate).toLocaleDateString('en-IN', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+      const eventDate = booking?.event?.startDate ?
+        new Date(booking.event.startDate).toLocaleDateString('en-IN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
         }) : 'TBA';
-        
-      const eventTime = booking?.event?.startDate ? 
-        new Date(booking.event.startDate).toLocaleTimeString('en-IN', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+
+      const eventTime = booking?.event?.startDate ?
+        new Date(booking.event.startDate).toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit'
         }) : 'TBA';
 
       // Format location
-      const eventLocation = booking?.event?.location ? 
-        (booking.event.location.address ? 
-          `${booking.event.location.address}, ${booking.event.location.city || ''}` : 
+      const eventLocation = booking?.event?.location ?
+        (booking.event.location.address ?
+          `${booking.event.location.address}, ${booking.event.location.city || ''}` :
           'Location details available in the app'
         ) : 'TBA';
 
       // Create HTML with or without QR code
-      const qrCodeHtml = qrCodeDataUrl ? 
+      const qrCodeHtml = qrCodeDataUrl ?
         `<div style="text-align: center; margin: 20px 0;">
           <img src="${qrCodeDataUrl}" alt="Ticket QR Code" style="max-width: 200px; width: 100%;">
           <p style="margin-top: 10px; font-size: 12px; color: #666;">Scan this QR code at the venue for entry</p>
@@ -602,15 +602,15 @@ class EmailService {
    */
   async sendMerchOrderConfirmation(order) {
     try {
-      const subject = 'Your Hornbill Merch Order Confirmation';
-      
+      const subject = 'Your Merch Order Confirmation';
+
       // Format order date
-      const orderDate = order.createdAt ? 
-        new Date(order.createdAt).toLocaleDateString('en-IN', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+      const orderDate = order.createdAt ?
+        new Date(order.createdAt).toLocaleDateString('en-IN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
         }) : new Date().toLocaleDateString();
 
       // Build items list
@@ -697,7 +697,7 @@ class EmailService {
   >
     <span>Total:</span>
     <span style={{ color: "#667eea" }}>
-      ₹{(order.total || 0).toFixed(2)}
+     ₹${(order.subtotal || 0).toFixed(2)}
     </span>
   </div>
 </div>
@@ -754,14 +754,14 @@ class EmailService {
    * @returns {Promise<Object>} - Send result
    */
   async sendArenaPartnerApprovalNotification(partner, approved, rejectionReason = '') {
-    const subject = approved 
-      ? 'Your Arena Partner Account Has Been Approved!' 
+    const subject = approved
+      ? 'Your Arena Partner Account Has Been Approved!'
       : 'Your Arena Partner Application Requires Changes';
 
     const businessName = partner.businessDetails?.businessName || partner.name;
 
     let html;
-    
+
     if (approved) {
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -821,12 +821,12 @@ class EmailService {
    * @returns {Promise<Object>} - Send result
    */
   async sendSportsVenueApprovalNotification(venue, approved, rejectionReason = '') {
-    const subject = approved 
-      ? 'Your Sports Venue Has Been Approved!' 
+    const subject = approved
+      ? 'Your Sports Venue Has Been Approved!'
       : 'Your Sports Venue Requires Changes';
 
     let html;
-    
+
     if (approved) {
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -896,15 +896,15 @@ class EmailService {
    * @returns {Promise<Object>} - Send result
    */
   async sendCourtApprovalNotification(court, approved, rejectionReason = '') {
-    const subject = approved 
-      ? 'Your Court Has Been Approved!' 
+    const subject = approved
+      ? 'Your Court Has Been Approved!'
       : 'Your Court Requires Changes';
 
     let html;
-    
+
     if (approved) {
       const hourlyRate = court.pricing?.weekday?.offPeak?.pricePerHour || 0;
-      
+
       html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <img src="https://res.cloudinary.com/dovc3lfgz/image/upload/v1770467388/ahibi/al2s8xllifmscvj7vicq.png" alt="Ahibi Logo" style="max-width: 150px; margin-bottom: 20px;">
@@ -969,7 +969,7 @@ class EmailService {
   // Send venue approval notification
   async sendVenueApprovalNotification(venue, notes = '') {
     const subject = '🎉 Your Venue Has Been Approved! - AHIBI';
-    
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
         <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -1029,7 +1029,7 @@ class EmailService {
   // Send venue rejection notification
   async sendVenueRejectionNotification(venue, reason, notes = '') {
     const subject = 'Regarding Your Venue Application - AHIBI';
-    
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
         <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">

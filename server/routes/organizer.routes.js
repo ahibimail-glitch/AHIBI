@@ -155,6 +155,7 @@ router.put('/daily-events/:id/resume', protect, dailyEventController.resumeOrgan
 
 // Artist booking routes for organizers
 router.get('/artists/search', protect, authorize('organizer'), organizerBookingController.searchArtistsWithAvailability);
+router.get('/artists/list', protect, authorize('organizer'), organizerBookingController.getAllArtists);
 router.get('/artists/:artistId/calendar', protect, authorize('organizer'), organizerBookingController.getArtistCalendar);
 router.post('/bookings', [
   protect,
@@ -170,6 +171,7 @@ router.post('/bookings', [
   check('requestedAmount', 'Requested amount is required').isNumeric()
 ], organizerBookingController.createBookingRequest);
 router.get('/bookings', protect, authorize('organizer'), organizerBookingController.getOrganizerBookings);
+router.get('/bookings/latest', protect, authorize('organizer'), organizerBookingController.getLatestBookingsWithDiscussion);
 router.get('/bookings/:id', protect, authorize('organizer'), organizerBookingController.getBookingDetails);
 router.put('/bookings/:id/accept-counter-offer', protect, authorize('organizer'), organizerBookingController.acceptCounterOffer);
 router.put('/bookings/:id/reject-counter-offer', [

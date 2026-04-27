@@ -65,7 +65,7 @@ const MerchOrderSchema = new mongoose.Schema(
     shippingAddress: { type: ShippingAddressSchema, required: true },
     status: {
       type: String,
-      enum: ['created', 'pending', 'paid', 'failed', 'cancelled', 'refunded'],
+      enum: ['created', 'pending', 'paid', 'shipped', 'delivered', 'failed', 'cancelled', 'refunded'],
       default: 'created',
       index: true
     },

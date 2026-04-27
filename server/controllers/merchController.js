@@ -1,6 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const MerchOrder = require('../models/HornbillMerch');
+const MerchOrder = require('../models/ArtistMerch');
+const MerchProduct = require('../models/MerchProduct');
 const User = require('../models/User');
 const { fetchCartBySession } = require('../services/hornbillMerchService');
 const emailService = require('../services/emailService');
@@ -339,6 +340,201 @@ exports.createOrder = async (req, res) => {
   }
 };
 
+exports.createCheckoutOrder = async (req, res) => {
+  try {
+    const { items = [], shippingAddress, source, metadata } = req.body || {};
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Cart items are required' });
+    }
+
+    const { isValid, errors } = validateShippingAddress(shippingAddress);
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid shipping address',
+        errors
+      });
+    }
+
+    const productIds = items.map((item) => item?.productId).filter(Boolean);
+    const products = await MerchProduct.find({ _id: { $in: productIds }, isActive: true, isDraft: false });
+    const productMap = new Map(products.map((product) => [product._id.toString(), product]));
+
+    const normalizedItems = [];
+    for (const item of items) {
+      const product = productMap.get(String(item.productId));
+      const quantity = Number(item.quantity) || 0;
+
+      if (!product || quantity <= 0) {
+        continue;
+      }
+
+      const variant = [item.size, item.color].filter(Boolean).join(' / ');
+
+      normalizedItems.push({
+        itemId: product._id.toString(),
+        name: product.name,
+        sku: item.sku || undefined,
+        variant: variant || undefined,
+        quantity,
+        price: Number(product.price) || 0,
+        taxRate: DEFAULT_TAX_RATE,
+        image: product.images?.[0]
+      });
+    }
+
+    if (!normalizedItems.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid cart items were found. Please refresh and try again.'
+      });
+    }
+
+    const totals = computeTotals(normalizedItems);
+    if (totals.total <= 0) {
+      return res.status(400).json({ success: false, message: 'Unable to compute payable amount for this cart.' });
+    }
+
+    const order = new MerchOrder({
+      sessionId: `local-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+      user: req.user?._id,
+      items: normalizedItems,
+      currency: 'INR',
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      shipping: totals.shipping,
+      total: totals.total,
+      shippingAddress,
+      status: 'pending',
+      source: source || 'artist-merch',
+      metadata: metadata || {}
+    });
+
+    const razorpay = getRazorpay();
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(totals.total * 100),
+      currency: 'INR',
+      receipt: `merch_${order._id.toString().slice(-10)}`,
+      notes: {
+        merchOrderId: order._id.toString(),
+        userId: req.user?._id?.toString(),
+        source: source || 'artist-merch'
+      }
+    });
+
+    order.payment = {
+      gatewayOrderId: razorpayOrder.id,
+      status: 'created',
+      amount: roundCurrency(razorpayOrder.amount / 100),
+      currency: razorpayOrder.currency,
+      notes: razorpayOrder.notes,
+      rawResponse: razorpayOrder
+    };
+
+    await order.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Checkout order created',
+      data: {
+        merchOrderId: order._id,
+        razorpayOrder: {
+          id: razorpayOrder.id,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency
+        },
+        totals
+      }
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to create checkout order', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create checkout order'
+    });
+  }
+};
+
+exports.verifyCheckoutPayment = async (req, res) => {
+  try {
+    const { merchOrderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body || {};
+
+    if (!merchOrderId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required payment fields'
+      });
+    }
+
+    const order = await MerchOrder.findById(merchOrderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    if (order.user?.toString() !== req.user?._id?.toString()) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (order.payment?.gatewayOrderId && order.payment.gatewayOrderId !== razorpay_order_id) {
+      return res.status(400).json({ success: false, message: 'Order ID mismatch' });
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: 'Invalid payment signature' });
+    }
+
+    const razorpay = getRazorpay();
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    const paymentStatus = payment?.status || 'authorized';
+    const isPaid = paymentStatus === 'captured' || paymentStatus === 'authorized';
+    const wasPaid = order.status === 'paid';
+
+    order.status = isPaid ? 'paid' : order.status;
+    order.payment = {
+      ...(order.payment || {}),
+      gatewayOrderId: razorpay_order_id,
+      transactionId: razorpay_payment_id,
+      status: isPaid ? 'paid' : order.payment?.status,
+      amount: typeof payment?.amount === 'number' ? roundCurrency(payment.amount / 100) : order.payment?.amount,
+      currency: payment?.currency || order.payment?.currency || 'INR',
+      rawResponse: payment,
+      verifiedAt: isPaid ? new Date() : order.payment?.verifiedAt
+    };
+
+    await order.save();
+
+    if (isPaid && !wasPaid) {
+      try {
+        const populatedOrder = await MerchOrder.findById(order._id).populate('user', 'name email');
+        if (populatedOrder && populatedOrder.user) {
+          await emailService.sendMerchOrderConfirmation(populatedOrder);
+        }
+      } catch (emailError) {
+        console.error('[Merch] Failed to send checkout confirmation email:', emailError);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: isPaid ? 'Payment verified successfully' : 'Payment verification completed',
+      data: order
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to verify checkout payment', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to verify checkout payment'
+    });
+  }
+};
+
 exports.getAllOrders = async (req, res) => {
   try {
     const { status, page = 1, limit = 50, search } = req.query;
@@ -383,6 +579,127 @@ exports.getAllOrders = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to fetch orders'
+    });
+  }
+};
+
+exports.getArtistOrders = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50, search } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const artistProducts = await MerchProduct.find({ artist: req.user._id }).select('_id');
+    const artistProductIds = artistProducts.map((product) => product._id.toString());
+
+    if (!artistProductIds.length) {
+      return res.json({
+        success: true,
+        data: {
+          orders: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            pages: 0
+          }
+        }
+      });
+    }
+
+    const query = {
+      'items.itemId': { $in: artistProductIds }
+    };
+
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { 'shippingAddress.fullName': { $regex: search, $options: 'i' } },
+        { 'shippingAddress.phone': { $regex: search, $options: 'i' } },
+        { 'shippingAddress.email': { $regex: search, $options: 'i' } },
+        { sessionId: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const orders = await MerchOrder.find(query)
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await MerchOrder.countDocuments(query);
+
+    return res.json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch artist orders', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch artist orders'
+    });
+  }
+};
+
+exports.updateArtistOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body || {};
+
+    const allowedStatuses = ['created', 'paid', 'shipped', 'delivered', 'failed', 'cancelled', 'refunded'];
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status value'
+      });
+    }
+
+    const artistProducts = await MerchProduct.find({ artist: req.user._id }).select('_id');
+    const artistProductIds = artistProducts.map((product) => product._id.toString());
+
+    if (!artistProductIds.length) {
+      return res.status(403).json({
+        success: false,
+        message: 'No products found for this artist'
+      });
+    }
+
+    const order = await MerchOrder.findOne({
+      _id: orderId,
+      'items.itemId': { $in: artistProductIds }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found for this artist'
+      });
+    }
+
+    order.status = status;
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: 'Order status updated',
+      data: order
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to update artist order status', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update order status'
     });
   }
 };
@@ -568,3 +885,213 @@ exports.razorpayWebhook = async (req, res) => {
   }
 };
 
+// ==================== Merch Product Controllers ====================
+
+exports.createProduct = async (req, res) => {
+  try {
+    const { name, description, price, category, variants, images, isDraft } = req.body;
+
+    if (!name || !price || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, price, and category are required'
+      });
+    }
+
+    const product = new MerchProduct({
+      artist: req.user._id,
+      name,
+      description,
+      price: Number(price),
+      category,
+      variants: variants || [],
+      images: images || [],
+      isDraft: isDraft || false
+    });
+
+    await product.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Product created successfully',
+      data: product
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to create product:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create product'
+    });
+  }
+};
+
+exports.getProducts = async (req, res) => {
+  try {
+    const { artistId, category, isActive, isDraft, page = 1, limit = 20 } = req.query;
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const query = {};
+    
+    if (artistId) {
+      query.artist = artistId;
+    } else if (req.user?.role === 'artist') {
+      query.artist = req.user._id;
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (isActive !== undefined) {
+      query.isActive = isActive === 'true';
+    }
+
+    if (isDraft !== undefined) {
+      query.isDraft = isDraft === 'true';
+    }
+
+    const products = await MerchProduct.find(query)
+      .populate('artist', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await MerchProduct.countDocuments(query);
+
+    return res.json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch products:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch products'
+    });
+  }
+};
+
+exports.getProductById = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const product = await MerchProduct.findById(productId).populate('artist', 'name email');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if user owns this product or is admin
+    if (req.user?.role === 'artist' && product.artist._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch product:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch product'
+    });
+  }
+};
+
+exports.updateProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { name, description, price, category, variants, images, isActive, isDraft } = req.body;
+
+    const product = await MerchProduct.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if user owns this product
+    if (product.artist.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    if (name !== undefined) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (price !== undefined) product.price = Number(price);
+    if (category !== undefined) product.category = category;
+    if (variants !== undefined) product.variants = variants;
+    if (images !== undefined) product.images = images;
+    if (isActive !== undefined) product.isActive = isActive;
+    if (isDraft !== undefined) product.isDraft = isDraft;
+
+    await product.save();
+
+    return res.json({
+      success: true,
+      message: 'Product updated successfully',
+      data: product
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to update product:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update product'
+    });
+  }
+};
+
+exports.deleteProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    const product = await MerchProduct.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if user owns this product
+    if (product.artist.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    await MerchProduct.findByIdAndDelete(productId);
+
+    return res.json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to delete product:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete product'
+    });
+  }
+};

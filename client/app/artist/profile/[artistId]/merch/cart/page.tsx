@@ -1,54 +1,85 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, X, ShoppingBag } from "lucide-react";
 import { QuantityStepper } from "../components/QuantityStepper";
-import { mockProducts } from "../data/mockProducts";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 
+interface MerchProduct {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  variants: {
+    size: string;
+    color: string;
+    stock: number;
+  }[];
+  images: string[];
+  isDraft: boolean;
+  createdAt: string;
+}
+
 interface CartItem {
-  product: typeof mockProducts[0];
+  product: MerchProduct;
   size: string;
   color: string;
   quantity: number;
 }
 
-const initialCart: CartItem[] = [
-  { product: mockProducts[0], size: "M", color: "Black", quantity: 1 },
-  { product: mockProducts[2], size: "", color: "Gold", quantity: 2 },
-];
+const CART_STORAGE_KEY = 'merch_cart';
 
 export default function Cart() {
   const params = useParams();
   const router = useRouter();
   const artistId = params.artistId as string;
-  const [items, setItems] = useState(initialCart);
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  const loadCart = () => {
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    if (savedCart) {
+      setItems(JSON.parse(savedCart));
+    }
+  };
+
+  const saveCart = (cartItems: CartItem[]) => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+  };
 
   const updateQty = (idx: number, qty: number) => {
-    setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, quantity: qty } : item)));
+    const newItems = items.map((item, i) => (i === idx ? { ...item, quantity: qty } : item));
+    setItems(newItems);
+    saveCart(newItems);
   };
 
   const remove = (idx: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== idx));
+    const newItems = items.filter((_, i) => i !== idx);
+    setItems(newItems);
+    saveCart(newItems);
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const shipping = subtotal > 50 ? 0 : 5.99;
-  const total = subtotal + shipping;
+  const total = subtotal;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar/>
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        <Link href={`/artist/profile/${artistId}/merch`}>
         <button
-          onClick={() => router.back()}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
+          >
           <ArrowLeft className="h-4 w-4" /> Continue Shopping
         </button>
+          </Link>
 
         <h1 className="mt-4 text-2xl font-bold font-display text-foreground">Your Cart</h1>
 
@@ -102,7 +133,7 @@ export default function Cart() {
                     <div className="flex items-center justify-between">
                       <QuantityStepper value={item.quantity} onChange={(q) => updateQty(idx, q)} />
                       <span className="text-sm font-semibold font-display text-foreground">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        ₹{(item.product.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -114,25 +145,22 @@ export default function Cart() {
             <div className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-soft space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium text-foreground">${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Shipping</span>
-                <span className="font-medium text-foreground">
-                  {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
-                </span>
+                <span className="font-medium text-foreground">₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="border-t border-border pt-3 flex justify-between">
                 <span className="text-sm font-medium text-foreground">Total</span>
-                <span className="text-lg font-bold font-display text-foreground">${total.toFixed(2)}</span>
+                <span className="text-lg font-bold font-display text-foreground">₹{total.toFixed(2)}</span>
               </div>
             </div>
 
-            <button
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl gradient-primary py-3.5 text-sm font-medium text-black shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
-            >
-              Proceed to Checkout
-            </button>
+              <Link
+                href={`/artist/profile/${artistId}/merch/cart/checkout`}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl gradient-primary py-3.5 text-sm font-medium text-black shadow-sm hover:shadow-md active:scale-[0.98] transition-all"
+              >
+                Proceed to Checkout
+              </Link>
+
+       
           </>
         )}
       </div>

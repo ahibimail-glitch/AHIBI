@@ -173,6 +173,102 @@ exports.removeVideo = async (req, res) => {
 };
 
 /**
+ * @desc    Set photo as profile image
+ * @route   PUT /api/artist/gallery/photo/:photoId/profile
+ * @access  Private (Artist only)
+ */
+exports.setProfilePhoto = async (req, res) => {
+  try {
+    const { photoId } = req.params;
+    
+    const artist = await Artist.findById(req.user.id);
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found');
+    }
+
+    // Check if the photo exists in the gallery
+    const photoExists = artist.gallery.photos.some(
+      photo => photo._id.toString() === photoId
+    );
+    
+    if (!photoExists) {
+      return ApiResponse.notFound(res, 'Photo not found in gallery');
+    }
+
+    // Remove profile image flag from all photos
+    artist.gallery.photos.forEach(photo => {
+      photo.isProfileImage = false;
+    });
+
+    // Set the selected photo as profile image
+    const photo = artist.gallery.photos.find(
+      photo => photo._id.toString() === photoId
+    );
+    if (photo) {
+      photo.isProfileImage = true;
+    }
+    
+    await artist.save();
+
+    return ApiResponse.success(res, 'Profile image set successfully', {
+      photo
+    });
+
+  } catch (error) {
+    console.error('Set Profile Photo Error:', error);
+    return ApiResponse.serverError(res, 'Error setting profile image', error.message);
+  }
+};
+
+/**
+ * @desc    Set photo as cover image
+ * @route   PUT /api/artist/gallery/photo/:photoId/cover
+ * @access  Private (Artist only)
+ */
+exports.setCoverPhoto = async (req, res) => {
+  try {
+    const { photoId } = req.params;
+    
+    const artist = await Artist.findById(req.user.id);
+    if (!artist) {
+      return ApiResponse.notFound(res, 'Artist not found');
+    }
+
+    // Check if the photo exists in the gallery
+    const photoExists = artist.gallery.photos.some(
+      photo => photo._id.toString() === photoId
+    );
+    
+    if (!photoExists) {
+      return ApiResponse.notFound(res, 'Photo not found in gallery');
+    }
+
+    // Remove cover image flag from all photos
+    artist.gallery.photos.forEach(photo => {
+      photo.isCoverImage = false;
+    });
+
+    // Set the selected photo as cover image
+    const photo = artist.gallery.photos.find(
+      photo => photo._id.toString() === photoId
+    );
+    if (photo) {
+      photo.isCoverImage = true;
+    }
+    
+    await artist.save();
+
+    return ApiResponse.success(res, 'Cover image set successfully', {
+      photo
+    });
+
+  } catch (error) {
+    console.error('Set Cover Photo Error:', error);
+    return ApiResponse.serverError(res, 'Error setting cover image', error.message);
+  }
+};
+
+/**
  * @desc    Add accolade
  * @route   POST /api/artist/accolades
  * @access  Private (Artist only)

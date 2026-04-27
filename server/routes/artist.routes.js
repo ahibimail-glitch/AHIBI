@@ -5,6 +5,7 @@ const artistAuthController = require('../controllers/artistAuthController');
 const artistBookingController = require('../controllers/artistBookingController');
 const artistProfileController = require('../controllers/artistProfileController');
 const artistAvailabilityController = require('../controllers/artistAvailabilityController');
+const merchController = require('../controllers/merchController');
 const { protect, authorize } = require('../middlewares/auth');
 
 // Public routes
@@ -65,11 +66,17 @@ router.put('/bookings/:id/counter-offer', [
   check('amount', 'Amount is required and must be a number').isNumeric(),
   check('message', 'Message cannot exceed 500 characters').optional().isLength({ max: 500 })
 ], artistBookingController.sendCounterOffer);
+router.put('/bookings/:id/final-price', [
+  protect,
+  authorize('artist'),
+  check('finalAmount', 'Final amount is required and must be a number').isNumeric()
+], artistBookingController.setFinalPrice);
 router.post('/bookings/:id/message', [
   protect,
   authorize('artist'),
   check('message', 'Message is required').not().isEmpty()
 ], artistBookingController.addBookingMessage);
+router.get('/earnings', protect, authorize('artist'), artistBookingController.getEarnings);
 
 // Terms and conditions management
 router.get('/terms', protect, authorize('artist'), artistBookingController.getArtistTerms);
@@ -82,6 +89,8 @@ router.post('/gallery/photo', protect, authorize('artist'), artistProfileControl
 router.post('/gallery/video', protect, authorize('artist'), artistProfileController.addVideo);
 router.delete('/gallery/photo/:photoId', protect, authorize('artist'), artistProfileController.removePhoto);
 router.delete('/gallery/video/:videoId', protect, authorize('artist'), artistProfileController.removeVideo);
+router.put('/gallery/photo/:photoId/profile', protect, authorize('artist'), artistProfileController.setProfilePhoto);
+router.put('/gallery/photo/:photoId/cover', protect, authorize('artist'), artistProfileController.setCoverPhoto);
 
 // Accolades management routes
 router.post('/accolades', [
@@ -115,5 +124,14 @@ router.get('/calendar-overview', protect, authorize('artist'), artistAvailabilit
 
 // Public availability routes (for organizers to view)
 router.get('/:artistId/availability/:date', artistAvailabilityController.getAvailableSlots);
+
+// Artist merch product routes
+router.post('/merch/products', protect, authorize('artist'), merchController.createProduct);
+router.get('/merch/products', protect, authorize('artist'), merchController.getProducts);
+router.get('/merch/products/:productId', protect, authorize('artist'), merchController.getProductById);
+router.put('/merch/products/:productId', protect, authorize('artist'), merchController.updateProduct);
+router.delete('/merch/products/:productId', protect, authorize('artist'), merchController.deleteProduct);
+router.get('/merch/orders', protect, authorize('artist'), merchController.getArtistOrders);
+router.put('/merch/orders/:orderId/status', protect, authorize('artist'), merchController.updateArtistOrderStatus);
 
 module.exports = router;

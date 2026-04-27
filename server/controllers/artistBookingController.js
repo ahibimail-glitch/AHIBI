@@ -393,7 +393,7 @@ exports.updateCancellationPolicy = async (req, res) => {
 exports.addBookingMessage = async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
       artist: req.user.id
@@ -419,4 +419,162 @@ exports.addBookingMessage = async (req, res) => {
     console.error('Add Booking Message Error:', error);
     return ApiResponse.serverError(res, 'Error sending message', error.message);
   }
+};
+
+/**
+ * @desc    Set final price for booking
+ * @route   PUT /api/artist/bookings/:id/final-price
+ * @access  Private (Artist only)
+ */
+exports.setFinalPrice = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  try {
+    const { finalAmount, message } = req.body;
+
+    const booking = await ArtistBooking.findOne({
+      _id: req.params.id,
+      artist: req.user.id
+    });
+
+    if (!booking) {
+      return ApiResponse.notFound(res, 'Booking not found');
+    }
+
+    if (!['pending', 'accepted', 'counter_offered'].includes(booking.booking.status)) {
+      return ApiResponse.badRequest(res, 'Cannot set final price in current booking state');
+    }
+
+    // Update booking
+    booking.booking.finalAmount = finalAmount;
+    booking.booking.status = 'confirmed';
+    booking.contract.termsAccepted = true;
+
+    // Add timeline entry
+    booking.addTimelineEntry('Final price set by artist', 'artist', `Final price: ₹${finalAmount}`);
+
+    // Add message
+    booking.communication.messages.push({
+      sender: 'artist',
+      message: `Final price confirmed: ₹${finalAmount}. ${message || 'Looking forward to the event!'}`,
+      timestamp: new Date()
+    });
+
+    await booking.save();
+
+    return ApiResponse.success(res, 'Final price set successfully', {
+      booking
+    });
+
+  } catch (error) {
+    console.error('Set Final Price Error:', error);
+    return ApiResponse.serverError(res, 'Error setting final price', error.message);
+  }
+};
+
+/**
+ * @desc    Get artist earnings statistics
+ * @route   GET /api/artist/earnings
+ * @access  Private (Artist only)
+ */
+exports.getEarnings = async (req, res) => {
+  try {
+    const { period = 'all' } = req.query;
+    const artistId = req.user.id;
+
+    // Calculate date range based on period
+    let startDate;
+    const now = new Date();
+
+    switch (period) {
+      case 'this_month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'last_month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        break;
+      case 'this_year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'all':
+      default:
+        startDate = new Date(0); // Beginning of time
+        break;
+    }
+
+    // Get completed bookings with final amounts
+    const completedBookings = await ArtistBooking.find({
+      artist: artistId,
+      'booking.status': { $in: ['confirmed', 'completed'] },
+      'booking.finalAmount': { $exists: true, $ne: null },
+      createdAt: { $gte: startDate }
+    }).sort({ createdAt: -1 });
+
+    // Calculate totals
+    let totalEarnings = 0;
+    let pendingEarnings = 0;
+    const bookings = completedBookings.map(booking => {
+      const amount = booking.booking.finalAmount || booking.booking.requestedAmount;
+      const isPaid = booking.booking.paymentStatus === 'fully_paid';
+
+      if (isPaid) {
+        totalEarnings += amount;
+      } else {
+        pendingEarnings += amount;
+      }
+
+      return {
+        _id: booking._id,
+        event: booking.event,
+        date: booking.event.date,
+        amount: amount,
+        status: booking.booking.status,
+        paymentStatus: booking.booking.paymentStatus,
+        organizer: booking.organizer
+      };
+    });
+
+    // Get this month's earnings
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthBookings = completedBookings.filter(
+      b => b.createdAt >= thisMonthStart && b.booking.paymentStatus === 'fully_paid'
+    );
+    const thisMonthEarnings = thisMonthBookings.reduce(
+      (sum, b) => sum + (b.booking.finalAmount || b.booking.requestedAmount),
+      0
+    );
+
+    return ApiResponse.success(res, 'Earnings retrieved successfully', {
+      statistics: {
+        totalEarnings,
+        pendingEarnings,
+        thisMonthEarnings,
+        totalBookings: completedBookings.length,
+        paidBookings: completedBookings.filter(b => b.booking.paymentStatus === 'fully_paid').length
+      },
+      bookings,
+      period
+    });
+
+  } catch (error) {
+    console.error('Get Earnings Error:', error);
+    return ApiResponse.serverError(res, 'Error retrieving earnings', error.message);
+  }
+};
+
+module.exports = {
+  getArtistBookings: exports.getArtistBookings,
+  getBookingDetails: exports.getBookingDetails,
+  acceptBooking: exports.acceptBooking,
+  declineBooking: exports.declineBooking,
+  sendCounterOffer: exports.sendCounterOffer,
+  updateArtistTerms: exports.updateArtistTerms,
+  getArtistTerms: exports.getArtistTerms,
+  updateCancellationPolicy: exports.updateCancellationPolicy,
+  addBookingMessage: exports.addBookingMessage,
+  setFinalPrice: exports.setFinalPrice,
+  getEarnings: exports.getEarnings
 };
