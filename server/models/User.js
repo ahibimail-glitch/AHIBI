@@ -116,11 +116,11 @@ UserSchema.pre('save', function(next) {
 });
 
 // Generate JWT token
-UserSchema.methods.getSignedJwtToken = function() {
+UserSchema.methods.getSignedJwtToken = function(expiresIn = process.env.JWT_EXPIRE) {
   return jwt.sign(
     { id: this._id, role: this.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE }
+    { expiresIn }
   );
 };
 

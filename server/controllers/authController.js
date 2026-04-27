@@ -162,7 +162,7 @@ exports.loginWithPassword = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { phone, password } = req.body;
+  const { phone, password, rememberMe } = req.body;
 
   try {
     const user = await User.findOne({ phone }).select('+passwordHash');
@@ -206,7 +206,7 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    const token = user.getSignedJwtToken();
+    const token = user.getSignedJwtToken(rememberMe ? '30d' : undefined);
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -373,7 +373,7 @@ exports.verifyOtp = async (req, res) => {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { phone, otp } = req.body;
+  const { phone, otp, rememberMe } = req.body;
 
   try {
     let user = await User.findOne({ phone });
@@ -411,7 +411,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     const needsPasswordSetup = !user.hasPasswordAuth();
-    const token = user.getSignedJwtToken();
+    const token = user.getSignedJwtToken(rememberMe ? '30d' : undefined);
 
     res.status(200).json({
       success: true,

@@ -176,6 +176,8 @@ function AuthPageContent() {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 30);
       localStorage.setItem("tokenExpiry", expiryDate.toISOString());
+    } else {
+      localStorage.removeItem("tokenExpiry");
     }
     window.location.href = redirectUrl;
   };
@@ -350,7 +352,8 @@ function AuthPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           phone: trimmedPhone, 
-          password: loginData.password 
+          password: loginData.password,
+          rememberMe
         })
       });
       
@@ -423,11 +426,13 @@ function AuthPageContent() {
             otp,
             name: signupData.name.trim(),
             email: signupData.email.trim(),
-            city: signupData.city.trim()
+            city: signupData.city.trim(),
+            rememberMe
           }
         : {
             phone: loginData.loginId.trim(),
-            otp
+            otp,
+            rememberMe
           };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-otp`, {

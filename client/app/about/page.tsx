@@ -736,7 +736,7 @@ export default function AboutPage() {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Call Us</h3>
                 <p className="text-muted-foreground mb-4">Speak directly with our team</p>
-                <p className="font-medium text-green-600">+91 7005727288</p>
+                <p className="font-medium text-green-600">+91 7005427394</p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100">

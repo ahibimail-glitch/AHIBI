@@ -207,18 +207,9 @@ export default function ArtistBookingPage() {
             <div className="w-full max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
               <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_minmax(320px,380px)] gap-[18px] lg:gap-7 items-end">
                 <div>
-                  <div className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white/10 text-white/90 border border-white/15 backdrop-blur-md">
-                    <Sparkles size={14} />
-                    <span className="text-xs font-bold tracking-[.18em] uppercase">
-                      {artist.type} · {artist.city}
-                    </span>
-                  </div>
+                 
 
-                  <h1 className="mt-3.5 font-['Cormorant_Garamond',_serif] text-white text-[clamp(42px,8vw,92px)] leading-[.92] tracking-[-0.04em] font-bold text-balance">
-                    Book {firstName}
-                    <br />
-                    {restName && <em className="italic font-medium opacity-80">{restName}</em>}
-                  </h1>
+                 
 
                   <div className="mt-4 flex flex-wrap gap-2.5">
                     {artist.rating && artist.rating.count > 0 && (
@@ -237,10 +228,7 @@ export default function ArtistBookingPage() {
                       </span>
                     )}
 
-                    <span className="inline-flex items-center gap-2 rounded-full px-3.5 py-2.5 bg-white/10 border border-white/15 text-white/90 backdrop-blur-md text-[13px] leading-none">
-                      <MapPin size={12} />
-                      {artist.city}
-                    </span>
+                 
                   </div>
                 </div>
               </div>

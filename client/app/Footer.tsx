@@ -42,9 +42,9 @@ export default function Footer() {
           <div>
             <h3 className="text-[#1C1C1C] font-semibold mb-4 text-lg">For Partners</h3>
             <ul className="space-y-2 text-gray-600 text-sm">
-              <li><Link href="/organizer" className="hover:text-[#ff0e0e] transition">Organizers</Link></li>
-              <li><Link href="/artist" className="hover:text-[#ff0e0e] transition">Artists</Link></li>
-              <li><Link href="/venue" className="hover:text-[#ff0e0e] transition">Venues</Link></li>
+              <li><Link href="/allOrganizers" className="hover:text-[#ff0e0e] transition">Organizers</Link></li>
+              <li><Link href="/allArtists" className="hover:text-[#ff0e0e] transition">Artists</Link></li>
+              <li><Link href="/allVenues" className="hover:text-[#ff0e0e] transition">Venues</Link></li>
             </ul>
           </div>
 
