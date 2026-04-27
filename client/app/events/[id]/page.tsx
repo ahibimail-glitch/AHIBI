@@ -560,7 +560,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
                 <AlertCircle size={17} className="text-red-500 mt-0.5 shrink-0" />
                 <p className="text-sm text-gray-600">
-                  {event._id=="69e0b9650d43584f4c39482a" ? "Carry a valid photo ID — it may be required at the venue. Refund only applicable if cancelled before 48 hours. For cancellation contact us." : "Carry a valid photo ID — it may be required at the venue. No refund on purchased tickets."}
+                  {event._id=="69e0b9650d43584f4c39482a" ? "Carry a valid photo ID — it may be required at the venue. Refund only applicable if cancelled before 48 hours. For cancellation contact us." : "Carry a valid photo ID — it may be required at the venue."}
                 </p>
               </div>
               <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
