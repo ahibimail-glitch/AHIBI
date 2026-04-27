@@ -36,7 +36,7 @@ export function ProductCard({ product }: { product: MerchProduct }) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
-      className="group rounded-2xl border border-border bg-card shadow-soft overflow-hidden"
+      className="group flex flex-col rounded-xl sm:rounded-2xl border border-border bg-card shadow-soft overflow-hidden"
     >
       <Link href={`/artist/profile/${artistId}/merch/${product._id}`} className="block">
         <div className="relative aspect-square overflow-hidden bg-muted">
@@ -47,11 +47,11 @@ export function ProductCard({ product }: { product: MerchProduct }) {
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center text-xs sm:text-sm text-muted-foreground">
               No image
             </div>
           )}
-          <div className="absolute top-3 left-3 flex gap-1.5">
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-wrap gap-1 sm:gap-1.5">
             {isSoldOut && <TagBadge variant="sold-out">Sold Out</TagBadge>}
             {isNew && !isSoldOut && (
               <TagBadge variant="new">New</TagBadge>
@@ -59,26 +59,31 @@ export function ProductCard({ product }: { product: MerchProduct }) {
           </div>
         </div>
       </Link>
-      <div className="p-4">
-        <Link href={`/artist/profile/${artistId}/merch/${product._id}`}>
-          <h3 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+      
+      <div className="flex flex-col flex-grow p-2.5 sm:p-4">
+        <Link href={`/artist/profile/${artistId}/merch/${product._id}`} className="flex-grow">
+          <h3 className="text-xs sm:text-sm font-medium text-foreground line-clamp-2 sm:truncate group-hover:text-primary transition-colors">
             {product.name}
           </h3>
         </Link>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-base font-semibold font-display text-foreground">
-            ₹{product.price.toFixed(2)}
+        
+        <div className="mt-2 sm:mt-3 flex items-center justify-between gap-1">
+          <span className="text-sm sm:text-base font-semibold font-display text-foreground truncate">
+            ₹{product.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Link 
               href={`/artist/profile/${artistId}/merch/${product._id}`}
-              className="flex h-9 items-center justify-center rounded-xl border border-border bg-background px-3 text-xs font-medium text-foreground hover:bg-muted transition-all"
+              className="flex h-7 sm:h-9 items-center justify-center rounded-lg sm:rounded-xl border border-border bg-background px-2 sm:px-3 text-[10px] sm:text-xs font-medium text-foreground hover:bg-muted transition-all active:scale-95"
             >
               View
             </Link>
             {!isSoldOut && (
-              <Link href={`/artist/profile/${artistId}/merch/cart`} className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:shadow-md active:scale-95">
-                <ShoppingBag className="h-4 w-4" />
+              <Link 
+                href={`/artist/profile/${artistId}/merch/cart`} 
+                className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl bg-primary text-primary-foreground transition-all hover:shadow-md active:scale-95"
+              >
+                <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Link>
             )}
           </div>
@@ -90,13 +95,19 @@ export function ProductCard({ product }: { product: MerchProduct }) {
 
 export function ProductCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-soft overflow-hidden animate-pulse">
+    <div className="flex flex-col rounded-xl sm:rounded-2xl border border-border bg-card shadow-soft overflow-hidden animate-pulse">
       <div className="aspect-square bg-muted" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 w-3/4 rounded bg-muted" />
-        <div className="flex items-center justify-between">
-          <div className="h-5 w-16 rounded bg-muted" />
-          <div className="h-9 w-9 rounded-xl bg-muted" />
+      <div className="flex flex-col p-2.5 sm:p-4 space-y-2 sm:space-y-3">
+        <div className="h-3 sm:h-4 w-3/4 rounded bg-muted" />
+        {/* Extra line for line-clamp skeleton on mobile */}
+        <div className="h-3 sm:h-4 w-1/2 rounded bg-muted sm:hidden" /> 
+        
+        <div className="mt-auto pt-1 flex items-center justify-between gap-2">
+          <div className="h-4 sm:h-5 w-12 sm:w-16 rounded bg-muted" />
+          <div className="flex gap-1.5 sm:gap-2">
+            <div className="h-7 w-10 sm:h-9 sm:w-12 rounded-lg sm:rounded-xl bg-muted" />
+            <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-muted" />
+          </div>
         </div>
       </div>
     </div>

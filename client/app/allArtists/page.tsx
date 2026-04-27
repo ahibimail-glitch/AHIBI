@@ -445,14 +445,14 @@ function ArtistCard({
 
         <div className="absolute bottom-4 left-4 rounded-lg bg-white/95 px-2.5 py-1 text-sm font-bold text-slate-900 shadow-sm">
           <span className="inline-flex items-center gap-1 text-[#f59e0b]">
-              <IconStar filled /> {rating}
+            <IconStar filled /> {rating}
           </span>
         </div>
       </div>
 
       <div className="flex flex-grow flex-col p-5">
         <div className="font-['Cormorant_Garamond',_serif] text-2xl font-bold leading-tight text-slate-900">{name}</div>
-      
+
         <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-4 font-semibold text-slate-900">
           <Wallet size={16} className="text-slate-400" />
           <span className="text-sm font-medium text-slate-500">Starts at</span>
@@ -600,91 +600,105 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-[#5b6cff]/15 blur-3xl" />
-            <div className="absolute -left-6 bottom-10 h-32 w-32 rounded-full bg-[#7c3aed]/15 blur-3xl" />
+          <div className="relative w-full max-w-4xl mx-auto">
+            {/* Background Blur Accents */}
+            <div className="absolute -right-4 -top-4 h-32 w-32 sm:h-48 sm:w-48 rounded-full bg-[#5b6cff]/15 blur-3xl" />
+            <div className="absolute -left-6 bottom-10 h-32 w-32 sm:h-48 sm:w-48 rounded-full bg-[#7c3aed]/15 blur-3xl" />
 
-            <div className="relative overflow-hidden rounded-[34px] border border-white bg-white/60 p-4 backdrop-blur-xl shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2 overflow-hidden rounded-[28px] bg-[#0f172a] p-6 text-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition hover:shadow-[0_25px_70px_rgba(0,0,0,0.3)]">
+            {/* Main Wrapper */}
+            <div className="relative overflow-hidden rounded-[24px] sm:rounded-[34px] border border-white bg-white/60 p-3 sm:p-4 backdrop-blur-xl shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
+              <div className="grid gap-4 md:grid-cols-2">
+
+                {/* TOP CARD - PRIYA NAIR */}
+                <div className="md:col-span-2 overflow-hidden rounded-[20px] sm:rounded-[28px] bg-[#0f172a] p-5 sm:p-6 text-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition hover:shadow-[0_25px_70px_rgba(0,0,0,0.3)]">
 
                   {/* TOP BADGES */}
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.18em] text-white/80 backdrop-blur-md">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.18em] text-white/80 backdrop-blur-md">
                       Featured pick
                     </span>
-                    <span className="rounded-full bg-gradient-to-r from-[#5b6cff] to-[#7c3aed] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.18em] text-white shadow-md">
+                    <span className="rounded-full bg-gradient-to-r from-[#5b6cff] to-[#7c3aed] px-3 py-1.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.18em] text-white shadow-md">
                       Trending now
                     </span>
                   </div>
 
                   {/* MAIN CONTENT */}
-                  <div className="mt-6 flex items-start justify-between gap-6">
+                  <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row items-start justify-between gap-5 sm:gap-6">
 
-                    {/* LEFT */}
-                    <div>
-                      <div className="font-['Cormorant_Garamond',_serif] text-3xl font-bold leading-tight">
+                    {/* LEFT: INFO */}
+                    <div className="w-full sm:w-auto">
+                      <div className="font-['Cormorant_Garamond',_serif] text-2xl sm:text-3xl font-bold leading-tight">
                         Priya Nair
                       </div>
-                      <div className="mt-1 text-sm text-white/60">
+                      <div className="mt-1 text-xs sm:text-sm text-white/60">
                         Singer • Mumbai
                       </div>
 
                       {/* STATS */}
-                      <div className="mt-4 flex items-center gap-4 text-[13px] text-white/80">
+                      <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-4 text-[12px] sm:text-[13px] text-white/80">
                         <span className="inline-flex items-center gap-1 font-semibold text-[#f59e0b]">
+                          {/* Assuming you have an IconStar component */}
                           <IconStar filled /> 4.9
                         </span>
                         <span>312 bookings</span>
-                        <span className="text-white/30">•</span>
+                        <span className="hidden sm:inline text-white/30">•</span>
                         <span className="text-[#16a34a] font-semibold">Verified</span>
                       </div>
                     </div>
 
-                    {/* RIGHT CTA */}
-                    <div className="flex flex-col items-end gap-3">
-                      <button className="rounded-2xl bg-white px-5 py-2.5 text-xs font-bold text-[#111827] transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(255,255,255,0.15)]">
+                    {/* RIGHT CTA BUTTONS */}
+                    <div className="mt-2 flex w-full flex-row sm:mt-0 sm:w-auto sm:flex-col items-center sm:items-end gap-3">
+                      <button className="w-full sm:w-auto flex-1 rounded-2xl bg-white px-4 sm:px-5 py-2.5 text-xs font-bold text-[#111827] transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(255,255,255,0.15)]">
                         Book now
                       </button>
-
-                      <button className="rounded-2xl border border-white/15 bg-transparent px-5 py-2.5 text-xs font-bold text-white transition hover:bg-white/10">
+                      <button className="w-full sm:w-auto flex-1 rounded-2xl border border-white/15 bg-transparent px-4 sm:px-5 py-2.5 text-xs font-bold text-white transition hover:bg-white/10">
                         View profile
                       </button>
                     </div>
-
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-[26px] border border-white bg-gradient-to-b from-[#ffffff] to-[#f8fbff] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+                {/* BOTTOM CARD 1 - DJ */}
+                <div className="overflow-hidden rounded-[20px] sm:rounded-[26px] border border-white bg-gradient-to-b from-[#ffffff] to-[#f8fbff] p-3 sm:p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
                   <img
                     src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80"
                     alt="DJ"
-                    className="h-52 w-full rounded-[20px] object-cover"
+                    className="h-40 sm:h-52 w-full rounded-[16px] sm:rounded-[20px] object-cover"
                   />
-                  <div className="mt-4">
-                    <div className="text-[11px] font-extrabold uppercase tracking-[.18em] text-[#5b6cff]">DJ</div>
-                    <div className="mt-1 font-bold text-[#111827]">Book instantly</div>
+                  <div className="mt-3 sm:mt-4 text-center sm:text-left">
+                    <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[.18em] text-[#5b6cff]">
+                      DJ
+                    </div>
+                    <div className="mt-1 text-sm sm:text-base font-bold text-[#111827]">
+                      Book instantly
+                    </div>
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-[26px] border border-white bg-gradient-to-b from-[#ffffff] to-[#f8fbff] p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
+                {/* BOTTOM CARD 2 - LIVE PERFORMANCE */}
+                <div className="overflow-hidden rounded-[20px] sm:rounded-[26px] border border-white bg-gradient-to-b from-[#ffffff] to-[#f8fbff] p-3 sm:p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
                   <img
                     src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80"
                     alt="Artist"
-                    className="h-52 w-full rounded-[20px] object-cover"
+                    className="h-40 sm:h-52 w-full rounded-[16px] sm:rounded-[20px] object-cover"
                   />
-                  <div className="mt-4">
-                    <div className="text-[11px] font-extrabold uppercase tracking-[.18em] text-[#7c3aed]">Live performance</div>
-                    <div className="mt-1 font-bold text-[#111827]">For premium events</div>
+                  <div className="mt-3 sm:mt-4 text-center sm:text-left">
+                    <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[.18em] text-[#7c3aed]">
+                      Live performance
+                    </div>
+                    <div className="mt-1 text-sm sm:text-base font-bold text-[#111827]">
+                      For premium events
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              {/* BOTTOM FEATURE TAGS */}
+              <div className="mt-4 grid grid-cols-1 gap-2 min-[450px]:grid-cols-3 sm:gap-3">
                 {["Fast booking", "Verified artists", "Secure payouts"].map((item) => (
                   <div
                     key={item}
-                    className="rounded-[18px] border border-white/60 bg-white/40 backdrop-blur-sm px-3 py-3 text-center text-[10px] font-extrabold uppercase tracking-[.14em] text-[#4b5563]"
+                    className="rounded-[14px] sm:rounded-[18px] border border-white/60 bg-white/40 px-3 py-2.5 sm:py-3 text-center backdrop-blur-sm text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.14em] text-[#4b5563]"
                   >
                     {item}
                   </div>
@@ -734,14 +748,14 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
             </button>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-2">
+          <div className="mt-8 flex gap-2 sm:flex-wrap overflow-x-auto pb-2 sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`rounded-full px-5 py-2.5 text-[13px] font-bold transition ${activeCategory === cat
-                  ? "bg-[#eef2ff] text-[#3346d6] border border-[#5b6cff]/20 shadow-sm"
-                  : "border border-[rgba(15,23,42,0.10)] bg-white text-[#4b5563] hover:bg-[#f8faff] hover:text-[#111827]"
+                className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 sm:px-5 sm:py-2.5 text-sm font-medium transition-all duration-200 active:scale-95 ${activeCategory === cat
+                    ? "bg-gradient-to-br from-[#eef2ff] to-[#e0e7ff] text-[#3346d6] border border-[#5b6cff]/30 shadow-md ring-1 ring-[#5b6cff]/10"
+                    : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 hover:shadow-sm"
                   }`}
               >
                 {cat}
@@ -749,8 +763,8 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
             ))}
           </div>
 
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
-            {filteredArtists.slice(0, 4).map((artist) => (
+          <div className="mt-8 grid  gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
+            {filteredArtists.slice(0, 3).map((artist) => (
               <ArtistCard key={artist?._id || artist?.id || artist?.name} artist={artist} onShare={shareArtist} />
             ))}
 
@@ -945,7 +959,7 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
 
       <section className="relative overflow-hidden bg-[#0f172a] py-18 sm:py-24">
         <div className="absolute -left-40 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-[#5b6cff]/20 blur-[100px]" />
-        
+
         <div className="relative mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-10">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
             <div>
@@ -1035,7 +1049,7 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
       <section className="relative overflow-hidden bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] py-18 sm:py-24">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        
+
         <div className="relative mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-10">
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
             <div className="max-w-2xl">

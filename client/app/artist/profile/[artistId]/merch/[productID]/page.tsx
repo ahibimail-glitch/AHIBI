@@ -196,7 +196,7 @@ export default function ProductDetail() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: showAddedToCart ? 1 : 0, y: showAddedToCart ? 0 : 20 }}
-          className="fixed bottom-6 right-6 z-100"
+          className="fixed bottom-6 right-6 z-[100]"
         >
           <div className="flex items-center gap-3 rounded-xl bg-green-600 px-4 py-3 text-white shadow-lg">
             <ShoppingBag className="h-5 w-5" />

@@ -78,63 +78,71 @@ export default function MerchStore() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar/>
-      <div className="mx-auto max-w-6xl px-4  sm:px-6">
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
       
-
-        {/* Filters Bar */}
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-2 overflow-x-auto pb-1">
+      <main className="flex-grow mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Header / Filters Bar */}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          
+          {/* Categories - Swipeable on mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-2 snap-x touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                className={`shrink-0 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium transition-all active:scale-95 ${
                   activeCategory === cat
-                    ? "gradient-primary text-black shadow-sm"
-                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-accent/50"
                 }`}
               >
                 {cat}
               </button>
             ))}
           </div>
-          <div className="flex gap-2 items-center">
+
+          {/* Actions (Cart, Filters, Sort) */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Link
               href={`/artist/profile/${artistId}/merch/cart`}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground hover:bg-primary hover:text-primary-foreground transition-all"
+              className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-foreground hover:bg-primary hover:text-primary-foreground transition-all"
+              aria-label="View Cart"
             >
               <ShoppingBag className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                <span className="absolute -top-1.5 -right-1.5 flex h-[22px] min-w-[22px] px-1 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground ring-2 ring-background">
                   {cartCount}
                 </span>
               )}
             </Link>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors sm:hidden"
+              className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors lg:hidden"
             >
-              <SlidersHorizontal className="h-4 w-4" /> Filters
+              <SlidersHorizontal className="h-4 w-4 shrink-0" /> 
+              <span>Filters</span>
             </button>
-            <div className="relative">
+
+            <div className="relative flex-grow sm:flex-grow-0">
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="appearance-none rounded-xl border border-border bg-card px-4 py-2 pr-8 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="h-11 w-full appearance-none rounded-xl border border-border bg-card pl-4 pr-10 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
               >
                 {sortOptions.map((s) => (
-                  <option key={s}>{s}</option>
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
         </div>
 
         {/* Product Grid */}
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:gap-8">
           {loading ? (
             <>
               <ProductCardSkeleton />
@@ -149,18 +157,25 @@ export default function MerchStore() {
           )}
         </div>
 
-        {sorted.length === 0 && (
+        {/* Empty State */}
+        {!loading && sorted.length === 0 && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-16 text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-20 flex flex-col items-center justify-center text-center px-4"
           >
-            <p className="text-lg font-medium text-foreground">No products found</p>
-            <p className="mt-1 text-sm text-muted-foreground">Try a different category</p>
+            <div className="h-16 w-16 rounded-full bg-accent flex items-center justify-center mb-4 text-muted-foreground">
+              <ShoppingBag className="h-8 w-8 opacity-50" />
+            </div>
+            <p className="text-xl font-semibold text-foreground">No products found</p>
+            <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+              We couldn't find any products in the <span className="font-medium text-foreground">"{activeCategory}"</span> category. Check back later or try a different filter.
+            </p>
           </motion.div>
         )}
-      </div>
-      <Footer/>
+      </main>
+
+      <Footer />
     </div>
   );
 }
