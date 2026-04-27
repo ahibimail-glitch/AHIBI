@@ -272,7 +272,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
                     <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
                       <AlertCircle size={17} className="text-red-500 mt-0.5 shrink-0" />
                       <p className="text-sm text-gray-600">
-                        Carry a valid photo ID — it may be required at the venue. No refund on purchased tickets.
+                        Carry a valid photo ID — it may be required at the venue. 
                       </p>
                     </div>
 
