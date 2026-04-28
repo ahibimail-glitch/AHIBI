@@ -148,6 +148,38 @@ export default function Bookings() {
     });
   };
 
+  // Export to CSV
+  const handleExport = () => {
+    const csvHeaders = ['Customer Name', 'Email', 'Phone', 'Event', 'Ticket Type', 'Quantity', 'Total Amount', 'Status', 'Booked Date', 'Event Date'];
+    const csvRows = filteredBookings.map(booking => [
+      booking.user.name,
+      booking.user.email,
+      booking.user.phone,
+      booking.event.title,
+      booking.ticketType,
+      booking.quantity,
+      booking.total,
+      booking.status,
+      formatDate(booking.bookedAt),
+      formatDate(booking.event.startDate)
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bookings-export-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -213,7 +245,7 @@ export default function Bookings() {
             <Calendar className="h-4 w-4 mr-2" />
             {showDailyEvents ? "Show Regular Events" : "Show Daily Events"}
           </Button>
-          <Button variant="outline" className="w-full sm:w-auto">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
