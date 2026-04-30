@@ -158,9 +158,21 @@ export default function ProfilePage() {
   const [sportsBookings, setSportsBookings] = useState<SportsBooking[]>([]);
   const [livestreamPurchases, setLivestreamPurchases] = useState<LivestreamPurchase[]>([]);
   const [bookingType, setBookingType] = useState<'events' | 'daily-events' | 'sports' | 'livestream'>('events');
-  
-  const regularEventBookings = userBookings.filter(b => !b.isDailyEvent);
-  const dailyEventBookings = userBookings.filter(b => b.isDailyEvent);
+
+  const isDailyBooking = (booking: Booking) => {
+    return Boolean(booking.isDailyEvent || booking.dailyEvent);
+  };
+
+  const getSafeImageSrc = (src?: string) => {
+    if (!src || typeof src !== "string") return "/placeholder.jpg";
+    if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) {
+      return src;
+    }
+    return "/placeholder.jpg";
+  };
+
+  const regularEventBookings = userBookings.filter((b) => !isDailyBooking(b));
+  const dailyEventBookings = userBookings.filter((b) => isDailyBooking(b));
 
   React.useEffect(() => {
     setMounted(true);
@@ -627,16 +639,17 @@ export default function ProfilePage() {
                   {regularEventBookings && regularEventBookings.length > 0 ? (
                     regularEventBookings.map((booking) => (
                       <div
-                        key={booking._id}
+                        key={`event-${booking._id}`}
                         className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
                       >
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                           <div className="flex items-start gap-4 flex-1">
                             <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
                               <Image
-                                src={booking.event?.banner || "/placeholder.jpg"}
+                                src={getSafeImageSrc(booking.event?.banner)}
                                 alt={booking.event?.title || "Event"}
                                 fill
+                                unoptimized
                                 className="object-cover"
                               />
                             </div>
@@ -710,16 +723,17 @@ export default function ProfilePage() {
                   {dailyEventBookings && dailyEventBookings.length > 0 ? (
                     dailyEventBookings.map((booking) => (
                       <div
-                        key={booking._id}
+                        key={`daily-${booking._id}`}
                         className="border border-gray-200 rounded-lg p-6 hover:border-black transition-all hover:shadow-md"
                       >
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                           <div className="flex items-start gap-4 flex-1">
                             <div className="relative w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden">
                               <Image
-                                src={booking.dailyEvent?.banner || "/placeholder.jpg"}
+                                src={getSafeImageSrc(booking.dailyEvent?.banner)}
                                 alt={booking.dailyEvent?.title || "Daily Event"}
                                 fill
+                                unoptimized
                                 className="object-cover"
                               />
                             </div>
