@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useRef, type ReactNode, type TouchEvent }
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Building2, Calendar, ChevronRight, Clock, Loader2, MapPin, Star, TrendingUp, Users } from "lucide-react"
+import { ArrowRight, Building2, Calendar, ChevronRight, Clock, Loader2, MapPin, Star, TrendingUp, Trophy, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import Navbar from "./Navbar"
@@ -901,6 +901,26 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+              {/* Futsal Tournament Registration Card */}
+              <Link href="/futsal-tournament">
+                <Card className="group overflow-hidden rounded-xl bg-gradient-to-br from-green-600 to-emerald-600 border-2 border-green-400 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50">
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-t-xl flex flex-col items-center justify-center p-4 text-center">
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-3">
+                      <Trophy className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="font-bold text-lg text-white mb-1">Turf Titans T3</h3>
+                    <p className="text-xs text-green-100 mb-2">Futsal Tournament</p>
+                    <Badge className="bg-white text-green-700 hover:bg-green-50">
+                      Register Now
+                    </Badge>
+                    <div className="mt-3 text-xs text-green-100 space-y-1">
+                      <p>📅 21-23 May 2026</p>
+                      <p>🏆 ₹2 Lakh Prize Pool</p>
+                      <p>💰 ₹3,500 Registration</p>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
               {sportsEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
                   <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-green-500/25">

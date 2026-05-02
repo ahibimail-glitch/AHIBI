@@ -81,6 +81,7 @@ import TermsManager from "./components/TermsManager";
 import SupportTickets from "./components/SupportTickets";
 import SupportChat from "./components/SupportChat";
 import LivestreamUserManagement from "./components/LivestreamUserManagement";
+import FutsalTournamentRegistrations from "./components/FutsalTournamentRegistrations";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -319,6 +320,8 @@ export default function AdminDashboard() {
         return <TermsManager />;
       case "support-chat":
         return <SupportChat />;
+      case "futsal-tournament":
+        return <FutsalTournamentRegistrations />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -413,6 +416,12 @@ export default function AdminDashboard() {
             label="Sports Partners"
             active={false}
             onClick={() => { router.push('/admin/sports/partners'); setSidebarOpen(false); }}
+          />
+          <SidebarButton
+            icon={UserCheck}
+            label="Futsal Registration"
+            active={activeView === "futsal-tournament"}
+            onClick={() => { setActiveView("futsal-tournament"); setSidebarOpen(false); }}
           />
           <SidebarButton
             icon={Building2}
