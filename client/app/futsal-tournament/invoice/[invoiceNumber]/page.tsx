@@ -18,13 +18,13 @@ interface RegistrationData {
   paymentStatus: string
   amount: number
   currency: string
-  players: Array<{
+  player: {
     fullName: string
-    age: number
-    phone: string
+    phone?: string
     idType: string
     idNumber: string
-  }>
+  }
+  numberOfPlayers: number
   teamManager?: {
     fullName?: string
     phone?: string
@@ -82,7 +82,9 @@ export default function FutsalTournamentInvoice() {
           if (adminData.success && adminData.data.registrations) {
             const found = adminData.data.registrations.find((r: any) => r.invoiceNumber === params.invoiceNumber)
             if (found) {
-              setRegistration(found)
+              // Handle both old and new data structures
+              const normalizedRegistration = normalizeRegistrationData(found)
+              setRegistration(normalizedRegistration)
               return
             }
           }
@@ -97,7 +99,9 @@ export default function FutsalTournamentInvoice() {
       if (regResponse.ok) {
         const data = await regResponse.json()
         if (data.success && data.data.registration) {
-          setRegistration(data.data.registration)
+          // Handle both old and new data structures
+          const normalizedRegistration = normalizeRegistrationData(data.data.registration)
+          setRegistration(normalizedRegistration)
           return
         }
       }
@@ -125,7 +129,13 @@ export default function FutsalTournamentInvoice() {
           paymentStatus: 'confirmed',
           amount: 3500,
           currency: 'INR',
-          players: [],
+          player: {
+            fullName: '',
+            phone: '',
+            idType: 'aadhar',
+            idNumber: '',
+          },
+          numberOfPlayers: 1,
           tournamentDetails: {
             dates: '21-23 May 2026',
             venue: 'Kuda Futsal Arena, Dimapur, Nagaland',
@@ -141,6 +151,36 @@ export default function FutsalTournamentInvoice() {
       setError(err.message || 'Failed to load invoice')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Helper function to normalize registration data (handle both old and new structures)
+  const normalizeRegistrationData = (data: any) => {
+    // If data has the old players array, convert it to new structure
+    if (data.players && Array.isArray(data.players) && data.players.length > 0) {
+      const firstPlayer = data.players[0]
+      return {
+        ...data,
+        player: {
+          fullName: firstPlayer.fullName || '',
+          phone: firstPlayer.phone || '',
+          idType: firstPlayer.idType || 'aadhar',
+          idNumber: firstPlayer.idNumber || '',
+        },
+        numberOfPlayers: data.numberOfPlayers || data.players.length || 1,
+      }
+    }
+    
+    // If data already has the new structure, return as-is
+    return {
+      ...data,
+      player: data.player || {
+        fullName: '',
+        phone: '',
+        idType: 'aadhar',
+        idNumber: '',
+      },
+      numberOfPlayers: data.numberOfPlayers || 1,
     }
   }
 
@@ -399,44 +439,55 @@ export default function FutsalTournamentInvoice() {
 
             <Separator />
 
-            {/* Players List */}
+            {/* Team Details */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Users className="w-5 h-5 text-green-600" />
-                Players ({registration.players.length})
+                Team Details
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {registration.players.map((player, index) => (
-                  <Card key={index} className="border-green-100">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">Player {index + 1}</h4>
-                        {player.age && (
-                          <Badge variant="outline" className="text-xs">
-                            Age: {player.age}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="w-4 h-4 text-gray-500" />
-                        <span>{player.fullName}</span>
-                      </div>
-                      {player.phone && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="w-4 h-4 text-gray-500" />
-                          <span>{player.phone}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-sm">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <span className="text-xs">
-                          {idTypeLabels[player.idType] || player.idType}: {player.idNumber}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-semibold">Number of Players:</span> {registration.numberOfPlayers || 1}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Team Name:</span> {registration.teamName || 'N/A'}
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Captain/Representative Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <User className="w-5 h-5 text-green-600" />
+                Captain/Representative Details
+              </h3>
+              <Card className="border-green-100">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">Team Captain/Representative</h4>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span>{registration.player?.fullName || 'N/A'}</span>
+                  </div>
+                  {registration.player?.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-gray-500" />
+                      <span>{registration.player.phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-xs">
+                      {registration.player ? `${idTypeLabels[registration.player.idType] || registration.player.idType}: ${registration.player.idNumber}` : 'N/A'}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <Separator />

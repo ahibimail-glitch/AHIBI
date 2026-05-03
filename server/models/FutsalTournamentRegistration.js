@@ -19,6 +19,7 @@ const playerSchema = new mongoose.Schema({
     type: String,
     enum: ['aadhar', 'pan', 'voter_id'],
     required: true,
+    trim: true,
   },
   idNumber: {
     type: String,
@@ -28,43 +29,71 @@ const playerSchema = new mongoose.Schema({
 }, { _id: false });
 
 const futsalTournamentRegistrationSchema = new mongoose.Schema({
-  tournamentName: {
-    type: String,
-    default: 'Turf Titans Tournament T3',
-  },
   teamName: {
     type: String,
     required: true,
     trim: true,
   },
-  players: {
-    type: [playerSchema],
+  numberOfPlayers: {
+    type: Number,
     required: true,
-    validate: {
-      validator: function(players) {
-        return players.length >= 6 && players.length <= 10;
-      },
-      message: 'Team must have between 6 and 10 players',
-    },
+    min: 6,
+    max: 10,
+    default: 6,
+  },
+  player: {
+    type: playerSchema,
+    required: true,
   },
   teamManager: {
-    fullName: String,
-    phone: String,
-    email: String,
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+    }
   },
   teamCoach: {
-    fullName: String,
-    phone: String,
-    email: String,
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+    }
   },
-  captainId: {
-    type: mongoose.Schema.Types.ObjectId,
-    refPath: 'players._id',
+  tournament: {
+    type: String,
+    default: 'Turf Titans Tournament T3',
   },
-  declarationsAccepted: {
-    type: Boolean,
-    required: true,
-    default: false,
+  registrationNumber: {
+    type: String,
+    unique: true,
+  },
+  invoiceNumber: {
+    type: String,
+    unique: true,
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'confirmed', 'failed'],
+    default: 'pending',
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'failed'],
+    default: 'pending',
   },
   amount: {
     type: Number,
@@ -75,32 +104,17 @@ const futsalTournamentRegistrationSchema = new mongoose.Schema({
     type: String,
     default: 'INR',
   },
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'confirmed', 'failed'],
-    default: 'pending',
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'cancelled'],
-    default: 'pending',
-  },
   razorpayOrderId: {
     type: String,
-    index: true,
   },
-  razorpayPaymentId: String,
-  razorpaySignature: String,
-  transactionId: String,
-  registrationNumber: {
+  razorpayPaymentId: {
     type: String,
-    unique: true,
-    sparse: true,
   },
-  invoiceNumber: {
+  razorpaySignature: {
     type: String,
-    unique: true,
-    sparse: true,
+  },
+  transactionId: {
+    type: String,
   },
   registrationDate: Date,
   tournamentDetails: {

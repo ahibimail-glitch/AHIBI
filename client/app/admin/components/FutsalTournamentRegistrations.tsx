@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Download, Search, Trophy, Calendar, MapPin, Users, IndianRupee, Eye, FileText } from 'lucide-react';
+import { Loader2, Download, Search, Trophy, Calendar, MapPin, Users, IndianRupee, Eye, FileText, User } from 'lucide-react';
 
 type FutsalTournamentRegistration = {
   _id: string;
@@ -20,13 +20,13 @@ type FutsalTournamentRegistration = {
   paymentStatus: 'pending' | 'confirmed' | 'failed';
   amount: number;
   currency: string;
-  players: Array<{
+  player: {
     fullName: string;
-    age?: number;
     phone?: string;
     idType: string;
     idNumber: string;
-  }>;
+  };
+  numberOfPlayers: number;
   teamManager?: {
     fullName?: string;
     phone?: string;
@@ -111,7 +111,7 @@ export default function FutsalTournamentRegistrations() {
         registration.invoiceNumber,
         registration.teamName,
         registration.tournamentName,
-        ...registration.players.map(p => p.fullName),
+        registration.player.fullName,
         registration.teamManager?.fullName,
         registration.teamCoach?.fullName,
       ]
@@ -288,10 +288,9 @@ export default function FutsalTournamentRegistrations() {
                       <TableCell className="font-semibold">{registration.teamName}</TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          <p>{registration.players.length} players</p>
+                          <p>{registration.numberOfPlayers} players</p>
                           <p className="text-gray-500 text-xs">
-                            {registration.players.slice(0, 2).map(p => p.fullName).join(', ')}
-                            {registration.players.length > 2 && '...'}
+                            Captain: {registration.player?.fullName || 'N/A'}
                           </p>
                         </div>
                       </TableCell>
@@ -446,35 +445,44 @@ export default function FutsalTournamentRegistrations() {
                 )}
               </div>
 
-              {/* Players */}
+              {/* Team Details */}
               <div>
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Players ({selectedRegistration.players.length})
+                  Team Details
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {selectedRegistration.players.map((player, index) => (
-                    <Card key={index}>
-                      <CardContent className="p-4 text-sm space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">Player {index + 1}</span>
-                          {player.age && (
-                            <Badge variant="outline" className="text-xs">
-                              Age: {player.age}
-                            </Badge>
-                          )}
-                        </div>
-                        <p><span className="font-semibold">Name:</span> {player.fullName}</p>
-                        {player.phone && (
-                          <p><span className="font-semibold">Phone:</span> {player.phone}</p>
-                        )}
-                        <p>
-                          <span className="font-semibold">ID:</span> {idTypeLabels[player.idType] || player.idType} - {player.idNumber}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-semibold">Number of Players:</span> {selectedRegistration.numberOfPlayers}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Team Name:</span> {selectedRegistration.teamName}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Captain/Representative Details */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Captain/Representative Details
+                </h3>
+                <Card>
+                  <CardContent className="p-4 text-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Team Captain/Representative</span>
+                    </div>
+                    <p><span className="font-semibold">Name:</span> {selectedRegistration.player?.fullName || 'N/A'}</p>
+                    {selectedRegistration.player?.phone && (
+                      <p><span className="font-semibold">Phone:</span> {selectedRegistration.player.phone}</p>
+                    )}
+                    <p>
+                      <span className="font-semibold">ID:</span> {selectedRegistration.player ? `${idTypeLabels[selectedRegistration.player.idType] || selectedRegistration.player.idType} - ${selectedRegistration.player.idNumber}` : 'N/A'}
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Actions */}

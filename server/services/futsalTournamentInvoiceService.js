@@ -95,9 +95,13 @@ class FutsalTournamentInvoiceService {
         doc.moveTo(40, y).lineTo(doc.page.width - 40, y).stroke('#CBD5E1');
         y += 16;
 
-        doc.roundedRect(50, y, doc.page.width - 90, 70, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
+        doc.roundedRect(50, y, doc.page.width - 90, 90, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
         doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Team Name:', 65, y + 12);
         doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(registration.teamName, 140, y + 12, { width: 380 });
+        y += 20;
+        
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Number of Players:', 65, y + 12);
+        doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(String(registration.numberOfPlayers || 1), 170, y + 12);
         y += 20;
 
         if (registration.teamManager?.fullName) {
@@ -118,13 +122,13 @@ class FutsalTournamentInvoiceService {
         }
         y += 90;
 
-        // Players List
-        doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Players', 40, y);
+        // Captain/Representative Details
+        doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Captain/Representative Details', 40, y);
         y += 24;
         doc.moveTo(40, y).lineTo(doc.page.width - 40, y).stroke('#CBD5E1');
         y += 16;
 
-        registration.players.forEach((player, index) => {
+        if (registration.player) {
           const boxHeight = 55;
           if (y + boxHeight > doc.page.height - 60) {
             doc.addPage();
@@ -133,25 +137,17 @@ class FutsalTournamentInvoiceService {
 
           doc.roundedRect(50, y, doc.page.width - 90, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
           
-          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text(`Player ${index + 1}:`, 65, y + 12);
-          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(player.fullName, 130, y + 12, { width: 380 });
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Captain/Representative:', 65, y + 12);
+          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(registration.player.fullName, 190, y + 12, { width: 380 });
           
-          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Age:', 65, y + 28);
-          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(String(player.age), 95, y + 28);
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Phone:', 65, y + 28);
+          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(registration.player.phone || 'N/A', 105, y + 28);
           
-          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Phone:', 130, y + 28);
-          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(player.phone, 175, y + 28);
-          
-          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('ID:', 260, y + 28);
-          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(`${idTypeLabels[player.idType] || player.idType}: ${player.idNumber}`, 285, y + 28, { width: 200 });
-          
-          if (player.email) {
-            doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('Email:', 65, y + 42);
-            doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(player.email, 105, y + 42, { width: 380 });
-          }
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text('ID:', 65, y + 42);
+          doc.font('Helvetica').fontSize(10).fillColor('#0F172A').text(`${idTypeLabels[registration.player.idType] || registration.player.idType}: ${registration.player.idNumber}`, 85, y + 42, { width: 400 });
           
           y += boxHeight + 12;
-        });
+        }
 
         y += 12;
 

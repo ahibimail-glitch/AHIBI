@@ -27,7 +27,6 @@ const MAX_PLAYERS = 10
 
 interface Player {
   fullName: string
-  age: string
   phone: string
   idType: string
   idNumber: string
@@ -65,29 +64,22 @@ export default function FutsalTournamentRegistration() {
   }, [])
 
   const [teamName, setTeamName] = useState("")
-  const [players, setPlayers] = useState<Player[]>([
-    { fullName: "", age: "", phone: "", idType: "", idNumber: "" }
-  ])
+  const [numberOfPlayers, setNumberOfPlayers] = useState(6)
+  const [player, setPlayer] = useState<Player>({
+    fullName: "",
+    phone: "",
+    idType: "",
+    idNumber: ""
+  })
   const [teamManager, setTeamManager] = useState<Contact>({ fullName: "", phone: "", email: "" })
   const [teamCoach, setTeamCoach] = useState<Contact>({ fullName: "", phone: "", email: "" })
   const [declarationsAccepted, setDeclarationsAccepted] = useState(false)
 
-  const addPlayer = () => {
-    if (players.length < MAX_PLAYERS) {
-      setPlayers([...players, { fullName: "", age: "", phone: "", idType: "", idNumber: "" }])
-    }
-  }
-
-  const removePlayer = (index: number) => {
-    if (players.length > MIN_PLAYERS) {
-      setPlayers(players.filter((_, i) => i !== index))
-    }
-  }
-
-  const updatePlayer = (index: number, field: keyof Player, value: string) => {
-    const updatedPlayers = [...players]
-    updatedPlayers[index][field] = value
-    setPlayers(updatedPlayers)
+  const updatePlayer = (field: keyof Player, value: string) => {
+    setPlayer(prev => ({
+      ...prev,
+      [field]: value
+    }))
   }
 
   const validateForm = () => {
@@ -96,33 +88,26 @@ export default function FutsalTournamentRegistration() {
       return false
     }
 
-    if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
-      toast.error(`Team must have between ${MIN_PLAYERS} and ${MAX_PLAYERS} players`)
+    if (numberOfPlayers < MIN_PLAYERS || numberOfPlayers > MAX_PLAYERS) {
+      toast.error(`Number of players must be between ${MIN_PLAYERS} and ${MAX_PLAYERS}`)
       return false
     }
 
-    for (let i = 0; i < players.length; i++) {
-      const player = players[i]
-      if (!player.fullName.trim()) {
-        toast.error(`Player ${i + 1}: Full name is required`)
-        return false
-      }
-      if (player.age && (parseInt(player.age) < 10 || parseInt(player.age) > 50)) {
-        toast.error(`Player ${i + 1}: Age must be between 10 and 50`)
-        return false
-      }
-      if (player.phone && !/^\d{10}$/.test(player.phone)) {
-        toast.error(`Player ${i + 1}: Phone must be a 10-digit number`)
-        return false
-      }
-      if (!player.idType) {
-        toast.error(`Player ${i + 1}: ID type is required`)
-        return false
-      }
-      if (!player.idNumber.trim()) {
-        toast.error(`Player ${i + 1}: ID number is required`)
-        return false
-      }
+    if (!player.fullName.trim()) {
+      toast.error("Player full name is required")
+      return false
+    }
+    if (player.phone && !/^\d{10}$/.test(player.phone)) {
+      toast.error("Player phone must be a 10-digit number")
+      return false
+    }
+    if (!player.idType) {
+      toast.error("Player ID type is required")
+      return false
+    }
+    if (!player.idNumber.trim()) {
+      toast.error("Player ID number is required")
+      return false
     }
 
     if (teamManager.fullName && !/^\d{10}$/.test(teamManager.phone)) {
@@ -157,7 +142,8 @@ export default function FutsalTournamentRegistration() {
         },
         body: JSON.stringify({
           teamName,
-          players,
+          numberOfPlayers,
+          player,
           teamManager: teamManager.fullName ? teamManager : undefined,
           teamCoach: teamCoach.fullName ? teamCoach : undefined,
           declarationsAccepted,
@@ -197,8 +183,8 @@ export default function FutsalTournamentRegistration() {
           await verifyPayment(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature, registrationId)
         },
         prefill: {
-          name: players[0].fullName,
-          contact: players[0].phone,
+          name: player.fullName,
+          contact: player.phone,
         },
         theme: {
           color: '#15803D',
@@ -438,100 +424,82 @@ export default function FutsalTournamentRegistration() {
 
               <Separator />
 
-              {/* Players Section */}
+              {/* Number of Players */}
+              <div className="space-y-2">
+                <Label htmlFor="numberOfPlayers">Number of Players in Team *</Label>
+                <Input
+                  id="numberOfPlayers"
+                  type="number"
+                  placeholder="Enter number of players (1-10)"
+                  value={numberOfPlayers}
+                  onChange={(e) => setNumberOfPlayers(parseInt(e.target.value) || 1)}
+                  min={MIN_PLAYERS}
+                  max={MAX_PLAYERS}
+                  className="text-lg"
+                />
+                <p className="text-sm text-gray-500">Enter the total number of players in your team (1-10)</p>
+              </div>
+
+              <Separator />
+
+              {/* Player Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-lg">Players ({players.length}/{MAX_PLAYERS}) *</Label>
-                  <Badge variant="outline">{MIN_PLAYERS}-{MAX_PLAYERS} players required</Badge>
+                  <Label className="text-lg">Captain/Representative Details *</Label>
+                  <Badge variant="outline">Primary Contact</Badge>
                 </div>
 
-                {players.map((player, index) => (
-                  <Card key={index} className="border-green-100">
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold">Player {index + 1}</h4>
-                        {players.length > MIN_PLAYERS && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removePlayer(index)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
+                <Card className="border-green-100">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold">Team Captain/Representative</h4>
+                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Full Name *</Label>
-                          <Input
-                            placeholder="Player full name"
-                            value={player.fullName}
-                            onChange={(e) => updatePlayer(index, 'fullName', e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Age (Optional)</Label>
-                          <Input
-                            type="number"
-                            placeholder="Age (10-50)"
-                            value={player.age}
-                            onChange={(e) => updatePlayer(index, 'age', e.target.value)}
-                            min="10"
-                            max="50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Phone (Optional)</Label>
-                          <Input
-                            type="tel"
-                            placeholder="10-digit phone number"
-                            value={player.phone}
-                            onChange={(e) => updatePlayer(index, 'phone', e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>ID Type *</Label>
-                          <Select
-                            value={player.idType}
-                            onValueChange={(value) => updatePlayer(index, 'idType', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select ID type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="aadhar">Aadhar Card</SelectItem>
-                              <SelectItem value="pan">PAN Card</SelectItem>
-                              <SelectItem value="voter_id">Voter ID</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>ID Number *</Label>
-                          <Input
-                            placeholder="Enter ID number"
-                            value={player.idNumber}
-                            onChange={(e) => updatePlayer(index, 'idNumber', e.target.value)}
-                          />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Full Name *</Label>
+                        <Input
+                          placeholder="Captain full name"
+                          value={player.fullName}
+                          onChange={(e) => updatePlayer('fullName', e.target.value)}
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {players.length < MAX_PLAYERS && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addPlayer}
-                    className="w-full border-green-300 text-green-700 hover:bg-green-50"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Player
-                  </Button>
-                )}
+                      <div className="space-y-2">
+                        <Label>Phone (Optional)</Label>
+                        <Input
+                          type="tel"
+                          placeholder="10-digit phone number"
+                          value={player.phone}
+                          onChange={(e) => updatePlayer('phone', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>ID Type *</Label>
+                        <Select
+                          value={player.idType}
+                          onValueChange={(value) => updatePlayer('idType', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ID type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="aadhar">Aadhar Card</SelectItem>
+                            <SelectItem value="pan">PAN Card</SelectItem>
+                            <SelectItem value="voter_id">Voter ID</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>ID Number *</Label>
+                        <Input
+                          placeholder="Enter ID number"
+                          value={player.idNumber}
+                          onChange={(e) => updatePlayer('idNumber', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               <Separator />

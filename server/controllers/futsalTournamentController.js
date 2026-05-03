@@ -18,7 +18,6 @@ const idTypeLabels = {
 const validatePlayer = (player) => {
   if (!player || typeof player !== 'object') return 'Invalid player details';
   if (!player.fullName?.trim()) return 'Player full name is required';
-  if (player.age && (Number(player.age) < 10 || Number(player.age) > 50)) return 'Player age must be between 10 and 50';
   if (player.phone && !/^\d{10}$/.test(String(player.phone))) return 'Player phone must be a 10-digit number';
   if (!player.idType || !['aadhar', 'pan', 'voter_id'].includes(player.idType)) return 'Valid ID type (aadhar, pan, voter_id) is required';
   if (!player.idNumber?.trim()) return 'ID number is required';
@@ -43,7 +42,8 @@ const serializeRegistration = (registration) => ({
   paymentStatus: registration.paymentStatus,
   amount: registration.amount,
   currency: registration.currency,
-  players: registration.players,
+  player: registration.player,
+  numberOfPlayers: registration.numberOfPlayers,
   teamManager: registration.teamManager,
   teamCoach: registration.teamCoach,
   tournamentDetails: registration.tournamentDetails,
@@ -54,19 +54,26 @@ const serializeRegistration = (registration) => ({
 
 exports.createRegistrationOrder = async (req, res) => {
   try {
-    const { teamName, players, teamManager, teamCoach, declarationsAccepted } = req.body;
+    const { teamName, numberOfPlayers, player, teamManager, teamCoach, declarationsAccepted } = req.body;
 
-    if (!teamName?.trim()) {
+    // Validate team name
+    if (!teamName || typeof teamName !== 'string' || !teamName.trim()) {
       return ApiResponse.badRequest(res, 'Team name is required');
     }
 
-    if (!Array.isArray(players) || players.length < 6 || players.length > 10) {
-      return ApiResponse.badRequest(res, 'Team must have between 6 and 10 players');
+    // Validate number of players
+    if (!numberOfPlayers || typeof numberOfPlayers !== 'number' || numberOfPlayers < 6 || numberOfPlayers > 10) {
+      return ApiResponse.badRequest(res, 'Number of players must be between 6 and 10');
     }
 
-    for (let i = 0; i < players.length; i++) {
-      const error = validatePlayer(players[i]);
-      if (error) return ApiResponse.badRequest(res, `Player ${i + 1}: ${error}`);
+    // Validate player
+    if (!player || typeof player !== 'object') {
+      return ApiResponse.badRequest(res, 'Player details are required');
+    }
+
+    const playerError = validatePlayer(player);
+    if (playerError) {
+      return ApiResponse.badRequest(res, playerError);
     }
 
     if (teamManager) {
@@ -92,19 +99,22 @@ exports.createRegistrationOrder = async (req, res) => {
       notes: {
         tournament: 'Turf Titans Tournament T3',
         teamName: teamName,
-        playerCount: String(players.length),
+        playerCount: String(numberOfPlayers),
       },
     });
 
+    const registrationNumber = `FTT-${Date.now()}`;
+    const invoiceNumber = `INV-FTT-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+
     const registration = await FutsalTournamentRegistration.create({
       teamName: String(teamName).trim(),
-      players: players.map(player => ({
+      numberOfPlayers: Number(numberOfPlayers),
+      player: {
         fullName: String(player.fullName).trim(),
-        age: player.age ? Number(player.age) : undefined,
         phone: player.phone ? String(player.phone).trim() : undefined,
         idType: player.idType,
         idNumber: String(player.idNumber).trim(),
-      })),
+      },
       teamManager: teamManager ? {
         fullName: teamManager.fullName ? String(teamManager.fullName).trim() : undefined,
         phone: teamManager.phone ? String(teamManager.phone).trim() : undefined,
@@ -115,10 +125,9 @@ exports.createRegistrationOrder = async (req, res) => {
         phone: teamCoach.phone ? String(teamCoach.phone).trim() : undefined,
         email: teamCoach.email ? String(teamCoach.email).trim() : undefined,
       } : undefined,
-      declarationsAccepted: true,
-      amount,
-      currency: 'INR',
-      paymentStatus: 'pending',
+      tournament: 'Turf Titans Tournament T3',
+      registrationNumber,
+      invoiceNumber,
       status: 'pending',
       razorpayOrderId: razorpayOrder.id,
     });
