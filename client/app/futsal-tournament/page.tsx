@@ -437,7 +437,7 @@ export default function FutsalTournamentRegistration() {
                   max={MAX_PLAYERS}
                   className="text-lg"
                 />
-                <p className="text-sm text-gray-500">Enter the total number of players in your team (1-10)</p>
+                <p className="text-sm text-gray-500">Enter the total number of players in your team </p>
               </div>
 
               <Separator />

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,299 +12,279 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, Search, Heart, Loader2, Sparkles, Crown, Filter, X, Zap, Timer, ExternalLink, Gift, CheckCircle2, Percent, ShoppingBag, Clock, Star } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Search,
+  Loader2,
+  Filter,
+  X,
+  Trophy,
+  CalendarClock,
+  ArrowRight,
+  ChevronRight,
+} from "lucide-react";
 import Image from "next/image";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Event, EventsResponse } from "@/types/event";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CITIES = [
-  "Mumbai",
-  "Delhi",
-  "Bangalore",
-  "Pune",
-  "Chennai",
-  "Hyderabad",
-  "Dimapur",
-  "Guwahati",
-  "Kohima",
-  "Shillong",
-  "Silchar",
-  "Tezpur",
+  "Mumbai", "Delhi", "Bangalore", "Pune", "Chennai", "Hyderabad",
+  "Dimapur", "Guwahati", "Kohima", "Shillong", "Silchar", "Tezpur",
 ];
 
-const GENRES = ['Music', 'Comedy', 'Theatre', 'Dance', 'Food', 'Art', 'Sports', 'Business', 'Education', 'Other'];
+const GENRES = [
+  "Music", "Comedy", "Theatre", "Dance", "Food",
+  "Art", "Sports", "Business", "Education", "Other",
+];
 
-// Format date for display
-const formatDate = (dateString: string | Date): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+const GENRE_ICONS: Record<string, string> = {
+  Music: "🎵", Comedy: "😂", Theatre: "🎭", Dance: "💃",
+  Food: "🍽️", Art: "🎨", Sports: "⚽", Business: "💼",
+  Education: "📚", Other: "✨",
 };
 
- // Format weekday + date for compact display
- const formatDayDate = (dateString: string | Date): string => {
-   const date = new Date(dateString);
-   if (isNaN(date.getTime())) return '';
-   const dayDate = date.toLocaleDateString('en-US', {
-     weekday: 'short',
-     month: 'short',
-     day: 'numeric',
-   });
-   const time = date.toLocaleTimeString('en-US', {
-     hour: '2-digit',
-     minute: '2-digit',
-   });
-   return `${dayDate} • ${time}`;
- };
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Format time for display
-const formatTime = (dateString: string | Date): string => {
+const formatDayDate = (dateString: string | Date): string => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (isNaN(date.getTime())) return "";
+  return `${date.toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric",
+  })} · ${date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
 };
 
-// Get the lowest ticket price
 const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
-  if (!ticketTypes || ticketTypes.length === 0) return 'Free';
-  const prices = ticketTypes.map(t => t.price);
-  const minPrice = Math.min(...prices);
-  return minPrice === 0 ? 'Free' : `₹${minPrice.toFixed(2)}`;
+  if (!ticketTypes?.length) return "Free";
+  const min = Math.min(...ticketTypes.map((t) => t.price));
+  return min === 0 ? "Free" : `₹${min.toLocaleString("en-IN")}`;
 };
 
-// Event Card Component
+// ─── Event Card ───────────────────────────────────────────────────────────────
+
 interface EventCardProps {
   event: Event;
   index?: number;
 }
 
 const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
-  const isPastEvent = new Date(event.endDate) < new Date();
-  const bookingCutoff = (() => {
-    const raw = (event as any).bookingEndTime || event.endDate;
-    if (!raw) return null;
-    const dt = new Date(raw);
-    if (isNaN(dt.getTime())) return null;
-    return dt;
-  })();
-  const isBookingClosed = bookingCutoff ? new Date() > bookingCutoff : false;
-  const [isHovered, setIsHovered] = useState(false);
+  const isPast = new Date(event.endDate ?? event.startDate) < new Date();
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.05 }}
-      className="relative w-full"
+      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
+      className="group"
       role="article"
       aria-labelledby={`event-title-${event._id}`}
     >
-      <Card className="w-full overflow-hidden rounded-xl bg-white border-0 shadow-none">
-        
-        {/* POSTER IMAGE */}
-        <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl">
-          <img
-            src={event.banner || "/placeholder.svg"}
-            alt={event.title}
-            loading={index < 8 ? "eager" : "lazy"}
-            className="w-full h-full object-cover rounded-xl"
-          />
-          {/* DATE & TIME STRIP */}
-          {!!formatDayDate(event.startDate) && (
-            <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
-              <p className="text-[10px] text-white text-center font-medium truncate">
-                {formatDayDate(event.startDate)}
-              </p>
-            </div>
-          )}
+      {/* Poster */}
+      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
+        <img
+          src={event.banner || "/placeholder.svg"}
+          alt={event.title}
+          loading={index < 8 ? "eager" : "lazy"}
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isPast ? "grayscale-[40%]" : ""}`}
+        />
+
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        {/* Category pill */}
+        {event.category && (
+          <div className="absolute top-2 left-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/90 backdrop-blur-sm text-gray-800 shadow-sm">
+              {GENRE_ICONS[event.category] ?? "✨"} {event.category}
+            </span>
+          </div>
+        )}
+
+        {isPast && (
+          <div className="absolute top-2 right-2">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-gray-300 uppercase tracking-wider">
+              Past
+            </span>
+          </div>
+        )}
+
+        {/* Date strip */}
+        {formatDayDate(event.startDate) && (
+          <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/90 to-transparent">
+            <p className="text-[10px] text-white/90 font-medium truncate">
+              {formatDayDate(event.startDate)}
+            </p>
+          </div>
+        )}
+
+        {/* Hover arrow */}
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
+          <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-md">
+            <ArrowRight className="w-3.5 h-3.5 text-gray-900" />
+          </div>
         </div>
+      </div>
 
-        {/* TEXT */}
-        <div className="px-1 pt-2 pb-1">
-          <h3
-            id={`event-title-${event._id}`}
-            className="text-[14px] font-semibold text-gray-900 leading-snug line-clamp-1"
-          >
-            {event.title}
-          </h3>
-
-          <p className="text-[12px] text-gray-500 mt-0.5 line-clamp-1">
-            {event.category || "Event"}{event.location?.city ? ` | ${event.location.city}` : ""}
+      {/* Text */}
+      <div className="pt-2.5 px-0.5">
+        <h3
+          id={`event-title-${event._id}`}
+          className="text-[13px] sm:text-sm font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors duration-200"
+        >
+          {event.title}
+        </h3>
+        {event.location?.city && (
+          <p className="flex items-center gap-1 text-[11px] text-gray-400 mt-1">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{event.location.city}</span>
           </p>
-        </div>
-
-      </Card>
+        )}
+      </div>
     </motion.div>
-
   );
 };
 
+// ─── Section Header ───────────────────────────────────────────────────────────
+
+const SectionHeader: React.FC<{ title: string; count: number; dot?: string }> = ({
+  title, count, dot = "bg-blue-500",
+}) => (
+  <div className="flex items-center gap-3 mb-5">
+    <span className={`w-2.5 h-2.5 rounded-full ${dot} flex-shrink-0`} />
+    <h2 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">{title}</h2>
+    <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+      {count}
+    </span>
+  </div>
+);
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function EventsPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCity, setSelectedCity] = useState("all");
-  const [selectedGenre, setSelectedGenre] = useState("all");
-  const [events, setEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [backgroundImages, setBackgroundImages] = useState<Array<{ url: string; mobileUrl?: string }>>([]);
-  const [loadingHeroImages, setLoadingHeroImages] = useState(true);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [searchQuery, setSearchQuery]       = useState("");
+  const [selectedCity, setSelectedCity]     = useState("all");
+  const [selectedGenre, setSelectedGenre]   = useState("all");
+  const [events, setEvents]                 = useState<Event[]>([]);
+  const [isLoading, setIsLoading]           = useState(true);
+  const [error, setError]                   = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen]     = useState(false);
+  const [heroImages, setHeroImages]         = useState<Array<{ url: string; mobileUrl?: string }>>([]);
+  const [loadingHero, setLoadingHero]       = useState(true);
+  const [isMobile, setIsMobile]             = useState(false);
+  const [showTournaments, setShowTournaments] = useState(false);
+  const [heroIdx, setHeroIdx]               = useState(0);
 
   const currentDate = new Date();
 
+  // ── Fetch events ───────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchEvents = async () => {
+    (async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000`);
-
-        if (!response.ok) throw new Error('Failed to fetch events');
-        const data: EventsResponse = await response.json();
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000`);
+        if (!res.ok) throw new Error("Failed to fetch events");
+        const data: EventsResponse = await res.json();
         setEvents(data.data.events);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load events';
-        console.error('Error fetching events:', errorMessage);
-        setError(errorMessage);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load events");
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchEvents();
+    })();
   }, []);
 
+  // ── Viewport detection ─────────────────────────────────────────────────────
   useEffect(() => {
-    const updateViewport = () => {
-      setIsMobileViewport(window.innerWidth < 640);
-    };
-    updateViewport();
-    window.addEventListener('resize', updateViewport);
-    return () => window.removeEventListener('resize', updateViewport);
+    const update = () => setIsMobile(window.innerWidth < 640);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Hero background images slideshow
+  // ── Hero images ────────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchHeroImages = async () => {
+    (async () => {
       try {
-        setLoadingHeroImages(true);
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images?active=true`);
-        if (response.ok) {
-          const data = await response.json();
-          // Filter for events-related images or use all active images if no events-specific images exist
-          const eventsImages = data.data.filter((img: any) => 
-            img.title?.toLowerCase().includes('events') || 
-            img.description?.toLowerCase().includes('events') ||
-            img.type === 'events'
+        setLoadingHero(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images?active=true`);
+        if (res.ok) {
+          const data = await res.json();
+          let imgs = data.data.filter((i: any) =>
+            i.title?.toLowerCase().includes("events") ||
+            i.description?.toLowerCase().includes("events") ||
+            i.type === "events"
           );
-          
-          // If no events-specific images, use all active images
-          const heroImages = eventsImages.length > 0 ? eventsImages : data.data;
-          const mapped = heroImages.map((img: any) => ({
-            url: img?.url,
-            mobileUrl: img?.mobileUrl,
-          }));
-          setBackgroundImages(mapped);
+          if (!imgs.length) imgs = data.data;
+          setHeroImages(imgs.map((i: any) => ({ url: i.url, mobileUrl: i.mobileUrl })));
         } else {
-          // Fallback to hardcoded images if API fails
-          const fallbackImages = [
-            { url: "/images/carausel1.jpg" }
-          ];
-          setBackgroundImages(fallbackImages);
+          setHeroImages([{ url: "/images/carausel1.jpg" }]);
         }
-      } catch (error) {
-        console.error('Error fetching hero images:', error);
-        // Fallback to hardcoded images
-        const fallbackImages = [
-          { url: "/images/carausel1.jpg" }
-        ];
-        setBackgroundImages(fallbackImages);
+      } catch {
+        setHeroImages([{ url: "/images/carausel1.jpg" }]);
       } finally {
-        setLoadingHeroImages(false);
+        setLoadingHero(false);
       }
-    };
-
-    fetchHeroImages();
+    })();
   }, []);
 
+  // ── Hero slideshow ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const id = setInterval(() => setHeroIdx((p) => (p + 1) % heroImages.length), 5000);
+    return () => clearInterval(id);
+  }, [heroImages.length]);
+
+  // ── Filter helpers ─────────────────────────────────────────────────────────
   const resetFilters = () => {
-    setSearchQuery("");
-    setSelectedCity("all");
-    setSelectedGenre("all");
+    setSearchQuery(""); setSelectedCity("all"); setSelectedGenre("all");
     setIsFilterOpen(false);
   };
-
   const hasActiveFilters = searchQuery !== "" || selectedCity !== "all" || selectedGenre !== "all";
 
-  const filteredEvents = events.filter((event: Event) => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (event.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCity = selectedCity === "all" || event.location?.city?.toLowerCase() === selectedCity.toLowerCase();
-    const matchesGenre = selectedGenre === "all" || event.category?.toLowerCase() === selectedGenre.toLowerCase();
-    return matchesSearch && matchesCity && matchesGenre;
-  });
+  // ── Filtered & sorted events ───────────────────────────────────────────────
+  const filtered = events.filter((e) =>
+    (e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (e.description ?? "").toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (selectedCity === "all" || e.location?.city?.toLowerCase() === selectedCity.toLowerCase()) &&
+    (selectedGenre === "all" || e.category?.toLowerCase() === selectedGenre.toLowerCase())
+  );
 
-  const upcomingEvents = filteredEvents.filter((event: Event) => new Date(event.startDate) > currentDate);
-  const currentEvents = filteredEvents.filter((event: Event) => {
-    const startDate = new Date(event.startDate);
-    const endDate = event.endDate ? new Date(event.endDate) : null;
-    if (isNaN(startDate.getTime())) return false;
-    if (!endDate) {
-      // Treat events without endDate as same-day; show as current if same calendar day
-      const startDay = new Date(startDate); startDay.setHours(0, 0, 0, 0);
-      const today = new Date(currentDate); today.setHours(0, 0, 0, 0);
-      return startDay.getTime() === today.getTime();
-    }
-    return startDate <= currentDate && endDate >= currentDate;
-  });
-  const pastEvents = filteredEvents.filter((event: Event) => {
-    const endDate = event.endDate ? new Date(event.endDate) : null;
-    if (endDate) return endDate < currentDate;
-    // If no end date: consider past if startDate is before today (and not same day)
-    const startDate = new Date(event.startDate);
-    if (isNaN(startDate.getTime())) return false;
-    const eventDay = new Date(startDate); eventDay.setHours(0, 0, 0, 0);
-    const today = new Date(currentDate); today.setHours(0, 0, 0, 0);
-    return eventDay < today;
-  });
-  const featuredEvents = events.filter((event: Event) => event.isFeatured);
-  // Sort past events by latest date first (use endDate if available, otherwise startDate)
-  const pastEventsSorted = [...pastEvents].sort((a: Event, b: Event) => {
-    const aDate = new Date(a.endDate || a.startDate).getTime();
-    const bDate = new Date(b.endDate || b.startDate).getTime();
-    return bDate - aDate; // descending: latest first
-  });
+  const upcomingSorted = filtered
+    .filter((e) => new Date(e.startDate) > currentDate)
+    .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate));
 
-  const upcomingEventsSorted = [...upcomingEvents].sort((a: Event, b: Event) => {
-    const aDate = new Date(a.startDate).getTime();
-    const bDate = new Date(b.startDate).getTime();
-    return aDate - bDate;
-  });
+  const currentSorted = filtered
+    .filter((e) => {
+      const s = new Date(e.startDate); const en = e.endDate ? new Date(e.endDate) : null;
+      if (!en) {
+        const sd = new Date(s); sd.setHours(0,0,0,0);
+        const td = new Date(currentDate); td.setHours(0,0,0,0);
+        return sd.getTime() === td.getTime();
+      }
+      return s <= currentDate && en >= currentDate;
+    })
+    .sort((a, b) => +new Date(a.startDate) - +new Date(b.startDate));
 
-  const currentEventsSorted = [...currentEvents].sort((a: Event, b: Event) => {
-    const aDate = new Date(a.startDate).getTime();
-    const bDate = new Date(b.startDate).getTime();
-    return aDate - bDate;
-  });
+  const pastSorted = filtered
+    .filter((e) => {
+      const en = e.endDate ? new Date(e.endDate) : null;
+      if (en) return en < currentDate;
+      const sd = new Date(new Date(e.startDate)); sd.setHours(0,0,0,0);
+      const td = new Date(currentDate); td.setHours(0,0,0,0);
+      return sd < td;
+    })
+    .sort((a, b) => +new Date(b.endDate ?? b.startDate) - +new Date(a.endDate ?? a.startDate));
 
+  // ── Loading / error states ─────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-          <p className="text-lg font-semibold text-gray-800">Loading Events...</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+          <p className="text-base font-semibold text-gray-700">Loading Events…</p>
         </motion.div>
       </div>
     );
@@ -313,336 +292,426 @@ export default function EventsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center p-8 max-w-md mx-auto bg-white rounded-2xl shadow-lg"
-        >
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-full"
-              onClick={() => window.location.reload()}
-            >
-              Try Again
-            </Button>
-          </motion.div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="text-center p-8 max-w-sm w-full bg-white rounded-2xl shadow-lg">
+          <h2 className="text-xl font-bold text-red-600 mb-3">Something went wrong</h2>
+          <p className="text-gray-500 text-sm mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6">
+            Try Again
+          </Button>
         </motion.div>
       </div>
     );
   }
 
+  // ── Hero image URL ─────────────────────────────────────────────────────────
+  const heroSrc = heroImages[heroIdx]
+    ? (isMobile && heroImages[heroIdx].mobileUrl
+        ? heroImages[heroIdx].mobileUrl!
+        : heroImages[heroIdx].url)
+    : "/images/carausel1.jpg";
+
+  // ── Sidebar / filter panel content (shared) ────────────────────────────────
+  const FilterContent = () => (
+    <div className="space-y-4">
+      {/* Search */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Search</p>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search events…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-8 bg-gray-50 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300"
+            aria-label="Search events"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* City */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">City</p>
+        <Select value={selectedCity} onValueChange={setSelectedCity}>
+          <SelectTrigger className="bg-gray-50 border-gray-200 rounded-xl text-sm">
+            <SelectValue placeholder="All Cities" />
+          </SelectTrigger>
+          <SelectContent className="bg-white border-gray-200 rounded-xl shadow-lg max-h-60">
+            <SelectItem value="all">All Cities</SelectItem>
+            {CITIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Category */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Category</p>
+        <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+          <SelectTrigger className="bg-gray-50 border-gray-200 rounded-xl text-sm">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent className="bg-white border-gray-200 rounded-xl shadow-lg max-h-60">
+            <SelectItem value="all">All Categories</SelectItem>
+            {GENRES.map((g) => <SelectItem key={g} value={g}>{GENRE_ICONS[g]} {g}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <hr className="border-gray-100" />
+
+      <Button asChild variant="outline"
+        className="w-full rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 text-sm justify-start gap-2">
+        <Link href="/allVenues"><MapPin className="h-4 w-4 text-gray-400" />Browse by Venues</Link>
+      </Button>
+      <Button asChild variant="outline"
+        className="w-full rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50 text-sm justify-start gap-2">
+        <Link href="/events/daily"><Calendar className="h-4 w-4 text-gray-400" />Daily Events</Link>
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 scroll-smooth">
+    <div className="min-h-screen flex flex-col bg-[#f8f8fa]">
       <Navbar />
+
       <main className="flex-1">
-        <section className="relative w-full bg-white">
-          {loadingHeroImages ? (
-            <div className="w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse" />
+        {/* ── Hero ─────────────────────────────────────────────────────────── */}
+        <section className="relative w-full overflow-hidden bg-gray-900">
+          {loadingHero ? (
+            <div className="h-[200px] sm:h-[280px] md:h-[380px] lg:h-[460px] bg-gray-800 animate-pulse" />
           ) : (
-            <div className="relative w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] overflow-hidden">
-              <Image
-                src={
-                  (isMobileViewport && backgroundImages[0]?.mobileUrl
-                    ? backgroundImages[0].mobileUrl
-                    : backgroundImages[0]?.url) || "/images/carausel1.jpg"
-                }
-                alt="Events Hero"
-                fill
-                className="object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={heroIdx}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="relative h-[200px] sm:h-[280px] md:h-[380px] lg:h-[460px]"
+              >
+                <Image src={heroSrc} alt="Events" fill className="object-cover" priority />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                {/* Hero content */}
+                <div className="absolute inset-0 flex flex-col justify-end pb-6 sm:pb-10 px-4 sm:px-8 lg:px-12">
+                  <motion.p
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-blue-300 mb-1.5"
+                  >
+                    Discover · Explore · Experience
+                  </motion.p>
+                  <motion.h1
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-2xl"
+                  >
+                    Events happening near you
+                  </motion.h1>
+                </div>
+
+                {/* Slideshow dots */}
+                {heroImages.length > 1 && (
+                  <div className="absolute bottom-3 right-4 flex gap-1.5">
+                    {heroImages.map((_, i) => (
+                      <button
+                        key={i} onClick={() => setHeroIdx(i)}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                          i === heroIdx ? "w-4 bg-white" : "bg-white/40"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           )}
         </section>
 
-        <section className="py-6 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-              <aside className="hidden lg:block">
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Filters</h3>
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={resetFilters}>
-                      Clear
-                    </Button>
-                  </div>
+        {/* ── Mobile quick-search bar ──────────────────────────────────────── */}
+        <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
+          <div className="flex gap-2 max-w-2xl mx-auto">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search events…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-gray-50 border-gray-200 rounded-full text-sm h-9"
+              />
+            </div>
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className={`flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-medium border transition-all ${
+                hasActiveFilters
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              <span className="hidden xs:inline">Filters</span>
+              {hasActiveFilters && (
+                <span className="w-4 h-4 flex items-center justify-center rounded-full bg-white/30 text-[10px] font-bold">
+                  {[searchQuery, selectedCity !== "all", selectedGenre !== "all"].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
 
-                  <div className="space-y-4">
-                 
-                     
+        {/* ── Main layout ─────────────────────────────────────────────────── */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex gap-6 lg:gap-8 items-start">
 
-                    <div className="border border-gray-200 rounded-md p-3">
-                      <p className="text-sm font-medium text-gray-900 mb-2">Search</p>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Search events..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-9 bg-white border-gray-300 rounded-md text-sm"
-                          aria-label="Search events"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-md p-3">
-                      <p className="text-sm font-medium text-gray-900 mb-2">City</p>
-                      <Select value={selectedCity} onValueChange={setSelectedCity}>
-                        <SelectTrigger className="bg-white border-gray-300 rounded-md text-sm">
-                          <SelectValue placeholder="Select City" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                          <SelectItem value="all">All Cities</SelectItem>
-                          {CITIES.map((city) => (
-                            <SelectItem key={city} value={city}>{city}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="border border-gray-200 rounded-md p-3">
-                      <p className="text-sm font-medium text-gray-900 mb-2">Categories</p>
-                      <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-                        <SelectTrigger className="bg-white border-gray-300 rounded-md text-sm">
-                          <SelectValue placeholder="Select Category" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                          <SelectItem value="all">All Categories</SelectItem>
-                          {GENRES.map((genre) => (
-                            <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Button asChild variant="outline" className="w-full border-red-300 text-red-600 hover:bg-red-50">
-                      <Link href="/allVenues">Browse by Venues</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full border-blue-300 text-blue-600 hover:bg-blue-50">
-                      <Link href="/events/daily">Daily Events</Link>
-                    </Button>
-                  </div>
+            {/* ── Desktop Sidebar ────────────────────────────────────────── */}
+            <aside className="hidden lg:block w-[260px] xl:w-[280px] flex-shrink-0 sticky top-6">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="font-bold text-gray-900 text-sm">Filters</h3>
+                  {hasActiveFilters && (
+                    <button onClick={resetFilters}
+                      className="text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">
+                      Clear all
+                    </button>
+                  )}
                 </div>
-              </aside>
+                <FilterContent />
+              </div>
+            </aside>
 
-              <div>
-                <div className="mb-4">
-                  <Button asChild className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+            {/* ── Content ────────────────────────────────────────────────── */}
+            <div className="flex-1 min-w-0">
+
+              {/* Top bar: title + action buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                    {showTournaments ? "Tournaments" : `Events in ${selectedCity === "all" ? "India" : selectedCity}`}
+                  </h2>
+                  {!showTournaments && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {upcomingSorted.length + currentSorted.length} upcoming
+                      {pastSorted.length > 0 ? ` · ${pastSorted.length} past` : ""}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button asChild size="sm"
+                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8 px-4 shadow-sm">
                     <Link href="/events/daily">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      View Daily Events
+                      <Calendar className="h-3.5 w-3.5 mr-1.5" />Daily
                     </Link>
                   </Button>
+                  <button
+                    onClick={() => setShowTournaments(!showTournaments)}
+                    className={`flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all shadow-sm ${
+                      showTournaments
+                        ? "bg-orange-500 text-white hover:bg-orange-600"
+                        : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600"
+                    }`}
+                  >
+                    <Trophy className="h-3.5 w-3.5" />
+                    {showTournaments ? "Back to Events" : "Tournaments"}
+                  </button>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                      Events in {selectedCity === 'all' ? 'India' : selectedCity}
-                    </h1>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {hasActiveFilters && (
-                      <Button
-                        variant="ghost"
-                        className="h-9 px-3 rounded-full text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
-                        onClick={resetFilters}
-                      >
-                        Clear
-                      </Button>
-                    )}
-                    <div className="lg:hidden">
-                      <Button
-                        variant="outline"
-                        className="bg-white border-gray-300 rounded-full text-gray-700 hover:bg-gray-100 transition-colors text-sm font-medium"
-                        onClick={() => setIsFilterOpen(true)}
-                      >
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filters
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 flex-wrap mb-6">
-                  {GENRES.slice(0, 5).map((genre) => (
-                    <Button
+              {/* ── Genre pill row ──────────────────────────────────────── */}
+              {!showTournaments && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+                  {GENRES.map((genre) => (
+                    <button
                       key={genre}
-                      variant={selectedGenre === genre ? 'default' : 'outline'}
-                      className="h-8 rounded-full text-xs"
-                      onClick={() => setSelectedGenre(selectedGenre === genre ? 'all' : genre)}
+                      onClick={() => setSelectedGenre(selectedGenre === genre ? "all" : genre)}
+                      className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium transition-all border ${
+                        selectedGenre === genre
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-200 hover:text-blue-600"
+                      }`}
                     >
-                      {genre}
-                    </Button>
+                      <span>{GENRE_ICONS[genre]}</span>
+                      <span>{genre}</span>
+                    </button>
                   ))}
                 </div>
+              )}
 
-                <section id="events" className="pb-6 space-y-10">
-                  {!!currentEventsSorted.length && (
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Live Events</h2>
+              {/* ── Tournaments view ────────────────────────────────────── */}
+              {showTournaments && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="max-w-lg">
+                  <Card className="rounded-2xl bg-gray-900 border-0 overflow-hidden shadow-xl">
+                    <CardContent className="p-0">
+                      <div className="relative h-52 sm:h-64 overflow-hidden">
+                        <Image src="/images/Turf_Titans_16_9.png" alt="Turf Titans Tournament T3"
+                          fill className="object-contain" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/30 to-transparent" />
+                        <span className="absolute top-3 right-3 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest bg-orange-500 text-white rounded-full">
+                          Open
+                        </span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                        {currentEventsSorted.map((event, index) => (
-                          <Link key={event._id} href={`/events/${event._id}`} className="block">
-                            <EventCard event={event} index={index} />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!!upcomingEventsSorted.length && (
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Upcoming Events</h2>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                        {upcomingEventsSorted.map((event, index) => (
-                          <Link key={event._id} href={`/events/${event._id}`} className="block">
-                            <EventCard event={event} index={index} />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!!pastEventsSorted.length && (
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Past Events</h2>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                        {pastEventsSorted.map((event, index) => (
-                          <Link key={event._id} href={`/events/${event._id}`} className="block">
-                            <EventCard event={event} index={index} />
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!currentEventsSorted.length && !upcomingEventsSorted.length && !pastEventsSorted.length && (
-                    <div className="text-center py-16 text-gray-600">No Events Found</div>
-                  )}
-                </section>
-              </div>
-            </div>
-
-            {/* Mobile: Centered Filter Modal */}
-            <AnimatePresence>
-              {isFilterOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center lg:hidden p-4"
-                  onClick={(e) => {
-                    if (e.target === e.currentTarget) setIsFilterOpen(false);
-                  }}
-                >
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.8, opacity: 0 }}
-                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
-                    className="bg-white rounded-2xl w-full max-w-md p-5 max-h-[80vh] overflow-y-auto shadow-xl"
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Filter Events</h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsFilterOpen(false)}
-                        aria-label="Close filters"
-                        className="text-gray-600 hover:text-gray-800"
-                      >
-                        <X className="h-5 w-5" />
-                      </Button>
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-1.5">Search</label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                          <Input
-                            placeholder="Search events..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-10 py-2.5 bg-gray-50 border-gray-300 rounded-full text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-300 shadow-sm"
-                            aria-label="Search events"
-                          />
-                          {searchQuery && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400 hover:text-gray-600"
-                              onClick={() => setSearchQuery("")}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
+                      <div className="p-5 space-y-4">
+                        <h3 className="text-lg font-extrabold text-white uppercase italic tracking-tight">
+                          Turf Titans Tournament T3
+                        </h3>
+                        <div className="space-y-2 text-sm text-gray-400">
+                          <div className="flex items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                            <span>21–23 May 2026</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                            <span>Kuda Futsal Arena, Dimapur, Nagaland</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="px-2.5 py-1 text-xs bg-white/10 text-gray-300 rounded-full">6v6 Futsal</span>
+                          <span className="px-2.5 py-1 text-xs bg-white/10 text-gray-300 rounded-full">Direct Knockout</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Entry Fee</p>
+                            <p className="text-sm font-bold text-white">₹3,500 / team</p>
+                          </div>
+                          <Button asChild size="sm"
+                            className="rounded-full bg-orange-500 hover:bg-orange-400 text-white font-semibold px-5">
+                            <Link href="/futsal-tournament">Register <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
+                          </Button>
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-1.5">City</label>
-                        <Select value={selectedCity} onValueChange={setSelectedCity}>
-                          <SelectTrigger className="py-2.5 px-4 bg-gray-50 border-gray-300 rounded-full text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-300 shadow-sm">
-                            <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                            <SelectValue placeholder="Select City" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                            <SelectItem value="all">All Cities</SelectItem>
-                            {CITIES.map((city) => (
-                              <SelectItem key={city} value={city}>{city}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-1.5">Category</label>
-                        <Select value={selectedGenre} onValueChange={setSelectedGenre}>
-                          <SelectTrigger className="py-2.5 px-4 bg-gray-50 border-gray-300 rounded-full text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-300 shadow-sm">
-                            <Sparkles className="h-4 w-4 mr-2 text-gray-400" />
-                            <SelectValue placeholder="Select Category" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                            <SelectItem value="all">All Categories</SelectItem>
-                            {GENRES.map((genre) => (
-                              <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          className="flex-1 border-gray-300 rounded-full py-2.5 text-gray-700 hover:bg-gray-100 text-sm font-medium"
-                          onClick={resetFilters}
-                        >
-                          Clear Filters
-                        </Button>
-                        <Button
-                          className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full py-2.5 text-sm font-medium"
-                          onClick={() => setIsFilterOpen(false)}
-                        >
-                          Apply Filters
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
+                    </CardContent>
+                  </Card>
                 </motion.div>
               )}
-            </AnimatePresence>
+
+              {/* ── Events sections ─────────────────────────────────────── */}
+              {!showTournaments && (
+                <div className="space-y-10">
+
+                  {/* Live */}
+                  {currentSorted.length > 0 && (
+                    <section>
+                      <SectionHeader title="Live Now" count={currentSorted.length} dot="bg-red-500" />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        {currentSorted.map((event, i) => (
+                          <Link key={event._id} href={`/events/${event._id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                            <EventCard event={event} index={i} />
+                          </Link>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Upcoming */}
+                  {upcomingSorted.length > 0 && (
+                    <section>
+                      <SectionHeader title="Upcoming Events" count={upcomingSorted.length} dot="bg-blue-500" />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        {upcomingSorted.map((event, i) => (
+                          <Link key={event._id} href={`/events/${event._id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                            <EventCard event={event} index={i} />
+                          </Link>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Past */}
+                  {pastSorted.length > 0 && (
+                    <section>
+                      <SectionHeader title="Past Events" count={pastSorted.length} dot="bg-gray-300" />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        {pastSorted.map((event, i) => (
+                          <Link key={event._id} href={`/events/${event._id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                            <EventCard event={event} index={i} />
+                          </Link>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Empty state */}
+                  {!currentSorted.length && !upcomingSorted.length && !pastSorted.length && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-col items-center justify-center py-20 text-center">
+                      <div className="text-5xl mb-4">🔍</div>
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">No events found</h3>
+                      <p className="text-gray-500 text-sm mb-6 max-w-xs">
+                        Try adjusting your filters or searching for something different.
+                      </p>
+                      <Button onClick={resetFilters} variant="outline"
+                        className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-50">
+                        Clear Filters
+                      </Button>
+                    </motion.div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </section>
+        </div>
       </main>
+
+      {/* ── Mobile Filter Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isFilterOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center lg:hidden"
+            onClick={(e) => { if (e.target === e.currentTarget) setIsFilterOpen(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 28, stiffness: 350 }}
+              className="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto shadow-2xl"
+            >
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                <div className="w-10 h-1 rounded-full bg-gray-200" />
+              </div>
+
+              <div className="px-5 py-4">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-base font-bold text-gray-900">Filter Events</h3>
+                  <button onClick={() => setIsFilterOpen(false)}
+                    className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <FilterContent />
+
+                <div className="flex gap-2.5 pt-5 mt-5 border-t border-gray-100">
+                  <Button variant="outline" onClick={resetFilters}
+                    className="flex-1 rounded-full border-gray-200 text-gray-700 text-sm h-10">
+                    Clear All
+                  </Button>
+                  <Button onClick={() => setIsFilterOpen(false)}
+                    className="flex-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-10 shadow-sm">
+                    Apply Filters
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Footer />
     </div>
   );

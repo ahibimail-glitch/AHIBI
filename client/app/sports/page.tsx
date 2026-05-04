@@ -359,12 +359,12 @@ const UpcomingTournaments = () => (
 
         <div className="flex justify-center">
             {[{
-                name: "Nagaland Pickleball Classic",
-                date: "March 15-17, 2026",
-                image: "/images/npatournament.jpeg",
-                location: "Dimapur Sports Complex",
-                categories: ["Mixed Doubles", "Men's Doubles", "Women's Doubles"],
-                entryFee: "₹1,000 per player",
+                name: "Turf Titans Tournament T3",
+                date: "21-23 May 2026",
+                image: "/images/Turf_Titans_16_9.png",
+                location: "Kuda Futsal Arena, Dimapur, Nagaland",
+                categories: ["6v6 Futsal", "Direct Knockout"],
+                entryFee: "₹3,500 per team",
                 status: "Open"
             }].map((tournament, index) => (
                 <Card key={index} className="w-full max-w-2xl group rounded-none bg-[#111] border-white/5 overflow-hidden hover:border-red-600 transition-all duration-500">
@@ -422,7 +422,7 @@ const UpcomingTournaments = () => (
                                     <p className="text-xs text-gray-500 uppercase tracking-widest">Entry Fee</p>
                                     <p className="text-sm font-bold text-white">{tournament.entryFee}</p>
                                 </div>
-                                <Link href="/sports/tournaments">
+                                <Link href={tournament.name === "Turf Titans Tournament T3" ? "/futsal-tournament" : "/sports/tournaments"}>
                                     <Button
                                         size="sm"
                                         disabled={tournament.status !== "Open"}
@@ -594,7 +594,7 @@ export default function SportsPage() {
         <div className="min-h-screen bg-white text-black selection:bg-red-600 selection:text-white">
             <Navbar />
             <Hero />
-            
+            <UpcomingTournaments/>
             <SportsCardSection />
             <Facilities />
             <HowItWorks />
