@@ -45,6 +45,16 @@ const futsalTournamentRegistrationSchema = new mongoose.Schema({
     type: playerSchema,
     required: true,
   },
+  players: {
+    type: [String],
+    required: true,
+    validate: {
+      validator: function(v) {
+        return v.length >= 6 && v.length <= 10;
+      },
+      message: 'Team must have between 6 and 10 players'
+    }
+  },
   teamManager: {
     fullName: {
       type: String,

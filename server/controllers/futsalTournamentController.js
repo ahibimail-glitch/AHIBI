@@ -44,6 +44,7 @@ const serializeRegistration = (registration) => ({
   currency: registration.currency,
   player: registration.player,
   numberOfPlayers: registration.numberOfPlayers,
+  players: registration.players,
   teamManager: registration.teamManager,
   teamCoach: registration.teamCoach,
   tournamentDetails: registration.tournamentDetails,
@@ -54,7 +55,7 @@ const serializeRegistration = (registration) => ({
 
 exports.createRegistrationOrder = async (req, res) => {
   try {
-    const { teamName, numberOfPlayers, player, teamManager, teamCoach, declarationsAccepted } = req.body;
+    const { teamName, numberOfPlayers, player, players, teamManager, teamCoach, declarationsAccepted } = req.body;
 
     // Validate team name
     if (!teamName || typeof teamName !== 'string' || !teamName.trim()) {
@@ -66,7 +67,7 @@ exports.createRegistrationOrder = async (req, res) => {
       return ApiResponse.badRequest(res, 'Number of players must be between 6 and 10');
     }
 
-    // Validate player
+    // Validate player (captain)
     if (!player || typeof player !== 'object') {
       return ApiResponse.badRequest(res, 'Player details are required');
     }
@@ -74,6 +75,23 @@ exports.createRegistrationOrder = async (req, res) => {
     const playerError = validatePlayer(player);
     if (playerError) {
       return ApiResponse.badRequest(res, playerError);
+    }
+
+    // Validate players array
+    if (!players || !Array.isArray(players) || players.length < 6 || players.length > 10) {
+      return ApiResponse.badRequest(res, 'Players array must contain between 6 and 10 player names');
+    }
+
+    // Validate each player name
+    for (let i = 0; i < players.length; i++) {
+      if (!players[i] || typeof players[i] !== 'string' || !players[i].trim()) {
+        return ApiResponse.badRequest(res, `Player ${i + 1} name is required`);
+      }
+    }
+
+    // Ensure players array length matches numberOfPlayers
+    if (players.length !== numberOfPlayers) {
+      return ApiResponse.badRequest(res, `Number of players (${numberOfPlayers}) must match the number of player names provided (${players.length})`);
     }
 
     if (teamManager) {
@@ -115,6 +133,7 @@ exports.createRegistrationOrder = async (req, res) => {
         idType: player.idType,
         idNumber: String(player.idNumber).trim(),
       },
+      players: players.map(p => String(p).trim()),
       teamManager: teamManager ? {
         fullName: teamManager.fullName ? String(teamManager.fullName).trim() : undefined,
         phone: teamManager.phone ? String(teamManager.phone).trim() : undefined,

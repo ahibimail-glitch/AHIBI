@@ -27,6 +27,7 @@ type FutsalTournamentRegistration = {
     idNumber: string;
   };
   numberOfPlayers: number;
+  players?: string[];
   teamManager?: {
     fullName?: string;
     phone?: string;
@@ -481,6 +482,33 @@ export default function FutsalTournamentRegistrations() {
                     <p>
                       <span className="font-semibold">ID:</span> {selectedRegistration.player ? `${idTypeLabels[selectedRegistration.player.idType] || selectedRegistration.player.idType} - ${selectedRegistration.player.idNumber}` : 'N/A'}
                     </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* All Players Names */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  All Team Players
+                </h3>
+                <Card>
+                  <CardContent className="p-4 text-sm space-y-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold">Player Names ({selectedRegistration.numberOfPlayers || 0})</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {selectedRegistration.players && selectedRegistration.players.length > 0 ? (
+                        selectedRegistration.players.map((playerName: string, index: number) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <span className="font-semibold text-green-600">{index + 1}.</span>
+                            <span>{playerName || 'N/A'}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500 col-span-2">No player names available</div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>

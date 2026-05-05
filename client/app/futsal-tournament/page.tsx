@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Plus, Trash2, Trophy, Calendar, MapPin, Users, IndianRupee, CheckCircle2 } from "lucide-react"
+import { Loader2, Plus, Trash2, Trophy, Calendar, MapPin, Users, IndianRupee, CheckCircle2, Minus } from "lucide-react"
 import { toast } from "sonner"
 import Footer from "../Footer"
 import Navbar from "../Navbar"
@@ -71,6 +71,7 @@ export default function FutsalTournamentRegistration() {
     idType: "",
     idNumber: ""
   })
+  const [players, setPlayers] = useState<string[]>(Array(6).fill(""))
   const [teamManager, setTeamManager] = useState<Contact>({ fullName: "", phone: "", email: "" })
   const [teamCoach, setTeamCoach] = useState<Contact>({ fullName: "", phone: "", email: "" })
   const [declarationsAccepted, setDeclarationsAccepted] = useState(false)
@@ -80,6 +81,31 @@ export default function FutsalTournamentRegistration() {
       ...prev,
       [field]: value
     }))
+  }
+
+  const updatePlayerName = (index: number, value: string) => {
+    setPlayers(prev => {
+      const newPlayers = [...prev]
+      newPlayers[index] = value
+      return newPlayers
+    })
+  }
+
+  const handleNumberOfPlayersChange = (value: number) => {
+    setNumberOfPlayers(value)
+    setPlayers(prev => {
+      const newPlayers = [...prev]
+      if (value > prev.length) {
+        // Add empty slots
+        for (let i = prev.length; i < value; i++) {
+          newPlayers.push("")
+        }
+      } else if (value < prev.length) {
+        // Remove extra slots
+        newPlayers.length = value
+      }
+      return newPlayers
+    })
   }
 
   const validateForm = () => {
@@ -108,6 +134,14 @@ export default function FutsalTournamentRegistration() {
     if (!player.idNumber.trim()) {
       toast.error("Player ID number is required")
       return false
+    }
+
+    // Validate all player names
+    for (let i = 0; i < players.length; i++) {
+      if (!players[i].trim()) {
+        toast.error(`Player ${i + 1} name is required`)
+        return false
+      }
     }
 
     if (teamManager.fullName && !/^\d{10}$/.test(teamManager.phone)) {
@@ -144,6 +178,7 @@ export default function FutsalTournamentRegistration() {
           teamName,
           numberOfPlayers,
           player,
+          players,
           teamManager: teamManager.fullName ? teamManager : undefined,
           teamCoach: teamCoach.fullName ? teamCoach : undefined,
           declarationsAccepted,
@@ -427,16 +462,38 @@ export default function FutsalTournamentRegistration() {
               {/* Number of Players */}
               <div className="space-y-2">
                 <Label htmlFor="numberOfPlayers">Number of Players in Team *</Label>
-                <Input
-                  id="numberOfPlayers"
-                  type="number"
-                  placeholder="Enter number of players (1-10)"
-                  value={numberOfPlayers}
-                  onChange={(e) => setNumberOfPlayers(parseInt(e.target.value) || 1)}
-                  min={MIN_PLAYERS}
-                  max={MAX_PLAYERS}
-                  className="text-lg"
-                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleNumberOfPlayersChange(Math.max(MIN_PLAYERS, numberOfPlayers - 1))}
+                    disabled={numberOfPlayers <= MIN_PLAYERS}
+                    className="h-12 w-12"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    id="numberOfPlayers"
+                    type="number"
+                    placeholder="Enter number of players (1-10)"
+                    value={numberOfPlayers}
+                    onChange={(e) => handleNumberOfPlayersChange(parseInt(e.target.value) || 6)}
+                    min={MIN_PLAYERS}
+                    max={MAX_PLAYERS}
+                    className="text-lg text-center"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleNumberOfPlayersChange(Math.min(MAX_PLAYERS, numberOfPlayers + 1))}
+                    disabled={numberOfPlayers >= MAX_PLAYERS}
+                    className="h-12 w-12"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-sm text-gray-500">Enter the total number of players in your team </p>
               </div>
 
@@ -446,7 +503,7 @@ export default function FutsalTournamentRegistration() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="text-lg">Captain/Representative Details *</Label>
-                  <Badge variant="outline">Primary Contact</Badge>
+                  
                 </div>
 
                 <Card className="border-green-100">
@@ -497,6 +554,37 @@ export default function FutsalTournamentRegistration() {
                           onChange={(e) => updatePlayer('idNumber', e.target.value)}
                         />
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Separator />
+
+              {/* All Players Names Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-lg">All Team Players Names *</Label>
+                  <Badge variant="outline">{numberOfPlayers} Players</Badge>
+                </div>
+
+                <Card className="border-green-100">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold">Player Names (6-10)</h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {players.map((playerName, index) => (
+                        <div key={index} className="space-y-2">
+                          <Label>Player {index + 1} Name *</Label>
+                          <Input
+                            placeholder={`Player ${index + 1} full name`}
+                            value={playerName}
+                            onChange={(e) => updatePlayerName(index, e.target.value)}
+                          />
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>

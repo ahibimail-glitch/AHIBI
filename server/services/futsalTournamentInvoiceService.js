@@ -151,6 +151,37 @@ class FutsalTournamentInvoiceService {
 
         y += 12;
 
+        // All Team Players
+        if (registration.players && registration.players.length > 0) {
+          doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('All Team Players', 40, y);
+          y += 24;
+          doc.moveTo(40, y).lineTo(doc.page.width - 40, y).stroke('#CBD5E1');
+          y += 16;
+
+          const boxHeight = Math.ceil(registration.players.length / 2) * 18 + 30;
+          if (y + boxHeight > doc.page.height - 60) {
+            doc.addPage();
+            y = 40;
+          }
+
+          doc.roundedRect(50, y, doc.page.width - 90, boxHeight, 8).fillAndStroke('#FFFFFF', '#E2E8F0');
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569').text(`Player Names (${registration.numberOfPlayers || registration.players.length}):`, 65, y + 12);
+          y += 28;
+
+          registration.players.forEach((playerName, index) => {
+            const col = index % 2;
+            const row = Math.floor(index / 2);
+            const xPos = col === 0 ? 65 : 300;
+            const yPos = y + (row * 18);
+            
+            doc.font('Helvetica').fontSize(9).fillColor('#0F172A').text(`${index + 1}. ${playerName}`, xPos, yPos);
+          });
+
+          y += boxHeight + 12;
+        }
+
+        y += 12;
+
         // Payment Details
         doc.font('Helvetica-Bold').fontSize(15).fillColor('#0F172A').text('Payment Details', 40, y);
         y += 24;

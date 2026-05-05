@@ -25,6 +25,7 @@ interface RegistrationData {
     idNumber: string
   }
   numberOfPlayers: number
+  players?: string[]
   teamManager?: {
     fullName?: string
     phone?: string
@@ -156,8 +157,8 @@ export default function FutsalTournamentInvoice() {
 
   // Helper function to normalize registration data (handle both old and new structures)
   const normalizeRegistrationData = (data: any) => {
-    // If data has the old players array, convert it to new structure
-    if (data.players && Array.isArray(data.players) && data.players.length > 0) {
+    // If data has the old players array (array of objects), convert it to new structure
+    if (data.players && Array.isArray(data.players) && data.players.length > 0 && typeof data.players[0] === 'object' && data.players[0].fullName) {
       const firstPlayer = data.players[0]
       return {
         ...data,
@@ -170,8 +171,8 @@ export default function FutsalTournamentInvoice() {
         numberOfPlayers: data.numberOfPlayers || data.players.length || 1,
       }
     }
-    
-    // If data already has the new structure, return as-is
+
+    // If data already has the new structure (player object + players array of strings), return as-is
     return {
       ...data,
       player: data.player || {
@@ -485,6 +486,35 @@ export default function FutsalTournamentInvoice() {
                     <span className="text-xs">
                       {registration.player ? `${idTypeLabels[registration.player.idType] || registration.player.idType}: ${registration.player.idNumber}` : 'N/A'}
                     </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Separator />
+
+            {/* All Players Names */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="w-5 h-5 text-green-600" />
+                All Team Players
+              </h3>
+              <Card className="border-green-100">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Player Names ({registration.numberOfPlayers || 0})</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {registration.players && registration.players.length > 0 ? (
+                      registration.players.map((playerName: string, index: number) => (
+                        <div key={index} className="flex items-center gap-2 text-sm">
+                          <span className="font-semibold text-green-600">{index + 1}.</span>
+                          <span>{playerName || 'N/A'}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500 col-span-2">No player names available</div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
