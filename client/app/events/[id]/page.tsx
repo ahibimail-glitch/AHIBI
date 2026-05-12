@@ -102,6 +102,13 @@ interface Event {
   price?: string;
   availabilityLabel?: string;
   youtube?: string;
+  socialLinks?: {
+    website?: string;
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    youtube?: string;
+  };
   meta?: {
     title?: string;
     description?: string;
@@ -645,6 +652,74 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SOCIAL LINKS
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {event.socialLinks && Object.values(event.socialLinks).some(link => link && link.trim() !== '') && (
+        <section className="w-full border-t border-gray-100">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+            <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">Connect With Us</h2>
+            <div className="flex flex-wrap gap-3">
+              {event.socialLinks.website && (
+                <a
+                  href={event.socialLinks.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                >
+                  <Globe className="w-4 h-4" />
+                  Website
+                </a>
+              )}
+              {event.socialLinks.instagram && (
+                <a
+                  href={event.socialLinks.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-700 rounded-lg hover:bg-pink-100 transition-colors text-sm font-medium"
+                >
+                  <Instagram className="w-4 h-4" />
+                  Instagram
+                </a>
+              )}
+              {event.socialLinks.facebook && (
+                <a
+                  href={event.socialLinks.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                >
+                  <Facebook className="w-4 h-4" />
+                  Facebook
+                </a>
+              )}
+              {event.socialLinks.twitter && (
+                <a
+                  href={event.socialLinks.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-colors text-sm font-medium"
+                >
+                  <Twitter className="w-4 h-4" />
+                  X/Twitter
+                </a>
+              )}
+              {event.socialLinks.youtube && (
+                <a
+                  href={event.socialLinks.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+                >
+                  <Youtube className="w-4 h-4" />
+                  YouTube
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           GALLERY/MAP IMAGES

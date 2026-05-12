@@ -48,7 +48,7 @@ const serializeRegistration = (registration) => ({
   teamManager: registration.teamManager,
   teamCoach: registration.teamCoach,
   tournamentDetails: registration.tournamentDetails,
-  registrationDate: registration.registrationDate,
+  registrationDate: registration.registrationDate || registration.createdAt,
   razorpayPaymentId: registration.razorpayPaymentId,
   razorpayOrderId: registration.razorpayOrderId,
 });
