@@ -62,7 +62,9 @@ interface Artist {
   email: string;
   phone: string;
   city: string;
-  bio: string;
+  bio?: string;
+  shortBio?: string;
+  longBio?: string;
   genres: string[];
   languages: string[];
   type: string;
@@ -379,7 +381,7 @@ export default function PublicArtistProfile() {
   const price = Number(artist?.basePrice ?? 0);
   const hasPrice = Number.isFinite(price) && price > 0;
   const priceLabel = hasPrice ? `₹${price.toLocaleString()}` : "On request";
-  const bio = artist?.bio || "";
+  const bio = artist?.longBio?.trim() || artist?.shortBio?.trim() || artist?.bio?.trim() || "";
   const longBio = bio.length > 260;
   const artistBook = useMemo(
     () => (artist ? { ...artist, basePrice: hasPrice ? price : 0 } : null),
