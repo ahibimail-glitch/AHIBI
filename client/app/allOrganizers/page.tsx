@@ -353,13 +353,15 @@ const CTA = () => (
                 Start planning free
               </Button>
             </Link>
+            <Link href={"/support"}>
             <Button 
               size="lg" 
               variant="outline" 
               className="w-full sm:w-auto bg-transparent rounded-full h-14 px-8 border-2 border-white/80 text-white hover:bg-white hover:text-teal-900 hover:border-white shadow-lg transform hover:-translate-y-1 transition-all duration-300 font-bold text-lg"
-            >
+              >
               Contact support
             </Button>
+              </Link>
           </div>
         </div>
 

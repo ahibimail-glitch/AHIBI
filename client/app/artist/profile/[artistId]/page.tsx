@@ -628,7 +628,7 @@ export default function PublicArtistProfile() {
               <Section
                 kicker="About"
                 title="Artist overview"
-                subtitle="A cleaner, lighter presentation with mobile-first spacing, readable typography, and stronger visual hierarchy."
+
               >
                 {bio ? (
                   <>
