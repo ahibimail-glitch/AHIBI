@@ -627,7 +627,7 @@ export default function EventsPage() {
                   )}
 
                   {/* Past */}
-                  {pastSorted.length > 0 && (
+                  {/* {pastSorted.length > 0 && (
                     <section>
                       <SectionHeader title="Past Events" count={pastSorted.length} dot="bg-gray-300" />
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
@@ -638,7 +638,7 @@ export default function EventsPage() {
                         ))}
                       </div>
                     </section>
-                  )}
+                  )} */}
 
                   {/* Empty state */}
                   {!currentSorted.length && !upcomingSorted.length && !pastSorted.length && (
