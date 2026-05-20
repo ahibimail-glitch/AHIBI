@@ -24,6 +24,7 @@ declare global {
 const REGISTRATION_FEE = 3500
 const MIN_PLAYERS = 6
 const MAX_PLAYERS = 10
+const REGISTRATION_OPEN = false
 
 interface Player {
   fullName: string
@@ -163,6 +164,11 @@ export default function FutsalTournamentRegistration() {
   }
 
   const handleRegistration = async () => {
+    if (!REGISTRATION_OPEN) {
+      toast.error("Registrations are closed.")
+      return
+    }
+
     if (!validateForm()) {
       return
     }
@@ -436,14 +442,44 @@ export default function FutsalTournamentRegistration() {
           </Card>
 
           {/* Registration Form */}
-          <Card className="border-green-200">
+          <Card className="border-green-200 overflow-hidden">
             <CardHeader>
               <CardTitle className="text-2xl">Team Registration</CardTitle>
               <CardDescription>
                 Fill in your team details to register. Registration fee: <span className="font-bold text-green-600">₹{REGISTRATION_FEE.toLocaleString('en-IN')}</span>
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="relative space-y-6">
+              {!REGISTRATION_OPEN && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 p-4 backdrop-blur-sm">
+                  <div className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-6 text-center shadow-2xl">
+                    <Badge className="mb-4 bg-red-600 hover:bg-red-600">Registration Closed</Badge>
+                    <h3 className="text-2xl font-bold text-red-700">Registrations Are Now Closed</h3>
+                    <p className="mt-2 text-sm text-gray-600">
+                      Turf Titans Tournament T3 registration window has ended. Thank you to all teams for the overwhelming response.
+                    </p>
+                    <div className="mt-5 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-700">
+                      Tournament Dates: 21-23 May 2026
+                    </div>
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <Button
+                        onClick={() => router.push("/sports/tournaments")}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        View Other Tournaments
+                      </Button>
+                      <Button
+                        onClick={() => router.push("/")}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Go to Home
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className={!REGISTRATION_OPEN ? "pointer-events-none select-none opacity-30 blur-[1px]" : ""}>
 
               {/* Team Name */}
               <div className="space-y-2">
@@ -686,7 +722,7 @@ export default function FutsalTournamentRegistration() {
               {/* Submit Button */}
               <Button
                 onClick={handleRegistration}
-                disabled={loading || paymentLoading}
+                disabled={!REGISTRATION_OPEN || loading || paymentLoading}
                 className="w-full bg-green-600 hover:bg-green-700 text-lg py-6"
                 size="lg"
               >
@@ -707,6 +743,7 @@ export default function FutsalTournamentRegistration() {
                   </>
                 )}
               </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
