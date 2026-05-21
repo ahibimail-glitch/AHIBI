@@ -14,11 +14,67 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
+function toDateString(val) {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val.split('T')[0];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  if (val instanceof Date) {
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    const day = String(val.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  return String(val);
+}
+
+function addDaysStr(dateStr, delta) {
+  const d = new Date(`${dateStr}T12:00:00`);
+  d.setDate(d.getDate() + delta);
+  return toDateString(d);
+}
+
+function isActiveBooking(booking) {
+  const status = (booking.status || 'confirmed').toLowerCase();
+  return ['confirmed', 'completed'].includes(status);
+}
+
+function isDayUnavailableForWedding(space, dateStr) {
+  for (const block of space.blockedSlots || []) {
+    if (toDateString(block.date) !== dateStr) continue;
+    if (block.isFullDayBlocked) return true;
+    if (block.timeSlots && block.timeSlots.length > 0) return true;
+  }
+  for (const booking of space.bookings || []) {
+    if (!isActiveBooking(booking)) continue;
+    if (toDateString(booking.bookingDate) === dateStr) return true;
+  }
+  return false;
+}
+
+function validateWeddingPackageDates(space, weddingDateStr) {
+  const dates = [addDaysStr(weddingDateStr, -1), weddingDateStr, addDaysStr(weddingDateStr, 1)];
+  for (const d of dates) {
+    if (isDayUnavailableForWedding(space, d)) {
+      return { ok: false, message: `Wedding package requires 3 consecutive free days. ${d} is not available.` };
+    }
+  }
+  return { ok: true, dates };
+}
+
 // Create space booking order
 router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
   try {
     const { spaceId } = req.params;
-    const { bookingDate, startTime, endTime, guestCount, eventType, specialRequirements, pricingHint } = req.body;
+    const { bookingDate, startTime, endTime, guestCount, eventType, specialRequirements, pricingHint, packageType } = req.body;
+    const isWeddingPackage = packageType === 'wedding';
+    let resolvedStartTime = startTime;
+    let resolvedEndTime = endTime;
 
     // Validate space exists and is available
     const space = await EventSpace.findById(spaceId).populate('venueId');
@@ -31,17 +87,30 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Venue is not available for booking' });
     }
 
-    // Check availability
-    const existingBookings = space.bookings || [];
-    const hasConflict = existingBookings.some(booking => {
-      return booking.bookingDate === bookingDate &&
-        ((startTime >= booking.startTime && startTime < booking.endTime) ||
-         (endTime > booking.startTime && endTime <= booking.endTime) ||
-         (startTime <= booking.startTime && endTime >= booking.endTime));
-    });
+    if (isWeddingPackage) {
+      const weddingCheck = validateWeddingPackageDates(space, bookingDate);
+      if (!weddingCheck.ok) {
+        return res.status(409).json({ success: false, message: weddingCheck.message });
+      }
+      resolvedStartTime = '00:00';
+      resolvedEndTime = '23:00';
+    } else {
+      const existingBookings = space.bookings || [];
+      const hasConflict = existingBookings.some(booking => {
+        if (!isActiveBooking(booking)) return false;
+        return booking.bookingDate === bookingDate &&
+          ((resolvedStartTime >= booking.startTime && resolvedStartTime < booking.endTime) ||
+           (resolvedEndTime > booking.startTime && resolvedEndTime <= booking.endTime) ||
+           (resolvedStartTime <= booking.startTime && resolvedEndTime >= booking.endTime));
+      });
 
-    if (hasConflict) {
-      return res.status(409).json({ success: false, message: 'Space is already booked for this time slot' });
+      if (hasConflict) {
+        return res.status(409).json({ success: false, message: 'Space is already booked for this time slot' });
+      }
+
+      if (isDayUnavailableForWedding(space, bookingDate)) {
+        return res.status(409).json({ success: false, message: 'Selected date is blocked or unavailable' });
+      }
     }
 
     // Calculate total amount
@@ -58,16 +127,18 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
       return duration;
     };
     
-    const duration = getDurationHours(startTime, endTime);
+    const duration = getDurationHours(resolvedStartTime, resolvedEndTime);
     const hourlyRate = space.pricing.hourlyRate ?? 100; // Default to ₹100 if not set
 
     // Default to hourly calculation
     totalAmount = hourlyRate * duration;
 
-    // Override with special rates only for exact time matches
-    if (startTime === "00:00" && endTime === "23:00" && space.pricing.fullDayRate !== undefined) {
+    if (isWeddingPackage) {
+      const fullDay = space.pricing.fullDayRate ?? space.pricing.basePrice ?? 0;
+      totalAmount = fullDay * 3;
+    } else if (resolvedStartTime === "00:00" && resolvedEndTime === "23:00" && space.pricing.fullDayRate !== undefined) {
       totalAmount = space.pricing.fullDayRate;
-    } else if (startTime === "09:00" && endTime === "17:00" && space.pricing.halfDayRate !== undefined) {
+    } else if (resolvedStartTime === "09:00" && resolvedEndTime === "17:00" && space.pricing.halfDayRate !== undefined) {
       totalAmount = space.pricing.halfDayRate;
     }
 
@@ -90,11 +161,12 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
       notes: {
         spaceId,
         bookingDate,
-        startTime,
-        endTime,
+        startTime: resolvedStartTime,
+        endTime: resolvedEndTime,
         guestCount,
         eventType,
-        specialRequirements
+        specialRequirements,
+        packageType: isWeddingPackage ? 'wedding' : 'standard'
       }
     });
 
@@ -108,11 +180,12 @@ router.post('/spaces/:spaceId/create-order', protect, async (req, res) => {
       space: spaceId,
       venue: space.venueId._id,
       bookingDate,
-      startTime,
-      endTime,
+      startTime: resolvedStartTime,
+      endTime: resolvedEndTime,
       guestCount,
       eventType,
       specialRequirements,
+      packageType: isWeddingPackage ? 'wedding' : 'standard',
       pricing: {
         basePrice: space.pricing.basePrice,
         hourlyRate: space.pricing.hourlyRate,
@@ -273,7 +346,16 @@ router.post('/spaces/:spaceId/verify-payment', protect, async (req, res) => {
     const totalAmount = order.amount / 100; // Convert from paise to rupees
     console.log('Total amount:', totalAmount);
 
+    const isWeddingPackage = bookingDetails.packageType === 'wedding';
+    if (isWeddingPackage) {
+      const weddingCheck = validateWeddingPackageDates(space, bookingDetails.bookingDate);
+      if (!weddingCheck.ok) {
+        return res.status(409).json({ success: false, message: weddingCheck.message });
+      }
+    }
+
     // Create booking record
+
     const booking = {
       _id: bookingId,
       user: req.user.id,
@@ -284,6 +366,7 @@ router.post('/spaces/:spaceId/verify-payment', protect, async (req, res) => {
       endTime: bookingDetails.endTime,
       guestCount: bookingDetails.guestCount,
       eventType: bookingDetails.eventType,
+      packageType: isWeddingPackage ? 'wedding' : 'standard',
       specialRequirements: bookingDetails.specialRequirements,
       pricing: {
         basePrice: space.pricing.basePrice,
@@ -312,6 +395,32 @@ router.post('/spaces/:spaceId/verify-payment', protect, async (req, res) => {
     space.bookings.push(booking);
     space.totalBookings = (space.totalBookings || 0) + 1;
     space.totalEarnings = (space.totalEarnings || 0) + booking.pricing.totalAmount;
+
+    if (isWeddingPackage) {
+      if (!space.blockedSlots) space.blockedSlots = [];
+      const weddingDateStr = toDateString(bookingDetails.bookingDate);
+      const packageDates = [
+        addDaysStr(weddingDateStr, -1),
+        weddingDateStr,
+        addDaysStr(weddingDateStr, 1)
+      ];
+      for (const dateStr of packageDates) {
+        const alreadyBlocked = space.blockedSlots.some(
+          (slot) => toDateString(slot.date) === dateStr
+        );
+        if (!alreadyBlocked) {
+          space.blockedSlots.push({
+            date: new Date(`${dateStr}T12:00:00`),
+            isFullDayBlocked: true,
+            timeSlots: [],
+            reason: 'wedding_buffer',
+            notes: dateStr === weddingDateStr
+              ? `Wedding package - wedding day for booking ${bookingId || booking._id}`
+              : `Wedding package buffer for booking ${bookingId || booking._id}`
+          });
+        }
+      }
+    }
 
     await space.save();
     console.log('Booking saved successfully');
@@ -347,26 +456,6 @@ router.post('/spaces/:spaceId/verify-payment', protect, async (req, res) => {
     });
   }
 });
-
-// Normalize date to YYYY-MM-DD for comparison
-function toDateString(val) {
-  if (!val) return '';
-  if (typeof val === 'string') {
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return val;
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-  if (val instanceof Date) {
-    const y = val.getFullYear();
-    const m = String(val.getMonth() + 1).padStart(2, '0');
-    const day = String(val.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-  return String(val);
-}
 
 // Get space availability for a date
 router.get('/spaces/:spaceId/availability/:date', async (req, res) => {

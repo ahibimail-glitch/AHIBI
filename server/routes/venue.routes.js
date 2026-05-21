@@ -149,7 +149,7 @@ const blockDateTimeValidation = [
   body('timeSlots').optional().isArray().withMessage('Time slots must be an array'),
   body('timeSlots.*.startTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid start time format required (HH:MM)'),
   body('timeSlots.*.endTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid end time format required (HH:MM)'),
-  body('reason').optional().isIn(['offline_booking', 'internal_event', 'maintenance', 'holiday', 'other']).withMessage('Valid reason is required'),
+  body('reason').optional().isIn(['offline_booking', 'internal_event', 'maintenance', 'holiday', 'wedding_buffer', 'other']).withMessage('Valid reason is required'),
   body('notes').optional().trim().isLength({ max: 500 }).withMessage('Notes must not exceed 500 characters')
 ];
 
@@ -158,7 +158,7 @@ const updateBlockedSlotValidation = [
   body('timeSlots').optional().isArray().withMessage('Time slots must be an array'),
   body('timeSlots.*.startTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid start time format required (HH:MM)'),
   body('timeSlots.*.endTime').optional().if(body('isFullDayBlocked').equals(false)).matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Valid end time format required (HH:MM)'),
-  body('reason').optional().isIn(['offline_booking', 'internal_event', 'maintenance', 'holiday', 'other']).withMessage('Valid reason is required'),
+  body('reason').optional().isIn(['offline_booking', 'internal_event', 'maintenance', 'holiday', 'wedding_buffer', 'other']).withMessage('Valid reason is required'),
   body('notes').optional().trim().isLength({ max: 500 }).withMessage('Notes must not exceed 500 characters')
 ];
 

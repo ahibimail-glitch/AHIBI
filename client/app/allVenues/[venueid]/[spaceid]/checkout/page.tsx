@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -195,6 +196,7 @@ export default function SpaceCheckoutPage() {
   const [basePrice, setBasePrice] = useState<number>(0);
   const [bookingDuration, setBookingDuration] = useState<number>(0);
   const [fullDaySelected, setFullDaySelected] = useState<boolean>(false);
+  const [isWeddingPackage, setIsWeddingPackage] = useState<boolean>(false);
 
   // Helper: Load Razorpay script if not already loaded
   const loadRazorpayScript = (): Promise<boolean> => {
@@ -247,8 +249,9 @@ export default function SpaceCheckoutPage() {
     // Default to hourly calculation
     let basePrice = hourly * duration;
 
-    // Override with special rates only for exact time matches
-    if (bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00" && typeof fullDay !== 'undefined') {
+    if (isWeddingPackage && typeof fullDay !== 'undefined') {
+      basePrice = fullDay * 3;
+    } else if (bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00" && typeof fullDay !== 'undefined') {
       basePrice = fullDay;
     } else if (bookingForm.startTime === "09:00" && bookingForm.endTime === "17:00" && typeof halfDay !== 'undefined') {
       basePrice = halfDay;
@@ -272,7 +275,19 @@ export default function SpaceCheckoutPage() {
     setBasePrice(pricing.basePrice);
     setEstimatedPrice(pricing.totalPrice);
     setBookingDuration(pricing.duration);
-  }, [bookingForm.startTime, bookingForm.endTime, spaceData]);
+  }, [bookingForm.startTime, bookingForm.endTime, spaceData, isWeddingPackage]);
+
+  useEffect(() => {
+    if (isWeddingPackage) {
+      setBookingForm((prev) => ({
+        ...prev,
+        startTime: "00:00",
+        endTime: "23:00",
+        eventType: prev.eventType || "Wedding",
+      }));
+      setFullDaySelected(true);
+    }
+  }, [isWeddingPackage]);
 
   // Fetch space and venue data
   useEffect(() => {
@@ -375,6 +390,34 @@ export default function SpaceCheckoutPage() {
       fetchAvailabilityData(selectedDate);
     }
   }, [selectedDate, venueData]);
+
+  const isDayUnavailableForWedding = (date: Date): boolean => {
+    if (isDateFullyBlocked(date)) return true;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    if (spaceData?.bookings?.some((booking: any) => {
+      if (!booking || booking.status !== 'confirmed') return false;
+      const bookingDateStr = typeof booking.bookingDate === 'string'
+        ? booking.bookingDate
+        : format(new Date(booking.bookingDate), 'yyyy-MM-dd');
+      return bookingDateStr === dateStr;
+    })) return true;
+    if (spaceData?.blockedSlots?.some((slot: any) => {
+      const slotDateStr = format(new Date(slot.date), 'yyyy-MM-dd');
+      if (slotDateStr !== dateStr) return false;
+      return slot.isFullDayBlocked || (slot.timeSlots && slot.timeSlots.length > 0);
+    })) return true;
+    return false;
+  };
+
+  const isWeddingPackageDateAvailable = (weddingDate: Date): boolean => {
+    const prev = new Date(weddingDate);
+    prev.setDate(prev.getDate() - 1);
+    const next = new Date(weddingDate);
+    next.setDate(next.getDate() + 1);
+    return !isDayUnavailableForWedding(weddingDate)
+      && !isDayUnavailableForWedding(prev)
+      && !isDayUnavailableForWedding(next);
+  };
 
   // Helper function to check if a date is fully blocked
   const isDateFullyBlocked = (date: Date): boolean => {
@@ -782,15 +825,19 @@ export default function SpaceCheckoutPage() {
       return;
     }
 
-    // Check if selected date is fully blocked
-    if (isDateFullyBlocked(selectedDate)) {
+    if (isWeddingPackage) {
+      if (!isWeddingPackageDateAvailable(selectedDate)) {
+        setFormError('Wedding package requires 3 consecutive free days (day before, wedding day, and day after).');
+        toast.error('Please select a different wedding date.');
+        return;
+      }
+    } else if (isDateFullyBlocked(selectedDate)) {
       setFormError('This date is fully blocked and not available for booking.');
       toast.error('Please select a different date.');
       return;
     }
 
-    // Check if selected time slots are blocked
-    if (isTimeSlotBlocked(bookingForm.startTime) || isTimeSlotBlocked(bookingForm.endTime)) {
+    if (!isWeddingPackage && (isTimeSlotBlocked(bookingForm.startTime) || isTimeSlotBlocked(bookingForm.endTime))) {
       setFormError('One or more selected time slots are blocked. Please choose different times.');
       toast.error('Blocked time slots cannot be booked.');
       return;
@@ -800,12 +847,14 @@ export default function SpaceCheckoutPage() {
     const bookingStartHour = parseInt(bookingForm.startTime.split(':')[0]);
     const bookingEndHour = parseInt(bookingForm.endTime.split(':')[0]);
     
-    for (let hour = bookingStartHour; hour < bookingEndHour; hour++) {
-      const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
-      if (isTimeSlotBlocked(timeSlot)) {
-        setFormError('The selected time range includes blocked slots. Please choose different times.');
-        toast.error('Blocked time slots cannot be booked.');
-        return;
+    if (!isWeddingPackage) {
+      for (let hour = bookingStartHour; hour < bookingEndHour; hour++) {
+        const timeSlot = `${hour.toString().padStart(2, '0')}:00`;
+        if (isTimeSlotBlocked(timeSlot)) {
+          setFormError('The selected time range includes blocked slots. Please choose different times.');
+          toast.error('Blocked time slots cannot be booked.');
+          return;
+        }
       }
     }
 
@@ -827,6 +876,7 @@ export default function SpaceCheckoutPage() {
           guestCount: guestCount,
           eventType: bookingForm.eventType,
           specialRequirements: bookingForm.specialRequirements,
+          packageType: isWeddingPackage ? 'wedding' : 'standard',
           pricingHint: {
             estimatedPrice,
           }
@@ -1232,6 +1282,22 @@ export default function SpaceCheckoutPage() {
               </CardHeader>
 
               <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                  <Checkbox
+                    id="weddingPackage"
+                    checked={isWeddingPackage}
+                    onCheckedChange={(checked) => setIsWeddingPackage(checked === true)}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="weddingPackage" className="text-sm font-medium text-gray-900 cursor-pointer">
+                      Wedding package (3 days)
+                    </Label>
+                    <p className="text-xs text-gray-600">
+                      Books the wedding day and automatically blocks the day before and day after.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex justify-center overflow-x-auto">
                   <Calendar
                     mode="single"
@@ -1241,7 +1307,9 @@ export default function SpaceCheckoutPage() {
                       if (date < new Date(new Date().setHours(0, 0, 0, 0))) {
                         return true
                       }
-                      // Disable fully blocked dates
+                      if (isWeddingPackage) {
+                        return !isWeddingPackageDateAvailable(date);
+                      }
                       return isDateFullyBlocked(date)
                     }}
                     modifiers={{
@@ -1306,7 +1374,7 @@ export default function SpaceCheckoutPage() {
             </Card>
 
             {/* Booking Duration Selection */}
-            {selectedDate && (
+            {selectedDate && !isWeddingPackage && (
               <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
                   <CardTitle className="text-base sm:text-lg font-bold text-gray-900">Select booking duration</CardTitle>
@@ -1483,6 +1551,18 @@ export default function SpaceCheckoutPage() {
               </Card>
             )}
 
+            {selectedDate && isWeddingPackage && (
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardContent className="p-4 sm:p-6">
+                  <p className="text-sm text-gray-700">
+                    <strong>Wedding package:</strong> full day on {format(selectedDate, 'PPP')} plus blocked buffer days on{' '}
+                    {format(new Date(selectedDate.getTime() - 86400000), 'PPP')} and{' '}
+                    {format(new Date(selectedDate.getTime() + 86400000), 'PPP')}.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Guest Count */}
             {selectedDate && bookingForm.startTime && (
               <Card className="bg-white border border-gray-200 shadow-sm">
@@ -1590,7 +1670,9 @@ export default function SpaceCheckoutPage() {
                             {bookingForm.startTime && (
                               <div className="flex justify-between">
                                 <span className="text-gray-600">
-                                  {bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00"
+                                  {isWeddingPackage
+                                    ? "Wedding package (3 days)"
+                                    : bookingForm.startTime === "00:00" && bookingForm.endTime === "23:00"
                                     ? "Full day rate"
                                     : bookingDuration <= 8 && bookingDuration > 4
                                     ? "Half day rate"

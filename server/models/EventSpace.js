@@ -378,7 +378,7 @@ const eventSpaceSchema = new mongoose.Schema({
     }],
     reason: {
       type: String,
-      enum: ['offline_booking', 'internal_event', 'maintenance', 'holiday', 'other'],
+      enum: ['offline_booking', 'internal_event', 'maintenance', 'holiday', 'wedding_buffer', 'other'],
       default: 'offline_booking'
     },
     notes: {
@@ -402,6 +402,7 @@ const eventSpaceSchema = new mongoose.Schema({
     endTime: { type: String, required: true },
     guestCount: { type: Number, default: 1 },
     eventType: { type: String, trim: true },
+    packageType: { type: String, enum: ['standard', 'wedding'], default: 'standard' },
     specialRequirements: { type: String, trim: true },
     pricing: {
       basePrice: Number,
