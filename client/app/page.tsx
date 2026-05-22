@@ -394,7 +394,7 @@ export default function HomePage() {
       setError(null)
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=10`)
+        const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=100`)
         if (!response.ok) {
           setFeaturedEvents([])
           setError("Failed to fetch featured events")
