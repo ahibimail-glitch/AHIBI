@@ -2,8 +2,179 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const Organizer = require('../models/Organizer');
 const Event = require('../models/Event');
+const DailyEvent = require('../models/DailyEvent');
 const Booking = require('../models/Booking');
 const ArtistBooking = require('../models/ArtistBooking');
+
+const COMPLETED_BOOKING_PAYMENT_STATUSES = ['completed', 'free'];
+
+const buildOrganizerScopeFilter = (organizerId, organizerDoc) => {
+  const objectId =
+    organizerId instanceof mongoose.Types.ObjectId
+      ? organizerId
+      : new mongoose.Types.ObjectId(organizerId);
+  const idCandidates = [organizerId, objectId, String(organizerId)];
+  const or = [];
+
+  idCandidates.forEach((id) => {
+    or.push({ organizer: id }, { createdBy: id }, { 'organizerInfo.id': id });
+  });
+
+  if (organizerDoc?.email) {
+    or.push({ 'organizerInfo.email': organizerDoc.email });
+  }
+  if (organizerDoc?.contactInfo?.email) {
+    or.push({ 'organizerInfo.email': organizerDoc.contactInfo.email });
+  }
+  if (organizerDoc?.name) {
+    or.push({ 'organizerInfo.name': organizerDoc.name });
+  }
+  if (organizerDoc?.companyName) {
+    or.push({ 'organizerInfo.name': organizerDoc.companyName });
+  }
+
+  return { $or: or };
+};
+
+const sumEventModelStats = async (Model, scopeFilter) => {
+  const [row] = await Model.aggregate([
+    { $match: scopeFilter },
+    {
+      $addFields: {
+        ticketTypesRevenue: {
+          $reduce: {
+            input: { $ifNull: ['$ticketTypes', []] },
+            initialValue: 0,
+            in: {
+              $add: [
+                '$$value',
+                {
+                  $multiply: [
+                    { $ifNull: ['$$this.sold', 0] },
+                    { $ifNull: ['$$this.price', 0] },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        ticketTypesSold: {
+          $reduce: {
+            input: { $ifNull: ['$ticketTypes', []] },
+            initialValue: 0,
+            in: { $add: ['$$value', { $ifNull: ['$$this.sold', 0] }] },
+          },
+        },
+      },
+    },
+    {
+      $addFields: {
+        effectiveRevenue: {
+          $max: [
+            { $ifNull: ['$totalRevenue', 0] },
+            { $ifNull: ['$ticketTypesRevenue', 0] },
+          ],
+        },
+        effectiveTicketsSold: {
+          $max: [
+            { $ifNull: ['$ticketsSold', 0] },
+            { $ifNull: ['$ticketTypesSold', 0] },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$effectiveRevenue' },
+        totalTicketsSold: { $sum: '$effectiveTicketsSold' },
+        eventCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return {
+    totalRevenue: row?.totalRevenue || 0,
+    totalTicketsSold: row?.totalTicketsSold || 0,
+    eventCount: row?.eventCount || 0,
+  };
+};
+
+const sumOrganizerBookingStats = async (organizerId, organizerDoc) => {
+  const organizerObjectId = new mongoose.Types.ObjectId(organizerId);
+  const organizerIdStr = String(organizerId);
+  const ownershipOr = [
+    { 'ownerDoc.organizer': organizerObjectId },
+    { 'ownerDoc.createdBy': organizerObjectId },
+    { 'ownerDoc.organizerInfo.id': organizerObjectId },
+    { $expr: { $eq: [{ $toString: '$ownerDoc.organizer' }, organizerIdStr] } },
+    { $expr: { $eq: [{ $toString: '$ownerDoc.createdBy' }, organizerIdStr] } },
+    { $expr: { $eq: [{ $toString: '$ownerDoc.organizerInfo.id' }, organizerIdStr] } },
+  ];
+
+  if (organizerDoc?.email) {
+    ownershipOr.push({ 'ownerDoc.organizerInfo.email': organizerDoc.email });
+  }
+  if (organizerDoc?.name) {
+    ownershipOr.push({ 'ownerDoc.organizerInfo.name': organizerDoc.name });
+  }
+
+  const [row] = await Booking.aggregate([
+    {
+      $match: {
+        $or: [
+          { paymentStatus: { $in: COMPLETED_BOOKING_PAYMENT_STATUSES } },
+          { status: 'confirmed' },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: 'events',
+        localField: 'event',
+        foreignField: '_id',
+        as: 'eventDoc',
+      },
+    },
+    {
+      $lookup: {
+        from: 'dailyevents',
+        localField: 'dailyEvent',
+        foreignField: '_id',
+        as: 'dailyDoc',
+      },
+    },
+    {
+      $addFields: {
+        ownerDoc: {
+          $cond: [
+            { $eq: ['$isDailyEvent', true] },
+            { $arrayElemAt: ['$dailyDoc', 0] },
+            { $arrayElemAt: ['$eventDoc', 0] },
+          ],
+        },
+      },
+    },
+    {
+      $match: {
+        ownerDoc: { $ne: null },
+        $or: ownershipOr,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$total' },
+        totalTicketsSold: { $sum: '$quantity' },
+      },
+    },
+  ]);
+
+  return {
+    totalRevenue: row?.totalRevenue || 0,
+    totalTicketsSold: row?.totalTicketsSold || 0,
+  };
+};
 const smsService = require('../services/smsService');
 const emailService = require('../services/emailService');
 const { validationResult } = require('express-validator');
@@ -464,107 +635,122 @@ exports.updateOrganizerProfile = async (req, res) => {
 exports.getOrganizerDashboard = async (req, res) => {
   try {
     const organizerId = req.user.id;
+    const organizerDoc = await Organizer.findById(organizerId)
+      .select('statistics email name companyName contactInfo totalPaidOut pendingPayouts')
+      .lean();
+    const scopeFilter = buildOrganizerScopeFilter(organizerId, organizerDoc);
+    const now = new Date();
 
-    // Get organizer's events statistics
-    const totalEvents = await Event.countDocuments({ organizer: organizerId });
-    const activeEvents = await Event.countDocuments({ 
-      organizer: organizerId,
-      status: 'approved',
-      endDate: { $gte: new Date() }
-    });
-    const pendingEvents = await Event.countDocuments({ 
-      organizer: organizerId,
-      status: 'pending'
-    });
-    const completedEvents = await Event.countDocuments({ 
-      organizer: organizerId,
-      status: 'approved',
-      endDate: { $lt: new Date() }
-    });
-
-    // Get revenue statistics from bookings
-    const revenueStats = await Booking.aggregate([
-      {
-        $lookup: {
-          from: 'events',
-          localField: 'event',
-          foreignField: '_id',
-          as: 'eventData'
-        }
-      },
-      {
-        $match: {
-          'eventData.organizer': new mongoose.Types.ObjectId(organizerId),
-          paymentStatus: 'completed'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: '$total' },
-          totalTicketsSold: { $sum: '$quantity' }
-        }
-      }
+    const [
+      regularDocStats,
+      dailyDocStats,
+      bookingStats,
+      activeRegularEvents,
+      activeDailyEvents,
+      pendingRegularEvents,
+      pendingDailyEvents,
+      completedRegularEvents,
+      completedDailyEvents,
+    ] = await Promise.all([
+      sumEventModelStats(Event, scopeFilter),
+      sumEventModelStats(DailyEvent, scopeFilter),
+      sumOrganizerBookingStats(organizerId, organizerDoc),
+      Event.countDocuments({ ...scopeFilter, status: 'approved', endDate: { $gte: now } }),
+      DailyEvent.countDocuments({ ...scopeFilter, status: 'approved' }),
+      Event.countDocuments({ ...scopeFilter, status: 'pending' }),
+      DailyEvent.countDocuments({ ...scopeFilter, status: 'pending' }),
+      Event.countDocuments({ ...scopeFilter, status: 'approved', endDate: { $lt: now } }),
+      DailyEvent.countDocuments({ ...scopeFilter, status: 'completed' }),
     ]);
 
-    const totalRevenue = revenueStats.length > 0 ? revenueStats[0].totalRevenue : 0;
-    const totalTicketsSold = revenueStats.length > 0 ? revenueStats[0].totalTicketsSold : 0;
+    const totalEvents = regularDocStats.eventCount + dailyDocStats.eventCount;
+    const activeEvents = activeRegularEvents + activeDailyEvents;
+    const pendingEvents = pendingRegularEvents + pendingDailyEvents;
+    const completedEvents = completedRegularEvents + completedDailyEvents;
 
-    console.log('Revenue calculation debug:', {
-      organizerId,
-      revenueStats: revenueStats.length,
-      totalRevenue,
-      totalTicketsSold
-    });
+    const eventDocumentRevenue =
+      regularDocStats.totalRevenue + dailyDocStats.totalRevenue;
+    const eventDocumentTickets =
+      regularDocStats.totalTicketsSold + dailyDocStats.totalTicketsSold;
 
-    // Fallback: Get revenue from Event model if booking aggregation returns 0
-    let fallbackRevenue = 0;
-    let fallbackTicketsSold = 0;
-    if (totalRevenue === 0 || totalTicketsSold === 0) {
-      const eventStats = await Event.aggregate([
-        { $match: { organizer: new mongoose.Types.ObjectId(organizerId) } },
+    // Event documents track cumulative sales; booking rows can be partial (per-ticket docs)
+    const liveRevenue = Math.max(eventDocumentRevenue, bookingStats.totalRevenue);
+    const liveTicketsSold = Math.max(
+      eventDocumentTickets,
+      bookingStats.totalTicketsSold
+    );
+    const ticketSalesRevenue = liveRevenue;
+    const totalTicketsSold = liveTicketsSold;
+    const totalPaidOut = Number(organizerDoc?.totalPaidOut) || 0;
+    const pendingPayouts = Number(organizerDoc?.pendingPayouts) || 0;
+    // Lifetime payouts from organizer profile; falls back to current ticket sales
+    const totalRevenue = totalPaidOut > 0 ? totalPaidOut : ticketSalesRevenue;
+
+    const getTotalTicketsForEvent = (event) =>
+      (event.ticketTypes || []).reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
+
+    const attachBookingStatsToEvents = async (events) => {
+      if (!events.length) return [];
+
+      const ids = events.map((e) => e._id);
+      const perEventStats = await Booking.aggregate([
+        {
+          $match: {
+            event: { $in: ids },
+            paymentStatus: { $in: COMPLETED_BOOKING_PAYMENT_STATUSES },
+          },
+        },
         {
           $group: {
-            _id: null,
-            totalRevenue: { $sum: '$totalRevenue' },
-            totalTicketsSold: { $sum: '$ticketsSold' }
-          }
-        }
+            _id: '$event',
+            ticketsSold: { $sum: '$quantity' },
+            totalRevenue: { $sum: '$total' },
+          },
+        },
       ]);
-      
-      if (eventStats.length > 0) {
-        fallbackRevenue = eventStats[0].totalRevenue || 0;
-        fallbackTicketsSold = eventStats[0].totalTicketsSold || 0;
-      }
-      
-      console.log('Fallback revenue calculation:', {
-        eventStats: eventStats.length,
-        fallbackRevenue,
-        fallbackTicketsSold
+
+      const statsByEventId = new Map(
+        perEventStats.map((row) => [row._id.toString(), row])
+      );
+
+      return events.map((event) => {
+        const stats = statsByEventId.get(event._id.toString());
+        return {
+          _id: event._id,
+          title: event.title,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          status: event.status,
+          banner: event.banner,
+          totalTickets: getTotalTicketsForEvent(event),
+          ticketsSold: Math.max(stats?.ticketsSold || 0, event.ticketsSold || 0),
+          totalRevenue: Math.max(stats?.totalRevenue || 0, event.totalRevenue || 0),
+        };
       });
-    }
+    };
 
-    const finalRevenue = totalRevenue > 0 ? totalRevenue : fallbackRevenue;
-    const finalTicketsSold = totalTicketsSold > 0 ? totalTicketsSold : fallbackTicketsSold;
-
-    // Get recent events (last 5)
-    const recentEvents = await Event.find({ organizer: organizerId })
-      .select('_id title startDate endDate status banner totalTickets ticketsSold')
+    // Recent events (last 5 regular) with live booking stats
+    const recentEventsRaw = await Event.find(scopeFilter)
+      .select('_id title startDate endDate status banner ticketTypes ticketsSold totalRevenue')
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .lean();
+    const recentEvents = await attachBookingStatsToEvents(recentEventsRaw);
 
-    // Get upcoming events (next 30 days)
-    const upcomingEvents = await Event.find({
-      organizer: organizerId,
+    // Upcoming events (next 30 days) with live booking stats
+    const upcomingEventsRaw = await Event.find({
+      ...scopeFilter,
       status: 'approved',
-      startDate: { 
-        $gte: new Date(),
-        $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Next 30 days
-      }
+      startDate: {
+        $gte: now,
+        $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
     })
-    .select('_id title startDate endDate banner totalTickets ticketsSold')
-    .sort({ startDate: 1 })
-    .limit(5);
+      .select('_id title startDate endDate status banner ticketTypes ticketsSold totalRevenue')
+      .sort({ startDate: 1 })
+      .limit(5)
+      .lean();
+    const upcomingEvents = await attachBookingStatsToEvents(upcomingEventsRaw);
 
     // Get artist booking statistics
     const totalBookings = await ArtistBooking.countDocuments({ organizer: organizerId });
@@ -577,16 +763,29 @@ exports.getOrganizerDashboard = async (req, res) => {
       'booking.status': 'accepted'
     });
 
-    // Get recent bookings
-    const recentBookings = await ArtistBooking.find({ organizer: organizerId })
+    // Get recent artist bookings (event date/venue live on event subdocument)
+    const recentBookingsRaw = await ArtistBooking.find({ organizer: organizerId })
       .populate('artist', 'name email phone profilePic')
-      .select('_id artist booking.status booking.eventDate booking.venue createdAt')
+      .select('_id artist event booking.status createdAt')
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .lean();
 
-    // Calculate average rating from organizer ratings
-    const organizer = await Organizer.findById(organizerId).select('statistics');
-    const averageRating = organizer?.statistics?.averageRating || 0;
+    const recentBookings = recentBookingsRaw.map((row) => ({
+      _id: row._id,
+      artist: row.artist,
+      createdAt: row.createdAt,
+      booking: {
+        status: row.booking?.status,
+        eventDate: row.event?.date,
+        venue:
+          row.event?.venue?.name ||
+          row.event?.venue?.address ||
+          '',
+      },
+    }));
+
+    const averageRating = organizerDoc?.statistics?.averageRating || 0;
 
     return ApiResponse.success(res, 'Organizer dashboard data retrieved successfully', {
       stats: {
@@ -594,12 +793,15 @@ exports.getOrganizerDashboard = async (req, res) => {
         activeEvents,
         pendingEvents,
         completedEvents,
-        totalRevenue: finalRevenue,
-        totalTicketsSold: finalTicketsSold,
+        totalRevenue,
+        ticketSalesRevenue,
+        totalPaidOut,
+        pendingPayouts,
+        totalTicketsSold,
         totalBookings,
         pendingBookings,
         acceptedBookings,
-        averageRating
+        averageRating,
       },
       recentEvents,
       upcomingEvents,

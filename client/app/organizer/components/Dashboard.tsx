@@ -29,6 +29,9 @@ interface DashboardData {
     pendingEvents: number;
     completedEvents: number;
     totalRevenue: number;
+    ticketSalesRevenue?: number;
+    totalPaidOut?: number;
+    pendingPayouts?: number;
     totalTicketsSold: number;
     totalBookings: number;
     pendingBookings: number;
@@ -97,7 +100,9 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            "Cache-Control": "no-cache",
           },
+          params: { _t: Date.now() },
         }
       );
 
@@ -144,30 +149,41 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
     );
   }
 
-  // Create stats array from dashboard data
+  const formatCurrency = (amount: number) =>
+    `₹${(Number(amount) || 0).toLocaleString("en-IN")}`;
+
+  const ticketSalesRevenue =
+    dashboardData.stats.ticketSalesRevenue ?? dashboardData.stats.totalRevenue;
+  const totalPaidOut = dashboardData.stats.totalPaidOut ?? 0;
+
   const stats = [
-    { 
-      title: "Total Events", 
-      value: dashboardData.stats.totalEvents.toString(), 
-      icon: Calendar, 
-      change: "+0%", 
-      color: "text-blue-600" 
+    {
+      title: "Total Events",
+      value: String(dashboardData.stats.totalEvents ?? 0),
+      icon: Calendar,
+      color: "text-blue-600",
+      hint: undefined as string | undefined,
     },
-    { 
-      title: "Active Events", 
-      value: dashboardData.stats.activeEvents.toString(), 
-      icon: Activity, 
-      change: "+0%", 
-      color: "text-green-600" 
+    {
+      title: "Active Events",
+      value: String(dashboardData.stats.activeEvents ?? 0),
+      icon: Activity,
+      color: "text-green-600",
+      hint: undefined,
     },
-    { 
-      title: "Total Revenue", 
-      value: `₹${dashboardData.stats.totalRevenue.toLocaleString()}`, 
-      icon: DollarSign, 
-      change: "+0%", 
-      color: "text-purple-600" 
+    {
+      title: totalPaidOut > 0 ? "Total Paid Out" : "Total Revenue",
+      value: formatCurrency(totalPaidOut > 0 ? totalPaidOut : ticketSalesRevenue),
+      icon: DollarSign,
+      color: "text-purple-600"
     },
- 
+    {
+      title: "Tickets Sold",
+      value: String(dashboardData.stats.totalTicketsSold ?? 0),
+      icon: Ticket,
+      color: "text-orange-600",
+      hint: undefined,
+    },
   ];
 
   return (
@@ -184,7 +200,9 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
-               
+                {stat.hint && (
+                  <p className="text-xs text-gray-500 mt-1">{stat.hint}</p>
+                )}
               </CardContent>
             </Card>
           );
@@ -279,14 +297,28 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
                 <span className="text-sm">Pending Events</span>
                 <span className="font-semibold text-yellow-600">{dashboardData.stats.pendingEvents}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Total Revenue</span>
-                <span className="font-semibold text-purple-600">₹{dashboardData.stats.totalRevenue.toLocaleString()}</span>
-              </div>
+              {totalPaidOut > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Total Paid Out</span>
+                  <span className="font-semibold text-purple-600">{formatCurrency(totalPaidOut)}</span>
+                </div>
+              )}
+              {/* <div className="flex justify-between items-center">
+                <span className="text-sm">Ticket Sales</span>
+                <span className="font-semibold text-purple-600">{formatCurrency(ticketSalesRevenue)}</span>
+              </div> */}
               <div className="flex justify-between items-center">
                 <span className="text-sm">Tickets Sold</span>
                 <span className="font-semibold text-blue-600">{dashboardData.stats.totalTicketsSold}</span>
               </div>
+              {(dashboardData.stats.pendingPayouts ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Pending Payouts</span>
+                  <span className="font-semibold text-amber-600">
+                    {formatCurrency(dashboardData.stats.pendingPayouts ?? 0)}
+                  </span>
+                </div>
+              )}
               
             </div>
           </CardContent>
@@ -316,7 +348,11 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
                     <div>
                       <h3 className="font-semibold">{booking.artist.name}</h3>
                       <p className="text-sm text-gray-500">{booking.booking.venue}</p>
-                      <p className="text-xs text-gray-400">{new Date(booking.booking.eventDate).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-400">
+                        {booking.booking.eventDate
+                          ? new Date(booking.booking.eventDate).toLocaleDateString()
+                          : "Date not set"}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
