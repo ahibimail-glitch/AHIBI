@@ -1,5 +1,6 @@
 const Coupon = require('../models/Coupon');
 const Event = require('../models/Event');
+const { computeCouponDiscount } = require('../utils/couponDiscount');
 
 function generateUniqueCode() {
   const segments = [];
@@ -163,25 +164,17 @@ exports.validateCoupon = async (req, res, next) => {
       return res.status(400).json({ message: 'Coupon has expired' });
     }
 
-    // Compute discount: apply to ALL applicable tickets
-    const applicableCategory = coupon.ticketCategory;
-    const applicableTickets = tickets.filter(t => t.ticketType === applicableCategory);
-    if (applicableTickets.length === 0) {
-      return res.status(400).json({ message: `Coupon applies to ${applicableCategory} tickets only` });
+    const discountResult = computeCouponDiscount(coupon, tickets);
+    if (discountResult.error) {
+      return res.status(400).json({ message: discountResult.error });
     }
 
-    // Calculate total quantity and discount for all applicable tickets
-    const totalApplicableQuantity = applicableTickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
-    const unitPrice = Number(applicableTickets[0]?.price) || 0;
-    let discountAmount = 0;
-    
-    if (coupon.discountPercentage !== undefined) {
-      discountAmount = Math.round((unitPrice * totalApplicableQuantity * coupon.discountPercentage) / 100);
-    } else if (coupon.discountPrice !== undefined) {
-      discountAmount = Math.min(coupon.discountPrice * totalApplicableQuantity, unitPrice * totalApplicableQuantity);
-    }
-    
-    const totalAmount = tickets.reduce((sum, t) => sum + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
+    const {
+      discountAmount,
+      totalAmount,
+      ticketCategory: applicableCategory,
+      applicableQuantity: totalApplicableQuantity,
+    } = discountResult;
     const payable = Math.max(0, totalAmount - discountAmount);
 
     // NOTE: timesUsed will be incremented when the booking is actually completed

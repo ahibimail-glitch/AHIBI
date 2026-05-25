@@ -11,6 +11,7 @@ const PaymentTransaction = require('../models/PaymentTransaction');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
 const BikerBash = require('../models/BikerBash');
 const Coupon = require('../models/Coupon');
+const { computeCouponDiscount } = require('../utils/couponDiscount');
 
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
@@ -65,23 +66,12 @@ exports.createOrder = async (req, res) => {
       if (coupon && coupon.code) {
         const dbCoupon = await Coupon.findOne({ code: String(coupon.code).trim().toUpperCase() });
         if (dbCoupon && String(dbCoupon.event?.id) === String(bookingDetails?.event?._id) && (!dbCoupon.expiresAt || new Date(dbCoupon.expiresAt) >= new Date())) {
-          // Apply discount to ALL applicable tickets
-          const applicableTickets = (bookingDetails?.tickets || []).filter(t => t.ticketType === dbCoupon.ticketCategory);
-          if (applicableTickets.length > 0) {
-            const totalApplicableQuantity = applicableTickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
-            const unitPrice = Number(applicableTickets[0].price) || 0;
-            
-            if (dbCoupon.discountPercentage !== undefined) {
-              discountAmount = Math.round((unitPrice * totalApplicableQuantity * dbCoupon.discountPercentage) / 100);
-            } else if (dbCoupon.discountPrice !== undefined) {
-              discountAmount = Math.min(dbCoupon.discountPrice * totalApplicableQuantity, unitPrice * totalApplicableQuantity);
-            }
-          }
-          
-          if (discountAmount > 0) {
+          const discountResult = computeCouponDiscount(dbCoupon, bookingDetails?.tickets || []);
+          if (!discountResult.error && discountResult.discountAmount > 0) {
+            discountAmount = discountResult.discountAmount;
             appliedCoupon = {
               code: dbCoupon.code,
-              ticketCategory: dbCoupon.ticketCategory,
+              ticketCategory: discountResult.ticketCategory || dbCoupon.ticketCategory,
               discountPercentage: dbCoupon.discountPercentage,
               discountPrice: dbCoupon.discountPrice,
               discountAmount,

@@ -311,6 +311,11 @@ export default function CheckoutPage() {
     return Number(amount.toFixed(2));
   };
 
+  const getGroup10DiscountAmount = () => {
+    const percentage = appliedCoupon?.discountPercentage ?? 10;
+    return Math.round((subtotalAmount * percentage) / 100);
+  };
+
   // If GROUP10 was applied, but the user later changes ticket selection below the rule,
   // remove the coupon immediately so the discount can't be used.
   useEffect(() => {
@@ -343,6 +348,22 @@ export default function CheckoutPage() {
       };
     });
   }, [selectedTickets, subtotalAmount, appliedCoupon, eventId]);
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    if (appliedCoupon.code?.trim().toUpperCase() !== "GROUP10") return;
+
+    const recalculatedDiscountAmount = getGroup10DiscountAmount();
+    if (appliedCoupon.discountAmount === recalculatedDiscountAmount) return;
+
+    setAppliedCoupon((prev: any) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        discountAmount: recalculatedDiscountAmount,
+      };
+    });
+  }, [selectedTickets, subtotalAmount, appliedCoupon]);
 
   // Add free ticket for RSVP events
   useEffect(() => {
@@ -472,7 +493,8 @@ export default function CheckoutPage() {
         toast.error(data?.message || 'Invalid coupon');
         return;
       }
-      const specialCouponCode = getNormalizedSpecialGroupCouponCode(data?.code || couponCode);
+      const appliedCode = (data?.code || couponCode).trim().toUpperCase();
+      const specialCouponCode = getNormalizedSpecialGroupCouponCode(appliedCode);
       const normalizedCouponData = specialCouponCode
         ? {
             ...data,
@@ -480,7 +502,12 @@ export default function CheckoutPage() {
             discountPercentage: 10,
             discountAmount: getSpecialGroupDiscountAmount(),
           }
-        : data;
+        : appliedCode === "GROUP10"
+          ? {
+              ...data,
+              discountAmount: Math.round((subtotalAmount * (data.discountPercentage ?? 10)) / 100),
+            }
+          : data;
 
       setAppliedCoupon(normalizedCouponData);
       const discountText = normalizedCouponData.discountPercentage !== undefined

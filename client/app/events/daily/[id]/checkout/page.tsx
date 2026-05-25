@@ -180,9 +180,10 @@ export default function DailyEventCheckoutPage() {
     }
 
     const selectedItems = Array.from(selectedTickets.values());
-    const generalAdmissionItems = selectedItems.filter(
-      (item) => item.ticket.name.trim().toLowerCase() === "general admission"
-    );
+    const generalAdmissionItems = selectedItems.filter((item) => {
+      const name = item.ticket.name.trim().toLowerCase();
+      return name === "general admission" || name.includes("general admission");
+    });
     const generalAdmissionQuantity = generalAdmissionItems.reduce(
       (sum, item) => sum + item.quantity,
       0
@@ -223,6 +224,20 @@ export default function DailyEventCheckoutPage() {
     setCouponError(validationError);
     toast.error(validationError);
   }, [selectedTickets, appliedCoupon]);
+
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    if (appliedCoupon.code?.trim().toUpperCase() !== "GROUP10") return;
+
+    const percentage = appliedCoupon.discountPercentage ?? 10;
+    const recalculatedDiscountAmount = Math.round((subtotalAmount * percentage) / 100);
+    if (appliedCoupon.discountAmount === recalculatedDiscountAmount) return;
+
+    setAppliedCoupon((prev: any) => {
+      if (!prev) return prev;
+      return { ...prev, discountAmount: recalculatedDiscountAmount };
+    });
+  }, [selectedTickets, subtotalAmount, appliedCoupon]);
 
   const toggleTicketExpansion = (ticketId: string) => {
     setExpandedTickets(prev => {
@@ -342,13 +357,20 @@ export default function DailyEventCheckoutPage() {
         toast.error(data?.message || 'Invalid coupon');
         return;
       }
-      setAppliedCoupon(data);
-      const discountText = data.discountPercentage !== undefined 
-        ? `${data.discountPercentage}% off` 
-        : data.discountPrice !== undefined 
-          ? `₹${data.discountPrice} off`
+      const appliedCode = (data?.code || couponCode).trim().toUpperCase();
+      const normalizedCouponData = appliedCode === "GROUP10"
+        ? {
+            ...data,
+            discountAmount: Math.round((subtotalAmount * (data.discountPercentage ?? 10)) / 100),
+          }
+        : data;
+      setAppliedCoupon(normalizedCouponData);
+      const discountText = normalizedCouponData.discountPercentage !== undefined 
+        ? `${normalizedCouponData.discountPercentage}% off` 
+        : normalizedCouponData.discountPrice !== undefined 
+          ? `₹${normalizedCouponData.discountPrice} off`
           : 'discount applied';
-      toast.success(`Coupon ${data.code} applied: ${discountText}`);
+      toast.success(`Coupon ${normalizedCouponData.code} applied: ${discountText}`);
     } catch (e) {
       setCouponError('Failed to apply coupon');
       toast.error('Failed to apply coupon');
