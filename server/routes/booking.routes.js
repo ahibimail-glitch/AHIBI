@@ -11,6 +11,20 @@ const smsService = require('../services/smsService');
 const whatsappService = require('../services/whatsappService');
 const Scan = require("../models/Scan");
 
+// Per-event purchase limits
+const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
+const MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT = 10;
+
+async function getUserTicketCountForEvent({ eventId, userId }) {
+  const rows = await Booking.find({
+    event: eventId,
+    user: userId,
+    status: { $in: ['pending', 'confirmed', 'checked-in'] },
+  }).select('quantity');
+
+  return rows.reduce((sum, b) => sum + (Number(b.quantity) || 0), 0);
+}
+
 // @route   POST /api/bookings/verify-ticket
 // @desc    Verify a ticket for an event
 // @access  Private (Admin)
@@ -134,6 +148,29 @@ router.post("/", auth.protect, async (req, res) => {
 
     // Determine if this is a free/RSVP booking
     const isFree = !!isEvent.isFreeEvent;
+
+    // Enforce per-user ticket cap for specific event
+    if (String(event) === LIMITED_EVENT_ID) {
+      const requestedQty = isFree ? 1 : Number(quantity || 0);
+      if (!isFree && (!Number.isInteger(requestedQty) || requestedQty < 1)) {
+        return res.status(400).json({ message: "Invalid quantity" });
+      }
+
+      const existingCount = await getUserTicketCountForEvent({
+        eventId: event,
+        userId: req.user._id,
+      });
+
+      if (existingCount + requestedQty > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+        return res.status(400).json({
+          message: `You can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
+          limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
+          alreadyBooked: existingCount,
+          requested: requestedQty,
+          remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
+        });
+      }
+    }
 
     // Fetch user details for sending notifications
     const userDetails = await User.findById(req.user._id);
@@ -851,6 +888,29 @@ router.post("/admin-manual-booking",  async (req, res) => {
       return res.status(400).json({ message: 'Please provide ticket details (tickets array or ticketType/quantity/price)' });
     }
 
+    // Enforce per-user ticket cap for specific event
+    if (String(eventDoc._id) === LIMITED_EVENT_ID) {
+      const requestedQty = ticketItems.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
+      if (!Number.isInteger(requestedQty) || requestedQty < 1) {
+        return res.status(400).json({ message: 'Invalid quantity' });
+      }
+
+      const existingCount = await getUserTicketCountForEvent({
+        eventId: eventDoc._id,
+        userId: user,
+      });
+
+      if (existingCount + requestedQty > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+        return res.status(400).json({
+          message: `This user can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
+          limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
+          alreadyBooked: existingCount,
+          requested: requestedQty,
+          remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
+        });
+      }
+    }
+
     // Create bookings for each ticket item (create one Booking per ticket -- quantity times)
     const createdBookings = [];
     const bookingIds = [];
@@ -1147,6 +1207,31 @@ router.post("/free", auth.protect, async (req, res) => {
 
     const createdBookings = [];
 
+    // Enforce per-user ticket cap for specific event across the whole request
+    let limitedEventRequestedQty = 0;
+    for (const bookingData of bookings) {
+      if (bookingData?.event && String(bookingData.event) === LIMITED_EVENT_ID) {
+        limitedEventRequestedQty += Number(bookingData.quantity || 1);
+      }
+    }
+
+    if (limitedEventRequestedQty > 0) {
+      const existingCount = await getUserTicketCountForEvent({
+        eventId: LIMITED_EVENT_ID,
+        userId: req.user._id,
+      });
+
+      if (existingCount + limitedEventRequestedQty > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+        return res.status(400).json({
+          message: `You can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
+          limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
+          alreadyBooked: existingCount,
+          requested: limitedEventRequestedQty,
+          remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
+        });
+      }
+    }
+
     for (const bookingData of bookings) {
       const { dailyEvent, event, selectedDate, ticketType, quantity } = bookingData;
 
@@ -1276,6 +1361,35 @@ router.post("/initiate", auth.protect, async (req, res) => {
     let totalAmount = 0;
     const createdBookings = [];
     const bookingIds = [];
+
+    // Enforce per-user ticket cap for specific event across the whole request
+    let limitedEventRequestedQty = 0;
+    for (const bookingData of bookings) {
+      if (bookingData?.event && String(bookingData.event) === LIMITED_EVENT_ID) {
+        limitedEventRequestedQty += Number(bookingData.quantity || 0);
+      }
+    }
+
+    if (limitedEventRequestedQty > 0) {
+      if (!Number.isInteger(limitedEventRequestedQty) || limitedEventRequestedQty < 1) {
+        return res.status(400).json({ message: 'Invalid quantity' });
+      }
+
+      const existingCount = await getUserTicketCountForEvent({
+        eventId: LIMITED_EVENT_ID,
+        userId: req.user._id,
+      });
+
+      if (existingCount + limitedEventRequestedQty > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+        return res.status(400).json({
+          message: `You can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
+          limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
+          alreadyBooked: existingCount,
+          requested: limitedEventRequestedQty,
+          remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
+        });
+      }
+    }
 
     for (const bookingData of bookings) {
       const { dailyEvent, event, selectedDate, ticketType, quantity, price, total } = bookingData;

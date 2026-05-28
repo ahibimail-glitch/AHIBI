@@ -13,6 +13,20 @@ const BikerBash = require('../models/BikerBash');
 const Coupon = require('../models/Coupon');
 const { computeCouponDiscount } = require('../utils/couponDiscount');
 
+// Per-event purchase limits
+const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
+const MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT = 10;
+
+async function getUserTicketCountForEvent({ eventId, userId }) {
+  const rows = await Booking.find({
+    event: eventId,
+    user: userId,
+    status: { $in: ['pending', 'confirmed', 'checked-in'] },
+  }).select('quantity');
+
+  return rows.reduce((sum, b) => sum + (Number(b.quantity) || 0), 0);
+}
+
 // Debug environment variables
 console.log('Environment variables for Razorpay:');
 console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
@@ -35,6 +49,30 @@ exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
   try {
     const { amount, currency, receipt, bookingDetails, coupon } = req.body;
+
+    // Enforce per-user ticket cap for specific event before taking payment
+    try {
+      const eventId = bookingDetails?.event?._id;
+      const userId = bookingDetails?.user?.id;
+      const requestedTickets = Array.isArray(bookingDetails?.tickets)
+        ? bookingDetails.tickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0)
+        : 0;
+
+      if (eventId && userId && String(eventId) === LIMITED_EVENT_ID && requestedTickets > 0) {
+        const existingCount = await getUserTicketCountForEvent({ eventId, userId });
+        if (existingCount + requestedTickets > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+          return res.status(400).json({
+            message: `You can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
+            limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
+            alreadyBooked: existingCount,
+            requested: requestedTickets,
+            remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
+          });
+        }
+      }
+    } catch (e) {
+      // If limit check fails unexpectedly, do not block order creation here
+    }
 
     // Enforce booking cutoff (bookingEndTime overrides endDate)
     try {
@@ -228,6 +266,34 @@ exports.verifyPayment = async (req, res) => {
       }
     } catch (e) {
       // ignore and continue
+    }
+
+    // Enforce per-user ticket cap for specific event right before creating bookings
+    try {
+      const eventId = bookingDetails?.event?._id;
+      const userId = bookingDetails?.user?.id;
+      const requestedTickets = Array.isArray(bookingDetails?.tickets)
+        ? bookingDetails.tickets.reduce((sum, t) => sum + (Number(t.quantity) || 0), 0)
+        : 0;
+
+      if (eventId && userId && String(eventId) === LIMITED_EVENT_ID && requestedTickets > 0) {
+        const existingCount = await getUserTicketCountForEvent({ eventId, userId });
+        if (existingCount + requestedTickets > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+          tx.status = 'paid_no_booking';
+          tx.errorMessage = `Ticket limit exceeded for event ${LIMITED_EVENT_ID}`;
+          await tx.save();
+          return res.status(400).json({
+            success: false,
+            message: `You can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
+            limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
+            alreadyBooked: existingCount,
+            requested: requestedTickets,
+            remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
+          });
+        }
+      }
+    } catch (e) {
+      // If limit check fails unexpectedly, continue to avoid false negatives
     }
 
     // Payment is verified, now create individual bookings for each ticket

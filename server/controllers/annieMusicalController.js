@@ -555,7 +555,7 @@ const cleanupExpiredBookings = async () => {
 };
 
 // Run cleanup job every 5 minutes
-setInterval(cleanupExpiredBookings, 5 * 60 * 1000);
+// setInterval(cleanupExpiredBookings, 5 * 60 * 1000);
 
 // Run cleanup on server start
 cleanupExpiredBookings().catch(console.error);
