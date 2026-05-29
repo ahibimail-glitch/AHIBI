@@ -108,25 +108,16 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
 
     const formatDate = (date: string | number | Date) =>
         new Date(date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric',
+            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
         });
 
     const formatDateShort = (date: string | number | Date) =>
         new Date(date).toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
+            weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
         });
 
     const formatTime = (date: string | number | Date) =>
-        new Date(date).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
@@ -142,16 +133,11 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
     const handleDownloadTicket = async () => {
         if (!ticketRef.current) return;
         setIsDownloading(true);
-
         try {
             const html2canvas = (await import('html2canvas')).default;
             const jsPDF = (await import('jspdf')).default;
-
-            // Wait for QR image to fully load
             await new Promise((resolve) => setTimeout(resolve, 500));
-
             const element = ticketRef.current;
-
             const canvas = await html2canvas(element, {
                 scale: 3,
                 useCORS: true,
@@ -173,55 +159,32 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
                     }
                 },
             });
-
             const imgData = canvas.toDataURL('image/png', 1.0);
-
-            // A4 portrait
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pageW = pdf.internal.pageSize.getWidth();  // 210
-            const pageH = pdf.internal.pageSize.getHeight(); // 297
-
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
             const margin = 12;
             const maxImgW = pageW - margin * 2;
             const maxImgH = pageH - margin * 2;
-
             const imgAspect = canvas.width / canvas.height;
             let imgW = maxImgW;
             let imgH = imgW / imgAspect;
-
-            if (imgH > maxImgH) {
-                imgH = maxImgH;
-                imgW = imgH * imgAspect;
-            }
-
+            if (imgH > maxImgH) { imgH = maxImgH; imgW = imgH * imgAspect; }
             const xOffset = (pageW - imgW) / 2;
             const yOffset = (pageH - imgH) / 2;
-
-            pdf.addImage({
-                imageData: imgData,
-                x: xOffset,
-                y: yOffset,
-                width: imgW,
-                height: imgH,
-                compression: 'FAST',
-            });
-
+            pdf.addImage({ imageData: imgData, x: xOffset, y: yOffset, width: imgW, height: imgH, compression: 'FAST' });
             const showEventSerial = shouldShowEventSerial(booking);
             const footerText = showEventSerial
                 ? `Serial No: ${booking.ticketSerialNumber}`
                 : `Ticket ID: ${booking?._id || 'N/A'}_ticket_${booking?.ticketIndex || ticketIndex}`;
-
             pdf.setFontSize(7);
             pdf.setTextColor(150, 150, 150);
             const textW = pdf.getStringUnitWidth(footerText) * 7 / pdf.internal.scaleFactor;
             pdf.text(footerText, (pageW - textW) / 2, pageH - 4);
-
-            const eventName =
-                booking?.event?.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'ticket';
+            const eventName = booking?.event?.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'ticket';
             const fileName = showEventSerial
                 ? `${eventName}_serial_${booking.ticketSerialNumber}.pdf`
                 : `${eventName}_ticket_${booking?.ticketIndex || ticketIndex}_of_${booking?.totalTickets || totalTickets}_${booking?._id?.slice(-6) || Date.now()}.pdf`;
-
             pdf.save(fileName);
         } catch (err) {
             console.error('Error generating PDF:', err);
@@ -242,7 +205,6 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
     if (!booking) return null;
 
     const showEventSerial = shouldShowEventSerial(booking);
-
     const startDate = booking.event?.startDate || booking.event?.startTime || booking.startTime;
     const displayName = booking.user?.name || user?.name || '—';
     const displayEmail = booking.user?.email || user?.email || '—';
@@ -254,7 +216,6 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
         return t?.benefits?.length ? t.benefits : [];
     })();
 
-    // Build QR data
     const rawDataObject = {
         bookingId: booking._id,
         bookingCode: booking.bookingCode,
@@ -272,326 +233,394 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
             ? `SN-${booking.ticketSerialNumber}`
             : `${booking._id}_ticket_${booking.ticketIndex || ticketIndex}`,
     };
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(JSON.stringify(rawDataObject))}&size=180x180&margin=8`;
-
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(JSON.stringify(rawDataObject))}&size=160x160&margin=6`;
     const ticketId = showEventSerial
         ? `SN-${booking.ticketSerialNumber}`
         : `${booking._id}_ticket_${booking.ticketIndex || ticketIndex}`;
 
     return (
-        <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 520, margin: '2rem auto', padding: '0 1rem' }}>
+        <>
+            <style>{`
+                .mbt-wrap {
+                    font-family: 'Segoe UI', system-ui, sans-serif;
+                    width: 100%;
+                    max-width: 440px;
+                    margin: 0 auto;
+                    padding: 12px;
+                    box-sizing: border-box;
+                }
+                .mbt-ticket {
+                    background: #fff;
+                    border-radius: 18px;
+                    box-shadow: 0 6px 32px rgba(79,70,229,0.14);
+                    overflow: hidden;
+                    width: 100%;
+                }
+                /* HEADER */
+                .mbt-header {
+                    background: linear-gradient(135deg, #312e81 0%, #4F46E5 45%, #7C3AED 75%, #db2777 100%);
+                    padding: 20px 20px 18px;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .mbt-header-circle1 {
+                    position: absolute; top: -35px; right: -35px;
+                    width: 120px; height: 120px;
+                    background: rgba(255,255,255,0.08); border-radius: 50%;
+                }
+                .mbt-header-circle2 {
+                    position: absolute; bottom: -25px; left: -25px;
+                    width: 90px; height: 90px;
+                    background: rgba(255,255,255,0.06); border-radius: 50%;
+                }
+                .mbt-header-inner { position: relative; z-index: 1; }
+                .mbt-logo-row {
+                    display: flex; justify-content: space-between; align-items: center;
+                    margin-bottom: 14px;
+                }
+                .mbt-logo { height: 24px; width: auto; filter: brightness(0) invert(1); }
+                .mbt-confirmed-badge {
+                    background: rgba(255,255,255,0.2);
+                    backdrop-filter: blur(4px);
+                    border-radius: 20px; padding: 4px 12px;
+                    color: #fff; font-size: 10px; font-weight: 700;
+                    letter-spacing: 1.2px; text-transform: uppercase;
+                }
+                .mbt-header-label {
+                    color: rgba(255,255,255,0.7); font-size: 10px;
+                    font-weight: 600; margin: 0 0 3px; letter-spacing: 0.5px;
+                }
+                .mbt-event-title {
+                    color: #fff; font-size: 20px; font-weight: 800;
+                    margin: 0 0 12px; line-height: 1.2;
+                }
+                .mbt-chips {
+                    display: flex; flex-wrap: wrap; gap: 7px;
+                }
+                .mbt-chip {
+                    display: inline-flex; align-items: center; gap: 5px;
+                    background: rgba(255,255,255,0.15); border-radius: 20px;
+                    padding: 5px 11px; color: #fff; font-size: 11px; font-weight: 500;
+                }
+                /* TEAR */
+                .mbt-tear {
+                    position: relative; height: 0;
+                }
+                .mbt-tear-dot-l, .mbt-tear-dot-r {
+                    position: absolute;
+                    width: 22px; height: 22px;
+                    background: #f3f4f6; border-radius: 50%; z-index: 2;
+                    top: -11px;
+                }
+                .mbt-tear-dot-l { left: -11px; }
+                .mbt-tear-dot-r { right: -11px; }
+                .mbt-tear-line {
+                    border-top: 2px dashed #e5e7eb; margin: 0 11px;
+                }
+                /* BODY */
+                .mbt-body { padding: 18px 18px 0; }
+                /* TICKET TYPE */
+                .mbt-type-box {
+                    background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+                    border: 1px solid #c7d2fe;
+                    border-radius: 12px; padding: 14px 16px;
+                    margin-bottom: 16px; text-align: center;
+                }
+                .mbt-type-label {
+                    font-size: 10px; font-weight: 700; color: #6366f1;
+                    letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 3px;
+                }
+                .mbt-type-name {
+                    font-size: 22px; font-weight: 900; color: #3730a3; margin: 0 0 6px;
+                }
+                .mbt-benefits {
+                    font-size: 12px; color: #0d9488; font-weight: 600; margin: 3px 0 0;
+                }
+                .mbt-ticket-count {
+                    display: inline-block; margin-top: 7px;
+                    background: #e0e7ff; border-radius: 20px; padding: 3px 12px;
+                    font-size: 12px; color: #4338ca; font-weight: 600;
+                }
+                /* ATTENDEE GRID */
+                .mbt-section-label {
+                    font-size: 10px; font-weight: 700; color: #9ca3af;
+                    letter-spacing: 1.1px; text-transform: uppercase; margin-bottom: 10px;
+                }
+                .mbt-details-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 9px;
+                    margin-bottom: 14px;
+                }
+                @media (max-width: 360px) {
+                    .mbt-details-grid { grid-template-columns: 1fr; }
+                }
+                .mbt-detail-row {
+                    border-radius: 9px; padding: 9px 10px;
+                }
+                .mbt-detail-row-icon-label {
+                    display: flex; align-items: center; gap: 5px;
+                    margin-bottom: 3px;
+                }
+                .mbt-detail-row-label {
+                    font-size: 9px; font-weight: 700; letter-spacing: 0.9px;
+                    text-transform: uppercase; margin: 0;
+                }
+                .mbt-detail-row-value {
+                    font-size: 12px; font-weight: 700; margin: 0; word-break: break-word;
+                }
+                /* PAYMENT */
+                .mbt-payment {
+                    background: #f0fdf4; border: 1px solid #86efac;
+                    border-radius: 9px; padding: 9px 14px;
+                    display: flex; align-items: center; justify-content: space-between;
+                    margin-bottom: 16px; gap: 8px; flex-wrap: wrap;
+                }
+                .mbt-payment-left {
+                    display: flex; align-items: center; gap: 6px;
+                }
+                .mbt-payment-label { font-size: 12px; font-weight: 600; color: #15803d; }
+                .mbt-payment-txn { font-size: 10px; font-family: monospace; color: #16a34a; font-weight: 600; }
+                /* TEAR 2 */
+                .mbt-tear2 { position: relative; }
+                .mbt-tear2-dot-l, .mbt-tear2-dot-r {
+                    position: absolute;
+                    width: 22px; height: 22px;
+                    background: #f3f4f6; border-radius: 50%;
+                    top: -11px;
+                }
+                .mbt-tear2-dot-l { left: 4px; }
+                .mbt-tear2-dot-r { right: 4px; }
+                .mbt-tear2-line {
+                    border-top: 2px dashed #e5e7eb; margin: 0 18px;
+                }
+                /* QR SECTION */
+                .mbt-qr-section {
+                    background: #fafafa; padding: 18px;
+                    display: flex; align-items: center; gap: 16px;
+                }
+                .mbt-qr-wrap {
+                    border: 3px solid #e0e7ff; border-radius: 10px;
+                    padding: 5px; background: #fff; flex-shrink: 0;
+                }
+                .mbt-qr-img { display: block; width: 110px; height: 110px; }
+                .mbt-qr-right { flex: 1; min-width: 0; }
+                .mbt-qr-scan-label { font-size: 11px; font-weight: 600; color: #6366f1; margin: 0 0 3px; }
+                .mbt-qr-venue { font-size: 11px; color: #6b7280; margin: 0 0 10px; line-height: 1.4; }
+                .mbt-ticket-id-box {
+                    background: #fff; border: 1px solid #e0e7ff;
+                    border-radius: 7px; padding: 7px 10px; margin-bottom: 8px;
+                }
+                .mbt-ticket-id-label {
+                    font-size: 9px; color: #9ca3af; font-weight: 600;
+                    letter-spacing: 0.9px; text-transform: uppercase; margin: 0 0 2px;
+                }
+                .mbt-ticket-id-value {
+                    font-size: 11px; font-family: monospace; font-weight: 700;
+                    color: #1e1b4b; margin: 0; word-break: break-all;
+                }
+                .mbt-booked-on { font-size: 10px; color: #9ca3af; margin: 0; }
+                /* FOOTER */
+                .mbt-footer {
+                    padding: 14px 18px 18px;
+                    background: #f9fafb; border-top: 1px solid #f3f4f6;
+                }
+                .mbt-download-btn {
+                    width: 100%;
+                    border: none; border-radius: 11px; padding: 13px 18px;
+                    font-weight: 700; font-size: 14px; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center; gap: 7px;
+                    transition: opacity 0.2s, transform 0.15s;
+                    color: #fff;
+                }
+                .mbt-download-btn:not(:disabled):active { transform: scale(0.98); }
+                /* VOUCHER POPUP */
+                .mbt-popup-overlay {
+                    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+                    display: flex; align-items: center; justify-content: center; z-index: 50;
+                    padding: 16px; box-sizing: border-box;
+                }
+                .mbt-popup {
+                    background: #fff; border-radius: 18px; padding: 24px 20px;
+                    max-width: 340px; width: 100%; text-align: center;
+                    position: relative; overflow: hidden;
+                }
+                .mbt-popup-circle1 {
+                    position: absolute; top: -35px; right: -35px;
+                    width: 110px; height: 110px;
+                    background: linear-gradient(135deg,#f472b6,#818cf8);
+                    border-radius: 50%; opacity: 0.25;
+                }
+                .mbt-popup-circle2 {
+                    position: absolute; bottom: -35px; left: -35px;
+                    width: 110px; height: 110px;
+                    background: linear-gradient(135deg,#818cf8,#f472b6);
+                    border-radius: 50%; opacity: 0.25;
+                }
+                .mbt-popup-emoji { font-size: 36px; margin-bottom: 10px; }
+                .mbt-popup-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; color: #111827; }
+                .mbt-popup-logo { width: 45%; height: auto; margin: 0 auto 14px; display: block; }
+                .mbt-popup-text { font-size: 13px; color: #374151; margin-bottom: 10px; line-height: 1.5; }
+                .mbt-popup-contact { font-size: 12px; color: #374151; margin-bottom: 14px; }
+                .mbt-popup-btn {
+                    background: linear-gradient(135deg,#4F46E5,#7C3AED); color: #fff;
+                    border: none; border-radius: 11px; padding: 11px 28px;
+                    font-weight: 700; font-size: 14px; cursor: pointer;
+                }
+            `}</style>
 
-            {/* Voucher Popup */}
-            {showVoucherPopup && (
-                <div
-                    onClick={() => setShowVoucherPopup(false)}
-                    style={{
-                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
-                    }}
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            background: '#fff', borderRadius: 20, padding: '2rem', maxWidth: 360,
-                            width: '90%', textAlign: 'center', position: 'relative', overflow: 'hidden',
-                        }}
-                    >
-                        <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, background: 'linear-gradient(135deg,#f472b6,#818cf8)', borderRadius: '50%', opacity: 0.25 }} />
-                        <div style={{ position: 'absolute', bottom: -40, left: -40, width: 120, height: 120, background: 'linear-gradient(135deg,#818cf8,#f472b6)', borderRadius: '50%', opacity: 0.25 }} />
-                        <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-                        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: '#111827' }}>Congratulations!</h2>
-                        <img src="/images/Madame_(clothing).svg.png" alt="Madame Logo" style={{ width: '50%', height: 'auto', margin: '0 auto 16px' }} />
-                        <p style={{ fontSize: 14, color: '#374151', marginBottom: 12 }}>
-                            You have got a <strong style={{ color: '#059669' }}>₹2,000 Madame Shopping Voucher</strong>! Redeem at any Madame Store PAN India within <strong style={{ color: '#D97706' }}>6 months</strong> of issue.
-                        </p>
-                        <p style={{ fontSize: 13, color: '#374151', marginBottom: 16 }}>Contact <strong style={{ color: '#4F46E5' }}>8730986585</strong> to claim.</p>
-                        <button
-                            onClick={() => setShowVoucherPopup(false)}
-                            style={{
-                                background: 'linear-gradient(135deg,#4F46E5,#7C3AED)', color: '#fff',
-                                border: 'none', borderRadius: 12, padding: '12px 32px',
-                                fontWeight: 700, fontSize: 15, cursor: 'pointer',
-                            }}
-                        >
-                            Close
-                        </button>
+            <div className="mbt-wrap">
+                {/* Voucher Popup */}
+                {showVoucherPopup && (
+                    <div className="mbt-popup-overlay" onClick={() => setShowVoucherPopup(false)}>
+                        <div className="mbt-popup" onClick={(e) => e.stopPropagation()}>
+                            <div className="mbt-popup-circle1" />
+                            <div className="mbt-popup-circle2" />
+                            <div className="mbt-popup-emoji">🎉</div>
+                            <h2 className="mbt-popup-title">Congratulations!</h2>
+                            <img src="/images/Madame_(clothing).svg.png" alt="Madame Logo" className="mbt-popup-logo" />
+                            <p className="mbt-popup-text">
+                                You have got a <strong style={{ color: '#059669' }}>₹2,000 Madame Shopping Voucher</strong>!
+                                Redeem at any Madame Store PAN India within <strong style={{ color: '#D97706' }}>6 months</strong> of issue.
+                            </p>
+                            <p className="mbt-popup-contact">
+                                Contact <strong style={{ color: '#4F46E5' }}>8730986585</strong> to claim.
+                            </p>
+                            <button className="mbt-popup-btn" onClick={() => setShowVoucherPopup(false)}>Close</button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* ── TICKET ── */}
-            <div
-                ref={ticketRef}
-                data-ticket-root
-                style={{
-                    background: '#fff',
-                    borderRadius: 20,
-                    boxShadow: '0 8px 40px rgba(79,70,229,0.15)',
-                    overflow: 'hidden',
-                }}
-            >
-                {/* ── HEADER ── */}
-                <div style={{
-                    background: 'linear-gradient(135deg, #312e81 0%, #4F46E5 45%, #7C3AED 75%, #db2777 100%)',
-                    padding: '28px 28px 24px',
-                    position: 'relative',
-                    overflow: 'hidden',
-                }}>
-                    {/* Decorative circles */}
-                    <div style={{ position: 'absolute', top: -40, right: -40, width: 140, height: 140, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-                    <div style={{ position: 'absolute', bottom: -30, left: -30, width: 100, height: 100, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
+                {/* ── TICKET ── */}
+                <div ref={ticketRef} data-ticket-root className="mbt-ticket">
 
-                    <div style={{ position: 'relative', zIndex: 1 }}>
-                        {/* Logo row */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                            <img src="/images/Logo.png" alt="Logo" style={{ height: 28, width: 'auto', filter: 'brightness(0) invert(1)' }} />
-                            <div style={{
-                                background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)',
-                                borderRadius: 20, padding: '4px 14px',
-                                color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase',
-                            }}>
-                                Confirmed ✓
+                    {/* HEADER */}
+                    <div className="mbt-header">
+                        <div className="mbt-header-circle1" />
+                        <div className="mbt-header-circle2" />
+                        <div className="mbt-header-inner">
+                            <div className="mbt-logo-row">
+                                <img src="/images/Logo.png" alt="Logo" className="mbt-logo" />
+                                <div className="mbt-confirmed-badge">Confirmed ✓</div>
+                            </div>
+                            <p className="mbt-header-label">BOOKING CONFIRMED FOR</p>
+                            <h1 className="mbt-event-title">{booking.event?.title || 'Event Title'}</h1>
+                            <div className="mbt-chips">
+                                <div className="mbt-chip">
+                                    <Calendar size={12} />
+                                    {formatDateShort(startDate)}
+                                </div>
+                                <div className="mbt-chip">
+                                    <Clock size={12} />
+                                    {formatTime(startDate)} – {getEndTime(booking)}
+                                </div>
+                                {eventLocation !== '—' && (
+                                    <div className="mbt-chip">
+                                        <MapPin size={12} />
+                                        {eventLocation}
+                                    </div>
+                                )}
                             </div>
                         </div>
+                    </div>
 
-                        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 500, marginBottom: 4, letterSpacing: 0.5 }}>
-                            BOOKING CONFIRMED FOR
-                        </p>
-                        <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 800, margin: '0 0 16px', lineHeight: 1.2 }}>
-                            {booking.event?.title || 'Event Title'}
-                        </h1>
+                    {/* TEAR 1 */}
+                    <div className="mbt-tear">
+                        <div className="mbt-tear-dot-l" />
+                        <div className="mbt-tear-dot-r" />
+                        <div className="mbt-tear-line" />
+                    </div>
 
-                        {/* Date + Location chips */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                            <div style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'rgba(255,255,255,0.15)', borderRadius: 20,
-                                padding: '6px 14px', color: '#fff', fontSize: 13,
-                            }}>
-                                <Calendar size={14} />
-                                {formatDateShort(startDate)}
-                            </div>
-                            <div style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'rgba(255,255,255,0.15)', borderRadius: 20,
-                                padding: '6px 14px', color: '#fff', fontSize: 13,
-                            }}>
-                                <Clock size={14} />
-                                {formatTime(startDate)} – {getEndTime(booking)}
-                            </div>
-                            {eventLocation !== '—' && (
-                                <div style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                    background: 'rgba(255,255,255,0.15)', borderRadius: 20,
-                                    padding: '6px 14px', color: '#fff', fontSize: 13,
-                                }}>
-                                    <MapPin size={14} />
-                                    {eventLocation}
+                    {/* BODY */}
+                    <div className="mbt-body">
+                        {/* Ticket Type */}
+                        <div className="mbt-type-box">
+                            <p className="mbt-type-label">Ticket Type</p>
+                            <h2 className="mbt-type-name">{booking.ticketType}</h2>
+                            {ticketBenefits.length > 0 && (
+                                <p className="mbt-benefits">{ticketBenefits.slice(0, 2).join(' · ')}</p>
+                            )}
+                            {(booking.totalTickets || totalTickets) > 1 && (
+                                <div className="mbt-ticket-count">
+                                    Ticket {booking.ticketIndex || ticketIndex} of {booking.totalTickets || totalTickets}
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
 
-                {/* ── TEAR EDGE ── */}
-                <div style={{ position: 'relative', height: 0, margin: '0' }}>
-                    <div style={{
-                        position: 'absolute', left: -12, top: -12,
-                        width: 24, height: 24, background: '#f3f4f6', borderRadius: '50%', zIndex: 2,
-                    }} />
-                    <div style={{
-                        position: 'absolute', right: -12, top: -12,
-                        width: 24, height: 24, background: '#f3f4f6', borderRadius: '50%', zIndex: 2,
-                    }} />
-                    <div style={{
-                        borderTop: '2px dashed #e5e7eb', margin: '0 12px',
-                    }} />
-                </div>
-
-                {/* ── BODY ── */}
-                <div style={{ padding: '28px 28px 0' }}>
-
-                    {/* ── TICKET TYPE ROW ── */}
-                    <div style={{
-                        background: 'linear-gradient(135deg, #eef2ff, #f5f3ff)',
-                        border: '1px solid #c7d2fe',
-                        borderRadius: 14,
-                        padding: '18px 20px',
-                        marginBottom: 20,
-                        textAlign: 'center',
-                    }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>
-                            Ticket Type
-                        </p>
-                        <h2 style={{ fontSize: 28, fontWeight: 900, color: '#3730a3', margin: '0 0 8px' }}>
-                            {booking.ticketType}
-                        </h2>
-
-                        {/* {showEventSerial && (
-                            <div style={{
-                                display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-                                border: '2px solid #a5b4fc', borderRadius: 12, padding: '8px 24px',
-                                background: '#fff', marginBottom: 8,
-                            }}>
-                                <p style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', letterSpacing: 1.5, textTransform: 'uppercase', margin: '0 0 2px' }}>
-                                    Serial Number
-                                </p>
-                                <p style={{ fontSize: 36, fontWeight: 900, color: '#1e1b4b', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
-                                    {booking.ticketSerialNumber}
-                                </p>
+                        {/* Attendee Details */}
+                        <div>
+                            <p className="mbt-section-label">Attendee Details</p>
+                            <div className="mbt-details-grid">
+                                <DetailRow icon={<User size={12} />} label="Name" value={displayName} />
+                                <DetailRow icon={<Mail size={12} />} label="Email" value={displayEmail} />
+                                <DetailRow icon={<Phone size={12} />} label="Phone" value={displayPhone} />
+                                <DetailRow icon={<Ticket size={12} />} label="Price" value={formatCurrency(booking.price)} highlight />
                             </div>
-                        )} */}
+                        </div>
 
-                        {ticketBenefits.length > 0 && (
-                            <p style={{ fontSize: 13, color: '#0d9488', fontWeight: 600, margin: '4px 0 0' }}>
-                                {ticketBenefits.slice(0, 2).join(' · ')}
-                            </p>
-                        )}
-
-                        {(booking.totalTickets || totalTickets) > 1 && (
-                            <div style={{
-                                marginTop: 8, display: 'inline-block',
-                                background: '#e0e7ff', borderRadius: 20, padding: '4px 14px',
-                                fontSize: 13, color: '#4338ca', fontWeight: 600,
-                            }}>
-                                Ticket {booking.ticketIndex || ticketIndex} of {booking.totalTickets || totalTickets}
+                        {/* Payment */}
+                        {booking.payment && (
+                            <div className="mbt-payment">
+                                <div className="mbt-payment-left">
+                                    <CreditCard size={15} color="#16a34a" />
+                                    <span className="mbt-payment-label">Payment Successful</span>
+                                </div>
+                                <span className="mbt-payment-txn">{booking.payment.transactionId}</span>
                             </div>
                         )}
                     </div>
 
-                    {/* ── ATTENDEE DETAILS ── */}
-                    <div style={{ marginBottom: 20 }}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 }}>
-                            Attendee Details
-                        </p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            <DetailRow icon={<User size={14} />} label="Name" value={displayName} />
-                            <DetailRow icon={<Mail size={14} />} label="Email" value={displayEmail} />
-                            <DetailRow icon={<Phone size={14} />} label="Phone" value={displayPhone} />
-                            <DetailRow icon={<Ticket size={14} />} label="Ticket Price" value={formatCurrency(booking.price)} highlight />
-                        </div>
+                    {/* TEAR 2 */}
+                    <div className="mbt-tear2">
+                        <div className="mbt-tear2-dot-l" />
+                        <div className="mbt-tear2-dot-r" />
+                        <div className="mbt-tear2-line" />
                     </div>
 
-                    {/* Payment badge */}
-                    {booking.payment && (
-                        <div style={{
-                            background: '#f0fdf4', border: '1px solid #86efac',
-                            borderRadius: 10, padding: '10px 16px',
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            marginBottom: 20,
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <CreditCard size={16} color="#16a34a" />
-                                <span style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>Payment Successful</span>
+                    {/* QR SECTION */}
+                    <div className="mbt-qr-section">
+                        <div className="mbt-qr-wrap">
+                            <img src={qrUrl} alt="Booking QR Code" className="mbt-qr-img" crossOrigin="anonymous" />
+                        </div>
+                        <div className="mbt-qr-right">
+                            <p className="mbt-qr-scan-label">Scan for Entry</p>
+                            <p className="mbt-qr-venue">
+                                Show at <strong style={{ color: '#374151' }}>
+                                    {eventLocation !== '—' ? eventLocation : 'the venue'}
+                                </strong>
+                            </p>
+                            <div className="mbt-ticket-id-box">
+                                <p className="mbt-ticket-id-label">
+                                    {showEventSerial ? 'Serial Number' : 'Ticket ID'}
+                                </p>
+                                <p className="mbt-ticket-id-value">
+                                    {showEventSerial ? booking.ticketSerialNumber : ticketId}
+                                </p>
                             </div>
-                            <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#16a34a', fontWeight: 600 }}>
-                                {booking.payment.transactionId}
-                            </span>
+                            <p className="mbt-booked-on">Booked {formatDateShort(booking.bookedAt)}</p>
                         </div>
-                    )}
-                </div>
-
-                {/* ── TEAR EDGE 2 ── */}
-                <div style={{ position: 'relative', margin: '0 0' }}>
-                    <div style={{ borderTop: '2px dashed #e5e7eb', margin: '0 28px' }} />
-                    <div style={{
-                        position: 'absolute', left: 4, top: -12,
-                        width: 24, height: 24, background: '#f3f4f6', borderRadius: '50%',
-                    }} />
-                    <div style={{
-                        position: 'absolute', right: 4, top: -12,
-                        width: 24, height: 24, background: '#f3f4f6', borderRadius: '50%',
-                    }} />
-                </div>
-
-                {/* ── QR + ID SECTION ── */}
-                <div style={{
-                    background: '#fafafa',
-                    padding: '24px 28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 24,
-                }}>
-                    {/* QR Code */}
-                    <div style={{
-                        border: '3px solid #e0e7ff',
-                        borderRadius: 12,
-                        padding: 6,
-                        background: '#fff',
-                        flexShrink: 0,
-                    }}>
-                        <img
-                            src={qrUrl}
-                            alt="Booking QR Code"
-                            width={150}
-                            height={150}
-                            crossOrigin="anonymous"
-                        />
                     </div>
 
-                    {/* Right side info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: '#6366f1', marginBottom: 4 }}>
-                            Scan for Entry
-                        </p>
-                        <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 14, lineHeight: 1.5 }}>
-                            Present this QR code at <strong style={{ color: '#374151' }}>{eventLocation !== '—' ? eventLocation : 'the venue'}</strong>
-                        </p>
-
-                        {/* Ticket ID box */}
-                        <div style={{
-                            background: '#fff',
-                            border: '1px solid #e0e7ff',
-                            borderRadius: 8,
-                            padding: '8px 12px',
-                            marginBottom: 10,
-                        }}>
-                            <p style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 2px' }}>
-                                {showEventSerial ? 'Serial Number' : 'Ticket ID'}
-                            </p>
-                            <p style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#1e1b4b', margin: 0, wordBreak: 'break-all' }}>
-                                {showEventSerial ? booking.ticketSerialNumber : ticketId}
-                            </p>
-                        </div>
-
-                        {/* Booked on */}
-                        <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>
-                            Booked on {formatDateShort(booking.bookedAt)}
-                        </p>
+                    {/* FOOTER */}
+                    <div className="mbt-footer">
+                        <button
+                            className="mbt-download-btn"
+                            onClick={handleDownloadTicket}
+                            disabled={isDownloading}
+                            style={{
+                                background: isDownloading
+                                    ? '#93c5fd'
+                                    : 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                                cursor: isDownloading ? 'not-allowed' : 'pointer',
+                            }}
+                        >
+                            <DownloadIcon size={16} />
+                            {isDownloading ? 'Generating PDF…' : 'Download Ticket'}
+                        </button>
                     </div>
-                </div>
-
-                {/* ── FOOTER / DOWNLOAD ── */}
-                <div style={{ padding: '16px 28px 24px', background: '#f9fafb', borderTop: '1px solid #f3f4f6' }}>
-                    <button
-                        onClick={handleDownloadTicket}
-                        disabled={isDownloading}
-                        style={{
-                            width: '100%',
-                            background: isDownloading
-                                ? '#93c5fd'
-                                : 'linear-gradient(135deg, #4F46E5, #7C3AED)',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: 12,
-                            padding: '14px 20px',
-                            fontWeight: 700,
-                            fontSize: 15,
-                            cursor: isDownloading ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            transition: 'opacity 0.2s',
-                        }}
-                    >
-                        <DownloadIcon size={18} />
-                        {isDownloading ? 'Generating PDF…' : 'Download Ticket'}
-                    </button>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
@@ -602,19 +631,21 @@ const DetailRow: React.FC<{
     value: string;
     highlight?: boolean;
 }> = ({ icon, label, value, highlight }) => (
-    <div style={{
-        background: highlight ? '#f0fdf4' : '#f9fafb',
-        border: `1px solid ${highlight ? '#86efac' : '#f3f4f6'}`,
-        borderRadius: 10,
-        padding: '10px 12px',
-    }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, color: highlight ? '#16a34a' : '#6b7280' }}>
+    <div
+        className="mbt-detail-row"
+        style={{
+            background: highlight ? '#f0fdf4' : '#f9fafb',
+            border: `1px solid ${highlight ? '#86efac' : '#f3f4f6'}`,
+        }}
+    >
+        <div
+            className="mbt-detail-row-icon-label"
+            style={{ color: highlight ? '#16a34a' : '#6b7280' }}
+        >
             {icon}
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', margin: 0, color: 'inherit' }}>
-                {label}
-            </p>
+            <p className="mbt-detail-row-label" style={{ color: 'inherit' }}>{label}</p>
         </div>
-        <p style={{ fontSize: 13, fontWeight: 700, color: highlight ? '#15803d' : '#111827', margin: 0, wordBreak: 'break-word' }}>
+        <p className="mbt-detail-row-value" style={{ color: highlight ? '#15803d' : '#111827' }}>
             {value}
         </p>
     </div>
