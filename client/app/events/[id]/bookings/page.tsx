@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ModernBookingTicket from '@/app/events/[id]/bookings/booking-invoice';
 
+const SERIAL_NUMBER_EVENT_ID = '6a17f0cfcea3b566702e86a9';
+
 interface Booking {
   _id: string;
   event: any;
@@ -214,6 +216,10 @@ export default function BookingSuccessPage() {
     );
   }
 
+  const bookingEventId =
+    typeof booking.event === 'string' ? booking.event : booking.event?._id;
+  const useEventSerial = String(bookingEventId) === SERIAL_NUMBER_EVENT_ID;
+
   // Generate multiple tickets based on quantity
   const generateTickets = () => {
     const quantity = booking.quantity || booking.totalTickets || 1;
@@ -227,7 +233,9 @@ export default function BookingSuccessPage() {
           <div key={relatedBooking._id} className="mb-8">
             <div className="text-center mb-4">
               <h3 className="text-lg font-semibold text-gray-700">
-                Ticket {relatedBooking.ticketIndex || i + 1} of {quantity}
+                {useEventSerial && typeof relatedBooking.ticketSerialNumber === 'number'
+                  ? `Serial No. ${relatedBooking.ticketSerialNumber}`
+                  : `Ticket ${relatedBooking.ticketIndex || i + 1} of ${quantity}`}
               </h3>
             </div>
             <ModernBookingTicket 

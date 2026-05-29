@@ -14,6 +14,46 @@ const Scan = require("../models/Scan");
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
 const MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT = 10;
+const SERIAL_NUMBER_EVENT_ID = LIMITED_EVENT_ID;
+
+async function computeTicketSerialNumber(booking) {
+  const eventId =
+    booking.event?._id ||
+    booking.event ||
+    booking.eventSnapshot?._id;
+
+  if (!eventId || String(eventId) !== SERIAL_NUMBER_EVENT_ID) {
+    return null;
+  }
+
+  if (!['confirmed', 'checked-in'].includes(booking.status)) {
+    return null;
+  }
+
+  const allBookings = await Booking.find({
+    event: eventId,
+    status: { $in: ['confirmed', 'checked-in'] },
+  })
+    .sort({ bookedAt: 1, ticketIndex: 1, _id: 1 })
+    .select('_id quantity ticketIndex')
+    .lean();
+
+  let ticketsBefore = 0;
+  const currentId = String(booking._id);
+  const ticketIndex = Number(booking.ticketIndex) || 1;
+
+  for (const row of allBookings) {
+    const qty = Math.max(1, Number(row.quantity) || 1);
+
+    if (String(row._id) === currentId) {
+      return ticketsBefore + Math.min(ticketIndex, qty);
+    }
+
+    ticketsBefore += qty;
+  }
+
+  return null;
+}
 
 async function getUserTicketCountForEvent({ eventId, userId }) {
   const rows = await Booking.find({
@@ -678,10 +718,19 @@ router.get("/related/:id", auth.protect, async (req, res) => {
     relatedBookings.sort((a, b) => (a.ticketIndex || 1) - (b.ticketIndex || 1));
 
     // Fallback to snapshot if event was deleted
-    const normalized = relatedBookings.map(b => ({
-      ...b,
-      event: b.event || b.eventSnapshot || b.event
-    }));
+    const normalized = await Promise.all(
+      relatedBookings.map(async (b) => {
+        const row = {
+          ...b,
+          event: b.event || b.eventSnapshot || b.event,
+        };
+        const ticketSerialNumber = await computeTicketSerialNumber(row);
+        if (ticketSerialNumber != null) {
+          row.ticketSerialNumber = ticketSerialNumber;
+        }
+        return row;
+      })
+    );
 
     res.json({ success: true, data: normalized });
   } catch (error) {
@@ -696,7 +745,7 @@ router.get("/related/:id", auth.protect, async (req, res) => {
 router.get("/:id", auth.protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
-      .populate('event', 'title banner startDate endDate location')
+      .populate('event', 'title banner startDate endDate location ticketTypes')
       .populate('user', 'name email phone')
       .lean();
 
@@ -715,6 +764,11 @@ router.get("/:id", auth.protect, async (req, res) => {
       ...booking,
       event: booking.event || booking.eventSnapshot || booking.event
     };
+
+    const ticketSerialNumber = await computeTicketSerialNumber(normalized);
+    if (ticketSerialNumber != null) {
+      normalized.ticketSerialNumber = ticketSerialNumber;
+    }
 
     res.json({ success: true, data: normalized });
   } catch (error) {
