@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
@@ -249,8 +249,8 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="bg-white/90 border border-slate-900/10 rounded-[28px] shadow-[0_10px_30px_rgba(15,23,42,0.04)] overflow-hidden animate-[fadeIn_0.5s_ease_forwards]">
-      <div className="p-[18px] md:p-6">
+    <section className="bg-white/90 border border-slate-900/10 rounded-[28px] shadow-[0_10px_30px_rgba(15,23,42,0.04)] overflow-hidden min-w-0 animate-[fadeIn_0.5s_ease_forwards]">
+      <div className="p-[18px] md:p-6 min-w-0">
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] ring-[6px] ring-[#5b6cff]/10" />
           <div className="text-[11px] tracking-[.20em] uppercase font-extrabold text-[#5b6cff]">
@@ -265,9 +265,133 @@ function Section({
             {subtitle}
           </p>
         )}
-        <div className="mt-4">{children}</div>
+        <div className="mt-4 min-w-0">{children}</div>
       </div>
     </section>
+  );
+}
+
+type GalleryPhoto = {
+  url: string;
+  caption: string;
+  isProfileImage: boolean;
+  isCoverImage: boolean;
+};
+
+function GalleryPhotoLane({
+  photos,
+  onPhotoClick,
+}: {
+  photos: GalleryPhoto[];
+  onPhotoClick: (url: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const useGrid = photos.length > 8;
+
+  const scrollLane = (direction: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction === "left" ? -240 : 240, behavior: "smooth" });
+  };
+
+  const renderPhotoCard = (
+    photo: GalleryPhoto,
+    index: number,
+    cardClassName: string
+  ) => (
+    <button
+      key={`${photo.url}-${index}`}
+      type="button"
+      className={cardClassName}
+      onClick={() => onPhotoClick(photo.url)}
+    >
+      <img
+        src={photo.url}
+        alt={photo.caption || `Photo ${index + 1}`}
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        loading="lazy"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/40 flex items-end justify-between gap-2 p-3">
+        <div className="min-w-0 text-white text-xs font-bold drop-shadow-md truncate">
+          {photo.caption || `Photo ${index + 1}`}
+        </div>
+        <div className="w-[34px] h-[34px] shrink-0 rounded-full bg-white/95 text-slate-900 flex items-center justify-center">
+          <ExternalLink size={16} />
+        </div>
+      </div>
+      {photo.isProfileImage && (
+        <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
+          <Star size={12} /> Profile
+        </div>
+      )}
+      {photo.isCoverImage && (
+        <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
+          <Camera size={12} /> Cover
+        </div>
+      )}
+    </button>
+  );
+
+  if (useGrid) {
+    return (
+      <div className="w-full min-w-0 max-w-full">
+        <p className="mb-3 text-xs font-semibold text-slate-500">
+          {photos.length} photos · scroll to view all
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[min(540px,65vh)] overflow-y-auto overscroll-contain pr-1">
+          {photos.map((photo, index) =>
+            renderPhotoCard(
+              photo,
+              index,
+              "group relative aspect-[4/5] w-full min-w-0 rounded-[20px] overflow-hidden bg-gray-200 border border-slate-900/10 cursor-pointer"
+            )
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full min-w-0 max-w-full overflow-hidden">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold text-slate-500">
+          {photos.length} {photos.length === 1 ? "photo" : "photos"} · swipe to browse
+        </p>
+        {photos.length > 3 && (
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              aria-label="Scroll photos left"
+              onClick={() => scrollLane("left")}
+              className="w-9 h-9 rounded-full border border-slate-900/10 bg-white text-slate-700 flex items-center justify-center hover:bg-[#f8faff] transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              aria-label="Scroll photos right"
+              onClick={() => scrollLane("right")}
+              className="w-9 h-9 rounded-full border border-slate-900/10 bg-white text-slate-700 flex items-center justify-center hover:bg-[#f8faff] transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex w-full min-w-0 max-w-full flex-nowrap gap-3 overflow-x-auto overscroll-x-contain pb-2 snap-x snap-mandatory touch-pan-x [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      >
+        {photos.map((photo, index) =>
+          renderPhotoCard(
+            photo,
+            index,
+            "group shrink-0 w-[186px] h-[232px] sm:w-[208px] sm:h-[246px] rounded-[20px] overflow-hidden relative bg-gray-200 border border-slate-900/10 cursor-pointer snap-start"
+          )
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -419,7 +543,7 @@ export default function PublicArtistProfile() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-[18px] lg:gap-6 mt-[18px] lg:mt-6 pb-[120px] lg:pb-[70px]">
+            <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-[18px] lg:gap-6 mt-[18px] lg:mt-6 pb-[120px] lg:pb-[70px]">
               <div className="flex flex-col gap-[18px]">
                 <div className="h-[280px] bg-slate-200 animate-pulse rounded-[28px]" />
                 <div className="h-[320px] bg-slate-200 animate-pulse rounded-[28px]" />
@@ -626,8 +750,8 @@ export default function PublicArtistProfile() {
           </div>
 
           {/* MAIN LAYOUT (Left Content, Right Sidebar) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-[18px] lg:gap-6 mt-[18px] lg:mt-6 pb-[120px] lg:pb-[70px]">
-            <main className="flex flex-col gap-[18px]">
+          <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-[18px] lg:gap-6 mt-[18px] lg:mt-6 pb-[120px] lg:pb-[70px]">
+            <main className="flex min-w-0 flex-col gap-[18px]">
               
               {/* ABOUT SECTION */}
               <Section
@@ -694,39 +818,10 @@ export default function PublicArtistProfile() {
                   subtitle="Horizontal media lanes work better on mobile than dense grids, so the layout stays smooth and swipe-friendly."
                 >
                   {galleryPics.length > 0 && (
-                    <div className="flex gap-3 overflow-x-auto pb-2 snap-x touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                      {galleryPics.map((photo, index) => (
-                        <button
-                          key={`${photo.url}-${index}`}
-                          className="shrink-0 w-[186px] h-[232px] sm:w-[208px] sm:h-[246px] rounded-[20px] overflow-hidden relative bg-gray-200 border border-slate-900/10 cursor-pointer snap-start group"
-                          onClick={() => setLightbox(photo.url)}
-                        >
-                          <img
-                            src={photo.url}
-                            alt={photo.caption || `Photo ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/40 flex items-end justify-between p-3">
-                            <div className="text-white text-xs font-bold drop-shadow-md">
-                              {photo.caption || `Photo ${index + 1}`}
-                            </div>
-                            <div className="w-[34px] h-[34px] rounded-full bg-white/95 text-slate-900 flex items-center justify-center">
-                              <ExternalLink size={16} />
-                            </div>
-                          </div>
-                          {photo.isProfileImage && (
-                            <div className="absolute top-2 left-2 bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
-                              <Star size={12} /> Profile
-                            </div>
-                          )}
-                          {photo.isCoverImage && (
-                            <div className="absolute top-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
-                              <Camera size={12} /> Cover
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                    <GalleryPhotoLane
+                      photos={galleryPics}
+                      onPhotoClick={setLightbox}
+                    />
                   )}
 
                   {galleryPics.length > 0 && videos.length > 0 && (
