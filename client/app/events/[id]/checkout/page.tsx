@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -39,7 +39,7 @@ import {
   trackPaymentFailed,
   trackPaymentSuccess,
   trackPurchase,
-} from "@/lib/analytics";
+} from "@/lib/analytics/google-analytics";
 
 // Types
 interface TicketType {
@@ -111,6 +111,7 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const checkoutStartedKeyRef = useRef<string | null>(null);
 
   // HMF event state
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -233,6 +234,15 @@ export default function CheckoutPage() {
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
   const isFreeEvent = event?.isFreeEvent || false;
+
+  const getAnalyticsEventPayload = () => {
+    if (!event?._id || !event?.title) return null;
+
+    return {
+      event_id: event._id,
+      event_name: event.title,
+    };
+  };
 
   const conveniencePercentage = event?.convenience?.percentage ?? 0;
   const convenienceFixedAmount = event?.convenience?.fixedAmount ?? 0;
@@ -535,6 +545,17 @@ export default function CheckoutPage() {
       toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket");
       return;
     }
+
+    const analyticsPayload = getAnalyticsEventPayload();
+    const checkoutKey = `${eventId}:${payableAmount}:${totalTicketQuantity}`;
+    if (analyticsPayload && checkoutStartedKeyRef.current !== checkoutKey) {
+      checkoutStartedKeyRef.current = checkoutKey;
+      trackCheckoutStarted({
+        ...analyticsPayload,
+        amount: payableAmount,
+      });
+    }
+
     setCurrentStep(3);
   };
 
@@ -663,13 +684,19 @@ export default function CheckoutPage() {
         }
 
         if (createdBookingIds.length > 0) {
-          trackCheckoutStarted({
-            event_id: event._id,
-            event_name: event.title,
-            amount: 0,
-          });
           toast.success('Booking confirmed!');
           localStorage.setItem('lastBookingId', createdBookingIds[0]);
+          trackPurchase({
+            transaction_id: createdBookingIds[0],
+            value: 0,
+            currency: "INR",
+            items: Array.from(selectedTickets.values()).map((item) => ({
+              item_id: item.ticket._id,
+              item_name: item.ticket.name,
+              quantity: item.quantity,
+              price: item.ticket.price,
+            })),
+          });
           router.push(`/events/${event._id}/bookings`);
           return;
         } else {
@@ -713,19 +740,6 @@ export default function CheckoutPage() {
       if (!orderResponse.ok) {
         throw new Error(orderData.message || "Failed to create payment order");
       }
-
-      trackCheckoutStarted({
-        event_id: event._id,
-        event_name: event.title,
-        amount: totalAmount,
-      });
-
-      const purchaseItems = Array.from(selectedTickets.values()).map((item) => ({
-        item_id: item.ticket._id,
-        item_name: item.ticket.name,
-        price: item.ticket.price,
-        quantity: item.quantity,
-      }));
 
       // Open Razorpay Checkout
       const options = {
@@ -781,35 +795,45 @@ export default function CheckoutPage() {
             const verificationData = await verificationResponse.json();
 
             if (verificationResponse.ok && verificationData.success) {
-              trackPaymentSuccess({
-                event_id: event._id,
-                event_name: event.title,
-                amount: totalAmount,
-                currency: "INR",
-              });
-              trackPurchase({
-                transaction_id: response.razorpay_payment_id,
-                value: totalAmount,
-                currency: "INR",
-                items: purchaseItems,
-              });
               toast.success("Booking confirmed!");
               localStorage.setItem('lastBookingId', verificationData.booking._id);
+              const analyticsPayload = getAnalyticsEventPayload();
+              const currency = orderData.currency || "INR";
+
+              if (analyticsPayload) {
+                trackPaymentSuccess({
+                  ...analyticsPayload,
+                  amount: totalAmount,
+                  currency,
+                });
+              }
+
+              trackPurchase({
+                transaction_id: verificationData.booking?._id || response.razorpay_payment_id,
+                value: totalAmount,
+                currency,
+                items: Array.from(selectedTickets.values()).map((item) => ({
+                  item_id: item.ticket._id,
+                  item_name: item.ticket.name,
+                  quantity: item.quantity,
+                  price: item.ticket.price,
+                })),
+              });
               router.push(`/events/${eventId}/bookings`);
             } else {
-              trackPaymentFailed({
-                event_id: event._id,
-                event_name: event.title,
-              });
+              const analyticsPayload = getAnalyticsEventPayload();
+              if (analyticsPayload) {
+                trackPaymentFailed(analyticsPayload);
+              }
               toast.error(verificationData.message || "Payment verification failed");
               setIsProcessingPayment(false);
             }
           } catch (error) {
             console.error("Error in payment handler:", error);
-            trackPaymentFailed({
-              event_id: event._id,
-              event_name: event.title,
-            });
+            const analyticsPayload = getAnalyticsEventPayload();
+            if (analyticsPayload) {
+              trackPaymentFailed(analyticsPayload);
+            }
             toast.error("An error occurred while processing your payment. Please contact support.");
             setIsProcessingPayment(false);
           }
@@ -826,15 +850,19 @@ export default function CheckoutPage() {
 
       const rzp = new (window as any).Razorpay(options);
       rzp.on("payment.failed", () => {
-        trackPaymentFailed({
-          event_id: event._id,
-          event_name: event.title,
-        });
+        const analyticsPayload = getAnalyticsEventPayload();
+        if (analyticsPayload) {
+          trackPaymentFailed(analyticsPayload);
+        }
       });
       rzp.open();
 
     } catch (error) {
       console.error("Booking error:", error);
+      const analyticsPayload = getAnalyticsEventPayload();
+      if (analyticsPayload) {
+        trackPaymentFailed(analyticsPayload);
+      }
       const errorMessage = error instanceof Error ? error.message : "Failed to book ticket";
       toast.error(errorMessage);
     } finally {

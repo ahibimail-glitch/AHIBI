@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -28,6 +28,12 @@ import {
 } from "@/components/ui/dialog";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
+import {
+  trackCheckoutStarted,
+  trackPaymentFailed,
+  trackPaymentSuccess,
+  trackPurchase,
+} from "@/lib/analytics/google-analytics";
 
 // Types
 interface TicketType {
@@ -99,6 +105,7 @@ export default function DailyEventCheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const checkoutStartedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -155,6 +162,15 @@ export default function DailyEventCheckoutPage() {
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
   const isFreeEvent = event?.isFreeEvent || false;
+
+  const getAnalyticsEventPayload = () => {
+    if (!event?._id || !event?.title) return null;
+
+    return {
+      event_id: event._id,
+      event_name: event.title,
+    };
+  };
 
   const activeDates = event?.activeDates ?? [];
   const sortedActiveDates = [...activeDates].sort(
@@ -416,6 +432,17 @@ export default function DailyEventCheckoutPage() {
       }
     }
 
+    const analyticsPayload = getAnalyticsEventPayload();
+    const totalTickets = Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0);
+    const checkoutKey = `${eventId}:${selectedDate}:${payableAmount}:${totalTickets}`;
+    if (analyticsPayload && checkoutStartedKeyRef.current !== checkoutKey) {
+      checkoutStartedKeyRef.current = checkoutKey;
+      trackCheckoutStarted({
+        ...analyticsPayload,
+        amount: payableAmount,
+      });
+    }
+
     if (isFreeEvent) {
       await handleFreeBooking();
     } else {
@@ -460,6 +487,18 @@ export default function DailyEventCheckoutPage() {
       }
 
       toast.success("RSVP confirmed successfully!");
+      const firstBookingId = data?.data?.bookings?.[0]?._id || data?.booking?._id || `daily-free-${eventId}`;
+      trackPurchase({
+        transaction_id: firstBookingId,
+        value: 0,
+        currency: "INR",
+        items: Array.from(selectedTickets.values()).map((item) => ({
+          item_id: item.ticket._id,
+          item_name: item.ticket.name,
+          quantity: item.quantity,
+          price: item.ticket.price,
+        })),
+      });
       router.push(`/events/daily/${eventId}/bookings`);
     } catch (err: any) {
       setBookingError(err.message || "Failed to create booking");
@@ -541,11 +580,19 @@ export default function DailyEventCheckoutPage() {
 
       const razorpay = new (window as any).Razorpay(options);
       razorpay.on("payment.failed", (response: any) => {
+        const analyticsPayload = getAnalyticsEventPayload();
+        if (analyticsPayload) {
+          trackPaymentFailed(analyticsPayload);
+        }
         toast.error("Payment failed. Please try again.");
         setIsBooking(false);
       });
       razorpay.open();
     } catch (err: any) {
+      const analyticsPayload = getAnalyticsEventPayload();
+      if (analyticsPayload) {
+        trackPaymentFailed(analyticsPayload);
+      }
       setBookingError(err.message || "Failed to initiate payment");
       toast.error(err.message || "Failed to initiate payment");
       setIsBooking(false);
@@ -578,8 +625,34 @@ export default function DailyEventCheckoutPage() {
       }
 
       toast.success("Payment successful! Booking confirmed.");
+      const analyticsPayload = getAnalyticsEventPayload();
+      const currency = "INR";
+
+      if (analyticsPayload) {
+        trackPaymentSuccess({
+          ...analyticsPayload,
+          amount: payableAmount,
+          currency,
+        });
+      }
+
+      trackPurchase({
+        transaction_id: bookingIds[0] || razorpayResponse.razorpay_payment_id,
+        value: payableAmount,
+        currency,
+        items: Array.from(selectedTickets.values()).map((item) => ({
+          item_id: item.ticket._id,
+          item_name: item.ticket.name,
+          quantity: item.quantity,
+          price: item.ticket.price,
+        })),
+      });
       router.push(`/events/daily/${eventId}/bookings`);
     } catch (err: any) {
+      const analyticsPayload = getAnalyticsEventPayload();
+      if (analyticsPayload) {
+        trackPaymentFailed(analyticsPayload);
+      }
       toast.error(err.message || "Payment verification failed");
       setIsProcessingPayment(false);
       setIsBooking(false);

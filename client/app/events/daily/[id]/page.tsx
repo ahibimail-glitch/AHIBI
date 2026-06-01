@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -24,6 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
+import { trackBookingStarted, trackEventView } from "@/lib/analytics/google-analytics";
 
 interface TicketType {
   _id: string;
@@ -84,6 +85,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
   const [event, setEvent] = useState<DailyEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const trackedEventViewId = useRef<string | null>(null);
 
   const [descExpanded, setDescExpanded] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -120,7 +122,24 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
     };
   }, [params.id]);
 
+  useEffect(() => {
+    if (!event || trackedEventViewId.current === event._id) return;
+
+    trackedEventViewId.current = event._id;
+    trackEventView({
+      event_id: event._id,
+      event_name: event.title,
+    });
+  }, [event]);
+
   const handleBuyNow = () => {
+    if (event) {
+      trackBookingStarted({
+        event_id: event._id,
+        event_name: event.title,
+      });
+    }
+
     const token = localStorage.getItem("token");
     if (!token) {
       toast.info("Please login to book tickets");

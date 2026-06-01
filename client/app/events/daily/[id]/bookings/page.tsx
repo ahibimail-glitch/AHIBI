@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle, ArrowLeft } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
@@ -8,11 +8,13 @@ import { createAuthRedirectUrl } from "@/utils/redirectUtils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import ModernBookingTicket from "@/app/events/[id]/bookings/booking-invoice";
+import { trackTicketGenerated } from "@/lib/analytics/google-analytics";
 
 interface DailyBooking {
   _id: string;
   dailyEvent?: {
     _id: string;
+    title?: string;
   };
   quantity?: number;
 }
@@ -24,6 +26,7 @@ export default function DailyEventBookingsPage() {
 
   const [booking, setBooking] = useState<DailyBooking | null>(null);
   const [loading, setLoading] = useState(true);
+  const trackedTicketGeneratedBookingId = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchDailyEventBooking = async () => {
@@ -67,6 +70,18 @@ export default function DailyEventBookingsPage() {
       setLoading(false);
     }
   }, [eventId, router]);
+
+  useEffect(() => {
+    if (loading || !booking?._id || trackedTicketGeneratedBookingId.current === booking._id) return;
+    if (!booking.dailyEvent?._id || !booking.dailyEvent?.title) return;
+
+    trackedTicketGeneratedBookingId.current = booking._id;
+    trackTicketGenerated({
+      event_id: booking.dailyEvent._id,
+      event_name: booking.dailyEvent.title,
+      ticket_count: booking.quantity || 1,
+    });
+  }, [loading, booking]);
 
   if (loading) {
     return (

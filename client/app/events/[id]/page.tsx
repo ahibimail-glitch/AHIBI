@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -37,7 +37,7 @@ import { Badge } from "@/components/ui/badge";
 
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
-import { trackBookingStarted, trackEventView } from "@/lib/analytics";
+import { trackBookingStarted, trackEventView } from "@/lib/analytics/google-analytics";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +162,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const trackedEventViewId = useRef<string | null>(null);
 
   // UI state
   const [descExpanded, setDescExpanded] = useState(false);
@@ -237,17 +238,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   // ─── Handlers ────────────────────────────────────────────────────────────────
 
   const handleBuyNow = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.info("Please login to book tickets");
-      router.push(`/auth?redirect=/events/${params.id}/checkout`);
-      return;
-    }
     if (event) {
       trackBookingStarted({
         event_id: event._id,
         event_name: event.title,
       });
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.info("Please login to book tickets");
+      router.push(`/auth?redirect=/events/${params.id}/checkout`);
+      return;
     }
     router.push(`/events/${params.id}/checkout`);
   };
@@ -317,6 +319,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   }, [params.id]);
 
   useEffect(() => {
+    if (!event || trackedEventViewId.current === event._id) return;
+
+    trackedEventViewId.current = event._id;
+    trackEventView({
+      event_id: event._id,
+      event_name: event.title,
+    });
+  }, [event]);
+
+  useEffect(() => {
     const fetchRelated = async () => {
       if (!event?.category) return;
       const now = new Date();
@@ -342,14 +354,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     };
     fetchRelated();
   }, [event]);
-
-  useEffect(() => {
-    if (!event?._id) return;
-    trackEventView({
-      event_id: event._id,
-      event_name: event.title,
-    });
-  }, [event?._id, event?.title]);
 
   // ─── Loading / Error states ──────────────────────────────────────────────────
 

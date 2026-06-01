@@ -9,7 +9,7 @@ import { createAuthRedirectUrl } from '@/utils/redirectUtils';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ModernBookingTicket from '@/app/events/[id]/bookings/booking-invoice';
-import { trackTicketGenerated } from '@/lib/analytics';
+import { trackTicketGenerated } from '@/lib/analytics/google-analytics';
 
 const SERIAL_NUMBER_EVENT_ID = '6a17f0cfcea3b566702e86a9';
 
@@ -33,7 +33,7 @@ export default function BookingSuccessPage() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const ticketTrackedRef = useRef<string | null>(null);
+  const trackedTicketGeneratedBookingId = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchBookingData = async () => {
@@ -180,29 +180,6 @@ export default function BookingSuccessPage() {
     fetchBookingData();
   }, [router, params]);
 
-  useEffect(() => {
-    if (loading || !booking || !bookingId) return;
-    if (ticketTrackedRef.current === bookingId) return;
-    ticketTrackedRef.current = bookingId;
-
-    const ev = booking.event;
-    const evId = typeof ev === 'string' ? ev : ev?._id;
-    const evName = typeof ev === 'string' ? 'Event' : ev?.title ?? 'Event';
-    const ticketCount =
-      booking.relatedBookings?.length ??
-      booking.totalTickets ??
-      booking.quantity ??
-      1;
-
-    if (evId) {
-      trackTicketGenerated({
-        event_id: evId,
-        event_name: evName,
-        ticket_count: ticketCount,
-      });
-    }
-  }, [loading, booking, bookingId]);
-
   // Fire Meta Pixel Purchase for Nasquerade on success page
   useEffect(() => {
     if (loading || !booking) return;
@@ -217,6 +194,23 @@ export default function BookingSuccessPage() {
         });
       }
     } catch {}
+  }, [loading, booking]);
+
+  useEffect(() => {
+    if (loading || !booking?._id || trackedTicketGeneratedBookingId.current === booking._id) return;
+
+    const ev = booking.event;
+    const eventId = typeof ev === 'string' ? ev : ev?._id;
+    const eventName = typeof ev === 'string' ? null : ev?.title;
+
+    if (!eventId || !eventName) return;
+
+    trackedTicketGeneratedBookingId.current = booking._id;
+    trackTicketGenerated({
+      event_id: eventId,
+      event_name: eventName,
+      ticket_count: booking.relatedBookings?.length || booking.totalTickets || booking.quantity || 1,
+    });
   }, [loading, booking]);
 
   if (loading) {

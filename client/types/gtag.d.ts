@@ -43,11 +43,11 @@ declare global {
       value?: number;
       transaction_id?: string;
       items?: Item[];
-      [key: string]: string | number | boolean | Item[] | undefined;
+      [key: string]: string | number | boolean | Item[] | null | undefined;
     }
 
     interface CustomParams {
-      [key: string]: string | number | boolean | undefined;
+      [key: string]: string | number | boolean | Item[] | null | undefined;
     }
 
     interface Item {
