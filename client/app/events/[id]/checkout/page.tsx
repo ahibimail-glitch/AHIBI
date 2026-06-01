@@ -34,6 +34,12 @@ import HMFTermsContent from "@/components/HMFTermsContent";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import CheckoutDetailedBreakdown from "@/components/CheckoutDetailedBreakdown";
+import {
+  trackCheckoutStarted,
+  trackPaymentFailed,
+  trackPaymentSuccess,
+  trackPurchase,
+} from "@/lib/analytics";
 
 // Types
 interface TicketType {
@@ -657,6 +663,11 @@ export default function CheckoutPage() {
         }
 
         if (createdBookingIds.length > 0) {
+          trackCheckoutStarted({
+            event_id: event._id,
+            event_name: event.title,
+            amount: 0,
+          });
           toast.success('Booking confirmed!');
           localStorage.setItem('lastBookingId', createdBookingIds[0]);
           router.push(`/events/${event._id}/bookings`);
@@ -702,6 +713,19 @@ export default function CheckoutPage() {
       if (!orderResponse.ok) {
         throw new Error(orderData.message || "Failed to create payment order");
       }
+
+      trackCheckoutStarted({
+        event_id: event._id,
+        event_name: event.title,
+        amount: totalAmount,
+      });
+
+      const purchaseItems = Array.from(selectedTickets.values()).map((item) => ({
+        item_id: item.ticket._id,
+        item_name: item.ticket.name,
+        price: item.ticket.price,
+        quantity: item.quantity,
+      }));
 
       // Open Razorpay Checkout
       const options = {
@@ -757,15 +781,35 @@ export default function CheckoutPage() {
             const verificationData = await verificationResponse.json();
 
             if (verificationResponse.ok && verificationData.success) {
+              trackPaymentSuccess({
+                event_id: event._id,
+                event_name: event.title,
+                amount: totalAmount,
+                currency: "INR",
+              });
+              trackPurchase({
+                transaction_id: response.razorpay_payment_id,
+                value: totalAmount,
+                currency: "INR",
+                items: purchaseItems,
+              });
               toast.success("Booking confirmed!");
               localStorage.setItem('lastBookingId', verificationData.booking._id);
               router.push(`/events/${eventId}/bookings`);
             } else {
+              trackPaymentFailed({
+                event_id: event._id,
+                event_name: event.title,
+              });
               toast.error(verificationData.message || "Payment verification failed");
               setIsProcessingPayment(false);
             }
           } catch (error) {
             console.error("Error in payment handler:", error);
+            trackPaymentFailed({
+              event_id: event._id,
+              event_name: event.title,
+            });
             toast.error("An error occurred while processing your payment. Please contact support.");
             setIsProcessingPayment(false);
           }
@@ -781,6 +825,12 @@ export default function CheckoutPage() {
       };
 
       const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", () => {
+        trackPaymentFailed({
+          event_id: event._id,
+          event_name: event.title,
+        });
+      });
       rzp.open();
 
     } catch (error) {

@@ -10,9 +10,7 @@ import Image from "next/image"
 import Navbar from "./Navbar"
 import Footer from "./Footer"
 import type { EventsResponse, Event } from "@/types/event"
-import { AspectRatio } from "@/components/ui/aspect-ratio"
 import StickyHeroCards from "@/components/StickyHeroCards"
-import NWAHeroSection from "@/components/NWA"
 import { format } from "date-fns"
 
 type PublicArtist = {
@@ -692,7 +690,7 @@ export default function HomePage() {
                 <>
                   <div className="sm:hidden -mx-3 px-3 overflow-x-auto">
                     <div className="flex gap-3 snap-x snap-mandatory">
-                      {[...Array(6)].map((_, i) => (
+                      {[...Array(5)].map((_, i) => (
                         <div
                           key={i}
                           className="shrink-0 w-[78%] max-w-[320px] bg-gray-200 rounded-lg aspect-[2/3] animate-pulse snap-center"
@@ -702,7 +700,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="hidden sm:grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {[...Array(6)].map((_, i) => (
+                    {[...Array(5)].map((_, i) => (
                       <div
                         key={i}
                         className="bg-gray-200 rounded-lg aspect-[2/3] animate-pulse"
