@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "../layout";
 import Image from "next/image";
 import {
@@ -38,12 +38,17 @@ import {
   Twitter,
   Globe,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { uploadToVercelBlob } from "@/lib/vercelBlob";
 
 export default function ProfilePage() {
   const { user, profile, fetchArtistProfile, setSuccessMessage, setError, successMessage } = useDashboard();
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingImage, setUploadingImage] = useState<'profile' | 'cover' | null>(null);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const profileInputRef = useRef<HTMLInputElement>(null);
   const [formState, setFormState] = useState({
     gender: '',
     showEventTypesOther: false,
@@ -63,32 +68,38 @@ export default function ProfilePage() {
   }, [profile]);
 
   const handleImageUpload = async (file: File, type: 'profile' | 'cover') => {
+    const inputRef = type === 'cover' ? coverInputRef : profileInputRef;
+
+    if (!file.type.startsWith('image/')) {
+      setImageUploadError('Please select a valid image file');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setImageUploadError('Image must be smaller than 10MB');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+
     try {
       setUploadingImage(type);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folder', 'artists');
-      formData.append('documentType', 'image');
+      setImageUploadError(null);
 
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const uploadData = await uploadResponse.json();
+      const uploadData = await uploadToVercelBlob(file, 'artists', 'image');
       const imageUrl = uploadData.url;
+
+      if (!imageUrl) {
+        throw new Error('Upload failed: no image URL returned');
+      }
 
       const token = localStorage.getItem('artist_token');
       if (!token) {
-        setError('Not authenticated');
+        setImageUploadError('Not authenticated');
         return;
       }
 
-      const updateData: any = {};
+      const updateData: Record<string, string> = {};
       if (type === 'profile') {
         updateData.profileImage = imageUrl;
         updateData.profilePic = imageUrl;
@@ -110,14 +121,15 @@ export default function ProfilePage() {
         setSuccessMessage(`${type === 'profile' ? 'Profile' : 'Cover'} image updated successfully!`);
         setTimeout(() => setSuccessMessage(null), 5000);
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || `Failed to update ${type} image`);
+        const errorData = await response.json().catch(() => null);
+        setImageUploadError(errorData?.message || `Failed to update ${type} image`);
       }
     } catch (error) {
       console.error(`Error uploading ${type} image:`, error);
-      setError(`Error uploading ${type} image. Please try again.`);
+      setImageUploadError(error instanceof Error ? error.message : `Error uploading ${type} image. Please try again.`);
     } finally {
       setUploadingImage(null);
+      if (inputRef.current) inputRef.current.value = '';
     }
   };
 
@@ -237,6 +249,17 @@ export default function ProfilePage() {
     }
   };
 
+  const coverImageSrc =
+    profile?.coverImage ||
+    profile?.gallery?.photos?.find((p) => p.isCoverImage)?.url ||
+    "/images/carausel1.jpg";
+  const profileImageSrc =
+    profile?.profilePic ||
+    profile?.profileImage ||
+    profile?.gallery?.photos?.find((p) => p.isProfileImage)?.url ||
+    "/images/carausel1.jpg";
+  const isExternalImage = (src: string) => src.startsWith("http");
+
   return (
     <div className="space-y-6">
       {/* Profile Header - Show when not editing */}
@@ -244,14 +267,22 @@ export default function ProfilePage() {
         <Card>
           <div className="relative">
             <Image
-              src={profile?.coverImage || profile?.gallery?.photos?.find(p => p.isCoverImage)?.url || "/images/carausel1.jpg"}
+              src={coverImageSrc}
               alt="Cover"
               width={800}
               height={300}
+              unoptimized={isExternalImage(coverImageSrc)}
               className="w-full h-48 md:h-64 object-cover rounded-t-lg"
             />
-            <label className="absolute top-4 right-4">
+            {uploadingImage === 'cover' && (
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-t-lg z-10">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+                <p className="mt-2 text-sm text-white font-medium">Uploading cover...</p>
+              </div>
+            )}
+            <label className="absolute top-4 right-4 z-20">
               <input
+                ref={coverInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -269,23 +300,39 @@ export default function ProfilePage() {
                 asChild
               >
                 <span>
-                  <Camera className="h-4 w-4 mr-1" />
+                  {uploadingImage === 'cover' ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4 mr-1" />
+                  )}
                   {uploadingImage === 'cover' ? 'Uploading...' : 'Change Cover'}
                 </span>
               </Button>
             </label>
           </div>
+          {imageUploadError && (
+            <div className="px-6 pt-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{imageUploadError}</AlertDescription>
+              </Alert>
+            </div>
+          )}
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
               <div className="relative">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage
-                    src={profile?.profilePic || profile?.profileImage || profile?.gallery?.photos?.find(p => p.isProfileImage)?.url || "/images/carausel1.jpg"}
-                  />
+                  <AvatarImage src={profileImageSrc} />
                   <AvatarFallback>{user?.name?.charAt(0) || 'A'}</AvatarFallback>
                 </Avatar>
-                <label className="absolute -bottom-2 -right-2">
+                {uploadingImage === 'profile' && (
+                  <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center z-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+                <label className="absolute -bottom-2 -right-2 z-20">
                   <input
+                    ref={profileInputRef}
                     type="file"
                     accept="image/*"
                     className="hidden"
@@ -304,7 +351,11 @@ export default function ProfilePage() {
                     asChild
                   >
                     <span>
-                      <Camera className="h-4 w-4" />
+                      {uploadingImage === 'profile' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
                     </span>
                   </Button>
                 </label>
