@@ -418,6 +418,22 @@ exports.updateArtistProfile = async (req, res) => {
         }
       }
 
+      if (techRider.epkFile !== undefined && typeof techRider.epkFile === 'object') {
+        artist.techRider.epkFile = artist.techRider.epkFile || {};
+
+        if (isValidValue(techRider.epkFile.url)) {
+          artist.techRider.epkFile.url = techRider.epkFile.url;
+        }
+
+        if (isValidValue(techRider.epkFile.fileType)) {
+          artist.techRider.epkFile.fileType = techRider.epkFile.fileType;
+        }
+
+        if (isValidValue(techRider.epkFile.uploadedAt)) {
+          artist.techRider.epkFile.uploadedAt = techRider.epkFile.uploadedAt;
+        }
+      }
+
       artist.techRider.updatedAt = new Date();
     }
 

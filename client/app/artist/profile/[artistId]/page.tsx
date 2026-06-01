@@ -54,6 +54,11 @@ interface TechRider {
     fileType: "pdf" | "image";
     uploadedAt: string;
   };
+  epkFile?: {
+    url: string;
+    fileType: "pdf" | "image";
+    uploadedAt: string;
+  };
 }
 
 interface Artist {
@@ -822,41 +827,87 @@ export default function PublicArtistProfile() {
                     <EmptyState>No technical details were added to this profile.</EmptyState>
                   )}
 
-                  {artist.techRider.file?.url && (
-                    <div className="mt-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-b from-white to-[#f8fbff] border border-slate-900/10 rounded-[22px]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 shrink-0 rounded-2xl bg-[#5b6cff]/10 text-[#5b6cff] flex items-center justify-center">
-                          <FileText size={20} />
-                        </div>
-                        <div>
-                          <div className="text-[15px] font-extrabold text-slate-900">
-                            Tech rider / EPK document
+                  {(artist.techRider.file?.url || artist.techRider.epkFile?.url) && (
+                    <div className="mt-3.5 space-y-3">
+                      {artist.techRider.file?.url && (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-b from-white to-[#f8fbff] border border-slate-900/10 rounded-[22px]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 shrink-0 rounded-2xl bg-[#5b6cff]/10 text-[#5b6cff] flex items-center justify-center">
+                              <FileText size={20} />
+                            </div>
+                            <div>
+                              <div className="text-[15px] font-extrabold text-slate-900">
+                                Tech Rider document
+                              </div>
+                              <div className="mt-0.5 text-[13px] text-slate-500">
+                                {artist.techRider.file.fileType === "pdf"
+                                  ? "PDF document"
+                                  : "Image file"}
+                              </div>
+                            </div>
                           </div>
-                          <div className="mt-0.5 text-[13px] text-slate-500">
-                            {artist.techRider.file.fileType === "pdf" ? "PDF document" : "Image file"}
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="flex gap-2.5 justify-end">
-                        <a
-                          href={artist.techRider.file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 border border-slate-900/10 bg-white text-slate-900 rounded-2xl px-[18px] py-[13px] text-sm font-bold transition-all hover:bg-[#f8faff] hover:border-[#5b6cff]/20 hover:-translate-y-[1px]"
-                        >
-                          <ExternalLink size={14} />
-                          View
-                        </a>
-                        <a
-                          href={artist.techRider.file.url}
-                          download="Tech-Rider-EPK"
-                          className="inline-flex items-center justify-center gap-2 border-none bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white rounded-2xl px-[18px] py-[13px] text-sm font-bold shadow-[0_12px_26px_rgba(91,108,255,0.25)] hover:shadow-[0_16px_30px_rgba(91,108,255,0.30)] transition-all hover:-translate-y-[1px]"
-                        >
-                          <Download size={14} />
-                          Download
-                        </a>
-                      </div>
+                          <div className="flex gap-2.5 justify-end">
+                            <a
+                              href={artist.techRider.file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-2 border border-slate-900/10 bg-white text-slate-900 rounded-2xl px-[18px] py-[13px] text-sm font-bold transition-all hover:bg-[#f8faff] hover:border-[#5b6cff]/20 hover:-translate-y-[1px]"
+                            >
+                              <ExternalLink size={14} />
+                              View
+                            </a>
+                            <a
+                              href={artist.techRider.file.url}
+                              download="Tech-Rider"
+                              className="inline-flex items-center justify-center gap-2 border-none bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white rounded-2xl px-[18px] py-[13px] text-sm font-bold shadow-[0_12px_26px_rgba(91,108,255,0.25)] hover:shadow-[0_16px_30px_rgba(91,108,255,0.30)] transition-all hover:-translate-y-[1px]"
+                            >
+                              <Download size={14} />
+                              Download
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
+                      {artist.techRider.epkFile?.url && (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-b from-white to-[#f8fbff] border border-slate-900/10 rounded-[22px]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 shrink-0 rounded-2xl bg-[#7c3aed]/10 text-[#7c3aed] flex items-center justify-center">
+                              <FileText size={20} />
+                            </div>
+                            <div>
+                              <div className="text-[15px] font-extrabold text-slate-900">
+                                EPK document
+                              </div>
+                              <div className="mt-0.5 text-[13px] text-slate-500">
+                                {artist.techRider.epkFile.fileType === "pdf"
+                                  ? "PDF document"
+                                  : "Image file"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2.5 justify-end">
+                            <a
+                              href={artist.techRider.epkFile.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-2 border border-slate-900/10 bg-white text-slate-900 rounded-2xl px-[18px] py-[13px] text-sm font-bold transition-all hover:bg-[#f8faff] hover:border-[#5b6cff]/20 hover:-translate-y-[1px]"
+                            >
+                              <ExternalLink size={14} />
+                              View
+                            </a>
+                            <a
+                              href={artist.techRider.epkFile.url}
+                              download="EPK"
+                              className="inline-flex items-center justify-center gap-2 border-none bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white rounded-2xl px-[18px] py-[13px] text-sm font-bold shadow-[0_12px_26px_rgba(91,108,255,0.25)] hover:shadow-[0_16px_30px_rgba(91,108,255,0.30)] transition-all hover:-translate-y-[1px]"
+                            >
+                              <Download size={14} />
+                              Download
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </Section>

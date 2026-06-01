@@ -44,6 +44,11 @@ export interface TechRider {
     fileType?: 'pdf' | 'image';
     uploadedAt?: string;
   };
+  epkFile?: {
+    url?: string;
+    fileType?: 'pdf' | 'image';
+    uploadedAt?: string;
+  };
   updatedAt?: string;
 }
 

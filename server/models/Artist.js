@@ -255,6 +255,18 @@ const ArtistSchema = new mongoose.Schema({
         type: Date
       }
     },
+    epkFile: {
+      url: {
+        type: String
+      },
+      fileType: {
+        type: String,
+        enum: ['pdf', 'image']
+      },
+      uploadedAt: {
+        type: Date
+      }
+    },
     updatedAt: {
       type: Date
     }

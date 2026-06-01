@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "../layout";
 import {
   Card,
@@ -12,15 +12,27 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FileText, Loader2, AlertCircle } from "lucide-react";
 import { TechRider } from "../types";
 import { uploadToVercelBlob } from "@/lib/vercelBlob";
+
+type UploadTarget = "techRider" | "epk";
+
+interface TechRiderFile {
+  url: string;
+  fileType: "pdf" | "image";
+  uploadedAt: string;
+}
 
 export default function TechRiderPage() {
   const { profile, fetchArtistProfile, setSuccessMessage, setError } = useDashboard();
   const [techRiderForm, setTechRiderForm] = useState<TechRider>({});
   const [techRiderSaving, setTechRiderSaving] = useState(false);
-  const [uploadingTechRiderFile, setUploadingTechRiderFile] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState<UploadTarget | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const techRiderInputRef = useRef<HTMLInputElement>(null);
+  const epkInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile?.techRider) {
@@ -31,69 +43,198 @@ export default function TechRiderPage() {
   const handleTechRiderSave = async () => {
     try {
       setTechRiderSaving(true);
-      const token = localStorage.getItem('artist_token');
+      const token = localStorage.getItem("artist_token");
       if (!token) {
-        setError('Not authenticated');
+        setError("Not authenticated");
         return;
       }
 
-      const response = await fetch('/api/artist/profile', {
-        method: 'PUT',
+      const response = await fetch("/api/artist/profile", {
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ techRider: techRiderForm })
+        body: JSON.stringify({ techRider: techRiderForm }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to save tech rider');
+        throw new Error(errorData.message || "Failed to save tech rider");
       }
 
       await fetchArtistProfile();
-      setSuccessMessage('Tech Rider saved successfully!');
+      setSuccessMessage("Tech Rider saved successfully!");
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (e: any) {
-      setError(e?.message || 'Error saving tech rider');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error saving tech rider");
     } finally {
       setTechRiderSaving(false);
     }
   };
 
-  const handleTechRiderFileUpload = async (file: File) => {
-    try {
-      setUploadingTechRiderFile(true);
+  const handleFileUpload = async (file: File, target: UploadTarget) => {
+    const inputRef = target === "techRider" ? techRiderInputRef : epkInputRef;
 
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-      
-      // Upload to Vercel Blob
-      const uploadData = await uploadToVercelBlob(
-        file, 
-        'artists/tech-rider', 
-        isPdf ? 'document' : 'image'
-      );
+    const isPdf =
+      file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+    if (!isPdf) {
+      setUploadError("Please upload a PDF file");
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("File must be smaller than 10MB");
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
+    try {
+      setUploadingFile(target);
+      setUploadError(null);
+
+      const folder =
+        target === "techRider" ? "artists/tech-rider" : "artists/epk";
+      const uploadData = await uploadToVercelBlob(file, folder, "document");
 
       if (!uploadData.url) {
-        throw new Error('Upload succeeded but URL not returned');
+        throw new Error("Upload succeeded but URL not returned");
       }
 
-      setTechRiderForm(prev => ({
-        ...prev,
-        file: {
-          url: uploadData.url,
-          fileType: isPdf ? 'pdf' : 'image',
-          uploadedAt: new Date().toISOString(),
-        }
-      }));
+      const fileData: TechRiderFile = {
+        url: uploadData.url,
+        fileType: "pdf",
+        uploadedAt: new Date().toISOString(),
+      };
 
-      setSuccessMessage('Tech Rider / EPK file uploaded. Please click Save to apply.');
+      const token = localStorage.getItem("artist_token");
+      if (!token) {
+        setUploadError("Not authenticated");
+        return;
+      }
+
+      const updatedTechRider: TechRider = {
+        ...techRiderForm,
+        ...(target === "techRider" ? { file: fileData } : { epkFile: fileData }),
+      };
+
+      const response = await fetch("/api/artist/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ techRider: updatedTechRider }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to save uploaded file");
+      }
+
+      setTechRiderForm(updatedTechRider);
+      await fetchArtistProfile();
+      setSuccessMessage(
+        target === "techRider"
+          ? "Tech Rider file uploaded successfully!"
+          : "EPK file uploaded successfully!"
+      );
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (e: any) {
-      setError(e?.message || 'Error uploading file');
+    } catch (e: unknown) {
+      setUploadError(
+        e instanceof Error ? e.message : "Error uploading file. Please try again."
+      );
     } finally {
-      setUploadingTechRiderFile(false);
+      setUploadingFile(null);
+      if (inputRef.current) inputRef.current.value = "";
     }
+  };
+
+  const renderFileSection = (
+    target: UploadTarget,
+    title: string,
+    description: string,
+    file: TechRiderFile | undefined,
+    inputRef: React.RefObject<HTMLInputElement | null>,
+    downloadName: string
+  ) => {
+    const isUploading = uploadingFile === target;
+
+    return (
+      <div className="border rounded-lg p-4 space-y-3 relative">
+        {isUploading && (
+          <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center rounded-lg z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
+              Uploading {target === "techRider" ? "Tech Rider" : "EPK"}...
+            </p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h4 className="font-semibold">{title}</h4>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+          <label>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const selected = e.target.files?.[0];
+                if (selected) handleFileUpload(selected, target);
+              }}
+              disabled={isUploading || uploadingFile !== null}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isUploading || uploadingFile !== null}
+              asChild
+            >
+              <span>
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                {isUploading ? "Uploading..." : "Upload PDF"}
+              </span>
+            </Button>
+          </label>
+        </div>
+
+        {file?.url ? (
+          <div className="text-sm flex flex-wrap items-center gap-3">
+            <span className="text-muted-foreground">Current file:</span>
+            <a
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-blue-600 hover:text-blue-800"
+            >
+              View
+            </a>
+            <span className="text-gray-300">|</span>
+            <a
+              href={file.url}
+              download={downloadName}
+              className="underline text-green-600 hover:text-green-800 flex items-center gap-1"
+            >
+              <FileText className="h-3 w-3" />
+              Download PDF
+            </a>
+            <span className="text-xs text-muted-foreground">(PDF)</span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No file uploaded yet.</p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -101,7 +242,9 @@ export default function TechRiderPage() {
       <CardHeader>
         <CardTitle>Tech Rider / EPK</CardTitle>
         <CardDescription>
-          Define your technical requirements and upload your Electronic Press Kit. Organizers will use this to prepare production and review your artist profile.
+          Define your technical requirements and upload your Tech Rider and EPK
+          separately. Organizers will use these to prepare production and review
+          your artist profile.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -110,8 +253,13 @@ export default function TechRiderPage() {
             <Label htmlFor="soundRequirements">Sound Requirements</Label>
             <Textarea
               id="soundRequirements"
-              value={techRiderForm.soundRequirements || ''}
-              onChange={(e) => setTechRiderForm(prev => ({ ...prev, soundRequirements: e.target.value }))}
+              value={techRiderForm.soundRequirements || ""}
+              onChange={(e) =>
+                setTechRiderForm((prev) => ({
+                  ...prev,
+                  soundRequirements: e.target.value,
+                }))
+              }
               placeholder="e.g., 2 wireless mics, DI box, monitor wedges, mixer channels..."
             />
           </div>
@@ -119,8 +267,13 @@ export default function TechRiderPage() {
             <Label htmlFor="lightingRequirements">Lighting Requirements</Label>
             <Textarea
               id="lightingRequirements"
-              value={techRiderForm.lightingRequirements || ''}
-              onChange={(e) => setTechRiderForm(prev => ({ ...prev, lightingRequirements: e.target.value }))}
+              value={techRiderForm.lightingRequirements || ""}
+              onChange={(e) =>
+                setTechRiderForm((prev) => ({
+                  ...prev,
+                  lightingRequirements: e.target.value,
+                }))
+              }
               placeholder="e.g., front wash, moving heads, haze, follow spot..."
             />
           </div>
@@ -128,17 +281,29 @@ export default function TechRiderPage() {
             <Label htmlFor="stageRequirements">Stage Requirements</Label>
             <Textarea
               id="stageRequirements"
-              value={techRiderForm.stageRequirements || ''}
-              onChange={(e) => setTechRiderForm(prev => ({ ...prev, stageRequirements: e.target.value }))}
+              value={techRiderForm.stageRequirements || ""}
+              onChange={(e) =>
+                setTechRiderForm((prev) => ({
+                  ...prev,
+                  stageRequirements: e.target.value,
+                }))
+              }
               placeholder="e.g., minimum stage size, risers, drum riser, backdrop..."
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="instrumentsEquipmentNeeded">Instruments / Equipment Needed</Label>
+            <Label htmlFor="instrumentsEquipmentNeeded">
+              Instruments / Equipment Needed
+            </Label>
             <Textarea
               id="instrumentsEquipmentNeeded"
-              value={techRiderForm.instrumentsEquipmentNeeded || ''}
-              onChange={(e) => setTechRiderForm(prev => ({ ...prev, instrumentsEquipmentNeeded: e.target.value }))}
+              value={techRiderForm.instrumentsEquipmentNeeded || ""}
+              onChange={(e) =>
+                setTechRiderForm((prev) => ({
+                  ...prev,
+                  instrumentsEquipmentNeeded: e.target.value,
+                }))
+              }
               placeholder="e.g., keyboard stand, guitar amp, drum kit, DJ controller..."
             />
           </div>
@@ -146,8 +311,13 @@ export default function TechRiderPage() {
             <Label htmlFor="powerRequirements">Power Requirements</Label>
             <Textarea
               id="powerRequirements"
-              value={techRiderForm.powerRequirements || ''}
-              onChange={(e) => setTechRiderForm(prev => ({ ...prev, powerRequirements: e.target.value }))}
+              value={techRiderForm.powerRequirements || ""}
+              onChange={(e) =>
+                setTechRiderForm((prev) => ({
+                  ...prev,
+                  powerRequirements: e.target.value,
+                }))
+              }
               placeholder="e.g., 2 x 15A outlets on stage, isolated power for audio..."
             />
           </div>
@@ -155,69 +325,58 @@ export default function TechRiderPage() {
             <Label htmlFor="specialNotes">Special Notes / Instructions</Label>
             <Textarea
               id="specialNotes"
-              value={techRiderForm.specialNotes || ''}
-              onChange={(e) => setTechRiderForm(prev => ({ ...prev, specialNotes: e.target.value }))}
+              value={techRiderForm.specialNotes || ""}
+              onChange={(e) =>
+                setTechRiderForm((prev) => ({
+                  ...prev,
+                  specialNotes: e.target.value,
+                }))
+              }
               placeholder="Any special setup or instructions for the production team"
             />
           </div>
         </div>
 
-        <div className="border rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-semibold">Tech Rider / EPK File</h4>
-              <p className="text-sm text-muted-foreground">Upload a PDF  (detailed rider, stage plot, input list, or EPK).</p>
-            </div>
-            <label>
-              <input
-                type="file"
-                accept="application/pdf,image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleTechRiderFileUpload(file);
-                }}
-                disabled={uploadingTechRiderFile}
-              />
-              <Button type="button" variant="outline" disabled={uploadingTechRiderFile} asChild>
-                <span>
-                  <FileText className="h-4 w-4 mr-2" />
-                  {uploadingTechRiderFile ? 'Uploading...' : 'Upload File'}
-                </span>
-              </Button>
-            </label>
-          </div>
+        {uploadError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{uploadError}</AlertDescription>
+          </Alert>
+        )}
 
-          {techRiderForm?.file?.url && (
-            <div className="text-sm flex items-center gap-3">
-              <span className="text-muted-foreground">Current file:</span>
-              <a
-                href={techRiderForm.file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline text-blue-600 hover:text-blue-800"
-              >
-                View
-              </a>
-              <span className="text-gray-300">|</span>
-              <a
-                href={techRiderForm.file.url}
-                download="Tech-Rider-EPK.pdf"
-                className="underline text-green-600 hover:text-green-800 flex items-center gap-1"
-              >
-                <FileText className="h-3 w-3" />
-                Download PDF
-              </a>
-              <span className="text-xs text-muted-foreground">
-                ({techRiderForm.file.fileType === 'pdf' ? 'PDF' : 'Image'})
-              </span>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {renderFileSection(
+            "techRider",
+            "Tech Rider File",
+            "Upload a PDF with your detailed rider, stage plot, or input list.",
+            techRiderForm.file as TechRiderFile | undefined,
+            techRiderInputRef,
+            "Tech-Rider.pdf"
+          )}
+          {renderFileSection(
+            "epk",
+            "EPK File",
+            "Upload a PDF with your Electronic Press Kit.",
+            techRiderForm.epkFile as TechRiderFile | undefined,
+            epkInputRef,
+            "EPK.pdf"
           )}
         </div>
 
         <div className="flex justify-end">
-          <Button type="button" onClick={handleTechRiderSave} disabled={techRiderSaving}>
-            {techRiderSaving ? 'Saving...' : 'Save Tech Rider / EPK'}
+          <Button
+            type="button"
+            onClick={handleTechRiderSave}
+            disabled={techRiderSaving || uploadingFile !== null}
+          >
+            {techRiderSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Tech Rider / EPK"
+            )}
           </Button>
         </div>
       </CardContent>
