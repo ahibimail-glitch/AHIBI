@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 import Image from "next/image";
 import {
   Card,
@@ -121,7 +121,7 @@ export default function ProfilePage() {
         setSuccessMessage(`${type === 'profile' ? 'Profile' : 'Cover'} image updated successfully!`);
         setTimeout(() => setSuccessMessage(null), 5000);
       } else {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await response.json().catch((): { message?: string } | null => null);
         setImageUploadError(errorData?.message || `Failed to update ${type} image`);
       }
     } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import AccoladesManager from "@/components/artist/AccoladesManager";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 
 export default function AccoladesPage() {
   const { profile, fetchArtistProfile } = useDashboard();

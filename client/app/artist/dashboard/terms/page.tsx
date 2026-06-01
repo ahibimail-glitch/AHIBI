@@ -2,7 +2,7 @@
 
 import TermsManager from "@/components/artist/TermsManager";
 import TermsDisplay from "@/components/TermsDisplay";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function TermsPage() {

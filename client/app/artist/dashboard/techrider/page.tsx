@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 import {
   Card,
   CardContent,

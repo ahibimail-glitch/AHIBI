@@ -1,7 +1,7 @@
 "use client";
 
 import AvailabilityCalendar from "@/components/artist/AvailabilityCalendar";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 
 export default function CalendarPage() {
   const { fetchArtistProfile } = useDashboard();

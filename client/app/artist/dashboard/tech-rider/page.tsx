@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 import {
   Card,
   CardContent,
@@ -59,7 +59,7 @@ export default function TechRiderPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch((): { message?: string } => ({}));
         throw new Error(errorData.message || "Failed to save tech rider");
       }
 
@@ -130,7 +130,7 @@ export default function TechRiderPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch((): { message?: string } => ({}));
         throw new Error(errorData.message || "Failed to save uploaded file");
       }
 

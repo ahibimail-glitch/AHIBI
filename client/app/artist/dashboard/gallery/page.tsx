@@ -1,7 +1,7 @@
 "use client";
 
 import GalleryManager from "@/components/artist/GalleryManager";
-import { useDashboard } from "../layout";
+import { useDashboard } from "../dashboard-context";
 
 export default function GalleryPage() {
   const { profile, fetchArtistProfile } = useDashboard();

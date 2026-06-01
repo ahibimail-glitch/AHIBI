@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import { Button } from "@/components/ui/button";
@@ -26,28 +26,7 @@ import {
 } from "lucide-react";
 import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { ArtistUser, ArtistProfile } from "./types";
-
-interface DashboardContextType {
-  user: ArtistUser | null;
-  profile: ArtistProfile | null;
-  loading: boolean;
-  error: string | null;
-  successMessage: string | null;
-  setSuccessMessage: (msg: string | null) => void;
-  setError: (err: string | null) => void;
-  fetchArtistProfile: () => Promise<void>;
-  handleLogout: () => void;
-}
-
-const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
-
-export function useDashboard() {
-  const context = useContext(DashboardContext);
-  if (!context) {
-    throw new Error("useDashboard must be used within DashboardLayout");
-  }
-  return context;
-}
+import { DashboardContext } from "./dashboard-context";
 
 interface SidebarButtonProps {
   icon: React.ElementType;
