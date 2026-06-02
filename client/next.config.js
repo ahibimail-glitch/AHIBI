@@ -20,7 +20,8 @@ const nextConfig = {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5000'
     return [
       {
-        source: '/api/:path*',
+        // Keep /api/upload on Next.js (Vercel Blob). Do not proxy to backend Cloudinary.
+        source: '/api/:path((?!upload$).*)',
         destination: `${apiBase}/api/:path*`,
       },
     ]

@@ -19,6 +19,9 @@ import { uploadToVercelBlob } from "@/lib/vercelBlob";
 
 type UploadTarget = "techRider" | "epk";
 
+const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_SIZE_LABEL = "10MB";
+
 interface TechRiderFile {
   url: string;
   fileType: "pdf" | "image";
@@ -85,8 +88,8 @@ export default function TechRiderPage() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError("File must be smaller than 10MB");
+    if (file.size > MAX_PDF_SIZE_BYTES) {
+      setUploadError(`File must be smaller than ${MAX_PDF_SIZE_LABEL}`);
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
@@ -177,6 +180,9 @@ export default function TechRiderPage() {
           <div>
             <h4 className="font-semibold">{title}</h4>
             <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              PDF only · Max size {MAX_PDF_SIZE_LABEL}
+            </p>
           </div>
           <label>
             <input
@@ -243,8 +249,8 @@ export default function TechRiderPage() {
         <CardTitle>Tech Rider / EPK</CardTitle>
         <CardDescription>
           Define your technical requirements and upload your Tech Rider and EPK
-          separately. Organizers will use these to prepare production and review
-          your artist profile.
+          separately. Each file must be a PDF up to {MAX_PDF_SIZE_LABEL}. Organizers
+          will use these to prepare production and review your artist profile.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
