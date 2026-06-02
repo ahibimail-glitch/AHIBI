@@ -42,6 +42,9 @@ import {
 } from "lucide-react";
 import { uploadToVercelBlob } from "@/lib/vercelBlob";
 
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_SIZE_LABEL = "10MB";
+
 export default function ProfilePage() {
   const { user, profile, fetchArtistProfile, setSuccessMessage, setError, successMessage } = useDashboard();
   const [isEditing, setIsEditing] = useState(false);
@@ -76,8 +79,8 @@ export default function ProfilePage() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setImageUploadError('Image must be smaller than 10MB');
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setImageUploadError(`Image must be smaller than ${MAX_IMAGE_SIZE_LABEL}`);
       if (inputRef.current) inputRef.current.value = '';
       return;
     }
@@ -280,7 +283,7 @@ export default function ProfilePage() {
                 <p className="mt-2 text-sm text-white font-medium">Uploading cover...</p>
               </div>
             )}
-            <label className="absolute top-4 right-4 z-20">
+            <label className="absolute top-4 right-4 z-20 flex flex-col items-end gap-1">
               <input
                 ref={coverInputRef}
                 type="file"
@@ -308,6 +311,9 @@ export default function ProfilePage() {
                   {uploadingImage === 'cover' ? 'Uploading...' : 'Change Cover'}
                 </span>
               </Button>
+              <span className="text-[11px] text-white/90 drop-shadow-sm">
+                Max size {MAX_IMAGE_SIZE_LABEL}
+              </span>
             </label>
           </div>
           {imageUploadError && (
@@ -330,7 +336,7 @@ export default function ProfilePage() {
                     <Loader2 className="h-6 w-6 animate-spin text-white" />
                   </div>
                 )}
-                <label className="absolute -bottom-2 -right-2 z-20">
+                <label className="absolute -bottom-2 -right-2 z-20 flex flex-col items-center gap-1">
                   <input
                     ref={profileInputRef}
                     type="file"
@@ -358,6 +364,9 @@ export default function ProfilePage() {
                       )}
                     </span>
                   </Button>
+                  <span className="text-[10px] mt-4 text-muted-foreground whitespace-nowrap">
+                    Max {MAX_IMAGE_SIZE_LABEL}
+                  </span>
                 </label>
               </div>
               <div className="flex-1">
