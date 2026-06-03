@@ -35,10 +35,9 @@ const otpValidation = [
     .notEmpty()
     .isLength({ min: 10, max: 10 })
     .matches(/^\d{10}$/),
-  check('otp', 'Please provide a valid 6-digit OTP')
+  check('otp', 'Please provide a valid OTP')
     .notEmpty()
-    .isLength({ min: 6, max: 6 })
-    .matches(/^\d{6}$/)
+    .isLength({ min: 6, max: 64 })
 ];
 
 const passwordValidation = [

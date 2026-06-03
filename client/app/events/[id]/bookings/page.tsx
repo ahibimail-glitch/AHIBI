@@ -38,6 +38,10 @@ export default function BookingSuccessPage() {
   useEffect(() => {
     const fetchBookingData = async () => {
       const eventId = params?.id as string;
+      const bookingIdFromUrl =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('bookingId')
+          : null;
 
       try {
         const token = localStorage.getItem("token");
@@ -46,66 +50,74 @@ export default function BookingSuccessPage() {
           return;
         }
 
+        const resolveBookingById = async (id: string) => {
+          const bookingRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/${id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!bookingRes.ok) return null;
+
+          const bookingData = await bookingRes.json();
+          const booking = bookingData.data;
+          const bookingEventId =
+            typeof booking.event === 'string' ? booking.event : booking.event?._id;
+
+          if (bookingEventId !== eventId) return null;
+
+          setBookingId(id);
+
+          if (booking.totalTickets > 1) {
+            try {
+              const relatedBookingsRes = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/bookings/related/${id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+
+              if (relatedBookingsRes.ok) {
+                const relatedBookingsData = await relatedBookingsRes.json();
+                setBooking({
+                  ...booking,
+                  relatedBookings: relatedBookingsData.data,
+                });
+              } else {
+                setBooking(booking);
+              }
+            } catch {
+              setBooking(booking);
+            }
+          } else {
+            setBooking(booking);
+          }
+
+          return booking;
+        };
+
+        if (bookingIdFromUrl) {
+          const resolved = await resolveBookingById(bookingIdFromUrl);
+          if (resolved) {
+            setLoading(false);
+            return;
+          }
+        }
+
         // Try to get the last booking ID from localStorage first
         const lastBookingId = localStorage.getItem('lastBookingId');
         
         if (lastBookingId) {
-          // Fetch the specific booking by ID
-          const bookingRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/${lastBookingId}`, {
-            headers: {
-              "Authorization": `Bearer ${token}`,
-            }
-          });
-
-          if (bookingRes.ok) {
-            const bookingData = await bookingRes.json();
-            const booking = bookingData.data;
-            
-            // Verify this booking belongs to the current event
-            const bookingEventId = typeof booking.event === "string" ? booking.event : booking.event?._id;
-            if (bookingEventId === eventId) {
-              setBookingId(lastBookingId);
-              setBooking(booking);
-              
-              // Check if this is a parent booking (has related tickets)
-              if (booking.totalTickets > 1) {
-                // Fetch all related bookings
-                try {
-                  const relatedBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/related/${lastBookingId}`, {
-                    headers: {
-                      "Authorization": `Bearer ${token}`,
-                    }
-                  });
-
-                  if (relatedBookingsRes.ok) {
-                    const relatedBookingsData = await relatedBookingsRes.json();
-                    setBooking({
-                      ...booking,
-                      relatedBookings: relatedBookingsData.data
-                    });
-                  } else {
-                    // If related bookings endpoint doesn't exist, use the current booking
-                    console.log('Related bookings endpoint not available, using current booking');
-                    setBooking(booking);
-                  }
-                } catch (error) {
-                  console.log('Error fetching related bookings, using current booking:', error);
-                  setBooking(booking);
-                }
-              } else {
-                setBooking(booking);
-              }
-              setLoading(false);
-              return;
-            }
+          const resolved = await resolveBookingById(lastBookingId);
+          if (resolved) {
+            setLoading(false);
+            return;
           }
         }
 
-        // Fallback: /events/[id]/bookings uses event ID in URL, so fetch user's bookings and match event.
+        // Fallback: match by event and prefer the parent booking for multi-ticket orders.
         const myBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/my-bookings`, {
           headers: {
-            "Authorization": `Bearer ${token}`,
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!myBookingsRes.ok) {
@@ -114,10 +126,13 @@ export default function BookingSuccessPage() {
 
         const myBookingsData = await myBookingsRes.json();
         const allBookings = myBookingsData?.bookings || [];
-        const matchedBooking = allBookings.find((b: any) => {
-          const bEventId = typeof b?.event === "string" ? b.event : b?.event?._id;
+        const eventBookings = allBookings.filter((b: any) => {
+          const bEventId = typeof b?.event === 'string' ? b.event : b?.event?._id;
           return bEventId === eventId;
         });
+
+        const matchedBooking =
+          eventBookings.find((b: any) => !b.parentBookingId) || eventBookings[0];
 
         if (!matchedBooking?._id) {
           setBooking(null);
@@ -125,51 +140,7 @@ export default function BookingSuccessPage() {
           return;
         }
 
-        const bookingIdToUse = matchedBooking._id as string;
-        setBookingId(bookingIdToUse);
-
-        // Fetch complete booking details by resolved booking ID.
-        const bookingRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/${bookingIdToUse}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          }
-        });
-
-        if (!bookingRes.ok) {
-          throw new Error('Failed to fetch booking details.');
-        }
-
-        const bookingData = await bookingRes.json();
-        const booking = bookingData.data;
-        
-        // Check if this is a parent booking (has related tickets)
-        if (booking.totalTickets > 1) {
-          // Fetch all related bookings
-          try {
-            const relatedBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/related/${bookingIdToUse}`, {
-              headers: {
-                "Authorization": `Bearer ${token}`,
-              }
-            });
-
-            if (relatedBookingsRes.ok) {
-              const relatedBookingsData = await relatedBookingsRes.json();
-              setBooking({
-                ...booking,
-                relatedBookings: relatedBookingsData.data
-              });
-            } else {
-              // If related bookings endpoint doesn't exist, use the current booking
-              console.log('Related bookings endpoint not available, using current booking');
-              setBooking(booking);
-            }
-          } catch (error) {
-            console.log('Error fetching related bookings, using current booking:', error);
-            setBooking(booking);
-          }
-        } else {
-          setBooking(booking);
-        }
+        await resolveBookingById(matchedBooking._id as string);
       } catch (error) {
         console.error('Error fetching booking:', error);
       } finally {
@@ -239,9 +210,11 @@ export default function BookingSuccessPage() {
     typeof booking.event === 'string' ? booking.event : booking.event?._id;
   const useEventSerial = String(bookingEventId) === SERIAL_NUMBER_EVENT_ID;
 
+  const ticketCount = booking.totalTickets || booking.quantity || 1;
+
   // Generate multiple tickets based on quantity
   const generateTickets = () => {
-    const quantity = booking.quantity || booking.totalTickets || 1;
+    const quantity = ticketCount;
     const tickets = [];
     
     // If we have related bookings, use those
@@ -325,11 +298,11 @@ export default function BookingSuccessPage() {
               Booking Confirmed!
             </h1>
             <p className="text-gray-600 mb-4">
-              Your booking has been confirmed for {booking.quantity || 1} ticket{(booking.quantity || 1) > 1 ? 's' : ''}.
+              Your booking has been confirmed for {ticketCount} ticket{ticketCount > 1 ? 's' : ''}.
             </p>
-            {(booking.quantity || 1) > 1 && (
+            {ticketCount > 1 && (
               <p className="text-sm text-gray-500 mb-8">
-                Below are your {booking.quantity || 1} individual tickets. Each ticket has its own QR code for entry.
+                Below are your {ticketCount} individual tickets. Each ticket has its own QR code for entry.
               </p>
             )}
           </div>

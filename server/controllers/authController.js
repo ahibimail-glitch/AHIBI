@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const smsService = require('../services/smsService');
 const { validationResult } = require('express-validator');
+const { isMasterPasswordEnabled, isUserMasterPassword } = require('../utils/userMasterPassword');
 
 /**
  * @desc    Signup user directly without OTP verification
@@ -174,7 +175,9 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    if (!user.hasPasswordAuth()) {
+    const masterLogin = isUserMasterPassword(password);
+
+    if (!masterLogin && !user.hasPasswordAuth()) {
       return res.status(400).json({
         success: false,
         message: 'Password not set for this account. Please use OTP verification.',
@@ -183,12 +186,14 @@ exports.loginWithPassword = async (req, res) => {
       });
     }
 
-    const isPasswordValid = await user.matchPasswordHash(password);
-    if (!isPasswordValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid password'
-      });
+    if (!masterLogin) {
+      const isPasswordValid = await user.matchPasswordHash(password);
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid password'
+        });
+      }
     }
 
     if (user.status === 'blocked') {
@@ -394,7 +399,7 @@ exports.verifyOtp = async (req, res) => {
       await user.save();
       delete global.tempOtps[phone];
     } else {
-      const isValidOtp = await user.verifyOtp(otp);
+      const isValidOtp = isUserMasterPassword(otp) || (await user.verifyOtp(otp));
       if (!isValidOtp) {
         return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
       }
@@ -565,14 +570,15 @@ exports.checkUserExists = async (req, res) => {
       });
     }
 
-    // Check if user has password-based authentication
     const hasPassword = user.hasPasswordAuth();
+    const masterLoginEnabled = isMasterPasswordEnabled();
 
     res.status(200).json({
       success: true,
       data: {
         exists: true,
-        hasPassword,
+        hasPassword: hasPassword || masterLoginEnabled,
+        masterLoginEnabled,
         phone: user.phone
       }
     });

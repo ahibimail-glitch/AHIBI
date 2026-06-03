@@ -175,8 +175,8 @@ export default function ProfilePage() {
 
   const handleViewTicket = (booking: any) => {
     if (booking.bookingType === "annie-musical") router.push(`/annie-musical/bookings/${booking._id}`);
-    else if (booking.isDailyEvent && booking.dailyEvent) router.push(`/events/daily/${booking.dailyEvent._id}/bookings`);
-    else if (booking.event) router.push(`/events/${booking.event._id}/bookings`);
+    else if (booking.isDailyEvent && booking.dailyEvent) router.push(`/events/daily/${booking.dailyEvent._id}/bookings?bookingId=${booking._id}`);
+    else if (booking.event) router.push(`/events/${booking.event._id}/bookings?bookingId=${booking._id}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -369,7 +369,7 @@ export default function ProfilePage() {
                           <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/> 
                             {new Date(booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.quantity} Ticket(s)</span>
+                          <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
@@ -407,7 +407,7 @@ export default function ProfilePage() {
                           <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/> 
                             {new Date(booking.selectedDate || booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
-                          <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.quantity} Ticket(s)</span>
+                          <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">

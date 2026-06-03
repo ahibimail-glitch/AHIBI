@@ -65,6 +65,45 @@ async function getUserTicketCountForEvent({ eventId, userId }) {
   return rows.reduce((sum, b) => sum + (Number(b.quantity) || 0), 0);
 }
 
+/** Collapse parent/child ticket rows from multi-ticket checkout into one booking per purchase. */
+function groupUserBookingsForDisplay(bookings) {
+  const groups = new Map();
+
+  for (const booking of bookings) {
+    const groupKey = booking.parentBookingId
+      ? booking.parentBookingId.toString()
+      : booking._id.toString();
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+    }
+    groups.get(groupKey).push(booking);
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const parent = group.find((b) => !b.parentBookingId) || group[0];
+    const sortedGroup = [...group].sort(
+      (a, b) => (a.ticketIndex || 1) - (b.ticketIndex || 1)
+    );
+    const ticketCount = Math.max(
+      Number(parent.totalTickets) || 0,
+      Number(parent.quantity) || 1,
+      sortedGroup.length
+    );
+    const groupTotal = sortedGroup.reduce(
+      (sum, b) => sum + (Number(b.total) || Number(b.price) || 0),
+      0
+    );
+
+    return {
+      ...parent,
+      quantity: ticketCount,
+      total: groupTotal,
+      totalTickets: ticketCount,
+    };
+  });
+}
+
 // @route   POST /api/bookings/verify-ticket
 // @desc    Verify a ticket for an event
 // @access  Private (Admin)
@@ -392,7 +431,10 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
       .populate('dailyEvent', 'title banner startTime duration location')
       .lean();
 
-    const normalizedBookings = bookings.map(b => ({
+    const groupedBookings = groupUserBookingsForDisplay(bookings)
+      .sort((a, b) => new Date(b.bookedAt).getTime() - new Date(a.bookedAt).getTime());
+
+    const normalizedBookings = groupedBookings.map(b => ({
       ...b,
       event: b.event || b.eventSnapshot || b.event,
       bookingType: 'event'
