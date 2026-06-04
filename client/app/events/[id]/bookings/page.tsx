@@ -234,7 +234,6 @@ export default function BookingSuccessPage() {
               bookingId={relatedBooking._id} 
               ticketIndex={relatedBooking.ticketIndex || i + 1}
               totalTickets={quantity}
-              autoDownload={i === 0}
             />
           </div>
         );
@@ -253,7 +252,6 @@ export default function BookingSuccessPage() {
               bookingId={bookingId} 
               ticketIndex={i + 1}
               totalTickets={quantity}
-              autoDownload={i === 0}
             />
           </div>
         );
