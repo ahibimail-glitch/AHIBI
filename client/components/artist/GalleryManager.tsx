@@ -255,7 +255,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
       {/* Photos Section */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
             <CardTitle className="flex items-center">
               <Camera className="h-5 w-5 mr-2" />
               Photos ({photos.length})
@@ -267,7 +267,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                   Add Photo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Upload Photo to Gallery</DialogTitle>
                 </DialogHeader>
@@ -329,7 +329,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                     />
                   </div>
 
-                  <div className="flex space-x-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:space-x-4">
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
@@ -451,7 +451,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
       {/* Videos Section */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
             <CardTitle className="flex items-center">
               <Video className="h-5 w-5 mr-2" />
               Videos ({videos.length})
@@ -463,7 +463,7 @@ export default function GalleryManager({ photos, videos, onUpdate }: GalleryMana
                   Add Video
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Add Video Link</DialogTitle>
                 </DialogHeader>

@@ -122,7 +122,7 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
           <CardTitle className="flex items-center">
             <Award className="h-5 w-5 mr-2" />
             Accolades & Awards ({accolades.length})
@@ -134,7 +134,7 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
                 Add Accolade
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New Accolade</DialogTitle>
               </DialogHeader>
@@ -199,8 +199,8 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
           {accolades.length > 0 ? (
             accolades.map((accolade) => (
               <div key={accolade._id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-lg flex items-center">
                       <Award className="h-5 w-5 mr-2 text-yellow-500" />
                       {accolade.title}
@@ -208,7 +208,7 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
                     {accolade.description && (
                       <p className="text-muted-foreground mt-1">{accolade.description}</p>
                     )}
-                    <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
                       <span className="flex items-center">
                         <Calendar className="h-4 w-4 mr-1" />
                         {accolade.year}
@@ -233,10 +233,11 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
                       </div>
                     )}
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex gap-2 sm:flex-col sm:items-end shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
+                      className="flex-1 sm:flex-none"
                       onClick={() => startEdit(accolade)}
                     >
                       <Edit className="h-4 w-4" />
@@ -244,6 +245,7 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
                     <Button
                       size="sm"
                       variant="outline"
+                      className="flex-1 sm:flex-none"
                       onClick={() => handleRemove(accolade._id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -264,7 +266,7 @@ export default function AccoladesManager({ accolades, onUpdate }: AccoladesManag
 
       {/* Edit Dialog */}
       <Dialog open={!!editingId} onOpenChange={() => setEditingId(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Accolade</DialogTitle>
           </DialogHeader>

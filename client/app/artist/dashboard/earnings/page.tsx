@@ -90,18 +90,19 @@ export default function EarningsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Earnings & Payouts</h2>
-          <p className="text-muted-foreground">Track your income and payment history</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Earnings & Payouts</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Track your income and payment history</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {["this_month", "last_month", "this_year", "all"].map((p) => (
             <Button
               key={p}
               variant={period === p ? "default" : "outline"}
               size="sm"
               onClick={() => setPeriod(p)}
+              className="flex-1 sm:flex-none min-w-0 text-xs sm:text-sm"
             >
               {p.replace("_", " ").toUpperCase()}
             </Button>
@@ -183,10 +184,10 @@ export default function EarningsPage() {
                   {earningsData.bookings.map((booking) => (
                     <div
                       key={booking._id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                           <h4 className="font-semibold">{booking.event.name}</h4>
                           <Badge
                             variant={
@@ -208,7 +209,7 @@ export default function EarningsPage() {
                             )}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {formatDate(booking.event.date)}
@@ -216,7 +217,7 @@ export default function EarningsPage() {
                           <span>by {booking.organizer.name}</span>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right shrink-0">
                         <p className="text-lg font-bold">
                           {formatCurrency(booking.amount)}
                         </p>

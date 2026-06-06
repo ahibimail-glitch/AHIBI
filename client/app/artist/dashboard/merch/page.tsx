@@ -324,26 +324,25 @@ export default function AddEditProduct() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="bg-background">
+      <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-           
-            <h1 className="mt-4 text-2xl font-bold font-display text-foreground">Merch Products</h1>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">Merch Products</h1>
             <p className="mt-1 text-sm text-muted-foreground">Manage your merchandise products</p>
           </div>
           {viewMode === 'list' && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <Link
                 href="/artist/dashboard/merch/orders"
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
               >
                 View All Orders
               </Link>
               <button
                 onClick={() => setViewMode('form')}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 <Plus className="h-4 w-4" /> Add New Product
               </button>
@@ -442,13 +441,13 @@ export default function AddEditProduct() {
           /* Form View */
           <div>
             {editingProduct && (
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm text-muted-foreground min-w-0">
                   Editing: <span className="font-medium text-foreground">{editingProduct.name}</span>
                 </span>
                 <button
                   onClick={resetForm}
-                  className="text-s text-red-500 hover:text-red-600 border border-border rounded-lg px-2 py-1"
+                  className="text-sm text-red-500 hover:text-red-600 border border-border rounded-lg px-2 py-1 w-full sm:w-auto"
                 >
                   Cancel edit
                 </button>

@@ -176,15 +176,15 @@ export default function TechRiderPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h4 className="font-semibold">{title}</h4>
             <p className="text-sm text-muted-foreground">{description}</p>
             <p className="text-xs text-muted-foreground mt-1">
               PDF only · Max size {MAX_PDF_SIZE_LABEL}
             </p>
           </div>
-          <label>
+          <label className="w-full sm:w-auto">
             <input
               ref={inputRef}
               type="file"
@@ -200,6 +200,7 @@ export default function TechRiderPage() {
               type="button"
               variant="outline"
               disabled={isUploading || uploadingFile !== null}
+              className="w-full sm:w-auto"
               asChild
             >
               <span>
@@ -369,11 +370,12 @@ export default function TechRiderPage() {
           )}
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           <Button
             type="button"
             onClick={handleTechRiderSave}
             disabled={techRiderSaving || uploadingFile !== null}
+            className="w-full sm:w-auto"
           >
             {techRiderSaving ? (
               <>

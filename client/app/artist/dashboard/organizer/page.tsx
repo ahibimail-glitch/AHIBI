@@ -155,16 +155,16 @@ export default function OrganizerPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Organizers</h2>
-          <p className="text-muted-foreground">Manage organizer communications and bookings</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Organizers</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage organizer communications and bookings</p>
         </div>
         <div className="flex gap-2">
-         
           <Button
             variant={activeTab === "bookings" ? "default" : "outline"}
             onClick={() => setActiveTab("bookings")}
+            className="w-full sm:w-auto"
           >
             <Calendar className="h-4 w-4 mr-2" />
             Latest Bookings
@@ -194,13 +194,13 @@ export default function OrganizerPage() {
                 {latestBookings.map((booking) => (
                   <Card key={booking._id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
                             {booking.organizer?.name?.charAt(0)?.toUpperCase() || "O"}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <h4 className="font-semibold">{booking.organizer?.name || "Unknown Organizer"}</h4>
                               {booking.organizer?.companyName && (
                                 <span className="text-sm text-muted-foreground">
@@ -223,7 +223,7 @@ export default function OrganizerPage() {
                             <p className="text-sm text-muted-foreground mt-1">
                               {booking.event?.name || "Unknown Event"}
                             </p>
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground mt-2">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 {booking.event?.date ? formatDate(booking.event.date) : "Date not set"}
@@ -245,16 +245,16 @@ export default function OrganizerPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
                           {booking.unreadCount > 0 && (
-                            <Badge variant="destructive" className="ml-auto">
+                            <Badge variant="destructive" className="sm:ml-auto w-fit">
                               {booking.unreadCount} new
                             </Badge>
                           )}
                           <Button
                             size="sm"
                             onClick={() => openChat(booking._id)}
-                            className="flex items-center gap-2"
+                            className="flex items-center justify-center gap-2 w-full sm:w-auto"
                           >
                             <MessageSquare className="h-4 w-4" />
                             {booking.hasDiscussion ? "Continue Chat" : "Start Chat"}

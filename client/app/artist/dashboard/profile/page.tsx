@@ -370,18 +370,19 @@ export default function ProfilePage() {
                 </label>
               </div>
               <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-2xl font-bold">{user?.name}</h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-2">
+                  <h2 className="text-xl sm:text-2xl font-bold">{user?.name}</h2>
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto"
                     onClick={() => setIsEditing(!isEditing)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Profile
                   </Button>
                 </div>
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-3">
                   {profile?.rating && typeof profile.rating === 'object' && 'average' in profile.rating && profile.rating.average > 0 && (
                     <div className="flex items-center">
                       <Star className="h-4 w-4 mr-1 text-yellow-500" />
@@ -757,11 +758,11 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-4 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t">
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setIsEditing(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" className="w-full sm:w-auto">Save Changes</Button>
               </div>
             </form>
           </CardContent>
@@ -772,13 +773,14 @@ export default function ProfilePage() {
       {!isEditing && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Profile Information</CardTitle>
                 <CardDescription>View your profile details</CardDescription>
               </div>
               <Button
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   setIsEditing(true);
                   setSuccessMessage(null);

@@ -136,9 +136,9 @@ export default function BookingsPage() {
 
   const renderPendingBooking = (request: BookingRequest) => (
     <div key={request._id} className="p-4 border rounded-lg">
-      <div className="flex justify-between items-start mb-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start mb-2">
         <h3 className="font-semibold">{request.event?.name || "Unknown Event"}</h3>
-        <Badge variant="outline">Rs.{request.booking.requestedAmount}</Badge>
+        <Badge variant="outline" className="w-fit">Rs.{request.booking.requestedAmount}</Badge>
       </div>
       <p className="text-sm text-muted-foreground mb-1">
         by {request.organizer?.name || "Unknown Organizer"}
@@ -152,10 +152,11 @@ export default function BookingsPage() {
         <MapPin className="h-4 w-4 inline mr-1" />
         {request.event.venue?.name || "Unknown Venue"}
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         <Button
           size="sm"
           variant="outline"
+          className="col-span-2 sm:col-span-1"
           onClick={() => fetchBookingDetails(request._id)}
           disabled={loadingBookingDetails}
         >
@@ -165,14 +166,14 @@ export default function BookingsPage() {
           size="sm"
           variant="outline"
           onClick={() => router.push(`/artist/chat/${request._id}`)}
-          className="flex items-center gap-2"
+          className="flex items-center justify-center gap-2"
         >
           <MessageSquare className="h-4 w-4" />
           Chat
         </Button>
         <Button
           size="sm"
-          className="flex-1 min-w-[120px]"
+          className="sm:flex-1 sm:min-w-[120px]"
           onClick={() => handleBookingAction(request._id, "accept")}
         >
           Accept
@@ -180,7 +181,7 @@ export default function BookingsPage() {
         <Button
           size="sm"
           variant="outline"
-          className="flex-1 min-w-[140px] bg-transparent"
+          className="sm:flex-1 sm:min-w-[140px] bg-transparent"
           onClick={() => {
             const amount = prompt("Enter counter offer amount:");
             const message = prompt("Add a message (optional):");
@@ -197,6 +198,7 @@ export default function BookingsPage() {
         <Button
           size="sm"
           variant="outline"
+          className="col-span-2 sm:col-span-1"
           onClick={() => handleBookingAction(request._id, "decline")}
         >
           Decline
@@ -207,15 +209,15 @@ export default function BookingsPage() {
 
   const renderAcceptedBooking = (request: BookingRequest) => (
     <div key={request._id} className="p-4 border rounded-lg bg-green-50/50 border-green-200">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start mb-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-semibold">{request.event?.name || "Unknown Event"}</h3>
           <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Accepted
           </Badge>
         </div>
-        <Badge variant="outline" className="border-green-300">Rs.{request.booking.requestedAmount}</Badge>
+        <Badge variant="outline" className="border-green-300 w-fit">Rs.{request.booking.requestedAmount}</Badge>
       </div>
       <p className="text-sm text-muted-foreground mb-1">
         by {request.organizer?.name || "Unknown Organizer"}
@@ -310,7 +312,7 @@ export default function BookingsPage() {
       </Tabs>
 
       <Dialog open={bookingDetailsOpen} onOpenChange={setBookingDetailsOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
             <DialogDescription>Organizer and event information</DialogDescription>
@@ -343,11 +345,11 @@ export default function BookingsPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-2 border-t">
                 <div className="text-sm">
                   Offered: <span className="font-medium">Rs.{selectedBooking.booking?.requestedAmount}</span>
                 </div>
-                <Badge variant={selectedBooking.booking?.status === "accepted" ? "default" : "outline"}>
+                <Badge variant={selectedBooking.booking?.status === "accepted" ? "default" : "outline"} className="w-fit">
                   {selectedBooking.booking?.status}
                 </Badge>
               </div>

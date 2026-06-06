@@ -23,6 +23,8 @@ import {
   LogOut,
   Loader2,
   Building2,
+  Menu,
+  X,
 } from "lucide-react";
 import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { ArtistUser, ArtistProfile } from "./types";
@@ -74,11 +76,15 @@ export default function DashboardLayout({
   const [shouldWarnOnExit, setShouldWarnOnExit] = useState(true);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const activeView = pathname.split("/").pop() || "bookings";
+  const activeNavItem = navItems.find((item) => item.id === activeView);
+  const pageTitle = activeNavItem?.label || "Dashboard";
 
   useEffect(() => {
     setIsNavigating(false);
+    setSidebarOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -170,6 +176,7 @@ export default function DashboardLayout({
   };
 
   const handleNavClick = (viewId: string) => {
+    setSidebarOpen(false);
     if (viewId === activeView) return;
     setIsNavigating(true);
     router.push(`/artist/dashboard/${viewId}`);
@@ -211,9 +218,9 @@ export default function DashboardLayout({
               Your artist account is currently under review by our admin team. 
               You will receive a notification once your account is approved.
             </p>
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={handleLogout}>Logout</Button>
-              <Button onClick={() => window.location.reload()}>Check Status</Button>
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-between">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={handleLogout}>Logout</Button>
+              <Button className="w-full sm:w-auto" onClick={() => window.location.reload()}>Check Status</Button>
             </div>
           </CardContent>
         </Card>
@@ -252,18 +259,41 @@ export default function DashboardLayout({
       }}
     >
       <div className="flex min-h-screen bg-gradient-to-br from-pink-400 via-white to-purple-400">
-        <aside className="w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-10 overflow-y-auto">
-          <div className="flex items-center space-x-3 mb-6 px-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-pink-600 to-purple-600 rounded-xl flex items-center justify-center">
-              <Music className="h-5 w-5 text-white" />
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
+        <aside
+          className={`w-64 max-w-[85vw] bg-white/90 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-lg z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0`}
+        >
+          <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-10 h-10 shrink-0 bg-gradient-to-br from-pink-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <Music className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-gray-900 truncate">Ahibi Artist</h2>
+                <p className="text-xs text-gray-600 truncate">Artist Dashboard</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">Ahibi Artist</h2>
-              <p className="text-xs text-gray-600">Artist Dashboard</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden shrink-0"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
 
-          <nav className="flex flex-col space-y-2">
+          <nav className="flex flex-col space-y-2 flex-1">
             {navItems.map((item) => (
               <SidebarButton
                 key={item.id}
@@ -275,7 +305,7 @@ export default function DashboardLayout({
             ))}
           </nav>
 
-          <div className="mt-auto">
+          <div className="mt-auto pt-4">
             <Card className="bg-pink-50 border-pink-200">
               <CardContent className="pt-6">
                 <h4 className="font-bold text-pink-800">Need Help?</h4>
@@ -297,9 +327,27 @@ export default function DashboardLayout({
           </div>
         </aside>
 
-        <main className="flex-1 ml-64 bg-gradient-to-br from-pink-50 to-purple-50 relative">
-          <div className="p-8">
-            <div className="mb-6">
+        <main className="flex-1 lg:ml-64 bg-gradient-to-br from-pink-50 to-purple-50 relative min-w-0">
+          <header className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-gray-900 truncate">{pageTitle}</h1>
+                <p className="text-xs text-gray-600 truncate">Ahibi Artist Dashboard</p>
+              </div>
+            </div>
+          </header>
+
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="mb-4 sm:mb-6">
               <KakiMarketingBanner platform="artist" />
             </div>
             {children}

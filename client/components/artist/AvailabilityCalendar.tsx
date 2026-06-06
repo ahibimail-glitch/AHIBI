@@ -338,27 +338,27 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
     <div className="space-y-5 font-sans">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-center gap-2 sm:gap-3">
           <button
             onClick={() => navigateMonth("prev")}
-            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+            className="w-9 h-9 shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
           >
             ←
           </button>
-          <h2 className="text-xl font-semibold text-gray-900 w-52 text-center">
+          <h2 className="text-base sm:text-xl font-semibold text-gray-900 min-w-0 text-center">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
           <button
             onClick={() => navigateMonth("next")}
-            className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+            className="w-9 h-9 shrink-0 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
           >
             →
           </button>
         </div>
         <button
           onClick={() => setCurrentDate(new Date())}
-          className="px-4 py-1.5 rounded-full text-sm border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+          className="px-4 py-1.5 rounded-full text-sm border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors self-center sm:self-auto"
         >
           Today
         </button>
@@ -374,9 +374,10 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
                 key={d}
-                className="py-3 text-center text-[11px] font-bold uppercase tracking-widest text-white/90"
+                className="py-2 sm:py-3 text-center text-[9px] sm:text-[11px] font-bold uppercase tracking-wide sm:tracking-widest text-white/90"
               >
-                {d}
+                <span className="sm:hidden">{d.charAt(0)}</span>
+                <span className="hidden sm:inline">{d}</span>
               </div>
             ))}
           </div>
@@ -443,7 +444,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   key={dateKey}
                   onClick={() => { if (!isPast) setSelectedDate(isSelected ? "" : dateKey); }}
                   className={[
-                    "relative min-h-[90px] border-b border-r transition-all duration-200 select-none overflow-hidden",
+                    "relative min-h-[52px] sm:min-h-[90px] border-b border-r transition-all duration-200 select-none overflow-hidden",
                     isCurrentMonth ? s.cell : "bg-gray-50 border-gray-100",
                     isPast ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
                     isSelected ? "ring-2 ring-inset ring-indigo-500 shadow-inner" : "",
@@ -459,7 +460,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                     <div className="absolute inset-0 opacity-0 hover:opacity-100 transition bg-black/5" />
                   )}
 
-                  <div className="p-2 pt-3">
+                  <div className="p-1 sm:p-2 pt-2 sm:pt-3">
                     {/* Date row */}
                     <div className="flex items-start justify-between mb-1.5">
                       <span
@@ -486,18 +487,18 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                       <div className="space-y-1">
                         {dayAvail ? (
                           <>
-                            <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>
+                            <span className={`hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>
                               {s.label}
                             </span>
 
                             {availableSlots !== null && (
-                              <p className={`text-[10px] font-medium ${s.slotText}`}>
+                              <p className={`hidden sm:block text-[10px] font-medium ${s.slotText}`}>
                                 {availableSlots} open slot{availableSlots !== 1 ? "s" : ""}
                               </p>
                             )}
 
                             {dayAvail.specialPricing?.isSpecialDay && (
-                              <p className="text-[10px] font-semibold text-orange-500 flex items-center gap-0.5">
+                              <p className="hidden sm:flex text-[10px] font-semibold text-orange-500 items-center gap-0.5">
                                 ★ Special
                               </p>
                             )}
@@ -567,7 +568,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                       Block time
                     </button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
                     <DialogHeader>
                       <DialogTitle>Block a time range</DialogTitle>
                       <DialogDescription>
@@ -608,7 +609,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                       <Plus className="h-3 w-3" /> Add slot
                     </button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg">
                     <DialogHeader>
                       <DialogTitle>Add available time slot</DialogTitle>
                       <DialogDescription>
@@ -661,14 +662,14 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                       {selectedAvailability.timeSlots.map((slot, i) => (
                         <div
                           key={i}
-                          className={`flex items-center justify-between px-4 py-3 rounded-xl border ${slot.isBooked
+                          className={`flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border ${slot.isBooked
                               ? "bg-rose-50 border-rose-200"
                               : slot.isAvailable
                                 ? "bg-emerald-50 border-emerald-200"
                                 : "bg-slate-50 border-slate-200"
                             }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
                             {/* Colour accent line */}
                             <div
                               className={`w-1 h-8 rounded-full flex-shrink-0 ${slot.isBooked ? "bg-rose-400" : slot.isAvailable ? "bg-emerald-400" : "bg-slate-400"
@@ -693,7 +694,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                           {!slot.isBooked && (
                             <button
                               onClick={() => removeTimeSlot(selectedDate, i)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-500 transition-colors"
+                              className="w-7 h-7 self-end sm:self-auto flex items-center justify-center rounded-lg text-gray-400 hover:bg-rose-100 hover:text-rose-500 transition-colors shrink-0"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>

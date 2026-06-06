@@ -177,14 +177,14 @@ export default function TechRiderPage() {
       {!isEditing ? (
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
                 <CardTitle>Technical Rider</CardTitle>
                 <CardDescription>
                   Your technical requirements for performances
                 </CardDescription>
               </div>
-              <Button onClick={() => setIsEditing(true)} variant="outline">
+              <Button onClick={() => setIsEditing(true)} variant="outline" className="w-full sm:w-auto shrink-0">
                 Edit
               </Button>
             </div>
@@ -192,10 +192,10 @@ export default function TechRiderPage() {
           <CardContent className="space-y-6">
             {techRider?.file ? (
               <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-8 w-8 text-blue-500" />
-                    <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="h-8 w-8 text-blue-500 shrink-0" />
+                    <div className="min-w-0">
                       <p className="font-medium">Tech Rider Document</p>
                       <p className="text-sm text-muted-foreground">
                         Uploaded: {new Date(techRider.file.uploadedAt).toLocaleDateString()}
@@ -205,6 +205,7 @@ export default function TechRiderPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto shrink-0"
                     onClick={() => window.open(techRider.file?.url, "_blank")}
                   >
                     <Download className="h-4 w-4 mr-2" />
@@ -302,15 +303,16 @@ export default function TechRiderPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-2">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => setIsEditing(false)}
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit" className="w-full sm:w-auto">Save Changes</Button>
               </div>
             </form>
           </CardContent>

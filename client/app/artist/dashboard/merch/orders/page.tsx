@@ -138,8 +138,8 @@ export default function ArtistMerchOrdersPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="space-y-6">
+      <div className="mx-auto max-w-6xl">
         <Link
           href="/artist/dashboard/merch"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -149,7 +149,7 @@ export default function ArtistMerchOrdersPage() {
 
         <div className="mt-4 rounded-2xl border border-border/70 bg-card/80 p-5 shadow-sm backdrop-blur">
           <div>
-            <h1 className="text-2xl font-bold font-display text-foreground">Merch Orders</h1>
+            <h1 className="text-xl sm:text-2xl font-bold font-display text-foreground">Merch Orders</h1>
             <p className="mt-1 text-sm text-muted-foreground">Track all orders placed for your merch products.</p>
           </div>
 
@@ -163,7 +163,7 @@ export default function ArtistMerchOrdersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full sm:w-auto rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               <option value="all">All Status</option>
               <option value="paid">Paid</option>
@@ -192,13 +192,13 @@ export default function ArtistMerchOrdersPage() {
         </div>
 
         {loading ? (
-          <div className="mt-8 rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          <div className="mt-8 rounded-xl border border-border bg-card p-6 sm:p-8 text-center text-sm text-muted-foreground">
             Loading orders...
           </div>
         ) : error ? (
           <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
         ) : filteredOrders.length === 0 ? (
-          <div className="mt-8 rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          <div className="mt-8 rounded-xl border border-border bg-card p-6 sm:p-8 text-center text-sm text-muted-foreground">
             No merch orders found yet.
           </div>
         ) : (

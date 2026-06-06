@@ -132,7 +132,7 @@ export default function TermsManager({ terms, cancellationPolicy, onUpdate }: Te
               placeholder="Enter your terms and conditions..."
             />
           </div>
-          <Button onClick={handleSaveTerms} disabled={saving}>
+          <Button onClick={handleSaveTerms} disabled={saving} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" />
             {saving ? 'Saving...' : 'Save Terms & Conditions'}
           </Button>
@@ -179,7 +179,7 @@ export default function TermsManager({ terms, cancellationPolicy, onUpdate }: Te
               placeholder="Emergency contact number"
             />
           </div>
-          <Button onClick={handleSaveCancellationPolicy} disabled={saving}>
+          <Button onClick={handleSaveCancellationPolicy} disabled={saving} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" />
             {saving ? 'Saving...' : 'Save Cancellation Policy'}
           </Button>
