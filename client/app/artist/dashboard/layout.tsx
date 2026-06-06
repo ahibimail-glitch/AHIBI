@@ -17,7 +17,6 @@ import {
   DollarSign,
   Edit,
   Image as ImageIcon,
-  Award,
   FileText,
   Music,
   LogOut,
@@ -49,15 +48,14 @@ const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonPro
 );
 
 const navItems = [
+  { id: "tech-rider", label: "EPK & Tech Rider", icon: FileText },
   { id: "bookings", label: "Bookings", icon: Calendar },
   { id: "organizer", label: "Organizers", icon: Building2 },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "gallery", label: "Gallery", icon: ImageIcon },
-  { id: "accolades", label: "Accolades", icon: Award },
   { id: "terms", label: "Terms", icon: FileText },
   { id: "earnings", label: "Earnings", icon: DollarSign },
   { id: "profile", label: "Profile", icon: Edit },
-  { id: "tech-rider", label: "Tech Rider / EPK", icon: FileText },
   { id: "merch", label: "Merch", icon: FileText },
 ];
 

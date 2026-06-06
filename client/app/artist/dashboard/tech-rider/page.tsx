@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Loader2, AlertCircle } from "lucide-react";
+import { FileText, Loader2, AlertCircle, Music2, Headphones, Radio } from "lucide-react";
+import AccoladesManager from "@/components/artist/AccoladesManager";
 import { TechRider } from "../types";
 import { uploadToVercelBlob } from "@/lib/vercelBlob";
 
@@ -21,6 +23,33 @@ type UploadTarget = "techRider" | "epk";
 
 const MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_PDF_SIZE_LABEL = "10MB";
+
+const STREAMING_PLATFORMS = [
+  {
+    key: "spotify",
+    label: "Spotify",
+    placeholder: "https://open.spotify.com/artist/...",
+    icon: Music2,
+  },
+  {
+    key: "appleMusic",
+    label: "Apple Music",
+    placeholder: "https://music.apple.com/...",
+    icon: Headphones,
+  },
+  {
+    key: "youtubeMusic",
+    label: "YouTube Music",
+    placeholder: "https://music.youtube.com/...",
+    icon: Music2,
+  },
+  {
+    key: "soundCloud",
+    label: "SoundCloud",
+    placeholder: "https://soundcloud.com/...",
+    icon: Radio,
+  },
+] as const;
 
 interface TechRiderFile {
   url: string;
@@ -31,7 +60,9 @@ interface TechRiderFile {
 export default function TechRiderPage() {
   const { profile, fetchArtistProfile, setSuccessMessage, setError } = useDashboard();
   const [techRiderForm, setTechRiderForm] = useState<TechRider>({});
+  const [streamingLinks, setStreamingLinks] = useState<Record<string, string>>({});
   const [techRiderSaving, setTechRiderSaving] = useState(false);
+  const [streamingSaving, setStreamingSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState<UploadTarget | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const techRiderInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +71,13 @@ export default function TechRiderPage() {
   useEffect(() => {
     if (profile?.techRider) {
       setTechRiderForm(profile.techRider);
+    }
+    if (profile?.socialLinks) {
+      const links: Record<string, string> = {};
+      STREAMING_PLATFORMS.forEach(({ key }) => {
+        links[key] = profile.socialLinks?.[key] || "";
+      });
+      setStreamingLinks(links);
     }
   }, [profile]);
 
@@ -67,12 +105,51 @@ export default function TechRiderPage() {
       }
 
       await fetchArtistProfile();
-      setSuccessMessage("Tech Rider saved successfully!");
+      setSuccessMessage("Tech rider saved successfully!");
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error saving tech rider");
     } finally {
       setTechRiderSaving(false);
+    }
+  };
+
+  const handleStreamingLinksSave = async () => {
+    try {
+      setStreamingSaving(true);
+      const token = localStorage.getItem("artist_token");
+      if (!token) {
+        setError("Not authenticated");
+        return;
+      }
+
+      const socialLinks: Record<string, string> = {};
+      STREAMING_PLATFORMS.forEach(({ key }) => {
+        const value = streamingLinks[key]?.trim();
+        if (value) socialLinks[key] = value;
+      });
+
+      const response = await fetch("/api/artist/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ socialLinks }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch((): { message?: string } => ({}));
+        throw new Error(errorData.message || "Failed to save streaming links");
+      }
+
+      await fetchArtistProfile();
+      setSuccessMessage("Streaming links saved successfully!");
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error saving streaming links");
+    } finally {
+      setStreamingSaving(false);
     }
   };
 
@@ -98,8 +175,7 @@ export default function TechRiderPage() {
       setUploadingFile(target);
       setUploadError(null);
 
-      const folder =
-        target === "techRider" ? "artists/tech-rider" : "artists/epk";
+      const folder = target === "techRider" ? "artists/tech-rider" : "artists/epk";
       const uploadData = await uploadToVercelBlob(file, folder, "document");
 
       if (!uploadData.url) {
@@ -235,7 +311,6 @@ export default function TechRiderPage() {
               <FileText className="h-3 w-3" />
               Download PDF
             </a>
-            <span className="text-xs text-muted-foreground">(PDF)</span>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No file uploaded yet.</p>
@@ -245,113 +320,188 @@ export default function TechRiderPage() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tech Rider / EPK</CardTitle>
-        <CardDescription>
-          Define your technical requirements and upload your Tech Rider and EPK
-          separately. Each file must be a PDF up to {MAX_PDF_SIZE_LABEL}. Organizers
-          will use these to prepare production and review your artist profile.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="soundRequirements">Sound Requirements</Label>
-            <Textarea
-              id="soundRequirements"
-              value={techRiderForm.soundRequirements || ""}
-              onChange={(e) =>
-                setTechRiderForm((prev) => ({
-                  ...prev,
-                  soundRequirements: e.target.value,
-                }))
-              }
-              placeholder="e.g., 2 wireless mics, DI box, monitor wedges, mixer channels..."
-            />
+    <div className="space-y-6">
+      {/* EPK — primary highlight */}
+      <Card className="border-pink-200 shadow-sm">
+        <CardHeader>
+          <CardTitle>Electronic Press Kit (EPK)</CardTitle>
+          <CardDescription>
+            Your EPK is the main highlight of your artist profile. Add streaming links,
+            upload your press kit, and showcase awards to increase visibility with organizers
+            and fans.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold">Listen on streaming platforms</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add links so visitors can hear your music on Spotify, Apple Music, YouTube Music, and SoundCloud.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {STREAMING_PLATFORMS.map(({ key, label, placeholder, icon: Icon }) => (
+                <div key={key} className="space-y-2">
+                  <Label htmlFor={key} className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Label>
+                  <Input
+                    id={key}
+                    type="url"
+                    value={streamingLinks[key] || ""}
+                    onChange={(e) =>
+                      setStreamingLinks((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                    placeholder={placeholder}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-stretch sm:justify-end">
+              <Button
+                type="button"
+                onClick={handleStreamingLinksSave}
+                disabled={streamingSaving}
+                className="w-full sm:w-auto bg-gradient-to-r from-pink-600 to-purple-600 text-white hover:opacity-90"
+              >
+                {streamingSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Streaming Links"
+                )}
+              </Button>
+            </div>
           </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="lightingRequirements">Lighting Requirements</Label>
-            <Textarea
-              id="lightingRequirements"
-              value={techRiderForm.lightingRequirements || ""}
-              onChange={(e) =>
-                setTechRiderForm((prev) => ({
-                  ...prev,
-                  lightingRequirements: e.target.value,
-                }))
-              }
-              placeholder="e.g., front wash, moving heads, haze, follow spot..."
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="stageRequirements">Stage Requirements</Label>
-            <Textarea
-              id="stageRequirements"
-              value={techRiderForm.stageRequirements || ""}
-              onChange={(e) =>
-                setTechRiderForm((prev) => ({
-                  ...prev,
-                  stageRequirements: e.target.value,
-                }))
-              }
-              placeholder="e.g., minimum stage size, risers, drum riser, backdrop..."
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="instrumentsEquipmentNeeded">
-              Instruments / Equipment Needed
-            </Label>
-            <Textarea
-              id="instrumentsEquipmentNeeded"
-              value={techRiderForm.instrumentsEquipmentNeeded || ""}
-              onChange={(e) =>
-                setTechRiderForm((prev) => ({
-                  ...prev,
-                  instrumentsEquipmentNeeded: e.target.value,
-                }))
-              }
-              placeholder="e.g., keyboard stand, guitar amp, drum kit, DJ controller..."
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="powerRequirements">Power Requirements</Label>
-            <Textarea
-              id="powerRequirements"
-              value={techRiderForm.powerRequirements || ""}
-              onChange={(e) =>
-                setTechRiderForm((prev) => ({
-                  ...prev,
-                  powerRequirements: e.target.value,
-                }))
-              }
-              placeholder="e.g., 2 x 15A outlets on stage, isolated power for audio..."
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="specialNotes">Special Notes / Instructions</Label>
-            <Textarea
-              id="specialNotes"
-              value={techRiderForm.specialNotes || ""}
-              onChange={(e) =>
-                setTechRiderForm((prev) => ({
-                  ...prev,
-                  specialNotes: e.target.value,
-                }))
-              }
-              placeholder="Any special setup or instructions for the production team"
-            />
-          </div>
-        </div>
 
-        {uploadError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{uploadError}</AlertDescription>
-          </Alert>
-        )}
+          {renderFileSection(
+            "epk",
+            "EPK Document",
+            "Upload a PDF press kit with bio, photos, and career highlights.",
+            techRiderForm.epkFile as TechRiderFile | undefined,
+            epkInputRef,
+            "EPK.pdf"
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="pt-2 border-t">
+            <AccoladesManager
+              accolades={profile?.accolades || []}
+              onUpdate={() => fetchArtistProfile()}
+              embedded
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tech Rider — secondary */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tech Rider</CardTitle>
+          <CardDescription>
+            Define your technical requirements for live performances. Organizers use this
+            to prepare sound, lighting, and stage setup.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="soundRequirements">Sound Requirements</Label>
+              <Textarea
+                id="soundRequirements"
+                value={techRiderForm.soundRequirements || ""}
+                onChange={(e) =>
+                  setTechRiderForm((prev) => ({
+                    ...prev,
+                    soundRequirements: e.target.value,
+                  }))
+                }
+                placeholder="e.g., 2 wireless mics, DI box, monitor wedges, mixer channels..."
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="lightingRequirements">Lighting Requirements</Label>
+              <Textarea
+                id="lightingRequirements"
+                value={techRiderForm.lightingRequirements || ""}
+                onChange={(e) =>
+                  setTechRiderForm((prev) => ({
+                    ...prev,
+                    lightingRequirements: e.target.value,
+                  }))
+                }
+                placeholder="e.g., front wash, moving heads, haze, follow spot..."
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="stageRequirements">Stage Requirements</Label>
+              <Textarea
+                id="stageRequirements"
+                value={techRiderForm.stageRequirements || ""}
+                onChange={(e) =>
+                  setTechRiderForm((prev) => ({
+                    ...prev,
+                    stageRequirements: e.target.value,
+                  }))
+                }
+                placeholder="e.g., minimum stage size, risers, drum riser, backdrop..."
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="instrumentsEquipmentNeeded">
+                Instruments / Equipment Needed
+              </Label>
+              <Textarea
+                id="instrumentsEquipmentNeeded"
+                value={techRiderForm.instrumentsEquipmentNeeded || ""}
+                onChange={(e) =>
+                  setTechRiderForm((prev) => ({
+                    ...prev,
+                    instrumentsEquipmentNeeded: e.target.value,
+                  }))
+                }
+                placeholder="e.g., keyboard stand, guitar amp, drum kit, DJ controller..."
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="powerRequirements">Power Requirements</Label>
+              <Textarea
+                id="powerRequirements"
+                value={techRiderForm.powerRequirements || ""}
+                onChange={(e) =>
+                  setTechRiderForm((prev) => ({
+                    ...prev,
+                    powerRequirements: e.target.value,
+                  }))
+                }
+                placeholder="e.g., 2 x 15A outlets on stage, isolated power for audio..."
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="specialNotes">Special Notes / Instructions</Label>
+              <Textarea
+                id="specialNotes"
+                value={techRiderForm.specialNotes || ""}
+                onChange={(e) =>
+                  setTechRiderForm((prev) => ({
+                    ...prev,
+                    specialNotes: e.target.value,
+                  }))
+                }
+                placeholder="Any special setup or instructions for the production team"
+              />
+            </div>
+          </div>
+
+          {uploadError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{uploadError}</AlertDescription>
+            </Alert>
+          )}
+
           {renderFileSection(
             "techRider",
             "Tech Rider File",
@@ -360,34 +510,26 @@ export default function TechRiderPage() {
             techRiderInputRef,
             "Tech-Rider.pdf"
           )}
-          {renderFileSection(
-            "epk",
-            "EPK File",
-            "Upload a PDF with your Electronic Press Kit.",
-            techRiderForm.epkFile as TechRiderFile | undefined,
-            epkInputRef,
-            "EPK.pdf"
-          )}
-        </div>
 
-        <div className="flex justify-stretch sm:justify-end">
-          <Button
-            type="button"
-            onClick={handleTechRiderSave}
-            disabled={techRiderSaving || uploadingFile !== null}
-            className="w-full sm:w-auto"
-          >
-            {techRiderSaving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Tech Rider / EPK"
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex justify-stretch sm:justify-end">
+            <Button
+              type="button"
+              onClick={handleTechRiderSave}
+              disabled={techRiderSaving || uploadingFile !== null}
+              className="w-full sm:w-auto"
+            >
+              {techRiderSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Tech Rider"
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

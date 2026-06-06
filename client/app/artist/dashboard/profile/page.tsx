@@ -188,6 +188,9 @@ export default function ProfilePage() {
       const instagram = cleanValue(formData.get('instagram') as string);
       const youtube = cleanValue(formData.get('youtube') as string);
       const spotify = cleanValue(formData.get('spotify') as string);
+      const appleMusic = cleanValue(formData.get('appleMusic') as string);
+      const youtubeMusic = cleanValue(formData.get('youtubeMusic') as string);
+      const soundCloud = cleanValue(formData.get('soundCloud') as string);
       const facebook = cleanValue(formData.get('facebook') as string);
       const twitter = cleanValue(formData.get('twitter') as string);
       const website = cleanValue(formData.get('website') as string);
@@ -195,6 +198,9 @@ export default function ProfilePage() {
       if (instagram) socialLinks.instagram = instagram;
       if (youtube) socialLinks.youtube = youtube;
       if (spotify) socialLinks.spotify = spotify;
+      if (appleMusic) socialLinks.appleMusic = appleMusic;
+      if (youtubeMusic) socialLinks.youtubeMusic = youtubeMusic;
+      if (soundCloud) socialLinks.soundCloud = soundCloud;
       if (facebook) socialLinks.facebook = facebook;
       if (twitter) socialLinks.twitter = twitter;
       if (website) socialLinks.website = website;
@@ -717,7 +723,10 @@ export default function ProfilePage() {
 
               {/* Social Links */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">Social Links</h3>
+                <h3 className="text-lg font-semibold border-b pb-2">Social & Streaming Links</h3>
+                <p className="text-sm text-muted-foreground">
+                  Streaming links also appear in your EPK section. Manage them in EPK & Tech Rider for the best visibility.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="instagram" className="flex items-center gap-2">
@@ -736,6 +745,24 @@ export default function ProfilePage() {
                       <Music2 className="h-4 w-4" /> Spotify
                     </Label>
                     <Input id="spotify" name="spotify" type="url" defaultValue={profile?.socialLinks?.spotify} placeholder="https://open.spotify.com/artist/..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="appleMusic" className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4" /> Apple Music
+                    </Label>
+                    <Input id="appleMusic" name="appleMusic" type="url" defaultValue={profile?.socialLinks?.appleMusic} placeholder="https://music.apple.com/..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="youtubeMusic" className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4" /> YouTube Music
+                    </Label>
+                    <Input id="youtubeMusic" name="youtubeMusic" type="url" defaultValue={profile?.socialLinks?.youtubeMusic} placeholder="https://music.youtube.com/..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="soundCloud" className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4" /> SoundCloud
+                    </Label>
+                    <Input id="soundCloud" name="soundCloud" type="url" defaultValue={profile?.socialLinks?.soundCloud} placeholder="https://soundcloud.com/..." />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="facebook" className="flex items-center gap-2">
@@ -958,6 +985,24 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2">
                       <Music2 className="h-4 w-4" />
                       <a href={profile.socialLinks.spotify} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">Spotify</a>
+                    </div>
+                  )}
+                  {profile.socialLinks.appleMusic && (
+                    <div className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4" />
+                      <a href={profile.socialLinks.appleMusic} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">Apple Music</a>
+                    </div>
+                  )}
+                  {profile.socialLinks.youtubeMusic && (
+                    <div className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4" />
+                      <a href={profile.socialLinks.youtubeMusic} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">YouTube Music</a>
+                    </div>
+                  )}
+                  {profile.socialLinks.soundCloud && (
+                    <div className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4" />
+                      <a href={profile.socialLinks.soundCloud} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">SoundCloud</a>
                     </div>
                   )}
                   {profile.socialLinks.facebook && (

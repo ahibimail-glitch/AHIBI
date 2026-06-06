@@ -100,6 +100,9 @@ interface Artist {
     instagram?: string;
     youtube?: string;
     spotify?: string;
+    appleMusic?: string;
+    youtubeMusic?: string;
+    soundCloud?: string;
     facebook?: string;
     twitter?: string;
     website?: string;
@@ -124,8 +127,57 @@ const SOCIALS: Record<
   facebook: { icon: <Facebook size={15} />, color: "#1877F2" },
   twitter: { icon: <Twitter size={15} />, color: "#1DA1F2" },
   spotify: { icon: <Music size={15} />, color: "#1DB954" },
+  appleMusic: { icon: <Music size={15} />, color: "#FA2D48" },
+  youtubeMusic: { icon: <Music size={15} />, color: "#FF0000" },
+  soundCloud: { icon: <Volume2 size={15} />, color: "#FF5500" },
   website: { icon: <Globe size={15} />, color: "#111827" },
 };
+
+const STREAMING_PLATFORMS = [
+  { key: "spotify", label: "Spotify" },
+  { key: "appleMusic", label: "Apple Music" },
+  { key: "youtubeMusic", label: "YouTube Music" },
+  { key: "soundCloud", label: "SoundCloud" },
+] as const;
+
+function StreamingLinks({ artist }: { artist: Artist }) {
+  const links = STREAMING_PLATFORMS.filter(
+    ({ key }) => !!artist.socialLinks?.[key as keyof NonNullable<Artist["socialLinks"]>]
+  );
+  if (!links.length) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="text-[11px] font-extrabold tracking-[.16em] uppercase text-slate-500">
+        Listen on
+      </div>
+      <div className="flex flex-wrap gap-2.5">
+        {links.map(({ key, label }) => {
+          const meta = SOCIALS[key];
+          const url = artist.socialLinks?.[key as keyof NonNullable<Artist["socialLinks"]>];
+          return (
+            <a
+              key={key}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-900/10 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition-all hover:-translate-y-[1px] hover:border-[#5b6cff]/20 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
+              style={{ color: meta?.color }}
+            >
+              <span
+                className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: meta ? `${meta.color}14` : undefined }}
+              >
+                {meta?.icon}
+              </span>
+              {label}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function Stars({ score }: { score: number }) {
   const rating = Math.round(score);
@@ -752,7 +804,94 @@ export default function PublicArtistProfile() {
           {/* MAIN LAYOUT (Left Content, Right Sidebar) */}
           <div className="grid min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-[18px] lg:gap-6 mt-[18px] lg:mt-6 pb-[120px] lg:pb-[70px]">
             <main className="flex min-w-0 flex-col gap-[18px]">
-              
+
+              {/* EPK SECTION — primary highlight */}
+              {(
+                STREAMING_PLATFORMS.some(({ key }) => artist.socialLinks?.[key as keyof NonNullable<Artist["socialLinks"]>]) ||
+                artist.techRider?.epkFile?.url ||
+                (artist.accolades?.length ?? 0) > 0
+              ) && (
+                <Section
+                  kicker="EPK"
+                  title="Electronic Press Kit"
+                  subtitle="Discover the artist's music, press materials, and career highlights."
+                >
+                  <div className="space-y-5">
+                    <StreamingLinks artist={artist} />
+
+                    {artist.techRider?.epkFile?.url && (
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-b from-white to-[#f8fbff] border border-[#7c3aed]/20 rounded-[22px]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 shrink-0 rounded-2xl bg-[#7c3aed]/10 text-[#7c3aed] flex items-center justify-center">
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <div className="text-[15px] font-extrabold text-slate-900">
+                              EPK document
+                            </div>
+                            <div className="mt-0.5 text-[13px] text-slate-500">
+                              Download the full press kit with bio, photos, and highlights.
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2.5 justify-end">
+                          <a
+                            href={artist.techRider.epkFile.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 border border-slate-900/10 bg-white text-slate-900 rounded-2xl px-[18px] py-[13px] text-sm font-bold transition-all hover:bg-[#f8faff] hover:border-[#5b6cff]/20 hover:-translate-y-[1px]"
+                          >
+                            <ExternalLink size={14} />
+                            View
+                          </a>
+                          <a
+                            href={artist.techRider.epkFile.url}
+                            download="EPK"
+                            className="inline-flex items-center justify-center gap-2 border-none bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white rounded-2xl px-[18px] py-[13px] text-sm font-bold shadow-[0_12px_26px_rgba(91,108,255,0.25)] hover:shadow-[0_16px_30px_rgba(91,108,255,0.30)] transition-all hover:-translate-y-[1px]"
+                          >
+                            <Download size={14} />
+                            Download
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {artist.accolades?.length > 0 && (
+                      <div>
+                        <div className="text-[11px] font-extrabold tracking-[.16em] uppercase text-slate-500 mb-3">
+                          Awards & achievements
+                        </div>
+                        <div className="flex flex-col">
+                          {artist.accolades.map((award, index) => (
+                            <div
+                              className="grid grid-cols-[64px_1fr] gap-3.5 py-[18px] border-t border-slate-900/10 first:border-none first:pt-0"
+                              key={`${award.title}-${index}`}
+                            >
+                              <div className="pt-1 font-sans text-[13px] font-extrabold tracking-[.12em] uppercase text-[#5b6cff]">
+                                {award.year}
+                              </div>
+                              <div>
+                                <div className="font-['Cormorant_Garamond',_serif] text-[28px] leading-[1.1] font-bold tracking-[-0.03em] text-slate-900">
+                                  {award.title}
+                                </div>
+                                <div className="mt-1.5 text-[11px] font-extrabold tracking-[.18em] uppercase text-slate-500">
+                                  {award.organization}
+                                </div>
+                                {award.description && (
+                                  <div className="mt-2 text-sm leading-[1.8] text-slate-600">
+                                    {award.description}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Section>
+              )}
+
               {/* ABOUT SECTION */}
               <Section
                 kicker="About"
@@ -922,7 +1061,7 @@ export default function PublicArtistProfile() {
                     <EmptyState>No technical details were added to this profile.</EmptyState>
                   )}
 
-                  {(artist.techRider.file?.url || artist.techRider.epkFile?.url) && (
+                  {artist.techRider.file?.url && (
                     <div className="mt-3.5 space-y-3">
                       {artist.techRider.file?.url && (
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-b from-white to-[#f8fbff] border border-slate-900/10 rounded-[22px]">
@@ -963,83 +1102,8 @@ export default function PublicArtistProfile() {
                           </div>
                         </div>
                       )}
-
-                      {artist.techRider.epkFile?.url && (
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-b from-white to-[#f8fbff] border border-slate-900/10 rounded-[22px]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 shrink-0 rounded-2xl bg-[#7c3aed]/10 text-[#7c3aed] flex items-center justify-center">
-                              <FileText size={20} />
-                            </div>
-                            <div>
-                              <div className="text-[15px] font-extrabold text-slate-900">
-                                EPK document
-                              </div>
-                              <div className="mt-0.5 text-[13px] text-slate-500">
-                                {artist.techRider.epkFile.fileType === "pdf"
-                                  ? "PDF document"
-                                  : "Image file"}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2.5 justify-end">
-                            <a
-                              href={artist.techRider.epkFile.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-2 border border-slate-900/10 bg-white text-slate-900 rounded-2xl px-[18px] py-[13px] text-sm font-bold transition-all hover:bg-[#f8faff] hover:border-[#5b6cff]/20 hover:-translate-y-[1px]"
-                            >
-                              <ExternalLink size={14} />
-                              View
-                            </a>
-                            <a
-                              href={artist.techRider.epkFile.url}
-                              download="EPK"
-                              className="inline-flex items-center justify-center gap-2 border-none bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white rounded-2xl px-[18px] py-[13px] text-sm font-bold shadow-[0_12px_26px_rgba(91,108,255,0.25)] hover:shadow-[0_16px_30px_rgba(91,108,255,0.30)] transition-all hover:-translate-y-[1px]"
-                            >
-                              <Download size={14} />
-                              Download
-                            </a>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
-                </Section>
-              )}
-
-              {/* AWARDS SECTION */}
-              {artist.accolades?.length > 0 && (
-                <Section
-                  kicker="Awards"
-                  title="Recognition and achievements"
-                  subtitle="A vertical timeline format keeps this readable and elegant on both desktop and mobile."
-                >
-                  <div className="flex flex-col">
-                    {artist.accolades.map((award, index) => (
-                      <div
-                        className="grid grid-cols-[64px_1fr] gap-3.5 py-[18px] border-t border-slate-900/10 first:border-none first:pt-0"
-                        key={`${award.title}-${index}`}
-                      >
-                        <div className="pt-1 font-sans text-[13px] font-extrabold tracking-[.12em] uppercase text-[#5b6cff]">
-                          {award.year}
-                        </div>
-                        <div>
-                          <div className="font-['Cormorant_Garamond',_serif] text-[28px] leading-[1.1] font-bold tracking-[-0.03em] text-slate-900">
-                            {award.title}
-                          </div>
-                          <div className="mt-1.5 text-[11px] font-extrabold tracking-[.18em] uppercase text-slate-500">
-                            {award.organization}
-                          </div>
-                          {award.description && (
-                            <div className="mt-2 text-sm leading-[1.8] text-slate-600">
-                              {award.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </Section>
               )}
 

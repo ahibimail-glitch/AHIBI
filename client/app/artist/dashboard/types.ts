@@ -92,6 +92,9 @@ export interface ArtistProfile {
     instagram?: string;
     youtube?: string;
     spotify?: string;
+    appleMusic?: string;
+    youtubeMusic?: string;
+    soundCloud?: string;
     facebook?: string;
     twitter?: string;
     website?: string;

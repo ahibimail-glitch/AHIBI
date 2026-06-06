@@ -380,7 +380,7 @@ exports.removeAccolade = async (req, res) => {
  */
 exports.updateSocialLinks = async (req, res) => {
   try {
-    const { instagram, youtube, spotify, facebook, twitter, website } = req.body;
+    const { instagram, youtube, spotify, appleMusic, youtubeMusic, soundCloud, facebook, twitter, website } = req.body;
     
     const artist = await Artist.findById(req.user.id);
     if (!artist) {
@@ -390,6 +390,9 @@ exports.updateSocialLinks = async (req, res) => {
     if (instagram !== undefined) artist.socialLinks.instagram = instagram;
     if (youtube !== undefined) artist.socialLinks.youtube = youtube;
     if (spotify !== undefined) artist.socialLinks.spotify = spotify;
+    if (appleMusic !== undefined) artist.socialLinks.appleMusic = appleMusic;
+    if (youtubeMusic !== undefined) artist.socialLinks.youtubeMusic = youtubeMusic;
+    if (soundCloud !== undefined) artist.socialLinks.soundCloud = soundCloud;
     if (facebook !== undefined) artist.socialLinks.facebook = facebook;
     if (twitter !== undefined) artist.socialLinks.twitter = twitter;
     if (website !== undefined) artist.socialLinks.website = website;

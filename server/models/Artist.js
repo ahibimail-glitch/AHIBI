@@ -281,6 +281,15 @@ const ArtistSchema = new mongoose.Schema({
     spotify: {
       type: String
     },
+    appleMusic: {
+      type: String
+    },
+    youtubeMusic: {
+      type: String
+    },
+    soundCloud: {
+      type: String
+    },
     facebook: {
       type: String
     },

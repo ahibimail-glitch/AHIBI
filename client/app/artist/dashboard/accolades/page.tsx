@@ -1,17 +1,18 @@
 "use client";
 
-import AccoladesManager from "@/components/artist/AccoladesManager";
-import { useDashboard } from "../dashboard-context";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AccoladesPage() {
-  const { profile, fetchArtistProfile } = useDashboard();
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/artist/dashboard/tech-rider");
+  }, [router]);
 
   return (
-    <AccoladesManager 
-      accolades={profile?.accolades || []}
-      onUpdate={() => {
-        fetchArtistProfile();
-      }}
-    />
+    <div className="flex items-center justify-center h-32">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
+    </div>
   );
 }
