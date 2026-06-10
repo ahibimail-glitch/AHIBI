@@ -960,12 +960,12 @@ export default function AllVenuesPage() {
           </div>
 
           <div className="flex gap-8">
-            <aside className="hidden lg:block w-60 shrink-0">
+            {/* <aside className="hidden lg:block w-60 shrink-0">
               <div className="sticky top-24 bg-card rounded-xl border border-surface-border p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-foreground mb-4">Filters</h3>
                 <FilterPanel filters={filters} setFilters={setFilters} resultCount={resultCount} onReset={resetFilters} />
               </div>
-            </aside>
+            </aside> */}
 
             <div className="flex-1">
               {resultCount > 0 ? (
