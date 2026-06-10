@@ -29,6 +29,7 @@ const {
   getVenueBookings,
   getPublicVenueSpaces,
   getPublicSpaceById,
+  getPublicSpacesListing,
   blockDateTime,
   getBlockedSlots,
   updateBlockedSlot,
@@ -166,6 +167,9 @@ const updateBlockedSlotValidation = [
 
 // Get all approved venues
 router.get('/', getPublicVenues);
+
+// Public bookable spaces listing (e.g. jamming rooms)
+router.get('/public/spaces', getPublicSpacesListing);
 
 // Send OTP for signup
 router.post('/auth/send-signup-otp', signupValidation, sendSignupOTP);

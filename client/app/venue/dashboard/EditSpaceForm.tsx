@@ -259,6 +259,7 @@ const venueTypeOptions = [
   { value: 'sports_complex', label: 'Sports Complex' },
   { value: 'conference_meeting_room', label: 'Conference/Meeting Room' },
   { value: 'wedding_venue', label: 'Wedding Venue' },
+  { value: 'jamming_room', label: 'Jamming Room / Rehearsal Studio' },
   { value: 'others', label: 'Others' }
 ];
 

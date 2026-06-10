@@ -147,6 +147,7 @@ const venueTypeLabels: { [key: string]: string } = {
   sports_complex: 'Sports Complex',
   conference_meeting_room: 'Conference/Meeting Room',
   wedding_venue: 'Wedding Venue',
+  jamming_room: 'Jamming Room',
   others: 'Others'
 };
 

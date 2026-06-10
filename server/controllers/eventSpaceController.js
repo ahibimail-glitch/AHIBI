@@ -855,6 +855,67 @@ const getVenueSpacesWithBlockedSlots = async (req, res) => {
   }
 };
 
+// Public listing of bookable spaces (optionally filtered by venue type)
+const getPublicSpacesListing = async (req, res) => {
+  try {
+    const { venueType, city, search, page = 1, limit = 20 } = req.query;
+    const query = {
+      'authorizations.publicListingAuthorized': { $ne: false },
+    };
+
+    if (venueType) {
+      query['venueClassification.venueTypes'] = venueType;
+    }
+
+    if (city) {
+      query['address.city'] = { $regex: city, $options: 'i' };
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tagline: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    const [spaces, total] = await Promise.all([
+      EventSpace.find(query)
+        .populate('venueId', 'name businessName status isVerified images coverImage')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit, 10)),
+      EventSpace.countDocuments(query),
+    ]);
+
+    const approvedSpaces = spaces.filter((space) => {
+      const venue = space.venueId;
+      return venue && (venue.status === 'approved' || venue.status === 'active');
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        spaces: approvedSpaces,
+        pagination: {
+          current: parseInt(page, 10),
+          limit: parseInt(limit, 10),
+          total,
+          pages: Math.ceil(total / parseInt(limit, 10)),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get public spaces listing error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch spaces listing',
+    });
+  }
+};
+
 module.exports = {
   getVenueSpaces,
   getSpaceById,
@@ -865,6 +926,7 @@ module.exports = {
   getVenueBookings,
   getPublicVenueSpaces,
   getPublicSpaceById,
+  getPublicSpacesListing,
   blockDateTime,
   getBlockedSlots,
   updateBlockedSlot,

@@ -35,6 +35,8 @@ import {
   Volume2,
   Youtube,
   Zap,
+  GraduationCap,
+  Monitor,
 } from "lucide-react";
 import {
   Dialog,
@@ -471,6 +473,30 @@ export default function PublicArtistProfile() {
   const [saved, setSaved] = useState(false);
   const [showBook, setShowBook] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [teachingClasses, setTeachingClasses] = useState<Array<{
+    _id: string;
+    title: string;
+    description?: string;
+    subject?: string;
+    level?: string;
+    mode: string;
+    pricing?: { amount: number; pricingType: string };
+    schedule?: { days?: string[]; startTime?: string };
+    offlineLocation?: { city?: string; venueName?: string };
+    onlineDetails?: { platform?: string };
+    maxStudents?: number;
+  }>>([]);
+  const [showTeachingInquiry, setShowTeachingInquiry] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
+  const [inquiryForm, setInquiryForm] = useState({
+    studentName: "",
+    studentEmail: "",
+    studentPhone: "",
+    message: "",
+    preferredMode: "" as "" | "online" | "offline",
+    preferredDate: "",
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -489,7 +515,19 @@ export default function PublicArtistProfile() {
       }
     }
 
+    async function fetchTeaching() {
+      try {
+        const res = await fetch(`/api/artist/public/${artistId}/teaching/classes`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted) setTeachingClasses(data?.data?.classes || []);
+      } catch {
+        // ignore
+      }
+    }
+
     fetchArtist();
+    fetchTeaching();
 
     if (typeof window !== "undefined") {
       setIsOrg(!!localStorage.getItem("organizer_token"));
@@ -526,6 +564,43 @@ export default function PublicArtistProfile() {
       }
     }
   }, [artist]);
+
+  const openTeachingInquiry = useCallback((classId = "") => {
+    setSelectedClassId(classId);
+    setInquiryForm({
+      studentName: "",
+      studentEmail: "",
+      studentPhone: "",
+      message: "",
+      preferredMode: "",
+      preferredDate: "",
+    });
+    setShowTeachingInquiry(true);
+  }, []);
+
+  const submitTeachingInquiry = useCallback(async () => {
+    if (!inquiryForm.studentName.trim() || !inquiryForm.studentPhone.trim()) return;
+    setInquirySubmitting(true);
+    try {
+      const res = await fetch(`/api/artist/public/${artistId}/teaching/inquiries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...inquiryForm,
+          classId: selectedClassId || undefined,
+          preferredMode: inquiryForm.preferredMode || undefined,
+          preferredDate: inquiryForm.preferredDate || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setShowTeachingInquiry(false);
+      alert("Your inquiry has been sent! The artist will contact you soon.");
+    } catch {
+      alert("Could not send inquiry. Please try again.");
+    } finally {
+      setInquirySubmitting(false);
+    }
+  }, [artistId, inquiryForm, selectedClassId]);
 
   const handleBook = useCallback(() => {
     const bookingPath = `/artist/profile/${artistId}/booking`;
@@ -949,6 +1024,89 @@ export default function PublicArtistProfile() {
                 </div>
               </Section>
 
+              {/* TEACHING SECTION */}
+              {teachingClasses.length > 0 && (
+                <Section
+                  kicker="Teaching"
+                  title="Classes & training"
+                  subtitle="Online and offline lessons with schedule, pricing, and easy enquiry."
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {teachingClasses.map((cls) => (
+                      <div
+                        key={cls._id}
+                        className="bg-gradient-to-b from-white to-[#f8fbff] border border-slate-900/10 rounded-[22px] p-5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-bold text-slate-900 text-lg">{cls.title}</h3>
+                            {cls.subject && (
+                              <p className="text-sm text-slate-500 mt-0.5">
+                                {cls.subject}
+                                {cls.level && ` · ${cls.level}`}
+                              </p>
+                            )}
+                          </div>
+                          <span className="shrink-0 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full bg-[#5b6cff]/10 text-[#5b6cff]">
+                            {cls.mode === "both" ? "Online & Offline" : cls.mode}
+                          </span>
+                        </div>
+                        {cls.description && (
+                          <p className="mt-3 text-sm text-slate-600 leading-relaxed line-clamp-3">
+                            {cls.description}
+                          </p>
+                        )}
+                        <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
+                          {cls.pricing?.amount > 0 && (
+                            <span className="font-semibold text-green-600">
+                              ₹{cls.pricing.amount.toLocaleString()}
+                              {cls.pricing.pricingType === "per_month"
+                                ? "/mo"
+                                : cls.pricing.pricingType === "package"
+                                  ? " package"
+                                  : "/session"}
+                            </span>
+                          )}
+                          {cls.schedule?.days && cls.schedule.days.length > 0 && (
+                            <span>{cls.schedule.days.join(", ")}</span>
+                          )}
+                          {cls.maxStudents && <span>Max {cls.maxStudents} students</span>}
+                        </div>
+                        {(cls.mode === "offline" || cls.mode === "both") && cls.offlineLocation?.city && (
+                          <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                            <MapPin size={14} />
+                            {cls.offlineLocation.venueName
+                              ? `${cls.offlineLocation.venueName}, ${cls.offlineLocation.city}`
+                              : cls.offlineLocation.city}
+                          </div>
+                        )}
+                        {(cls.mode === "online" || cls.mode === "both") && cls.onlineDetails?.platform && (
+                          <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                            <Monitor size={14} />
+                            {cls.onlineDetails.platform.replace("_", " ")}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openTeachingInquiry(cls._id)}
+                          className="mt-4 w-full inline-flex items-center justify-center gap-2 border-none rounded-xl px-4 py-3 text-sm font-bold bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white shadow-[0_8px_20px_rgba(91,108,255,0.2)] hover:opacity-95 transition-opacity"
+                        >
+                          <GraduationCap size={15} />
+                          Enquire about this class
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openTeachingInquiry()}
+                    className="mt-4 text-sm font-bold text-[#5b6cff] hover:underline"
+                  >
+                    General teaching enquiry →
+                  </button>
+                </Section>
+              )}
+
               {/* GALLERY SECTION */}
               {(galleryPics.length > 0 || videos.length > 0) && (
                 <Section
@@ -1202,6 +1360,75 @@ export default function PublicArtistProfile() {
         <div className="h-24 lg:hidden" />
 
         <Footer />
+
+        {/* TEACHING INQUIRY MODAL */}
+        <Dialog open={showTeachingInquiry} onOpenChange={setShowTeachingInquiry}>
+          <DialogContent className="max-w-md rounded-[28px] border border-slate-200 bg-white p-4 md:p-6">
+            <DialogHeader>
+              <DialogTitle className="font-['Cormorant_Garamond',_serif] text-[26px] font-bold">
+                Teaching enquiry
+              </DialogTitle>
+              <DialogDescription className="text-slate-500 text-sm">
+                Send an inquiry to {artist.name} about classes or training.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-2">
+              <input
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
+                placeholder="Your name *"
+                value={inquiryForm.studentName}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, studentName: e.target.value }))}
+              />
+              <input
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
+                placeholder="Phone *"
+                value={inquiryForm.studentPhone}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, studentPhone: e.target.value }))}
+              />
+              <input
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
+                placeholder="Email"
+                type="email"
+                value={inquiryForm.studentEmail}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, studentEmail: e.target.value }))}
+              />
+              <select
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-white"
+                value={inquiryForm.preferredMode}
+                onChange={(e) =>
+                  setInquiryForm((p) => ({
+                    ...p,
+                    preferredMode: e.target.value as "" | "online" | "offline",
+                  }))
+                }
+              >
+                <option value="">Preferred mode (optional)</option>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+              </select>
+              <input
+                type="date"
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
+                value={inquiryForm.preferredDate}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, preferredDate: e.target.value }))}
+              />
+              <textarea
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm min-h-[80px]"
+                placeholder="Message (optional)"
+                value={inquiryForm.message}
+                onChange={(e) => setInquiryForm((p) => ({ ...p, message: e.target.value }))}
+              />
+              <button
+                type="button"
+                disabled={inquirySubmitting || !inquiryForm.studentName || !inquiryForm.studentPhone}
+                onClick={submitTeachingInquiry}
+                className="w-full border-none rounded-xl px-4 py-3 text-sm font-bold bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white disabled:opacity-50"
+              >
+                {inquirySubmitting ? "Sending…" : "Send inquiry"}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* BOOKING MODAL */}
         <Dialog open={showBook} onOpenChange={setShowBook}>

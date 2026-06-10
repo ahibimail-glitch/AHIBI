@@ -24,6 +24,7 @@ import {
   Building2,
   Menu,
   X,
+  GraduationCap,
 } from "lucide-react";
 import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { ArtistUser, ArtistProfile } from "./types";
@@ -50,6 +51,7 @@ const SidebarButton = ({ icon: Icon, label, active, ...props }: SidebarButtonPro
 const navItems = [
   { id: "tech-rider", label: "EPK & Tech Rider", icon: FileText },
   { id: "bookings", label: "Bookings", icon: Calendar },
+  { id: "teaching", label: "Teaching", icon: GraduationCap },
   { id: "organizer", label: "Organizers", icon: Building2 },
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "gallery", label: "Gallery", icon: ImageIcon },

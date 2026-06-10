@@ -42,6 +42,7 @@ const eventSpaceSchema = new mongoose.Schema({
         'sports_complex',
         'conference_meeting_room',
         'wedding_venue',
+        'jamming_room',
         'others'
       ]
     }],

@@ -21,12 +21,15 @@ import {
   Users,
   X,
   Heart,
-  Wifi,
   UtensilsCrossed,
   Music,
-  Camera,
-  Phone,
-  IndianRupee,
+  Guitar,
+  Building2,
+  Mic,
+  PartyPopper,
+  Trees,
+  Hotel,
+  Presentation,
 } from "lucide-react";
 import Navbar from "../../Navbar";
 import Footer from "../../Footer";
@@ -92,12 +95,67 @@ interface Venue {
   isVerified?: boolean;
 }
 
-type VenueType = "indoor" | "outdoor" | "both";
+type IndoorOutdoor = "indoor" | "outdoor" | "both";
 type PriceRange = "budget" | "mid" | "premium";
+type SpaceCategory =
+  | "restaurant_cafe_lounge"
+  | "banquet_hall"
+  | "event_hall_multipurpose"
+  | "auditorium_convention_centre"
+  | "resort_hotel_event_space"
+  | "outdoor_venue"
+  | "rooftop_venue"
+  | "sports_complex"
+  | "conference_meeting_room"
+  | "wedding_venue"
+  | "jamming_room"
+  | "others";
+
+interface EventSpace {
+  _id: string;
+  name: string;
+  description?: string;
+  tagline?: string;
+  venueId?: {
+    _id: string;
+    name?: string;
+    businessName?: string;
+    images?: Array<{ url: string; public_id?: string }>;
+    coverImage?: string;
+  };
+  venueClassification?: {
+    venueTypes?: string[];
+    indoorOutdoor?: string;
+  };
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+  };
+  capacity?: number;
+  capacityDetails?: {
+    standingCapacity?: number;
+  };
+  parking?: {
+    carCapacity?: number;
+    twoWheelerAvailable?: boolean;
+  };
+  accessibility?: {
+    wheelchairAccess?: boolean;
+    liftElevator?: boolean;
+  };
+  pricing?: {
+    basePrice?: number;
+    hourlyRate?: number;
+  };
+  images?: Array<{ url: string; isMain?: boolean }>;
+  gallery?: Array<{ url?: string; isMain?: boolean }>;
+}
 
 interface Filters {
   search: string;
-  venueTypes: VenueType[];
+  indoorOutdoor: IndoorOutdoor[];
+  spaceCategories: SpaceCategory[];
   priceRange: PriceRange[];
   minCapacity: number;
   parking: boolean;
@@ -106,7 +164,8 @@ interface Filters {
 
 const createDefaultFilters = (): Filters => ({
   search: "",
-  venueTypes: [],
+  indoorOutdoor: [],
+  spaceCategories: [],
   priceRange: [],
   minCapacity: 0,
   parking: false,
@@ -119,20 +178,67 @@ const priceRanges: { key: PriceRange; label: string; min: number; max: number }[
   { key: "premium", label: "₹3,00,000+", min: 300000, max: Infinity },
 ];
 
-const venueTypeOptions: { key: VenueType; label: string; icon: typeof Home }[] = [
+const indoorOutdoorOptions: { key: IndoorOutdoor; label: string; icon: typeof Home }[] = [
   { key: "indoor", label: "Indoor", icon: Home },
   { key: "outdoor", label: "Outdoor", icon: TreePine },
   { key: "both", label: "Indoor & Outdoor", icon: Layers },
 ];
 
-const getVenueType = (venue: Venue): VenueType => {
-  const value = venue.venueClassification?.indoorOutdoor?.toLowerCase();
-  if (value === "indoor") return "indoor";
-  if (value === "outdoor") return "outdoor";
-  if (value === "indoor_outdoor" || value === "indoor outdoor" || value === "both") {
+const spaceCategoryOptions: { key: SpaceCategory; label: string; icon: typeof Home }[] = [
+  { key: "jamming_room", label: "Jamming Room", icon: Guitar },
+  { key: "banquet_hall", label: "Banquet Hall", icon: UtensilsCrossed },
+  { key: "event_hall_multipurpose", label: "Event Hall", icon: PartyPopper },
+  { key: "wedding_venue", label: "Wedding Venue", icon: Heart },
+  { key: "conference_meeting_room", label: "Conference Room", icon: Presentation },
+  { key: "auditorium_convention_centre", label: "Auditorium", icon: Mic },
+  { key: "restaurant_cafe_lounge", label: "Restaurant / Cafe", icon: UtensilsCrossed },
+  { key: "rooftop_venue", label: "Rooftop", icon: Building2 },
+  { key: "outdoor_venue", label: "Outdoor Venue", icon: Trees },
+  { key: "resort_hotel_event_space", label: "Resort / Hotel", icon: Hotel },
+  { key: "sports_complex", label: "Sports Complex", icon: Users },
+  { key: "others", label: "Others", icon: Layers },
+];
+
+const spaceCategoryLabels: Record<string, string> = Object.fromEntries(
+  spaceCategoryOptions.map((o) => [o.key, o.label])
+);
+
+const getIndoorOutdoor = (value?: string): IndoorOutdoor => {
+  const normalized = value?.toLowerCase();
+  if (normalized === "indoor") return "indoor";
+  if (normalized === "outdoor") return "outdoor";
+  if (normalized === "hybrid" || normalized === "indoor_outdoor" || normalized === "both") {
     return "both";
   }
   return "both";
+};
+
+const getVenueIndoorOutdoor = (venue: Venue): IndoorOutdoor =>
+  getIndoorOutdoor(venue.venueClassification?.indoorOutdoor);
+
+const getSpaceIndoorOutdoor = (space: EventSpace): IndoorOutdoor =>
+  getIndoorOutdoor(space.venueClassification?.indoorOutdoor);
+
+const getSpaceImageUrl = (space: EventSpace) => {
+  const imgs = space.images || space.gallery || [];
+  const main = imgs.find((i) => i?.isMain && i?.url);
+  if (main?.url) return main.url;
+  if (imgs[0]?.url) return imgs[0].url;
+  const venueImgs = space.venueId?.images || [];
+  if (venueImgs.length > 0) return venueImgs[0].url;
+  return "https://images.unsplash.com/photo-1519167758481-83f550bb49b3";
+};
+
+const getSpaceCategories = (space: EventSpace): string[] =>
+  space.venueClassification?.venueTypes || [];
+
+const matchesPriceRange = (basePrice: number | undefined, filters: Filters): boolean => {
+  if (filters.priceRange.length === 0) return true;
+  return filters.priceRange.some((rangeKey) => {
+    const range = priceRanges.find((p) => p.key === rangeKey);
+    if (!range || basePrice === undefined) return false;
+    return basePrice >= range.min && basePrice < range.max;
+  });
 };
 
 const getVenueImageUrl = (venue: Venue) => {
@@ -163,44 +269,71 @@ const getVenueImageUrl = (venue: Venue) => {
   );
 };
 
-const matchesFilters = (venue: Venue, filters: Filters): boolean => {
+const matchesVenueFilters = (venue: Venue, filters: Filters): boolean => {
+  if (filters.spaceCategories.length > 0) return false;
+
   if (filters.search) {
     const haystack = `${venue.businessName} ${venue.name} ${venue.address?.city ?? ""} ${venue.address?.state ?? ""}`.toLowerCase();
     if (!haystack.includes(filters.search.toLowerCase())) return false;
   }
 
-  if (filters.venueTypes.length > 0 && !filters.venueTypes.includes(getVenueType(venue))) {
+  if (filters.indoorOutdoor.length > 0 && !filters.indoorOutdoor.includes(getVenueIndoorOutdoor(venue))) {
     return false;
   }
 
-  if (filters.priceRange.length > 0) {
-    const basePrice = venue.pricing?.basePrice;
-    const inRange = filters.priceRange.some((rangeKey) => {
-      const range = priceRanges.find((p) => p.key === rangeKey);
-      if (!range) return false;
-      if (basePrice === undefined) return false;
-      return basePrice >= range.min && basePrice < range.max;
-    });
-    if (!inRange) return false;
-  }
+  if (!matchesPriceRange(venue.pricing?.basePrice, filters)) return false;
 
   const capacityValue = venue.capacityDetails?.standingCapacity ?? venue.capacity ?? 0;
-  if (filters.minCapacity > 0 && capacityValue < filters.minCapacity) {
-    return false;
-  }
+  if (filters.minCapacity > 0 && capacityValue < filters.minCapacity) return false;
 
   const hasParking = Boolean(venue.parking?.carCapacity || venue.parking?.twoWheelerAvailable);
-  if (filters.parking && !hasParking) {
-    return false;
-  }
+  if (filters.parking && !hasParking) return false;
 
   const isAccessible = Boolean(venue.accessibility?.wheelchairAccess || venue.accessibility?.liftElevator);
-  if (filters.accessibility && !isAccessible) {
-    return false;
-  }
+  if (filters.accessibility && !isAccessible) return false;
 
   return true;
 };
+
+const matchesSpaceFilters = (space: EventSpace, filters: Filters): boolean => {
+  const categories = getSpaceCategories(space);
+  if (filters.spaceCategories.length > 0) {
+    const hasCategory = filters.spaceCategories.some((cat) => categories.includes(cat));
+    if (!hasCategory) return false;
+  }
+
+  if (filters.search) {
+    const venueName = space.venueId?.businessName || space.venueId?.name || "";
+    const haystack = `${space.name} ${venueName} ${space.address?.city ?? ""} ${space.address?.state ?? ""}`.toLowerCase();
+    if (!haystack.includes(filters.search.toLowerCase())) return false;
+  }
+
+  if (filters.indoorOutdoor.length > 0 && !filters.indoorOutdoor.includes(getSpaceIndoorOutdoor(space))) {
+    return false;
+  }
+
+  const price = space.pricing?.hourlyRate ?? space.pricing?.basePrice;
+  if (!matchesPriceRange(price, filters)) return false;
+
+  const capacityValue = space.capacityDetails?.standingCapacity ?? space.capacity ?? 0;
+  if (filters.minCapacity > 0 && capacityValue < filters.minCapacity) return false;
+
+  const hasParking = Boolean(space.parking?.carCapacity || space.parking?.twoWheelerAvailable);
+  if (filters.parking && !hasParking) return false;
+
+  const isAccessible = Boolean(space.accessibility?.wheelchairAccess || space.accessibility?.liftElevator);
+  if (filters.accessibility && !isAccessible) return false;
+
+  return true;
+};
+
+const countActiveFilters = (filters: Filters) =>
+  filters.indoorOutdoor.length +
+  filters.spaceCategories.length +
+  filters.priceRange.length +
+  (filters.minCapacity > 0 ? 1 : 0) +
+  (filters.parking ? 1 : 0) +
+  (filters.accessibility ? 1 : 0);
 
 const FilterPanel = ({
   filters,
@@ -213,29 +346,53 @@ const FilterPanel = ({
   resultCount: number;
   onReset: () => void;
 }) => {
-  const activeCount =
-    filters.venueTypes.length +
-    filters.priceRange.length +
-    (filters.minCapacity > 0 ? 1 : 0) +
-    (filters.parking ? 1 : 0) +
-    (filters.accessibility ? 1 : 0);
+  const activeCount = countActiveFilters(filters);
+
+  const toggleSpaceCategory = (key: SpaceCategory, checked: boolean) => {
+    setFilters((prev) => ({
+      ...prev,
+      spaceCategories:
+        checked
+          ? [...prev.spaceCategories, key]
+          : prev.spaceCategories.filter((cat) => cat !== key),
+    }));
+  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h4 className="text-sm font-semibold text-foreground mb-3">Venue Type</h4>
-        <div className="space-y-2.5">
-          {venueTypeOptions.map((opt) => (
+        <h4 className="text-sm font-semibold text-foreground mb-3">Space category</h4>
+        <p className="text-xs text-muted-foreground mb-3">
+          Filter by venue type — e.g. jamming rooms, banquet halls, wedding venues.
+        </p>
+        <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+          {spaceCategoryOptions.map((opt) => (
             <label key={opt.key} className="flex items-center gap-3 cursor-pointer">
               <Checkbox
-                checked={filters.venueTypes.includes(opt.key)}
+                checked={filters.spaceCategories.includes(opt.key)}
+                onCheckedChange={(checked) => toggleSpaceCategory(opt.key, checked === true)}
+              />
+              <opt.icon className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-sm text-foreground">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-sm font-semibold text-foreground mb-3">Indoor / Outdoor</h4>
+        <div className="space-y-2.5">
+          {indoorOutdoorOptions.map((opt) => (
+            <label key={opt.key} className="flex items-center gap-3 cursor-pointer">
+              <Checkbox
+                checked={filters.indoorOutdoor.includes(opt.key)}
                 onCheckedChange={(checked) =>
                   setFilters((prev) => ({
                     ...prev,
-                    venueTypes:
+                    indoorOutdoor:
                       checked === true
-                        ? [...prev.venueTypes, opt.key]
-                        : prev.venueTypes.filter((type) => type !== opt.key),
+                        ? [...prev.indoorOutdoor, opt.key]
+                        : prev.indoorOutdoor.filter((type) => type !== opt.key),
                   }))
                 }
               />
@@ -325,7 +482,7 @@ const FilterPanel = ({
       )}
 
       <p className="text-xs text-muted-foreground pt-2">
-        {resultCount} venue{resultCount !== 1 ? "s" : ""} found
+        {resultCount} result{resultCount !== 1 ? "s" : ""} found
       </p>
     </div>
   );
@@ -336,9 +493,9 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
   const imageUrl = getVenueImageUrl(venue);
   const capacity = venue.capacityDetails?.standingCapacity ?? venue.capacity ?? 0;
   const venueTypeLabel =
-    getVenueType(venue) === "both"
+    getVenueIndoorOutdoor(venue) === "both"
       ? "Indoor & Outdoor"
-      : getVenueType(venue) === "indoor"
+      : getVenueIndoorOutdoor(venue) === "indoor"
       ? "Indoor"
       : "Outdoor";
   const hasParking = Boolean(venue.parking?.carCapacity || venue.parking?.twoWheelerAvailable);
@@ -505,44 +662,184 @@ const VenueCard = ({ venue }: { venue: Venue }) => {
   );
 };
 
+const SpaceCard = ({ space }: { space: EventSpace }) => {
+  const router = useRouter();
+  const imageUrl = getSpaceImageUrl(space);
+  const capacity = space.capacityDetails?.standingCapacity ?? space.capacity ?? 0;
+  const venueId = space.venueId?._id;
+  const venueName = space.venueId?.businessName || space.venueId?.name || "Venue";
+  const categories = getSpaceCategories(space);
+  const primaryCategory = categories[0];
+  const categoryLabel = primaryCategory ? spaceCategoryLabels[primaryCategory] || primaryCategory.replace(/_/g, " ") : "Space";
+  const hourlyRate = space.pricing?.hourlyRate;
+  const basePrice = space.pricing?.basePrice;
+  const displayPrice = hourlyRate
+    ? `₹${hourlyRate.toLocaleString()}/hr`
+    : basePrice
+      ? `From ₹${basePrice.toLocaleString()}`
+      : "Price on request";
+  const indoorLabel =
+    getSpaceIndoorOutdoor(space) === "both"
+      ? "Indoor & Outdoor"
+      : getSpaceIndoorOutdoor(space) === "indoor"
+        ? "Indoor"
+        : "Outdoor";
+
+  const handleShare = async () => {
+    if (!venueId) return;
+    try {
+      const url = `${window.location.origin}/allVenues/${venueId}/${space._id}`;
+      const shareData = {
+        title: `${space.name} - ${venueName}`,
+        text: `Book ${space.name} at ${venueName}`,
+        url,
+      };
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+        toast.success("Space shared successfully!");
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch {
+      try {
+        const url = `${window.location.origin}/allVenues/${venueId}/${space._id}`;
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard!");
+      } catch {
+        toast.error("Failed to share");
+      }
+    }
+  };
+
+  return (
+    <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <img
+          src={imageUrl}
+          alt={space.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+        />
+        <div className="absolute top-4 left-4">
+          <span className="bg-purple-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+            {categoryLabel}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-wide text-gray-500">{venueName}</p>
+          <h3 className="text-xl font-bold text-gray-900 leading-tight line-clamp-2">{space.name}</h3>
+          <div className="flex items-center gap-2 text-gray-600">
+            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="text-sm">
+              {space.address?.city || "Unknown"}
+              {space.address?.state ? `, ${space.address.state}` : ""}
+            </span>
+          </div>
+        </div>
+
+        {space.description && (
+          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{space.description}</p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
+            <Layers className="w-3 h-3" />
+            {indoorLabel}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
+            <Users className="w-3 h-3" />
+            Up to {capacity || "N/A"}
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-pink-50 text-pink-700 text-xs font-medium rounded-full">
+            {displayPrice}
+          </span>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => venueId && router.push(`/allVenues/${venueId}/${space._id}`)}
+            className="px-4 py-2 text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 rounded-lg transition-colors"
+          >
+            Book now
+          </button>
+          <button
+            onClick={handleShare}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-1"
+          >
+            <Share2 className="w-4 h-4" />
+            Share
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function AllVenuesPage() {
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [spaces, setSpaces] = useState<EventSpace[]>([]);
   const [filters, setFilters] = useState<Filters>(createDefaultFilters);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchVenues = async () => {
+    const fetchData = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-        const response = await fetch(`${apiUrl}/api/venue/`);
-        const data = await response.json();
+        const [venuesRes, spacesRes] = await Promise.all([
+          fetch(`${apiUrl}/api/venue/?limit=200`),
+          fetch(`${apiUrl}/api/venue/public/spaces?limit=200`),
+        ]);
+        const venuesData = await venuesRes.json();
+        const spacesData = await spacesRes.json();
 
-        if (data.success) {
-          const allVenues: Venue[] = data.data.venues;
-          const parentVenues = allVenues.filter((v) => v.managedByVenueId == null);
-          setVenues(parentVenues);
+        if (venuesData.success) {
+          const allVenues: Venue[] = venuesData.data.venues;
+          setVenues(allVenues.filter((v) => v.managedByVenueId == null));
         } else {
           toast.error("Failed to load venues");
         }
+
+        if (spacesData.success) {
+          setSpaces(spacesData.data?.spaces || []);
+        }
       } catch (error) {
-        console.error("Error fetching venues:", error);
+        console.error("Error fetching listings:", error);
         toast.error("Failed to load venues");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVenues();
+    fetchData();
   }, []);
 
-  const filtered = useMemo(() => venues.filter((venue) => matchesFilters(venue, filters)), [venues, filters]);
+  const showingSpaces = filters.spaceCategories.length > 0;
 
-  const activeFilterCount =
-    filters.venueTypes.length +
-    filters.priceRange.length +
-    (filters.minCapacity > 0 ? 1 : 0) +
-    (filters.parking ? 1 : 0) +
-    (filters.accessibility ? 1 : 0);
+  const filteredVenues = useMemo(
+    () => venues.filter((venue) => matchesVenueFilters(venue, filters)),
+    [venues, filters]
+  );
+
+  const filteredSpaces = useMemo(
+    () => spaces.filter((space) => matchesSpaceFilters(space, filters)),
+    [spaces, filters]
+  );
+
+  const resultCount = showingSpaces ? filteredSpaces.length : filteredVenues.length;
+  const activeFilterCount = countActiveFilters(filters);
+
+  const toggleQuickCategory = (key: SpaceCategory) => {
+    setFilters((prev) => ({
+      ...prev,
+      spaceCategories: prev.spaceCategories.includes(key)
+        ? prev.spaceCategories.filter((c) => c !== key)
+        : [...prev.spaceCategories, key],
+    }));
+  };
 
   const resetFilters = () => setFilters(createDefaultFilters());
 
@@ -605,7 +902,7 @@ export default function AllVenuesPage() {
                     <SheetTitle>Filters</SheetTitle>
                   </SheetHeader>
                   <div className="pt-4">
-                    <FilterPanel filters={filters} setFilters={setFilters} resultCount={filtered.length} onReset={resetFilters} />
+                    <FilterPanel filters={filters} setFilters={setFilters} resultCount={resultCount} onReset={resetFilters} />
                   </div>
                 </SheetContent>
               </Sheet>
@@ -613,12 +910,51 @@ export default function AllVenuesPage() {
           </div>
         </div>
 
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 border-b border-surface-border">
+          <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              type="button"
+              onClick={() => setFilters((prev) => ({ ...prev, spaceCategories: [] }))}
+              className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                filters.spaceCategories.length === 0
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-foreground border-surface-border hover:border-primary/40"
+              }`}
+            >
+              All venues
+            </button>
+            {spaceCategoryOptions.slice(0, 6).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => toggleQuickCategory(opt.key)}
+                className={`shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                  filters.spaceCategories.includes(opt.key)
+                    ? "bg-purple-600 text-white border-purple-600"
+                    : "bg-card text-foreground border-surface-border hover:border-purple-300"
+                }`}
+              >
+                <opt.icon className="w-3.5 h-3.5" />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Explore Venues</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+                {showingSpaces ? "Explore spaces" : "Explore Venues"}
+              </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {filtered.length} venue{filtered.length !== 1 ? "s" : ""} available
+                {resultCount} {showingSpaces ? "space" : "venue"}{resultCount !== 1 ? "s" : ""} available
+                {showingSpaces && filters.spaceCategories.length > 0 && (
+                  <span>
+                    {" "}
+                    · {filters.spaceCategories.map((c) => spaceCategoryLabels[c] || c).join(", ")}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -627,20 +963,22 @@ export default function AllVenuesPage() {
             <aside className="hidden lg:block w-60 shrink-0">
               <div className="sticky top-24 bg-card rounded-xl border border-surface-border p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-foreground mb-4">Filters</h3>
-                <FilterPanel filters={filters} setFilters={setFilters} resultCount={filtered.length} onReset={resetFilters} />
+                <FilterPanel filters={filters} setFilters={setFilters} resultCount={resultCount} onReset={resetFilters} />
               </div>
             </aside>
 
             <div className="flex-1">
-              {filtered.length > 0 ? (
+              {resultCount > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filtered.map((venue) => (
-                    <VenueCard key={venue._id} venue={venue} />
-                  ))}
+                  {showingSpaces
+                    ? filteredSpaces.map((space) => <SpaceCard key={space._id} space={space} />)
+                    : filteredVenues.map((venue) => <VenueCard key={venue._id} venue={venue} />)}
                 </div>
               ) : (
                 <div className="text-center py-20">
-                  <p className="text-lg font-medium text-foreground">No venues found</p>
+                  <p className="text-lg font-medium text-foreground">
+                    {showingSpaces ? "No spaces found" : "No venues found"}
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters</p>
                   <Button variant="outline" className="mt-4 rounded-full" onClick={resetFilters}>
                     Clear all filters

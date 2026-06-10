@@ -6,6 +6,7 @@ const artistBookingController = require('../controllers/artistBookingController'
 const artistProfileController = require('../controllers/artistProfileController');
 const artistAvailabilityController = require('../controllers/artistAvailabilityController');
 const merchController = require('../controllers/merchController');
+const artistTeachingController = require('../controllers/artistTeachingController');
 const { protect, authorize } = require('../middlewares/auth');
 
 // Public routes
@@ -46,6 +47,11 @@ router.post('/auth/setup-password', [
 // Public artist profiles
 router.get('/public', artistProfileController.getApprovedArtists);
 router.get('/public/:artistId', artistProfileController.getPublicArtistProfile);
+router.get('/public/:artistId/teaching/classes', artistTeachingController.getPublicClasses);
+router.post('/public/:artistId/teaching/inquiries', [
+  check('studentName', 'Student name is required').not().isEmpty(),
+  check('studentPhone', 'Student phone is required').not().isEmpty(),
+], artistTeachingController.submitPublicInquiry);
 
 // Protected routes - artist only
 router.get('/profile', protect, authorize('artist'), artistAuthController.getArtistProfile);
@@ -133,5 +139,26 @@ router.put('/merch/products/:productId', protect, authorize('artist'), merchCont
 router.delete('/merch/products/:productId', protect, authorize('artist'), merchController.deleteProduct);
 router.get('/merch/orders', protect, authorize('artist'), merchController.getArtistOrders);
 router.put('/merch/orders/:orderId/status', protect, authorize('artist'), merchController.updateArtistOrderStatus);
+
+// Teaching CRM routes
+router.get('/teaching/overview', protect, authorize('artist'), artistTeachingController.getTeachingOverview);
+router.get('/teaching/classes', protect, authorize('artist'), artistTeachingController.getClasses);
+router.post('/teaching/classes', [
+  protect,
+  authorize('artist'),
+  check('title', 'Title is required').not().isEmpty(),
+  check('mode', 'Mode must be online, offline, or both').isIn(['online', 'offline', 'both']),
+], artistTeachingController.createClass);
+router.put('/teaching/classes/:classId', protect, authorize('artist'), artistTeachingController.updateClass);
+router.delete('/teaching/classes/:classId', protect, authorize('artist'), artistTeachingController.deleteClass);
+router.get('/teaching/inquiries', protect, authorize('artist'), artistTeachingController.getInquiries);
+router.post('/teaching/inquiries', [
+  protect,
+  authorize('artist'),
+  check('studentName', 'Student name is required').not().isEmpty(),
+  check('studentPhone', 'Student phone is required').not().isEmpty(),
+], artistTeachingController.createInquiry);
+router.put('/teaching/inquiries/:inquiryId', protect, authorize('artist'), artistTeachingController.updateInquiry);
+router.delete('/teaching/inquiries/:inquiryId', protect, authorize('artist'), artistTeachingController.deleteInquiry);
 
 module.exports = router;

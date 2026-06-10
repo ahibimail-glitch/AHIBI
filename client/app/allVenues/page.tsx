@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ArrowRight, Search, CalendarClock, Wallet, LayoutDashboard, Building2, MapPin, Users, Star, ChevronRight } from "lucide-react";
+import { Check, ArrowRight, Search, CalendarClock, Wallet, LayoutDashboard, Building2, MapPin, Users, Star, ChevronRight, Guitar } from "lucide-react";
 import Link from "next/link";
 import Footer from "../Footer";
 import Navbar from "../Navbar";
@@ -449,6 +449,43 @@ const PopularVenuesList = ({ featuredVenues }: { featuredVenues: ReturnType<type
   );
 };
 
+const JammingRoomsPromo = () => (
+  <Section className="bg-white">
+    <div className="max-w-5xl mx-auto">
+      <Card className="border border-purple-100 shadow-md overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          <div className="relative min-h-[220px] md:min-h-0">
+            <img
+              src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80"
+              alt="Musicians in a jamming room"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-900/70 to-transparent md:hidden" />
+          </div>
+          <CardContent className="p-8 md:p-10 flex flex-col justify-center">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-xl bg-purple-100">
+                <Guitar className="h-6 w-6 text-purple-600" />
+              </div>
+              <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">New</Badge>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Jamming Rooms & rehearsal studios</h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              Book practice spaces with hourly rates, equipment details, and live availability — perfect for bands and solo artists.
+            </p>
+            <Link href="/allVenues/jamming">
+              <Button className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto">
+                Browse jamming rooms
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </CardContent>
+        </div>
+      </Card>
+    </div>
+  </Section>
+);
+
 const OrganizerNote = () => (
   <Section className="bg-gradient-to-br from-purple-50 to-pink-50">
     <div className="max-w-4xl mx-auto">
@@ -559,6 +596,7 @@ export default async function AhibiVenuePage() {
       <main>
         <Hero />
         <PopularVenuesList featuredVenues={featuredVenues} />
+        <JammingRoomsPromo />
         <IntroSection />
         <FeaturesSection />
         <HowItWorksSection />
