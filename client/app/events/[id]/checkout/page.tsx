@@ -123,6 +123,12 @@ export default function CheckoutPage() {
   const isHMFEvent = HMF_id.includes(eventId);
   const isHFEvent = HF_id.includes(eventId);
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
+  const CHEESE_EVENT_ID = "6a28ecaba70d7b412aa9efb4";
+  const CHEESE_GROUP_COUPONS: Record<string, string> = {
+    GROUP10D1B1: "General Admission (June 26, BATCH 1)",
+    GROUP10D1B2: "General Admission (June 26, BATCH 2)",
+    GROUP10D2: "General Admission (June 27)",
+  };
 
   const countries = [
     "India", "Afghanistan", "Bangladesh", "Bhutan", "Maldives", "Nepal", "Pakistan", "Sri Lanka",
@@ -258,6 +264,14 @@ export default function CheckoutPage() {
         .filter((item) => item.ticket.name.trim().toLowerCase() === ticketName.trim().toLowerCase())
         .reduce((sum, item) => sum + item.quantity, 0);
 
+    if (eventId === CHEESE_EVENT_ID && CHEESE_GROUP_COUPONS[effectiveCode]) {
+      if (totalTicketQuantity < 4) {
+        return "Please select 4 or more tickets to apply this coupon";
+      }
+
+      return null;
+    }
+
     if (
       (effectiveCode === "GROUP10D1" || effectiveCode === "GROUP10D2") &&
       eventId === "69e87ca50d43584f4c39846d"
@@ -316,8 +330,13 @@ export default function CheckoutPage() {
   };
 
   const getNormalizedSpecialGroupCouponCode = (code?: string | null) => {
-    if (eventId !== "69e87ca50d43584f4c39846d") return null;
     const normalized = (code ?? "").trim().toUpperCase();
+
+    if (eventId === CHEESE_EVENT_ID && CHEESE_GROUP_COUPONS[normalized]) {
+      return normalized;
+    }
+
+    if (eventId !== "69e87ca50d43584f4c39846d") return null;
     if (normalized === "GROUP10D1" || normalized === "GROUP10D2") return normalized;
     return null;
   };

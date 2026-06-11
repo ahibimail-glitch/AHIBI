@@ -39,14 +39,57 @@ function computeTicketsSubtotal(tickets) {
   );
 }
 
+const CHEESE_GROUP_COUPON_CODES = new Set(['GROUP10D1B1', 'GROUP10D1B2', 'GROUP10D2']);
+
+function validateCheeseGroupCoupon(tickets, minQuantity = 4) {
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    return { valid: false, message: 'No tickets selected' };
+  }
+
+  const totalQuantity = tickets.reduce(
+    (sum, t) => sum + (Number(t.quantity) || 0),
+    0
+  );
+
+  if (totalQuantity < minQuantity) {
+    return {
+      valid: false,
+      message: 'Please select 4 or more tickets to apply this coupon',
+    };
+  }
+
+  return { valid: true, applicableQuantity: totalQuantity };
+}
+
 /**
  * Compute discount for a coupon and ticket selection.
  * GROUP10: 10% (or configured %) off entire subtotal when 4+ General Admission tickets.
+ * Cheese event group coupons: 10% off entire subtotal when 4+ tickets total (mixed categories allowed).
  * Other coupons: percentage/fixed off matching ticketCategory only.
  */
 function computeCouponDiscount(coupon, tickets) {
   const totalAmount = computeTicketsSubtotal(tickets);
   const code = String(coupon.code || '').trim().toUpperCase();
+
+  if (CHEESE_GROUP_COUPON_CODES.has(code)) {
+    const groupValidation = validateCheeseGroupCoupon(tickets);
+    if (!groupValidation.valid) {
+      return { error: groupValidation.message };
+    }
+
+    const discountPercentage =
+      coupon.discountPercentage !== undefined && coupon.discountPercentage !== null
+        ? coupon.discountPercentage
+        : 10;
+    const discountAmount = Math.round((totalAmount * discountPercentage) / 100);
+
+    return {
+      discountAmount,
+      totalAmount,
+      ticketCategory: coupon.ticketCategory,
+      applicableQuantity: groupValidation.applicableQuantity,
+    };
+  }
 
   if (code === 'GROUP10') {
     const groupValidation = validateGroup10Tickets(tickets);
@@ -108,6 +151,7 @@ function computeCouponDiscount(coupon, tickets) {
 module.exports = {
   isGeneralAdmissionTicketType,
   validateGroup10Tickets,
+  validateCheeseGroupCoupon,
   computeTicketsSubtotal,
   computeCouponDiscount,
 };
