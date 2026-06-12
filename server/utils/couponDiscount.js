@@ -39,7 +39,7 @@ function computeTicketsSubtotal(tickets) {
   );
 }
 
-const CHEESE_GROUP_COUPON_CODES = new Set(['GROUP10D1B1', 'GROUP10D1B2', 'GROUP10D2']);
+const CHEESE_GROUP_COUPON_CODES = new Set(['GROUP10']);
 
 function validateCheeseGroupCoupon(tickets, minQuantity = 4) {
   if (!Array.isArray(tickets) || tickets.length === 0) {
