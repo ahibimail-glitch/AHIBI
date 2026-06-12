@@ -125,9 +125,9 @@ export default function CheckoutPage() {
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
   const CHEESE_EVENT_ID = "6a28ecaba70d7b412aa9efb4";
   const CHEESE_GROUP_COUPONS: Record<string, string> = {
-    GROUP10D: "General Admission (June 26, BATCH 1)",
-    GROUP10: "General Admission (June 26, BATCH 2)",
-    GROUP10: "General Admission (June 27)",
+    GROUP10D1B1: "General Admission (June 26, BATCH 1)",
+    GROUP10D1B2: "General Admission (June 26, BATCH 2)",
+    GROUP10D2: "General Admission (June 27)",
   };
 
   const countries = [
