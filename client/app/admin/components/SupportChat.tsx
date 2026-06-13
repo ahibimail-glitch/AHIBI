@@ -1,17 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -25,23 +21,19 @@ import {
   Loader2,
   AlertCircle,
   Send,
-  Filter,
-  User,
   MessageCircle,
-  CheckCircle2,
-  Clock,
-  Phone,
-  Mail,
+  Paperclip,
+  X,
 } from "lucide-react";
+import MessageAttachments from "@/components/support/MessageAttachments";
+import {
+  type SupportAttachment,
+  type SupportMessage,
+  uploadSupportAttachment,
+  validateSupportAttachment,
+} from "@/lib/supportChat";
 
-interface Message {
-  _id?: string;
-  sender: string;
-  senderName: string;
-  senderRole: "user" | "admin";
-  message: string;
-  createdAt: string;
-}
+interface Message extends SupportMessage {}
 
 interface Conversation {
   _id: string;
@@ -89,6 +81,7 @@ function getToken() {
 }
 
 export default function SupportChat() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -100,8 +93,11 @@ export default function SupportChat() {
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const [replyText, setReplyText] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<SupportAttachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<"active" | "resolved">("active");
   const [searchQuery, setSearchQuery] = useState("");
@@ -220,8 +216,8 @@ export default function SupportChat() {
   const handleSendReply = async () => {
     const token = getToken();
     if (!token || !selectedConversationId) return;
-    if (!replyText.trim()) {
-      setReplyError("Please enter a message before sending.");
+    if (!replyText.trim() && pendingAttachments.length === 0) {
+      setReplyError("Please enter a message or attach a file before sending.");
       return;
     }
 
@@ -235,7 +231,10 @@ export default function SupportChat() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: replyText.trim() }),
+        body: JSON.stringify({
+          message: replyText.trim(),
+          attachments: pendingAttachments,
+        }),
       });
 
       const data: ApiSuccess<{ conversation: Conversation }> | ApiError = await res.json();
@@ -260,6 +259,7 @@ export default function SupportChat() {
         ),
       );
       setReplyText("");
+      setPendingAttachments([]);
     } catch (err: any) {
       setReplyError(err.message || "Something went wrong while sending your reply.");
     } finally {
@@ -267,11 +267,44 @@ export default function SupportChat() {
     }
   };
 
+  const handleAttachmentSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateSupportAttachment(file);
+    if (validationError) {
+      setReplyError(validationError);
+      return;
+    }
+
+    try {
+      setUploadingAttachment(true);
+      setReplyError(null);
+      const attachment = await uploadSupportAttachment(file);
+      setPendingAttachments((prev) => [...prev, attachment]);
+    } catch (err: any) {
+      setReplyError(err.message || "Failed to upload attachment.");
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const removePendingAttachment = (index: number) => {
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const canSendReply = Boolean(replyText.trim() || pendingAttachments.length);
+
   const handleStatusChange = async (status: "active" | "resolved") => {
     const token = getToken();
     if (!token || !selectedConversationId) return;
+    if (selectedConversation?.status === status) return;
 
     try {
+      setStatusUpdating(true);
+      setDetailError(null);
+
       const res = await fetch(`/api/admin/support/${selectedConversationId}/status`, {
         method: "PUT",
         headers: {
@@ -301,8 +334,11 @@ export default function SupportChat() {
         ),
       );
       fetchStats();
+      fetchConversations();
     } catch (err: any) {
       setDetailError(err.message || "Something went wrong while updating status.");
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -477,20 +513,43 @@ export default function SupportChat() {
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
           {/* Chat Header */}
           {selectedConversation ? (
-            <div className="px-4 py-3 border-b border-gray-200 bg-white flex items-center justify-between sticky top-0 z-10">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">{selectedConversation.userName}</h3>
-                <p className="text-xs text-gray-500">
-                  {selectedConversation.userEmail || selectedConversation.userPhone || "No contact info"}
-                </p>
+            <div className="px-4 py-3 border-b border-gray-200 bg-white sticky top-0 z-10">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">{selectedConversation.userName}</h3>
+                  <p className="text-xs text-gray-500">
+                    {selectedConversation.userEmail || selectedConversation.userPhone || "No contact info"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant={selectedConversation.status === "active" ? "default" : "outline"}
+                    className={`h-8 px-3 text-xs ${
+                      selectedConversation.status === "active"
+                        ? "bg-amber-600 hover:bg-amber-700"
+                        : "hover:bg-gray-100"
+                    }`}
+                    onClick={() => handleStatusChange("active")}
+                    disabled={statusUpdating}
+                  >
+                    Active
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={selectedConversation.status === "resolved" ? "default" : "outline"}
+                    className={`h-8 px-3 text-xs ${
+                      selectedConversation.status === "resolved"
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "hover:bg-gray-100"
+                    }`}
+                    onClick={() => handleStatusChange("resolved")}
+                    disabled={statusUpdating}
+                  >
+                    Resolved
+                  </Button>
+                </div>
               </div>
-              <Badge className={`text-xs px-3 py-1 rounded-full ${
-                selectedConversation.status === "resolved"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-amber-100 text-amber-700"
-              }`}>
-                {selectedConversation.status === "resolved" ? "✓ Resolved" : "● Active"}
-              </Badge>
             </div>
           ) : (
             <div className="px-4 py-4 border-b border-gray-200 bg-gray-50">
@@ -546,9 +605,12 @@ export default function SupportChat() {
                           ? "bg-blue-600 text-white rounded-br-none"
                           : "bg-gray-200 text-gray-900 rounded-bl-none"
                       }`}>
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">
-                          {msg.message}
-                        </p>
+                        {msg.message ? (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed">
+                            {msg.message}
+                          </p>
+                        ) : null}
+                        <MessageAttachments attachments={msg.attachments} onDarkBubble={isAdmin} />
                         <div className={`text-xs mt-1 flex justify-end ${
                           isAdmin ? "text-blue-100" : "text-gray-600"
                         }`}>
@@ -576,24 +638,62 @@ export default function SupportChat() {
                   <span>{replyError}</span>
                 </div>
               )}
+              {pendingAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {pendingAttachments.map((attachment, index) => (
+                    <div
+                      key={`${attachment.url}-${index}`}
+                      className="relative flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700"
+                    >
+                      <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="max-w-[140px] truncate">{attachment.filename}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingAttachment(index)}
+                        className="rounded-full p-0.5 hover:bg-gray-200"
+                        aria-label="Remove attachment"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex items-end gap-2">
-                <Input
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                  className="hidden"
+                  onChange={handleAttachmentSelect}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAttachment || replyLoading}
+                  className="h-10 w-10 rounded-full flex-shrink-0"
+                  aria-label="Attach file"
+                >
+                  {uploadingAttachment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-4 w-4" />
+                  )}
+                </Button>
+                <Textarea
                   placeholder="Type a message..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  onKeyDown={(e: any) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendReply();
-                    }
-                  }}
-                  className="flex-1 rounded-full border-gray-300"
+                  rows={2}
+                  className="flex-1 min-h-[44px] max-h-32 rounded-2xl border-gray-300 resize-none"
                 />
                 <Button
                   size="icon"
                   className="h-10 w-10 rounded-full bg-blue-600 hover:bg-blue-700 flex-shrink-0"
                   onClick={handleSendReply}
-                  disabled={replyLoading || !replyText.trim()}
+                  disabled={replyLoading || uploadingAttachment || !canSendReply}
                 >
                   {replyLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -605,7 +705,7 @@ export default function SupportChat() {
             </div>
           ) : selectedConversation?.status === "resolved" ? (
             <div className="px-4 py-3 border-t border-green-200 bg-green-50 text-center text-sm text-green-700">
-              ✓ This conversation is resolved
+              ✓ This conversation is resolved. Mark it as Active to send a reply.
             </div>
           ) : null}
         </div>

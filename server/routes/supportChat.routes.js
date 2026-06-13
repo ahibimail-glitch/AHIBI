@@ -12,13 +12,7 @@ router.use(protect);
 router.get('/chat', supportChatController.getOrCreateConversation);
 
 // Send message in conversation
-router.post(
-  '/chat/message',
-  [
-    body('message', 'Message is required').notEmpty().trim()
-  ],
-  supportChatController.sendMessage
-);
+router.post('/chat/message', supportChatController.sendMessage);
 
 // Admin routes
 const adminRouter = express.Router();
@@ -28,17 +22,14 @@ adminRouter.use(authorize('admin'));
 // Get all conversations
 adminRouter.get('/conversations', supportChatController.getAllConversations);
 
+// Get statistics (must be before /:id)
+adminRouter.get('/stats', supportChatController.getStats);
+
 // Get conversation by ID
 adminRouter.get('/:id', supportChatController.getConversationById);
 
 // Send admin reply
-adminRouter.post(
-  '/:id/reply',
-  [
-    body('message', 'Message is required').notEmpty().trim()
-  ],
-  supportChatController.sendAdminReply
-);
+adminRouter.post('/:id/reply', supportChatController.sendAdminReply);
 
 // Update conversation status
 adminRouter.put(
@@ -57,8 +48,5 @@ adminRouter.put(
   ],
   supportChatController.assignConversation
 );
-
-// Get statistics
-adminRouter.get('/stats', supportChatController.getStats);
 
 module.exports = { userRouter: router, adminRouter };

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MessageCircle,
   Send,
@@ -13,19 +13,19 @@ import {
   CheckCheck,
   ShieldCheck,
   RefreshCw,
+  Paperclip,
+  X,
 } from "lucide-react";
 import Navbar from "../../Navbar";
 import Footer from "../../Footer";
 import { getApiUrl } from "@/config";
-
-interface Message {
-  _id?: string;
-  sender: string;
-  senderName: string;
-  senderRole: "user" | "admin";
-  message: string;
-  createdAt: string;
-}
+import MessageAttachments from "@/components/support/MessageAttachments";
+import {
+  type SupportAttachment,
+  type SupportMessage,
+  uploadSupportAttachment,
+  validateSupportAttachment,
+} from "@/lib/supportChat";
 
 interface Conversation {
   _id: string;
@@ -37,7 +37,7 @@ interface Conversation {
   status: "active" | "resolved";
   assignedTo?: string;
   assignedToName?: string;
-  messages: Message[];
+  messages: SupportMessage[];
   lastMessage?: {
     text: string;
     sender: string;
@@ -63,10 +63,13 @@ interface ApiError {
 export default function SupportChatPage() {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messageText, setMessageText] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<SupportAttachment[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
 
@@ -122,8 +125,8 @@ export default function SupportChatPage() {
       return;
     }
 
-    if (!messageText.trim()) {
-      setSendError("Please enter a message.");
+    if (!messageText.trim() && pendingAttachments.length === 0) {
+      setSendError("Please enter a message or attach a file.");
       return;
     }
 
@@ -137,7 +140,10 @@ export default function SupportChatPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: messageText.trim() }),
+        body: JSON.stringify({
+          message: messageText.trim(),
+          attachments: pendingAttachments,
+        }),
       });
 
       const data: ApiSuccess<{ conversation: Conversation }> | ApiError = await res.json();
@@ -148,12 +154,42 @@ export default function SupportChatPage() {
 
       setConversation(data.data.conversation);
       setMessageText("");
+      setPendingAttachments([]);
     } catch (err: any) {
       setSendError(err.message || "Something went wrong while sending your message.");
     } finally {
       setSending(false);
     }
   };
+
+  const handleAttachmentSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateSupportAttachment(file);
+    if (validationError) {
+      setSendError(validationError);
+      return;
+    }
+
+    try {
+      setUploadingAttachment(true);
+      setSendError(null);
+      const attachment = await uploadSupportAttachment(file);
+      setPendingAttachments((prev) => [...prev, attachment]);
+    } catch (err: any) {
+      setSendError(err.message || "Failed to upload attachment.");
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const removePendingAttachment = (index: number) => {
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const canSend = Boolean(messageText.trim() || pendingAttachments.length);
 
   const handleStartNewConversation = async () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -350,7 +386,10 @@ export default function SupportChatPage() {
                           <p className="text-[10px] font-semibold text-red-500 mb-1">{msg.senderName}</p>
                         ) : null}
 
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.message}</p>
+                        {msg.message ? (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.message}</p>
+                        ) : null}
+                        <MessageAttachments attachments={msg.attachments} onDarkBubble={isUser} />
 
                         <div className={`flex items-center justify-end gap-1 mt-1 ${isUser ? "text-red-200" : "text-gray-400"}`}>
                           <span className="text-[10px]">{formatTime(msg.createdAt)}</span>
@@ -377,25 +416,63 @@ export default function SupportChatPage() {
                 <span>{sendError}</span>
               </div>
             )}
+            {pendingAttachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2.5">
+                {pendingAttachments.map((attachment, index) => (
+                  <div
+                    key={`${attachment.url}-${index}`}
+                    className="relative flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700"
+                  >
+                    <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="max-w-[140px] truncate">{attachment.filename}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePendingAttachment(index)}
+                      className="rounded-full p-0.5 hover:bg-gray-200"
+                      aria-label="Remove attachment"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-end gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                className="hidden"
+                onChange={handleAttachmentSelect}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAttachment || sending}
+                className="h-10 w-10 rounded-full flex-shrink-0 border-gray-200"
+                aria-label="Attach file"
+              >
+                {uploadingAttachment ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Paperclip className="h-4 w-4" />
+                )}
+              </Button>
               <div className="flex-1 relative">
-                <Input
+                <Textarea
                   placeholder="Type a message…"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e: any) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  className="w-full rounded-2xl border-gray-200 bg-[#f0f2f5] focus:bg-white focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:border-red-300 pr-4 py-2.5 text-sm transition-colors placeholder:text-gray-400 resize-none"
+                  rows={2}
+                  className="w-full min-h-[44px] max-h-32 rounded-2xl border-gray-200 bg-[#f0f2f5] focus:bg-white focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:border-red-300 py-2.5 text-sm transition-colors placeholder:text-gray-400 resize-none"
                 />
               </div>
               <Button
                 size="icon"
                 onClick={handleSendMessage}
-                disabled={sending || !messageText.trim()}
+                disabled={sending || uploadingAttachment || !canSend}
                 className="h-10 w-10 rounded-full bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 transition-all duration-150 shadow-md hover:shadow-red-200"
               >
                 {sending ? (
@@ -405,9 +482,6 @@ export default function SupportChatPage() {
                 )}
               </Button>
             </div>
-            <p className="text-center text-[10px] text-gray-400 mt-2 pb-1">
-              Press <kbd className="px-1 py-0.5 rounded bg-gray-100 text-gray-500 font-mono text-[9px]">Enter</kbd> to send
-            </p>
           </div>
         ) : (
           <div className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto w-full bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 sm:px-5 pt-4 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] sm:bottom-0 bottom-16"

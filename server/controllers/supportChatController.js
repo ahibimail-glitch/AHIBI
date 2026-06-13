@@ -4,6 +4,49 @@ const Admin = require('../models/Admin');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
 
+const ALLOWED_ATTACHMENT_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+];
+
+function normalizeAttachments(rawAttachments) {
+  if (!Array.isArray(rawAttachments)) return [];
+
+  return rawAttachments
+    .filter(
+      (item) =>
+        item &&
+        typeof item.url === 'string' &&
+        item.url.trim() &&
+        typeof item.filename === 'string' &&
+        item.filename.trim() &&
+        typeof item.contentType === 'string' &&
+        ALLOWED_ATTACHMENT_TYPES.includes(item.contentType)
+    )
+    .map((item) => ({
+      url: item.url.trim(),
+      filename: item.filename.trim(),
+      contentType: item.contentType,
+    }));
+}
+
+function validateMessagePayload(message, attachments) {
+  const trimmedMessage = typeof message === 'string' ? message.trim() : '';
+  const normalizedAttachments = normalizeAttachments(attachments);
+
+  if (!trimmedMessage && normalizedAttachments.length === 0) {
+    return { error: 'Message or attachment is required' };
+  }
+
+  return { message: trimmedMessage, attachments: normalizedAttachments };
+}
+
 /**
  * @desc    Get or create user's support conversation
  * @route   GET /api/support/chat
@@ -82,7 +125,12 @@ exports.sendMessage = async (req, res) => {
       return ApiResponse.error(res, 'Validation error', errors.array());
     }
 
-    const { message } = req.body;
+    const payload = validateMessagePayload(req.body.message, req.body.attachments);
+    if (payload.error) {
+      return ApiResponse.error(res, payload.error);
+    }
+
+    const { message, attachments } = payload;
     const userId = req.user.id;
     
     // Get user details
@@ -92,8 +140,11 @@ exports.sendMessage = async (req, res) => {
       return ApiResponse.notFound(res, 'User not found');
     }
     
-    // Find or create conversation
-    let conversation = await SupportConversation.findOne({ user: userId });
+    // Find active conversation or most recent one
+    let conversation = await SupportConversation.findOne({ user: userId, status: 'active' });
+    if (!conversation) {
+      conversation = await SupportConversation.findOne({ user: userId }).sort({ updatedAt: -1 });
+    }
     
     if (!conversation) {
       conversation = new SupportConversation({
@@ -117,7 +168,8 @@ exports.sendMessage = async (req, res) => {
       sender: userId,
       senderName: user.name || 'User',
       senderRole: 'user',
-      message: message.trim()
+      message,
+      attachments,
     });
     
     // Auto-assign to first available admin if not assigned
@@ -251,7 +303,12 @@ exports.sendAdminReply = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { message } = req.body;
+    const payload = validateMessagePayload(req.body.message, req.body.attachments);
+    if (payload.error) {
+      return ApiResponse.error(res, payload.error);
+    }
+
+    const { message, attachments } = payload;
     const adminId = req.user.id;
     
     // Get admin details from Admin model
@@ -273,7 +330,8 @@ exports.sendAdminReply = async (req, res) => {
       sender: adminId,
       senderName: admin.username || 'Admin',
       senderRole: 'admin',
-      message: message.trim()
+      message,
+      attachments,
     });
     
     // Assign to this admin if not assigned

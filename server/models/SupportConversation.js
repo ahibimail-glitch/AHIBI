@@ -17,7 +17,7 @@ const MessageSchema = new mongoose.Schema({
   },
   message: {
     type: String,
-    required: true
+    default: ''
   },
   attachments: [{
     url: String,
@@ -104,8 +104,13 @@ SupportConversationSchema.pre('save', function(next) {
   
   if (this.messages && this.messages.length > 0) {
     const lastMsg = this.messages[this.messages.length - 1];
+    const previewText = lastMsg.message?.trim()
+      ? lastMsg.message.substring(0, 100)
+      : lastMsg.attachments?.length
+        ? '📎 Attachment'
+        : '';
     this.lastMessage = {
-      text: lastMsg.message.substring(0, 100),
+      text: previewText,
       sender: lastMsg.senderName,
       createdAt: lastMsg.createdAt
     };
