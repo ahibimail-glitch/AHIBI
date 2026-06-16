@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { PlusCircle, Trash2, Plus } from "lucide-react";
 import PriceBreakdown from "@/components/PriceBreakdown";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 
 interface TicketType {
   name: string;
@@ -555,23 +556,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     )}
                   </div>
                   <div>
-                    <input
+                    <FileUploadButton
                       id="eventPoster"
-                      type="file"
                       ref={posterInputRef}
                       onChange={handlePosterChange}
                       accept="image/*"
-                      className="hidden"
                       disabled={isUploadingPoster}
+                      uploading={isUploadingPoster}
+                      label="Upload Poster"
+                      uploadingLabel="Uploading..."
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => posterInputRef.current?.click()}
-                      disabled={isUploadingPoster}
-                    >
-                      {isUploadingPoster ? 'Uploading...' : 'Upload Poster'}
-                    </Button>
                     <p className="text-sm text-gray-500 mt-2">
                       Recommended: 1000×1500 (2:3)
                     </p>
@@ -599,23 +593,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     )}
                   </div>
                   <div>
-                    <input
+                    <FileUploadButton
                       id="eventCover"
-                      type="file"
                       ref={coverInputRef}
                       onChange={handleCoverChange}
                       accept="image/*"
-                      className="hidden"
                       disabled={isUploadingCover}
+                      uploading={isUploadingCover}
+                      label="Upload Cover"
+                      uploadingLabel="Uploading..."
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => coverInputRef.current?.click()}
-                      disabled={isUploadingCover}
-                    >
-                      {isUploadingCover ? 'Uploading...' : 'Upload Cover'}
-                    </Button>
                     <p className="text-sm text-gray-500 mt-2">
                       Recommended: 1920×1080 (16:9)
                     </p>
@@ -636,22 +623,20 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="galleryImages">Upload Images</Label>
-                  <Input
-                    id="galleryImages"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleGalleryImageChange}
-                    ref={galleryInputRef}
-                    disabled={isUploadingGallery}
-                  />
-                  {isUploadingGallery && (
-                    <div className="flex items-center space-x-2 mt-2">
-                      <span className="mr-2">⏳</span>
-                      <span className="text-sm text-gray-600">Uploading gallery images...</span>
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-500 mt-1">
+                  <div className="mt-2">
+                    <FileUploadButton
+                      id="galleryImages"
+                      ref={galleryInputRef}
+                      accept="image/*"
+                      multiple
+                      onChange={handleGalleryImageChange}
+                      disabled={isUploadingGallery}
+                      uploading={isUploadingGallery}
+                      label="Choose Files"
+                      uploadingLabel="Uploading..."
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
                     You can upload multiple images. Each image can have an optional caption.
                   </p>
                 </div>
@@ -877,8 +862,10 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
             {/* Ticket Types Section - Only for paid events */}
             {!eventData.isFreeEvent && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-lg font-semibold">Ticket Types *</Label>
+                <div className="sticky top-0 z-10 flex items-center justify-between bg-white/95 backdrop-blur-sm py-3 px-2 -mx-2 border-b border-gray-200 shadow-sm">
+                  <Label className="text-lg font-semibold">
+                    Ticket Types * ({ticketTypes.length})
+                  </Label>
                   <Button type="button" variant="outline" onClick={addTicketType}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Ticket Type
@@ -1009,6 +996,13 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                     </CardContent>
                   </Card>
                 ))}
+
+                <div className="flex justify-center pt-2 pb-1">
+                  <Button type="button" variant="outline" onClick={addTicketType}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Another Ticket Type
+                  </Button>
+                </div>
               </div>
             )}
 

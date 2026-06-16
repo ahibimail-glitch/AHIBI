@@ -26,6 +26,7 @@ import { PlusCircle, Trash2, Plus, Calendar, X } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 
 interface TicketType {
   name: string;
@@ -734,35 +735,147 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="posterImage">Poster Image *</Label>
-                <Input
-                  ref={posterInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePosterChange}
-                  disabled={isUploadingPoster}
-                />
-                {isUploadingPoster && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
-                {posterPreview && (
-                  <img src={posterPreview} alt="Poster preview" className="mt-2 max-w-xs rounded" />
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="eventPoster">Event Poster (2:3) *</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-32 h-48 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                      {posterPreview ? (
+                        <img
+                          src={posterPreview}
+                          alt="Event poster preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          <span>No image</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <FileUploadButton
+                        id="eventPoster"
+                        ref={posterInputRef}
+                        onChange={handlePosterChange}
+                        accept="image/*"
+                        disabled={isUploadingPoster}
+                        uploading={isUploadingPoster}
+                        label="Upload Poster"
+                        uploadingLabel="Uploading..."
+                      />
+                      <p className="text-sm text-gray-500 mt-2">
+                        Recommended: 1000×1500 (2:3)
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        JPG, PNG or WebP. Max 10MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="eventCover">Event Cover (16:9)</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-48 h-28 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                      {coverPreview ? (
+                        <img
+                          src={coverPreview}
+                          alt="Event cover preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500">
+                          <span>No image</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <FileUploadButton
+                        id="eventCover"
+                        ref={coverInputRef}
+                        onChange={handleCoverChange}
+                        accept="image/*"
+                        disabled={isUploadingCover}
+                        uploading={isUploadingCover}
+                        label="Upload Cover"
+                        uploadingLabel="Uploading..."
+                      />
+                      <p className="text-sm text-gray-500 mt-2">
+                        Recommended: 1920×1080 (16:9)
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        JPG, PNG or WebP. Max 10MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="coverImage">Cover Image (Optional)</Label>
-                <Input
-                  ref={coverInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverChange}
-                  disabled={isUploadingCover}
-                />
-                {isUploadingCover && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
-                {coverPreview && (
-                  <img src={coverPreview} alt="Cover preview" className="mt-2 max-w-xs rounded" />
-                )}
-              </div>
+              {/* Event Maps/Gallery */}
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-base">Event Maps & Gallery (optional)</CardTitle>
+                  <CardDescription>Upload maps and additional images for your event</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="galleryImages">Upload Images</Label>
+                    <div className="mt-2">
+                      <FileUploadButton
+                        id="galleryImages"
+                        ref={galleryInputRef}
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryImageChange}
+                        disabled={isUploadingGallery}
+                        uploading={isUploadingGallery}
+                        label="Choose Files"
+                        uploadingLabel="Uploading..."
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                      You can upload multiple images. Each image can have an optional caption.
+                    </p>
+                  </div>
+
+                  {galleryImages.length > 0 && (
+                    <div className="space-y-4">
+                      <Label>Gallery Images ({galleryImages.length})</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {galleryImages.map((image, index) => (
+                          <div key={index} className="border rounded-lg p-4 space-y-3">
+                            <div className="relative">
+                              <img
+                                src={image.url}
+                                alt={`Gallery image ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-2 right-2 h-6 w-6 p-0"
+                                onClick={() => removeGalleryImage(index)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div>
+                              <Label className="text-sm">Caption (optional)</Label>
+                              <Input
+                                value={image.caption}
+                                onChange={(e) => updateGalleryCaption(index, e.target.value)}
+                                placeholder="Describe this image"
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -777,8 +890,10 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
 
               {!eventData.isFreeEvent && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Ticket Types</Label>
+                  <div className="sticky top-0 z-10 flex items-center justify-between bg-white/95 backdrop-blur-sm py-3 px-2 -mx-2 border-b border-gray-200 shadow-sm">
+                    <Label className="text-lg font-semibold">
+                      Ticket Types ({ticketTypes.length})
+                    </Label>
                     <Button type="button" onClick={addTicketType} variant="outline" size="sm">
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Ticket Type
@@ -896,6 +1011,13 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                       </CardContent>
                     </Card>
                   ))}
+
+                  <div className="flex justify-center pt-2 pb-1">
+                    <Button type="button" onClick={addTicketType} variant="outline">
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Add Another Ticket Type
+                    </Button>
+                  </div>
                 </div>
               )}
 

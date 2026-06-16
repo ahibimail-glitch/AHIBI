@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 import {
   Table,
   TableBody,
@@ -794,22 +795,20 @@ export default function ApprovedEvents() {
                   <h4 className="font-medium">Event Maps & Gallery (optional)</h4>
                   <div>
                     <Label htmlFor="galleryImages">Upload Images</Label>
-                    <Input
-                      id="galleryImages"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleGalleryImageChange}
-                      ref={galleryInputRef}
-                      disabled={isUploadingGallery}
-                    />
-                    {isUploadingGallery && (
-                      <div className="flex items-center space-x-2 mt-2">
-                        <span className="mr-2">⏳</span>
-                        <span className="text-sm text-gray-600">Uploading gallery images...</span>
-                      </div>
-                    )}
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <div className="mt-2">
+                      <FileUploadButton
+                        id="galleryImages"
+                        ref={galleryInputRef}
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryImageChange}
+                        disabled={isUploadingGallery}
+                        uploading={isUploadingGallery}
+                        label="Choose Files"
+                        uploadingLabel="Uploading..."
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
                       You can upload multiple images. Each image can have an optional caption.
                     </p>
                   </div>

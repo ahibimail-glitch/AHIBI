@@ -301,8 +301,16 @@ exports.verifyOrganizerOtp = async (req, res) => {
       }
 
       try {
+        const { password, mode: _mode, confirmPassword: _confirmPassword, agreeToTerms: _agreeToTerms, ...organizerData } = stored.data || {};
+
         // Create organizer account from stored data
-        const organizer = await Organizer.create(stored.data);
+        const organizer = await Organizer.create(organizerData);
+
+        if (password && password.length >= 6) {
+          const salt = await bcrypt.genSalt(10);
+          organizer.passwordHash = await bcrypt.hash(password, salt);
+          await organizer.save({ validateBeforeSave: false });
+        }
 
         // Notify admin about new organizer registration
         adminNotificationController.notifyOrganizerRegistration(organizer);

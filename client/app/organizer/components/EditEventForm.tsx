@@ -24,6 +24,7 @@ import {
 import { PlusCircle, Trash2, Plus, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import PriceBreakdown from "@/components/PriceBreakdown";
+import { FileUploadButton } from "@/components/ui/file-upload-button";
 
 interface TicketType {
   name: string;
@@ -771,20 +772,18 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="banner">Banner Image</Label>
-              <Input
-                id="banner"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                ref={fileInputRef}
-                disabled={isUploading}
-              />
-              {isUploading && (
-                <div className="flex items-center space-x-2 mt-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-gray-600">Uploading...</span>
-                </div>
-              )}
+              <div className="mt-2">
+                <FileUploadButton
+                  id="banner"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={isUploading}
+                  uploading={isUploading}
+                  label="Upload Banner"
+                  uploadingLabel="Uploading..."
+                />
+              </div>
             </div>
             {imagePreview && (
               <div className="mt-4">
@@ -806,20 +805,18 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="coverImage">Cover Image</Label>
-              <Input
-                id="coverImage"
-                type="file"
-                accept="image/*"
-                onChange={handleCoverImageChange}
-                ref={coverInputRef}
-                disabled={isUploadingCover}
-              />
-              {isUploadingCover && (
-                <div className="flex items-center space-x-2 mt-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-gray-600">Uploading...</span>
-                </div>
-              )}
+              <div className="mt-2">
+                <FileUploadButton
+                  id="coverImage"
+                  ref={coverInputRef}
+                  accept="image/*"
+                  onChange={handleCoverImageChange}
+                  disabled={isUploadingCover}
+                  uploading={isUploadingCover}
+                  label="Upload Cover"
+                  uploadingLabel="Uploading..."
+                />
+              </div>
             </div>
             {coverPreview && (
               <div className="mt-4">
@@ -842,22 +839,20 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="galleryImages">Upload Images</Label>
-              <Input
-                id="galleryImages"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleGalleryImageChange}
-                ref={galleryInputRef}
-                disabled={isUploadingGallery}
-              />
-              {isUploadingGallery && (
-                <div className="flex items-center space-x-2 mt-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-gray-600">Uploading gallery images...</span>
-                </div>
-              )}
-              <p className="text-sm text-gray-500 mt-1">
+              <div className="mt-2">
+                <FileUploadButton
+                  id="galleryImages"
+                  ref={galleryInputRef}
+                  accept="image/*"
+                  multiple
+                  onChange={handleGalleryImageChange}
+                  disabled={isUploadingGallery}
+                  uploading={isUploadingGallery}
+                  label="Choose Files"
+                  uploadingLabel="Uploading..."
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
                 You can upload multiple images. Each image can have an optional caption.
               </p>
             </div>
@@ -956,6 +951,16 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
               <CardDescription>Define different ticket categories and pricing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="sticky top-0 z-10 flex items-center justify-between bg-white/95 backdrop-blur-sm py-3 px-2 -mx-2 border-b border-gray-200 shadow-sm">
+                <Label className="text-lg font-semibold">
+                  Ticket Types ({ticketTypes.length})
+                </Label>
+                <Button type="button" variant="outline" onClick={addTicketType}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Ticket Type
+                </Button>
+              </div>
+
               {ticketTypes.map((ticket, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-4">
                   <div className="flex justify-between items-center">
@@ -1070,10 +1075,12 @@ export default function EditEventForm({ eventId, onSuccess, onCancel }: EditEven
                   </div>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={addTicketType} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Another Ticket Type
-              </Button>
+              <div className="flex justify-center pt-2 pb-1">
+                <Button type="button" variant="outline" onClick={addTicketType}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Another Ticket Type
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

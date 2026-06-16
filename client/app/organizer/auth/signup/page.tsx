@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Ticket, Calendar, User, Mail, Phone, Building, Shield } from "lucide-react"
+import { Ticket, Calendar, User, Mail, Phone, Building, Shield, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 
 export default function OrganizerSignupPage() {
@@ -18,6 +18,8 @@ export default function OrganizerSignupPage() {
     name: "",
     email: "",
     phone: "",
+    password: "",
+    confirmPassword: "",
     companyName: "",
     description: "",
     address: {
@@ -33,21 +35,48 @@ export default function OrganizerSignupPage() {
   })
   const [otp, setOtp] = useState("")
   const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  const validatePasswordFields = () => {
+    if (!signupData.password) {
+      setError("Password is required")
+      return false
+    }
+    if (signupData.password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return false
+    }
+    if (!signupData.confirmPassword) {
+      setError("Please confirm your password")
+      return false
+    }
+    if (signupData.password !== signupData.confirmPassword) {
+      setError("Passwords do not match")
+      return false
+    }
+    return true
+  }
 
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    if (!validatePasswordFields()) {
+      return
+    }
     
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const { confirmPassword, agreeToTerms, ...payload } = signupData;
       const response = await fetch(`${apiUrl}/api/organizer/auth/send-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...signupData,
-          contactInfo: { email: signupData.email }, // ensure contactInfo email is set
+          ...payload,
+          contactInfo: { email: signupData.email },
           mode: 'signup'
         }),
       });
@@ -201,6 +230,56 @@ export default function OrganizerSignupPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-200">
+                  Password *
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 6 characters"
+                    value={signupData.password}
+                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                    className="pr-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-200"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-gray-200">
+                  Confirm Password *
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    value={signupData.confirmPassword}
+                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                    className="pr-10 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-200"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="organization" className="text-gray-200">
                   Organization/Company *
                 </Label>
@@ -311,7 +390,11 @@ export default function OrganizerSignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:opacity-90 transition-opacity"
-                disabled={!signupData.agreeToTerms}
+                disabled={
+                  !signupData.agreeToTerms ||
+                  !signupData.password ||
+                  !signupData.confirmPassword
+                }
               >
                 Continue to Verification
               </Button>
@@ -428,7 +511,7 @@ export default function OrganizerSignupPage() {
 
           <div className="flex items-center justify-center text-sm text-gray-400 pt-4 border-t border-gray-700">
             <Shield className="h-4 w-4 mr-1" />
-            Secured with OTP verification
+            Secured with password & OTP verification
           </div>
         </CardContent>
       </Card>

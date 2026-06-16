@@ -21,7 +21,8 @@ router.post('/auth/send-otp', [
   check('address.city', 'City is required').if(check('mode').equals('signup')).notEmpty(),
   check('address.state', 'State is required').if(check('mode').equals('signup')).notEmpty(),
   check('address.pincode', 'Valid pincode is required').if(check('mode').equals('signup')).matches(/^\d{6}$/),
-  check('contactInfo.email', 'Contact email is required').if(check('mode').equals('signup')).isEmail()
+  check('contactInfo.email', 'Contact email is required').if(check('mode').equals('signup')).isEmail(),
+  check('password', 'Password must be at least 6 characters').if(check('mode').equals('signup')).isLength({ min: 6 })
 ], organizerAuthController.sendOrganizerOtp);
 
 router.post('/auth/verify-otp', [
