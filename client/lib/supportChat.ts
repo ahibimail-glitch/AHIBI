@@ -8,7 +8,7 @@ export interface SupportMessage {
   _id?: string;
   sender: string;
   senderName: string;
-  senderRole: "user" | "admin";
+  senderRole: "user" | "artist" | "admin";
   message: string;
   attachments?: SupportAttachment[];
   createdAt: string;
