@@ -17,7 +17,6 @@ import {
   X,
 } from "lucide-react";
 import Navbar from "../../Navbar";
-import Footer from "../../Footer";
 import { getApiUrl } from "@/config";
 import MessageAttachments from "@/components/support/MessageAttachments";
 import {
@@ -191,39 +190,6 @@ export default function SupportChatPage() {
 
   const canSend = Boolean(messageText.trim() || pendingAttachments.length);
 
-  const handleStartNewConversation = async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (!token) {
-      router.replace("/auth?redirect=/support/chat");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const res = await fetch(getApiUrl("support/chat?new=true"), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-
-      const data: ApiSuccess<{ conversation: Conversation }> | ApiError = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to start new conversation.");
-      }
-
-      setConversation(data.data.conversation);
-      setMessageText("");
-      setSendError(null);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong while starting a new conversation.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -241,7 +207,7 @@ export default function SupportChatPage() {
   };
 
   const isResolved = conversation?.status === "resolved";
-  const footerHeight = isResolved ? "pb-44 sm:pb-36" : "pb-24 sm:pb-20";
+  const footerHeight = isResolved ? "pb-36 sm:pb-32" : "pb-24 sm:pb-20";
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] flex flex-col">
@@ -406,115 +372,91 @@ export default function SupportChatPage() {
         </div>
 
         {/* ── INPUT FOOTER ── */}
-        {!isResolved ? (
-          <div className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto w-full bg-white/95 backdrop-blur-md border-t border-gray-100 px-3 sm:px-4 pt-3 pb-safe-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.06)] sm:bottom-0 bottom-16"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
-          >
-            {sendError && (
-              <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-600 mb-2.5">
-                <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                <span>{sendError}</span>
-              </div>
-            )}
-            {pendingAttachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2.5">
-                {pendingAttachments.map((attachment, index) => (
-                  <div
-                    key={`${attachment.url}-${index}`}
-                    className="relative flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700"
-                  >
-                    <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span className="max-w-[140px] truncate">{attachment.filename}</span>
-                    <button
-                      type="button"
-                      onClick={() => removePendingAttachment(index)}
-                      className="rounded-full p-0.5 hover:bg-gray-200"
-                      aria-label="Remove attachment"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-end gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
-                className="hidden"
-                onChange={handleAttachmentSelect}
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingAttachment || sending}
-                className="h-10 w-10 rounded-full flex-shrink-0 border-gray-200"
-                aria-label="Attach file"
-              >
-                {uploadingAttachment ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Paperclip className="h-4 w-4" />
-                )}
-              </Button>
-              <div className="flex-1 relative">
-                <Textarea
-                  placeholder="Type a message…"
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  rows={2}
-                  className="w-full min-h-[44px] max-h-32 rounded-2xl border-gray-200 bg-[#f0f2f5] focus:bg-white focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:border-red-300 py-2.5 text-sm transition-colors placeholder:text-gray-400 resize-none"
-                />
-              </div>
-              <Button
-                size="icon"
-                onClick={handleSendMessage}
-                disabled={sending || uploadingAttachment || !canSend}
-                className="h-10 w-10 rounded-full bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 transition-all duration-150 shadow-md hover:shadow-red-200"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4 ml-0.5" />
-                )}
-              </Button>
+        <div
+          className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto w-full bg-white/95 backdrop-blur-md border-t border-gray-100 px-3 sm:px-4 pt-3 pb-safe-bottom shadow-[0_-4px_24px_rgba(0,0,0,0.06)] sm:bottom-0 bottom-16"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+        >
+          {isResolved && (
+            <div className="flex items-start gap-2.5 bg-emerald-50 rounded-xl px-3 py-2.5 mb-2.5 border border-emerald-100">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-emerald-700 leading-relaxed">
+                Your issue has been resolved. 
+              </p>
             </div>
-          </div>
-        ) : (
-          <div className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto w-full bg-white/95 backdrop-blur-md border-t border-gray-100 px-4 sm:px-5 pt-4 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] sm:bottom-0 bottom-16"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
-          >
-            <div className="flex items-start gap-3 bg-emerald-50 rounded-2xl px-4 py-3 mb-3 border border-emerald-100">
-              <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-emerald-800 leading-tight">Conversation resolved</p>
-                <p className="text-xs text-emerald-600 mt-0.5 leading-relaxed">
-                  Need more help? Start a fresh conversation with our team.
-                </p>
-              </div>
+          )}
+          {sendError && (
+            <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-600 mb-2.5">
+              <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>{sendError}</span>
+            </div>
+          )}
+          {pendingAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2.5">
+              {pendingAttachments.map((attachment, index) => (
+                <div
+                  key={`${attachment.url}-${index}`}
+                  className="relative flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-700"
+                >
+                  <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="max-w-[140px] truncate">{attachment.filename}</span>
+                  <button
+                    type="button"
+                    onClick={() => removePendingAttachment(index)}
+                    className="rounded-full p-0.5 hover:bg-gray-200"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+              className="hidden"
+              onChange={handleAttachmentSelect}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAttachment || sending}
+              className="h-10 w-10 rounded-full flex-shrink-0 border-gray-200"
+              aria-label="Attach file"
+            >
+              {uploadingAttachment ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
+            </Button>
+            <div className="flex-1 relative">
+              <Textarea
+                placeholder={isResolved ? "Send a message to reopen this conversation…" : "Type a message…"}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={2}
+                className="w-full min-h-[44px] max-h-32 rounded-2xl border-gray-200 bg-[#f0f2f5] focus:bg-white focus-visible:ring-1 focus-visible:ring-red-400 focus-visible:border-red-300 py-2.5 text-sm transition-colors placeholder:text-gray-400 resize-none"
+              />
             </div>
             <Button
-              onClick={handleStartNewConversation}
-              disabled={loading}
-              className="w-full rounded-2xl bg-gray-900 hover:bg-gray-800 active:scale-[0.98] text-white font-semibold py-3 text-sm transition-all duration-150 shadow-md"
+              size="icon"
+              onClick={handleSendMessage}
+              disabled={sending || uploadingAttachment || !canSend}
+              className="h-10 w-10 rounded-full bg-red-600 hover:bg-red-700 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0 transition-all duration-150 shadow-md hover:shadow-red-200"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Starting…
-                </span>
+              {sending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <span className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4" /> Start New Conversation
-                </span>
+                <Send className="h-4 w-4 ml-0.5" />
               )}
             </Button>
           </div>
-        )}
+        </div>
       </main>
     </div>
   );

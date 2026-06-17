@@ -85,7 +85,15 @@ exports.getOrCreateConversation = async (req, res) => {
       .populate('assignedTo', 'name email')
       .populate('messages.sender', 'name role profilePic');
     
-    // If no active conversation exists, create one
+    // If no active conversation, return the most recent one (including resolved) so history is preserved
+    if (!conversation) {
+      conversation = await SupportConversation.findOne({ user: userId })
+        .sort({ updatedAt: -1 })
+        .populate('assignedTo', 'name email')
+        .populate('messages.sender', 'name role profilePic');
+    }
+    
+    // Only create a new conversation if the user has never had one
     if (!conversation) {
       const user = await User.findById(userId).select('name email phone');
       
@@ -161,6 +169,8 @@ exports.sendMessage = async (req, res) => {
     // If conversation was resolved, reactivate it
     if (conversation.status === 'resolved') {
       conversation.status = 'active';
+      conversation.resolvedAt = undefined;
+      conversation.resolvedBy = undefined;
     }
     
     // Add message
@@ -343,6 +353,8 @@ exports.sendAdminReply = async (req, res) => {
     // Mark as active if it was resolved
     if (conversation.status === 'resolved') {
       conversation.status = 'active';
+      conversation.resolvedAt = undefined;
+      conversation.resolvedBy = undefined;
     }
     
     await conversation.save();
@@ -383,6 +395,9 @@ exports.updateConversationStatus = async (req, res) => {
     if (status === 'resolved') {
       conversation.resolvedAt = Date.now();
       conversation.resolvedBy = req.user.id;
+    } else if (status === 'active') {
+      conversation.resolvedAt = undefined;
+      conversation.resolvedBy = undefined;
     }
     
     await conversation.save();
