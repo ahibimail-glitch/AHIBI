@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Loader2, AlertCircle, Music2, Headphones, Radio } from "lucide-react";
+import { FileText, Loader2, AlertCircle, Music2, Headphones, Radio, Trash2 } from "lucide-react";
 import AccoladesManager from "@/components/artist/AccoladesManager";
 import { TechRider } from "../types";
 import { uploadToVercelBlob } from "@/lib/vercelBlob";
@@ -64,6 +64,7 @@ export default function TechRiderPage() {
   const [techRiderSaving, setTechRiderSaving] = useState(false);
   const [streamingSaving, setStreamingSaving] = useState(false);
   const [uploadingFile, setUploadingFile] = useState<UploadTarget | null>(null);
+  const [deletingFile, setDeletingFile] = useState<UploadTarget | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const techRiderInputRef = useRef<HTMLInputElement>(null);
   const epkInputRef = useRef<HTMLInputElement>(null);
@@ -231,6 +232,50 @@ export default function TechRiderPage() {
     }
   };
 
+  const handleFileDelete = async (target: UploadTarget) => {
+    const fileLabel = target === "techRider" ? "Tech Rider" : "EPK";
+    if (!window.confirm(`Remove the uploaded ${fileLabel} file?`)) return;
+
+    try {
+      setDeletingFile(target);
+      setUploadError(null);
+
+      const token = localStorage.getItem("artist_token");
+      if (!token) {
+        setUploadError("Not authenticated");
+        return;
+      }
+
+      const updatedTechRider: TechRider = {
+        ...techRiderForm,
+        ...(target === "techRider" ? { file: null } : { epkFile: null }),
+      };
+
+      const response = await fetch("/api/artist/profile", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ techRider: updatedTechRider }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch((): { message?: string } => ({}));
+        throw new Error(errorData.message || "Failed to delete file");
+      }
+
+      setTechRiderForm(updatedTechRider);
+      await fetchArtistProfile();
+      setSuccessMessage(`${fileLabel} file removed successfully!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (e: unknown) {
+      setUploadError(e instanceof Error ? e.message : "Error deleting file. Please try again.");
+    } finally {
+      setDeletingFile(null);
+    }
+  };
+
   const renderFileSection = (
     target: UploadTarget,
     title: string,
@@ -240,14 +285,17 @@ export default function TechRiderPage() {
     downloadName: string
   ) => {
     const isUploading = uploadingFile === target;
+    const isDeleting = deletingFile === target;
 
     return (
       <div className="border rounded-lg p-4 space-y-3 relative">
-        {isUploading && (
+        {(isUploading || isDeleting) && (
           <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center rounded-lg z-10">
             <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
             <p className="mt-2 text-sm font-medium text-muted-foreground">
-              Uploading {target === "techRider" ? "Tech Rider" : "EPK"}...
+              {isDeleting
+                ? `Removing ${target === "techRider" ? "Tech Rider" : "EPK"}...`
+                : `Uploading ${target === "techRider" ? "Tech Rider" : "EPK"}...`}
             </p>
           </div>
         )}
@@ -270,12 +318,12 @@ export default function TechRiderPage() {
                 const selected = e.target.files?.[0];
                 if (selected) handleFileUpload(selected, target);
               }}
-              disabled={isUploading || uploadingFile !== null}
+              disabled={isUploading || isDeleting || uploadingFile !== null || deletingFile !== null}
             />
             <Button
               type="button"
               variant="outline"
-              disabled={isUploading || uploadingFile !== null}
+              disabled={isUploading || isDeleting || uploadingFile !== null || deletingFile !== null}
               className="w-full sm:w-auto"
               asChild
             >
@@ -311,6 +359,21 @@ export default function TechRiderPage() {
               <FileText className="h-3 w-3" />
               Download PDF
             </a>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleFileDelete(target)}
+              disabled={isDeleting || isUploading || deletingFile !== null || uploadingFile !== null}
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            >
+              {isDeleting ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Trash2 className="h-3 w-3 mr-1" />
+              )}
+              Delete
+            </Button>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No file uploaded yet.</p>

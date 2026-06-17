@@ -221,7 +221,7 @@ export default function AddEditProduct() {
         newVariantStocks.push({
           size,
           color,
-          stock: existing?.stock || "0"
+          stock: existing?.stock ?? ""
         });
       });
     });
@@ -547,7 +547,7 @@ export default function AddEditProduct() {
                       type="number"
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
-                      placeholder="0.00"
+                      placeholder="e.g. 499"
                       step="0.01"
                       min="0"
                       className="w-full rounded-xl border border-border bg-card pl-8 pr-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
@@ -632,7 +632,7 @@ export default function AddEditProduct() {
                                     type="number"
                                     value={vs.stock}
                                     onChange={(e) => updateVariantStock(vs.size, vs.color, e.target.value)}
-                                    placeholder="0"
+                                    placeholder="e.g. 10"
                                     min="0"
                                     className="w-24 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                                   />

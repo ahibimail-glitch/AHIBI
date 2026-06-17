@@ -72,6 +72,15 @@ exports.setArtistAvailability = async (req, res) => {
     });
 
     if (availability) {
+      const hasBookings = availability.timeSlots.some(slot => slot.isBooked);
+
+      if ((!timeSlots || timeSlots.length === 0) && !hasBookings) {
+        await ArtistAvailability.findByIdAndDelete(availability._id);
+        return ApiResponse.success(res, 'Availability cleared successfully', {
+          availability: null
+        });
+      }
+
       // Update existing availability
       availability.timeSlots = timeSlots;
       availability.dayStatus = dayStatus || availability.dayStatus;
@@ -146,6 +155,14 @@ exports.updateArtistAvailability = async (req, res) => {
     if (minimumBookingDuration) availability.minimumBookingDuration = minimumBookingDuration;
     if (maximumBookingDuration) availability.maximumBookingDuration = maximumBookingDuration;
     if (advanceBookingDays) availability.advanceBookingDays = advanceBookingDays;
+
+    const hasBookings = availability.timeSlots.some(slot => slot.isBooked);
+    if (availability.timeSlots.length === 0 && !hasBookings) {
+      await ArtistAvailability.findByIdAndDelete(availability._id);
+      return ApiResponse.success(res, 'Availability cleared successfully', {
+        availability: null
+      });
+    }
 
     // Update day status based on time slots
     availability.updateDayStatus();

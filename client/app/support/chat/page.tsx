@@ -305,7 +305,7 @@ export default function SupportChatPage() {
           ) : (
             <>
               {conversation.messages.map((msg, idx) => {
-                const isUser = msg.senderRole === "user";
+                const isUser = msg.senderRole === "user" || msg.senderRole === "artist";
                 const showDate =
                   idx === 0 ||
                   formatDate(conversation.messages[idx - 1].createdAt) !== formatDate(msg.createdAt);

@@ -47,6 +47,30 @@ function validateMessagePayload(message, attachments) {
   return { message: trimmedMessage, attachments: normalizedAttachments };
 }
 
+function getSupportParticipant(reqUser) {
+  const participantId = reqUser._id || reqUser.id;
+
+  if (reqUser.role === 'artist') {
+    return {
+      id: participantId,
+      name: reqUser.name || reqUser.stageName || 'Artist',
+      email: reqUser.email,
+      phone: reqUser.phone,
+      senderRole: 'artist',
+      category: 'account',
+    };
+  }
+
+  return {
+    id: participantId,
+    name: reqUser.name || 'User',
+    email: reqUser.email,
+    phone: reqUser.phone,
+    senderRole: 'user',
+    category: 'general',
+  };
+}
+
 /**
  * @desc    Get or create user's support conversation
  * @route   GET /api/support/chat
@@ -54,23 +78,18 @@ function validateMessagePayload(message, attachments) {
  */
 exports.getOrCreateConversation = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const participant = getSupportParticipant(req.user);
+    const userId = participant.id;
     const { new: isNewConversation } = req.query;
     
     // If requesting a new conversation, create one regardless of existing conversations
     if (isNewConversation === 'true') {
-      const user = await User.findById(userId).select('name email phone');
-      
-      if (!user) {
-        return ApiResponse.notFound(res, 'User not found');
-      }
-      
       const conversation = new SupportConversation({
         user: userId,
-        userName: user.name || 'User',
-        userEmail: user.email,
-        userPhone: user.phone,
-        category: 'general',
+        userName: participant.name,
+        userEmail: participant.email,
+        userPhone: participant.phone,
+        category: participant.category,
         status: 'active',
         messages: []
       });
@@ -95,18 +114,12 @@ exports.getOrCreateConversation = async (req, res) => {
     
     // Only create a new conversation if the user has never had one
     if (!conversation) {
-      const user = await User.findById(userId).select('name email phone');
-      
-      if (!user) {
-        return ApiResponse.notFound(res, 'User not found');
-      }
-      
       conversation = new SupportConversation({
         user: userId,
-        userName: user.name || 'User',
-        userEmail: user.email,
-        userPhone: user.phone,
-        category: 'general',
+        userName: participant.name,
+        userEmail: participant.email,
+        userPhone: participant.phone,
+        category: participant.category,
         status: 'active',
         messages: []
       });
@@ -139,14 +152,8 @@ exports.sendMessage = async (req, res) => {
     }
 
     const { message, attachments } = payload;
-    const userId = req.user.id;
-    
-    // Get user details
-    const user = await User.findById(userId).select('name email phone role');
-    
-    if (!user) {
-      return ApiResponse.notFound(res, 'User not found');
-    }
+    const participant = getSupportParticipant(req.user);
+    const userId = participant.id;
     
     // Find active conversation or most recent one
     let conversation = await SupportConversation.findOne({ user: userId, status: 'active' });
@@ -157,10 +164,10 @@ exports.sendMessage = async (req, res) => {
     if (!conversation) {
       conversation = new SupportConversation({
         user: userId,
-        userName: user.name || 'User',
-        userEmail: user.email,
-        userPhone: user.phone,
-        category: 'general',
+        userName: participant.name,
+        userEmail: participant.email,
+        userPhone: participant.phone,
+        category: participant.category,
         status: 'active',
         messages: []
       });
@@ -176,8 +183,8 @@ exports.sendMessage = async (req, res) => {
     // Add message
     conversation.messages.push({
       sender: userId,
-      senderName: user.name || 'User',
-      senderRole: 'user',
+      senderName: participant.name,
+      senderRole: participant.senderRole,
       message,
       attachments,
     });

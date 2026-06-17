@@ -200,10 +200,15 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
       });
       if (response.ok) {
         const result = await response.json();
-        setAvailability((prev) => ({
-          ...prev,
-          [dateKey]: result.data.availability,
-        }));
+        setAvailability((prev) => {
+          const next = { ...prev };
+          if (result.data?.availability) {
+            next[dateKey] = result.data.availability;
+          } else {
+            delete next[dateKey];
+          }
+          return next;
+        });
         if (onUpdate) onUpdate();
       }
     } catch (e) {

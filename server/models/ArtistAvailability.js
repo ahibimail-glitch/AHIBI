@@ -136,10 +136,15 @@ ArtistAvailabilitySchema.methods.bookTimeSlot = function(startTime, endTime, boo
 
 // Method to update day status based on time slots
 ArtistAvailabilitySchema.methods.updateDayStatus = function() {
+  if (!this.timeSlots || this.timeSlots.length === 0) {
+    this.dayStatus = 'available';
+    return;
+  }
+
   const availableSlots = this.timeSlots.filter(slot => slot.isAvailable && !slot.isBooked);
   const bookedSlots = this.timeSlots.filter(slot => slot.isBooked);
   
-  if (bookedSlots.length === this.timeSlots.length) {
+  if (bookedSlots.length === this.timeSlots.length && this.timeSlots.length > 0) {
     this.dayStatus = 'fully_booked';
   } else if (bookedSlots.length > 0) {
     this.dayStatus = 'partially_booked';

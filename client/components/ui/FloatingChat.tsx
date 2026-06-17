@@ -16,7 +16,8 @@ const BLOCKED_PATHS = [
   '/admin/booking',
   '/HORNBILL/ManualBooking',
   '/HORNBILL/eventsScanner',
-  '/sports/tournaments'
+  '/sports/tournaments',
+  '/artist/support/chat'
 ];
 
 export const FloatingChatButton = () => {

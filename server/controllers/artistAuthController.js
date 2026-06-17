@@ -23,7 +23,7 @@ exports.artistSignup = async (req, res) => {
     phone,
     city,
     bio,
-
+    password,
     type,
     specialization,
     basePrice,
@@ -54,12 +54,28 @@ exports.artistSignup = async (req, res) => {
       approvalStatus: 'pending'
     });
 
+    if (password && password.length >= 6) {
+      const salt = await bcrypt.genSalt(10);
+      artist.passwordHash = await bcrypt.hash(password, salt);
+      await artist.save({ validateBeforeSave: false });
+    }
+
     // Notify admin about new artist registration
     adminNotificationController.notifyArtistRegistration(artist);
 
-    // For OTP-based signup, we don't send a token here.
-    // The user will verify OTP to complete registration and get a token.
-    return ApiResponse.success(res, 'Artist registered. Please verify OTP to complete signup.');
+    const token = artist.getSignedJwtToken();
+
+    return ApiResponse.success(res, 'Artist registered successfully.', {
+      token,
+      user: {
+        _id: artist._id,
+        name: artist.name,
+        email: artist.email,
+        phone: artist.phone,
+        role: 'artist',
+        approvalStatus: artist.approvalStatus
+      }
+    });
 
   } catch (error) {
     console.error('Artist Signup Error:', error);
@@ -402,7 +418,9 @@ exports.updateArtistProfile = async (req, res) => {
         artist.techRider.specialNotes = techRider.specialNotes;
       }
 
-      if (techRider.file !== undefined && typeof techRider.file === 'object') {
+      if (techRider.file === null) {
+        delete artist.techRider.file;
+      } else if (techRider.file !== undefined && typeof techRider.file === 'object') {
         artist.techRider.file = artist.techRider.file || {};
 
         if (isValidValue(techRider.file.url)) {
@@ -418,7 +436,9 @@ exports.updateArtistProfile = async (req, res) => {
         }
       }
 
-      if (techRider.epkFile !== undefined && typeof techRider.epkFile === 'object') {
+      if (techRider.epkFile === null) {
+        delete artist.techRider.epkFile;
+      } else if (techRider.epkFile !== undefined && typeof techRider.epkFile === 'object') {
         artist.techRider.epkFile = artist.techRider.epkFile || {};
 
         if (isValidValue(techRider.epkFile.url)) {

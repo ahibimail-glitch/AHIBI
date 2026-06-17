@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,6 +31,8 @@ import {
   Shield,
   AlertCircle,
   Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import Link from "next/link"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -43,6 +45,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
  * Drop-in replacement for your original file (no logic changes)
  */
 
+const SIGNUP_DRAFT_KEY = "artist_signup_draft"
+
 export default function ArtistSignupPage() {
   const router = useRouter()
   const [step, setStep] = useState<"details" | "otp" | "complete">("details")
@@ -52,17 +56,71 @@ export default function ArtistSignupPage() {
     name: "",
     email: "",
     phone: "",
+    password: "",
+    confirmPassword: "",
     city: "",
     specialization: "",
     experience: "",
     agreeToTerms: false,
   })
   const [otp, setOtp] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(SIGNUP_DRAFT_KEY)
+    if (!saved) return
+
+    try {
+      const parsed = JSON.parse(saved)
+      setSignupData((prev) => ({
+        ...prev,
+        ...parsed,
+        password: "",
+        confirmPassword: "",
+        agreeToTerms: Boolean(parsed.agreeToTerms),
+      }))
+    } catch {
+      sessionStorage.removeItem(SIGNUP_DRAFT_KEY)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (step !== "details") return
+
+    const { password, confirmPassword, ...draft } = signupData
+    sessionStorage.setItem(SIGNUP_DRAFT_KEY, JSON.stringify(draft))
+  }, [signupData, step])
+
+  const validatePasswordFields = () => {
+    if (!signupData.password) {
+      setError("Password is required")
+      return false
+    }
+    if (signupData.password.length < 6) {
+      setError("Password must be at least 6 characters long")
+      return false
+    }
+    if (!signupData.confirmPassword) {
+      setError("Please confirm your password")
+      return false
+    }
+    if (signupData.password !== signupData.confirmPassword) {
+      setError("Passwords do not match")
+      return false
+    }
+    return true
+  }
 
   const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (!validatePasswordFields()) {
+      setLoading(false)
+      return
+    }
 
     try {
       // First, send OTP to the phone number
@@ -131,6 +189,7 @@ export default function ArtistSignupPage() {
           name: signupData.name,
           email: signupData.email,
           phone: signupData.phone,
+          password: signupData.password,
           city: signupData.city,
           specialization: signupData.specialization,
           experience: signupData.experience,
@@ -158,6 +217,7 @@ export default function ArtistSignupPage() {
       }
 
       setStep("complete")
+      sessionStorage.removeItem(SIGNUP_DRAFT_KEY)
     } catch (error) {
       console.error("Error during signup:", error)
       setError(
@@ -325,6 +385,61 @@ export default function ArtistSignupPage() {
                 </div>
               </div>
 
+              {/* Password */}
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-200">
+                  Password *
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="At least 6 characters"
+                    value={signupData.password}
+                    onChange={(e) =>
+                      setSignupData({ ...signupData, password: e.target.value })
+                    }
+                    className={`${inputBase} pr-10`}
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-200"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-gray-200">
+                  Confirm Password *
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Re-enter your password"
+                    value={signupData.confirmPassword}
+                    onChange={(e) =>
+                      setSignupData({ ...signupData, confirmPassword: e.target.value })
+                    }
+                    className={`${inputBase} pr-10`}
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-200"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
               {/* City */}
               <div className="space-y-2">
                 <Label htmlFor="city" className="text-gray-200">
@@ -428,24 +543,34 @@ export default function ArtistSignupPage() {
               </div>
 
               {/* Terms */}
-              <div className="flex items-start space-x-3">
-                <div className="pt-1">
+              <div className="flex items-start space-x-3 rounded-lg border border-gray-600 bg-gray-800/60 p-3">
+                <div className="pt-0.5">
                   <Checkbox
                     id="terms"
                     checked={signupData.agreeToTerms}
                     onCheckedChange={(checked) =>
                       setSignupData({ ...signupData, agreeToTerms: checked as boolean })
                     }
-                    className="border-gray-700 data-[state=checked]:bg-green-600 data-[state=checked]:border-transparent"
+                    className="h-5 w-5 border-2 border-gray-300 bg-white data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 data-[state=unchecked]:shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
                   />
                 </div>
-                <Label htmlFor="terms" className="text-sm text-gray-300">
+                <Label htmlFor="terms" className="text-sm text-gray-300 leading-relaxed">
                   I agree to the{" "}
-                  <Link href="/terms" className="underline text-green-400">
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-green-400 hover:text-green-300"
+                  >
                     Terms of Service
                   </Link>{" "}
                   and{" "}
-                  <Link href="/privacy" className="underline text-green-400">
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-green-400 hover:text-green-300"
+                  >
                     Privacy Policy
                   </Link>
                 </Label>
@@ -461,6 +586,8 @@ export default function ArtistSignupPage() {
                   !signupData.name ||
                   !signupData.email ||
                   !signupData.phone ||
+                  !signupData.password ||
+                  !signupData.confirmPassword ||
                   !signupData.city ||
                   !signupData.specialization ||
                   !signupData.experience

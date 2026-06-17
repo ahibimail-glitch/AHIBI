@@ -104,11 +104,11 @@ const emptyClassForm = {
   subject: "",
   level: "all" as ClassLevel,
   mode: "both" as TeachingMode,
-  pricing: { amount: 0, currency: "INR", pricingType: "per_session" as PricingType },
-  schedule: { days: [] as string[], startTime: "", endTime: "", durationMinutes: 60 },
+  pricing: { amount: "", currency: "INR", pricingType: "per_session" as PricingType },
+  schedule: { days: [] as string[], startTime: "", endTime: "", durationMinutes: "" },
   offlineLocation: { venueName: "", address: "", city: "", state: "", pincode: "", landmark: "" },
   onlineDetails: { platform: "zoom", platformOther: "", meetingLink: "", instructions: "" },
-  maxStudents: 10,
+  maxStudents: "",
   isActive: true,
 };
 
@@ -204,16 +204,20 @@ export default function TeachingPage() {
       subject: cls.subject || "",
       level: cls.level,
       mode: cls.mode,
-      pricing: cls.pricing || emptyClassForm.pricing,
+      pricing: {
+        amount: cls.pricing?.amount?.toString() ?? "",
+        currency: cls.pricing?.currency || "INR",
+        pricingType: cls.pricing?.pricingType || "per_session",
+      },
       schedule: {
         days: cls.schedule?.days || [],
         startTime: cls.schedule?.startTime || "",
         endTime: cls.schedule?.endTime || "",
-        durationMinutes: cls.schedule?.durationMinutes || 60,
+        durationMinutes: cls.schedule?.durationMinutes?.toString() ?? "",
       },
       offlineLocation: { ...emptyClassForm.offlineLocation, ...cls.offlineLocation },
       onlineDetails: { ...emptyClassForm.onlineDetails, ...cls.onlineDetails },
-      maxStudents: cls.maxStudents || 10,
+      maxStudents: cls.maxStudents?.toString() ?? "",
       isActive: cls.isActive,
     });
     setClassDialogOpen(true);
@@ -236,7 +240,20 @@ export default function TeachingPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(classForm),
+        body: JSON.stringify({
+          ...classForm,
+          maxStudents: classForm.maxStudents ? parseInt(classForm.maxStudents) : undefined,
+          pricing: {
+            ...classForm.pricing,
+            amount: classForm.pricing.amount ? parseFloat(classForm.pricing.amount) : 0,
+          },
+          schedule: {
+            ...classForm.schedule,
+            durationMinutes: classForm.schedule.durationMinutes
+              ? parseInt(classForm.schedule.durationMinutes)
+              : undefined,
+          },
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -597,7 +614,8 @@ export default function TeachingPage() {
                   type="number"
                   min={1}
                   value={classForm.maxStudents}
-                  onChange={(e) => setClassForm((p) => ({ ...p, maxStudents: parseInt(e.target.value) || 10 }))}
+                  onChange={(e) => setClassForm((p) => ({ ...p, maxStudents: e.target.value }))}
+                  placeholder="e.g. 10"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -622,9 +640,10 @@ export default function TeachingPage() {
                     onChange={(e) =>
                       setClassForm((p) => ({
                         ...p,
-                        pricing: { ...p.pricing, amount: parseFloat(e.target.value) || 0 },
+                        pricing: { ...p.pricing, amount: e.target.value },
                       }))
                     }
+                    placeholder="e.g. 500"
                   />
                 </div>
                 <div>
@@ -700,9 +719,10 @@ export default function TeachingPage() {
                     onChange={(e) =>
                       setClassForm((p) => ({
                         ...p,
-                        schedule: { ...p.schedule, durationMinutes: parseInt(e.target.value) || 60 },
+                        schedule: { ...p.schedule, durationMinutes: e.target.value },
                       }))
                     }
+                    placeholder="e.g. 60"
                   />
                 </div>
               </div>

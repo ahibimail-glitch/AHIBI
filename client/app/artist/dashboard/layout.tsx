@@ -25,6 +25,7 @@ import {
   Menu,
   X,
   GraduationCap,
+  HeadphonesIcon,
 } from "lucide-react";
 import KakiMarketingBanner from "@/components/KakiMarketingBanner";
 import { ArtistUser, ArtistProfile } from "./types";
@@ -310,7 +311,15 @@ export default function DashboardLayout({
               <CardContent className="pt-6">
                 <h4 className="font-bold text-pink-800">Need Help?</h4>
                 <p className="text-xs text-pink-700 mt-1">Check our documentation or contact support.</p>
-                <Button size="sm" className="w-full mt-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90">
+                <Button
+                  size="sm"
+                  className="w-full mt-3 bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90"
+                  onClick={() => {
+                    router.push("/artist/support/chat");
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <HeadphonesIcon className="h-4 w-4 mr-2" />
                   Get Support
                 </Button>
               </CardContent>

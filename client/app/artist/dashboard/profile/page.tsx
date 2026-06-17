@@ -711,11 +711,11 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="feeMin">Minimum Fee (₹)</Label>
-                    <Input id="feeMin" name="feeMin" type="number" defaultValue={profile?.feeRange?.min?.toString() || profile?.basePrice?.toString()} placeholder="Minimum fee" />
+                    <Input id="feeMin" name="feeMin" type="number" defaultValue={profile?.feeRange?.min?.toString() ?? ""} placeholder="Minimum fee" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="feeMax">Maximum Fee (₹)</Label>
-                    <Input id="feeMax" name="feeMax" type="number" defaultValue={profile?.feeRange?.max?.toString()} placeholder="Maximum fee" />
+                    <Input id="feeMax" name="feeMax" type="number" defaultValue={profile?.feeRange?.max?.toString() ?? ""} placeholder="Maximum fee" />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">Provide a range for your typical performance fees</p>

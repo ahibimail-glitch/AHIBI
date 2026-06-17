@@ -30,7 +30,7 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
   const [form, setForm] = useState({
     title: '',
     description: '',
-    year: new Date().getFullYear(),
+    year: '',
     organization: '',
     certificate: ''
   });
@@ -39,7 +39,7 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
     setForm({
       title: '',
       description: '',
-      year: new Date().getFullYear(),
+      year: '',
       organization: '',
       certificate: ''
     });
@@ -54,7 +54,10 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          year: form.year ? parseInt(form.year) : undefined,
+        })
       });
 
       if (response.ok) {
@@ -76,7 +79,10 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          year: form.year ? parseInt(form.year) : undefined,
+        })
       });
 
       if (response.ok) {
@@ -113,7 +119,7 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
     setForm({
       title: accolade.title,
       description: accolade.description,
-      year: accolade.year,
+      year: accolade.year?.toString() ?? '',
       organization: accolade.organization,
       certificate: accolade.certificate || ''
     });
@@ -222,7 +228,8 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
                   id="edit-year"
                   type="number"
                   value={form.year}
-                  onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) })}
+                  onChange={(e) => setForm({ ...form, year: e.target.value })}
+                  placeholder="e.g. 2024"
                 />
               </div>
               <div>
@@ -309,7 +316,8 @@ export default function AccoladesManager({ accolades, onUpdate, embedded = false
                   id="year"
                   type="number"
                   value={form.year}
-                  onChange={(e) => setForm({ ...form, year: parseInt(e.target.value) })}
+                  onChange={(e) => setForm({ ...form, year: e.target.value })}
+                  placeholder="e.g. 2024"
                 />
               </div>
               <div>

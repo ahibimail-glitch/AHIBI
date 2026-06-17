@@ -13,7 +13,7 @@ export default function TermsPage() {
       {profile && (
         <TermsManager 
           terms={profile.termsAndConditions || { content: '', lastUpdated: new Date().toISOString() }}
-          cancellationPolicy={profile.cancellationPolicy || { advanceNotice: 24, refundPolicy: '', emergencyContact: '' }}
+          cancellationPolicy={profile.cancellationPolicy || { advanceNotice: 0, refundPolicy: '', emergencyContact: '' }}
           onUpdate={() => {
             fetchArtistProfile();
           }}

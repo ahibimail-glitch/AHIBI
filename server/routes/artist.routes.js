@@ -16,7 +16,8 @@ router.post('/auth/signup', [
   check('phone', 'Please include a valid phone number').isMobilePhone('any'),
   check('city', 'City is required').not().isEmpty(),
   check('specialization', 'Specialization is required').not().isEmpty(),
-  check('experience', 'Experience level is required').not().isEmpty()
+  check('experience', 'Experience level is required').not().isEmpty(),
+  check('password', 'Password must be at least 6 characters').isLength({ min: 6 })
 ], artistAuthController.artistSignup);
 
 router.post('/auth/send-otp', [

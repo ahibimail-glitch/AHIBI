@@ -153,8 +153,14 @@ export default function TermsManager({ terms, cancellationPolicy, onUpdate }: Te
             <Input
               id="advance-notice"
               type="number"
-              value={policy.advanceNotice}
-              onChange={(e) => setPolicy({ ...policy, advanceNotice: parseInt(e.target.value) })}
+              value={policy.advanceNotice || ""}
+              onChange={(e) =>
+                setPolicy({
+                  ...policy,
+                  advanceNotice: e.target.value === "" ? 0 : parseInt(e.target.value) || 0,
+                })
+              }
+              placeholder="e.g. 48"
               className="mt-2"
             />
           </div>
@@ -200,7 +206,7 @@ export default function TermsManager({ terms, cancellationPolicy, onUpdate }: Te
             
             <h3 className="font-semibold mb-2">Cancellation Policy</h3>
             <div className="text-sm space-y-1">
-              <p><strong>Advance Notice:</strong> {policy.advanceNotice} hours</p>
+              <p><strong>Advance Notice:</strong> {policy.advanceNotice ? `${policy.advanceNotice} hours` : 'Not specified'}</p>
               <p><strong>Refund Policy:</strong> {policy.refundPolicy || 'Not specified'}</p>
               {policy.emergencyContact && (
                 <p className="flex items-center">

@@ -12,7 +12,7 @@ const MessageSchema = new mongoose.Schema({
   },
   senderRole: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'artist', 'admin'],
     default: 'user'
   },
   message: {
@@ -72,7 +72,7 @@ const SupportConversationSchema = new mongoose.Schema({
   
   lastRepliedBy: {
     type: String,
-    enum: ['user', 'admin']
+    enum: ['user', 'artist', 'admin']
   },
   
   lastRepliedAt: {
