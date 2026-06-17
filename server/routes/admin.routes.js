@@ -220,6 +220,9 @@ router.get("/bookings/all",  async (req, res) => {
               'Deleted Event'
             ]
           },
+          eventCategory: {
+            $ifNull: ['$eventDoc.category', null]
+          },
           // event display fields with snapshot fallback and final placeholder
           event: {
             title: {
@@ -227,6 +230,9 @@ router.get("/bookings/all",  async (req, res) => {
                 { $ifNull: ['$eventDoc.title', '$eventSnapshot.title'] },
                 'Deleted Event'
               ]
+            },
+            category: {
+              $ifNull: ['$eventDoc.category', null]
             },
             startDate: {
               $ifNull: [

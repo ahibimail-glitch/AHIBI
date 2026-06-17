@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -31,8 +31,10 @@ import { toast } from "sonner";
 interface Booking {
   _id: string;
   eventTitle?: string;
+  eventCategory?: string;
   event: {
     title: string;
+    category?: string;
     startDate: string;
     endDate: string;
   };
@@ -64,15 +66,53 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   const [error, setError] = useState<string | null>(null);
   
   // Filter states
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [nameFilter, setNameFilter] = useState<string>("");
   const [phoneFilter, setPhoneFilter] = useState<string>("");
   const [ticketTypeFilter, setTicketTypeFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-  
-  // Unique lists for filters
-  const [uniqueEvents, setUniqueEvents] = useState<string[]>([]);
-  const [uniqueTicketTypes, setUniqueTicketTypes] = useState<string[]>([]);
+
+  const getBookingCategory = (booking: Booking) =>
+    booking.eventCategory || booking.event?.category || "";
+
+  const getBookingEventTitle = (booking: Booking) =>
+    booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title || "";
+
+  const uniqueCategories = useMemo(() => {
+    const categories = new Set<string>();
+    bookings.forEach((booking) => {
+      const category = getBookingCategory(booking);
+      if (category) categories.add(category);
+    });
+    return Array.from(categories).sort();
+  }, [bookings]);
+
+  const availableEvents = useMemo(() => {
+    const events = new Set<string>();
+    bookings.forEach((booking) => {
+      if (categoryFilter !== "all" && getBookingCategory(booking) !== categoryFilter) {
+        return;
+      }
+      const title = getBookingEventTitle(booking);
+      if (title) events.add(title);
+    });
+    return Array.from(events).sort();
+  }, [bookings, categoryFilter]);
+
+  const availableTicketTypes = useMemo(() => {
+    const types = new Set<string>();
+    bookings.forEach((booking) => {
+      if (categoryFilter !== "all" && getBookingCategory(booking) !== categoryFilter) {
+        return;
+      }
+      if (eventFilter !== "all" && getBookingEventTitle(booking) !== eventFilter) {
+        return;
+      }
+      if (booking.ticketType) types.add(booking.ticketType);
+    });
+    return Array.from(types).sort();
+  }, [bookings, categoryFilter, eventFilter]);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -105,25 +145,6 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         setBookings(data.bookings);
         setFilteredBookings(data.bookings);
         
-        // Extract unique events and categories for filters with proper typing
-        const events: string[] = Array.from(
-          new Set(
-            data.bookings
-              .map((booking: Booking) => booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title)
-              .filter((title: string | undefined): title is string => Boolean(title))
-          )
-        );
-        setUniqueEvents(events);
-        
-        const ticketTypes: string[] = Array.from(
-          new Set(
-            data.bookings
-              .map((booking: Booking) => booking.ticketType)
-              .filter((type: string | undefined): type is string => Boolean(type))
-          )
-        );
-        setUniqueTicketTypes(ticketTypes);
-        
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load bookings';
         console.error('Error fetching bookings:', errorMessage);
@@ -135,18 +156,45 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
 
     fetchBookings();
   }, []);
+
+  useEffect(() => {
+    if (eventFilter !== "all" && !availableEvents.includes(eventFilter)) {
+      setEventFilter("all");
+    }
+  }, [availableEvents, eventFilter]);
+
+  useEffect(() => {
+    if (ticketTypeFilter !== "all" && !availableTicketTypes.includes(ticketTypeFilter)) {
+      setTicketTypeFilter("all");
+    }
+  }, [availableTicketTypes, ticketTypeFilter]);
+
+  const handleCategoryFilterChange = (value: string) => {
+    setCategoryFilter(value);
+    setEventFilter("all");
+    setTicketTypeFilter("all");
+  };
+
+  const handleEventFilterChange = (value: string) => {
+    setEventFilter(value);
+    setTicketTypeFilter("all");
+  };
   
   // Apply filters whenever filter values change
   useEffect(() => {
     applyFilters();
-  }, [eventFilter, nameFilter, phoneFilter, ticketTypeFilter, dateFilter, bookings]);
+  }, [categoryFilter, eventFilter, nameFilter, phoneFilter, ticketTypeFilter, dateFilter, bookings]);
   
   // Filter function
   const applyFilters = () => {
     let result = [...bookings];
     
+    if (categoryFilter && categoryFilter !== "all") {
+      result = result.filter((booking: Booking) => getBookingCategory(booking) === categoryFilter);
+    }
+
     if (eventFilter && eventFilter !== "all") {
-      result = result.filter((booking: Booking) => (booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title) === eventFilter);
+      result = result.filter((booking: Booking) => getBookingEventTitle(booking) === eventFilter);
     }
     
     if (nameFilter) {
@@ -178,6 +226,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   
   // Reset all filters
   const resetFilters = () => {
+    setCategoryFilter("all");
     setEventFilter("all");
     setNameFilter("");
     setPhoneFilter("");
@@ -302,16 +351,33 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       </CardHeader>
       <CardContent>
         {/* Filter section */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div>
+            <Label htmlFor="category-filter">Event Category</Label>
+            <Select value={categoryFilter} onValueChange={handleCategoryFilterChange}>
+              <SelectTrigger id="category-filter">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {uniqueCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Label htmlFor="event-filter">Event</Label>
-            <Select value={eventFilter} onValueChange={setEventFilter}>
+            <Select value={eventFilter} onValueChange={handleEventFilterChange}>
               <SelectTrigger id="event-filter">
                 <SelectValue placeholder="All Events" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Events</SelectItem>
-                {uniqueEvents.map((event) => (
+                {availableEvents.map((event) => (
                   <SelectItem key={event} value={event}>
                     {event}
                   </SelectItem>
@@ -370,7 +436,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                {uniqueTicketTypes.map((ticketType) => (
+                {availableTicketTypes.map((ticketType) => (
                   <SelectItem key={ticketType} value={ticketType}>
                     {ticketType}
                   </SelectItem>
@@ -408,14 +474,22 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         </div>
         
         {/* Active filters display */}
-        {(eventFilter !== "all" || nameFilter || phoneFilter || ticketTypeFilter !== "all" || dateFilter) && (
+        {(categoryFilter !== "all" || eventFilter !== "all" || nameFilter || phoneFilter || ticketTypeFilter !== "all" || dateFilter) && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-gray-500">Active filters:</span>
             <div className="flex flex-wrap gap-2">
+              {categoryFilter !== "all" && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  Category: {categoryFilter}
+                  <button onClick={() => handleCategoryFilterChange("all")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
               {eventFilter !== "all" && (
                 <Badge variant="outline" className="flex items-center gap-1">
                   Event: {eventFilter}
-                  <button onClick={() => setEventFilter("all")}>
+                  <button onClick={() => handleEventFilterChange("all")}>
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
