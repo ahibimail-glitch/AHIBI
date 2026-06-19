@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const TeachingClass = require('../models/TeachingClass');
 const TeachingInquiry = require('../models/TeachingInquiry');
+const TeachingBooking = require('../models/TeachingBooking');
 const Artist = require('../models/Artist');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
@@ -168,9 +169,10 @@ exports.deleteInquiry = async (req, res) => {
 
 exports.getTeachingOverview = async (req, res) => {
   try {
-    const [classes, inquiries, statusCounts] = await Promise.all([
+    const [classes, inquiries, confirmedBookings, statusCounts] = await Promise.all([
       TeachingClass.countDocuments({ artistId: req.user.id, isActive: true }),
       TeachingInquiry.countDocuments({ artistId: req.user.id }),
+      TeachingBooking.countDocuments({ artistId: req.user.id, status: { $in: ['confirmed', 'completed'] } }),
       TeachingInquiry.aggregate([
         { $match: { artistId: new mongoose.Types.ObjectId(req.user.id) } },
         { $group: { _id: '$status', count: { $sum: 1 } } },
@@ -185,6 +187,7 @@ exports.getTeachingOverview = async (req, res) => {
     return ApiResponse.success(res, 'Teaching overview fetched', {
       activeClasses: classes,
       totalInquiries: inquiries,
+      confirmedBookings,
       inquiriesByStatus: byStatus,
     });
   } catch (error) {

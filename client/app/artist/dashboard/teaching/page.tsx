@@ -40,6 +40,8 @@ import {
   IndianRupee,
   Loader2,
   MessageSquare,
+  CalendarDays,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -84,6 +86,27 @@ interface TeachingClass {
   isActive: boolean;
 }
 
+type BookingStatus = "pending_payment" | "confirmed" | "completed" | "cancelled" | "refunded";
+
+interface TeachingBooking {
+  _id: string;
+  studentName: string;
+  studentEmail?: string;
+  studentPhone: string;
+  message?: string;
+  mode: "online" | "offline";
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: BookingStatus;
+  pricing: { amount: number; currency: string };
+  payment?: { paymentStatus: string; amountPaid?: number; paidAt?: string };
+  invoiceNumber?: string;
+  invoiceUrl?: string;
+  classId?: { _id: string; title: string; mode: TeachingMode; subject?: string };
+  createdAt: string;
+}
+
 interface TeachingInquiry {
   _id: string;
   studentName: string;
@@ -126,6 +149,14 @@ const emptyInquiryForm = {
 
 const DAY_OPTIONS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const bookingStatusColors: Record<BookingStatus, string> = {
+  pending_payment: "bg-yellow-100 text-yellow-800",
+  confirmed: "bg-green-100 text-green-800",
+  completed: "bg-gray-100 text-gray-800",
+  cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-orange-100 text-orange-800",
+};
+
 const statusColors: Record<InquiryStatus, string> = {
   new: "bg-blue-100 text-blue-800",
   contacted: "bg-yellow-100 text-yellow-800",
@@ -143,9 +174,10 @@ const pricingLabel = (type: PricingType) =>
 export default function TeachingPage() {
   const [activeTab, setActiveTab] = useState("classes");
   const [loading, setLoading] = useState(true);
-  const [overview, setOverview] = useState({ activeClasses: 0, totalInquiries: 0, inquiriesByStatus: {} as Record<string, number> });
+  const [overview, setOverview] = useState({ activeClasses: 0, totalInquiries: 0, confirmedBookings: 0, inquiriesByStatus: {} as Record<string, number> });
   const [classes, setClasses] = useState<TeachingClass[]>([]);
   const [inquiries, setInquiries] = useState<TeachingInquiry[]>([]);
+  const [bookings, setBookings] = useState<TeachingBooking[]>([]);
   const [classDialogOpen, setClassDialogOpen] = useState(false);
   const [inquiryDialogOpen, setInquiryDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<TeachingClass | null>(null);
@@ -165,14 +197,15 @@ export default function TeachingPage() {
     try {
       const token = getToken();
       const headers = { Authorization: `Bearer ${token}` };
-      const [overviewRes, classesRes, inquiriesRes] = await Promise.all([
+      const [overviewRes, classesRes, inquiriesRes, bookingsRes] = await Promise.all([
         fetch("/api/artist/teaching/overview", { headers }),
         fetch("/api/artist/teaching/classes", { headers }),
         fetch("/api/artist/teaching/inquiries", { headers }),
+        fetch("/api/artist/teaching/bookings", { headers }),
       ]);
       if (overviewRes.ok) {
         const d = await overviewRes.json();
-        setOverview(d.data || { activeClasses: 0, totalInquiries: 0, inquiriesByStatus: {} });
+        setOverview(d.data || { activeClasses: 0, totalInquiries: 0, confirmedBookings: 0, inquiriesByStatus: {} });
       }
       if (classesRes.ok) {
         const d = await classesRes.json();
@@ -181,6 +214,10 @@ export default function TeachingPage() {
       if (inquiriesRes.ok) {
         const d = await inquiriesRes.json();
         setInquiries(d.data?.inquiries || []);
+      }
+      if (bookingsRes.ok) {
+        const d = await bookingsRes.json();
+        setBookings(d.data?.bookings || []);
       }
     } catch (e) {
       console.error(e);
@@ -355,6 +392,54 @@ export default function TeachingPage() {
     }));
   };
 
+  const updateBookingStatus = async (bookingId: string, status: "completed" | "cancelled") => {
+    try {
+      const token = getToken();
+      const res = await fetch(`/api/artist/teaching/bookings/${bookingId}/status`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success(status === "completed" ? "Marked as completed" : "Booking cancelled");
+      fetchAll();
+    } catch {
+      toast.error("Failed to update booking");
+    }
+  };
+
+  const formatBookingDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+  const downloadInvoice = async (bookingId: string, invoiceNumber?: string) => {
+    try {
+      const token = getToken();
+      const res = await fetch(`/api/artist/teaching/bookings/${bookingId}/invoice`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to download invoice");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${invoiceNumber || bookingId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download invoice");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -372,7 +457,7 @@ export default function TeachingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-purple-100">
@@ -398,7 +483,18 @@ export default function TeachingPage() {
         <Card>
           <CardContent className="pt-6 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-green-100">
-              <Users className="h-6 w-6 text-green-600" />
+              <CalendarDays className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{overview.confirmedBookings || 0}</p>
+              <p className="text-sm text-muted-foreground">Confirmed bookings</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-amber-100">
+              <Users className="h-6 w-6 text-amber-600" />
             </div>
             <div>
               <p className="text-2xl font-bold">{overview.inquiriesByStatus?.new || 0}</p>
@@ -412,12 +508,13 @@ export default function TeachingPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="classes" className="flex-1 sm:flex-none">Classes</TabsTrigger>
+            <TabsTrigger value="bookings" className="flex-1 sm:flex-none">Bookings</TabsTrigger>
             <TabsTrigger value="inquiries" className="flex-1 sm:flex-none">Inquiries</TabsTrigger>
           </TabsList>
           <Button
             size="sm"
-            onClick={activeTab === "classes" ? openCreateClass : openCreateInquiry}
-            className="w-full sm:w-auto"
+            onClick={activeTab === "classes" ? openCreateClass : activeTab === "inquiries" ? openCreateInquiry : undefined}
+            className={`w-full sm:w-auto ${activeTab === "bookings" ? "hidden" : ""}`}
           >
             <Plus className="h-4 w-4 mr-2" />
             {activeTab === "classes" ? "Add class" : "Add inquiry"}
@@ -502,6 +599,70 @@ export default function TeachingPage() {
                       </span>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="bookings" className="mt-4 space-y-4">
+          {bookings.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No teaching bookings yet. Paid sessions booked from your public profile will appear here.
+              </CardContent>
+            </Card>
+          ) : (
+            bookings.map((booking) => (
+              <Card key={booking._id}>
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CardTitle className="text-lg">{booking.studentName}</CardTitle>
+                        <Badge className={bookingStatusColors[booking.status]}>{booking.status}</Badge>
+                        <Badge variant="outline" className="capitalize">{booking.mode}</Badge>
+                      </div>
+                      <CardDescription className="mt-1">
+                        {formatBookingDate(booking.bookingDate)} · {booking.startTime}–{booking.endTime}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      {["confirmed", "completed"].includes(booking.status) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => downloadInvoice(booking._id, booking.invoiceNumber)}
+                        >
+                          <FileDown className="h-4 w-4 mr-1" /> Invoice
+                        </Button>
+                      )}
+                      {booking.status === "confirmed" && (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => updateBookingStatus(booking._id, "completed")}>
+                            Mark completed
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => updateBookingStatus(booking._id, "cancelled")}>
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p><span className="font-medium">Phone:</span> {booking.studentPhone}</p>
+                  {booking.studentEmail && <p><span className="font-medium">Email:</span> {booking.studentEmail}</p>}
+                  {booking.classId && <p><span className="font-medium">Class:</span> {booking.classId.title}</p>}
+                  <p className="flex items-center gap-1 font-medium text-green-700">
+                    <IndianRupee className="h-4 w-4" />
+                    ₹{booking.pricing?.amount?.toLocaleString()}
+                    {booking.payment?.paymentStatus === "completed" && " · Paid"}
+                  </p>
+                  {booking.invoiceNumber && (
+                    <p className="text-muted-foreground">Invoice: {booking.invoiceNumber}</p>
+                  )}
+                  {booking.message && <p className="text-muted-foreground">{booking.message}</p>}
                 </CardContent>
               </Card>
             ))

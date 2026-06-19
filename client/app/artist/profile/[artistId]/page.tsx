@@ -7,6 +7,7 @@ import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import PublicBookingCalendar from "@/components/artist/PublicBookingCalendar";
+import PublicTeachingBookingCalendar from "@/components/artist/PublicTeachingBookingCalendar";
 import {
   Calendar,
   Camera,
@@ -486,17 +487,8 @@ export default function PublicArtistProfile() {
     onlineDetails?: { platform?: string };
     maxStudents?: number;
   }>>([]);
-  const [showTeachingInquiry, setShowTeachingInquiry] = useState(false);
-  const [selectedClassId, setSelectedClassId] = useState<string>("");
-  const [inquirySubmitting, setInquirySubmitting] = useState(false);
-  const [inquiryForm, setInquiryForm] = useState({
-    studentName: "",
-    studentEmail: "",
-    studentPhone: "",
-    message: "",
-    preferredMode: "" as "" | "online" | "offline",
-    preferredDate: "",
-  });
+  const [showTeachingBooking, setShowTeachingBooking] = useState(false);
+  const [selectedTeachingClass, setSelectedTeachingClass] = useState<typeof teachingClasses[0] | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -565,42 +557,10 @@ export default function PublicArtistProfile() {
     }
   }, [artist]);
 
-  const openTeachingInquiry = useCallback((classId = "") => {
-    setSelectedClassId(classId);
-    setInquiryForm({
-      studentName: "",
-      studentEmail: "",
-      studentPhone: "",
-      message: "",
-      preferredMode: "",
-      preferredDate: "",
-    });
-    setShowTeachingInquiry(true);
+  const openTeachingBooking = useCallback((cls: typeof teachingClasses[0]) => {
+    setSelectedTeachingClass(cls);
+    setShowTeachingBooking(true);
   }, []);
-
-  const submitTeachingInquiry = useCallback(async () => {
-    if (!inquiryForm.studentName.trim() || !inquiryForm.studentPhone.trim()) return;
-    setInquirySubmitting(true);
-    try {
-      const res = await fetch(`/api/artist/public/${artistId}/teaching/inquiries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...inquiryForm,
-          classId: selectedClassId || undefined,
-          preferredMode: inquiryForm.preferredMode || undefined,
-          preferredDate: inquiryForm.preferredDate || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setShowTeachingInquiry(false);
-      alert("Your inquiry has been sent! The artist will contact you soon.");
-    } catch {
-      alert("Could not send inquiry. Please try again.");
-    } finally {
-      setInquirySubmitting(false);
-    }
-  }, [artistId, inquiryForm, selectedClassId]);
 
   const handleBook = useCallback(() => {
     const bookingPath = `/artist/profile/${artistId}/booking`;
@@ -1029,7 +989,7 @@ export default function PublicArtistProfile() {
                 <Section
                   kicker="Teaching"
                   title="Classes & training"
-                  subtitle="Online and offline lessons with schedule, pricing, and easy enquiry."
+                  subtitle="Book a session online with calendar availability and secure payment."
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {teachingClasses.map((cls) => (
@@ -1088,22 +1048,16 @@ export default function PublicArtistProfile() {
                         )}
                         <button
                           type="button"
-                          onClick={() => openTeachingInquiry(cls._id)}
-                          className="mt-4 w-full inline-flex items-center justify-center gap-2 border-none rounded-xl px-4 py-3 text-sm font-bold bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white shadow-[0_8px_20px_rgba(91,108,255,0.2)] hover:opacity-95 transition-opacity"
+                          onClick={() => openTeachingBooking(cls)}
+                          disabled={!cls.pricing?.amount}
+                          className="mt-4 w-full inline-flex items-center justify-center gap-2 border-none rounded-xl px-4 py-3 text-sm font-bold bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white shadow-[0_8px_20px_rgba(91,108,255,0.2)] hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <GraduationCap size={15} />
-                          Enquire about this class
+                          {cls.pricing?.amount ? "Book this class" : "Pricing not set"}
                         </button>
                       </div>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => openTeachingInquiry()}
-                    className="mt-4 text-sm font-bold text-[#5b6cff] hover:underline"
-                  >
-                    General teaching enquiry →
-                  </button>
                 </Section>
               )}
 
@@ -1361,72 +1315,28 @@ export default function PublicArtistProfile() {
 
         <Footer />
 
-        {/* TEACHING INQUIRY MODAL */}
-        <Dialog open={showTeachingInquiry} onOpenChange={setShowTeachingInquiry}>
-          <DialogContent className="max-w-md rounded-[28px] border border-slate-200 bg-white p-4 md:p-6">
+        {/* TEACHING BOOKING MODAL */}
+        <Dialog open={showTeachingBooking} onOpenChange={setShowTeachingBooking}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 md:p-6">
             <DialogHeader>
               <DialogTitle className="font-['Cormorant_Garamond',_serif] text-[26px] font-bold">
-                Teaching enquiry
+                Book a teaching session
               </DialogTitle>
               <DialogDescription className="text-slate-500 text-sm">
-                Send an inquiry to {artist.name} about classes or training.
+                Choose an available date and time, then pay to confirm your session with {artist.name}.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 mt-2">
-              <input
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
-                placeholder="Your name *"
-                value={inquiryForm.studentName}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, studentName: e.target.value }))}
+            {selectedTeachingClass && (
+              <PublicTeachingBookingCalendar
+                artistId={artistId}
+                artistName={artist.name}
+                teachingClass={{
+                  ...selectedTeachingClass,
+                  mode: selectedTeachingClass.mode as "online" | "offline" | "both",
+                }}
+                onClose={() => setShowTeachingBooking(false)}
               />
-              <input
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
-                placeholder="Phone *"
-                value={inquiryForm.studentPhone}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, studentPhone: e.target.value }))}
-              />
-              <input
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
-                placeholder="Email"
-                type="email"
-                value={inquiryForm.studentEmail}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, studentEmail: e.target.value }))}
-              />
-              <select
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-white"
-                value={inquiryForm.preferredMode}
-                onChange={(e) =>
-                  setInquiryForm((p) => ({
-                    ...p,
-                    preferredMode: e.target.value as "" | "online" | "offline",
-                  }))
-                }
-              >
-                <option value="">Preferred mode (optional)</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-              </select>
-              <input
-                type="date"
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm"
-                value={inquiryForm.preferredDate}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, preferredDate: e.target.value }))}
-              />
-              <textarea
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm min-h-[80px]"
-                placeholder="Message (optional)"
-                value={inquiryForm.message}
-                onChange={(e) => setInquiryForm((p) => ({ ...p, message: e.target.value }))}
-              />
-              <button
-                type="button"
-                disabled={inquirySubmitting || !inquiryForm.studentName || !inquiryForm.studentPhone}
-                onClick={submitTeachingInquiry}
-                className="w-full border-none rounded-xl px-4 py-3 text-sm font-bold bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white disabled:opacity-50"
-              >
-                {inquirySubmitting ? "Sending…" : "Send inquiry"}
-              </button>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
 

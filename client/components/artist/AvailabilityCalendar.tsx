@@ -44,6 +44,17 @@ interface AvailabilityData {
   advanceBookingDays: number;
 }
 
+interface TeachingBookingSummary {
+  _id: string;
+  startTime: string;
+  endTime: string;
+  studentName: string;
+  mode?: string;
+  status?: string;
+  classTitle?: string;
+  amount?: number;
+}
+
 interface AvailabilityCalendarProps {
   onUpdate?: () => void;
 }
@@ -111,6 +122,9 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   const [availability, setAvailability] = useState<{
     [key: string]: AvailabilityData | undefined;
   }>({});
+  const [teachingBookingsByDate, setTeachingBookingsByDate] = useState<{
+    [key: string]: TeachingBookingSummary[];
+  }>({});
   const [loading, setLoading] = useState(false);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
@@ -164,6 +178,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
           map[toDateKey(new Date(avail.date))] = avail;
         });
         setAvailability(map);
+        setTeachingBookingsByDate(data.data.teachingBookingsByDate || {});
       }
     } catch (e) {
       console.error(e);
@@ -329,6 +344,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   const selectedAvailability = selectedDate ? availability[selectedDate] : undefined;
+  const selectedTeachingBookings = selectedDate ? teachingBookingsByDate[selectedDate] || [] : [];
   const selectedStatus = getStatus(selectedAvailability?.dayStatus);
   const statusCfg = STATUS_CONFIG[selectedStatus];
 
@@ -393,6 +409,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
               const status = getStatus(dayAvail?.dayStatus);
               const isPast = isPastDateKey(dateKey);
               const isSelected = selectedDate === dateKey;
+              const teachingCount = teachingBookingsByDate[dateKey]?.length || 0;
 
               const availableSlots = dayAvail
                 ? dayAvail.timeSlots.filter((s) => s.isAvailable && !s.isBooked).length
@@ -507,7 +524,14 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                                 ★ Special
                               </p>
                             )}
+                            {teachingCount > 0 && (
+                              <p className="hidden sm:block text-[10px] font-semibold text-purple-600">
+                                {teachingCount} teaching
+                              </p>
+                            )}
                           </>
+                        ) : teachingCount > 0 ? (
+                          <span className="text-[10px] text-purple-600 font-semibold">{teachingCount} teaching</span>
                         ) : (
                           <span className="text-[10px] text-gray-400">Open</span>
                         )}
@@ -716,6 +740,32 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   )}
                 </div>
 
+                {/* Teaching Bookings */}
+                {selectedTeachingBookings.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Teaching sessions</h4>
+                    <div className="space-y-2">
+                      {selectedTeachingBookings.map((booking) => (
+                        <div
+                          key={booking._id}
+                          className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border bg-purple-50 border-purple-200"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-purple-900">{booking.studentName}</p>
+                            <p className="text-xs text-purple-700">
+                              {booking.startTime} – {booking.endTime}
+                              {booking.classTitle ? ` · ${booking.classTitle}` : ""}
+                            </p>
+                          </div>
+                          <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 capitalize">
+                            {booking.mode || "teaching"} · {booking.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Special Pricing */}
                 {selectedAvailability.specialPricing.isSpecialDay && (
                   <div>
@@ -733,6 +783,24 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   </div>
                 )}
               </>
+            ) : selectedTeachingBookings.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Teaching sessions</h4>
+                <div className="space-y-2">
+                  {selectedTeachingBookings.map((booking) => (
+                    <div
+                      key={booking._id}
+                      className="px-3 py-3 rounded-xl border bg-purple-50 border-purple-200"
+                    >
+                      <p className="text-sm font-semibold text-purple-900">{booking.studentName}</p>
+                      <p className="text-xs text-purple-700 mt-1">
+                        {booking.startTime} – {booking.endTime}
+                        {booking.classTitle ? ` · ${booking.classTitle}` : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <Alert className="border-indigo-100 bg-indigo-50">
                 <AlertDescription className="text-sm text-indigo-700">

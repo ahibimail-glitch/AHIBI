@@ -7,7 +7,8 @@ const artistProfileController = require('../controllers/artistProfileController'
 const artistAvailabilityController = require('../controllers/artistAvailabilityController');
 const merchController = require('../controllers/merchController');
 const artistTeachingController = require('../controllers/artistTeachingController');
-const { protect, authorize } = require('../middlewares/auth');
+const teachingBookingController = require('../controllers/teachingBookingController');
+const { protect, authorize, optionalAuth } = require('../middlewares/auth');
 
 // Public routes
 router.post('/auth/signup', [
@@ -49,6 +50,19 @@ router.post('/auth/setup-password', [
 router.get('/public', artistProfileController.getApprovedArtists);
 router.get('/public/:artistId', artistProfileController.getPublicArtistProfile);
 router.get('/public/:artistId/teaching/classes', artistTeachingController.getPublicClasses);
+router.get('/public/:artistId/teaching/calendar', teachingBookingController.getPublicTeachingCalendar);
+router.get('/public/:artistId/teaching/slots', teachingBookingController.getPublicDaySlots);
+router.post('/public/:artistId/teaching/bookings/create-order', optionalAuth, [
+  check('classId', 'Class is required').not().isEmpty(),
+  check('bookingDate', 'Booking date is required').not().isEmpty(),
+  check('startTime', 'Start time is required').not().isEmpty(),
+  check('endTime', 'End time is required').not().isEmpty(),
+  check('mode', 'Mode must be online or offline').isIn(['online', 'offline']),
+  check('studentName', 'Student name is required').not().isEmpty(),
+  check('studentPhone', 'Student phone is required').not().isEmpty(),
+], teachingBookingController.createTeachingOrder);
+router.post('/public/:artistId/teaching/bookings/verify-payment', optionalAuth, teachingBookingController.verifyTeachingPayment);
+router.get('/public/teaching/invoice/:invoiceNumber', teachingBookingController.downloadPublicInvoice);
 router.post('/public/:artistId/teaching/inquiries', [
   check('studentName', 'Student name is required').not().isEmpty(),
   check('studentPhone', 'Student phone is required').not().isEmpty(),
@@ -161,5 +175,9 @@ router.post('/teaching/inquiries', [
 ], artistTeachingController.createInquiry);
 router.put('/teaching/inquiries/:inquiryId', protect, authorize('artist'), artistTeachingController.updateInquiry);
 router.delete('/teaching/inquiries/:inquiryId', protect, authorize('artist'), artistTeachingController.deleteInquiry);
+router.get('/teaching/bookings', protect, authorize('artist'), teachingBookingController.getArtistTeachingBookings);
+router.get('/teaching/bookings/calendar', protect, authorize('artist'), teachingBookingController.getArtistTeachingCalendarOverview);
+router.get('/teaching/bookings/:bookingId/invoice', protect, authorize('artist'), teachingBookingController.downloadArtistBookingInvoice);
+router.put('/teaching/bookings/:bookingId/status', protect, authorize('artist'), teachingBookingController.updateTeachingBookingStatus);
 
 module.exports = router;

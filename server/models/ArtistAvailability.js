@@ -31,6 +31,10 @@ const ArtistAvailabilitySchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ArtistBooking'
     },
+    teachingBookingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TeachingBooking'
+    },
     price: {
       type: Number // Custom price for this time slot
     },

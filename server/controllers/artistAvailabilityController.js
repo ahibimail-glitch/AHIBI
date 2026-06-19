@@ -1,5 +1,6 @@
 const ArtistAvailability = require('../models/ArtistAvailability');
 const Artist = require('../models/Artist');
+const TeachingBooking = require('../models/TeachingBooking');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
 
@@ -32,8 +33,38 @@ exports.getArtistAvailability = async (req, res) => {
       .populate('timeSlots.bookingId', 'event.name organizer')
       .sort({ date: 1 });
 
+    let teachingBookingsByDate = {};
+    if (month && year) {
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0, 23, 59, 59);
+      const teachingBookings = await TeachingBooking.find({
+        artistId: req.user.id,
+        bookingDate: { $gte: start, $lte: end },
+        status: { $in: ['confirmed', 'completed'] },
+      })
+        .populate('classId', 'title mode')
+        .sort({ bookingDate: 1, startTime: 1 });
+
+      teachingBookingsByDate = teachingBookings.reduce((acc, booking) => {
+        const dateKey = booking.bookingDate.toISOString().split('T')[0];
+        if (!acc[dateKey]) acc[dateKey] = [];
+        acc[dateKey].push({
+          _id: booking._id,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          studentName: booking.studentName,
+          mode: booking.mode,
+          status: booking.status,
+          classTitle: booking.classId?.title,
+          amount: booking.pricing?.amount,
+        });
+        return acc;
+      }, {});
+    }
+
     return ApiResponse.success(res, 'Availability retrieved successfully', {
-      availability
+      availability,
+      teachingBookingsByDate,
     });
 
   } catch (error) {
@@ -322,6 +353,14 @@ exports.getCalendarOverview = async (req, res) => {
       date: { $gte: startDate, $lte: endDate }
     }).populate('timeSlots.bookingId', 'event.name organizer booking.finalAmount');
 
+    const teachingBookings = await TeachingBooking.find({
+      artistId: req.user.id,
+      bookingDate: { $gte: startDate, $lte: endDate },
+      status: { $in: ['confirmed', 'completed'] },
+    })
+      .populate('classId', 'title')
+      .sort({ bookingDate: 1, startTime: 1 });
+
     // Create calendar overview
     const calendarData = {};
     availability.forEach(avail => {
@@ -340,9 +379,42 @@ exports.getCalendarOverview = async (req, res) => {
             endTime: slot.endTime,
             bookingId: slot.bookingId._id,
             eventName: slot.bookingId.event.name,
-            amount: slot.bookingId.booking.finalAmount
-          }))
+            amount: slot.bookingId.booking.finalAmount,
+            type: 'event',
+          })),
+        teachingBookings: [],
       };
+    });
+
+    teachingBookings.forEach((booking) => {
+      const dateKey = booking.bookingDate.toISOString().split('T')[0];
+      const entry = {
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        bookingId: booking._id,
+        studentName: booking.studentName,
+        classTitle: booking.classId?.title,
+        amount: booking.pricing?.amount,
+        mode: booking.mode,
+        type: 'teaching',
+      };
+      if (!calendarData[dateKey]) {
+        calendarData[dateKey] = {
+          dayStatus: 'partially_booked',
+          totalSlots: 0,
+          availableSlots: 0,
+          bookedSlots: 1,
+          isSpecialDay: false,
+          bookings: [],
+          teachingBookings: [entry],
+        };
+      } else {
+        calendarData[dateKey].teachingBookings = calendarData[dateKey].teachingBookings || [];
+        calendarData[dateKey].teachingBookings.push(entry);
+        if (calendarData[dateKey].dayStatus === 'available') {
+          calendarData[dateKey].dayStatus = 'partially_booked';
+        }
+      }
     });
 
     return ApiResponse.success(res, 'Calendar overview retrieved successfully', {
