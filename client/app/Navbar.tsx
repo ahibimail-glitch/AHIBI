@@ -37,7 +37,7 @@ import { useAuth } from "@/hooks/useAuth";
 // ─── Bottom nav primary tabs (5 max) ───────────────────────────────────────
 const primaryNavLinks = [
   { href: "/events",    label: "Events",  Icon: CalendarDays },
-  { href: "/sports",    label: "Sports",  Icon: Trophy       },
+  // { href: "/sports",    label: "Sports",  Icon: Trophy       },
   { href: "/allArtists",label: "Artists", Icon: Mic2         },
   { href: "/allVenues", label: "Venues",  Icon: Building2    },
 ];

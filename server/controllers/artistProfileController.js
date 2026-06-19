@@ -462,10 +462,13 @@ exports.getApprovedArtists = async (req, res) => {
     };
 
     // Add filters
-
-    
     if (type) {
-      query.type = type;
+      const normalizedType = String(type).toLowerCase();
+      const typeRegex = new RegExp(`^${normalizedType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      query.$or = [
+        { type: typeRegex },
+        { artistCategories: normalizedType },
+      ];
     }
     
     if (city) {

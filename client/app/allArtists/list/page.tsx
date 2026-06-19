@@ -20,7 +20,17 @@ interface Artist {
   gallery: { photos: Array<{ url: string; isProfileImage?: boolean }> }
 }
 
-const CATEGORIES = ["All", "DJ", "Singer", "Band", "Dancer", "Comedian", "Magician"]
+const CATEGORIES = ["All", "DJ", "Singer", "Band", "Dancer", "Comedian", "Magician"] as const
+
+const CATEGORY_TO_TYPE: Record<(typeof CATEGORIES)[number], string | null> = {
+  All: null,
+  DJ: "dj",
+  Singer: "singer",
+  Band: "band",
+  Dancer: "dancer",
+  Comedian: "comedian",
+  Magician: "magician",
+}
 
 const DEMO_IMAGES = [
   "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80",
@@ -42,7 +52,9 @@ export default function ArtistsListPage() {
     try {
       setLoading(true)
       const params = new URLSearchParams()
-      if (activeCategory !== "All") params.append("genre", activeCategory)
+      params.append("limit", "100")
+      const typeFilter = CATEGORY_TO_TYPE[activeCategory as (typeof CATEGORIES)[number]]
+      if (typeFilter) params.append("type", typeFilter)
 
       const res = await fetch(`/api/artist/public?${params.toString()}`)
       const data = await res.json()

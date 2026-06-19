@@ -19,8 +19,6 @@ import {
   Loader2,
   Filter,
   X,
-  Trophy,
-  CalendarClock,
   ArrowRight,
   ChevronRight,
 } from "lucide-react";
@@ -175,7 +173,6 @@ export default function EventsPage() {
   const [heroImages, setHeroImages]         = useState<Array<{ url: string; mobileUrl?: string }>>([]);
   const [loadingHero, setLoadingHero]       = useState(true);
   const [isMobile, setIsMobile]             = useState(false);
-  const [showTournaments, setShowTournaments] = useState(false);
   const [heroIdx, setHeroIdx]               = useState(0);
 
   const currentDate = new Date();
@@ -496,14 +493,12 @@ export default function EventsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                    {showTournaments ? "Tournaments" : `Events in ${selectedCity === "all" ? "India" : selectedCity}`}
+                    {`Events in ${selectedCity === "all" ? "India" : selectedCity}`}
                   </h2>
-                  {!showTournaments && (
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {upcomingSorted.length + currentSorted.length} upcoming
-                      {pastSorted.length > 0 ? ` · ${pastSorted.length} past` : ""}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {upcomingSorted.length + currentSorted.length} upcoming
+                    {pastSorted.length > 0 ? ` · ${pastSorted.length} past` : ""}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Button asChild size="sm"
@@ -512,91 +507,29 @@ export default function EventsPage() {
                       <Calendar className="h-3.5 w-3.5 mr-1.5" />Daily
                     </Link>
                   </Button>
-                  <button
-                    onClick={() => setShowTournaments(!showTournaments)}
-                    className={`flex items-center gap-1.5 h-8 px-4 rounded-full text-xs font-semibold transition-all shadow-sm ${
-                      showTournaments
-                        ? "bg-orange-500 text-white hover:bg-orange-600"
-                        : "bg-white text-gray-700 border border-gray-200 hover:border-orange-300 hover:text-orange-600"
-                    }`}
-                  >
-                    <Trophy className="h-3.5 w-3.5" />
-                    {showTournaments ? "Back to Events" : "Tournaments"}
-                  </button>
                 </div>
               </div>
 
               {/* ── Genre pill row ──────────────────────────────────────── */}
-              {!showTournaments && (
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-                  {GENRES.map((genre) => (
-                    <button
-                      key={genre}
-                      onClick={() => setSelectedGenre(selectedGenre === genre ? "all" : genre)}
-                      className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium transition-all border ${
-                        selectedGenre === genre
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-200 hover:text-blue-600"
-                      }`}
-                    >
-                      <span>{GENRE_ICONS[genre]}</span>
-                      <span>{genre}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* ── Tournaments view ────────────────────────────────────── */}
-              {showTournaments && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  className="max-w-lg">
-                  <Card className="rounded-2xl bg-gray-900 border-0 overflow-hidden shadow-xl">
-                    <CardContent className="p-0">
-                      <div className="relative h-52 sm:h-64 overflow-hidden">
-                        <Image src="/images/Turf_Titans_16_9.png" alt="Turf Titans Tournament T3"
-                          fill className="object-contain" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/30 to-transparent" />
-                        <span className="absolute top-3 right-3 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest bg-orange-500 text-white rounded-full">
-                          Open
-                        </span>
-                      </div>
-                      <div className="p-5 space-y-4">
-                        <h3 className="text-lg font-extrabold text-white uppercase italic tracking-tight">
-                          Turf Titans Tournament T3
-                        </h3>
-                        <div className="space-y-2 text-sm text-gray-400">
-                          <div className="flex items-center gap-2">
-                            <CalendarClock className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                            <span>21–23 May 2026</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                            <span>Kuda Futsal Arena, Dimapur, Nagaland</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="px-2.5 py-1 text-xs bg-white/10 text-gray-300 rounded-full">6v6 Futsal</span>
-                          <span className="px-2.5 py-1 text-xs bg-white/10 text-gray-300 rounded-full">Direct Knockout</span>
-                        </div>
-                        <div className="flex items-center justify-between pt-1">
-                          <div>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Entry Fee</p>
-                            <p className="text-sm font-bold text-white">₹3,500 / team</p>
-                          </div>
-                          <Button asChild size="sm"
-                            className="rounded-full bg-orange-500 hover:bg-orange-400 text-white font-semibold px-5">
-                            <Link href="/futsal-tournament">Register <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+                {GENRES.map((genre) => (
+                  <button
+                    key={genre}
+                    onClick={() => setSelectedGenre(selectedGenre === genre ? "all" : genre)}
+                    className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium transition-all border ${
+                      selectedGenre === genre
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-blue-200 hover:text-blue-600"
+                    }`}
+                  >
+                    <span>{GENRE_ICONS[genre]}</span>
+                    <span>{genre}</span>
+                  </button>
+                ))}
+              </div>
 
               {/* ── Events sections ─────────────────────────────────────── */}
-              {!showTournaments && (
-                <div className="space-y-10">
+              <div className="space-y-10">
 
                   {/* Live */}
                   {currentSorted.length > 0 && (
@@ -656,7 +589,6 @@ export default function EventsPage() {
                     </motion.div>
                   )}
                 </div>
-              )}
             </div>
           </div>
         </div>
