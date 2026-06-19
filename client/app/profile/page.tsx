@@ -334,7 +334,7 @@ export default function ProfilePage() {
               {[
                 { id: "events", label: "Events", count: regularEventBookings.length },
                 { id: "daily-events", label: "Daily Events", count: dailyEventBookings.length },
-                { id: "sports", label: "Sports", count: sportsBookings.length }
+                // { id: "sports", label: "Sports", count: sportsBookings.length }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -428,8 +428,8 @@ export default function ProfilePage() {
                 )
               )}
 
-              {/* --- SPORTS --- */}
-              {bookingType === "sports" && (
+              {/* --- SPORTS --- (hidden while /sports is disabled) */}
+              {false && bookingType === "sports" && (
                 sportsBookings.length > 0 ? sportsBookings.map((booking) => (
                   <div key={booking._id} className="group bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5">
                     <div className="w-full sm:w-32 h-32 relative rounded-xl shrink-0 bg-slate-50 border border-slate-100 flex items-center justify-center text-4xl">

@@ -485,15 +485,15 @@ export default function HomePage() {
           "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
         count: events.length,
       },
-      {
-        label: "Sports",
-        href: "/sports",
-        image:
-          "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
-        count: events.filter((e) =>
-          (e.category || "").toLowerCase().includes("sport")
-        ).length,
-      },
+      // {
+      //   label: "Sports",
+      //   href: "/sports",
+      //   image:
+      //     "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80",
+      //   count: events.filter((e) =>
+      //     (e.category || "").toLowerCase().includes("sport")
+      //   ).length,
+      // },
       {
         label: "Artists",
         href: "/allArtists",
@@ -877,8 +877,8 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Sports Events Section */}
-      {sportsEvents.length > 0 && (
+      {/* Sports Events Section — hidden while /sports is disabled */}
+      {false && sportsEvents.length > 0 && (
         <section className="py-8 sm:py-12 md:py-16 bg-gradient-to-br from-green-900 via-blue-900 to-indigo-900 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(34,197,94,0.1),transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(59,130,246,0.1),transparent_50%)]" />

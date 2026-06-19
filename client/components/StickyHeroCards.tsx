@@ -32,15 +32,15 @@ const HERO_CARDS = [
     href: "/allArtists",
     dotColor: "#d4e6c7",
   },
-  {
-    badge: "SPORTS",
-    heading: "Post your",
-    accent: "sports events",
-    sub: "Fill the stands. Live in under",
-    subBold: "5 minutes.",
-    href: "/sports",
-    dotColor: "#e6c7c7",
-  },
+  // {
+  //   badge: "SPORTS",
+  //   heading: "Post your",
+  //   accent: "sports events",
+  //   sub: "Fill the stands. Live in under",
+  //   subBold: "5 minutes.",
+  //   href: "/sports",
+  //   dotColor: "#e6c7c7",
+  // },
 ]
 
 // Each transition uses CARD_VH of scroll; last card only needs LAST_VH to land

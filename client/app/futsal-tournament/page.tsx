@@ -463,18 +463,18 @@ export default function FutsalTournamentRegistration() {
                     </div>
                     <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                       <Button
-                        onClick={() => router.push("/sports/tournaments")}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        View Other Tournaments
-                      </Button>
-                      <Button
                         onClick={() => router.push("/")}
-                        variant="outline"
-                        className="flex-1"
+                        className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         Go to Home
                       </Button>
+                      {/* <Button
+                        onClick={() => router.push("/sports/tournaments")}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        View Other Tournaments
+                      </Button> */}
                     </div>
                   </div>
                 </div>

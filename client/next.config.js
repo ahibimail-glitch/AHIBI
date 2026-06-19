@@ -40,6 +40,17 @@ const nextConfig = {
         destination: 'https://ahibi.in/:path*',
         permanent: true,
       },
+      // Sports section disabled — routes kept in codebase for future use
+      {
+        source: '/sports',
+        destination: '/',
+        permanent: false,
+      },
+      {
+        source: '/sports/:path*',
+        destination: '/',
+        permanent: false,
+      },
     ]
   },
   // Remove console statements in production builds (keep error and warn)
