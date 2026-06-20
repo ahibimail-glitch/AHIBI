@@ -27,6 +27,7 @@ import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Event, EventsResponse } from "@/types/event";
+import { EVENTS_HERO_DISPLAY_HEIGHT } from "@/lib/eventsHero";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -170,9 +171,8 @@ export default function EventsPage() {
   const [isLoading, setIsLoading]           = useState(true);
   const [error, setError]                   = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen]     = useState(false);
-  const [heroImages, setHeroImages]         = useState<Array<{ url: string; mobileUrl?: string }>>([]);
+  const [heroImages, setHeroImages]         = useState<Array<{ url: string }>>([]);
   const [loadingHero, setLoadingHero]       = useState(true);
-  const [isMobile, setIsMobile]             = useState(false);
   const [heroIdx, setHeroIdx]               = useState(0);
 
   const currentDate = new Date();
@@ -193,14 +193,6 @@ export default function EventsPage() {
     })();
   }, []);
 
-  // ── Viewport detection ─────────────────────────────────────────────────────
-  useEffect(() => {
-    const update = () => setIsMobile(window.innerWidth < 640);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
   // ── Hero images ────────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -215,7 +207,7 @@ export default function EventsPage() {
             i.type === "events"
           );
           if (!imgs.length) imgs = data.data;
-          setHeroImages(imgs.map((i: any) => ({ url: i.url, mobileUrl: i.mobileUrl })));
+          setHeroImages(imgs.map((i: any) => ({ url: i.url })));
         } else {
           setHeroImages([{ url: "/images/carausel1.jpg" }]);
         }
@@ -304,11 +296,7 @@ export default function EventsPage() {
   }
 
   // ── Hero image URL ─────────────────────────────────────────────────────────
-  const heroSrc = heroImages[heroIdx]
-    ? (isMobile && heroImages[heroIdx].mobileUrl
-        ? heroImages[heroIdx].mobileUrl!
-        : heroImages[heroIdx].url)
-    : "/images/carausel1.jpg";
+  const heroSrc = heroImages[heroIdx]?.url || "/images/carausel1.jpg";
 
   // ── Sidebar / filter panel content (shared) ────────────────────────────────
   const FilterContent = () => (
@@ -383,7 +371,10 @@ export default function EventsPage() {
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative w-full overflow-hidden bg-gray-900">
           {loadingHero ? (
-            <div className="h-[200px] sm:h-[280px] md:h-[380px] lg:h-[460px] bg-gray-800 animate-pulse" />
+            <div
+              className="w-full bg-gray-800 animate-pulse"
+              style={{ height: `${EVENTS_HERO_DISPLAY_HEIGHT}px` }}
+            />
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
@@ -392,7 +383,8 @@ export default function EventsPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.8 }}
-                className="relative h-[200px] sm:h-[280px] md:h-[380px] lg:h-[460px]"
+                className="relative w-full"
+                style={{ height: `${EVENTS_HERO_DISPLAY_HEIGHT}px` }}
               >
                 <Image src={heroSrc} alt="Events" fill className="object-cover" priority />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />

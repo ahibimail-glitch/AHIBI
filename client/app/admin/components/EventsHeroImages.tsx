@@ -17,6 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  EVENTS_HERO_DISPLAY_HEIGHT,
+  EVENTS_HERO_IMAGE_SIZE_LABEL,
+  EVENTS_HERO_IMAGE_WIDTH,
+  EVENTS_HERO_MAX_FILE_SIZE_MB,
+} from "@/lib/eventsHero";
 
 interface EventsHeroImage {
   _id: string;
@@ -24,8 +30,6 @@ interface EventsHeroImage {
   description: string;
   url: string;
   public_id: string;
-  mobileUrl?: string;
-  mobilePublic_id?: string;
   active: boolean;
   order: number;
   createdAt: string;
@@ -38,7 +42,6 @@ export default function EventsHeroImages() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedMobileFile, setSelectedMobileFile] = useState<File | null>(null);
   const [imageTitle, setImageTitle] = useState("");
   const [imageDescription, setImageDescription] = useState("");
 
@@ -79,16 +82,6 @@ export default function EventsHeroImages() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
-      
-      // Clear any previous messages
-      setError(null);
-      setSuccess(null);
-    }
-  };
-
-  const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedMobileFile(e.target.files[0]);
       setError(null);
       setSuccess(null);
     }
@@ -110,9 +103,6 @@ export default function EventsHeroImages() {
       const formData = new FormData();
       if (selectedFile) {
         formData.append("image", selectedFile);
-      }
-      if (selectedMobileFile) {
-        formData.append("mobileImage", selectedMobileFile);
       }
       
       // Add events-specific metadata to title and description
@@ -138,7 +128,6 @@ export default function EventsHeroImages() {
 
       // Reset form
       setSelectedFile(null);
-      setSelectedMobileFile(null);
       setImageTitle("");
       setImageDescription("");
       
@@ -152,10 +141,6 @@ export default function EventsHeroImages() {
       const fileInput = document.getElementById("events-image-upload") as HTMLInputElement;
       if (fileInput) {
         fileInput.value = "";
-      }
-      const mobileFileInput = document.getElementById("events-mobile-image-upload") as HTMLInputElement;
-      if (mobileFileInput) {
-        mobileFileInput.value = "";
       }
     } catch (err: any) {
       console.error("Error uploading image:", err);
@@ -298,38 +283,23 @@ export default function EventsHeroImages() {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="events-image-upload" className="block mb-2">Select Desktop Image</Label>
-                    <Input
-                        id="events-image-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                       
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                        Recommended: 2560x900px (wide banner). Minimum: 1920px wide. Max: 5MB.
-                    </p>
-                </div>
-                <div>
-                    <Label htmlFor="events-mobile-image-upload" className="block mb-2">Select Mobile Image (Optional)</Label>
-                    <Input
-                        id="events-mobile-image-upload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleMobileFileChange}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                        Recommended: 1080x540px (wide banner). Minimum: 1080px wide. Max: 2MB.
-                    </p>
-                </div>
+            <div>
+              <Label htmlFor="events-image-upload" className="block mb-2">Select Hero Image</Label>
+              <Input
+                id="events-image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Required size: {EVENTS_HERO_IMAGE_SIZE_LABEL}. Minimum: {EVENTS_HERO_IMAGE_WIDTH}px wide. Max: {EVENTS_HERO_MAX_FILE_SIZE_MB}MB.
+              </p>
             </div>
 
             <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
               <p className="font-medium text-gray-700">Events Hero Image Tips</p>
               <p className="mt-1">
-                The events page hero uses a fixed-height banner with <span className="font-mono">object-cover</span>, so edges may crop on different screens. Keep key text/logos centered.
+                The events page hero is {EVENTS_HERO_DISPLAY_HEIGHT}px tall with <span className="font-mono">object-cover</span>, so edges may crop on narrow screens. Keep key text/logos centered.
               </p>
             </div>
             
@@ -337,18 +307,9 @@ export default function EventsHeroImages() {
               {selectedFile && (
                 <div className="flex items-center space-x-2 text-sm">
                   <ImageIcon className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">Desktop: {selectedFile.name}</span>
+                  <span className="text-gray-700">{selectedFile.name}</span>
                   <span className="text-xs text-gray-500">
                     ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
-                  </span>
-                </div>
-              )}
-              {selectedMobileFile && (
-                <div className="flex items-center space-x-2 text-sm mt-1">
-                  <ImageIcon className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">Mobile: {selectedMobileFile.name}</span>
-                  <span className="text-xs text-gray-500">
-                    ({(selectedMobileFile.size / (1024 * 1024)).toFixed(2)} MB)
                   </span>
                 </div>
               )}
@@ -393,34 +354,16 @@ export default function EventsHeroImages() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {images.map((image) => (
-            <Card key={image._id} className="overflow-hidden">
-              <div className="grid grid-cols-2 divide-x divide-gray-200">
-                <div className="aspect-video relative">
-                    <img 
-                        src={image.url}
-                        alt={image.title || "Events hero image"}
-                        className="object-cover w-full h-full"
-                    />
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        Desktop
-                    </div>
-                </div>
-                <div className="aspect-video relative bg-gray-100">
-                    {image.mobileUrl ? (
-                        <img 
-                            src={image.mobileUrl}
-                            alt={`${image.title || "Events hero image"} (Mobile)`}
-                            className="object-cover w-full h-full"
-                        />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400">
-                            <ImageIcon className="h-8 w-8" />
-                        </div>
-                    )}
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        Mobile
-                    </div>
-                </div>
+            <Card key={image._id} className="overflow-hidden relative">
+              <div
+                className="relative w-full overflow-hidden bg-gray-100"
+                style={{ height: `${EVENTS_HERO_DISPLAY_HEIGHT}px` }}
+              >
+                <img
+                  src={image.url}
+                  alt={image.title || "Events hero image"}
+                  className="object-cover w-full h-full"
+                />
               </div>
               <div className="absolute top-2 right-2">
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${image.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
@@ -479,7 +422,7 @@ export default function EventsHeroImages() {
               <div className="mt-2 text-xs text-blue-600">
                 <p>• Images are automatically tagged as "Events" for easy identification</p>
                 <p>• Only active images will be displayed on the events page</p>
-                <p>• Desktop and mobile versions are supported for better responsive design</p>
+                <p>• Upload one image at {EVENTS_HERO_IMAGE_SIZE_LABEL}; displayed at {EVENTS_HERO_DISPLAY_HEIGHT}px height</p>
               </div>
             </div>
           </div>
