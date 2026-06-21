@@ -163,6 +163,7 @@ router.post('/teaching/classes', [
   authorize('artist'),
   check('title', 'Title is required').not().isEmpty(),
   check('mode', 'Mode must be online, offline, or both').isIn(['online', 'offline', 'both']),
+  check('maxStudents', 'Max students is required').isInt({ min: 1 }),
 ], artistTeachingController.createClass);
 router.put('/teaching/classes/:classId', protect, authorize('artist'), artistTeachingController.updateClass);
 router.delete('/teaching/classes/:classId', protect, authorize('artist'), artistTeachingController.deleteClass);

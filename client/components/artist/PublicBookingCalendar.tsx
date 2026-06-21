@@ -32,6 +32,12 @@ interface DayAvailability {
   date: string;
   dayStatus: 'available' | 'partially_booked' | 'fully_booked' | 'unavailable';
   timeSlots: TimeSlot[];
+  bookedSlots?: Array<{
+    startTime: string;
+    endTime: string;
+    type: string;
+    label?: string;
+  }>;
   specialPricing?: {
     isSpecial: boolean;
     multiplier?: number;
@@ -150,17 +156,18 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         ([dateKey, dayData]: any) => ({
           _id: `${artistId}-${dateKey}`,
           date: dateKey,
-          dayStatus: dayData?.dayStatus || 'unavailable',
+          dayStatus: dayData?.dayStatus || 'available',
           timeSlots: Array.isArray(dayData?.availableSlots)
             ? dayData.availableSlots.map((slot: any) => ({
                 startTime: slot.startTime,
                 endTime: slot.endTime,
                 isAvailable: true,
                 isBooked: false,
-                price: slot.calculatedPrice,
+                price: slot.calculatedPrice || slot.price,
                 notes: slot.note,
               }))
             : [],
+          bookedSlots: Array.isArray(dayData?.bookedSlots) ? dayData.bookedSlots : [],
           specialPricing: dayData?.isSpecialDay
             ? {
                 isSpecial: true,
@@ -565,6 +572,22 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5 px-4 pb-4 sm:px-6 sm:pb-6">
+                {selectedDayAvailability?.bookedSlots && selectedDayAvailability.bookedSlots.length > 0 && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 mb-2">
+                      Already booked on this date
+                    </p>
+                    <div className="space-y-1">
+                      {selectedDayAvailability.bookedSlots.map((slot, i) => (
+                        <p key={i} className="text-sm text-amber-900">
+                          {slot.startTime}–{slot.endTime}
+                          {slot.label ? ` · ${slot.label}` : ''}
+                          {slot.type === 'teaching' ? ' (Teaching)' : slot.type === 'event' ? ' (Event)' : ''}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {selectedDayAvailability?.dayStatus === 'unavailable' ? (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                     This date is marked unavailable by the artist.

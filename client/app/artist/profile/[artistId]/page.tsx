@@ -488,6 +488,7 @@ export default function PublicArtistProfile() {
     maxStudents?: number;
   }>>([]);
   const [showTeachingBooking, setShowTeachingBooking] = useState(false);
+  const [teachingPaymentActive, setTeachingPaymentActive] = useState(false);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState<typeof teachingClasses[0] | null>(null);
 
   useEffect(() => {
@@ -1030,7 +1031,7 @@ export default function PublicArtistProfile() {
                           {cls.schedule?.days && cls.schedule.days.length > 0 && (
                             <span>{cls.schedule.days.join(", ")}</span>
                           )}
-                          {cls.maxStudents && <span>Max {cls.maxStudents} students</span>}
+                          {cls.maxStudents && <span>Up to {cls.maxStudents} students per session</span>}
                         </div>
                         {(cls.mode === "offline" || cls.mode === "both") && cls.offlineLocation?.city && (
                           <div className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
@@ -1316,7 +1317,7 @@ export default function PublicArtistProfile() {
         <Footer />
 
         {/* TEACHING BOOKING MODAL */}
-        <Dialog open={showTeachingBooking} onOpenChange={setShowTeachingBooking}>
+        <Dialog open={showTeachingBooking} onOpenChange={setShowTeachingBooking} modal={!teachingPaymentActive}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 md:p-6">
             <DialogHeader>
               <DialogTitle className="font-['Cormorant_Garamond',_serif] text-[26px] font-bold">
@@ -1335,6 +1336,7 @@ export default function PublicArtistProfile() {
                   mode: selectedTeachingClass.mode as "online" | "offline" | "both",
                 }}
                 onClose={() => setShowTeachingBooking(false)}
+                onPaymentStateChange={setTeachingPaymentActive}
               />
             )}
           </DialogContent>

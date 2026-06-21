@@ -3,6 +3,12 @@ const Artist = require('../models/Artist');
 const TeachingBooking = require('../models/TeachingBooking');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
+const {
+  getUnifiedMonthCalendar,
+  getEventBookingsByDate,
+  getTeachingBookingsByDate,
+  toDateKey,
+} = require('../utils/artistScheduleUtils');
 
 /**
  * @desc    Get artist availability for a date range
@@ -34,37 +40,28 @@ exports.getArtistAvailability = async (req, res) => {
       .sort({ date: 1 });
 
     let teachingBookingsByDate = {};
+    let eventBookingsByDate = {};
+    let unifiedCalendar = {};
+
     if (month && year) {
       const start = new Date(year, month - 1, 1);
       const end = new Date(year, month, 0, 23, 59, 59);
-      const teachingBookings = await TeachingBooking.find({
-        artistId: req.user.id,
-        bookingDate: { $gte: start, $lte: end },
-        status: { $in: ['confirmed', 'completed'] },
-      })
-        .populate('classId', 'title mode')
-        .sort({ bookingDate: 1, startTime: 1 });
 
-      teachingBookingsByDate = teachingBookings.reduce((acc, booking) => {
-        const dateKey = booking.bookingDate.toISOString().split('T')[0];
-        if (!acc[dateKey]) acc[dateKey] = [];
-        acc[dateKey].push({
-          _id: booking._id,
-          startTime: booking.startTime,
-          endTime: booking.endTime,
-          studentName: booking.studentName,
-          mode: booking.mode,
-          status: booking.status,
-          classTitle: booking.classId?.title,
-          amount: booking.pricing?.amount,
-        });
-        return acc;
-      }, {});
+      const artist = await Artist.findById(req.user.id).select('basePrice');
+      [teachingBookingsByDate, eventBookingsByDate, unifiedCalendar] = await Promise.all([
+        getTeachingBookingsByDate(req.user.id, start, end),
+        getEventBookingsByDate(req.user.id, start, end),
+        getUnifiedMonthCalendar(req.user.id, Number(month), Number(year), {
+          basePrice: artist?.basePrice || 0,
+        }),
+      ]);
     }
 
     return ApiResponse.success(res, 'Availability retrieved successfully', {
       availability,
       teachingBookingsByDate,
+      eventBookingsByDate,
+      unifiedCalendar,
     });
 
   } catch (error) {
@@ -342,85 +339,36 @@ exports.bulkSetAvailability = async (req, res) => {
 exports.getCalendarOverview = async (req, res) => {
   try {
     const { month, year } = req.query;
-    const currentMonth = month || new Date().getMonth() + 1;
-    const currentYear = year || new Date().getFullYear();
+    const currentMonth = Number(month) || new Date().getMonth() + 1;
+    const currentYear = Number(year) || new Date().getFullYear();
 
-    const startDate = new Date(currentYear, currentMonth - 1, 1);
-    const endDate = new Date(currentYear, currentMonth, 0);
+    const artist = await Artist.findById(req.user.id).select('basePrice');
+    const calendarData = await getUnifiedMonthCalendar(
+      req.user.id,
+      currentMonth,
+      currentYear,
+      { basePrice: artist?.basePrice || 0 }
+    );
 
-    const availability = await ArtistAvailability.find({
-      artist: req.user.id,
-      date: { $gte: startDate, $lte: endDate }
-    }).populate('timeSlots.bookingId', 'event.name organizer booking.finalAmount');
-
-    const teachingBookings = await TeachingBooking.find({
-      artistId: req.user.id,
-      bookingDate: { $gte: startDate, $lte: endDate },
-      status: { $in: ['confirmed', 'completed'] },
-    })
-      .populate('classId', 'title')
-      .sort({ bookingDate: 1, startTime: 1 });
-
-    // Create calendar overview
-    const calendarData = {};
-    availability.forEach(avail => {
-      const dateKey = avail.date.toISOString().split('T')[0];
-      calendarData[dateKey] = {
-        dayStatus: avail.dayStatus,
-        totalSlots: avail.timeSlots.length,
-        availableSlots: avail.timeSlots.filter(slot => slot.isAvailable && !slot.isBooked).length,
-        bookedSlots: avail.timeSlots.filter(slot => slot.isBooked).length,
-        isSpecialDay: avail.specialPricing.isSpecialDay,
-        specialReason: avail.specialPricing.reason,
-        bookings: avail.timeSlots
-          .filter(slot => slot.isBooked && slot.bookingId)
-          .map(slot => ({
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            bookingId: slot.bookingId._id,
-            eventName: slot.bookingId.event.name,
-            amount: slot.bookingId.booking.finalAmount,
-            type: 'event',
-          })),
-        teachingBookings: [],
+    const formatted = {};
+    Object.entries(calendarData).forEach(([dateKey, day]) => {
+      formatted[dateKey] = {
+        dayStatus: day.dayStatus,
+        totalSlots: day.totalSlots,
+        availableSlots: day.availableSlots.length,
+        bookedSlots: day.bookedSlots.length,
+        isSpecialDay: day.isSpecialDay,
+        specialReason: day.specialReason,
+        bookings: day.bookedSlots.filter((slot) => slot.type === 'event'),
+        teachingBookings: day.bookedSlots.filter((slot) => slot.type === 'teaching'),
+        blockedSlots: day.bookedSlots.filter((slot) => slot.type === 'blocked'),
       };
-    });
-
-    teachingBookings.forEach((booking) => {
-      const dateKey = booking.bookingDate.toISOString().split('T')[0];
-      const entry = {
-        startTime: booking.startTime,
-        endTime: booking.endTime,
-        bookingId: booking._id,
-        studentName: booking.studentName,
-        classTitle: booking.classId?.title,
-        amount: booking.pricing?.amount,
-        mode: booking.mode,
-        type: 'teaching',
-      };
-      if (!calendarData[dateKey]) {
-        calendarData[dateKey] = {
-          dayStatus: 'partially_booked',
-          totalSlots: 0,
-          availableSlots: 0,
-          bookedSlots: 1,
-          isSpecialDay: false,
-          bookings: [],
-          teachingBookings: [entry],
-        };
-      } else {
-        calendarData[dateKey].teachingBookings = calendarData[dateKey].teachingBookings || [];
-        calendarData[dateKey].teachingBookings.push(entry);
-        if (calendarData[dateKey].dayStatus === 'available') {
-          calendarData[dateKey].dayStatus = 'partially_booked';
-        }
-      }
     });
 
     return ApiResponse.success(res, 'Calendar overview retrieved successfully', {
       month: currentMonth,
       year: currentYear,
-      calendarData
+      calendarData: formatted,
     });
 
   } catch (error) {

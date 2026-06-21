@@ -13,6 +13,7 @@ const {
   getBusySlotsForDate,
   normalizeDateOnly,
   timeToMinutes,
+  toDateKey,
 } = require('../utils/artistScheduleUtils');
 
 let razorpayInstance;
@@ -29,7 +30,7 @@ const getRazorpay = () => {
 };
 
 async function generateAndAttachInvoice(bookingId) {
-  const booking = await TeachingBooking.findById(bookingId)
+  let booking = await TeachingBooking.findById(bookingId)
     .populate('classId', 'title subject mode pricing')
     .populate('artistId', 'name email phone city');
 
@@ -39,6 +40,9 @@ async function generateAndAttachInvoice(bookingId) {
 
   if (!booking.invoiceNumber) {
     await booking.save();
+    booking = await TeachingBooking.findById(bookingId)
+      .populate('classId', 'title subject mode pricing')
+      .populate('artistId', 'name email phone city');
   }
 
   if (!booking.invoicePdf) {
@@ -82,6 +86,7 @@ exports.getPublicTeachingCalendar = async (req, res) => {
         _id: result.teachingClass._id,
         title: result.teachingClass.title,
         mode: result.teachingClass.mode,
+        maxStudents: result.teachingClass.maxStudents,
         pricing: result.teachingClass.pricing,
         schedule: result.teachingClass.schedule,
       },
@@ -112,17 +117,34 @@ exports.getPublicDaySlots = async (req, res) => {
       return ApiResponse.notFound(res, 'Class not found');
     }
 
-    const { getMonthlySchedule: getSchedule, getBusySlotsForDate: getBusy } = require('../utils/artistScheduleUtils');
-    const { generateTeachingSlotsForClass, isSlotFree } = require('../utils/artistScheduleUtils');
+    const { getBusySlotsForDate, getActiveTeachingBookingsForDate, generateTeachingSlotsForClass, evaluateTeachingClassSlot } = require('../utils/artistScheduleUtils');
 
-    const busySlots = await getBusy(artistId, date);
+    const [busySlots, teachingBookings] = await Promise.all([
+      getBusySlotsForDate(artistId, date),
+      getActiveTeachingBookingsForDate(artistId, date),
+    ]);
     const candidateSlots = generateTeachingSlotsForClass(teachingClass, date);
+    const capacity = Math.max(1, teachingClass.maxStudents || 1);
     const availableSlots = candidateSlots
-      .filter((slot) => isSlotFree(busySlots, slot.startTime, slot.endTime))
-      .map((slot) => ({
-        ...slot,
-        price: teachingClass.pricing?.amount || 0,
-      }));
+      .map((slot) => {
+        const slotCheck = evaluateTeachingClassSlot(
+          busySlots,
+          teachingBookings,
+          teachingClass._id,
+          slot.startTime,
+          slot.endTime,
+          capacity
+        );
+        if (!slotCheck.available) return null;
+        return {
+          ...slot,
+          price: teachingClass.pricing?.amount || 0,
+          maxStudents: capacity,
+          bookedCount: slotCheck.bookedCount,
+          spotsLeft: slotCheck.spotsLeft,
+        };
+      })
+      .filter(Boolean);
 
     return ApiResponse.success(res, 'Day slots fetched', {
       date,
@@ -188,7 +210,13 @@ exports.createTeachingOrder = async (req, res) => {
       return ApiResponse.badRequest(res, `This class only supports ${allowedModes.join(' or ')} mode`);
     }
 
-    const availabilityCheck = await checkTeachingSlotAvailable(artistId, bookingDate, startTime, endTime);
+    const availabilityCheck = await checkTeachingSlotAvailable(
+      artistId,
+      bookingDate,
+      startTime,
+      endTime,
+      { classId, maxStudents: teachingClass.maxStudents }
+    );
     if (!availabilityCheck.available) {
       return ApiResponse.badRequest(res, availabilityCheck.reason || 'Artist is not available at this time');
     }
@@ -270,22 +298,58 @@ exports.verifyTeachingPayment = async (req, res) => {
       return ApiResponse.badRequest(res, 'Invalid payment signature');
     }
 
-    const booking = await TeachingBooking.findOne({
+    let booking = await TeachingBooking.findOne({
       _id: bookingId,
       artistId,
-      status: 'pending_payment',
       'payment.razorpayOrderId': razorpay_order_id,
-    }).populate('classId', 'title mode');
+    }).populate('classId', 'title mode maxStudents');
 
     if (!booking) {
       return ApiResponse.notFound(res, 'Pending booking not found');
+    }
+
+    if (
+      booking.status === 'confirmed' &&
+      booking.payment?.razorpayPaymentId === razorpay_payment_id
+    ) {
+      let invoicedBooking = booking;
+      if (!booking.invoiceNumber) {
+        try {
+          invoicedBooking = await generateAndAttachInvoice(booking._id);
+        } catch (invoiceError) {
+          console.error('Teaching invoice regeneration error:', invoiceError);
+        }
+      }
+      return ApiResponse.success(res, 'Teaching session already confirmed', {
+        booking: {
+          _id: booking._id,
+          bookingDate: booking.bookingDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          mode: booking.mode,
+          status: booking.status,
+          classTitle: booking.classId?.title,
+          amountPaid: booking.payment.amountPaid,
+          invoiceNumber: invoicedBooking?.invoiceNumber || booking.invoiceNumber,
+          invoiceUrl: invoicedBooking?.invoiceUrl || booking.invoiceUrl,
+        },
+      });
+    }
+
+    if (booking.status !== 'pending_payment') {
+      return ApiResponse.badRequest(res, 'This booking is no longer pending payment');
     }
 
     const availabilityCheck = await checkTeachingSlotAvailable(
       artistId,
       booking.bookingDate,
       booking.startTime,
-      booking.endTime
+      booking.endTime,
+      {
+        excludeTeachingBookingId: booking._id,
+        classId: booking.classId?._id || booking.classId,
+        maxStudents: booking.classId?.maxStudents,
+      }
     );
 
     if (!availabilityCheck.available) {
@@ -312,7 +376,9 @@ exports.verifyTeachingPayment = async (req, res) => {
       booking.bookingDate,
       booking.startTime,
       booking.endTime,
-      booking._id
+      booking._id,
+      booking.classId?._id || booking.classId,
+      booking.classId?.maxStudents
     );
 
     let invoicedBooking = null;
@@ -415,7 +481,7 @@ exports.getArtistTeachingCalendarOverview = async (req, res) => {
 
     const calendarData = {};
     for (const booking of bookings) {
-      const dateKey = booking.bookingDate.toISOString().split('T')[0];
+      const dateKey = toDateKey(booking.bookingDate);
       if (!calendarData[dateKey]) calendarData[dateKey] = [];
       calendarData[dateKey].push({
         bookingId: booking._id,

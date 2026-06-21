@@ -3,7 +3,7 @@ const TeachingBooking = require('../models/TeachingBooking');
 const ArtistAvailability = require('../models/ArtistAvailability');
 
 const ACTIVE_EVENT_STATUSES = ['pending', 'accepted', 'counter_offered', 'confirmed'];
-const ACTIVE_TEACHING_STATUSES = ['pending_payment', 'confirmed'];
+const PENDING_PAYMENT_HOLD_MS = 30 * 60 * 1000;
 
 const DAY_MAP = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -24,21 +24,124 @@ function timesOverlap(startA, endA, startB, endB) {
   return startA < endB && endA > startB;
 }
 
-function toDateKey(date) {
-  const d = new Date(date);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 function normalizeDateOnly(dateInput) {
   const d = new Date(dateInput);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-async function getBusySlotsForDate(artistId, dateInput) {
+function toDateKey(dateInput) {
+  const d = normalizeDateOnly(dateInput);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function computeDayStatus(busySlots, availableSlotCount, hasExplicitUnavailable = false) {
+  if (hasExplicitUnavailable) return 'unavailable';
+  const hasFullDayBlock = busySlots.some(
+    (slot) => slot.type === 'blocked' && slot.startTime <= '00:00' && slot.endTime >= '23:59'
+  );
+  if (hasFullDayBlock) return 'unavailable';
+  if (availableSlotCount === 0 && busySlots.length > 0) return 'fully_booked';
+  if (busySlots.length > 0 && availableSlotCount > 0) return 'partially_booked';
+  if (busySlots.length > 0) return 'partially_booked';
+  return 'available';
+}
+
+async function getActiveTeachingBookingsForDate(artistId, dateInput, options = {}) {
+  const { excludeBookingId, excludeTeachingBookingId } = options;
+  const excludeId = excludeTeachingBookingId || excludeBookingId;
+
+  const dateOnly = normalizeDateOnly(dateInput);
+  const nextDay = new Date(dateOnly);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  const teachingQuery = {
+    artistId,
+    bookingDate: { $gte: dateOnly, $lt: nextDay },
+    $or: [
+      { status: { $in: ['confirmed', 'completed'] } },
+      {
+        status: 'pending_payment',
+        createdAt: { $gte: new Date(Date.now() - PENDING_PAYMENT_HOLD_MS) },
+      },
+    ],
+  };
+  if (excludeId) {
+    teachingQuery._id = { $ne: excludeId };
+  }
+
+  return TeachingBooking.find(teachingQuery).select('startTime endTime studentName classId status');
+}
+
+function slotsTimeOverlap(startA, endA, startB, endB) {
+  return timesOverlap(
+    timeToMinutes(startA),
+    timeToMinutes(endA),
+    timeToMinutes(startB),
+    timeToMinutes(endB)
+  );
+}
+
+function countClassBookingsAtSlot(teachingBookings, classId, startTime, endTime) {
+  const classIdStr = classId?.toString();
+  return teachingBookings.filter(
+    (booking) =>
+      booking.classId?.toString() === classIdStr &&
+      booking.startTime === startTime &&
+      booking.endTime === endTime
+  ).length;
+}
+
+function evaluateTeachingClassSlot(busySlots, teachingBookings, classId, startTime, endTime, maxStudents) {
+  const capacity = Math.max(1, Number(maxStudents) || 1);
+
+  const hasEventConflict = busySlots.some(
+    (slot) => slot.type === 'event' && slotsTimeOverlap(startTime, endTime, slot.startTime, slot.endTime)
+  );
+  if (hasEventConflict) {
+    return { available: false, reason: 'Artist has an event at this time', spotsLeft: 0, bookedCount: 0, maxStudents: capacity };
+  }
+
+  const hasBlockConflict = busySlots.some(
+    (slot) => slot.type === 'blocked' && slotsTimeOverlap(startTime, endTime, slot.startTime, slot.endTime)
+  );
+  if (hasBlockConflict) {
+    return { available: false, reason: 'Artist is not available at this time', spotsLeft: 0, bookedCount: 0, maxStudents: capacity };
+  }
+
+  const classIdStr = classId?.toString();
+  const otherTeachingConflict = teachingBookings.some((booking) => {
+    const sameClassExactSlot =
+      booking.classId?.toString() === classIdStr &&
+      booking.startTime === startTime &&
+      booking.endTime === endTime;
+    if (sameClassExactSlot) return false;
+    return slotsTimeOverlap(startTime, endTime, booking.startTime, booking.endTime);
+  });
+  if (otherTeachingConflict) {
+    return { available: false, reason: 'Artist is not available at this time', spotsLeft: 0, bookedCount: 0, maxStudents: capacity };
+  }
+
+  const bookedCount = countClassBookingsAtSlot(teachingBookings, classId, startTime, endTime);
+  const spotsLeft = Math.max(0, capacity - bookedCount);
+
+  if (bookedCount >= capacity) {
+    return {
+      available: false,
+      reason: 'This session is fully booked',
+      bookedCount,
+      spotsLeft: 0,
+      maxStudents: capacity,
+    };
+  }
+
+  return { available: true, bookedCount, spotsLeft, maxStudents: capacity };
+}
+
+async function getBusySlotsForDate(artistId, dateInput, options = {}) {
   const dateOnly = normalizeDateOnly(dateInput);
   const nextDay = new Date(dateOnly);
   nextDay.setDate(nextDay.getDate() + 1);
@@ -49,18 +152,7 @@ async function getBusySlotsForDate(artistId, dateInput) {
       'event.date': { $gte: dateOnly, $lt: nextDay },
       'booking.status': { $in: ACTIVE_EVENT_STATUSES },
     }).select('event.startTime event.endTime event.name booking.status'),
-    TeachingBooking.find({
-      artistId,
-      bookingDate: { $gte: dateOnly, $lt: nextDay },
-      status: { $in: ACTIVE_TEACHING_STATUSES },
-      $or: [
-        { status: 'confirmed' },
-        {
-          status: 'pending_payment',
-          createdAt: { $gte: new Date(Date.now() - 20 * 60 * 1000) },
-        },
-      ],
-    }).select('startTime endTime studentName classId status'),
+    getActiveTeachingBookingsForDate(artistId, dateInput, options),
     ArtistAvailability.findOne({ artist: artistId, date: dateOnly }),
   ]);
 
@@ -111,7 +203,10 @@ async function getBusySlotsForDate(artistId, dateInput) {
     availability.timeSlots
       .filter((slot) => slot.isBooked)
       .forEach((slot) => {
-        if (!busySlots.some((b) => b.startTime === slot.startTime && b.endTime === slot.endTime)) {
+        const duplicate = busySlots.some(
+          (b) => b.startTime === slot.startTime && b.endTime === slot.endTime
+        );
+        if (!duplicate) {
           busySlots.push({
             startTime: slot.startTime,
             endTime: slot.endTime,
@@ -142,8 +237,8 @@ function generateTeachingSlotsForClass(teachingClass, dateInput) {
   const schedule = teachingClass.schedule || {};
   const durationMinutes = schedule.durationMinutes || 60;
 
-  let windowStart = schedule.startTime || '09:00';
-  let windowEnd = schedule.endTime || '20:00';
+  const windowStart = schedule.startTime || '09:00';
+  const windowEnd = schedule.endTime || '20:00';
 
   if (schedule.days && schedule.days.length > 0) {
     const allowed = schedule.days.some((day) => DAY_MAP[day] === dayIndex);
@@ -164,15 +259,154 @@ function generateTeachingSlotsForClass(teachingClass, dateInput) {
   return slots;
 }
 
-async function checkTeachingSlotAvailable(artistId, dateInput, startTime, endTime) {
-  const busySlots = await getBusySlotsForDate(artistId, dateInput);
+async function checkTeachingSlotAvailable(artistId, dateInput, startTime, endTime, options = {}) {
+  const { classId, maxStudents } = options;
+
+  if (classId) {
+    const [busySlots, teachingBookings] = await Promise.all([
+      getBusySlotsForDate(artistId, dateInput, options),
+      getActiveTeachingBookingsForDate(artistId, dateInput, options),
+    ]);
+    const result = evaluateTeachingClassSlot(
+      busySlots,
+      teachingBookings,
+      classId,
+      startTime,
+      endTime,
+      maxStudents
+    );
+    return { ...result, busySlots };
+  }
+
+  const busySlots = await getBusySlotsForDate(artistId, dateInput, options);
   if (!isSlotFree(busySlots, startTime, endTime)) {
     return { available: false, reason: 'Artist is not available at this time', busySlots };
   }
   return { available: true, busySlots };
 }
 
-async function markTeachingSlotBooked(artistId, dateInput, startTime, endTime, teachingBookingId) {
+async function checkSlotAvailable(artistId, dateInput, startTime, endTime, options = {}) {
+  return checkTeachingSlotAvailable(artistId, dateInput, startTime, endTime, options);
+}
+
+async function buildUnifiedDayData(artistId, dateInput, options = {}) {
+  const { excludeBookingId, classForTeachingSlots, basePrice = 0 } = options;
+  const [busySlots, teachingBookings] = await Promise.all([
+    getBusySlotsForDate(artistId, dateInput, { excludeBookingId }),
+    getActiveTeachingBookingsForDate(artistId, dateInput, { excludeBookingId }),
+  ]);
+  const dateOnly = normalizeDateOnly(dateInput);
+  const availability = await ArtistAvailability.findOne({ artist: artistId, date: dateOnly });
+
+  let availableSlots = [];
+  let candidateCount = 0;
+  const hasExplicitUnavailable = availability?.dayStatus === 'unavailable';
+
+  if (classForTeachingSlots) {
+    const capacity = Math.max(1, classForTeachingSlots.maxStudents || 1);
+    const candidateSlots = generateTeachingSlotsForClass(classForTeachingSlots, dateInput);
+    candidateCount = candidateSlots.length;
+    availableSlots = candidateSlots
+      .map((slot) => {
+        const slotCheck = evaluateTeachingClassSlot(
+          busySlots,
+          teachingBookings,
+          classForTeachingSlots._id,
+          slot.startTime,
+          slot.endTime,
+          capacity
+        );
+        if (!slotCheck.available) return null;
+        return {
+          ...slot,
+          price: classForTeachingSlots.pricing?.amount || 0,
+          calculatedPrice: classForTeachingSlots.pricing?.amount || 0,
+          maxStudents: capacity,
+          bookedCount: slotCheck.bookedCount,
+          spotsLeft: slotCheck.spotsLeft,
+        };
+      })
+      .filter(Boolean);
+  } else if (availability?.timeSlots?.length) {
+    const openSlots = availability.timeSlots.filter((slot) => slot.isAvailable && !slot.isBooked);
+    candidateCount = openSlots.length;
+    availableSlots = openSlots
+      .filter((slot) => isSlotFree(busySlots, slot.startTime, slot.endTime))
+      .map((slot) => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        calculatedPrice: availability.calculatePrice(slot.startTime, slot.endTime, basePrice),
+        price: slot.price || basePrice,
+        note: slot.note,
+      }));
+  }
+
+  let dayStatus;
+  if (!classForTeachingSlots && !availability?.timeSlots?.length) {
+    const hasFullDayBlock = busySlots.some(
+      (slot) => slot.type === 'blocked' && slot.startTime <= '00:00' && slot.endTime >= '23:59'
+    );
+    const bookingCount = busySlots.filter((slot) => slot.type === 'event' || slot.type === 'teaching').length;
+
+    if (hasExplicitUnavailable || hasFullDayBlock) {
+      dayStatus = 'unavailable';
+    } else if (bookingCount > 0) {
+      dayStatus = 'partially_booked';
+    } else {
+      dayStatus = 'available';
+    }
+  } else {
+    dayStatus = computeDayStatus(
+      busySlots,
+      availableSlots.length,
+      hasExplicitUnavailable
+    );
+  }
+
+  return {
+    dayStatus,
+    busySlots,
+    bookedSlots: busySlots.map((slot) => ({
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      type: slot.type,
+      label: slot.label,
+      status: slot.status,
+    })),
+    availableSlots,
+    totalSlots: candidateCount,
+    isSpecialDay: availability?.specialPricing?.isSpecialDay || false,
+    specialReason: availability?.specialPricing?.reason,
+    minimumBookingDuration: availability?.minimumBookingDuration,
+    maximumBookingDuration: availability?.maximumBookingDuration,
+    advanceBookingDays: availability?.advanceBookingDays,
+  };
+}
+
+async function getUnifiedMonthCalendar(artistId, month, year, options = {}) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0);
+  const calendarData = {};
+  const cursor = new Date(startDate);
+
+  while (cursor <= endDate) {
+    const dateKey = toDateKey(cursor);
+    calendarData[dateKey] = await buildUnifiedDayData(artistId, cursor, options);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return calendarData;
+}
+
+async function markTeachingSlotBooked(artistId, dateInput, startTime, endTime, teachingBookingId, classId, maxStudents) {
+  const capacity = Math.max(1, Number(maxStudents) || 1);
+  const teachingBookings = await getActiveTeachingBookingsForDate(artistId, dateInput);
+  const bookedCount = countClassBookingsAtSlot(teachingBookings, classId, startTime, endTime);
+
+  if (bookedCount < capacity) {
+    return null;
+  }
+
   const dateOnly = normalizeDateOnly(dateInput);
 
   let availability = await ArtistAvailability.findOne({
@@ -243,8 +477,6 @@ async function markTeachingSlotBooked(artistId, dateInput, startTime, endTime, t
 }
 
 async function getMonthlySchedule(artistId, month, year, classId) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
   const TeachingClass = require('../models/TeachingClass');
 
   const teachingClass = await TeachingClass.findOne({
@@ -257,58 +489,84 @@ async function getMonthlySchedule(artistId, month, year, classId) {
     return { error: 'Class not found' };
   }
 
-  const calendarData = {};
-  const cursor = new Date(startDate);
-
-  while (cursor <= endDate) {
-    const dateKey = toDateKey(cursor);
-    const busySlots = await getBusySlotsForDate(artistId, cursor);
-    const candidateSlots = generateTeachingSlotsForClass(teachingClass, cursor);
-    const availableSlots = candidateSlots.filter((slot) =>
-      isSlotFree(busySlots, slot.startTime, slot.endTime)
-    );
-
-    let dayStatus = 'available';
-    if (candidateSlots.length === 0) {
-      dayStatus = busySlots.length > 0 ? 'partially_booked' : 'unavailable';
-    } else if (availableSlots.length === 0) {
-      dayStatus = 'fully_booked';
-    } else if (availableSlots.length < candidateSlots.length) {
-      dayStatus = 'partially_booked';
-    }
-
-    calendarData[dateKey] = {
-      dayStatus,
-      availableSlots: availableSlots.map((slot) => ({
-        ...slot,
-        price: teachingClass.pricing?.amount || 0,
-      })),
-      bookedSlots: busySlots.map((slot) => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        type: slot.type,
-        label: slot.label,
-      })),
-      totalSlots: candidateSlots.length,
-    };
-
-    cursor.setDate(cursor.getDate() + 1);
-  }
+  const calendarData = await getUnifiedMonthCalendar(artistId, month, year, {
+    classForTeachingSlots: teachingClass,
+  });
 
   return { teachingClass, calendarData };
 }
 
+async function getEventBookingsByDate(artistId, startDate, endDate) {
+  const bookings = await ArtistBooking.find({
+    artist: artistId,
+    'event.date': { $gte: startDate, $lte: endDate },
+    'booking.status': { $in: ACTIVE_EVENT_STATUSES },
+  })
+    .select('event booking.status')
+    .sort({ 'event.date': 1, 'event.startTime': 1 });
+
+  return bookings.reduce((acc, booking) => {
+    const dateKey = toDateKey(booking.event.date);
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push({
+      _id: booking._id,
+      startTime: booking.event.startTime,
+      endTime: booking.event.endTime,
+      eventName: booking.event.name,
+      status: booking.booking.status,
+      type: 'event',
+    });
+    return acc;
+  }, {});
+}
+
+async function getTeachingBookingsByDate(artistId, startDate, endDate) {
+  const bookings = await TeachingBooking.find({
+    artistId,
+    bookingDate: { $gte: startDate, $lte: endDate },
+    status: { $in: ['confirmed', 'completed'] },
+  })
+    .populate('classId', 'title mode')
+    .sort({ bookingDate: 1, startTime: 1 });
+
+  return bookings.reduce((acc, booking) => {
+    const dateKey = toDateKey(booking.bookingDate);
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push({
+      _id: booking._id,
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      studentName: booking.studentName,
+      mode: booking.mode,
+      status: booking.status,
+      classTitle: booking.classId?.title,
+      amount: booking.pricing?.amount,
+      type: 'teaching',
+    });
+    return acc;
+  }, {});
+}
+
 module.exports = {
   ACTIVE_EVENT_STATUSES,
-  ACTIVE_TEACHING_STATUSES,
+  PENDING_PAYMENT_HOLD_MS,
   timeToMinutes,
   timesOverlap,
   toDateKey,
   normalizeDateOnly,
+  getActiveTeachingBookingsForDate,
+  countClassBookingsAtSlot,
+  evaluateTeachingClassSlot,
   getBusySlotsForDate,
   isSlotFree,
   generateTeachingSlotsForClass,
   checkTeachingSlotAvailable,
+  checkSlotAvailable,
+  buildUnifiedDayData,
+  getUnifiedMonthCalendar,
   markTeachingSlotBooked,
   getMonthlySchedule,
+  getEventBookingsByDate,
+  getTeachingBookingsByDate,
+  computeDayStatus,
 };

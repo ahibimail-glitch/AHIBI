@@ -4,6 +4,11 @@ const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
+const {
+  getUnifiedMonthCalendar,
+  checkSlotAvailable,
+  toDateKey,
+} = require('../utils/artistScheduleUtils');
 const whatsappService = require('../services/whatsappService');
 
 /**
@@ -160,13 +165,9 @@ exports.getArtistCalendar = async (req, res) => {
     const { artistId } = req.params;
     const { month, year } = req.query;
     
-    const currentMonth = month || new Date().getMonth() + 1;
-    const currentYear = year || new Date().getFullYear();
+    const currentMonth = Number(month) || new Date().getMonth() + 1;
+    const currentYear = Number(year) || new Date().getFullYear();
 
-    const startDate = new Date(currentYear, currentMonth - 1, 1);
-    const endDate = new Date(currentYear, currentMonth, 0);
-
-    // Get artist info
     const artist = await Artist.findById(artistId)
       .select('name basePrice profilePic rating city genres type');
 
@@ -174,39 +175,18 @@ exports.getArtistCalendar = async (req, res) => {
       return ApiResponse.notFound(res, 'Artist not found');
     }
 
-    // Get availability for the month
-    const availability = await ArtistAvailability.find({
-      artist: artistId,
-      date: { $gte: startDate, $lte: endDate }
-    }).sort({ date: 1 });
-
-    // Format calendar data
-    const calendarData = {};
-    availability.forEach(avail => {
-      const dateKey = avail.date.toISOString().split('T')[0];
-      const availableSlots = avail.getAvailableSlots();
-      
-      calendarData[dateKey] = {
-        dayStatus: avail.dayStatus,
-        availableSlots: availableSlots.map(slot => ({
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          calculatedPrice: avail.calculatePrice(slot.startTime, slot.endTime, artist.basePrice),
-          note: slot.note
-        })),
-        isSpecialDay: avail.specialPricing.isSpecialDay,
-        specialReason: avail.specialPricing.reason,
-        minimumBookingDuration: avail.minimumBookingDuration,
-        maximumBookingDuration: avail.maximumBookingDuration,
-        advanceBookingDays: avail.advanceBookingDays
-      };
-    });
+    const calendarData = await getUnifiedMonthCalendar(
+      artistId,
+      currentMonth,
+      currentYear,
+      { basePrice: artist.basePrice || 0 }
+    );
 
     return ApiResponse.success(res, 'Artist calendar retrieved successfully', {
       artist,
       month: currentMonth,
       year: currentYear,
-      calendarData
+      calendarData,
     });
 
   } catch (error) {
@@ -299,7 +279,19 @@ exports.createBookingRequest = async (req, res) => {
       }
     }
 
-    // Always prevent overlap with existing bookings even when artist hasn't configured availability
+    // Prevent overlap with event bookings, teaching sessions, and blocked slots
+    const slotCheck = await checkSlotAvailable(
+      artistId,
+      event.date,
+      event.startTime,
+      event.endTime
+    );
+
+    if (!slotCheck.available) {
+      return ApiResponse.badRequest(res, slotCheck.reason || 'Artist is not available at this time');
+    }
+
+    // Legacy overlap guard for event bookings
     const overlappingBooking = await ArtistBooking.findOne({
       artist: artistId,
       'event.date': new Date(event.date),

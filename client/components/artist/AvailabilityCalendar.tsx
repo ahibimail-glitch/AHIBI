@@ -55,6 +55,27 @@ interface TeachingBookingSummary {
   amount?: number;
 }
 
+interface EventBookingSummary {
+  _id: string;
+  startTime: string;
+  endTime: string;
+  eventName?: string;
+  status?: string;
+  type?: string;
+}
+
+interface UnifiedDayData {
+  dayStatus?: string;
+  bookedSlots?: Array<{
+    startTime: string;
+    endTime: string;
+    type: string;
+    label?: string;
+    status?: string;
+  }>;
+  availableSlots?: unknown[];
+}
+
 interface AvailabilityCalendarProps {
   onUpdate?: () => void;
 }
@@ -125,6 +146,12 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   const [teachingBookingsByDate, setTeachingBookingsByDate] = useState<{
     [key: string]: TeachingBookingSummary[];
   }>({});
+  const [eventBookingsByDate, setEventBookingsByDate] = useState<{
+    [key: string]: EventBookingSummary[];
+  }>({});
+  const [unifiedCalendar, setUnifiedCalendar] = useState<{
+    [key: string]: UnifiedDayData;
+  }>({});
   const [loading, setLoading] = useState(false);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
@@ -179,6 +206,8 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
         });
         setAvailability(map);
         setTeachingBookingsByDate(data.data.teachingBookingsByDate || {});
+        setEventBookingsByDate(data.data.eventBookingsByDate || {});
+        setUnifiedCalendar(data.data.unifiedCalendar || {});
       }
     } catch (e) {
       console.error(e);
@@ -225,6 +254,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
           return next;
         });
         if (onUpdate) onUpdate();
+        await fetchAvailability();
       }
     } catch (e) {
       console.error(e);
@@ -343,10 +373,113 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
   const calendarDays = generateCalendarDays();
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+  const resolveDayDisplay = (dateKey: string, dayAvail?: AvailabilityData) => {
+    const teachingCount = teachingBookingsByDate[dateKey]?.length || 0;
+    const eventCount = eventBookingsByDate[dateKey]?.length || 0;
+    const unifiedStatus = unifiedCalendar[dateKey]?.dayStatus as StatusKey | undefined;
+    const displayStatus =
+      unifiedStatus ||
+      (teachingCount + eventCount > 0 ? "partially_booked" : dayAvail?.dayStatus);
+    return {
+      teachingCount,
+      eventCount,
+      bookingCount: teachingCount + eventCount,
+      unifiedStatus,
+      displayStatus,
+      status: getStatus(displayStatus),
+    };
+  };
+
   const selectedAvailability = selectedDate ? availability[selectedDate] : undefined;
+  const selectedDayDisplay = selectedDate ? resolveDayDisplay(selectedDate, selectedAvailability) : null;
   const selectedTeachingBookings = selectedDate ? teachingBookingsByDate[selectedDate] || [] : [];
-  const selectedStatus = getStatus(selectedAvailability?.dayStatus);
+  const selectedEventBookings = selectedDate ? eventBookingsByDate[selectedDate] || [] : [];
+  const selectedUnifiedDay = selectedDate ? unifiedCalendar[selectedDate] : undefined;
+  const selectedStatus = selectedDayDisplay?.status ?? "default";
   const statusCfg = STATUS_CONFIG[selectedStatus];
+
+  const renderBookingSections = (dateKey: string) => {
+    const eventBookings = eventBookingsByDate[dateKey] || [];
+    const teachingBookings = teachingBookingsByDate[dateKey] || [];
+    const unifiedBooked = unifiedCalendar[dateKey]?.bookedSlots || [];
+
+    return (
+      <>
+        {eventBookings.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Event bookings</h4>
+            <div className="space-y-2">
+              {eventBookings.map((booking) => (
+                <div
+                  key={booking._id}
+                  className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border bg-blue-50 border-blue-200"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-blue-900">{booking.eventName || "Event booking"}</p>
+                    <p className="text-xs text-blue-700">
+                      {booking.startTime} – {booking.endTime}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 capitalize">
+                    {booking.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {teachingBookings.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Teaching sessions</h4>
+            <div className="space-y-2">
+              {teachingBookings.map((booking) => (
+                <div
+                  key={booking._id}
+                  className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border bg-purple-50 border-purple-200"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-purple-900">{booking.studentName}</p>
+                    <p className="text-xs text-purple-700">
+                      {booking.startTime} – {booking.endTime}
+                      {booking.classTitle ? ` · ${booking.classTitle}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 capitalize">
+                    {booking.mode || "teaching"} · {booking.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {unifiedBooked.length > 0 && eventBookings.length === 0 && teachingBookings.length === 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Booked / blocked</h4>
+            <div className="space-y-2">
+              {unifiedBooked.map((slot, i) => (
+                <div
+                  key={i}
+                  className={`px-3 py-2 rounded-lg border text-sm ${
+                    slot.type === "event"
+                      ? "bg-blue-50 border-blue-200 text-blue-800"
+                      : slot.type === "teaching"
+                        ? "bg-purple-50 border-purple-200 text-purple-800"
+                        : "bg-slate-50 border-slate-200 text-slate-700"
+                  }`}
+                >
+                  {slot.startTime} – {slot.endTime}
+                  {slot.label ? ` · ${slot.label}` : ""}
+                  {slot.type === "teaching" ? " (Teaching)" : slot.type === "event" ? " (Event)" : ""}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   // ── Slot status pill inside detail panel ──────────────────────────────────
   const slotPill = (slot: TimeSlot) => {
@@ -360,6 +493,12 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">
+          Synced with event bookings and paid teaching sessions. Block times here to prevent new bookings.
+        </p>
+        {loading && (
+          <span className="text-xs text-muted-foreground animate-pulse">Refreshing…</span>
+        )}
         <div className="flex items-center justify-center gap-2 sm:gap-3">
           <button
             onClick={() => navigateMonth("prev")}
@@ -406,10 +545,10 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
           {/* Day Cells */}
           <div className="grid grid-cols-7">
             {calendarDays.map(({ date, dateKey, isCurrentMonth, isToday, availability: dayAvail }) => {
-              const status = getStatus(dayAvail?.dayStatus);
+              const { teachingCount, eventCount, bookingCount, displayStatus, status } = resolveDayDisplay(dateKey, dayAvail);
               const isPast = isPastDateKey(dateKey);
               const isSelected = selectedDate === dateKey;
-              const teachingCount = teachingBookingsByDate[dateKey]?.length || 0;
+              const hasActivity = Boolean(dayAvail) || bookingCount > 0 || Boolean(displayStatus);
 
               const availableSlots = dayAvail
                 ? dayAvail.timeSlots.filter((s) => s.isAvailable && !s.isBooked).length
@@ -467,13 +606,17 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   onClick={() => { if (!isPast) setSelectedDate(isSelected ? "" : dateKey); }}
                   className={[
                     "relative min-h-[52px] sm:min-h-[90px] border-b border-r transition-all duration-200 select-none overflow-hidden",
-                    isCurrentMonth ? s.cell : "bg-gray-50 border-gray-100",
+                    isCurrentMonth
+                      ? hasActivity
+                        ? s.cell
+                        : "bg-white hover:bg-gray-50 border-gray-200"
+                      : "bg-gray-50 border-gray-100",
                     isPast ? "opacity-40 cursor-not-allowed" : "cursor-pointer",
                     isSelected ? "ring-2 ring-inset ring-indigo-500 shadow-inner" : "",
                   ].join(" ")}
                 >
-                  {/* Top color bar */}
-                  {isCurrentMonth && dayAvail && (
+                  {/* Top color bar — reflects availability + bookings */}
+                  {isCurrentMonth && hasActivity && (
                     <div className={`absolute top-0 left-0 right-0 h-1 ${s.bar}`} />
                   )}
 
@@ -499,41 +642,45 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                       </span>
 
                       {/* Status dot */}
-                      {isCurrentMonth && dayAvail && (
+                      {isCurrentMonth && hasActivity && (
                         <span className={`w-2 h-2 rounded-full mt-0.5 ${s.dot}`} />
                       )}
                     </div>
 
                     {/* Status Info */}
                     {isCurrentMonth && (
-                      <div className="space-y-1">
-                        {dayAvail ? (
-                          <>
-                            <span className={`hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${s.badge}`}>
-                              {s.label}
-                            </span>
+                      <div className="space-y-0.5">
+                        {displayStatus && displayStatus !== "default" && (
+                          <span className={`inline-block text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full ${s.badge}`}>
+                            {s.label}
+                          </span>
+                        )}
 
-                            {availableSlots !== null && (
-                              <p className={`hidden sm:block text-[10px] font-medium ${s.slotText}`}>
-                                {availableSlots} open slot{availableSlots !== 1 ? "s" : ""}
-                              </p>
-                            )}
+                        {availableSlots !== null && availableSlots > 0 && (
+                          <p className={`text-[9px] sm:text-[10px] font-medium ${s.slotText}`}>
+                            {availableSlots} open
+                          </p>
+                        )}
 
-                            {dayAvail.specialPricing?.isSpecialDay && (
-                              <p className="hidden sm:flex text-[10px] font-semibold text-orange-500 items-center gap-0.5">
-                                ★ Special
-                              </p>
-                            )}
-                            {teachingCount > 0 && (
-                              <p className="hidden sm:block text-[10px] font-semibold text-purple-600">
-                                {teachingCount} teaching
-                              </p>
-                            )}
-                          </>
-                        ) : teachingCount > 0 ? (
-                          <span className="text-[10px] text-purple-600 font-semibold">{teachingCount} teaching</span>
-                        ) : (
-                          <span className="text-[10px] text-gray-400">Open</span>
+                        {eventCount > 0 && (
+                          <p className="text-[9px] sm:text-[10px] font-semibold text-blue-600">
+                            {eventCount} event{eventCount !== 1 ? "s" : ""}
+                          </p>
+                        )}
+                        {teachingCount > 0 && (
+                          <p className="text-[9px] sm:text-[10px] font-semibold text-purple-600">
+                            {teachingCount} teaching
+                          </p>
+                        )}
+
+                        {!displayStatus && bookingCount === 0 && !dayAvail && (
+                          <span className="text-[9px] sm:text-[10px] text-gray-400">Open</span>
+                        )}
+
+                        {dayAvail?.specialPricing?.isSpecialDay && (
+                          <p className="text-[9px] sm:text-[10px] font-semibold text-orange-500">
+                            ★ Special
+                          </p>
                         )}
                       </div>
                     )}
@@ -556,10 +703,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
         <Card className="shadow-sm border-gray-200 overflow-hidden">
           {/* Coloured top strip that reflects the day status */}
           <div
-            className={`h-1.5 w-full ${selectedAvailability
-                ? STATUS_CONFIG[getStatus(selectedAvailability.dayStatus)].legend
-                : "bg-gradient-to-r from-gray-200 to-gray-300"
-              }`}
+            className={`h-1.5 w-full ${statusCfg.legend}`}
           />
 
           <CardHeader className="pb-3">
@@ -572,7 +716,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   month: "long",
                   day: "numeric",
                 })}
-                {selectedAvailability && (
+                {(selectedAvailability || selectedUnifiedDay?.dayStatus || selectedTeachingBookings.length > 0 || selectedEventBookings.length > 0) && (
                   <span
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusCfg.detailBadge}`}
                   >
@@ -740,31 +884,7 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   )}
                 </div>
 
-                {/* Teaching Bookings */}
-                {selectedTeachingBookings.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Teaching sessions</h4>
-                    <div className="space-y-2">
-                      {selectedTeachingBookings.map((booking) => (
-                        <div
-                          key={booking._id}
-                          className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 rounded-xl border bg-purple-50 border-purple-200"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-purple-900">{booking.studentName}</p>
-                            <p className="text-xs text-purple-700">
-                              {booking.startTime} – {booking.endTime}
-                              {booking.classTitle ? ` · ${booking.classTitle}` : ""}
-                            </p>
-                          </div>
-                          <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 capitalize">
-                            {booking.mode || "teaching"} · {booking.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {renderBookingSections(selectedDate)}
 
                 {/* Special Pricing */}
                 {selectedAvailability.specialPricing.isSpecialDay && (
@@ -783,23 +903,9 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
                   </div>
                 )}
               </>
-            ) : selectedTeachingBookings.length > 0 ? (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Teaching sessions</h4>
-                <div className="space-y-2">
-                  {selectedTeachingBookings.map((booking) => (
-                    <div
-                      key={booking._id}
-                      className="px-3 py-3 rounded-xl border bg-purple-50 border-purple-200"
-                    >
-                      <p className="text-sm font-semibold text-purple-900">{booking.studentName}</p>
-                      <p className="text-xs text-purple-700 mt-1">
-                        {booking.startTime} – {booking.endTime}
-                        {booking.classTitle ? ` · ${booking.classTitle}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+            ) : selectedTeachingBookings.length > 0 || selectedEventBookings.length > 0 || (selectedUnifiedDay?.bookedSlots?.length ?? 0) > 0 ? (
+              <div className="space-y-4">
+                {renderBookingSections(selectedDate)}
               </div>
             ) : (
               <Alert className="border-indigo-100 bg-indigo-50">
@@ -828,6 +934,14 @@ export default function AvailabilityCalendar({ onUpdate }: AvailabilityCalendarP
             <span className="text-xs text-gray-600">{label}</span>
           </div>
         ))}
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-blue-500" />
+          <span className="text-xs text-gray-600">Event booking</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-purple-500" />
+          <span className="text-xs text-gray-600">Teaching session</span>
+        </div>
         <div className="flex items-center gap-2 ml-2">
           <span className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] font-bold">9</span>
           <span className="text-xs text-gray-600">Today</span>

@@ -40,6 +40,10 @@ import {
   trackPaymentSuccess,
   trackPurchase,
 } from "@/lib/analytics/google-analytics";
+import {
+  runAfterRazorpay,
+  setRazorpayCheckoutActive,
+} from "@/lib/razorpayUi";
 
 // Types
 interface TicketType {
@@ -761,6 +765,96 @@ export default function CheckoutPage() {
         throw new Error(orderData.message || "Failed to create payment order");
       }
 
+      const verifyEventPayment = async (response: RazorpayResponse) => {
+        setIsProcessingPayment(true);
+        try {
+          const verificationResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                bookingDetails: {
+                  event: event,
+                  user: user,
+                  tickets: Array.from(selectedTickets.values()).map(item => ({
+                    ticketType: item.ticket.name,
+                    quantity: item.quantity,
+                    price: item.ticket.price,
+                  })),
+                  ...(isHMFEvent && {
+                    country: selectedCountry,
+                    state: selectedState,
+                  }),
+                  ...(appliedCoupon ? {
+                    coupon: {
+                      code: appliedCoupon.code,
+                      ticketCategory: appliedCoupon.ticketCategory,
+                      discountPercentage: appliedCoupon.discountPercentage,
+                      discountPrice: appliedCoupon.discountPrice,
+                      discountAmount: appliedCoupon.discountAmount,
+                    }
+                  } : {}),
+                },
+              }),
+            }
+          );
+
+          const verificationData = await verificationResponse.json();
+
+          if (verificationResponse.ok && verificationData.success) {
+            toast.success("Booking confirmed!");
+            localStorage.setItem('lastBookingId', verificationData.booking._id);
+            const analyticsPayload = getAnalyticsEventPayload();
+            const currency = orderData.currency || "INR";
+
+            if (analyticsPayload) {
+              trackPaymentSuccess({
+                ...analyticsPayload,
+                amount: totalAmount,
+                currency,
+              });
+            }
+
+            trackPurchase({
+              transaction_id: verificationData.booking?._id || response.razorpay_payment_id,
+              value: totalAmount,
+              currency,
+              items: Array.from(selectedTickets.values()).map((item) => ({
+                item_id: item.ticket._id,
+                item_name: item.ticket.name,
+                quantity: item.quantity,
+                price: item.ticket.price,
+              })),
+            });
+            setIsProcessingPayment(false);
+            router.push(`/events/${eventId}/bookings`);
+          } else {
+            const analyticsPayload = getAnalyticsEventPayload();
+            if (analyticsPayload) {
+              trackPaymentFailed(analyticsPayload);
+            }
+            toast.error(verificationData.message || "Payment verification failed");
+          }
+        } catch (error) {
+          console.error("Error in payment handler:", error);
+          const analyticsPayload = getAnalyticsEventPayload();
+          if (analyticsPayload) {
+            trackPaymentFailed(analyticsPayload);
+          }
+          toast.error("An error occurred while processing your payment. Please contact support.");
+        } finally {
+          setIsProcessingPayment(false);
+          setRazorpayCheckoutActive(false);
+        }
+      };
+
       // Open Razorpay Checkout
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -770,93 +864,8 @@ export default function CheckoutPage() {
         description: `Booking for ${event.title}`,
         image: "/logo.png",
         order_id: orderData.id,
-        handler: async function (response: RazorpayResponse) {
-          try {
-            setIsProcessingPayment(true);
-
-            const verificationResponse = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_signature: response.razorpay_signature,
-                  bookingDetails: {
-                    event: event,
-                    user: user,
-                    tickets: Array.from(selectedTickets.values()).map(item => ({
-                      ticketType: item.ticket.name,
-                      quantity: item.quantity,
-                      price: item.ticket.price,
-                    })),
-                    ...(isHMFEvent && {
-                      country: selectedCountry,
-                      state: selectedState,
-                    }),
-                    ...(appliedCoupon ? {
-                      coupon: {
-                        code: appliedCoupon.code,
-                        ticketCategory: appliedCoupon.ticketCategory,
-                        discountPercentage: appliedCoupon.discountPercentage,
-                        discountPrice: appliedCoupon.discountPrice,
-                        discountAmount: appliedCoupon.discountAmount,
-                      }
-                    } : {}),
-                  },
-                }),
-              }
-            );
-
-            const verificationData = await verificationResponse.json();
-
-            if (verificationResponse.ok && verificationData.success) {
-              toast.success("Booking confirmed!");
-              localStorage.setItem('lastBookingId', verificationData.booking._id);
-              const analyticsPayload = getAnalyticsEventPayload();
-              const currency = orderData.currency || "INR";
-
-              if (analyticsPayload) {
-                trackPaymentSuccess({
-                  ...analyticsPayload,
-                  amount: totalAmount,
-                  currency,
-                });
-              }
-
-              trackPurchase({
-                transaction_id: verificationData.booking?._id || response.razorpay_payment_id,
-                value: totalAmount,
-                currency,
-                items: Array.from(selectedTickets.values()).map((item) => ({
-                  item_id: item.ticket._id,
-                  item_name: item.ticket.name,
-                  quantity: item.quantity,
-                  price: item.ticket.price,
-                })),
-              });
-              router.push(`/events/${eventId}/bookings`);
-            } else {
-              const analyticsPayload = getAnalyticsEventPayload();
-              if (analyticsPayload) {
-                trackPaymentFailed(analyticsPayload);
-              }
-              toast.error(verificationData.message || "Payment verification failed");
-              setIsProcessingPayment(false);
-            }
-          } catch (error) {
-            console.error("Error in payment handler:", error);
-            const analyticsPayload = getAnalyticsEventPayload();
-            if (analyticsPayload) {
-              trackPaymentFailed(analyticsPayload);
-            }
-            toast.error("An error occurred while processing your payment. Please contact support.");
-            setIsProcessingPayment(false);
-          }
+        handler(response: RazorpayResponse) {
+          runAfterRazorpay(() => verifyEventPayment(response));
         },
         prefill: {
           name: user.name,
@@ -866,10 +875,17 @@ export default function CheckoutPage() {
         theme: {
           color: "#000000",
         },
+        modal: {
+          ondismiss() {
+            setRazorpayCheckoutActive(false);
+          },
+        },
       };
 
+      setRazorpayCheckoutActive(true);
       const rzp = new (window as any).Razorpay(options);
       rzp.on("payment.failed", () => {
+        setRazorpayCheckoutActive(false);
         const analyticsPayload = getAnalyticsEventPayload();
         if (analyticsPayload) {
           trackPaymentFailed(analyticsPayload);

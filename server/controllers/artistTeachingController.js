@@ -28,6 +28,7 @@ exports.createClass = async (req, res) => {
     const teachingClass = await TeachingClass.create({
       ...req.body,
       artistId: req.user.id,
+      maxStudents: Math.max(1, Number(req.body.maxStudents) || 1),
     });
 
     return ApiResponse.success(res, 'Teaching class created', { class: teachingClass }, 201);
@@ -55,7 +56,9 @@ exports.updateClass = async (req, res) => {
 
     allowed.forEach((field) => {
       if (req.body[field] !== undefined) {
-        teachingClass[field] = req.body[field];
+        teachingClass[field] = field === 'maxStudents'
+          ? Math.max(1, Number(req.body.maxStudents) || 1)
+          : req.body[field];
       }
     });
 
@@ -169,26 +172,19 @@ exports.deleteInquiry = async (req, res) => {
 
 exports.getTeachingOverview = async (req, res) => {
   try {
-    const [classes, inquiries, confirmedBookings, statusCounts] = await Promise.all([
-      TeachingClass.countDocuments({ artistId: req.user.id, isActive: true }),
-      TeachingInquiry.countDocuments({ artistId: req.user.id }),
-      TeachingBooking.countDocuments({ artistId: req.user.id, status: { $in: ['confirmed', 'completed'] } }),
-      TeachingInquiry.aggregate([
-        { $match: { artistId: new mongoose.Types.ObjectId(req.user.id) } },
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-      ]),
+    const artistId = req.user.id;
+    const [classes, totalBookings, confirmedBookings, completedBookings] = await Promise.all([
+      TeachingClass.countDocuments({ artistId, isActive: true }),
+      TeachingBooking.countDocuments({ artistId }),
+      TeachingBooking.countDocuments({ artistId, status: { $in: ['confirmed', 'completed'] } }),
+      TeachingBooking.countDocuments({ artistId, status: 'completed' }),
     ]);
-
-    const byStatus = statusCounts.reduce((acc, item) => {
-      acc[item._id] = item.count;
-      return acc;
-    }, {});
 
     return ApiResponse.success(res, 'Teaching overview fetched', {
       activeClasses: classes,
-      totalInquiries: inquiries,
+      totalBookings,
       confirmedBookings,
-      inquiriesByStatus: byStatus,
+      completedBookings,
     });
   } catch (error) {
     console.error('Teaching overview error:', error);

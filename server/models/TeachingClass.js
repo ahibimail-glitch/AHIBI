@@ -68,7 +68,7 @@ const teachingClassSchema = new mongoose.Schema({
   maxStudents: {
     type: Number,
     min: 1,
-    default: 10,
+    default: 1,
   },
   isActive: {
     type: Boolean,

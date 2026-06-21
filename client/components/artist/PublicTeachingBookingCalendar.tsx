@@ -27,6 +27,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import {
+  downloadPdfFromUrl,
+  runAfterRazorpay,
+  setRazorpayCheckoutActive,
+} from "@/lib/razorpayUi";
 
 declare global {
   interface Window {
@@ -38,6 +43,7 @@ interface TeachingClassInfo {
   _id: string;
   title: string;
   mode: "online" | "offline" | "both";
+  maxStudents?: number;
   pricing?: { amount: number; currency?: string; pricingType?: string };
   schedule?: {
     days?: string[];
@@ -52,6 +58,9 @@ interface TimeSlot {
   endTime: string;
   durationMinutes?: number;
   price?: number;
+  maxStudents?: number;
+  bookedCount?: number;
+  spotsLeft?: number;
 }
 
 interface BookedSlot {
@@ -72,6 +81,7 @@ interface PublicTeachingBookingCalendarProps {
   artistName: string;
   teachingClass: TeachingClassInfo;
   onClose?: () => void;
+  onPaymentStateChange?: (active: boolean) => void;
 }
 
 export default function PublicTeachingBookingCalendar({
@@ -79,6 +89,7 @@ export default function PublicTeachingBookingCalendar({
   artistName,
   teachingClass,
   onClose,
+  onPaymentStateChange,
 }: PublicTeachingBookingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarData, setCalendarData] = useState<Record<string, DayCalendarData>>({});
@@ -88,6 +99,7 @@ export default function PublicTeachingBookingCalendar({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [selectedMode, setSelectedMode] = useState<"online" | "offline" | "">("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successInvoice, setSuccessInvoice] = useState<{ invoiceNumber?: string; invoiceUrl?: string } | null>(null);
   const [studentForm, setStudentForm] = useState({
@@ -236,6 +248,67 @@ export default function PublicTeachingBookingCalendar({
         throw new Error("Unable to load payment gateway");
       }
 
+      if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+        throw new Error("Payment gateway is not configured");
+      }
+
+      const verifyAndComplete = async (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => {
+        setVerifyingPayment(true);
+        try {
+          const verifyRes = await fetch(
+            `/api/artist/public/${artistId}/teaching/bookings/verify-payment`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                bookingId: orderData.data.bookingId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            }
+          );
+          const verifyData = await verifyRes.json();
+          if (!verifyRes.ok) {
+            throw new Error(verifyData?.message || "Payment verification failed");
+          }
+
+          const invoiceNumber = verifyData?.data?.booking?.invoiceNumber as string | undefined;
+          const invoiceUrl = verifyData?.data?.booking?.invoiceUrl as string | undefined;
+
+          setSuccessInvoice({ invoiceNumber, invoiceUrl });
+          setShowSuccess(true);
+          fetchCalendar();
+
+          if (invoiceUrl) {
+            try {
+              await downloadPdfFromUrl(invoiceUrl, `${invoiceNumber || "teaching-invoice"}.pdf`);
+            } catch (downloadError) {
+              console.error(downloadError);
+              toast({
+                title: "Booking confirmed",
+                description: "Payment succeeded. Use the download button if the invoice did not open automatically.",
+              });
+            }
+          }
+        } catch (err) {
+          toast({
+            title: "Booking failed",
+            description: err instanceof Error ? err.message : "Payment could not be confirmed",
+            variant: "destructive",
+          });
+        } finally {
+          setVerifyingPayment(false);
+          setSubmitting(false);
+          setRazorpayCheckoutActive(false);
+          onPaymentStateChange?.(false);
+        }
+      };
+
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.data.razorpayOrder.amount,
@@ -249,58 +322,41 @@ export default function PublicTeachingBookingCalendar({
           contact: studentForm.studentPhone,
         },
         theme: { color: "#5b6cff" },
-        handler: async (response: {
+        handler(response: {
           razorpay_order_id: string;
           razorpay_payment_id: string;
           razorpay_signature: string;
-        }) => {
-          try {
-            const verifyRes = await fetch(
-              `/api/artist/public/${artistId}/teaching/bookings/verify-payment`,
-              {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                  bookingId: orderData.data.bookingId,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                }),
-              }
-            );
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok) {
-              throw new Error(verifyData?.message || "Payment verification failed");
-            }
-            setSuccessInvoice({
-              invoiceNumber: verifyData?.data?.booking?.invoiceNumber,
-              invoiceUrl: verifyData?.data?.booking?.invoiceUrl,
-            });
-            setShowSuccess(true);
-            fetchCalendar();
-          } catch (err) {
-            toast({
-              title: "Booking failed",
-              description: err instanceof Error ? err.message : "Payment could not be confirmed",
-              variant: "destructive",
-            });
-          } finally {
-            setSubmitting(false);
-          }
+        }) {
+          runAfterRazorpay(() => verifyAndComplete(response));
         },
         modal: {
-          ondismiss: () => setSubmitting(false),
+          ondismiss() {
+            setSubmitting(false);
+            setVerifyingPayment(false);
+            setRazorpayCheckoutActive(false);
+            onPaymentStateChange?.(false);
+          },
         },
       };
+
+      setSubmitting(false);
+      setRazorpayCheckoutActive(true);
+      onPaymentStateChange?.(true);
 
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", () => {
         setSubmitting(false);
+        setVerifyingPayment(false);
+        setRazorpayCheckoutActive(false);
+        onPaymentStateChange?.(false);
         toast({ title: "Payment failed", description: "Please try again", variant: "destructive" });
       });
       rzp.open();
     } catch (error) {
       setSubmitting(false);
+      setVerifyingPayment(false);
+      setRazorpayCheckoutActive(false);
+      onPaymentStateChange?.(false);
       toast({
         title: "Cannot book this slot",
         description: error instanceof Error ? error.message : "Artist may not be available",
@@ -421,6 +477,12 @@ export default function PublicTeachingBookingCalendar({
                         <p className="mt-1 text-xs text-slate-500 flex items-center gap-1">
                           <IndianRupee className="h-3 w-3" /> ₹{slot.price || price}
                         </p>
+                        {typeof slot.spotsLeft === "number" && (
+                          <p className="mt-1 text-xs font-medium text-emerald-700">
+                            {slot.spotsLeft} spot{slot.spotsLeft !== 1 ? "s" : ""} left
+                            {slot.maxStudents ? ` of ${slot.maxStudents}` : ""}
+                          </p>
+                        )}
                       </button>
                     );
                   })}
@@ -506,10 +568,10 @@ export default function PublicTeachingBookingCalendar({
 
             <Button
               onClick={handleBookAndPay}
-              disabled={submitting}
+              disabled={submitting || verifyingPayment}
               className="w-full rounded-xl bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] hover:opacity-95"
             >
-              {submitting ? (
+              {submitting || verifyingPayment ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Processing…
@@ -523,6 +585,16 @@ export default function PublicTeachingBookingCalendar({
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {verifyingPayment && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+          <div className="rounded-2xl bg-white px-6 py-5 shadow-xl text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-[#5b6cff] mx-auto mb-3" />
+            <p className="text-sm font-medium text-slate-900">Confirming your booking…</p>
+            <p className="text-xs text-slate-500 mt-1">Generating invoice</p>
+          </div>
+        </div>
       )}
 
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
@@ -548,8 +620,19 @@ export default function PublicTeachingBookingCalendar({
               <Button
                 variant="outline"
                 className="w-full rounded-full"
-                onClick={() => {
-                  window.open(successInvoice.invoiceUrl, "_blank");
+                onClick={async () => {
+                  try {
+                    await downloadPdfFromUrl(
+                      successInvoice.invoiceUrl!,
+                      `${successInvoice.invoiceNumber || "teaching-invoice"}.pdf`
+                    );
+                  } catch {
+                    toast({
+                      title: "Download failed",
+                      description: "Could not download the invoice. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
                 }}
               >
                 <Download className="h-4 w-4 mr-2" />
