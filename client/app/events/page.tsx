@@ -27,7 +27,10 @@ import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Event, EventsResponse } from "@/types/event";
-import { EVENTS_HERO_DISPLAY_HEIGHT } from "@/lib/eventsHero";
+import {
+  EVENTS_HERO_IMAGE_WIDTH,
+  EVENTS_HERO_IMAGE_HEIGHT,
+} from "@/lib/eventsHero";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -83,12 +86,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       aria-labelledby={`event-title-${event._id}`}
     >
       {/* Poster */}
-      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
-        <img
+      <div className="relative w-full overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
+        <Image
           src={event.banner || "/placeholder.svg"}
           alt={event.title}
-          loading={index < 8 ? "eager" : "lazy"}
-          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${isPast ? "grayscale-[40%]" : ""}`}
+          width={0}
+          height={0}
+          sizes="(max-width: 640px) 50vw, 20vw"
+          priority={index < 8}
+          className={`w-full h-auto block transition-transform duration-500 group-hover:scale-105 ${isPast ? "grayscale-[40%]" : ""}`}
         />
 
         {/* Gradient overlay */}
@@ -218,13 +224,6 @@ export default function EventsPage() {
       }
     })();
   }, []);
-
-  // ── Hero slideshow ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (heroImages.length <= 1) return;
-    const id = setInterval(() => setHeroIdx((p) => (p + 1) % heroImages.length), 5000);
-    return () => clearInterval(id);
-  }, [heroImages.length]);
 
   // ── Filter helpers ─────────────────────────────────────────────────────────
   const resetFilters = () => {
@@ -371,10 +370,7 @@ export default function EventsPage() {
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative w-full overflow-hidden bg-gray-900">
           {loadingHero ? (
-            <div
-              className="w-full bg-gray-800 animate-pulse"
-              style={{ height: `${EVENTS_HERO_DISPLAY_HEIGHT}px` }}
-            />
+            <div className="w-full aspect-[2560/460] bg-gray-800 animate-pulse" />
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
@@ -384,30 +380,18 @@ export default function EventsPage() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.8 }}
                 className="relative w-full"
-                style={{ height: `${EVENTS_HERO_DISPLAY_HEIGHT}px` }}
               >
-                <Image src={heroSrc} alt="Events" fill className="object-cover" priority />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <Image
+                  src={heroSrc}
+                  alt="Events"
+                  width={EVENTS_HERO_IMAGE_WIDTH}
+                  height={EVENTS_HERO_IMAGE_HEIGHT}
+                  className="w-full h-auto block"
+                  priority
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
 
-                {/* Hero content */}
-                <div className="absolute inset-0 flex flex-col justify-end pb-6 sm:pb-10 px-4 sm:px-8 lg:px-12">
-                  <motion.p
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-blue-300 mb-1.5"
-                  >
-                    Discover · Explore · Experience
-                  </motion.p>
-                  <motion.h1
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-2xl"
-                  >
-                    Events happening near you
-                  </motion.h1>
-                </div>
+                
 
                 {/* Slideshow dots */}
                 {heroImages.length > 1 && (

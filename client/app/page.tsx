@@ -154,13 +154,14 @@ const DailyEventCard = ({ event }: { event: DailyEvent }) => {
   return (
     <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
       {/* POSTER */}
-      <div className="relative aspect-[2/3] overflow-hidden">
+      <div className="relative w-full overflow-hidden">
         <Image
           src={event.banner || "/placeholder.svg"}
           alt={event.title}
-          fill
+          width={0}
+          height={0}
           sizes="50vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
           <p className="text-[10px] text-white text-center font-medium truncate">
@@ -573,31 +574,40 @@ export default function HomePage() {
       <Navbar />
 
       {/* Hero Carousel Banner */}
-      <section className="relative w-full bg-white">
+      <section className="relative w-full bg-white overflow-hidden">
         {loadingHeroImages ? (
-          <div className="w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] bg-gray-200 animate-pulse" />
+          <div className="w-full aspect-[2560/900] bg-gray-200 animate-pulse" />
         ) : (
-          <div className="relative w-full h-[180px] sm:h-[250px] md:h-[350px] lg:h-[450px] overflow-hidden">
-            {backgroundImages.map((image, index) => (
-              <div
-                key={index}
-                className={`absolute inset-0 transition-opacity duration-700 ${index === currentBgSlide ? "opacity-100" : "opacity-0"
+          <div className="relative w-full">
+            {backgroundImages.map((image, index) => {
+              const src =
+                (isMobileViewport && image.mobileUrl ? image.mobileUrl : image.url) ||
+                "/images/carausel1.jpg"
+              const isActive = index === currentBgSlide
+
+              return (
+                <div
+                  key={index}
+                  className={`w-full transition-opacity duration-700 ${
+                    isActive
+                      ? "relative opacity-100 z-10"
+                      : "absolute inset-x-0 top-0 opacity-0 pointer-events-none"
                   }`}
-              >
-                <Image
-                  src={
-                    (isMobileViewport && image.mobileUrl
-                      ? image.mobileUrl
-                      : image.url) || "/images/carausel1.jpg"
-                  }
-                  alt={`Banner ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  priority={index === 0}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              </div>
-            ))}
+                  aria-hidden={!isActive}
+                >
+                  <Image
+                    src={src}
+                    alt={`Banner ${index + 1}`}
+                    width={0}
+                    height={0}
+                    sizes="100vw"
+                    className="w-full h-auto block"
+                    priority={index === 0}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
+                </div>
+              )
+            })}
 
             {/* LEFT BUTTON */}
             {backgroundImages.length > 1 && (
@@ -693,7 +703,7 @@ export default function HomePage() {
                       {[...Array(5)].map((_, i) => (
                         <div
                           key={i}
-                          className="shrink-0 w-[78%] max-w-[320px] bg-gray-200 rounded-lg aspect-[2/3] animate-pulse snap-center"
+                          className="shrink-0 w-[78%] max-w-[320px] bg-gray-200 rounded-lg aspect-[2560/460] animate-pulse snap-center"
                         />
                       ))}
                     </div>
@@ -703,7 +713,7 @@ export default function HomePage() {
                     {[...Array(5)].map((_, i) => (
                       <div
                         key={i}
-                        className="bg-gray-200 rounded-lg aspect-[2/3] animate-pulse"
+                        className="bg-gray-200 rounded-lg aspect-[2560/460] animate-pulse"
                       />
                     ))}
                   </div>
@@ -725,13 +735,14 @@ export default function HomePage() {
                             <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
 
                               {/* Poster */}
-                              <div className="relative aspect-[2/3]">
+                              <div className="relative w-full overflow-hidden">
                                 <Image
                                   src={event.banner || "/placeholder.svg"}
                                   alt={event.title}
-                                  fill
+                                  width={0}
+                                  height={0}
                                   sizes="(max-width: 640px) 50vw, 20vw"
-                                  className="object-cover"
+                                  className="w-full h-auto block"
                                 />
                                 {!!formatDayDate((event as any)?.startDate) && (
                                   <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -765,13 +776,14 @@ export default function HomePage() {
                       <Link key={event._id} href={`/events/${event._id}`}>
                         <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
                           {/* POSTER */}
-                          <div className="relative aspect-[2/3] overflow-hidden">
+                          <div className="relative w-full overflow-hidden">
                             <Image
                               src={event.banner || "/placeholder.svg"}
                               alt={event.title}
-                              fill
+                              width={0}
+                              height={0}
                               sizes="50vw"
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
                             />
                             {!!formatDayDate((event as any)?.startDate) && (
                               <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -845,13 +857,14 @@ export default function HomePage() {
               {musicEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
                   <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
-                    <div className="relative aspect-[2/3] overflow-hidden">
+                    <div className="relative w-full overflow-hidden">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
-                        fill
+                        width={0}
+                        height={0}
                         sizes="50vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
                       />
                       {!!formatDayDate((event as any)?.startDate) && (
                         <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -922,13 +935,14 @@ export default function HomePage() {
               {sportsEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
                   <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-green-500/25">
-                    <div className="relative aspect-[4/5] overflow-hidden rounded-t-xl">
+                    <div className="relative w-full overflow-hidden rounded-t-xl">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
-                        fill
+                        width={0}
+                        height={0}
                         sizes="50vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-auto block transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
@@ -972,13 +986,14 @@ export default function HomePage() {
               {comedyEvents.map((event) => (
                 <Link key={event._id} href={`/events/${event._id}`}>
                   <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-yellow-500/25">
-                    <div className="relative aspect-[4/5] overflow-hidden rounded-t-xl">
+                    <div className="relative w-full overflow-hidden rounded-t-xl">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
-                        fill
+                        width={0}
+                        height={0}
                         sizes="50vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-auto block transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
