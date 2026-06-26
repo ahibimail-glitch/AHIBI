@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Building, Plus, Search, Edit, Trash2, Eye, Calendar, Users, DollarSign } from 'lucide-react';
 import CreateSpaceForm from './CreateSpaceForm';
 import EditSpaceForm from './EditSpaceForm';
+import { isVenueAddressComplete } from '@/utils/venueValidation';
 
 interface SpaceData {
   _id: string;
@@ -130,10 +131,17 @@ interface VenueData {
   businessName: string;
   status: string;
   isVerified: boolean;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
 }
 
 interface SpacesSectionProps {
   venue: VenueData;
+  onNavigate?: (section: string) => void;
 }
 
 const venueTypeLabels: { [key: string]: string } = {
@@ -151,7 +159,7 @@ const venueTypeLabels: { [key: string]: string } = {
   others: 'Others'
 };
 
-export default function SpacesSection({ venue }: SpacesSectionProps) {
+export default function SpacesSection({ venue, onNavigate }: SpacesSectionProps) {
   const [spaces, setSpaces] = useState<SpaceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -248,6 +256,15 @@ export default function SpacesSection({ venue }: SpacesSectionProps) {
   const handleViewDetails = (space: SpaceData) => {
     setSelectedSpace(space);
     setShowDetailsModal(true);
+  };
+
+  const handleOpenCreateForm = () => {
+    if (!isVenueAddressComplete(venue)) {
+      toast.error('Please complete your venue address (street, city, state, and pincode) in Profile Settings before creating a space.');
+      onNavigate?.('profile');
+      return;
+    }
+    setShowCreateForm(true);
   };
 
   const filteredSpaces = spaces.filter(space => {
@@ -365,8 +382,8 @@ export default function SpacesSection({ venue }: SpacesSectionProps) {
             </div>
           </div>
           <Button 
-            onClick={() => setShowCreateForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors"
+            onClick={handleOpenCreateForm}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create Space
@@ -405,7 +422,7 @@ export default function SpacesSection({ venue }: SpacesSectionProps) {
             </p>
             {spaces.length === 0 && (
               <Button 
-                onClick={() => setShowCreateForm(true)}
+                onClick={handleOpenCreateForm}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
               >
                 <Plus className="h-4 w-4 mr-2" />

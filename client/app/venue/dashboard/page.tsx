@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import EditProfileForm from './EditProfileForm';
 import SpacesSection from './SpacesSection';
 import BlockDatesTimes from './BlockDatesTimes';
+import { isVenueAddressComplete } from '@/utils/venueValidation';
 
 // --- Helper component for sidebar buttons ---
 interface SidebarButtonProps {
@@ -137,9 +138,9 @@ export default function VenueDashboard() {
       case 'overview':
         return <OverviewSection venue={venue} onNavigate={setActiveSection} />;
       case 'spaces':
-        return venue ? <SpacesSection venue={venue} /> : null;
+        return venue ? <SpacesSection venue={venue} onNavigate={setActiveSection} /> : null;
       case 'bookings':
-        return <BookingsSection venue={venue} />;
+        return <BookingsSection venue={venue} onNavigate={setActiveSection} />;
       case 'calendar':
         return <CalendarSection venue={venue} />;
       case 'block-dates':
@@ -278,6 +279,12 @@ export default function VenueDashboard() {
           </div>
 
           <nav className="flex flex-col space-y-2 flex-1">
+            <Link href="/" onClick={() => setSidebarOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start text-gray-700 hover:text-blue-600">
+                <Home className="mr-2 h-4 w-4" />
+                Back to Homepage
+              </Button>
+            </Link>
             <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeSection === "overview"} onClick={() => { setActiveSection("overview"); setSidebarOpen(false); }} />
             <SidebarButton icon={Building} label="My Spaces" active={activeSection === "spaces"} onClick={() => { setActiveSection("spaces"); setSidebarOpen(false); }} />
             <SidebarButton icon={CalendarIcon} label="Bookings" active={activeSection === "bookings"} onClick={() => { setActiveSection("bookings"); setSidebarOpen(false); }} />
@@ -323,6 +330,12 @@ export default function VenueDashboard() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-4">
+                  <Link href="/" className="hidden sm:inline-flex">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Home className="h-4 w-4" />
+                      Homepage
+                    </Button>
+                  </Link>
                   <div className="flex items-center space-x-2">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                       venue?.status === 'approved' || venue?.status === 'active'
@@ -485,7 +498,14 @@ function OverviewSection({ venue, onNavigate }: OverviewSectionProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Button 
               className="w-full sm:w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
-              onClick={() => onNavigate?.('spaces')}
+              onClick={() => {
+                if (!isVenueAddressComplete(venue)) {
+                  toast.error('Please complete your venue address in Profile Settings before adding a space.');
+                  onNavigate?.('profile');
+                  return;
+                }
+                onNavigate?.('spaces');
+              }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Your First Space
@@ -506,7 +526,14 @@ function OverviewSection({ venue, onNavigate }: OverviewSectionProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card 
           className="hover:shadow-md transition-all duration-200 cursor-pointer border-l-4 border-l-blue-500"
-          onClick={() => onNavigate?.('spaces')}
+          onClick={() => {
+            if (!isVenueAddressComplete(venue)) {
+              toast.error('Please complete your venue address in Profile Settings before managing spaces.');
+              onNavigate?.('profile');
+              return;
+            }
+            onNavigate?.('spaces');
+          }}
           role="button"
           tabIndex={0}
         >
@@ -565,7 +592,7 @@ function OverviewSection({ venue, onNavigate }: OverviewSectionProps) {
   );
 }
 
-function BookingsSection({ venue }: { venue: VenueData | null }) {
+function BookingsSection({ venue, onNavigate }: { venue: VenueData | null; onNavigate?: (section: string) => void }) {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -742,11 +769,18 @@ function BookingsSection({ venue }: { venue: VenueData | null }) {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+                onClick={() => onNavigate?.('spaces')}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Promote Your Spaces
               </Button>
-              <Button variant="outline" className="border-gray-300 hover:border-gray-400 px-6 py-2 rounded-lg transition-colors">
+              <Button
+                variant="outline"
+                className="border-gray-300 hover:border-gray-400 px-6 py-2 rounded-lg transition-colors"
+                onClick={() => onNavigate?.('profile')}
+              >
                 <Settings className="h-4 w-4 mr-2" />
                 Update Settings
               </Button>

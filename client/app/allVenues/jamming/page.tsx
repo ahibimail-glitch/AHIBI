@@ -82,7 +82,7 @@ export default function JammingRoomsPage() {
       if (searchVal) params.set("search", searchVal);
       if (cityVal) params.set("city", cityVal);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const res = await fetch(`${apiUrl}/api/venue/public/spaces?${params}`);
       const data = await res.json();
       setSpaces(data?.success ? data?.data?.spaces || [] : []);

@@ -1,5 +1,23 @@
 // Venue completeness validation utility
 
+export interface VenueAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
+/** Returns true when street, city, state, and pincode are all filled in. */
+export function isVenueAddressComplete(venue: { address?: VenueAddress } | null | undefined): boolean {
+  const addr = venue?.address;
+  return Boolean(
+    addr?.street?.trim() &&
+    addr?.city?.trim() &&
+    addr?.state?.trim() &&
+    addr?.pincode?.trim()
+  );
+}
+
 export interface MissingField {
   section: string;
   sectionLabel: string;

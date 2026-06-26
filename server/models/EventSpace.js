@@ -514,7 +514,7 @@ const eventSpaceSchema = new mongoose.Schema({
   authorizations: {
     publicListingAuthorized: {
       type: Boolean,
-      default: false
+      default: true
     },
     onlineBookingEnabled: {
       type: Boolean,

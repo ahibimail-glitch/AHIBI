@@ -58,7 +58,7 @@ interface TechRiderFile {
 }
 
 export default function TechRiderPage() {
-  const { profile, fetchArtistProfile, setSuccessMessage, setError } = useDashboard();
+  const { profile, fetchArtistProfile, setSuccessMessage, setError, successMessage } = useDashboard();
   const [techRiderForm, setTechRiderForm] = useState<TechRider>({});
   const [streamingLinks, setStreamingLinks] = useState<Record<string, string>>({});
   const [techRiderSaving, setTechRiderSaving] = useState(false);
@@ -246,18 +246,15 @@ export default function TechRiderPage() {
         return;
       }
 
-      const updatedTechRider: TechRider = {
-        ...techRiderForm,
-        ...(target === "techRider" ? { file: null } : { epkFile: null }),
-      };
-
       const response = await fetch("/api/artist/profile", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ techRider: updatedTechRider }),
+        body: JSON.stringify({
+          techRider: target === "techRider" ? { file: null } : { epkFile: null },
+        }),
       });
 
       if (!response.ok) {
@@ -265,7 +262,15 @@ export default function TechRiderPage() {
         throw new Error(errorData.message || "Failed to delete file");
       }
 
-      setTechRiderForm(updatedTechRider);
+      setTechRiderForm((prev) => {
+        const next = { ...prev };
+        if (target === "techRider") {
+          delete next.file;
+        } else {
+          delete next.epkFile;
+        }
+        return next;
+      });
       await fetchArtistProfile();
       setSuccessMessage(`${fileLabel} file removed successfully!`);
       setTimeout(() => setSuccessMessage(null), 5000);
@@ -384,6 +389,19 @@ export default function TechRiderPage() {
 
   return (
     <div className="space-y-6">
+      {successMessage && (
+        <Alert className="bg-green-50 border-green-200">
+          <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {uploadError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{uploadError}</AlertDescription>
+        </Alert>
+      )}
+
       {/* EPK — primary highlight */}
       <Card className="border-pink-200 shadow-sm">
         <CardHeader>
@@ -557,13 +575,6 @@ export default function TechRiderPage() {
               />
             </div>
           </div>
-
-          {uploadError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{uploadError}</AlertDescription>
-            </Alert>
-          )}
 
           {renderFileSection(
             "techRider",

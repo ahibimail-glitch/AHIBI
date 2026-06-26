@@ -399,6 +399,14 @@ exports.updateArtistProfile = async (req, res) => {
     if (techRider !== undefined && typeof techRider === 'object') {
       artist.techRider = artist.techRider || {};
 
+      const techRiderUnset = {};
+      if (techRider.file === null) {
+        techRiderUnset['techRider.file'] = 1;
+      }
+      if (techRider.epkFile === null) {
+        techRiderUnset['techRider.epkFile'] = 1;
+      }
+
       if (isValidValue(techRider.soundRequirements)) {
         artist.techRider.soundRequirements = techRider.soundRequirements;
       }
@@ -419,7 +427,8 @@ exports.updateArtistProfile = async (req, res) => {
       }
 
       if (techRider.file === null) {
-        delete artist.techRider.file;
+        artist.set('techRider.file', undefined);
+        artist.markModified('techRider');
       } else if (techRider.file !== undefined && typeof techRider.file === 'object') {
         artist.techRider.file = artist.techRider.file || {};
 
@@ -437,7 +446,8 @@ exports.updateArtistProfile = async (req, res) => {
       }
 
       if (techRider.epkFile === null) {
-        delete artist.techRider.epkFile;
+        artist.set('techRider.epkFile', undefined);
+        artist.markModified('techRider');
       } else if (techRider.epkFile !== undefined && typeof techRider.epkFile === 'object') {
         artist.techRider.epkFile = artist.techRider.epkFile || {};
 
@@ -455,13 +465,23 @@ exports.updateArtistProfile = async (req, res) => {
       }
 
       artist.techRider.updatedAt = new Date();
+
+      if (Object.keys(techRiderUnset).length > 0) {
+        await Artist.updateOne({ _id: artist._id }, { $unset: techRiderUnset });
+      }
     }
 
     const updatedArtist = await artist.save();
-    console.log('Artist profile updated successfully:', updatedArtist._id);
+    const responseArtist =
+      techRider !== undefined &&
+      typeof techRider === 'object' &&
+      (techRider.file === null || techRider.epkFile === null)
+        ? await Artist.findById(artist._id)
+        : updatedArtist;
+    console.log('Artist profile updated successfully:', responseArtist._id);
 
     return ApiResponse.success(res, 'Artist profile updated successfully', {
-      artist: updatedArtist
+      artist: responseArtist
     });
 
   } catch (error) {

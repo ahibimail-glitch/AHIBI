@@ -187,10 +187,22 @@ const createSpace = async (req, res) => {
       });
     }
 
+    const { street, city, state, pincode } = venue.address || {};
+    if (!street?.trim() || !city?.trim() || !state?.trim() || !pincode?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please complete your venue address details (street, city, state, and pincode) before creating spaces.'
+      });
+    }
+
     // Create space with venue reference
     const spaceData = {
       ...req.body,
-      venueId
+      venueId,
+      authorizations: {
+        ...req.body.authorizations,
+        publicListingAuthorized: req.body.authorizations?.publicListingAuthorized !== false,
+      },
     };
 
     const space = new EventSpace(spaceData);
@@ -859,9 +871,7 @@ const getVenueSpacesWithBlockedSlots = async (req, res) => {
 const getPublicSpacesListing = async (req, res) => {
   try {
     const { venueType, city, search, page = 1, limit = 20 } = req.query;
-    const query = {
-      'authorizations.publicListingAuthorized': { $ne: false },
-    };
+    const query = {};
 
     if (venueType) {
       query['venueClassification.venueTypes'] = venueType;

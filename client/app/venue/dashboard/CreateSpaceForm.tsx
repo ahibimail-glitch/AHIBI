@@ -13,6 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Upload, X, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { isVenueAddressComplete } from '@/utils/venueValidation';
+
+const formatNumberInputValue = (value: number) => (value === 0 ? '' : String(value));
+
+const parseIntInput = (value: string) => (value === '' ? 0 : parseInt(value, 10) || 0);
+
+const parseFloatInput = (value: string) => (value === '' ? 0 : parseFloat(value) || 0);
 
 interface CloudinaryPhoto {
   public_id: string;
@@ -492,15 +499,35 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
         return;
       }
 
-      if (!venue.address || !venue.address.city || !venue.address.state || !venue.address.pincode) {
-        toast.error('Please complete your venue address details (city, state, and pincode) before creating spaces.');
+      if (!isVenueAddressComplete(venue)) {
+        toast.error('Please complete your venue address details (street, city, state, and pincode) in Profile Settings before creating spaces.');
         return;
       }
 
+      if (formData.venueClassification.venueTypes.length === 0) {
+        toast.error('Please select at least one venue type for your space.');
+        return;
+      }
+
+      if (formData.capacity < 1 || formData.capacityDetails.standingCapacity < 1) {
+        toast.error('Please enter valid capacity values (at least 1).');
+        return;
+      }
+
+      if (formData.pricing.basePrice <= 0) {
+        toast.error('Please enter a base price greater than 0.');
+        return;
+      }
+
+      const { minimumBookingCapacity, ...capacityDetailsRest } = formData.capacityDetails;
       const payload = {
         ...formData,
-        venueId: String(venueId), // Ensure it's a string
-        gallery
+        capacityDetails: {
+          ...capacityDetailsRest,
+          ...(minimumBookingCapacity > 0 ? { minimumBookingCapacity } : {}),
+        },
+        venueId: String(venueId),
+        gallery,
       };
 
       const response = await fetch('/api/venue/spaces', {
@@ -632,9 +659,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="capacity"
                   type="number"
-                  value={formData.capacity}
-                  onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.capacity)}
+                  onChange={(e) => handleInputChange('capacity', parseIntInput(e.target.value))}
+                  placeholder="e.g. 50"
                   min="1"
                   required
                 />
@@ -644,9 +671,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="standingCapacity"
                   type="number"
-                  value={formData.capacityDetails.standingCapacity}
-                  onChange={(e) => handleNestedInputChange('capacityDetails', 'standingCapacity', parseInt(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.capacityDetails.standingCapacity)}
+                  onChange={(e) => handleNestedInputChange('capacityDetails', 'standingCapacity', parseIntInput(e.target.value))}
+                  placeholder="e.g. 40"
                   min="1"
                   required
                 />
@@ -656,9 +683,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="minimumBookingCapacity"
                   type="number"
-                  value={formData.capacityDetails.minimumBookingCapacity}
-                  onChange={(e) => handleNestedInputChange('capacityDetails', 'minimumBookingCapacity', parseInt(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.capacityDetails.minimumBookingCapacity)}
+                  onChange={(e) => handleNestedInputChange('capacityDetails', 'minimumBookingCapacity', parseIntInput(e.target.value))}
+                  placeholder="e.g. 5"
                   min="1"
                 />
               </div>
@@ -672,12 +699,12 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                   <Input
                     id="theatreStyle"
                     type="number"
-                    value={formData.capacityDetails.seatingCapacity.theatreStyle}
+                    value={formatNumberInputValue(formData.capacityDetails.seatingCapacity.theatreStyle)}
                     onChange={(e) => handleNestedInputChange('capacityDetails', 'seatingCapacity', {
                       ...formData.capacityDetails.seatingCapacity,
-                      theatreStyle: parseInt(e.target.value) || 0
+                      theatreStyle: parseIntInput(e.target.value)
                     })}
-                    placeholder="0"
+                    placeholder="e.g. 30"
                     min="0"
                   />
                 </div>
@@ -686,12 +713,12 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                   <Input
                     id="roundTable"
                     type="number"
-                    value={formData.capacityDetails.seatingCapacity.roundTable}
+                    value={formatNumberInputValue(formData.capacityDetails.seatingCapacity.roundTable)}
                     onChange={(e) => handleNestedInputChange('capacityDetails', 'seatingCapacity', {
                       ...formData.capacityDetails.seatingCapacity,
-                      roundTable: parseInt(e.target.value) || 0
+                      roundTable: parseIntInput(e.target.value)
                     })}
-                    placeholder="0"
+                    placeholder="e.g. 20"
                     min="0"
                   />
                 </div>
@@ -704,9 +731,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="advanceBookingDays"
                   type="number"
-                  value={formData.capacityDetails.advanceBookingDays}
-                  onChange={(e) => handleNestedInputChange('capacityDetails', 'advanceBookingDays', parseInt(e.target.value) || 0)}
-                  placeholder="7"
+                  value={formatNumberInputValue(formData.capacityDetails.advanceBookingDays)}
+                  onChange={(e) => handleNestedInputChange('capacityDetails', 'advanceBookingDays', parseIntInput(e.target.value) || 7)}
+                  placeholder="e.g. 7"
                   min="0"
                   required
                 />
@@ -724,9 +751,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="basePrice"
                   type="number"
-                  value={formData.pricing.basePrice}
-                  onChange={(e) => handleNestedInputChange('pricing', 'basePrice', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.pricing.basePrice)}
+                  onChange={(e) => handleNestedInputChange('pricing', 'basePrice', parseFloatInput(e.target.value))}
+                  placeholder="e.g. 5000"
                   min="0"
                   required
                 />
@@ -736,9 +763,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="hourlyRate"
                   type="number"
-                  value={formData.pricing.hourlyRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'hourlyRate', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.pricing.hourlyRate)}
+                  onChange={(e) => handleNestedInputChange('pricing', 'hourlyRate', parseFloatInput(e.target.value))}
+                  placeholder="e.g. 500"
                   min="0"
                 />
               </div>
@@ -747,9 +774,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="halfDayRate"
                   type="number"
-                  value={formData.pricing.halfDayRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'halfDayRate', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.pricing.halfDayRate)}
+                  onChange={(e) => handleNestedInputChange('pricing', 'halfDayRate', parseFloatInput(e.target.value))}
+                  placeholder="e.g. 2000"
                   min="0"
                 />
               </div>
@@ -758,9 +785,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="fullDayRate"
                   type="number"
-                  value={formData.pricing.fullDayRate}
-                  onChange={(e) => handleNestedInputChange('pricing', 'fullDayRate', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.pricing.fullDayRate)}
+                  onChange={(e) => handleNestedInputChange('pricing', 'fullDayRate', parseFloatInput(e.target.value))}
+                  placeholder="e.g. 3500"
                   min="0"
                 />
               </div>
@@ -772,9 +799,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="cleaningFee"
                   type="number"
-                  value={formData.pricing.cleaningFee}
-                  onChange={(e) => handleNestedInputChange('pricing', 'cleaningFee', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.pricing.cleaningFee)}
+                  onChange={(e) => handleNestedInputChange('pricing', 'cleaningFee', parseFloatInput(e.target.value))}
+                  placeholder="e.g. 500"
                   min="0"
                 />
               </div>
@@ -783,9 +810,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="securityDeposit"
                   type="number"
-                  value={formData.pricing.securityDeposit}
-                  onChange={(e) => handleNestedInputChange('pricing', 'securityDeposit', parseFloat(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.pricing.securityDeposit)}
+                  onChange={(e) => handleNestedInputChange('pricing', 'securityDeposit', parseFloatInput(e.target.value))}
+                  placeholder="e.g. 1000"
                   min="0"
                 />
               </div>
@@ -834,9 +861,9 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
                 <Input
                   id="carCapacity"
                   type="number"
-                  value={formData.parking.carCapacity}
-                  onChange={(e) => handleNestedInputChange('parking', 'carCapacity', parseInt(e.target.value) || 0)}
-                  placeholder="0"
+                  value={formatNumberInputValue(formData.parking.carCapacity)}
+                  onChange={(e) => handleNestedInputChange('parking', 'carCapacity', parseIntInput(e.target.value))}
+                  placeholder="e.g. 10"
                   min="0"
                   required
                 />
@@ -1005,38 +1032,38 @@ export default function CreateSpaceForm({ venue, onClose }: { venue: VenueData; 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button type="button" variant="ghost" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b px-4 py-4 sm:p-6 z-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <Button type="button" variant="ghost" onClick={onClose} className="self-start -ml-2 sm:ml-0">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <div>
-                <h2 className="text-2xl font-bold">Create New Space</h2>
-                <p className="text-gray-600">Add a new space to {venue.name}</p>
+              <div className="space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold">Create New Space</h2>
+                <p className="text-sm text-gray-600">Add a new space to {venue.name}</p>
               </div>
             </div>
-            <Button type="submit" form="create-space-form" disabled={isLoading}>
+            <Button type="submit" form="create-space-form" disabled={isLoading} className="w-full sm:w-auto shrink-0">
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Creating...' : 'Create Space'}
             </Button>
           </div>
         </div>
 
-        <form id="create-space-form" onSubmit={handleSubmit} className="p-6">
+        <form id="create-space-form" onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="capacity">Capacity</TabsTrigger>
-              <TabsTrigger value="pricing">Pricing</TabsTrigger>
-              <TabsTrigger value="facilities">Facilities</TabsTrigger>
-              <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 p-1">
+              <TabsTrigger value="basic" className="text-xs sm:text-sm py-2.5">Basic Info</TabsTrigger>
+              <TabsTrigger value="capacity" className="text-xs sm:text-sm py-2.5">Capacity</TabsTrigger>
+              <TabsTrigger value="pricing" className="text-xs sm:text-sm py-2.5">Pricing</TabsTrigger>
+              <TabsTrigger value="facilities" className="text-xs sm:text-sm py-2.5">Facilities</TabsTrigger>
+              <TabsTrigger value="gallery" className="text-xs sm:text-sm py-2.5 col-span-2 sm:col-span-1">Gallery</TabsTrigger>
             </TabsList>
 
-            <div className="mt-6">
+            <div className="mt-6 sm:mt-8 space-y-6">
               {renderTabContent()}
             </div>
           </Tabs>

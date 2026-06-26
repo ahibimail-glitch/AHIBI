@@ -25,11 +25,13 @@ export default function VenuePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="flex justify-center mb-8">
-              <img 
-                src="/images/LogoB.png" 
-                alt="AHIBI Logo" 
-                className="h-20 w-auto"
-              />
+              <Link href="/">
+                <img 
+                  src="/images/LogoB.png" 
+                  alt="AHIBI Logo" 
+                  className="h-20 w-auto hover:opacity-90 transition-opacity"
+                />
+              </Link>
             </div>
             <Building className="mx-auto h-16 w-16 text-blue-600 mb-6" />
             <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
@@ -39,16 +41,21 @@ export default function VenuePage() {
               Join our platform and connect with thousands of event organizers. 
               Manage your venue, accept bookings, and grow your business.
             </p>
-            <div className="mt-10 flex justify-center space-x-4">
+            <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
               <Link href="/venue/auth/signup">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                   Register Your Venue
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/venue/auth/login">
-                <Button variant="outline" size="lg">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto">
                   Sign In
+                </Button>
+              </Link>
+              <Link href="/">
+                <Button variant="ghost" size="lg" className="w-full sm:w-auto text-gray-600">
+                  Back to Homepage
                 </Button>
               </Link>
             </div>
