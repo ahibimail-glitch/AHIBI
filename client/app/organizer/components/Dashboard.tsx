@@ -65,7 +65,7 @@ interface DashboardData {
       email: string;
       phone: string;
       profilePic?: string;
-    };
+    } | null;
     booking: {
       status: string;
       eventDate: string;
@@ -346,7 +346,7 @@ export default function Dashboard({ setActiveView }: DashboardProps) {
                       <Users className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">{booking.artist.name}</h3>
+                      <h3 className="font-semibold">{booking.artist?.name ?? "Unknown Artist"}</h3>
                       <p className="text-sm text-gray-500">{booking.booking.venue}</p>
                       <p className="text-xs text-gray-400">
                         {booking.booking.eventDate

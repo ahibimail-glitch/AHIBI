@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,7 @@ interface EventsProps {
 }
 
 export default function Events({ filterStatus = "all" }: EventsProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -465,11 +467,21 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
+                      <div className="flex flex-wrap gap-2">
                         {event.status === 'approved' || event.status === 'active' ? (
-                          <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
-                            Pause
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 text-white"
+                              onClick={() => router.push(`/organizer/dashboard/crm/${event._id}`)}
+                            >
+                              <Users className="h-4 w-4 mr-1" />
+                              Activate CRM
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
+                              Pause
+                            </Button>
+                          </>
                         ) : null}
                         {event.status === 'paused' ? (
                           <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50" onClick={() => handleResumeEvent(event._id)}>
@@ -569,9 +581,19 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2">
                   {event.status === 'approved' || event.status === 'active' ? (
-                    <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50 flex-1" onClick={() => handlePauseEvent(event._id)}>
-                      Pause
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        className="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 text-white"
+                        onClick={() => router.push(`/organizer/dashboard/crm/${event._id}`)}
+                      >
+                        <Users className="h-4 w-4 mr-1" />
+                        Activate CRM
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50 flex-1" onClick={() => handlePauseEvent(event._id)}>
+                        Pause
+                      </Button>
+                    </>
                   ) : null}
                   {event.status === 'paused' ? (
                     <Button size="sm" variant="outline" className="text-green-600 hover:bg-green-50 flex-1" onClick={() => handleResumeEvent(event._id)}>

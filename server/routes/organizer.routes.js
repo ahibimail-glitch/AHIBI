@@ -4,6 +4,7 @@ const organizerAuthController = require('../controllers/organizerAuthController'
 const eventController = require('../controllers/eventController');
 const dailyEventController = require('../controllers/dailyEventController');
 const organizerBookingController = require('../controllers/organizerBookingController');
+const eventTeamController = require('../controllers/eventTeamController');
 const { protect, authorize } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -114,6 +115,16 @@ router.put('/events/:id', [
 router.put('/events/:id/pause', protect, eventController.pauseOrganizerEvent);
 router.put('/events/:id/resume', protect, eventController.resumeOrganizerEvent);
 router.delete('/events/:id', protect, eventController.deleteOrganizerEvent);
+
+// Event team / CRM member routes
+router.get('/events/:eventId/team', protect, eventTeamController.getEventTeam);
+router.post('/events/:eventId/team/invite', [
+  protect,
+  check('phone', 'Valid 10-digit phone number is required').matches(/^\d{10}$/),
+  check('email', 'Valid email is required').optional().isEmail().normalizeEmail(),
+  check('role', 'Role is required').notEmpty(),
+], eventTeamController.inviteTeamMember);
+router.delete('/events/:eventId/team/:memberId', protect, eventTeamController.removeTeamMember);
 
 // Organizer daily event routes
 router.post('/daily-events', [

@@ -1,4 +1,37 @@
+const fs = require('fs');
+const path = require('path');
 const nodemailer = require('nodemailer');
+
+const AHIBI_LOGO_CID = 'ahibi-logo@ahibi';
+
+function resolveLogoAttachment() {
+  const candidates = [
+    process.env.AHIBI_LOGO_PATH,
+    path.join(__dirname, '../../client/public/images/Logo.png'),
+    path.join(__dirname, '../assets/ahibi-logo.png'),
+  ].filter(Boolean);
+
+  for (const filePath of candidates) {
+    if (fs.existsSync(filePath)) {
+      return {
+        filename: path.basename(filePath),
+        path: filePath,
+        cid: AHIBI_LOGO_CID,
+      };
+    }
+  }
+
+  return null;
+}
+
+function getLogoImageSrc(logoAttachment) {
+  if (logoAttachment) {
+    return `cid:${AHIBI_LOGO_CID}`;
+  }
+
+  const frontendUrl = (process.env.FRONTEND_URL || 'https://ahibi.com').replace(/\/$/, '');
+  return process.env.AHIBI_LOGO_URL || `${frontendUrl}/images/Logo.png`;
+}
 
 /**
  * Service for sending emails in the application
@@ -41,8 +74,12 @@ class EmailService {
         to: options.to,
         subject: options.subject,
         text: options.text || '',
-        html: options.html || ''
+        html: options.html || '',
       };
+
+      if (options.attachments?.length) {
+        mailOptions.attachments = options.attachments;
+      }
 
       const info = await this.transporter.sendMail(mailOptions);
       console.log('Email sent:', info.messageId);
@@ -1087,6 +1124,91 @@ class EmailService {
       to: venue.email,
       subject,
       html
+    });
+  }
+
+  /**
+   * Send event team invitation email
+   */
+  async sendEventTeamInviteEmail({ to, phone, event, eventId, organizer, inviteToken, role }) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const acceptPath = `/manageEvent?invite=${inviteToken}`;
+    const inviteUrl = `${frontendUrl}/auth?redirect=${encodeURIComponent(acceptPath)}`;
+    const dashboardPath = eventId ? `/manageEvent/${eventId}` : '/manageEvent';
+    const dashboardUrl = `${frontendUrl}/auth?redirect=${encodeURIComponent(dashboardPath)}`;
+    const teamDashboardUrl = `${frontendUrl}/auth?redirect=${encodeURIComponent('/manageEvent')}`;
+    const eventTitle = event?.title || 'an event';
+    const organizerName = organizer?.companyName || organizer?.name || 'An organizer';
+    const logoAttachment = resolveLogoAttachment();
+    const logoSrc = getLogoImageSrc(logoAttachment);
+
+    const subject = `You're invited to join ${eventTitle} on AHIBI Event Command`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #0b0e14; color: #ffffff;">
+        <div style="background: #131820; border: 1px solid #21262d; border-radius: 12px; padding: 28px;">
+          <div style="margin-bottom: 20px;">
+            <img src="${logoSrc}" alt="AHIBI Event Command" style="max-width: 160px; height: auto; display: block;" />
+          </div>
+          <h1 style="color: #ffffff; font-size: 22px; margin: 0 0 12px;">Event team invitation</h1>
+          <p style="color: #8b949e; line-height: 1.6; margin: 0 0 16px;">
+            <strong style="color: #ffffff;">${organizerName}</strong> has invited you to join
+            <strong style="color: #ffffff;">${eventTitle}</strong> as a <strong style="color: #f97316;">${role}</strong>.
+          </p>
+          <p style="color: #8b949e; line-height: 1.6; margin: 0 0 24px;">
+            Sign in or create an account using your mobile number${phone ? ` (<strong style="color: #ffffff;">${phone}</strong>)` : ''}${to ? ` and email (<strong style="color: #ffffff;">${to}</strong>)` : ''},
+            then accept the invitation to activate your event dashboard.
+          </p>
+          <div style="margin-bottom: 16px;">
+            <a href="${inviteUrl}"
+               style="display: inline-block; background: #f97316; color: #000000; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 8px;">
+              Accept Invitation
+            </a>
+          </div>
+          <div style="margin-bottom: 24px;">
+            <a href="${teamDashboardUrl}"
+               style="display: inline-block; background: transparent; color: #f97316; text-decoration: none; font-weight: 600; padding: 12px 24px; border-radius: 8px; border: 1px solid #f97316;">
+              Open Team Dashboard
+            </a>
+          </div>
+          <p style="color: #6e7681; font-size: 12px; margin: 0 0 12px; line-height: 1.5;">
+            <strong style="color: #8b949e;">Accept invitation:</strong><br>
+            <a href="${inviteUrl}" style="color: #f97316; word-break: break-all;">${inviteUrl}</a>
+          </p>
+          <p style="color: #6e7681; font-size: 12px; margin: 0 0 12px; line-height: 1.5;">
+            <strong style="color: #8b949e;">Team dashboard:</strong><br>
+            <a href="${teamDashboardUrl}" style="color: #f97316; word-break: break-all;">${teamDashboardUrl}</a>
+          </p>
+          ${eventId ? `
+          <p style="color: #6e7681; font-size: 12px; margin: 0; line-height: 1.5;">
+            <strong style="color: #8b949e;">Event page (after accepting):</strong><br>
+            <a href="${dashboardUrl}" style="color: #f97316; word-break: break-all;">${dashboardUrl}</a>
+          </p>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    const text = [
+      `You have been invited to join ${eventTitle} as ${role}.`,
+      `Sign in with phone ${phone || 'your number'}${to ? ` and email ${to}` : ''}.`,
+      '',
+      `Accept invitation: ${inviteUrl}`,
+      `Open team dashboard: ${teamDashboardUrl}`,
+      eventId ? `Event page (after accepting): ${dashboardUrl}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    if (!to) {
+      return { success: false, message: 'No email provided' };
+    }
+
+    return this.sendMail({
+      to,
+      subject,
+      html,
+      text,
+      ...(logoAttachment ? { attachments: [logoAttachment] } : {}),
     });
   }
 }

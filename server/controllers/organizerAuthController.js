@@ -779,19 +779,21 @@ exports.getOrganizerDashboard = async (req, res) => {
       .limit(5)
       .lean();
 
-    const recentBookings = recentBookingsRaw.map((row) => ({
-      _id: row._id,
-      artist: row.artist,
-      createdAt: row.createdAt,
-      booking: {
-        status: row.booking?.status,
-        eventDate: row.event?.date,
-        venue:
-          row.event?.venue?.name ||
-          row.event?.venue?.address ||
-          '',
-      },
-    }));
+    const recentBookings = recentBookingsRaw
+      .filter((row) => row.artist)
+      .map((row) => ({
+        _id: row._id,
+        artist: row.artist,
+        createdAt: row.createdAt,
+        booking: {
+          status: row.booking?.status,
+          eventDate: row.event?.date,
+          venue:
+            row.event?.venue?.name ||
+            row.event?.venue?.address ||
+            '',
+        },
+      }));
 
     const averageRating = organizerDoc?.statistics?.averageRating || 0;
 

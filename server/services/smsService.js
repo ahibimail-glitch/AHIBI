@@ -229,7 +229,47 @@ const smsService = {
         error: error.response?.data || error.message
       };
     }
-  }
+  },
+
+  /**
+   * Send event team invitation SMS
+   */
+  sendEventTeamInvite: async (phone, { eventName, inviteUrl, role }) => {
+    try {
+      const apiKey = process.env.FAST2SMS_API_KEY;
+      if (!apiKey) {
+        console.error('SMS service error: FAST2SMS_API_KEY not found');
+        return { success: false, message: 'SMS service is not configured.' };
+      }
+
+      const message =
+        `AHIBI Event Command: You are invited to "${eventName}" as ${role}. ` +
+        `Sign in with this mobile number and accept your invite: ${inviteUrl}`;
+
+      const params = {
+        authorization: apiKey,
+        route: 'q',
+        message,
+        language: 'english',
+        flash: '0',
+        numbers: phone,
+      };
+
+      const response = await axios.get('https://www.fast2sms.com/dev/bulkV2', { params });
+      return {
+        success: response.data.return === true,
+        message: response.data.message,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('[SMS Service] Failed to send team invite SMS:', error.response?.data || error.message);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to send invitation SMS.',
+        error: error.response?.data || error.message,
+      };
+    }
+  },
 };
 
 module.exports = smsService;
