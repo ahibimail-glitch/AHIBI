@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -82,6 +82,12 @@ interface PublicTeachingBookingCalendarProps {
   teachingClass: TeachingClassInfo;
   onClose?: () => void;
   onPaymentStateChange?: (active: boolean) => void;
+  initialCalendarData?: Record<string, DayCalendarData>;
+  initialMonthKey?: string;
+}
+
+function getMonthKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}`;
 }
 
 export default function PublicTeachingBookingCalendar({
@@ -90,10 +96,19 @@ export default function PublicTeachingBookingCalendar({
   teachingClass,
   onClose,
   onPaymentStateChange,
+  initialCalendarData,
+  initialMonthKey,
 }: PublicTeachingBookingCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarData, setCalendarData] = useState<Record<string, DayCalendarData>>({});
-  const [loading, setLoading] = useState(true);
+  const currentMonthKey = getMonthKey(currentDate);
+  const hasInitialMonthData =
+    !!initialCalendarData &&
+    !!initialMonthKey &&
+    initialMonthKey === currentMonthKey;
+  const [calendarData, setCalendarData] = useState<Record<string, DayCalendarData>>(
+    hasInitialMonthData ? initialCalendarData : {}
+  );
+  const [loading, setLoading] = useState(!hasInitialMonthData);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedDateObj, setSelectedDateObj] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
@@ -121,11 +136,25 @@ export default function PublicTeachingBookingCalendar({
     return `${dd}/${mm}/${String(yyyy).slice(-2)}`;
   };
 
+  const usedInitialDataRef = useRef(false);
+
   const fetchCalendar = useCallback(async () => {
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    const monthKey = getMonthKey(currentDate);
+
+    if (
+      !usedInitialDataRef.current &&
+      initialCalendarData &&
+      initialMonthKey === monthKey
+    ) {
+      usedInitialDataRef.current = true;
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const month = currentDate.getMonth() + 1;
-      const year = currentDate.getFullYear();
       const res = await fetch(
         `/api/artist/public/${artistId}/teaching/calendar?month=${month}&year=${year}&classId=${teachingClass._id}`
       );
@@ -143,11 +172,18 @@ export default function PublicTeachingBookingCalendar({
     } finally {
       setLoading(false);
     }
-  }, [artistId, currentDate, teachingClass._id]);
+  }, [artistId, currentDate, initialCalendarData, initialMonthKey, teachingClass._id]);
 
   useEffect(() => {
     fetchCalendar();
   }, [fetchCalendar]);
+
+  useEffect(() => {
+    if (!initialCalendarData || !initialMonthKey) return;
+    if (initialMonthKey !== getMonthKey(currentDate)) return;
+    setCalendarData(initialCalendarData);
+    setLoading(false);
+  }, [initialCalendarData, initialMonthKey, currentDate]);
 
   useEffect(() => {
     if (teachingClass.mode === "online") setSelectedMode("online");
@@ -196,6 +232,17 @@ export default function PublicTeachingBookingCalendar({
   const loadRazorpayScript = async () => {
     if (typeof window === "undefined") return false;
     if (window.Razorpay) return true;
+    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existing) {
+      return new Promise<boolean>((resolve) => {
+        if (window.Razorpay) {
+          resolve(true);
+          return;
+        }
+        existing.addEventListener("load", () => resolve(!!window.Razorpay), { once: true });
+        existing.addEventListener("error", () => resolve(false), { once: true });
+      });
+    }
     return new Promise<boolean>((resolve) => {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -204,6 +251,23 @@ export default function PublicTeachingBookingCalendar({
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
+  };
+
+  const downloadInvoiceWithRetry = async (invoiceUrl: string, filename: string) => {
+    const delays = [0, 800, 1600, 2400];
+    for (const delay of delays) {
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+      try {
+        await downloadPdfFromUrl(invoiceUrl, filename);
+        return;
+      } catch (downloadError) {
+        if (delay === delays[delays.length - 1]) {
+          throw downloadError;
+        }
+      }
+    }
   };
 
   const handleBookAndPay = async () => {
@@ -286,7 +350,10 @@ export default function PublicTeachingBookingCalendar({
 
           if (invoiceUrl) {
             try {
-              await downloadPdfFromUrl(invoiceUrl, `${invoiceNumber || "teaching-invoice"}.pdf`);
+              await downloadInvoiceWithRetry(
+                invoiceUrl,
+                `${invoiceNumber || "teaching-invoice"}.pdf`
+              );
             } catch (downloadError) {
               console.error(downloadError);
               toast({
@@ -592,7 +659,7 @@ export default function PublicTeachingBookingCalendar({
           <div className="rounded-2xl bg-white px-6 py-5 shadow-xl text-center">
             <Loader2 className="h-8 w-8 animate-spin text-[#5b6cff] mx-auto mb-3" />
             <p className="text-sm font-medium text-slate-900">Confirming your booking…</p>
-            <p className="text-xs text-slate-500 mt-1">Generating invoice</p>
+            <p className="text-xs text-slate-500 mt-1">Securing your session</p>
           </div>
         </div>
       )}

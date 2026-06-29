@@ -490,6 +490,50 @@ export default function PublicArtistProfile() {
   const [showTeachingBooking, setShowTeachingBooking] = useState(false);
   const [teachingPaymentActive, setTeachingPaymentActive] = useState(false);
   const [selectedTeachingClass, setSelectedTeachingClass] = useState<typeof teachingClasses[0] | null>(null);
+  const teachingCalendarCacheRef = useRef<
+    Record<string, { monthKey: string; data: Record<string, unknown> }>
+  >({});
+  const [prefetchedTeachingCalendar, setPrefetchedTeachingCalendar] = useState<{
+    classId: string;
+    monthKey: string;
+    data: Record<string, unknown>;
+  } | null>(null);
+
+  const getTeachingMonthKey = (date = new Date()) =>
+    `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+  const prefetchTeachingCalendar = useCallback(
+    async (classId: string) => {
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+      const monthKey = getTeachingMonthKey(now);
+      const cacheKey = `${classId}:${monthKey}`;
+      const cached = teachingCalendarCacheRef.current[cacheKey];
+      if (cached) {
+        setPrefetchedTeachingCalendar({ classId, monthKey: cached.monthKey, data: cached.data });
+        return cached;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/artist/public/${artistId}/teaching/calendar?month=${month}&year=${year}&classId=${classId}`
+        );
+        const data = await res.json();
+        if (!res.ok) return null;
+        const entry = {
+          monthKey,
+          data: (data?.data?.calendarData || {}) as Record<string, unknown>,
+        };
+        teachingCalendarCacheRef.current[cacheKey] = entry;
+        setPrefetchedTeachingCalendar({ classId, monthKey, data: entry.data });
+        return entry;
+      } catch {
+        return null;
+      }
+    },
+    [artistId]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -559,9 +603,15 @@ export default function PublicArtistProfile() {
   }, [artist]);
 
   const openTeachingBooking = useCallback((cls: typeof teachingClasses[0]) => {
+    const monthKey = getTeachingMonthKey();
+    const cached = teachingCalendarCacheRef.current[`${cls._id}:${monthKey}`];
     setSelectedTeachingClass(cls);
+    setPrefetchedTeachingCalendar(
+      cached ? { classId: cls._id, monthKey: cached.monthKey, data: cached.data } : null
+    );
     setShowTeachingBooking(true);
-  }, []);
+    prefetchTeachingCalendar(cls._id);
+  }, [prefetchTeachingCalendar]);
 
   const handleBook = useCallback(() => {
     const bookingPath = `/artist/profile/${artistId}/booking`;
@@ -1049,6 +1099,8 @@ export default function PublicArtistProfile() {
                         )}
                         <button
                           type="button"
+                          onMouseEnter={() => prefetchTeachingCalendar(cls._id)}
+                          onFocus={() => prefetchTeachingCalendar(cls._id)}
                           onClick={() => openTeachingBooking(cls)}
                           disabled={!cls.pricing?.amount}
                           className="mt-4 w-full inline-flex items-center justify-center gap-2 border-none rounded-xl px-4 py-3 text-sm font-bold bg-gradient-to-br from-[#5b6cff] to-[#7c3aed] text-white shadow-[0_8px_20px_rgba(91,108,255,0.2)] hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1329,12 +1381,43 @@ export default function PublicArtistProfile() {
             </DialogHeader>
             {selectedTeachingClass && (
               <PublicTeachingBookingCalendar
+                key={selectedTeachingClass._id}
                 artistId={artistId}
                 artistName={artist.name}
                 teachingClass={{
                   ...selectedTeachingClass,
                   mode: selectedTeachingClass.mode as "online" | "offline" | "both",
                 }}
+                initialCalendarData={
+                  prefetchedTeachingCalendar?.classId === selectedTeachingClass._id
+                    ? (prefetchedTeachingCalendar.data as Record<
+                        string,
+                        {
+                          dayStatus: "available" | "partially_booked" | "fully_booked" | "unavailable";
+                          availableSlots: Array<{
+                            startTime: string;
+                            endTime: string;
+                            durationMinutes?: number;
+                            price?: number;
+                            maxStudents?: number;
+                            bookedCount?: number;
+                            spotsLeft?: number;
+                          }>;
+                          bookedSlots: Array<{
+                            startTime: string;
+                            endTime: string;
+                            type: string;
+                            label?: string;
+                          }>;
+                        }
+                      >)
+                    : undefined
+                }
+                initialMonthKey={
+                  prefetchedTeachingCalendar?.classId === selectedTeachingClass._id
+                    ? prefetchedTeachingCalendar.monthKey
+                    : undefined
+                }
                 onClose={() => setShowTeachingBooking(false)}
                 onPaymentStateChange={setTeachingPaymentActive}
               />

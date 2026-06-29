@@ -381,12 +381,16 @@ exports.verifyTeachingPayment = async (req, res) => {
       booking.classId?.maxStudents
     );
 
-    let invoicedBooking = null;
-    try {
-      invoicedBooking = await generateAndAttachInvoice(booking._id);
-    } catch (invoiceError) {
-      console.error('Teaching invoice generation error:', invoiceError);
-    }
+    const invoiceNumber = booking.invoiceNumber;
+    const invoiceUrl = invoiceNumber
+      ? `/api/artist/public/teaching/invoice/${invoiceNumber}`
+      : booking.invoiceUrl;
+
+    setImmediate(() => {
+      generateAndAttachInvoice(booking._id).catch((invoiceError) => {
+        console.error('Teaching invoice generation error:', invoiceError);
+      });
+    });
 
     return ApiResponse.success(res, 'Teaching session booked successfully', {
       booking: {
@@ -398,8 +402,8 @@ exports.verifyTeachingPayment = async (req, res) => {
         status: booking.status,
         classTitle: booking.classId?.title,
         amountPaid: booking.payment.amountPaid,
-        invoiceNumber: invoicedBooking?.invoiceNumber || booking.invoiceNumber,
-        invoiceUrl: invoicedBooking?.invoiceUrl || booking.invoiceUrl,
+        invoiceNumber,
+        invoiceUrl,
       },
     });
   } catch (error) {

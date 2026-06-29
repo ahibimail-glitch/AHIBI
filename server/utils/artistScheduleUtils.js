@@ -141,21 +141,7 @@ function evaluateTeachingClassSlot(busySlots, teachingBookings, classId, startTi
   return { available: true, bookedCount, spotsLeft, maxStudents: capacity };
 }
 
-async function getBusySlotsForDate(artistId, dateInput, options = {}) {
-  const dateOnly = normalizeDateOnly(dateInput);
-  const nextDay = new Date(dateOnly);
-  nextDay.setDate(nextDay.getDate() + 1);
-
-  const [eventBookings, teachingBookings, availability] = await Promise.all([
-    ArtistBooking.find({
-      artist: artistId,
-      'event.date': { $gte: dateOnly, $lt: nextDay },
-      'booking.status': { $in: ACTIVE_EVENT_STATUSES },
-    }).select('event.startTime event.endTime event.name booking.status'),
-    getActiveTeachingBookingsForDate(artistId, dateInput, options),
-    ArtistAvailability.findOne({ artist: artistId, date: dateOnly }),
-  ]);
-
+function assembleBusySlots(eventBookings, teachingBookings, availability) {
   const busySlots = [];
 
   eventBookings.forEach((booking) => {
@@ -219,6 +205,33 @@ async function getBusySlotsForDate(artistId, dateInput, options = {}) {
   }
 
   return busySlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
+
+async function getDayScheduleSources(artistId, dateInput, options = {}) {
+  const dateOnly = normalizeDateOnly(dateInput);
+  const nextDay = new Date(dateOnly);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  const [eventBookings, teachingBookings, availability] = await Promise.all([
+    ArtistBooking.find({
+      artist: artistId,
+      'event.date': { $gte: dateOnly, $lt: nextDay },
+      'booking.status': { $in: ACTIVE_EVENT_STATUSES },
+    }).select('event.startTime event.endTime event.name booking.status'),
+    getActiveTeachingBookingsForDate(artistId, dateInput, options),
+    ArtistAvailability.findOne({ artist: artistId, date: dateOnly }),
+  ]);
+
+  return { eventBookings, teachingBookings, availability };
+}
+
+async function getBusySlotsForDate(artistId, dateInput, options = {}) {
+  const { eventBookings, teachingBookings, availability } = await getDayScheduleSources(
+    artistId,
+    dateInput,
+    options
+  );
+  return assembleBusySlots(eventBookings, teachingBookings, availability);
 }
 
 function isSlotFree(busySlots, startTime, endTime) {
@@ -289,14 +302,10 @@ async function checkSlotAvailable(artistId, dateInput, startTime, endTime, optio
   return checkTeachingSlotAvailable(artistId, dateInput, startTime, endTime, options);
 }
 
-async function buildUnifiedDayData(artistId, dateInput, options = {}) {
-  const { excludeBookingId, classForTeachingSlots, basePrice = 0 } = options;
-  const [busySlots, teachingBookings] = await Promise.all([
-    getBusySlotsForDate(artistId, dateInput, { excludeBookingId }),
-    getActiveTeachingBookingsForDate(artistId, dateInput, { excludeBookingId }),
-  ]);
-  const dateOnly = normalizeDateOnly(dateInput);
-  const availability = await ArtistAvailability.findOne({ artist: artistId, date: dateOnly });
+function buildUnifiedDayDataFromSources(dateInput, daySources, options = {}) {
+  const { classForTeachingSlots, basePrice = 0 } = options;
+  const { eventBookings, teachingBookings, availability } = daySources;
+  const busySlots = assembleBusySlots(eventBookings, teachingBookings, availability);
 
   let availableSlots = [];
   let candidateCount = 0;
@@ -383,15 +392,88 @@ async function buildUnifiedDayData(artistId, dateInput, options = {}) {
   };
 }
 
-async function getUnifiedMonthCalendar(artistId, month, year, options = {}) {
-  const startDate = new Date(year, month - 1, 1);
+async function buildUnifiedDayData(artistId, dateInput, options = {}) {
+  const daySources = await getDayScheduleSources(artistId, dateInput, options);
+  return buildUnifiedDayDataFromSources(dateInput, daySources, options);
+}
+
+async function getMonthScheduleSources(artistId, month, year, options = {}) {
+  const { excludeBookingId, excludeTeachingBookingId } = options;
+  const excludeId = excludeTeachingBookingId || excludeBookingId;
+
+  const startDate = normalizeDateOnly(new Date(year, month - 1, 1));
   const endDate = new Date(year, month, 0);
+  const endDateExclusive = new Date(endDate);
+  endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+
+  const teachingQuery = {
+    artistId,
+    bookingDate: { $gte: startDate, $lt: endDateExclusive },
+    $or: [
+      { status: { $in: ['confirmed', 'completed'] } },
+      {
+        status: 'pending_payment',
+        createdAt: { $gte: new Date(Date.now() - PENDING_PAYMENT_HOLD_MS) },
+      },
+    ],
+  };
+  if (excludeId) {
+    teachingQuery._id = { $ne: excludeId };
+  }
+
+  const [eventBookings, teachingBookings, availabilityRecords] = await Promise.all([
+    ArtistBooking.find({
+      artist: artistId,
+      'event.date': { $gte: startDate, $lt: endDateExclusive },
+      'booking.status': { $in: ACTIVE_EVENT_STATUSES },
+    }).select('event.startTime event.endTime event.name event.date booking.status'),
+    TeachingBooking.find(teachingQuery).select('startTime endTime studentName classId status bookingDate'),
+    ArtistAvailability.find({
+      artist: artistId,
+      date: { $gte: startDate, $lte: endDate },
+    }),
+  ]);
+
+  const eventsByDate = {};
+  eventBookings.forEach((booking) => {
+    const dateKey = toDateKey(booking.event.date);
+    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+    eventsByDate[dateKey].push(booking);
+  });
+
+  const teachingByDate = {};
+  teachingBookings.forEach((booking) => {
+    const dateKey = toDateKey(booking.bookingDate);
+    if (!teachingByDate[dateKey]) teachingByDate[dateKey] = [];
+    teachingByDate[dateKey].push(booking);
+  });
+
+  const availabilityByDate = {};
+  availabilityRecords.forEach((record) => {
+    availabilityByDate[toDateKey(record.date)] = record;
+  });
+
+  return { eventsByDate, teachingByDate, availabilityByDate, startDate, endDate };
+}
+
+async function getUnifiedMonthCalendar(artistId, month, year, options = {}) {
+  const { eventsByDate, teachingByDate, availabilityByDate, startDate, endDate } =
+    await getMonthScheduleSources(artistId, month, year, options);
+
   const calendarData = {};
   const cursor = new Date(startDate);
 
   while (cursor <= endDate) {
     const dateKey = toDateKey(cursor);
-    calendarData[dateKey] = await buildUnifiedDayData(artistId, cursor, options);
+    calendarData[dateKey] = buildUnifiedDayDataFromSources(
+      cursor,
+      {
+        eventBookings: eventsByDate[dateKey] || [],
+        teachingBookings: teachingByDate[dateKey] || [],
+        availability: availabilityByDate[dateKey] || null,
+      },
+      options
+    );
     cursor.setDate(cursor.getDate() + 1);
   }
 
