@@ -503,7 +503,7 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">Artist Category</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {['Singer', 'Performer', 'Musician', 'DJ', 'Comedian', 'Dancer', 'Band','Orchestra', 'Magician', 'Speaker', 'Instrumentalist', 'MC/Host', 'Other'].map((category) => (
+                  {['Singer', 'Performer', 'Musician', 'DJ', 'Comedian', 'Dancer', 'Band', 'Orchestra', 'Magician', 'Speaker', 'Instrumentalist', 'Sessionist', 'Songwriter', 'MC/Host', 'Other'].map((category) => (
                     <div key={category} className="flex items-center space-x-2">
                       <Checkbox
                         id={`category-${category}`}

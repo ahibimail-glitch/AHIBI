@@ -217,7 +217,7 @@ const FEATURED_ARTISTS = [
   },
 ];
 
-const CATEGORIES = ["All", "Singer", "DJ", "Band", "Dancer", "Comedian", "Magician", "Anchor/MC"];
+const CATEGORIES = ["All", "Singer", "DJ", "Band", "Dancer", "Comedian", "Magician", "Sessionist", "Songwriter", "Anchor/MC"];
 
 const WHY_JOIN = [
   {
@@ -308,7 +308,7 @@ const BENEFITS = [
 const FAQS = [
   {
     q: "Who can join as an artist on Ahibi?",
-    a: "Any performing artist can join: singers, musicians, DJs, dancers, bands, comedians, magicians, anchors/MCs, and more.",
+    a: "Any performing artist can join: singers, musicians, DJs, dancers, bands, comedians, magicians, sessionists, songwriters, anchors/MCs, and more.",
   },
   {
     q: "How much does it cost to join?",

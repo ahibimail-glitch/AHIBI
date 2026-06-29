@@ -20,7 +20,7 @@ interface Artist {
   gallery: { photos: Array<{ url: string; isProfileImage?: boolean }> }
 }
 
-const CATEGORIES = ["All", "DJ", "Singer", "Band", "Dancer", "Comedian", "Magician"] as const
+const CATEGORIES = ["All", "DJ", "Singer", "Band", "Dancer", "Comedian", "Magician", "Sessionist", "Songwriter"] as const
 
 const CATEGORY_TO_TYPE: Record<(typeof CATEGORIES)[number], string | null> = {
   All: null,
@@ -30,6 +30,8 @@ const CATEGORY_TO_TYPE: Record<(typeof CATEGORIES)[number], string | null> = {
   Dancer: "dancer",
   Comedian: "comedian",
   Magician: "magician",
+  Sessionist: "sessionist",
+  Songwriter: "songwriter",
 }
 
 const DEMO_IMAGES = [

@@ -84,7 +84,7 @@ const ArtistSchema = new mongoose.Schema({
   }],
   type: {
     type: String,
-    enum: ['musician', 'singer', 'dj', 'comedian', 'dancer', 'performer', 'band', 'magician', 'speaker', 'instrumentalist', 'host', 'orchestra', 'comedian', 'dancer', 'other']
+    enum: ['musician', 'singer', 'dj', 'comedian', 'dancer', 'performer', 'band', 'magician', 'speaker', 'instrumentalist', 'host', 'orchestra', 'sessionist', 'songwriter', 'other']
   },
   artistCategories: [{
     type: String

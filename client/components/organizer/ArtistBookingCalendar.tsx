@@ -382,6 +382,9 @@ export default function ArtistBookingCalendar() {
                   <SelectItem value="band">Band</SelectItem>
                   <SelectItem value="comedian">Comedian</SelectItem>
                   <SelectItem value="dancer">Dancer</SelectItem>
+                  <SelectItem value="sessionist">Sessionist</SelectItem>
+                  <SelectItem value="songwriter">Songwriter</SelectItem>
+                  <SelectItem value="magician">Magician</SelectItem>
                 </SelectContent>
               </Select>
             </div>

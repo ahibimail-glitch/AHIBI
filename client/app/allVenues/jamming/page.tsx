@@ -119,12 +119,12 @@ export default function JammingRoomsPage() {
                 <Guitar className="h-6 w-6" />
               </div>
               <Badge variant="secondary" className="text-purple-700 bg-purple-100">
-                Rehearsal & practice
+                Jamming & practice
               </Badge>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Jamming Rooms</h1>
             <p className="text-gray-600 mt-2 max-w-2xl">
-              Book rehearsal studios and jamming spaces with live availability, hourly pricing, and instant booking.
+              Book jamming rooms with live availability, hourly pricing, and instant booking.
             </p>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function JammingRoomsPage() {
             <Music className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No jamming rooms listed yet</h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Venue owners can list rehearsal studios under the Jamming Room category in their dashboard.
+              Venue owners can list jamming rooms under the Jamming Room category in their dashboard.
             </p>
             <Link href="/venue/auth/signup">
               <Button className="bg-pink-600 hover:bg-pink-700">List your jamming room</Button>

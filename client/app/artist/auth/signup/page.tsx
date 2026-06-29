@@ -500,6 +500,12 @@ export default function ArtistSignupPage() {
                     <SelectItem value="instrumentalist" className={selectItemBase}>
                       Instrumentalist
                     </SelectItem>
+                    <SelectItem value="sessionist" className={selectItemBase}>
+                      Sessionist
+                    </SelectItem>
+                    <SelectItem value="songwriter" className={selectItemBase}>
+                      Songwriter
+                    </SelectItem>
                     <SelectItem value="speaker" className={selectItemBase}>
                       Public Speaker
                     </SelectItem>
