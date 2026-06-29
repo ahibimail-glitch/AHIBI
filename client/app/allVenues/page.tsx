@@ -469,7 +469,7 @@ const JammingRoomsPromo = () => (
               </div>
               <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">New</Badge>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Jamming Rooms & rehearsal studios</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">Jamming Rooms </h3>
             <p className="text-gray-600 mb-6 leading-relaxed">
               Book practice spaces with hourly rates, equipment details, and live availability — perfect for bands and solo artists.
             </p>
