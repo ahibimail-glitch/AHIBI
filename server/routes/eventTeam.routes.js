@@ -6,6 +6,7 @@ const { protect } = require('../middlewares/auth');
 const router = express.Router();
 
 router.get('/invites', protect, eventTeamController.getMyInvites);
+router.get('/invites/token/:token', protect, eventTeamController.getInviteByToken);
 router.get('/events', protect, eventTeamController.getMyEvents);
 router.get('/events/:eventId', protect, eventTeamController.getEventForMember);
 router.get('/access/:eventId', protect, eventTeamController.checkEventAccess);

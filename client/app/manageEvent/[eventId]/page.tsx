@@ -32,23 +32,10 @@ interface EventDetails {
 }
 
 interface Membership {
-  role: string;
   department: string;
+  departmentName?: string;
   isOwner?: boolean;
 }
-
-const DEPARTMENTS: Record<string, string> = {
-  none: "No department assigned",
-  "artist-management": "Artist Management",
-  "event-management": "Event Management",
-  hospitality: "Hospitality",
-  "media-content": "Media and Content",
-  medical: "Medical",
-  security: "Security",
-  "sound-lighting": "Sound and Lighting",
-  "stage-production": "Stage and Production",
-  "ticketing-entry": "Ticketing and Entry",
-};
 
 type TabId = "tasks" | "checklist" | "incident" | "department";
 
@@ -76,10 +63,9 @@ function formatLocation(location?: EventLocation) {
   return parts[0] || parts.join(", ") || "—";
 }
 
-function formatRole(role: string, isOwner?: boolean) {
-  if (isOwner) return "Event Admin";
-  if (role === "Admin") return "Event Admin";
-  return role;
+function formatBadgeLabel(membership: Membership | null) {
+  if (membership?.isOwner) return "Event Admin";
+  return membership?.departmentName || "Team Member";
 }
 
 export default function ManageEventDetailPage() {
@@ -155,8 +141,8 @@ export default function ManageEventDetailPage() {
     );
   }
 
-  const roleLabel = formatRole(membership?.role || "Team Member", membership?.isOwner);
-  const departmentLabel = DEPARTMENTS[membership?.department || "none"] || membership?.department || "—";
+  const badgeLabel = formatBadgeLabel(membership);
+  const departmentLabel = membership?.departmentName || "No department assigned";
 
   return (
     <div className="min-h-screen bg-[#0b0e14] text-white">
@@ -184,7 +170,7 @@ export default function ManageEventDetailPage() {
               {formatEventDate(event.startDate)}
             </span>
             <span className="inline-flex items-center rounded-full border border-[#30363d] bg-[#161b22] px-3 py-1 text-xs font-medium text-[#c9d1d9]">
-              {roleLabel}
+              {badgeLabel}
             </span>
           </div>
         </header>
@@ -248,10 +234,6 @@ export default function ManageEventDetailPage() {
               <h2 className="text-base font-semibold text-white mb-1">Your department</h2>
               <p className="text-sm text-[#8b949e] mb-4">{departmentLabel}</p>
               <dl className="space-y-3 text-sm">
-                <div>
-                  <dt className="text-[#6e7681] text-xs uppercase tracking-wider mb-0.5">Role</dt>
-                  <dd className="text-[#c9d1d9]">{roleLabel}</dd>
-                </div>
                 <div>
                   <dt className="text-[#6e7681] text-xs uppercase tracking-wider mb-0.5">Event</dt>
                   <dd className="text-[#c9d1d9]">{event.title}</dd>

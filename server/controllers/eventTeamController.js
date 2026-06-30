@@ -6,12 +6,9 @@ const EventTeamMember = require('../models/EventTeamMember');
 const ApiResponse = require('../utils/apiResponse');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
+const { resolveDepartmentKey, ensureDefaultDepartments, getDepartmentDisplayName } = require('./eventDepartmentController');
 
-const ROLE_LABELS = {
-  'team-member': 'Team Member',
-  admin: 'Admin',
-  viewer: 'Viewer',
-};
+const DEFAULT_TEAM_ROLE = 'Team Member';
 
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '').slice(-10);
@@ -162,6 +159,7 @@ exports.getEventTeam = async (req, res) => {
         { $set: { status: 'accepted' } }
       );
       await ensureOwnerMember(event, organizer);
+      await ensureDefaultDepartments(eventId);
     }
 
     const members = await EventTeamMember.find({ event: eventId, status: { $ne: 'revoked' } })
@@ -186,7 +184,7 @@ exports.inviteTeamMember = async (req, res) => {
 
   try {
     const { eventId } = req.params;
-    const { email, phone, role, department, accessExpiresAt } = req.body;
+    const { email, phone, department, accessExpiresAt } = req.body;
     const normalizedPhone = normalizePhone(phone);
     const normalizedEmail = normalizeEmail(email);
 
@@ -197,6 +195,14 @@ exports.inviteTeamMember = async (req, res) => {
     const event = await getOrganizerEvent(eventId, req.user.id);
     if (!event) {
       return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    await ensureDefaultDepartments(eventId);
+    let departmentKey = '';
+    try {
+      departmentKey = await resolveDepartmentKey(eventId, department);
+    } catch (deptError) {
+      return ApiResponse.error(res, deptError.message || 'Invalid department selected', {}, deptError.statusCode || 400);
     }
 
     const organizer = await Organizer.findById(req.user.id);
@@ -236,8 +242,8 @@ exports.inviteTeamMember = async (req, res) => {
       status: 'pending',
       phone: normalizedPhone,
       email: normalizedEmail,
-      eventRole: ROLE_LABELS[role] || role || 'Team Member',
-      departmentKey: department && department !== 'none' ? department : '',
+      eventRole: DEFAULT_TEAM_ROLE,
+      departmentKey,
       accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : null,
       inviteToken,
       invitedBy: req.user.id,
@@ -313,6 +319,148 @@ exports.removeTeamMember = async (req, res) => {
   }
 };
 
+exports.updateTeamMemberDepartment = async (req, res) => {
+  try {
+    const { eventId, memberId } = req.params;
+    const { department } = req.body;
+
+    const event = await getOrganizerEvent(eventId, req.user.id);
+    if (!event) {
+      return ApiResponse.notFound(res, 'Event not found');
+    }
+
+    await ensureDefaultDepartments(eventId);
+
+    const member = await EventTeamMember.findOne({
+      _id: memberId,
+      event: eventId,
+      status: { $ne: 'revoked' },
+    });
+
+    if (!member) {
+      return ApiResponse.notFound(res, 'Team member not found');
+    }
+
+    if (member.isOwner) {
+      return ApiResponse.error(res, 'Cannot change the event owner department', {}, 400);
+    }
+
+    let departmentKey = '';
+    try {
+      departmentKey = await resolveDepartmentKey(eventId, department);
+    } catch (deptError) {
+      return ApiResponse.error(res, deptError.message || 'Invalid department selected', {}, deptError.statusCode || 400);
+    }
+
+    const previousKey = member.departmentKey || '';
+    if (previousKey === departmentKey) {
+      return ApiResponse.success(res, 'Department unchanged', {
+        member: formatMember(member),
+        emailSent: false,
+      });
+    }
+
+    const previousDepartment = await getDepartmentDisplayName(eventId, previousKey);
+    const newDepartment = await getDepartmentDisplayName(eventId, departmentKey);
+
+    await EventTeamMember.updateOne(
+      { _id: memberId, event: eventId },
+      { $set: { departmentKey } }
+    );
+
+    member.departmentKey = departmentKey;
+
+    const organizer = await Organizer.findById(req.user.id);
+    let emailResult = { success: false, message: 'No email on file' };
+
+    if (member.email) {
+      emailResult = await emailService.sendTeamMemberDepartmentUpdateEmail({
+        to: member.email,
+        memberName: member.name,
+        event,
+        eventId: event._id.toString(),
+        organizer,
+        previousDepartment,
+        newDepartment,
+        status: member.status,
+        inviteToken: member.inviteToken,
+      });
+    }
+
+    return ApiResponse.success(res, 'Department updated successfully', {
+      member: formatMember(member),
+      emailSent: emailResult.success,
+      emailMessage: emailResult.message || emailResult.error,
+    });
+  } catch (error) {
+    console.error('updateTeamMemberDepartment error:', error);
+    return ApiResponse.serverError(res, 'Failed to update department', error);
+  }
+};
+
+async function formatInviteForClient(invite, user = null) {
+  const eventId = invite.event?._id || invite.event;
+  const departmentKey = invite.departmentKey || '';
+  const departmentName = eventId
+    ? await getDepartmentDisplayName(eventId, departmentKey)
+    : 'No department';
+
+  return {
+    id: invite._id,
+    phone: invite.phone,
+    email: invite.email || '',
+    department: departmentKey || 'none',
+    departmentName,
+    inviteToken: invite.inviteToken,
+    accessExpiresAt: invite.accessExpiresAt,
+    createdAt: invite.createdAt,
+    userMatches: user ? userMatchesInvite(user, invite) : null,
+    event: invite.event
+      ? {
+          id: invite.event._id,
+          title: invite.event.title,
+          startDate: invite.event.startDate,
+          endDate: invite.event.endDate,
+          location: invite.event.location,
+          status: invite.event.status,
+          banner: invite.event.banner,
+        }
+      : null,
+    invitedBy: invite.invitedBy
+      ? {
+          name: invite.invitedBy.name,
+          companyName: invite.invitedBy.companyName,
+        }
+      : null,
+  };
+}
+
+exports.getInviteByToken = async (req, res) => {
+  try {
+    const invite = await EventTeamMember.findOne({
+      inviteToken: req.params.token,
+      status: 'pending',
+    })
+      .populate('event', 'title startDate endDate location status banner')
+      .populate('invitedBy', 'name companyName');
+
+    if (!invite) {
+      return ApiResponse.notFound(res, 'Invitation not found or already accepted');
+    }
+
+    if (invite.accessExpiresAt && invite.accessExpiresAt <= new Date()) {
+      return ApiResponse.error(res, 'This invitation has expired', {}, 400);
+    }
+
+    const formatted = await formatInviteForClient(invite, req.user);
+
+    return ApiResponse.success(res, 'Invitation fetched successfully', { invite: formatted });
+  } catch (error) {
+    console.error('getInviteByToken error:', error);
+    return ApiResponse.serverError(res, 'Failed to fetch invitation', error);
+  }
+};
+
 exports.getMyInvites = async (req, res) => {
   try {
     const matchConditions = buildUserMatchConditions(req.user);
@@ -333,33 +481,7 @@ exports.getMyInvites = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const formatted = invites.map((invite) => ({
-      id: invite._id,
-      phone: invite.phone,
-      email: invite.email,
-      role: invite.eventRole,
-      department: invite.departmentKey || 'none',
-      inviteToken: invite.inviteToken,
-      accessExpiresAt: invite.accessExpiresAt,
-      createdAt: invite.createdAt,
-      event: invite.event
-        ? {
-            id: invite.event._id,
-            title: invite.event.title,
-            startDate: invite.event.startDate,
-            endDate: invite.event.endDate,
-            location: invite.event.location,
-            status: invite.event.status,
-            banner: invite.event.banner,
-          }
-        : null,
-      invitedBy: invite.invitedBy
-        ? {
-            name: invite.invitedBy.name,
-            companyName: invite.invitedBy.companyName,
-          }
-        : null,
-    }));
+    const formatted = await Promise.all(invites.map((invite) => formatInviteForClient(invite, req.user)));
 
     return ApiResponse.success(res, 'Invites fetched successfully', { invites: formatted });
   } catch (error) {
@@ -386,24 +508,26 @@ exports.getMyEvents = async (req, res) => {
       .sort({ acceptedAt: -1 })
       .lean();
 
-    const events = memberships
-      .filter((m) => m.event)
-      .map((m) => ({
-        membershipId: m._id,
-        role: m.eventRole,
-        department: m.departmentKey || 'none',
-        isOwner: m.isOwner,
-        acceptedAt: m.acceptedAt,
-        event: {
-          id: m.event._id,
-          title: m.event.title,
-          startDate: m.event.startDate,
-          endDate: m.event.endDate,
-          location: m.event.location,
-          status: m.event.status,
-          banner: m.event.banner,
-        },
-      }));
+    const events = await Promise.all(
+      memberships
+        .filter((m) => m.event)
+        .map(async (m) => ({
+          membershipId: m._id,
+          department: m.departmentKey || 'none',
+          departmentName: await getDepartmentDisplayName(m.event._id, m.departmentKey || ''),
+          isOwner: m.isOwner,
+          acceptedAt: m.acceptedAt,
+          event: {
+            id: m.event._id,
+            title: m.event.title,
+            startDate: m.event.startDate,
+            endDate: m.event.endDate,
+            location: m.event.location,
+            status: m.event.status,
+            banner: m.event.banner,
+          },
+        }))
+    );
 
     return ApiResponse.success(res, 'Events fetched successfully', { events });
   } catch (error) {
@@ -587,11 +711,14 @@ exports.getEventForMember = async (req, res) => {
       return ApiResponse.notFound(res, 'Event not found');
     }
 
+    const departmentKey = membership.departmentKey || '';
+    const departmentName = await getDepartmentDisplayName(req.params.eventId, departmentKey);
+
     return ApiResponse.success(res, 'Event fetched successfully', {
       event,
       membership: {
-        role: membership.eventRole,
-        department: membership.departmentKey || 'none',
+        department: departmentKey || 'none',
+        departmentName,
         isOwner: membership.isOwner,
       },
     });

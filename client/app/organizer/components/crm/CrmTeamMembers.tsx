@@ -11,32 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-
-const DEPARTMENTS = [
-  { value: "none", label: "No department" },
-  { value: "artist-management", label: "Artist Management" },
-  { value: "event-management", label: "Event Management" },
-  { value: "hospitality", label: "Hospitality" },
-  { value: "media-content", label: "Media and Content" },
-  { value: "medical", label: "Medical" },
-  { value: "security", label: "Security" },
-  { value: "sound-lighting", label: "Sound and Lighting" },
-  { value: "stage-production", label: "Stage and Production" },
-  { value: "ticketing-entry", label: "Ticketing and Entry" },
-];
-
-const ROLES = [
-  { value: "team-member", label: "Team Member" },
-  { value: "admin", label: "Admin" },
-  { value: "viewer", label: "Viewer" },
-];
+import { useEventDepartments } from "@/app/organizer/components/crm/useEventDepartments";
 
 interface TeamMember {
   id: string;
   name: string;
   phone: string;
   email: string;
-  role: string;
   department: string;
   isOwner?: boolean;
 }
@@ -45,7 +26,6 @@ interface PendingInvite {
   id: string;
   phone: string;
   email: string;
-  role: string;
   department: string;
   accessExpiresAt?: string;
 }
@@ -56,12 +36,10 @@ const inputClass =
 const selectTriggerClass =
   "bg-[#0d1117] border-[#21262d] text-white focus:ring-[#f97316] h-10";
 
-const selectContentClass = "bg-[#161b26] border-[#21262d] text-white";
+const selectTriggerCompactClass =
+  "bg-[#0d1117] border-[#21262d] text-white focus:ring-[#f97316] h-8 text-xs";
 
-function getDepartmentLabel(value: string) {
-  if (!value || value === "none") return "—";
-  return DEPARTMENTS.find((d) => d.value === value)?.label ?? value;
-}
+const selectContentClass = "bg-[#161b26] border-[#21262d] text-white";
 
 interface CrmTeamMembersProps {
   eventId: string;
@@ -70,14 +48,19 @@ interface CrmTeamMembersProps {
 
 export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMembersProps) {
   const { toast } = useToast();
+  const {
+    departmentOptions,
+    getDepartmentLabel,
+    loading: departmentsLoading,
+  } = useEventDepartments({ eventId });
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingDepartmentId, setUpdatingDepartmentId] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("team-member");
   const [department, setDepartment] = useState("none");
   const [expiresAt, setExpiresAt] = useState("");
 
@@ -105,7 +88,6 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Failed to load team",
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -115,6 +97,12 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
   useEffect(() => {
     fetchTeam();
   }, [fetchTeam]);
+
+  useEffect(() => {
+    if (!departmentOptions.some((d) => d.value === department)) {
+      setDepartment("none");
+    }
+  }, [departmentOptions, department]);
 
   const handleInvite = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -137,7 +125,6 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
         body: JSON.stringify({
           phone: normalizedPhone,
           email: trimmedEmail || undefined,
-          role,
           department,
           accessExpiresAt: expiresAt || null,
         }),
@@ -165,7 +152,6 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
 
       setEmail("");
       setPhone("");
-      setRole("team-member");
       setDepartment("none");
       setExpiresAt("");
       await fetchTeam();
@@ -177,6 +163,62 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDepartmentChange = async (memberId: string, nextDepartment: string, memberEmail?: string) => {
+    try {
+      setUpdatingDepartmentId(memberId);
+      const token = localStorage.getItem("organizer_token");
+      const res = await fetch(
+        `${apiUrl}/api/organizer/events/${eventId}/team/${memberId}/department`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ department: nextDepartment }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update department");
+      }
+
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === memberId ? { ...m, department: data.data?.member?.department ?? nextDepartment } : m
+        )
+      );
+      setPendingInvites((prev) =>
+        prev.map((i) =>
+          i.id === memberId ? { ...i, department: data.data?.member?.department ?? nextDepartment } : i
+        )
+      );
+
+      const emailSent = data.data?.emailSent;
+      const unchanged = data.message === "Department unchanged";
+      toast({
+        title: unchanged ? "No change" : "Department updated",
+        description: unchanged
+          ? "Department is already set to this value"
+          : emailSent
+            ? `Notification sent${memberEmail ? ` to ${memberEmail}` : ""}. No re-invitation needed.`
+            : memberEmail
+              ? "Updated, but email could not be sent"
+              : "Updated (no email on file for this member)",
+      });
+    } catch (err) {
+      toast({
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Failed to update department",
+        variant: "destructive",
+      });
+      await fetchTeam();
+    } finally {
+      setUpdatingDepartmentId(null);
     }
   };
 
@@ -206,7 +248,7 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
     }
   };
 
-  if (loading) {
+  if (loading || departmentsLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-[#f97316]" />
@@ -227,7 +269,7 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
 
       {!readOnly && (
         <div className="rounded-xl border border-[#21262d] bg-[#131820] p-4 sm:p-5 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Input
               type="tel"
               placeholder="Mobile number"
@@ -245,25 +287,12 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
               className={inputClass}
             />
 
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger className={selectTriggerClass}>
-                <SelectValue placeholder="Role" />
-              </SelectTrigger>
-              <SelectContent className={selectContentClass}>
-                {ROLES.map((r) => (
-                  <SelectItem key={r.value} value={r.value} className="focus:bg-[#1e2433] focus:text-white">
-                    {r.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Select value={department} onValueChange={setDepartment}>
               <SelectTrigger className={selectTriggerClass}>
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
               <SelectContent className={selectContentClass}>
-                {DEPARTMENTS.map((d) => (
+                {departmentOptions.map((d) => (
                   <SelectItem key={d.value} value={d.value} className="focus:bg-[#1e2433] focus:text-white">
                     {d.label}
                   </SelectItem>
@@ -303,11 +332,10 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
         </p>
 
         <div className="rounded-xl border border-[#21262d] bg-[#131820] overflow-hidden">
-          <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_40px] gap-4 px-5 py-3 border-b border-[#21262d] text-[10px] font-semibold uppercase tracking-widest text-[#6e7681]">
+          <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_1.2fr_1fr_40px] gap-4 px-5 py-3 border-b border-[#21262d] text-[10px] font-semibold uppercase tracking-widest text-[#6e7681]">
             <span>Name</span>
             <span>Phone</span>
             <span>Email</span>
-            <span>Role</span>
             <span>Department</span>
             <span />
           </div>
@@ -319,7 +347,7 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_40px] gap-2 sm:gap-4 px-5 py-4 items-center"
+                  className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1.2fr_1fr_40px] gap-2 sm:gap-4 px-5 py-4 items-center"
                 >
                   <div>
                     <p className="text-[10px] uppercase text-[#6e7681] sm:hidden mb-0.5">Name</p>
@@ -336,12 +364,31 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
                     <p className="text-sm text-[#c9d1d9]">{member.email || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase text-[#6e7681] sm:hidden mb-0.5">Role</p>
-                    <p className="text-sm text-[#c9d1d9]">{member.role}</p>
-                  </div>
-                  <div>
                     <p className="text-[10px] uppercase text-[#6e7681] sm:hidden mb-0.5">Department</p>
-                    <p className="text-sm text-[#c9d1d9]">{getDepartmentLabel(member.department)}</p>
+                    {!readOnly && !member.isOwner ? (
+                      <Select
+                        value={member.department || "none"}
+                        onValueChange={(value) => handleDepartmentChange(member.id, value, member.email)}
+                        disabled={updatingDepartmentId === member.id}
+                      >
+                        <SelectTrigger className={`${selectTriggerCompactClass} w-full max-w-[180px]`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className={selectContentClass}>
+                          {departmentOptions.map((d) => (
+                            <SelectItem
+                              key={d.value}
+                              value={d.value}
+                              className="focus:bg-[#1e2433] focus:text-white"
+                            >
+                              {d.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-sm text-[#c9d1d9]">{getDepartmentLabel(member.department)}</p>
+                    )}
                   </div>
                   <div className="flex justify-end">
                     {!readOnly && !member.isOwner && (
@@ -378,17 +425,38 @@ export default function CrmTeamMembers({ eventId, readOnly = false }: CrmTeamMem
                     key={invite.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm text-white truncate">{invite.phone}</p>
                       {invite.email && (
                         <p className="text-xs text-[#8b949e] truncate">{invite.email}</p>
                       )}
-                      <p className="text-xs text-[#8b949e] mt-0.5">
-                        {invite.role}
-                        {invite.department !== "none" && ` · ${getDepartmentLabel(invite.department)}`}
-                        {invite.accessExpiresAt &&
-                          ` · Expires ${new Date(invite.accessExpiresAt).toLocaleString()}`}
-                      </p>
+                      <div className="mt-2 max-w-xs">
+                        <Select
+                          value={invite.department || "none"}
+                          onValueChange={(value) => handleDepartmentChange(invite.id, value, invite.email)}
+                          disabled={updatingDepartmentId === invite.id}
+                        >
+                          <SelectTrigger className={`${selectTriggerCompactClass} w-full`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className={selectContentClass}>
+                            {departmentOptions.map((d) => (
+                              <SelectItem
+                                key={d.value}
+                                value={d.value}
+                                className="focus:bg-[#1e2433] focus:text-white"
+                              >
+                                {d.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {invite.accessExpiresAt && (
+                        <p className="text-xs text-[#8b949e] mt-1">
+                          Expires {new Date(invite.accessExpiresAt).toLocaleString()}
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"

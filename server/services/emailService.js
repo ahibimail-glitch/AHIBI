@@ -1211,6 +1211,100 @@ class EmailService {
       ...(logoAttachment ? { attachments: [logoAttachment] } : {}),
     });
   }
+
+  /**
+   * Notify team member their department assignment changed
+   */
+  async sendTeamMemberDepartmentUpdateEmail({
+    to,
+    memberName,
+    event,
+    eventId,
+    organizer,
+    previousDepartment,
+    newDepartment,
+    status,
+    inviteToken,
+  }) {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const isPending = status === 'pending';
+    const isAccepted = status === 'accepted' || status === 'active';
+
+    const dashboardPath = isPending && inviteToken
+      ? `/manageEvent?invite=${inviteToken}`
+      : `/manageEvent/${eventId}`;
+    const actionUrl = `${frontendUrl}/auth?redirect=${encodeURIComponent(dashboardPath)}`;
+    const eventTitle = event?.title || 'an event';
+    const organizerName = organizer?.companyName || organizer?.name || 'Your organizer';
+    const logoAttachment = resolveLogoAttachment();
+    const logoSrc = getLogoImageSrc(logoAttachment);
+    const greeting = memberName ? `Hi ${memberName},` : 'Hi,';
+
+    const subject = `Your department for ${eventTitle} has been updated`;
+    const statusNote = isPending
+      ? 'This is a notification only — you do not need a new invitation. When you are ready, use the same invite link to join; your department has already been updated.'
+      : isAccepted
+        ? 'This is a notification only — no action is required. Your access to the event is unchanged.'
+        : 'This is a notification only — no action is required.';
+
+    const buttonLabel = isPending ? 'View invitation' : 'Open event dashboard';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; background: #0b0e14; color: #ffffff;">
+        <div style="background: #131820; border: 1px solid #21262d; border-radius: 12px; padding: 28px;">
+          <div style="margin-bottom: 20px;">
+            <img src="${logoSrc}" alt="AHIBI Event Command" style="max-width: 160px; height: auto; display: block;" />
+          </div>
+          <h1 style="color: #ffffff; font-size: 22px; margin: 0 0 12px;">Department updated</h1>
+          <p style="color: #8b949e; line-height: 1.6; margin: 0 0 16px;">
+            ${greeting}<br><br>
+            <strong style="color: #ffffff;">${organizerName}</strong> updated your department assignment for
+            <strong style="color: #ffffff;">${eventTitle}</strong>.
+          </p>
+          <div style="background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 16px; margin: 0 0 24px;">
+            <p style="color: #6e7681; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em;">Previous</p>
+            <p style="color: #8b949e; margin: 0 0 16px;">${previousDepartment}</p>
+            <p style="color: #6e7681; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em;">New department</p>
+            <p style="color: #f97316; font-weight: 700; margin: 0;">${newDepartment}</p>
+          </div>
+          <p style="color: #8b949e; line-height: 1.6; margin: 0 0 24px; font-size: 14px;">
+            ${statusNote}
+          </p>
+          <a href="${actionUrl}"
+             style="display: inline-block; background: #f97316; color: #000000; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 8px;">
+            ${buttonLabel}
+          </a>
+          <p style="color: #6e7681; font-size: 12px; margin: 24px 0 0; line-height: 1.5;">
+            <a href="${actionUrl}" style="color: #f97316; word-break: break-all;">${actionUrl}</a>
+          </p>
+        </div>
+      </div>
+    `;
+
+    const text = [
+      `${greeting}`,
+      '',
+      `${organizerName} updated your department for ${eventTitle}.`,
+      `Previous: ${previousDepartment}`,
+      `New: ${newDepartment}`,
+      '',
+      statusNote,
+      '',
+      `${buttonLabel}: ${actionUrl}`,
+    ].join('\n');
+
+    if (!to) {
+      return { success: false, message: 'No email provided' };
+    }
+
+    return this.sendMail({
+      to,
+      subject,
+      html,
+      text,
+      ...(logoAttachment ? { attachments: [logoAttachment] } : {}),
+    });
+  }
 }
 
 module.exports = new EmailService();

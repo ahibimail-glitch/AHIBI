@@ -5,6 +5,7 @@ const eventController = require('../controllers/eventController');
 const dailyEventController = require('../controllers/dailyEventController');
 const organizerBookingController = require('../controllers/organizerBookingController');
 const eventTeamController = require('../controllers/eventTeamController');
+const eventDepartmentController = require('../controllers/eventDepartmentController');
 const { protect, authorize } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -122,9 +123,18 @@ router.post('/events/:eventId/team/invite', [
   protect,
   check('phone', 'Valid 10-digit phone number is required').matches(/^\d{10}$/),
   check('email', 'Valid email is required').optional().isEmail().normalizeEmail(),
-  check('role', 'Role is required').notEmpty(),
 ], eventTeamController.inviteTeamMember);
 router.delete('/events/:eventId/team/:memberId', protect, eventTeamController.removeTeamMember);
+router.patch('/events/:eventId/team/:memberId/department', protect, eventTeamController.updateTeamMemberDepartment);
+
+// Event CRM departments
+router.get('/events/:eventId/departments', protect, eventDepartmentController.getEventDepartments);
+router.post('/events/:eventId/departments', [
+  protect,
+  check('name', 'Department name is required').notEmpty().trim(),
+  check('color', 'Valid hex color is required').optional().matches(/^#[0-9A-Fa-f]{6}$/),
+], eventDepartmentController.createEventDepartment);
+router.delete('/events/:eventId/departments/:departmentId', protect, eventDepartmentController.deleteEventDepartment);
 
 // Organizer daily event routes
 router.post('/daily-events', [

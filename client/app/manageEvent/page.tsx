@@ -2,13 +2,16 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import {
+  Briefcase,
   Calendar,
   CheckCircle2,
+  Clock,
   Loader2,
   LogOut,
-  Mail,
   MapPin,
+  User,
   XCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,10 +22,11 @@ interface PendingInvite {
   id: string;
   phone: string;
   email?: string;
-  role: string;
   department: string;
+  departmentName?: string;
   inviteToken?: string;
   accessExpiresAt?: string;
+  userMatches?: boolean | null;
   event: {
     id: string;
     title: string;
@@ -36,8 +40,9 @@ interface PendingInvite {
 
 interface ActiveEvent {
   membershipId: string;
-  role: string;
   department: string;
+  departmentName?: string;
+  isOwner?: boolean;
   acceptedAt?: string;
   event: {
     id: string;
@@ -47,6 +52,71 @@ interface ActiveEvent {
     location?: { city?: string; state?: string; address?: string };
     status: string;
   };
+}
+
+function formatEventDate(dateStr: string) {
+  return new Date(dateStr).toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatLocation(location?: { address?: string; city?: string; state?: string }) {
+  if (!location) return null;
+  const parts = [location.address, location.city, location.state].filter(Boolean);
+  return parts.join(", ") || null;
+}
+
+function InviteDetailRows({ invite }: { invite: PendingInvite }) {
+  const location = formatLocation(invite.event?.location);
+  const inviter =
+    invite.invitedBy?.companyName || invite.invitedBy?.name || "Event organizer";
+
+  return (
+    <div className="mt-4 space-y-2.5 text-sm">
+      <div className="flex items-start gap-2.5 text-[#c9d1d9]">
+        <User className="h-4 w-4 shrink-0 mt-0.5 text-[#6e7681]" />
+        <span>
+          Invited by <span className="text-white font-medium">{inviter}</span>
+        </span>
+      </div>
+      <div className="flex items-start gap-2.5 text-[#c9d1d9]">
+        <Briefcase className="h-4 w-4 shrink-0 mt-0.5 text-[#6e7681]" />
+        <span>
+          Department:{" "}
+          <span className="text-[#f97316] font-medium">
+            {invite.departmentName || "No department"}
+          </span>
+        </span>
+      </div>
+      {invite.event?.startDate && (
+        <div className="flex items-start gap-2.5 text-[#c9d1d9]">
+          <Calendar className="h-4 w-4 shrink-0 mt-0.5 text-[#6e7681]" />
+          <span>{formatEventDate(invite.event.startDate)}</span>
+        </div>
+      )}
+      {location && (
+        <div className="flex items-start gap-2.5 text-[#c9d1d9]">
+          <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-[#6e7681]" />
+          <span>{location}</span>
+        </div>
+      )}
+      {invite.accessExpiresAt && (
+        <div className="flex items-start gap-2.5 text-[#c9d1d9]">
+          <Clock className="h-4 w-4 shrink-0 mt-0.5 text-[#6e7681]" />
+          <span>Access expires {formatEventDate(invite.accessExpiresAt)}</span>
+        </div>
+      )}
+      <p className="text-xs text-[#6e7681] pt-1">
+        Invitation sent to {invite.phone}
+        {invite.email ? ` · ${invite.email}` : ""}
+      </p>
+    </div>
+  );
 }
 
 function ManageEventContent() {
@@ -62,10 +132,42 @@ function ManageEventContent() {
 
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [events, setEvents] = useState<ActiveEvent[]>([]);
+  const [tokenPreview, setTokenPreview] = useState<PendingInvite | null>(null);
+  const [tokenPreviewError, setTokenPreviewError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+  const fetchTokenPreview = useCallback(async () => {
+    if (!inviteToken) {
+      setTokenPreview(null);
+      setTokenPreviewError(null);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${apiUrl}/api/event-team/invites/token/${inviteToken}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setTokenPreview(null);
+        setTokenPreviewError(data.message || "Invitation not found or expired");
+        return;
+      }
+
+      setTokenPreview(data.data?.invite || null);
+      setTokenPreviewError(null);
+    } catch {
+      setTokenPreview(null);
+      setTokenPreviewError("Failed to load invitation details");
+    }
+  }, [apiUrl, inviteToken]);
 
   const fetchData = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -78,6 +180,8 @@ function ManageEventContent() {
         fetch(`${apiUrl}/api/event-team/invites`, { headers }),
         fetch(`${apiUrl}/api/event-team/events`, { headers }),
       ]);
+
+      await fetchTokenPreview();
 
       if (invitesRes.ok) {
         const invitesData = await invitesRes.json();
@@ -93,7 +197,7 @@ function ManageEventContent() {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl]);
+  }, [apiUrl, fetchTokenPreview]);
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
@@ -105,9 +209,10 @@ function ManageEventContent() {
     try {
       setActionId(invite.id);
       const token = localStorage.getItem("token");
-      const endpoint = invite.inviteToken && inviteToken === invite.inviteToken
-        ? `${apiUrl}/api/event-team/invites/token/${invite.inviteToken}/accept`
-        : `${apiUrl}/api/event-team/invites/${invite.id}/accept`;
+      const endpoint =
+        invite.inviteToken && inviteToken === invite.inviteToken
+          ? `${apiUrl}/api/event-team/invites/token/${invite.inviteToken}/accept`
+          : `${apiUrl}/api/event-team/invites/${invite.id}/accept`;
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -119,13 +224,22 @@ function ManageEventContent() {
         throw new Error(data.message || "Failed to accept invitation");
       }
 
+      const eventId = data.data?.eventId;
       toast({
         title: "Invitation accepted",
-        description: `You now have access to ${data.data?.eventTitle || "the event"}.`,
+        description: `Welcome to ${data.data?.eventTitle || "the event"}.${
+          invite.departmentName && invite.departmentName !== "No department"
+            ? ` You are assigned to ${invite.departmentName}.`
+            : ""
+        }`,
       });
 
-      router.replace("/manageEvent");
-      await fetchData();
+      if (eventId) {
+        router.replace(`/manageEvent/${eventId}`);
+      } else {
+        router.replace("/manageEvent");
+        await fetchData();
+      }
     } catch (err) {
       toast({
         title: "Could not accept invite",
@@ -149,6 +263,7 @@ function ManageEventContent() {
       if (!res.ok) throw new Error(data.message || "Failed to decline invitation");
 
       toast({ title: "Invitation declined" });
+      if (inviteToken) router.replace("/manageEvent");
       await fetchData();
     } catch (err) {
       toast({
@@ -174,24 +289,34 @@ function ManageEventContent() {
     );
   }
 
-  const highlightedInvite = inviteToken
-    ? invites.find((i) => i.inviteToken === inviteToken)
-    : null;
+  const highlightedInvite =
+    tokenPreview ||
+    (inviteToken ? invites.find((i) => i.inviteToken === inviteToken) : null) ||
+    null;
+
+  const showPhoneMismatch =
+    highlightedInvite?.userMatches === false ||
+    (highlightedInvite && user?.phone && highlightedInvite.phone !== user.phone.replace(/\D/g, "").slice(-10));
 
   return (
     <div className="min-h-screen bg-[#0b0e14] text-white">
       <header className="border-b border-[#21262d] px-4 sm:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md bg-[#f97316] flex items-center justify-center">
-            <span className="text-black font-bold text-sm">A</span>
-          </div>
-          <div>
-            <h1 className="font-semibold">AHIBI Event Command</h1>
+          <Image
+            src="/images/Logo.png"
+            alt="AHIBI Event Command"
+            width={120}
+            height={32}
+            className="h-8 w-auto object-contain"
+          />
+          <div className="hidden sm:block border-l border-[#21262d] pl-3">
             <p className="text-xs text-[#8b949e]">Team member dashboard</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {user?.email && <span className="hidden sm:inline text-sm text-[#8b949e]">{user.email}</span>}
+          {user?.phone && (
+            <span className="hidden sm:inline text-sm text-[#8b949e]">{user.phone}</span>
+          )}
           <button
             type="button"
             onClick={handleSignOut}
@@ -206,25 +331,43 @@ function ManageEventContent() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {!user?.phone && (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
-            Sign in with your mobile number to view and accept event team invitations.
+            Sign in with the mobile number your invitation was sent to in order to accept it.
+          </div>
+        )}
+
+        {inviteToken && tokenPreviewError && !highlightedInvite && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-200">
+            {tokenPreviewError}
           </div>
         )}
 
         {highlightedInvite && (
-          <div className="rounded-xl border border-[#f97316]/40 bg-[#131820] p-5">
-            <p className="text-[10px] uppercase tracking-widest text-[#f97316] mb-2">Invitation waiting</p>
-            <h2 className="text-xl font-semibold">{highlightedInvite.event?.title}</h2>
-            <p className="text-sm text-[#8b949e] mt-1">
-              Role: {highlightedInvite.role}
-              {highlightedInvite.invitedBy?.companyName &&
-                ` · Invited by ${highlightedInvite.invitedBy.companyName}`}
+          <div className="rounded-xl border border-[#f97316]/40 bg-[#131820] p-5 sm:p-6">
+            <p className="text-[10px] uppercase tracking-widest text-[#f97316] mb-2">
+              You&apos;re invited
             </p>
-            <div className="flex gap-3 mt-4">
+            <h2 className="text-2xl font-semibold text-white">
+              {highlightedInvite.event?.title || "Event invitation"}
+            </h2>
+            <p className="text-sm text-[#8b949e] mt-1">
+              Join the event team on AHIBI Event Command
+            </p>
+
+            <InviteDetailRows invite={highlightedInvite} />
+
+            {showPhoneMismatch && (
+              <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                This invitation was sent to <strong>{highlightedInvite.phone}</strong>. Sign in
+                with that number to accept.
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 mt-6">
               <button
                 type="button"
-                disabled={actionId === highlightedInvite.id}
+                disabled={!!actionId || showPhoneMismatch}
                 onClick={() => handleAccept(highlightedInvite)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#f97316] text-black font-semibold text-sm disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[#f97316] hover:bg-[#ea580c] text-black font-semibold text-sm disabled:opacity-60"
               >
                 {actionId === highlightedInvite.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -235,9 +378,9 @@ function ManageEventContent() {
               </button>
               <button
                 type="button"
-                disabled={actionId === highlightedInvite.id}
+                disabled={!!actionId || showPhoneMismatch}
                 onClick={() => handleDecline(highlightedInvite.id)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-[#21262d] text-[#8b949e] hover:text-white text-sm"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md border border-[#21262d] text-[#8b949e] hover:text-white text-sm disabled:opacity-60"
               >
                 <XCircle className="h-4 w-4" />
                 Decline
@@ -258,30 +401,16 @@ function ManageEventContent() {
                 {invites.map((invite) => (
                   <div key={invite.id} className="p-5">
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                      <div>
-                        <h3 className="font-semibold text-white">{invite.event?.title || "Event invitation"}</h3>
-                        <p className="text-sm text-[#8b949e] mt-1 flex items-center gap-2">
-                          <Mail className="h-3.5 w-3.5" />
-                          {invite.phone}
-                          {invite.email ? ` · ${invite.email}` : ""} · {invite.role}
-                        </p>
-                        {invite.event?.startDate && (
-                          <p className="text-xs text-[#6e7681] mt-2 flex items-center gap-2">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {new Date(invite.event.startDate).toLocaleDateString()}
-                            {invite.event.location?.city && (
-                              <>
-                                <MapPin className="h-3.5 w-3.5 ml-2" />
-                                {invite.event.location.city}
-                              </>
-                            )}
-                          </p>
-                        )}
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-white">
+                          {invite.event?.title || "Event invitation"}
+                        </h3>
+                        <InviteDetailRows invite={invite} />
                       </div>
                       <div className="flex gap-2 shrink-0">
                         <button
                           type="button"
-                          disabled={!!actionId}
+                          disabled={!!actionId || invite.userMatches === false}
                           onClick={() => handleAccept(invite)}
                           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#f97316] text-black font-semibold text-sm disabled:opacity-60"
                         >
@@ -316,17 +445,19 @@ function ManageEventContent() {
           <div className="grid gap-4 sm:grid-cols-2">
             {events.length === 0 ? (
               <div className="sm:col-span-2 rounded-xl border border-[#21262d] bg-[#131820] p-8 text-center text-sm text-[#8b949e]">
-                Accept an invitation to activate your event dashboard.
+                Accept an invitation to access your event dashboard.
               </div>
             ) : (
-              events.map(({ event, role, membershipId }) => (
+              events.map(({ event, departmentName, membershipId, isOwner }) => (
                 <button
                   key={membershipId}
                   type="button"
                   onClick={() => router.push(`/manageEvent/${event.id}`)}
                   className="text-left rounded-xl border border-[#21262d] bg-[#131820] p-5 hover:border-[#f97316]/40 transition-colors"
                 >
-                  <p className="text-[10px] uppercase tracking-widest text-[#f97316] mb-2">{role}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-[#f97316] mb-2">
+                    {isOwner ? "Event Admin" : departmentName || "Team Member"}
+                  </p>
                   <h3 className="font-semibold text-white">{event.title}</h3>
                   <p className="text-sm text-[#8b949e] mt-2 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
