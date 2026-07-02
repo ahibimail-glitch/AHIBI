@@ -470,14 +470,14 @@ export default function Events({ filterStatus = "all" }: EventsProps) {
                       <div className="flex flex-wrap gap-2">
                         {event.status === 'approved' || event.status === 'active' ? (
                           <>
-                            {/* <Button
+                            <Button
                               size="sm"
                               className="bg-gradient-to-r from-pink-600 to-purple-600 hover:opacity-90 text-white"
                               onClick={() => router.push(`/organizer/dashboard/crm/${event._id}`)}
                             >
                               <Users className="h-4 w-4 mr-1" />
                               Activate CRM
-                            </Button> */}
+                            </Button>
                             <Button size="sm" variant="outline" className="text-amber-600 hover:bg-amber-50" onClick={() => handlePauseEvent(event._id)}>
                               Pause
                             </Button>
