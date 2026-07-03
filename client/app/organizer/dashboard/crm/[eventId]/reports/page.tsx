@@ -1,17 +1,11 @@
 "use client";
 
-import { BarChart3 } from "lucide-react";
-import CrmComingSoon from "@/app/organizer/components/crm/CrmComingSoon";
+import { useParams } from "next/navigation";
+import CrmReports from "@/app/organizer/components/crm/CrmReports";
 
 export default function CrmReportsPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-white mb-8">Reports</h1>
-      <CrmComingSoon
-        title="Reports"
-        description="View analytics and export event operation reports."
-        icon={BarChart3}
-      />
-    </div>
-  );
+  const params = useParams();
+  const eventId = params.eventId as string;
+
+  return <CrmReports eventId={eventId} />;
 }

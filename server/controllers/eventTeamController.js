@@ -3,6 +3,21 @@ const { validationResult } = require('express-validator');
 const Event = require('../models/Event');
 const Organizer = require('../models/Organizer');
 const EventTeamMember = require('../models/EventTeamMember');
+const EventResponsibility = require('../models/EventResponsibility');
+const EventDepartment = require('../models/EventDepartment');
+const EventChecklist = require('../models/EventChecklist');
+const EventChecklistItem = require('../models/EventChecklistItem');
+const EventTask = require('../models/EventTask');
+const EventIncident = require('../models/EventIncident');
+const EventFile = require('../models/EventFile');
+const EventDiscordLink = require('../models/EventDiscordLink');
+const {
+  formatIncident,
+  createIncidentRecord,
+  buildDepartmentIncidentQuery,
+} = require('./eventIncidentController');
+const { formatFile } = require('./eventFileController');
+const { formatDiscordLink } = require('./eventDiscordLinkController');
 const ApiResponse = require('../utils/apiResponse');
 const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
@@ -24,6 +39,199 @@ function normalizeMemberStatus(status) {
 
 function isAcceptedStatus(status) {
   return status === 'accepted' || status === 'active';
+}
+
+function formatResponsibility(doc) {
+  const department = doc.department;
+  return {
+    id: doc._id,
+    title: doc.title,
+    description: doc.description || '',
+    departmentId: department?._id || department || null,
+    departmentName: department?.name || null,
+    priority: doc.priority || 'medium',
+    expectedOutcome: doc.expectedOutcome || '',
+  };
+}
+
+async function getResponsibilitiesForMember(eventId, membership, departmentKey) {
+  let query = { event: eventId };
+
+  if (!membership.isOwner) {
+    if (departmentKey) {
+      const dept = await EventDepartment.findOne({ event: eventId, key: departmentKey });
+      if (dept) {
+        query = {
+          event: eventId,
+          $or: [{ department: dept._id }, { department: null }],
+        };
+      } else {
+        query = { event: eventId, department: null };
+      }
+    } else {
+      query = { event: eventId, department: null };
+    }
+  }
+
+  const docs = await EventResponsibility.find(query)
+    .populate('department', 'name key color')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return docs.map(formatResponsibility);
+}
+
+function formatChecklistItem(doc) {
+  return {
+    id: doc._id,
+    checklistId: doc.checklist?._id || doc.checklist,
+    title: doc.title,
+    status: doc.status || 'not_started',
+    deadline: doc.deadline || null,
+    position: doc.position ?? 0,
+  };
+}
+
+function formatChecklist(doc, items = []) {
+  const department = doc.department;
+  return {
+    id: doc._id,
+    name: doc.name,
+    phase: doc.phase,
+    departmentId: department?._id || department || null,
+    departmentName: department?.name || null,
+    items: items.map(formatChecklistItem),
+  };
+}
+
+async function buildDepartmentFilterQuery(eventId, membership, departmentKey) {
+  if (membership.isOwner) {
+    return { event: eventId };
+  }
+
+  if (departmentKey) {
+    const dept = await EventDepartment.findOne({ event: eventId, key: departmentKey });
+    if (dept) {
+      return {
+        event: eventId,
+        $or: [{ department: dept._id }, { department: null }],
+      };
+    }
+    return { event: eventId, department: null };
+  }
+
+  return { event: eventId, department: null };
+}
+
+async function getChecklistsForMember(eventId, membership, departmentKey) {
+  const query = await buildDepartmentFilterQuery(eventId, membership, departmentKey);
+
+  const checklists = await EventChecklist.find(query)
+    .populate('department', 'name key color')
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const checklistIds = checklists.map((c) => c._id);
+  const allItems = checklistIds.length
+    ? await EventChecklistItem.find({ checklist: { $in: checklistIds } })
+        .sort({ position: 1, createdAt: 1 })
+        .lean()
+    : [];
+
+  const itemsByChecklist = {};
+  allItems.forEach((item) => {
+    const key = String(item.checklist);
+    if (!itemsByChecklist[key]) itemsByChecklist[key] = [];
+    itemsByChecklist[key].push(item);
+  });
+
+  return checklists.map((c) => formatChecklist(c, itemsByChecklist[String(c._id)] || []));
+}
+
+function formatTask(doc) {
+  const department = doc.department;
+  const assignee = doc.assignee;
+
+  return {
+    id: doc._id,
+    title: doc.title,
+    description: doc.description || '',
+    status: doc.status || 'not_started',
+    priority: doc.priority || 'medium',
+    departmentId: department?._id || department || null,
+    departmentName: department?.name || null,
+    assigneeId: assignee?._id || assignee || null,
+    assigneeName: assignee?.name || assignee?.phone || assignee?.email || null,
+    deadline: doc.deadline || null,
+    completionComment: doc.completionComment || '',
+    completedAt: doc.completedAt || null,
+    createdAt: doc.createdAt,
+  };
+}
+
+async function getTasksForMember(eventId, membership) {
+  const docs = await EventTask.find({ event: eventId, assignee: membership._id })
+    .populate('department', 'name key color')
+    .populate('assignee', 'name phone email')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return docs.map(formatTask);
+}
+
+async function getIncidentsForMember(eventId, membership, departmentKey) {
+  const query = await buildDepartmentIncidentQuery(eventId, membership, departmentKey);
+
+  const docs = await EventIncident.find(query)
+    .populate('department', 'name key color')
+    .sort({ reportedAt: -1 })
+    .lean();
+
+  return docs.map(formatIncident);
+}
+
+async function getFilesForMember(eventId, membership, departmentKey) {
+  const query = await buildDepartmentIncidentQuery(eventId, membership, departmentKey);
+
+  const docs = await EventFile.find(query)
+    .populate('department', 'name key color')
+    .sort({ pinned: -1, createdAt: -1 })
+    .lean();
+
+  return docs.map(formatFile);
+}
+
+async function getDiscordLinksForMember(eventId, membership, departmentKey) {
+  const query = await buildDepartmentFilterQuery(eventId, membership, departmentKey);
+
+  const docs = await EventDiscordLink.find(query)
+    .populate('department', 'name key color')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return docs.map(formatDiscordLink);
+}
+
+async function findActiveMembership(eventId, user) {
+  const matchConditions = buildUserMatchConditions(user);
+  if (matchConditions.length === 0) {
+    return null;
+  }
+
+  return EventTeamMember.findOne({
+    event: eventId,
+    status: { $in: ['accepted', 'active'] },
+    $and: [
+      { $or: matchConditions },
+      { $or: [{ accessExpiresAt: null }, { accessExpiresAt: { $gt: new Date() } }] },
+    ],
+  });
+}
+
+async function isChecklistVisibleToMember(eventId, membership, departmentKey, checklistId) {
+  const query = await buildDepartmentFilterQuery(eventId, membership, departmentKey);
+  const checklist = await EventChecklist.findOne({ ...query, _id: checklistId });
+  return Boolean(checklist);
 }
 
 function formatMember(member) {
@@ -713,6 +921,33 @@ exports.getEventForMember = async (req, res) => {
 
     const departmentKey = membership.departmentKey || '';
     const departmentName = await getDepartmentDisplayName(req.params.eventId, departmentKey);
+    const responsibilities = await getResponsibilitiesForMember(
+      req.params.eventId,
+      membership,
+      departmentKey
+    );
+    const checklists = await getChecklistsForMember(
+      req.params.eventId,
+      membership,
+      departmentKey
+    );
+    const tasks = await getTasksForMember(req.params.eventId, membership);
+
+    const incidents = await getIncidentsForMember(
+      req.params.eventId,
+      membership,
+      departmentKey
+    );
+    const files = await getFilesForMember(req.params.eventId, membership, departmentKey);
+    const discordLinks = await getDiscordLinksForMember(
+      req.params.eventId,
+      membership,
+      departmentKey
+    );
+    const departments = await EventDepartment.find({ event: req.params.eventId })
+      .sort({ sortOrder: 1, name: 1 })
+      .select('name')
+      .lean();
 
     return ApiResponse.success(res, 'Event fetched successfully', {
       event,
@@ -721,9 +956,136 @@ exports.getEventForMember = async (req, res) => {
         departmentName,
         isOwner: membership.isOwner,
       },
+      responsibilities,
+      checklists,
+      tasks,
+      incidents,
+      files,
+      discordLinks,
+      departments: departments.map((d) => ({ id: d._id, name: d.name })),
     });
   } catch (error) {
     console.error('getEventForMember error:', error);
     return ApiResponse.serverError(res, 'Failed to fetch event', error);
+  }
+};
+
+exports.updateChecklistItemForMember = async (req, res) => {
+  try {
+    const { eventId, checklistId, itemId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ['not_started', 'in_progress', 'completed', 'blocked'];
+    if (!allowedStatuses.includes(status)) {
+      return ApiResponse.error(res, 'Invalid status', {}, 400);
+    }
+
+    const membership = await findActiveMembership(eventId, req.user);
+    if (!membership) {
+      return ApiResponse.error(res, 'You do not have access to this event', {}, 403);
+    }
+
+    const departmentKey = membership.departmentKey || '';
+    const visible = await isChecklistVisibleToMember(
+      eventId,
+      membership,
+      departmentKey,
+      checklistId
+    );
+    if (!visible) {
+      return ApiResponse.notFound(res, 'Checklist not found');
+    }
+
+    const item = await EventChecklistItem.findOneAndUpdate(
+      { _id: itemId, checklist: checklistId, event: eventId },
+      { $set: { status } },
+      { new: true }
+    );
+
+    if (!item) {
+      return ApiResponse.notFound(res, 'Checklist item not found');
+    }
+
+    return ApiResponse.success(res, 'Checklist item updated successfully', {
+      item: formatChecklistItem(item),
+    });
+  } catch (error) {
+    console.error('updateChecklistItemForMember error:', error);
+    return ApiResponse.serverError(res, 'Failed to update checklist item', error);
+  }
+};
+
+exports.updateTaskForMember = async (req, res) => {
+  try {
+    const { eventId, taskId } = req.params;
+    const { status, completionComment } = req.body;
+
+    const allowedStatuses = ['not_started', 'in_progress', 'waiting', 'completed', 'cancelled'];
+    if (status !== undefined && !allowedStatuses.includes(status)) {
+      return ApiResponse.error(res, 'Invalid status', {}, 400);
+    }
+
+    const membership = await findActiveMembership(eventId, req.user);
+    if (!membership) {
+      return ApiResponse.error(res, 'You do not have access to this event', {}, 403);
+    }
+
+    const updates = {};
+    if (status !== undefined) {
+      updates.status = status;
+      updates.completedAt = status === 'completed' ? new Date() : null;
+    }
+    if (completionComment !== undefined) {
+      updates.completionComment = String(completionComment).trim();
+    }
+
+    const task = await EventTask.findOneAndUpdate(
+      { _id: taskId, event: eventId, assignee: membership._id },
+      { $set: updates },
+      { new: true }
+    )
+      .populate('department', 'name key color')
+      .populate('assignee', 'name phone email');
+
+    if (!task) {
+      return ApiResponse.notFound(res, 'Task not found');
+    }
+
+    return ApiResponse.success(res, 'Task updated successfully', { task: formatTask(task) });
+  } catch (error) {
+    console.error('updateTaskForMember error:', error);
+    return ApiResponse.serverError(res, 'Failed to update task', error);
+  }
+};
+
+exports.createIncidentForMember = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { title, description, location, category, priority, departmentId } = req.body;
+
+    if (!title || !String(title).trim()) {
+      return ApiResponse.error(res, 'Title is required', {}, 400);
+    }
+
+    const membership = await findActiveMembership(eventId, req.user);
+    if (!membership) {
+      return ApiResponse.error(res, 'You do not have access to this event', {}, 403);
+    }
+
+    const incident = await createIncidentRecord({
+      eventId,
+      body: { title, description, location, category, priority, departmentId },
+      reporterMember: membership._id,
+    });
+
+    return ApiResponse.success(res, 'Incident reported successfully', { incident }, 201);
+  } catch (error) {
+    console.error('createIncidentForMember error:', error);
+    return ApiResponse.error(
+      res,
+      error.message || 'Failed to report incident',
+      {},
+      error.statusCode || 500
+    );
   }
 };

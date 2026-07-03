@@ -21,7 +21,7 @@ const nextConfig = {
     return [
       {
         // Keep /api/upload on Next.js (Vercel Blob). Do not proxy to backend Cloudinary.
-        source: '/api/:path((?!upload$).*)',
+        source: '/api/:path((?!upload(?:/|$)).*)',
         destination: `${apiBase}/api/:path*`,
       },
     ]

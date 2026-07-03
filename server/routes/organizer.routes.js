@@ -6,6 +6,14 @@ const dailyEventController = require('../controllers/dailyEventController');
 const organizerBookingController = require('../controllers/organizerBookingController');
 const eventTeamController = require('../controllers/eventTeamController');
 const eventDepartmentController = require('../controllers/eventDepartmentController');
+const eventRoleController = require('../controllers/eventRoleController');
+const eventChecklistController = require('../controllers/eventChecklistController');
+const eventTaskController = require('../controllers/eventTaskController');
+const eventIncidentController = require('../controllers/eventIncidentController');
+const eventFileController = require('../controllers/eventFileController');
+const eventDiscordLinkController = require('../controllers/eventDiscordLinkController');
+const eventCrmOverviewController = require('../controllers/eventCrmOverviewController');
+const eventCrmReportController = require('../controllers/eventCrmReportController');
 const { protect, authorize } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -135,6 +143,107 @@ router.post('/events/:eventId/departments', [
   check('color', 'Valid hex color is required').optional().matches(/^#[0-9A-Fa-f]{6}$/),
 ], eventDepartmentController.createEventDepartment);
 router.delete('/events/:eventId/departments/:departmentId', protect, eventDepartmentController.deleteEventDepartment);
+
+// Event CRM roles & responsibilities
+router.get('/events/:eventId/roles', protect, eventRoleController.getEventRoles);
+router.post('/events/:eventId/roles', [
+  protect,
+  check('name', 'Role name is required').notEmpty().trim(),
+  check('description', 'Description must be a string').optional().isString(),
+], eventRoleController.createEventRole);
+router.delete('/events/:eventId/roles/:roleId', protect, eventRoleController.deleteEventRole);
+router.post('/events/:eventId/responsibilities', [
+  protect,
+  check('title', 'Title is required').notEmpty().trim(),
+  check('description', 'Description must be a string').optional().isString(),
+  check('expectedOutcome', 'Expected outcome must be a string').optional().isString(),
+  check('departmentId', 'Department id must be valid').optional().isString(),
+  check('priority', 'Priority must be low, medium, or high').optional().isIn(['low', 'medium', 'high']),
+], eventRoleController.createEventResponsibility);
+router.delete('/events/:eventId/responsibilities/:responsibilityId', protect, eventRoleController.deleteEventResponsibility);
+
+// Event CRM checklists
+router.get('/events/:eventId/checklists', protect, eventChecklistController.getEventChecklists);
+router.post('/events/:eventId/checklists', [
+  protect,
+  check('name', 'Checklist name is required').notEmpty().trim(),
+  check('phase', 'Phase must be pre_event, event_day, or post_event').optional().isIn(['pre_event', 'event_day', 'post_event']),
+  check('departmentId', 'Department id must be valid').optional().isString(),
+], eventChecklistController.createEventChecklist);
+router.delete('/events/:eventId/checklists/:checklistId', protect, eventChecklistController.deleteEventChecklist);
+router.post('/events/:eventId/checklists/:checklistId/items', [
+  protect,
+  check('title', 'Item title is required').notEmpty().trim(),
+], eventChecklistController.createChecklistItem);
+router.patch('/events/:eventId/checklists/:checklistId/items/:itemId', [
+  protect,
+  check('status', 'Status is required').isIn(['not_started', 'in_progress', 'completed', 'blocked']),
+], eventChecklistController.updateChecklistItem);
+router.delete('/events/:eventId/checklists/:checklistId/items/:itemId', protect, eventChecklistController.deleteChecklistItem);
+
+// Event CRM tasks
+router.get('/events/:eventId/tasks', protect, eventTaskController.getEventTasks);
+router.post('/events/:eventId/tasks', [
+  protect,
+  check('title', 'Title is required').notEmpty().trim(),
+  check('description', 'Description must be a string').optional().isString(),
+  check('departmentId', 'Department id must be valid').optional().isString(),
+  check('assigneeId', 'Assignee id must be valid').optional().isString(),
+  check('priority', 'Priority must be low, medium, high, or urgent').optional().isIn(['low', 'medium', 'high', 'urgent']),
+  check('deadline', 'Deadline must be a valid date').optional().isISO8601(),
+], eventTaskController.createEventTask);
+router.patch('/events/:eventId/tasks/:taskId', [
+  protect,
+  check('status', 'Status must be valid').optional().isIn(['not_started', 'in_progress', 'waiting', 'completed', 'cancelled']),
+  check('completionComment', 'Completion comment must be a string').optional().isString(),
+], eventTaskController.updateEventTask);
+router.delete('/events/:eventId/tasks/:taskId', protect, eventTaskController.deleteEventTask);
+
+// Event CRM incidents
+router.get('/events/:eventId/incidents', protect, eventIncidentController.getEventIncidents);
+router.post('/events/:eventId/incidents', [
+  protect,
+  check('title', 'Title is required').notEmpty().trim(),
+  check('description', 'Description must be a string').optional().isString(),
+  check('location', 'Location must be a string').optional().isString(),
+  check('category', 'Category must be a string').optional().isString(),
+  check('departmentId', 'Department id must be valid').optional().isString(),
+  check('priority', 'Priority must be low, medium, high, or urgent').optional().isIn(['low', 'medium', 'high', 'urgent']),
+], eventIncidentController.createEventIncident);
+router.patch('/events/:eventId/incidents/:incidentId', [
+  protect,
+  check('status', 'Status is required').isIn(['open', 'assigned', 'in_progress', 'escalated', 'resolved', 'closed']),
+], eventIncidentController.updateEventIncident);
+
+// Event CRM files
+router.get('/events/:eventId/files', protect, eventFileController.getEventFiles);
+router.post('/events/:eventId/files', [
+  protect,
+  check('name', 'File name is required').notEmpty().trim(),
+  check('storageUrl', 'Storage URL is required').notEmpty().trim(),
+  check('storagePath', 'Storage path is required').notEmpty().trim(),
+  check('sizeBytes', 'Size must be a number').optional().isNumeric(),
+  check('mimeType', 'Mime type must be a string').optional().isString(),
+  check('departmentId', 'Department id must be valid').optional().isString(),
+], eventFileController.createEventFile);
+router.patch('/events/:eventId/files/:fileId', protect, eventFileController.updateEventFile);
+router.delete('/events/:eventId/files/:fileId', protect, eventFileController.deleteEventFile);
+
+// Event CRM Discord / communication links
+router.get('/events/:eventId/discord-links', protect, eventDiscordLinkController.getEventDiscordLinks);
+router.post('/events/:eventId/discord-links', [
+  protect,
+  check('inviteUrl', 'Invite URL is required').notEmpty().trim(),
+  check('serverName', 'Server name must be a string').optional().isString(),
+  check('channelName', 'Channel name must be a string').optional().isString(),
+  check('departmentId', 'Department id must be valid').optional().isString(),
+  check('notes', 'Notes must be a string').optional().isString(),
+], eventDiscordLinkController.createEventDiscordLink);
+router.delete('/events/:eventId/discord-links/:linkId', protect, eventDiscordLinkController.deleteEventDiscordLink);
+
+// Event CRM overview
+router.get('/events/:eventId/crm-overview', protect, eventCrmOverviewController.getCrmOverview);
+router.get('/events/:eventId/crm-report', protect, eventCrmReportController.getCrmReport);
 
 // Organizer daily event routes
 router.post('/daily-events', [

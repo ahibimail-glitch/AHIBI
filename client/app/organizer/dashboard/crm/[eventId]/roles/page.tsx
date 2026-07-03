@@ -1,19 +1,11 @@
 "use client";
 
-import { Shield } from "lucide-react";
-import CrmComingSoon from "@/app/organizer/components/crm/CrmComingSoon";
+import { useParams } from "next/navigation";
+import CrmRoles from "@/app/organizer/components/crm/CrmRoles";
 
 export default function CrmRolesPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-white mb-8">
-        Roles & Responsibilities
-      </h1>
-      <CrmComingSoon
-        title="Roles & Responsibilities"
-        description="Define roles and assign responsibilities across your event team."
-        icon={Shield}
-      />
-    </div>
-  );
+  const params = useParams();
+  const eventId = params.eventId as string;
+
+  return <CrmRoles eventId={eventId} />;
 }

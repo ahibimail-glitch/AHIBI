@@ -299,36 +299,37 @@ function ManageEventContent() {
     (highlightedInvite && user?.phone && highlightedInvite.phone !== user.phone.replace(/\D/g, "").slice(-10));
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-white">
-      <header className="border-b border-[#21262d] px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-[#0b0e14] text-white overflow-x-hidden">
+      <header className="border-b border-[#21262d] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Image
             src="/images/Logo.png"
             alt="AHIBI Event Command"
             width={120}
             height={32}
-            className="h-8 w-auto object-contain"
+            className="h-7 sm:h-8 w-auto object-contain shrink-0"
           />
           <div className="hidden sm:block border-l border-[#21262d] pl-3">
             <p className="text-xs text-[#8b949e]">Team member dashboard</p>
           </div>
+          <p className="sm:hidden text-[10px] text-[#8b949e] truncate">Team dashboard</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {user?.phone && (
             <span className="hidden sm:inline text-sm text-[#8b949e]">{user.phone}</span>
           )}
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-2 text-sm text-[#8b949e] hover:text-white"
+            className="flex items-center gap-1.5 sm:gap-2 min-h-[44px] px-2 text-sm text-[#8b949e] hover:text-white touch-manipulation"
           >
             <LogOut className="h-4 w-4" />
-            Sign out
+            <span>Sign out</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         {!user?.phone && (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
             Sign in with the mobile number your invitation was sent to in order to accept it.
@@ -346,7 +347,7 @@ function ManageEventContent() {
             <p className="text-[10px] uppercase tracking-widest text-[#f97316] mb-2">
               You&apos;re invited
             </p>
-            <h2 className="text-2xl font-semibold text-white">
+            <h2 className="text-xl sm:text-2xl font-semibold text-white break-words">
               {highlightedInvite.event?.title || "Event invitation"}
             </h2>
             <p className="text-sm text-[#8b949e] mt-1">
@@ -362,12 +363,12 @@ function ManageEventContent() {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <button
                 type="button"
                 disabled={!!actionId || showPhoneMismatch}
                 onClick={() => handleAccept(highlightedInvite)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[#f97316] hover:bg-[#ea580c] text-black font-semibold text-sm disabled:opacity-60"
+                className="inline-flex w-full sm:w-auto min-h-[44px] items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-[#f97316] hover:bg-[#ea580c] text-black font-semibold text-sm disabled:opacity-60 touch-manipulation"
               >
                 {actionId === highlightedInvite.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -380,7 +381,7 @@ function ManageEventContent() {
                 type="button"
                 disabled={!!actionId || showPhoneMismatch}
                 onClick={() => handleDecline(highlightedInvite.id)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md border border-[#21262d] text-[#8b949e] hover:text-white text-sm disabled:opacity-60"
+                className="inline-flex w-full sm:w-auto min-h-[44px] items-center justify-center gap-2 px-5 py-2.5 rounded-md border border-[#21262d] text-[#8b949e] hover:text-white text-sm disabled:opacity-60 touch-manipulation"
               >
                 <XCircle className="h-4 w-4" />
                 Decline
@@ -407,12 +408,12 @@ function ManageEventContent() {
                         </h3>
                         <InviteDetailRows invite={invite} />
                       </div>
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
                         <button
                           type="button"
                           disabled={!!actionId || invite.userMatches === false}
                           onClick={() => handleAccept(invite)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-[#f97316] text-black font-semibold text-sm disabled:opacity-60"
+                          className="inline-flex w-full sm:w-auto min-h-[44px] items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-[#f97316] text-black font-semibold text-sm disabled:opacity-60 touch-manipulation"
                         >
                           {actionId === invite.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -425,7 +426,7 @@ function ManageEventContent() {
                           type="button"
                           disabled={!!actionId}
                           onClick={() => handleDecline(invite.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-[#21262d] text-[#8b949e] hover:text-white text-sm disabled:opacity-60"
+                          className="inline-flex w-full sm:w-auto min-h-[44px] items-center justify-center gap-1.5 px-3 py-2 rounded-md border border-[#21262d] text-[#8b949e] hover:text-white text-sm disabled:opacity-60 touch-manipulation"
                         >
                           Decline
                         </button>
@@ -453,12 +454,12 @@ function ManageEventContent() {
                   key={membershipId}
                   type="button"
                   onClick={() => router.push(`/manageEvent/${event.id}`)}
-                  className="text-left rounded-xl border border-[#21262d] bg-[#131820] p-5 hover:border-[#f97316]/40 transition-colors"
+                  className="text-left w-full rounded-xl border border-[#21262d] bg-[#131820] p-4 sm:p-5 hover:border-[#f97316]/40 transition-colors touch-manipulation min-h-[44px]"
                 >
                   <p className="text-[10px] uppercase tracking-widest text-[#f97316] mb-2">
                     {isOwner ? "Event Admin" : departmentName || "Team Member"}
                   </p>
-                  <h3 className="font-semibold text-white">{event.title}</h3>
+                  <h3 className="font-semibold text-white break-words">{event.title}</h3>
                   <p className="text-sm text-[#8b949e] mt-2 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
                     {new Date(event.startDate).toLocaleDateString()}

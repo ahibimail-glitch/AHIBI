@@ -1,17 +1,11 @@
 "use client";
 
-import { Folder } from "lucide-react";
-import CrmComingSoon from "@/app/organizer/components/crm/CrmComingSoon";
+import { useParams } from "next/navigation";
+import CrmFiles from "@/app/organizer/components/crm/CrmFiles";
 
 export default function CrmFilesPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-white mb-8">Files</h1>
-      <CrmComingSoon
-        title="Files"
-        description="Store and share event documents."
-        icon={Folder}
-      />
-    </div>
-  );
+  const params = useParams();
+  const eventId = params.eventId as string;
+
+  return <CrmFiles eventId={eventId} />;
 }

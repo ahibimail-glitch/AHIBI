@@ -7,6 +7,13 @@ const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 const DOC_TYPES = ['application/pdf'];
 
 function getUploadLimits(pathname: string) {
+  if (pathname.includes('/event-files/')) {
+    return {
+      allowedContentTypes: [] as string[],
+      maximumSizeInBytes: 25 * 1024 * 1024,
+    };
+  }
+
   if (pathname.includes('/video/')) {
     return {
       allowedContentTypes: VIDEO_TYPES,

@@ -141,3 +141,31 @@ export async function uploadMultipleToVercelBlob(
 
   return Promise.all(uploadPromises);
 }
+
+/**
+ * Upload an event CRM file (documents, maps, schedules, etc.)
+ */
+export async function uploadEventCrmFile(
+  file: File,
+  eventId: string
+): Promise<UploadResponse> {
+  const timestamp = Date.now();
+  const randomString = Math.random().toString(36).substring(2, 15);
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const pathname = `event-files/${eventId}/${timestamp}-${randomString}-${safeName}`;
+
+  const blob = await upload(pathname, file, {
+    access: 'public',
+    handleUploadUrl: '/api/upload',
+    contentType: file.type || undefined,
+    multipart: file.size > MULTIPART_THRESHOLD_BYTES,
+  });
+
+  return {
+    success: true,
+    url: blob.url,
+    pathname: blob.pathname,
+    size: file.size,
+    contentType: file.type,
+  };
+}
