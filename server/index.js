@@ -66,7 +66,8 @@ const allowedOrigins = [
   'https://ahibi.in',
   'http://ahibi.in',
   'http://localhost:3000',
-  'https://ahibi.vercel.app'
+  'https://ahibi.vercel.app',
+  'https://ahibi-lac.vercel.app/'
 ];
 
 if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
