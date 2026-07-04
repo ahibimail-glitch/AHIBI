@@ -80,3 +80,6 @@ export default function CrmTopBar({ signOutMode = "organizer" }: { signOutMode?:
     </header>
   );
 }
+/**
+ * 
+ */
