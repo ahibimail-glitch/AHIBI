@@ -174,7 +174,7 @@ export default function CrmFiles({ eventId }: CrmFilesProps) {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url: blobUrl }),
-        }).catch(() => undefined);
+        }).catch((): undefined => undefined);
       }
 
       toast({ title: "File removed", description: file.name });
