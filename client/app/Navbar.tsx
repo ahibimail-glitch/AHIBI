@@ -45,8 +45,8 @@ const primaryNavLinks = [
 // ─── Overflow links shown in "More" drawer ─────────────────────────────────
 const moreNavLinks = [
   { href: "/allOrganizers",        label: "Organizers",             Icon: Users        },
-  // { href: "/about",                label: "About",                  Icon: Info         },
-  // { href: "/sports/tournaments",   label: "Tournament Registration", Icon: ClipboardList },
+  { href: "/about",                label: "About",                  Icon: Info         },
+  { href: "/tournaments",         label: "Tournament Registration", Icon: ClipboardList },
 ];
 
 export default function Navbar() {
