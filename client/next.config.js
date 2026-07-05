@@ -28,18 +28,8 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Redirect www to root domain
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'www.ahibi.in',
-          },
-        ],
-        destination: 'https://ahibi.in/:path*',
-        permanent: true,
-      },
+      // Domain redirects (www ↔ apex) belong in Vercel/hosting settings only.
+      // Do not add them here — duplicate rules cause ERR_TOO_MANY_REDIRECTS.
       // Sports section disabled — routes kept in codebase for future use
       {
         source: '/sports',
