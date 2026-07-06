@@ -16,6 +16,7 @@ import {
   Shield,
   MessageSquare,
   BarChart3,
+  BookOpen,
 } from "lucide-react";
 import type { EventDetails } from "./CrmContext";
 
@@ -37,6 +38,7 @@ export const CRM_NAV_ITEMS: CrmNavItem[] = [
   { label: "Files", segment: "files", icon: Folder },
   { label: "Communication", segment: "communication", icon: MessageSquare },
   { label: "Reports", segment: "reports", icon: BarChart3 },
+  { label: "Guide", segment: "guide", icon: BookOpen },
 ];
 
 interface CrmSidebarProps {
