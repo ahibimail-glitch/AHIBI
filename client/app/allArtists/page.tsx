@@ -132,6 +132,28 @@ const IconChart = () => (
   </svg>
 );
 
+const FeaturedMicIllustration = () => (
+  <svg viewBox="0 0 220 200" fill="none" className="h-full w-full" aria-hidden="true">
+    <defs>
+      <linearGradient id="spotCone" x1="50%" y1="0%" x2="50%" y2="100%">
+        <stop offset="0%" stopColor="#8b7cf8" stopOpacity="0.55" />
+        <stop offset="100%" stopColor="#8b7cf8" stopOpacity="0" />
+      </linearGradient>
+    </defs>
+    <polygon points="110,8 52,118 168,118" fill="url(#spotCone)" />
+    <ellipse cx="110" cy="128" rx="52" ry="10" fill="#2a2a38" opacity="0.55" />
+    <rect x="106" y="72" width="8" height="58" rx="4" fill="#2a3142" />
+    <rect x="98" y="64" width="24" height="30" rx="12" fill="#1a1f2e" stroke="#3d4558" strokeWidth="1.5" />
+    <path d="M92 88 Q110 100 128 88" stroke="#3d4558" strokeWidth="2.5" fill="none" />
+    <line x1="94" y1="130" x2="126" y2="130" stroke="#3d4558" strokeWidth="4" strokeLinecap="round" />
+    <rect x="72" y="142" width="5" height="16" rx="2.5" fill="#7c6cf0" opacity="0.85" />
+    <rect x="80" y="148" width="5" height="10" rx="2.5" fill="#7c6cf0" opacity="0.55" />
+    <rect x="88" y="138" width="5" height="20" rx="2.5" fill="#7c6cf0" opacity="0.95" />
+    <rect x="128" y="144" width="5" height="12" rx="2.5" fill="#f87171" opacity="0.75" />
+    <rect x="136" y="140" width="5" height="18" rx="2.5" fill="#f87171" opacity="0.9" />
+  </svg>
+);
+
 /* ───────────────────────── Data ───────────────────────── */
 
 const FEATURED_ARTISTS = [
@@ -334,7 +356,6 @@ const FAQS = [
 
 const TICKER_ITEMS = [
   "Join Free",
-  "10,000+ Artists",
   "Secure Payments",
   "Set Your Rates",
   "Verified Profiles",
@@ -556,7 +577,7 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(91,108,255,0.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(124,58,237,0.08),transparent_26%),linear-gradient(180deg,#fbfdff_0%,#f7f8fc_42%,#f5f7ff_100%)]" />
 
-        <div className="relative mx-auto grid w-full max-w-[1280px] items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-10 lg:py-6">
+        <div className="relative mx-auto grid w-full max-w-[1280px] items-center gap-12 px-4 py-10 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-10 lg:py-6">
           <div>
             <h1 className="max-w-3xl font-['Cormorant_Garamond',_serif] text-[clamp(42px,6.5vw,86px)] font-bold leading-[0.92] tracking-[-0.03em] text-[#111827]">
               Discover
@@ -600,112 +621,120 @@ function LandingPage({ onViewList }: { onViewList: () => void }) {
             </div>
           </div>
 
-          <div className="relative w-full max-w-4xl mx-auto">
-            {/* Background Blur Accents */}
-            <div className="absolute -right-4 -top-4 h-32 w-32 sm:h-48 sm:w-48 rounded-full bg-[#5b6cff]/15 blur-3xl" />
-            <div className="absolute -left-6 bottom-10 h-32 w-32 sm:h-48 sm:w-48 rounded-full bg-[#7c3aed]/15 blur-3xl" />
+          <div className="relative w-full mx-auto lg:min-w-0">
+            <div className="relative overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.05)] bg-[#eceef3] p-3 sm:p-4 shadow-[0_20px_50px_rgba(15,23,42,0.07)]">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
 
-            {/* Main Wrapper */}
-            <div className="relative overflow-hidden rounded-[24px] sm:rounded-[34px] border border-white bg-white/60 p-3 sm:p-4 backdrop-blur-xl shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
-              <div className="grid gap-4 md:grid-cols-2">
-
-                {/* TOP CARD - PRIYA NAIR */}
-                <div className="md:col-span-2 overflow-hidden rounded-[20px] sm:rounded-[28px] bg-[#0f172a] p-5 sm:p-6 text-white shadow-[0_20px_60px_rgba(0,0,0,0.2)] transition hover:shadow-[0_25px_70px_rgba(0,0,0,0.3)]">
-
-                  {/* TOP BADGES */}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.18em] text-white/80 backdrop-blur-md">
+                {/* FEATURED PICK */}
+                <div className="relative md:col-span-2 overflow-hidden rounded-[22px] sm:rounded-[24px] bg-[#12121b] p-5 sm:p-6 text-white shadow-[0_18px_50px_rgba(0,0,0,0.22)] min-h-[270px] sm:min-h-[220px]">
+                  <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#1a1a24] px-3 py-1.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.16em] text-white/75">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#ef4444]" />
                       Featured pick
                     </span>
-                    <span className="rounded-full bg-gradient-to-r from-[#5b6cff] to-[#7c3aed] px-3 py-1.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.18em] text-white shadow-md">
+                    <span className="rounded-full bg-[#635bff] px-3.5 py-1.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.16em] text-white">
                       Trending now
                     </span>
                   </div>
 
-                  {/* MAIN CONTENT */}
-                  <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row items-start justify-between gap-5 sm:gap-6">
-
-                    {/* LEFT: INFO */}
-                    <div className="w-full sm:w-auto">
-                      <div className="font-['Cormorant_Garamond',_serif] text-2xl sm:text-3xl font-bold leading-tight">
-                        Priya Nair
-                      </div>
-                      <div className="mt-1 text-xs sm:text-sm text-white/60">
-                        Singer • Mumbai
-                      </div>
-
-                      {/* STATS */}
-                      <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-4 text-[12px] sm:text-[13px] text-white/80">
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#f59e0b]">
-                          {/* Assuming you have an IconStar component */}
-                          <IconStar filled /> 4.9
-                        </span>
-                        <span>312 bookings</span>
-                        <span className="hidden sm:inline text-white/30">•</span>
-                        <span className="text-[#16a34a] font-semibold">Verified</span>
-                      </div>
+                  <div className="relative z-10 mt-5 sm:mt-6 max-w-full sm:max-w-[58%]">
+                    <div className="font-['Cormorant_Garamond',_serif] text-[30px] sm:text-[34px] font-bold leading-[1.05] tracking-[-0.01em]">
+                      Boho Singer
+                    </div>
+                    <div className="mt-1.5 text-[13px] sm:text-sm text-white/50">
+                      Singer • Chumukedima / Nagaland
                     </div>
 
-                    {/* RIGHT CTA BUTTONS */}
-                    <div className="mt-2 flex w-full flex-row sm:mt-0 sm:w-auto sm:flex-col items-center sm:items-end gap-3">
-                      <button className="w-full sm:w-auto flex-1 rounded-2xl bg-white px-4 sm:px-5 py-2.5 text-xs font-bold text-[#111827] transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(255,255,255,0.15)]">
+                    <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] sm:text-[13px] text-white/70">
+                      <span className="inline-flex items-center gap-1 font-semibold text-[#f59e0b]">
+                        <IconStar filled /> 4.9
+                      </span>
+                      <span className="text-white/25">•</span>
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-[#22c55e]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e]" />
+                        Verified
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {["Wedding", "Concert", "& more"].map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-white/10 bg-[#1c1c28] px-3 py-1 text-[11px] font-medium text-white/65"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                      <button className="rounded-full bg-[#635bff] px-5 py-2.5 text-[11px] sm:text-xs font-bold text-white transition hover:bg-[#5248e6]">
                         Book now
                       </button>
-                      <button className="w-full sm:w-auto flex-1 rounded-2xl border border-white/15 bg-transparent px-4 sm:px-5 py-2.5 text-xs font-bold text-white transition hover:bg-white/10">
+                      <button className="rounded-full border border-white/20 bg-transparent px-5 py-2.5 text-[11px] sm:text-xs font-bold text-white/90 transition hover:bg-white/8">
                         View profile
                       </button>
                     </div>
                   </div>
+
+                  <div className="pointer-events-none absolute right-0 top-8 bottom-0 w-[40%] sm:top-6 sm:w-[38%]">
+                    <FeaturedMicIllustration />
+                  </div>
                 </div>
 
-                {/* BOTTOM CARD 1 - DJ */}
-                <div className="overflow-hidden rounded-[20px] sm:rounded-[26px] border border-white bg-gradient-to-b from-[#ffffff] to-[#f8fbff] p-3 sm:p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-                  <img
-                    src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&q=80"
-                    alt="DJ"
-                    className="h-40 sm:h-52 w-full rounded-[16px] sm:rounded-[20px] object-cover"
-                  />
-                  <div className="mt-3 sm:mt-4 text-center sm:text-left">
+                {/* DJ */}
+                <div className="overflow-hidden rounded-[22px] sm:rounded-[24px] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                  <div className="h-[132px] sm:h-[148px] overflow-hidden rounded-t-[22px] sm:rounded-t-[24px]">
+                    <img
+                      src="/images/dj-illustration.png"
+                      alt="DJ illustration"
+                      className=" w-full object-cover object-center"
+                    />
+                  </div>
+                  <div className="px-4 py-4 sm:px-5 sm:py-[18px]">
                     <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[.18em] text-[#5b6cff]">
                       DJ
                     </div>
-                    <div className="mt-1 text-sm sm:text-base font-bold text-[#111827]">
+                    <div className="mt-1 font-['Cormorant_Garamond',_serif] text-[22px] sm:text-2xl font-bold leading-tight text-[#111827]">
                       Book instantly
                     </div>
+                    <p className="mt-1.5 text-[12px] sm:text-[13px] leading-relaxed text-[#6b7280]">
+                      42 DJs available near Chumukedima
+                    </p>
+                    <button className="mt-2.5 text-[12px] sm:text-[13px] font-semibold text-[#5b6cff] transition hover:text-[#4338ca]">
+                      Explore DJs →
+                    </button>
                   </div>
                 </div>
 
-                {/* BOTTOM CARD 2 - LIVE PERFORMANCE */}
-                <div className="overflow-hidden rounded-[20px] sm:rounded-[26px] border border-white bg-gradient-to-b from-[#ffffff] to-[#f8fbff] p-3 sm:p-4 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-                  <img
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80"
-                    alt="Artist"
-                    className="h-40 sm:h-52 w-full rounded-[16px] sm:rounded-[20px] object-cover"
-                  />
-                  <div className="mt-3 sm:mt-4 text-center sm:text-left">
-                    <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[.18em] text-[#7c3aed]">
+                {/* LIVE PERFORMANCE */}
+                <div className="overflow-hidden rounded-[22px] sm:rounded-[24px] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                  <div className="h-[132px] sm:h-[148px] overflow-hidden rounded-t-[22px] sm:rounded-t-[24px]">
+                    <img
+                      src="/images/live-performance-illustration.png"
+                      alt="Live performance illustration"
+                      className=" w-full object-cover object-center"
+                    />
+                  </div>
+                  <div className="px-4 py-4 sm:px-5 sm:py-[18px]">
+                    <div className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[.18em] text-[#e91e8c]">
                       Live performance
                     </div>
-                    <div className="mt-1 text-sm sm:text-base font-bold text-[#111827]">
+                    <div className="mt-1 font-['Cormorant_Garamond',_serif] text-[22px] sm:text-2xl font-bold leading-tight text-[#111827]">
                       For premium events
                     </div>
+                    <p className="mt-1.5 text-[12px] sm:text-[13px] leading-relaxed text-[#6b7280]">
+                      Bands, anchors and dancers, vetted
+                    </p>
+                    <button className="mt-2.5 text-[12px] sm:text-[13px] font-semibold text-[#e91e8c] transition hover:text-[#be185d]">
+                      See performers →
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              {/* BOTTOM FEATURE TAGS */}
-              <div className="mt-4 grid grid-cols-1 gap-2 min-[450px]:grid-cols-3 sm:gap-3">
-                {["Fast booking", "Verified artists", "Secure payouts"].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-[14px] sm:rounded-[18px] border border-white/60 bg-white/40 px-3 py-2.5 sm:py-3 text-center backdrop-blur-sm text-[9px] sm:text-[10px] font-extrabold uppercase tracking-[.14em] text-[#4b5563]"
-                  >
-                    {item}
-                  </div>
-                ))}
               </div>
             </div>
           </div>
+          
         </div>
       </section>
 
