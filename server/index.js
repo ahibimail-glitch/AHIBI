@@ -52,12 +52,12 @@ const adminNotificationRoutes = require('./routes/adminNotification.routes');
 const adminTermsRoutes = require('./routes/adminTermsRoutes');
 const publicTermsRoutes = require('./routes/publicTermsRoutes');
 const futsalTournamentRoutes = require('./routes/futsalTournament.routes');
-const registrationFormRoutes = require('./routes/registrationForm.routes');
 const {
   adminAnalyticsRoutes,
   organizerAnalyticsRoutes,
   artistAnalyticsRoutes,
 } = require('./routes/analytics.routes');
+const { logRouterRoutes } = require('./utils/logRouterRoutes');
 
 const User = require('./models/User');
 
@@ -215,7 +215,8 @@ app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/admin/terms', adminTermsRoutes);
 app.use('/api/public/terms', publicTermsRoutes);
 app.use('/api/futsal', futsalTournamentRoutes);
-app.use('/api/registration-forms', registrationFormRoutes);
+
+logRouterRoutes('adminAnalyticsRoutes', adminAnalyticsRoutes, '/api/admin/analytics');
 
 // Root route
 app.get('/', (req, res) => {
