@@ -1,7 +1,7 @@
 const { check, validationResult } = require('express-validator');
 const Event = require('../models/Event');
 const ApiResponse = require('../utils/apiResponse');
-const { v4: uuidv4 } = require('uuid');
+const { generateUniqueEventSlug } = require('../utils/eventSlug');
 const Booking = require('../models/Booking');
 const adminNotificationController = require('./adminNotificationController');
 const emailService = require('../services/emailService');
@@ -36,8 +36,7 @@ const createEvent = async (req, res) => {
       socialLinks = {}
     } = req.body;
 
-    // Create event slug from title
-    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
+    const slug = await generateUniqueEventSlug(title, Event);
 
     // Prepare location data with proper GeoJSON format
     // Handle coordinates - support both old format (latitude/longitude) and new format (GeoJSON)
@@ -940,8 +939,7 @@ const createOrganizerEvent = async (req, res) => {
       socialLinks = {}
     } = req.body;
 
-    // Create event slug from title
-    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
+    const slug = await generateUniqueEventSlug(title, Event);
 
     // Prepare location data with proper GeoJSON format
     const locationData = {

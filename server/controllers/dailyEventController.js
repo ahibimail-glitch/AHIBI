@@ -1,7 +1,7 @@
 const { check, validationResult } = require('express-validator');
 const DailyEvent = require('../models/DailyEvent');
 const ApiResponse = require('../utils/apiResponse');
-const { v4: uuidv4 } = require('uuid');
+const { generateUniqueEventSlug } = require('../utils/eventSlug');
 const Booking = require('../models/Booking');
 const AdminNotification = require('../models/AdminNotification');
 const adminNotificationController = require('./adminNotificationController');
@@ -44,7 +44,7 @@ const createOrganizerDailyEvent = async (req, res) => {
       bookingDeadlineHours = 0
     } = req.body;
 
-    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
+    const slug = await generateUniqueEventSlug(title, DailyEvent);
 
     const locationData = {
       ...location,
@@ -164,7 +164,7 @@ const createDailyEvent = async (req, res) => {
       bookingDeadlineHours = 0
     } = req.body;
 
-    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${uuidv4().substring(0, 6)}`;
+    const slug = await generateUniqueEventSlug(title, DailyEvent);
 
     let coordinates = { type: 'Point', coordinates: [0, 0] };
 
