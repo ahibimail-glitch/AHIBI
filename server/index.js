@@ -52,6 +52,12 @@ const adminNotificationRoutes = require('./routes/adminNotification.routes');
 const adminTermsRoutes = require('./routes/adminTermsRoutes');
 const publicTermsRoutes = require('./routes/publicTermsRoutes');
 const futsalTournamentRoutes = require('./routes/futsalTournament.routes');
+const registrationFormRoutes = require('./routes/registrationForm.routes');
+const {
+  adminAnalyticsRoutes,
+  organizerAnalyticsRoutes,
+  artistAnalyticsRoutes,
+} = require('./routes/analytics.routes');
 
 const User = require('./models/User');
 
@@ -159,14 +165,17 @@ app.use((req, res, next) => {
 // Define API routes
 app.use('/api/auth', authRoutes);
 
-// Admin routes - auth first, then other admin routes
+// Admin routes - auth first, then analytics (before catch-all admin router), then other admin routes
 app.use('/api/admin', adminAuthRoutes);  // This will handle /api/admin/login
+app.use('/api/admin/analytics', adminAnalyticsRoutes);
 app.use('/api/admin', (req, res, next) => {
   console.log('Admin route accessed:', req.originalUrl);
   next();
 }, adminRoutes);
+app.use('/api/artist/analytics', artistAnalyticsRoutes);
 app.use('/api/artist', artistRoutes);
 app.use('/api/venue', venueRoutes);
+app.use('/api/organizer/analytics', organizerAnalyticsRoutes);
 app.use('/api/organizer', organizerRoutes);
 app.use('/api/event-team', eventTeamRoutes);
 app.use('/api/events', eventRoutes);
@@ -206,6 +215,7 @@ app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/admin/terms', adminTermsRoutes);
 app.use('/api/public/terms', publicTermsRoutes);
 app.use('/api/futsal', futsalTournamentRoutes);
+app.use('/api/registration-forms', registrationFormRoutes);
 
 // Root route
 app.get('/', (req, res) => {

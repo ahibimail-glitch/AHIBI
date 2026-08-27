@@ -20,6 +20,7 @@
   "author": "Ahibi Team",
   "license": "ISC",
   "dependencies": {
+    "@google-analytics/data": "^6.1.0",
     "@mux/mux-node": "^8.0.0",
     "axios": "^1.5.0",
     "bcryptjs": "^2.4.3",
