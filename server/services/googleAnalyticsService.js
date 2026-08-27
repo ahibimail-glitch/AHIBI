@@ -139,6 +139,16 @@ class GoogleAnalyticsService {
       });
       return { ok: true, response };
     } catch (err) {
+      const dimensionNames = (request.dimensions || []).map((d) => d.name).join(',') || 'none';
+      const metricNames = (request.metrics || []).map((m) => m.name).join(',') || 'none';
+      console.error('[GA4] runRealtimeReport failed:', {
+        dimensions: dimensionNames,
+        metrics: metricNames,
+        minuteRanges: request.minuteRanges?.length || 0,
+        code: err?.code,
+        status: err?.status,
+        message: String(err?.message || '').slice(0, 240),
+      });
       return this.mapGaError(err);
     }
   }
@@ -159,7 +169,13 @@ class GoogleAnalyticsService {
   mapGaError(err) {
     const message = err?.message || 'GA4 request failed';
     const status = err?.code || err?.status;
-    console.error('[GA4] API error:', message);
+    console.error('[GA4] API error:', {
+      status,
+      message: String(message).slice(0, 240),
+      details: Array.isArray(err?.details)
+        ? err.details.map((d) => String(d?.message || '').slice(0, 120)).filter(Boolean)
+        : undefined,
+    });
 
     if (/UNAUTHENTICATED|invalid_grant|credentials/i.test(message) || status === 16) {
       return { ok: false, code: 'GA4_AUTH_FAILED', message: 'GA4 authentication failed' };
@@ -173,7 +189,18 @@ class GoogleAnalyticsService {
     if (/NOT_FOUND|property/i.test(message)) {
       return { ok: false, code: 'GA4_NOT_FOUND', message: 'GA4 property not found or inaccessible' };
     }
-    return { ok: false, code: 'GA4_ERROR', message: 'Analytics data is still processing' };
+    if (/INVALID_ARGUMENT|incompatible|unsupported/i.test(message)) {
+      return {
+        ok: false,
+        code: 'GA4_INVALID_REQUEST',
+        message: 'GA4 report request is invalid. Check dimension and metric compatibility.',
+      };
+    }
+    return {
+      ok: false,
+      code: 'GA4_ERROR',
+      message: 'GA4 report request failed. See server logs for details.',
+    };
   }
 
   dimensionFilterEquals(dimensionName, value) {
@@ -675,33 +702,112 @@ class GoogleAnalyticsService {
     };
   }
 
+  buildRealtimePayload({
+    configured,
+    available,
+    processing = false,
+    activeUsers = null,
+    eventCount = null,
+    recentEvents = [],
+    errorCode = null,
+    message = null,
+    windowMinutes = 30,
+  }) {
+    return {
+      configured,
+      available,
+      processing,
+      activeUsers,
+      eventCount,
+      recentEvents,
+      errorCode,
+      message,
+      source: 'ga4_realtime',
+      windowMinutes,
+      summary:
+        activeUsers == null && eventCount == null
+          ? null
+          : { activeUsers: activeUsers ?? 0, eventCount: eventCount ?? 0 },
+      topEvents: recentEvents,
+      empty: false,
+    };
+  }
+
   async getRealtimeOverview() {
     const cacheKey = 'realtime:overview';
     return this.cached(cacheKey, REALTIME_TTL_MS, async () => {
+      if (!hasPropertyId()) {
+        return this.buildRealtimePayload({
+          configured: false,
+          available: false,
+          processing: false,
+          errorCode: 'GA4_PROPERTY_ID_MISSING',
+          message: 'GA4_PROPERTY_ID is not set',
+        });
+      }
+
+      if (!isConfigured()) {
+        return this.buildRealtimePayload({
+          configured: false,
+          available: false,
+          processing: false,
+          errorCode: 'GA4_NOT_CONFIGURED',
+          message: 'GA4 credentials are not configured on the server.',
+        });
+      }
+
       const result = await this.runRealtimeSafe({
         metrics: [{ name: 'activeUsers' }, { name: 'eventCount' }],
         dimensions: [{ name: 'eventName' }],
         minuteRanges: [{ startMinutesAgo: 29, endMinutesAgo: 0 }],
+        metricAggregations: ['TOTAL'],
         orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
         limit: 20,
       });
 
       if (!result.ok) {
-        return { available: false, code: result.code, message: result.message, source: 'ga4_realtime' };
+        return this.buildRealtimePayload({
+          configured: true,
+          available: false,
+          processing: false,
+          errorCode: result.code,
+          message: result.message,
+        });
       }
 
       const rows = this.parseRows(result.response, ['eventName'], ['activeUsers', 'eventCount']);
       const totals = this.metricTotals(result.response, ['activeUsers', 'eventCount']);
 
-      return {
+      let activeUsers = 0;
+      let eventCount = 0;
+
+      if (!totals.empty && totals.totals) {
+        activeUsers = Number(totals.totals.activeUsers) || 0;
+        eventCount = Number(totals.totals.eventCount) || 0;
+      } else if (rows.length) {
+        eventCount = rows.reduce((sum, row) => sum + (Number(row.eventCount) || 0), 0);
+        activeUsers = rows.reduce(
+          (max, row) => Math.max(max, Number(row.activeUsers) || 0),
+          0
+        );
+      }
+
+      const recentEvents = rows.map((row) => ({
+        eventName: row.eventName,
+        activeUsers: Number(row.activeUsers) || 0,
+        eventCount: Number(row.eventCount) || 0,
+      }));
+
+      return this.buildRealtimePayload({
+        configured: true,
         available: true,
-        empty: !rows.length && totals.empty,
-        message: rows.length ? undefined : 'Analytics data is still processing',
-        source: 'ga4_realtime',
-        windowMinutes: 30,
-        summary: totals.empty ? null : totals.totals,
-        topEvents: rows,
-      };
+        processing: false,
+        activeUsers,
+        eventCount,
+        recentEvents,
+        errorCode: null,
+        message: null,
+      });
     });
   }
 

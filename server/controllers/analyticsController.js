@@ -310,7 +310,14 @@ exports.getRealtime = async (req, res) => {
     const realtime = await googleAnalyticsService.getRealtimeOverview();
     return res.json({
       success: true,
-      configured: isGa4Configured(),
+      configured: realtime.configured ?? isGa4Configured(),
+      available: realtime.available,
+      processing: realtime.processing ?? false,
+      activeUsers: realtime.activeUsers,
+      eventCount: realtime.eventCount,
+      recentEvents: realtime.recentEvents ?? [],
+      errorCode: realtime.errorCode ?? null,
+      message: realtime.message ?? null,
       realtime,
     });
   } catch (err) {
