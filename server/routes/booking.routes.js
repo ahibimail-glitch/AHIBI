@@ -344,21 +344,26 @@ router.post("/", auth.protect, async (req, res) => {
           })
         : 'Event date TBA';
 
-      // Send WhatsApp confirmation via Fast2SMS template (non-blocking)
+      // Send WhatsApp ticket confirmation via Meta Cloud API template (non-blocking)
       if (userDetails?.phone) {
         whatsappService
-          .sendBookingConfirmationTemplate({
+          .sendTicketReadyTemplate({
             phone: userDetails.phone,
-            customerName: userDetails.name || userDetails.email || 'Customer',
             eventName: isEvent.title,
             eventDate: displayEventDate,
-            ticketType: booking.ticketType,
-            quantity: booking.quantity,
+            venue: isEvent.location?.address || isEvent.location?.city || 'Venue TBA',
             bookingId: booking._id,
+            eventId: isEvent._id,
           })
-          .then(() => console.log('[Booking] WhatsApp template confirmation sent'))
+          .then((result) => {
+            if (result?.success === false) {
+              console.error('[Booking] WhatsApp ticket template failed:', result.message || result.error);
+              return;
+            }
+            console.log('[Booking] WhatsApp ticket template sent');
+          })
           .catch((waError) =>
-            console.error('[Booking] WhatsApp template send failed:', waError?.message || waError)
+            console.error('[Booking] WhatsApp ticket template send failed:', waError?.message || waError)
           );
       }
 

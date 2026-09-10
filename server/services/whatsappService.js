@@ -67,7 +67,80 @@ const sendFast2SmsWhatsapp = async ({ number, messageId, variablesValues }) => {
 
 const buildVarsPipe = (values = []) => values.map((value) => String(value ?? '').trim()).join('|');
 
+const getFrontendUrl = () => (process.env.FRONTEND_URL || 'https://www.ahibi.in').replace(/\/$/, '');
+
+const buildTicketLink = ({ eventId, bookingId, ticketLink }) => {
+  if (ticketLink) return ticketLink;
+  if (eventId && bookingId) {
+    return `${getFrontendUrl()}/events/${eventId}/bookings?bookingId=${bookingId}`;
+  }
+  return `${getFrontendUrl()}/profile`;
+};
+
+const safeText = (value, fallback = '-') => String(value ?? fallback).trim() || fallback;
+
 const whatsappService = {
+  // Send a pre-approved Meta template message (required for business-initiated notifications).
+  // Usage: sendTemplateMessage({ to, templateName, languageCode, bodyParams: ['John','Ahibi Fest'] })
+  sendTemplateMessage: async ({ to, templateName, languageCode = 'en_US', components = [], bodyParams }) => {
+    const enabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'true';
+    if (!enabled) {
+      console.log('[WhatsApp] Template skipped (disabled)');
+      return { success: false, message: 'WhatsApp is disabled' };
+    }
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    if (!token || !phoneNumberId) {
+      console.error('[WhatsApp] Missing Meta config (token / phoneNumberId)');
+      return { success: false, message: 'WhatsApp is not configured' };
+    }
+    if (!templateName) {
+      return { success: false, message: 'templateName is required' };
+    }
+    const toE164 = normalizeToE164(to);
+    if (!toE164) {
+      console.error('[WhatsApp] Invalid destination phone number:', to);
+      return { success: false, message: 'Invalid destination phone number' };
+    }
+
+    let comp = Array.isArray(components) ? components : [];
+    if (comp.length === 0 && Array.isArray(bodyParams) && bodyParams.length) {
+      comp = [{ type: 'body', parameters: bodyParams.map((v) => ({ type: 'text', text: String(v ?? '') })) }];
+    }
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: toE164.replace('+', ''),
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: languageCode },
+        ...(comp.length ? { components: comp } : {})
+      }
+    };
+
+    const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+    try {
+      const response = await axios.post(url, payload, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        timeout: 10000
+      });
+      console.log('[WhatsApp] Template sent:', templateName, '->', redactNumber(toE164));
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('[WhatsApp] Template send failed:', {
+        status: error.response?.status,
+        message: error.response?.data?.error?.message || error.message,
+        details: error.response?.data
+      });
+      return {
+        success: false,
+        message: error.response?.data?.error?.message || error.message,
+        error: error.response?.data || error.message
+      };
+    }
+  },
+
   sendTextMessage: async ({ to, body }) => {
     const enabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'true';
     if (!enabled) {
@@ -216,6 +289,86 @@ const whatsappService = {
       number: normalized,
       messageId,
       variablesValues: varsPipe
+    });
+  },
+
+  sendTicketReadyTemplate: async ({
+    phone,
+    eventName,
+    eventDate,
+    venue,
+    bookingId,
+    eventId,
+    ticketLink,
+    languageCode = 'en'
+  }) => {
+    return whatsappService.sendTemplateMessage({
+      to: phone,
+      templateName: 'ahibi_ticket_ready',
+      languageCode,
+      bodyParams: [
+        safeText(eventName, 'Your event'),
+        safeText(eventDate, 'Date TBA'),
+        safeText(venue, 'Venue TBA'),
+        safeText(bookingId),
+        buildTicketLink({ eventId, bookingId, ticketLink })
+      ]
+    });
+  },
+
+  sendPaymentSuccessTemplate: async ({
+    phone,
+    customerName,
+    amount,
+    eventName,
+    bookingId,
+    paymentId,
+    eventId,
+    ticketLink,
+    languageCode = 'en'
+  }) => {
+    return whatsappService.sendTemplateMessage({
+      to: phone,
+      templateName: 'ahibi_payment_success',
+      languageCode,
+      bodyParams: [
+        safeText(customerName, 'Guest'),
+        Number(amount || 0).toFixed(2),
+        safeText(eventName, 'Your event'),
+        safeText(bookingId),
+        safeText(paymentId),
+        buildTicketLink({ eventId, bookingId, ticketLink })
+      ]
+    });
+  },
+
+  sendBookingConfirmedTemplate: async ({
+    phone,
+    customerName,
+    eventName,
+    eventDate,
+    eventTime,
+    venue,
+    tickets,
+    bookingId,
+    eventId,
+    ticketLink,
+    languageCode = 'en'
+  }) => {
+    return whatsappService.sendTemplateMessage({
+      to: phone,
+      templateName: 'ahibi_booking_confirmed',
+      languageCode,
+      bodyParams: [
+        safeText(customerName, 'Guest'),
+        safeText(eventName, 'Your event'),
+        safeText(eventDate, 'Date TBA'),
+        safeText(eventTime, 'Time TBA'),
+        safeText(venue, 'Venue TBA'),
+        safeText(tickets, '1 ticket'),
+        safeText(bookingId),
+        buildTicketLink({ eventId, bookingId, ticketLink })
+      ]
     });
   },
 

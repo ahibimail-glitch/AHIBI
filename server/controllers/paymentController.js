@@ -458,18 +458,39 @@ exports.verifyPayment = async (req, res) => {
         : 'Event date TBA';
 
       if (user.phone) {
-        whatsappService
-          .sendBookingConfirmationTemplate({
+        const eventTitle = updatedEvent?.title || event.title;
+        const eventVenue = updatedEvent?.location?.address || updatedEvent?.location?.city || event.location?.address || event.location?.city || 'Venue TBA';
+        const totalAmount = bookings.reduce((sum, b) => sum + (b.total || 0), 0);
+        const primaryBookingId = bookings[0]?._id;
+
+        Promise.allSettled([
+          whatsappService.sendPaymentSuccessTemplate({
             phone: user.phone,
             customerName: user.name || user.email || 'Customer',
-            eventName: updatedEvent?.title || event.title,
+            amount: totalAmount,
+            eventName: eventTitle,
+            bookingId: primaryBookingId,
+            paymentId: razorpay_payment_id,
+            eventId: event._id
+          }),
+          whatsappService.sendTicketReadyTemplate({
+            phone: user.phone,
+            eventName: eventTitle,
             eventDate: displayEventDate,
-            ticketType: tickets.map((t) => `${t.ticketType}`).join(', '),
-            quantity: totalTickets,
-            bookingId: bookings[0]?._id
+            venue: eventVenue,
+            bookingId: primaryBookingId,
+            eventId: event._id
           })
-          .then(() => console.log('[Payment] WhatsApp confirmation sent'))
-          .catch((waErr) => console.error('[Payment] WhatsApp confirmation failed:', waErr?.message || waErr));
+        ])
+          .then((results) => {
+            const failed = results.filter((r) => r.status === 'rejected' || r.value?.success === false);
+            if (failed.length) {
+              console.error('[Payment] WhatsApp template notification failed:', failed.map((r) => r.reason?.message || r.value?.message || r.value?.error || r.reason));
+            } else {
+              console.log('[Payment] WhatsApp template notifications sent');
+            }
+          })
+          .catch((waErr) => console.error('[Payment] WhatsApp notification failed:', waErr?.message || waErr));
       }
 
       whatsappService

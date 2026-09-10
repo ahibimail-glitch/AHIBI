@@ -4,6 +4,48 @@ const Organizer = require('../models/Organizer');
 const ArtistAvailability = require('../models/ArtistAvailability');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
+const whatsappService = require('../services/whatsappService');
+
+const getFrontendUrl = () => (process.env.FRONTEND_URL || 'https://www.ahibi.in').replace(/\/$/, '');
+
+const formatArtistBookingDate = (date) => {
+  if (!date) return 'Date TBA';
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const sendArtistBookingConfirmedToOrganizer = async ({ booking, statusLabel }) => {
+  try {
+    const organizer = await Organizer.findById(booking.organizer).select('name email phone');
+    if (!organizer?.phone) return;
+
+    whatsappService
+      .sendBookingConfirmedTemplate({
+        phone: organizer.phone,
+        customerName: organizer.name || organizer.email || 'Host',
+        eventName: booking.event?.name || 'Artist booking',
+        eventDate: formatArtistBookingDate(booking.event?.date),
+        eventTime: [booking.event?.startTime, booking.event?.endTime].filter(Boolean).join(' - ') || 'Time TBA',
+        venue: booking.event?.venue || 'Venue TBA',
+        tickets: statusLabel || 'Artist booking',
+        bookingId: booking._id,
+        ticketLink: `${getFrontendUrl()}/organizer/chat/${booking._id}`
+      })
+      .then((result) => {
+        if (result?.success === false) {
+          console.error('[Artist Booking] WhatsApp booking template failed:', result.message || result.error);
+          return;
+        }
+        console.log('[Artist Booking] WhatsApp booking template sent');
+      })
+      .catch((notifyError) => console.error('[Artist Booking] WhatsApp notify error:', notifyError?.message || notifyError));
+  } catch (notifyError) {
+    console.error('[Artist Booking] WhatsApp notify setup error:', notifyError?.message || notifyError);
+  }
+};
 
 /**
  * @desc    Get all booking requests for an artist
@@ -165,6 +207,11 @@ exports.acceptBooking = async (req, res) => {
     }
 
     await booking.save();
+
+    sendArtistBookingConfirmedToOrganizer({
+      booking,
+      statusLabel: 'Artist accepted'
+    });
 
     return ApiResponse.success(res, 'Booking accepted successfully', {
       booking
@@ -464,6 +511,11 @@ exports.setFinalPrice = async (req, res) => {
     });
 
     await booking.save();
+
+    sendArtistBookingConfirmedToOrganizer({
+      booking,
+      statusLabel: `Final price Rs ${finalAmount}`
+    });
 
     return ApiResponse.success(res, 'Final price set successfully', {
       booking
