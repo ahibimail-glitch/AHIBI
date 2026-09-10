@@ -292,6 +292,31 @@ const whatsappService = {
     });
   },
 
+  sendTaskAssignedTemplate: async ({
+    phone,
+    task,
+    project,
+    department,
+    assignedBy,
+    dueDate,
+    link,
+    languageCode = 'en'
+  }) => {
+    return whatsappService.sendTemplateMessage({
+      to: phone,
+      templateName: 'task_assigned',
+      languageCode,
+      bodyParams: [
+        safeText(task, 'Review booking request'),
+        safeText(project, 'Ahibi'),
+        safeText(department, 'Artist booking'),
+        safeText(assignedBy, 'Ahibi'),
+        safeText(dueDate, 'Date TBA'),
+        safeText(link, getFrontendUrl())
+      ]
+    });
+  },
+
   sendTicketReadyTemplate: async ({
     phone,
     eventName,

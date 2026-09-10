@@ -19,6 +19,11 @@ const getRequesterQuery = (req) => (getRequesterRole(req) === 'organizer'
   : { customer: req.user.id });
 const getRequesterSender = (req) => (getRequesterRole(req) === 'organizer' ? 'organizer' : 'user');
 const getRequesterLabel = (req) => (getRequesterRole(req) === 'organizer' ? 'Organizer' : 'Customer');
+const getFrontendUrl = () => (process.env.FRONTEND_URL || 'https://www.ahibi.in').replace(/\/$/, '');
+const formatBookingDate = (date) => {
+  if (!date) return 'Date TBA';
+  return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 /**
  * @desc    Get all approved artists
@@ -354,18 +359,28 @@ exports.createBookingRequest = async (req, res) => {
 
     await booking.save();
 
-    // Notify artist via WhatsApp (non-blocking)
+    // Notify artist via approved WhatsApp template (non-blocking)
     try {
       if (artist?.phone) {
-        const dateKey = new Date(event.date).toISOString().split('T')[0];
-        const message = `New booking request received for ${dateKey} (${event.startTime}-${event.endTime}). Please check your artist dashboard to accept/decline.`;
-        await whatsappService.sendTextMessage({
-          to: artist.phone,
-          body: message
+        const requesterName = req.user?.companyName || req.user?.name || req.user?.email || getRequesterLabel(req);
+        const notifyResult = await whatsappService.sendTaskAssignedTemplate({
+          phone: artist.phone,
+          task: 'Review new artist booking request',
+          project: event.name || 'Artist booking',
+          department: 'Artist booking',
+          assignedBy: requesterName,
+          dueDate: `${formatBookingDate(event.date)} ${event.startTime || ''}`.trim(),
+          link: `${getFrontendUrl()}/artist/chat/${booking._id}`
         });
+
+        if (notifyResult?.success === false) {
+          console.error('[Artist Booking] WhatsApp artist request template failed:', notifyResult.message || notifyResult.error);
+        } else {
+          console.log('[Artist Booking] WhatsApp artist request template sent');
+        }
       }
     } catch (notifyError) {
-      console.error('WhatsApp notify error:', notifyError?.message || notifyError);
+      console.error('[Artist Booking] WhatsApp artist request notify error:', notifyError?.message || notifyError);
     }
 
     // Populate the booking with artist and organizer details
