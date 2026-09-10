@@ -83,9 +83,9 @@ const whatsappService = {
   // Send a pre-approved Meta template message (required for business-initiated notifications).
   // Usage: sendTemplateMessage({ to, templateName, languageCode, bodyParams: ['John','Ahibi Fest'] })
   sendTemplateMessage: async ({ to, templateName, languageCode = 'en_US', components = [], bodyParams }) => {
-    const enabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'true';
-    if (!enabled) {
-      console.log('[WhatsApp] Template skipped (disabled)');
+    const explicitlyDisabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'false';
+    if (explicitlyDisabled) {
+      console.log('[WhatsApp] Template skipped (explicitly disabled)');
       return { success: false, message: 'WhatsApp is disabled' };
     }
     const token = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -142,9 +142,9 @@ const whatsappService = {
   },
 
   sendTextMessage: async ({ to, body }) => {
-    const enabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'true';
-    if (!enabled) {
-      console.log('[WhatsApp] Skipped (disabled)');
+    const explicitlyDisabled = String(process.env.WHATSAPP_ENABLED || '').toLowerCase() === 'false';
+    if (explicitlyDisabled) {
+      console.log('[WhatsApp] Skipped (explicitly disabled)');
       return { success: false, message: 'WhatsApp is disabled' };
     }
 
