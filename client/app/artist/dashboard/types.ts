@@ -134,7 +134,14 @@ export interface BookingRequest {
       address: string;
     };
   };
-  organizer: {
+  organizer?: {
+    _id?: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  customer?: {
+    _id?: string;
     name: string;
     email: string;
     phone?: string;

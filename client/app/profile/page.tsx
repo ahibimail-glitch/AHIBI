@@ -35,6 +35,7 @@ import {
   User,
   Activity,
   Map,
+  MessageSquare,
 } from "lucide-react";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
@@ -57,7 +58,7 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   // Avatar State
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -66,10 +67,11 @@ export default function ProfilePage() {
   // Bookings State
   const [userBookings, setUserBookings] = useState<any[]>([]);
   const [sportsBookings, setSportsBookings] = useState<any[]>([]);
-  const [bookingType, setBookingType] = useState<"events" | "daily-events" | "sports">("events");
+  const [artistBookings, setArtistBookings] = useState<any[]>([]);
+  const [bookingType, setBookingType] = useState<"events" | "daily-events" | "artist" | "sports">("events");
 
   const isDailyBooking = (booking: any) => Boolean(booking.isDailyEvent || booking.dailyEvent);
-  
+
   const getSafeImageSrc = (src?: string) => {
     if (!src || typeof src !== "string") return "/placeholder.jpg";
     if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) return src;
@@ -108,6 +110,13 @@ export default function ProfilePage() {
             (b: any) => b.paymentStatus === "completed" || b.paymentStatus === "paid" || (b.bookingType === "annie-musical" && b.paymentStatus === "pending")
           );
           setUserBookings(filtered);
+        }
+
+        // Fetch Artist Bookings
+        const artistBookingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/organizer/bookings`, { headers });
+        const artistBookingsData = await artistBookingsRes.json().catch((): any => null);
+        if (artistBookingsRes.ok && artistBookingsData?.success) {
+          setArtistBookings(artistBookingsData.data?.bookings || []);
         }
 
         // Fetch Sports
@@ -151,7 +160,7 @@ export default function ProfilePage() {
       const uploadRes = await fetch(getApiUrl("upload"), { method: "POST", body: formData });
       const uploadData = await uploadRes.json().catch((): any => null);
       const uploadedUrl = uploadData?.data?.photo?.url;
-      
+
       if (!uploadRes.ok || uploadData?.status !== "success" || typeof uploadedUrl !== "string") {
         throw new Error(uploadData?.message || "Failed to upload image");
       }
@@ -245,7 +254,7 @@ export default function ProfilePage() {
             {/* Avatar Profile */}
             <div className="relative group shrink-0">
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} />
-              
+
               <div className="relative rounded-full p-1 bg-white border border-slate-200 shadow-sm">
                 <Avatar className="w-32 h-32 md:w-40 md:h-40 shadow-inner">
                   <AvatarImage src={profileData.profilePic || profileData.avatar || "/images/profile.png"} className="object-cover" />
@@ -253,7 +262,7 @@ export default function ProfilePage() {
                     {profileData.name?.split(" ").map((n) => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
-                
+
                 <Button
                   size="icon"
                   disabled={uploadingAvatar}
@@ -283,7 +292,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <Button 
+                <Button
                   onClick={() => setIsEditing(!isEditing)}
                   variant={isEditing ? "destructive" : "outline"}
                   className="rounded-xl shadow-sm transition-all"
@@ -296,7 +305,7 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
                   <span className="text-slate-500 text-sm font-medium mb-1">Total Bookings</span>
-                  <span className="text-2xl font-bold text-slate-900">{userBookings.length + sportsBookings.length}</span>
+                  <span className="text-2xl font-bold text-slate-900">{userBookings.length + sportsBookings.length + artistBookings.length}</span>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
                   <span className="text-slate-500 text-sm font-medium mb-1">Completed</span>
@@ -315,7 +324,7 @@ export default function ProfilePage() {
       {/* Main Content Area */}
       <div className="container mx-auto px-4 py-10 max-w-5xl">
         <Tabs defaultValue="bookings" className="w-full">
-          
+
           {/* Main Navigation Tabs */}
           <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex w-full max-w-sm mx-auto mb-10">
             <TabsTrigger value="bookings" className="flex-1 rounded-xl py-2.5 text-sm font-semibold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
@@ -328,20 +337,21 @@ export default function ProfilePage() {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="space-y-6 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-            
+
             {/* Booking Type Pill Toggle */}
             <div className="flex gap-2 p-1 bg-slate-200/50 rounded-xl max-w-fit mx-auto md:mx-0 overflow-x-auto">
               {[
                 { id: "events", label: "Events", count: regularEventBookings.length },
                 { id: "daily-events", label: "Daily Events", count: dailyEventBookings.length },
+                { id: "artist", label: "Artist Bookings", count: artistBookings.length },
                 // { id: "sports", label: "Sports", count: sportsBookings.length }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setBookingType(tab.id as any)}
                   className={`px-5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                    bookingType === tab.id 
-                    ? "bg-white text-slate-900 shadow border border-slate-200" 
+                    bookingType === tab.id
+                    ? "bg-white text-slate-900 shadow border border-slate-200"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >
@@ -352,7 +362,7 @@ export default function ProfilePage() {
 
             {/* List Renderer */}
             <div className="space-y-4">
-              
+
               {/* --- REGULAR EVENTS --- */}
               {bookingType === "events" && (
                 regularEventBookings.length > 0 ? regularEventBookings.map((booking) => (
@@ -366,7 +376,7 @@ export default function ProfilePage() {
                           {booking.event?.title || booking.dailyEvent?.title || "Event Name Unavailable"}
                         </h3>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
-                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/> 
+                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
                             {new Date(booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                           <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
@@ -404,7 +414,7 @@ export default function ProfilePage() {
                           {booking.dailyEvent?.title || "Daily Event"}
                         </h3>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
-                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/> 
+                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
                             {new Date(booking.selectedDate || booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                           <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
@@ -428,6 +438,48 @@ export default function ProfilePage() {
                 )
               )}
 
+              {/* --- ARTIST BOOKINGS --- */}
+              {bookingType === "artist" && (
+                artistBookings.length > 0 ? artistBookings.map((booking) => (
+                  <div key={booking._id} className="group bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5">
+                    <div className="w-full sm:w-32 h-32 relative rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-violet-50 to-blue-50 border border-slate-100 flex items-center justify-center">
+                      {booking.artist?.profilePic ? (
+                        <Image src={getSafeImageSrc(booking.artist.profilePic)} alt={booking.artist?.name || "Artist"} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <MessageSquare className="h-10 w-10 text-slate-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-900 leading-tight mb-2 line-clamp-2">
+                          {booking.event?.name || "Artist Booking"}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
+                          <span className="flex items-center gap-1.5"><User className="h-4 w-4"/> {booking.artist?.name || "Artist"}</span>
+                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
+                            {booking.event?.date ? new Date(booking.event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : "Date TBA"}
+                          </span>
+                          <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4"/> {booking.event?.venue?.name || booking.event?.venue?.address || "Venue TBA"}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-slate-100">
+                        <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200 rounded-md uppercase tracking-wider text-[10px] font-bold px-2 py-1 w-fit">
+                          {booking.booking?.status || "pending"}
+                        </Badge>
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-lg text-slate-900">₹{Number(booking.booking?.finalAmount || booking.booking?.requestedAmount || 0).toLocaleString()}</span>
+                          <Button size="sm" onClick={() => router.push(`/profile/artist-bookings/${booking._id}`)} className="rounded-lg bg-slate-900 text-white hover:bg-slate-800">
+                            Open Chat
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )) : (
+                  <EmptyState icon={<MessageSquare className="w-12 h-12 text-slate-300"/>} title="No artist bookings yet" desc="Book an artist and your request will appear here." link="/allArtists" linkText="Explore Artists" />
+                )
+              )}
+
               {/* --- SPORTS --- (hidden while /sports is disabled) */}
               {false && bookingType === "sports" && (
                 sportsBookings.length > 0 ? sportsBookings.map((booking) => (
@@ -442,7 +494,7 @@ export default function ProfilePage() {
                           <Badge variant="outline" className={`${getStatusColor(booking.status)} rounded-md capitalize`}>{booking.status}</Badge>
                         </div>
                         <p className="text-sm text-slate-500 font-medium mb-3 uppercase tracking-wider text-[11px]">{booking.court.courtName} • {booking.court.sportType}</p>
-                        
+
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600">
                           <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md"><Calendar className="h-3.5 w-3.5 text-slate-400"/> {new Date(booking.bookingDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                           <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md"><Clock className="h-3.5 w-3.5 text-slate-400"/> {booking.startTime} - {booking.endTime}</span>
@@ -473,7 +525,7 @@ export default function ProfilePage() {
                 <CardDescription>Manage your personal information and contact details.</CardDescription>
               </CardHeader>
               <CardContent className="p-6 sm:p-8 space-y-8">
-                
+
                 {/* Grid Layout for Inputs */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <div className="space-y-2">

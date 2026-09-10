@@ -34,7 +34,13 @@ interface Booking {
     email: string;
     phone: string;
   };
-  organizer: {
+  organizer?: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  customer?: {
     _id: string;
     name: string;
     email: string;
@@ -243,7 +249,7 @@ export default function ChatPage() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-2xl">Chat with {booking.organizer.name}</CardTitle>
+                  <CardTitle className="text-2xl">Chat with {(booking.organizer?.name || booking.customer?.name || "Customer")}</CardTitle>
                   <p className="text-muted-foreground mt-1">{booking.event.name}</p>
                 </div>
                 <Badge
@@ -293,7 +299,7 @@ export default function ChatPage() {
                 <div>
                   <p className="font-semibold text-green-900">Ready to finalize the booking?</p>
                   <p className="text-sm text-green-800">
-                    Set the final price to confirm the booking with {booking.organizer.name}
+                    Set the final price to confirm the booking with {(booking.organizer?.name || booking.customer?.name || "Customer")}
                   </p>
                 </div>
                 <Button
@@ -376,7 +382,7 @@ export default function ChatPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <User className="h-3 w-3" />
                         <span className="text-xs font-semibold">
-                          {msg.sender === "artist" ? "You" : booking.organizer.name}
+                          {msg.sender === "artist" ? "You" : (booking.organizer?.name || booking.customer?.name || "Customer")}
                         </span>
                       </div>
                       <p className="text-sm">{msg.message}</p>

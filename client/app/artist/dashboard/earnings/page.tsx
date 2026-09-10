@@ -29,7 +29,10 @@ interface Booking {
   amount: number;
   status: string;
   paymentStatus: string;
-  organizer: {
+  organizer?: {
+    name: string;
+  };
+  customer?: {
     name: string;
   };
 }
@@ -214,7 +217,7 @@ export default function EarningsPage() {
                             <Calendar className="h-3 w-3" />
                             {formatDate(booking.event.date)}
                           </span>
-                          <span>by {booking.organizer.name}</span>
+                          <span>by {(booking.organizer?.name || booking.customer?.name || "Customer")}</span>
                         </div>
                       </div>
                       <div className="text-left sm:text-right shrink-0">

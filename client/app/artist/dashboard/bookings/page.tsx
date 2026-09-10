@@ -141,7 +141,7 @@ export default function BookingsPage() {
         <Badge variant="outline" className="w-fit">Rs.{request.booking.requestedAmount}</Badge>
       </div>
       <p className="text-sm text-muted-foreground mb-1">
-        by {request.organizer?.name || "Unknown Organizer"}
+        by {request.organizer?.name || request.customer?.name || "Customer"}
       </p>
       <p className="text-sm text-muted-foreground mb-1">
         <Calendar className="h-4 w-4 inline mr-1" />
@@ -220,7 +220,7 @@ export default function BookingsPage() {
         <Badge variant="outline" className="border-green-300 w-fit">Rs.{request.booking.requestedAmount}</Badge>
       </div>
       <p className="text-sm text-muted-foreground mb-1">
-        by {request.organizer?.name || "Unknown Organizer"}
+        by {request.organizer?.name || request.customer?.name || "Customer"}
       </p>
       <p className="text-sm text-muted-foreground mb-1">
         <Calendar className="h-4 w-4 inline mr-1" />

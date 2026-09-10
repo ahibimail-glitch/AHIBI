@@ -8,8 +8,11 @@ const ArtistBookingSchema = new mongoose.Schema({
   },
   organizer: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Organizer',
-    required: true
+    ref: 'Organizer'
+  },
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   event: {
     name: {
@@ -117,7 +120,7 @@ const ArtistBookingSchema = new mongoose.Schema({
     messages: [{
       sender: {
         type: String,
-        enum: ['artist', 'organizer', 'admin'],
+        enum: ['artist', 'organizer', 'user', 'admin'],
         required: true
       },
       message: {
@@ -156,7 +159,7 @@ const ArtistBookingSchema = new mongoose.Schema({
     },
     performedBy: {
       type: String,
-      enum: ['artist', 'organizer', 'admin'],
+      enum: ['artist', 'organizer', 'user', 'admin'],
       required: true
     },
     details: {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createRoleAuthRedirectUrl } from "@/utils/redirectUtils";
 import { Calendar, ChevronLeft, MapPin, Sparkles, Star } from "lucide-react";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
@@ -60,10 +59,11 @@ export default function ArtistBookingPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const isOrg = !!localStorage.getItem("organizer_token");
-      if (!isOrg) {
+      const hasCustomerToken = !!localStorage.getItem("token");
+      const hasOrganizerToken = !!localStorage.getItem("organizer_token");
+      if (!hasCustomerToken && !hasOrganizerToken) {
         const bookingPath = `/artist/profile/${artistId}/booking`;
-        window.location.href = createRoleAuthRedirectUrl("organizer", bookingPath);
+        window.location.href = `/auth?redirect=${encodeURIComponent(bookingPath)}`;
         return;
       }
     }

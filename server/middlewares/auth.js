@@ -49,6 +49,9 @@ exports.protect = async (req, res, next) => {
         req.originalUrl.startsWith('/api/livestream/admin');
 
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
+      const isSharedArtistBookingRoute =
+        req.originalUrl.startsWith('/api/organizer/artists') ||
+        req.originalUrl.startsWith('/api/organizer/bookings');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
       const isArenaPartnerRoute = req.originalUrl.startsWith('/api/arena-partner');
@@ -90,7 +93,7 @@ exports.protect = async (req, res, next) => {
         }
         console.log('Admin found:', user.username);
         user.role = 'admin';
-      } else if (decoded.role === 'organizer' || isOrganizerRoute) {
+      } else if (decoded.role === 'organizer' || (isOrganizerRoute && !isSharedArtistBookingRoute)) {
         console.log('Looking for Organizer with ID:', decoded.id);
         user = await Organizer.findById(decoded.id);
         if (!user) {
@@ -130,6 +133,7 @@ exports.protect = async (req, res, next) => {
           console.log('AUTH FAILED: User not found');
           return res.status(404).json({ success: false, message: 'User not found' });
         }
+        user.role = 'user';
       }
 
       // Attach user to request
@@ -222,6 +226,9 @@ exports.optionalAuth = async (req, res, next) => {
         req.originalUrl.startsWith('/api/livestream/admin');
 
       const isOrganizerRoute = req.originalUrl.startsWith('/api/organizer');
+      const isSharedArtistBookingRoute =
+        req.originalUrl.startsWith('/api/organizer/artists') ||
+        req.originalUrl.startsWith('/api/organizer/bookings');
       const isArtistRoute = req.originalUrl.startsWith('/api/artist');
       const isVenueRoute = req.originalUrl.startsWith('/api/venue');
       const isArenaPartnerRoute = req.originalUrl.startsWith('/api/arena-partner');
@@ -241,7 +248,7 @@ exports.optionalAuth = async (req, res, next) => {
       if (decoded.role === 'admin') {
         user = await Admin.findById(decoded.id);
         if (user) user.role = 'admin';
-      } else if (decoded.role === 'organizer' || isOrganizerRoute) {
+      } else if (decoded.role === 'organizer' || (isOrganizerRoute && !isSharedArtistBookingRoute)) {
         user = await Organizer.findById(decoded.id);
         if (user) user.role = 'organizer';
       } else if (decoded.role === 'artist' || isArtistRoute) {
@@ -255,6 +262,7 @@ exports.optionalAuth = async (req, res, next) => {
         if (user) user.role = 'arenaPartner';
       } else {
         user = await User.findById(decoded.id);
+        if (user) user.role = 'user';
       }
 
       if (user) {

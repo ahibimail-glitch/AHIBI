@@ -71,7 +71,8 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
   const [currentDate, setCurrentDate] = useState(new Date());
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasOrganizerToken, setHasOrganizerToken] = useState(true);
+  const [hasBookingToken, setHasBookingToken] = useState(true);
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedDateObj, setSelectedDateObj] = useState<Date | undefined>(undefined);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
@@ -114,17 +115,21 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
 
   const safeParseDate = (dateKey: string) => new Date(`${dateKey}T00:00:00`);
 
+  const getBookingToken = () => localStorage.getItem('token') || localStorage.getItem('organizer_token');
+  const isOrganizerSession = () => !localStorage.getItem('token') && !!localStorage.getItem('organizer_token');
+  const getLoginUrl = () => `/auth?redirect=${encodeURIComponent(`/artist/profile/${artistId}/booking`)}`;
+
   const fetchAvailability = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('organizer_token');
+      const token = getBookingToken();
       if (!token) {
-        setHasOrganizerToken(false);
+        setHasBookingToken(false);
         setAvailability([]);
         return;
       }
 
-      setHasOrganizerToken(true);
+      setHasBookingToken(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
 
@@ -140,7 +145,7 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         setAvailability([]);
         toast({
           title: "Booking unavailable",
-          description: data?.message || "Please login as organizer to book this artist.",
+          description: data?.message || "Please login to book this artist.",
           variant: "destructive",
         });
         return;
@@ -304,12 +309,14 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('organizer_token')}`
+          'Authorization': `Bearer ${getBookingToken()}`
         },
         body: JSON.stringify(bookingData)
       });
 
       if (response.ok) {
+        const successData = await response.json().catch(() => ({}));
+        setCreatedBookingId(successData?.data?.booking?._id || null);
         setShowSuccessModal(true);
         setSelectedDate(null);
         setSelectedTimeSlot(null);
@@ -330,23 +337,21 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
         if (errorData.message === "Organizer not found" || response.status === 401) {
           toast({
             title: "Authentication Required",
-            description: "Please login as an organizer to make booking requests. Your session may have expired.",
+            description: "Please login to make booking requests. Your session may have expired.",
             variant: "destructive",
             action: (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  localStorage.removeItem('organizer_token');
-                  window.location.href = '/organizer/auth/login';
+                  window.location.href = getLoginUrl();
                 }}
               >
                 Login Again
               </Button>
             )
           });
-          localStorage.removeItem('organizer_token');
-          setHasOrganizerToken(false);
+          setHasBookingToken(false);
         } else if (errorData.message?.includes('token') || response.status === 403) {
           toast({
             title: "Session Expired",
@@ -357,16 +362,14 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  localStorage.removeItem('organizer_token');
-                  window.location.href = '/organizer/auth/login';
+                  window.location.href = getLoginUrl();
                 }}
               >
                 Login Again
               </Button>
             )
           });
-          localStorage.removeItem('organizer_token');
-          setHasOrganizerToken(false);
+          setHasBookingToken(false);
         } else {
           toast({
             title: "Booking Failed",
@@ -547,14 +550,14 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
                 </div>
               </div>
 
-              {!loading && !hasOrganizerToken && (
+              {!loading && !hasBookingToken && (
                 <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <p>Login as an organizer to view availability and send booking requests.</p>
+                  <p>Login to view availability and send booking requests.</p>
                 </div>
               )}
 
-              {!loading && hasOrganizerToken && availability.length === 0 && (
+              {!loading && hasBookingToken && availability.length === 0 && (
                 <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
                   <p>All dates are open by default. Only dates explicitly marked unavailable by the artist will be blocked.</p>
@@ -954,7 +957,11 @@ export default function PublicBookingCalendar({ artistId, artist }: PublicBookin
                 <Button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    window.location.href = '/organizer/dashboard';
+                    window.location.href = isOrganizerSession()
+                      ? '/organizer/dashboard'
+                      : createdBookingId
+                        ? `/profile/artist-bookings/${createdBookingId}`
+                        : '/profile';
                   }}
                   className="w-full rounded-full bg-blue-600 text-white hover:bg-blue-700"
                 >

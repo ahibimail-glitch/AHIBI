@@ -2,6 +2,7 @@ const ArtistBooking = require('../models/ArtistBooking');
 const ArtistAvailability = require('../models/ArtistAvailability');
 const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
+const User = require('../models/User');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
 const {
@@ -11,17 +12,25 @@ const {
 } = require('../utils/artistScheduleUtils');
 const whatsappService = require('../services/whatsappService');
 
+
+const getRequesterRole = (req) => (req.user?.role === 'organizer' ? 'organizer' : 'user');
+const getRequesterQuery = (req) => (getRequesterRole(req) === 'organizer'
+  ? { organizer: req.user.id }
+  : { customer: req.user.id });
+const getRequesterSender = (req) => (getRequesterRole(req) === 'organizer' ? 'organizer' : 'user');
+const getRequesterLabel = (req) => (getRequesterRole(req) === 'organizer' ? 'Organizer' : 'Customer');
+
 /**
  * @desc    Get all approved artists
  * @route   GET /api/organizer/artists/list
- * @access  Private (Organizer only)
+ * @access  Private (Organizer or user)
  */
 exports.getAllArtists = async (req, res) => {
   try {
     const { page = 1, limit = 20, city, type } = req.query;
 
     let query = { approvalStatus: 'approved' };
-    
+
     if (city) {
       query.city = new RegExp(city, 'i');
     }
@@ -55,26 +64,26 @@ exports.getAllArtists = async (req, res) => {
 /**
  * @desc    Search artists with availability
  * @route   GET /api/organizer/artists/search
- * @access  Private (Organizer only)
+ * @access  Private (Organizer or user)
  */
 exports.searchArtistsWithAvailability = async (req, res) => {
   try {
-    const { 
-      date, 
-      startTime, 
-      endTime, 
-      location, 
-      genre, 
-      type, 
-      minPrice, 
-      maxPrice, 
-      page = 1, 
-      limit = 10 
+    const {
+      date,
+      startTime,
+      endTime,
+      location,
+      genre,
+      type,
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 10
     } = req.query;
 
     // Build artist search query
     let artistQuery = { approvalStatus: 'approved' };
-    
+
     if (location) {
       artistQuery.city = new RegExp(location, 'i');
     }
@@ -158,13 +167,13 @@ exports.searchArtistsWithAvailability = async (req, res) => {
 /**
  * @desc    Get artist availability calendar
  * @route   GET /api/organizer/artists/:artistId/calendar
- * @access  Private (Organizer only)
+ * @access  Private (Organizer or user)
  */
 exports.getArtistCalendar = async (req, res) => {
   try {
     const { artistId } = req.params;
     const { month, year } = req.query;
-    
+
     const currentMonth = Number(month) || new Date().getMonth() + 1;
     const currentYear = Number(year) || new Date().getFullYear();
 
@@ -311,7 +320,7 @@ exports.createBookingRequest = async (req, res) => {
     // Create booking request
     const booking = new ArtistBooking({
       artist: artistId,
-      organizer: req.user.id,
+      ...(getRequesterRole(req) === 'organizer' ? { organizer: req.user.id } : { customer: req.user.id }),
       event: {
         name: event.name,
         description: event.description,
@@ -334,11 +343,11 @@ exports.createBookingRequest = async (req, res) => {
     });
 
     // Add initial timeline entry
-    booking.addTimelineEntry('Booking request created', 'organizer', 'Initial booking request submitted');
+    booking.addTimelineEntry('Booking request created', getRequesterSender(req), `Initial booking request submitted by ${getRequesterLabel(req).toLowerCase()}`);
 
     // Add initial message
     booking.communication.messages.push({
-      sender: 'organizer',
+      sender: getRequesterSender(req),
       message: `Hello! I would like to book you for ${event.name} on ${event.date} from ${event.startTime} to ${event.endTime}. ${organizerRequirements || ''}`,
       timestamp: new Date()
     });
@@ -362,7 +371,8 @@ exports.createBookingRequest = async (req, res) => {
     // Populate the booking with artist and organizer details
     const populatedBooking = await ArtistBooking.findById(booking._id)
       .populate('artist', 'name email phone')
-      .populate('organizer', 'name email phone');
+      .populate('organizer', 'name email phone')
+      .populate('customer', 'name email phone');
 
     return ApiResponse.success(res, 'Booking request created successfully', {
       booking: populatedBooking
@@ -382,7 +392,7 @@ exports.createBookingRequest = async (req, res) => {
 exports.getOrganizerBookings = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
-    const query = { organizer: req.user.id };
+    const query = getRequesterQuery(req);
 
     if (status) {
       query['booking.status'] = status;
@@ -390,6 +400,8 @@ exports.getOrganizerBookings = async (req, res) => {
 
     const bookings = await ArtistBooking.find(query)
       .populate('artist', 'name email phone profilePic rating city')
+      .populate('customer', 'name email phone')
+      .populate('organizer', 'name email phone')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -420,8 +432,10 @@ exports.getLatestBookingsWithDiscussion = async (req, res) => {
   try {
     const { limit = 20 } = req.query;
 
-    const bookings = await ArtistBooking.find({ organizer: req.user.id })
+    const bookings = await ArtistBooking.find(getRequesterQuery(req))
       .populate('artist', 'name email phone profilePic rating city')
+      .populate('customer', 'name email phone')
+      .populate('organizer', 'name email phone')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
 
@@ -461,8 +475,11 @@ exports.getBookingDetails = async (req, res) => {
   try {
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
-      organizer: req.user.id
-    }).populate('artist', 'name email phone profilePic rating city genres type');
+      ...getRequesterQuery(req)
+    })
+      .populate('artist', 'name email phone profilePic rating city genres type')
+      .populate('customer', 'name email phone')
+      .populate('organizer', 'name email phone');
 
     if (!booking) {
       return ApiResponse.notFound(res, 'Booking not found');
@@ -487,7 +504,7 @@ exports.acceptCounterOffer = async (req, res) => {
   try {
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
-      organizer: req.user.id,
+      ...getRequesterQuery(req),
       'booking.status': 'counter_offered'
     });
 
@@ -501,12 +518,12 @@ exports.acceptCounterOffer = async (req, res) => {
     booking.contract.termsAccepted = true;
 
     // Add timeline entry
-    booking.addTimelineEntry('Counter offer accepted by organizer', 'organizer', 
+    booking.addTimelineEntry(`Counter offer accepted by ${getRequesterLabel(req).toLowerCase()}`, getRequesterSender(req),
       `Accepted counter offer of ₹${booking.communication.counterOffer.amount}`);
 
     // Add message
     booking.communication.messages.push({
-      sender: 'organizer',
+      sender: getRequesterSender(req),
       message: 'I accept your counter offer. Looking forward to the event!',
       timestamp: new Date()
     });
@@ -531,10 +548,10 @@ exports.acceptCounterOffer = async (req, res) => {
 exports.rejectCounterOffer = async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
-      organizer: req.user.id,
+      ...getRequesterQuery(req),
       'booking.status': 'counter_offered'
     });
 
@@ -546,12 +563,12 @@ exports.rejectCounterOffer = async (req, res) => {
     booking.booking.status = 'declined';
 
     // Add timeline entry
-    booking.addTimelineEntry('Counter offer rejected by organizer', 'organizer', 
+    booking.addTimelineEntry(`Counter offer rejected by ${getRequesterLabel(req).toLowerCase()}`, getRequesterSender(req),
       reason || 'Organizer rejected the counter offer');
 
     // Add message
     booking.communication.messages.push({
-      sender: 'organizer',
+      sender: getRequesterSender(req),
       message: reason || 'I cannot accept the counter offer. Thank you for your time.',
       timestamp: new Date()
     });
@@ -576,10 +593,10 @@ exports.rejectCounterOffer = async (req, res) => {
 exports.cancelBooking = async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
-      organizer: req.user.id
+      ...getRequesterQuery(req)
     });
 
     if (!booking) {
@@ -594,12 +611,12 @@ exports.cancelBooking = async (req, res) => {
     booking.booking.status = 'cancelled';
 
     // Add timeline entry
-    booking.addTimelineEntry('Booking cancelled by organizer', 'organizer', 
-      reason || 'Booking cancelled by organizer');
+    booking.addTimelineEntry(`Booking cancelled by ${getRequesterLabel(req).toLowerCase()}`, getRequesterSender(req),
+      reason || `Booking cancelled by ${getRequesterLabel(req).toLowerCase()}`);
 
     // Add message
     booking.communication.messages.push({
-      sender: 'organizer',
+      sender: getRequesterSender(req),
       message: reason || 'I need to cancel this booking. Sorry for any inconvenience.',
       timestamp: new Date()
     });
@@ -612,10 +629,10 @@ exports.cancelBooking = async (req, res) => {
       });
 
       if (availability) {
-        const slot = availability.timeSlots.find(slot => 
+        const slot = availability.timeSlots.find(slot =>
           slot.bookingId && slot.bookingId.toString() === booking._id.toString()
         );
-        
+
         if (slot) {
           slot.isBooked = false;
           slot.bookingId = null;
@@ -645,10 +662,10 @@ exports.cancelBooking = async (req, res) => {
 exports.addBookingMessage = async (req, res) => {
   try {
     const { message } = req.body;
-    
+
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
-      organizer: req.user.id
+      ...getRequesterQuery(req)
     });
 
     if (!booking) {
@@ -656,7 +673,7 @@ exports.addBookingMessage = async (req, res) => {
     }
 
     booking.communication.messages.push({
-      sender: 'organizer',
+      sender: getRequesterSender(req),
       message,
       timestamp: new Date()
     });

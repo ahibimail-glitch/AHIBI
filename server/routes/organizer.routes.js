@@ -285,12 +285,12 @@ router.put('/daily-events/:id/pause', protect, dailyEventController.pauseOrganiz
 router.put('/daily-events/:id/resume', protect, dailyEventController.resumeOrganizerDailyEvent);
 
 // Artist booking routes for organizers
-router.get('/artists/search', protect, authorize('organizer'), organizerBookingController.searchArtistsWithAvailability);
-router.get('/artists/list', protect, authorize('organizer'), organizerBookingController.getAllArtists);
-router.get('/artists/:artistId/calendar', protect, authorize('organizer'), organizerBookingController.getArtistCalendar);
+router.get('/artists/search', protect, authorize('organizer', 'user'), organizerBookingController.searchArtistsWithAvailability);
+router.get('/artists/list', protect, authorize('organizer', 'user'), organizerBookingController.getAllArtists);
+router.get('/artists/:artistId/calendar', protect, authorize('organizer', 'user'), organizerBookingController.getArtistCalendar);
 router.post('/bookings', [
   protect,
-  authorize('organizer'),
+  authorize('organizer', 'user'),
   check('artistId', 'Artist ID is required').isMongoId(),
   check('event.name', 'Event name is required').notEmpty(),
   check('event.date', 'Event date is required').isISO8601(),
@@ -301,23 +301,23 @@ router.post('/bookings', [
   check('event.eventType', 'Event type is required').notEmpty(),
   check('requestedAmount', 'Requested amount is required').isNumeric()
 ], organizerBookingController.createBookingRequest);
-router.get('/bookings', protect, authorize('organizer'), organizerBookingController.getOrganizerBookings);
-router.get('/bookings/latest', protect, authorize('organizer'), organizerBookingController.getLatestBookingsWithDiscussion);
-router.get('/bookings/:id', protect, authorize('organizer'), organizerBookingController.getBookingDetails);
-router.put('/bookings/:id/accept-counter-offer', protect, authorize('organizer'), organizerBookingController.acceptCounterOffer);
+router.get('/bookings', protect, authorize('organizer', 'user'), organizerBookingController.getOrganizerBookings);
+router.get('/bookings/latest', protect, authorize('organizer', 'user'), organizerBookingController.getLatestBookingsWithDiscussion);
+router.get('/bookings/:id', protect, authorize('organizer', 'user'), organizerBookingController.getBookingDetails);
+router.put('/bookings/:id/accept-counter-offer', protect, authorize('organizer', 'user'), organizerBookingController.acceptCounterOffer);
 router.put('/bookings/:id/reject-counter-offer', [
   protect,
-  authorize('organizer'),
+  authorize('organizer', 'user'),
   check('reason', 'Reason is required').optional().notEmpty()
 ], organizerBookingController.rejectCounterOffer);
 router.put('/bookings/:id/cancel', [
   protect,
-  authorize('organizer'),
+  authorize('organizer', 'user'),
   check('reason', 'Reason is required').optional().notEmpty()
 ], organizerBookingController.cancelBooking);
 router.post('/bookings/:id/message', [
   protect,
-  authorize('organizer'),
+  authorize('organizer', 'user'),
   check('message', 'Message is required').notEmpty()
 ], organizerBookingController.addBookingMessage);
 

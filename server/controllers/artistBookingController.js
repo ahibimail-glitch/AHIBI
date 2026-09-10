@@ -1,6 +1,7 @@
 const ArtistBooking = require('../models/ArtistBooking');
 const Artist = require('../models/Artist');
 const Organizer = require('../models/Organizer');
+const User = require('../models/User');
 const ArtistAvailability = require('../models/ArtistAvailability');
 const ApiResponse = require('../utils/apiResponse');
 const { validationResult } = require('express-validator');
@@ -19,20 +20,24 @@ const formatArtistBookingDate = (date) => {
 
 const sendArtistBookingConfirmedToOrganizer = async ({ booking, statusLabel }) => {
   try {
-    const organizer = await Organizer.findById(booking.organizer).select('name email phone');
-    if (!organizer?.phone) return;
+    const requester = booking.organizer
+      ? await Organizer.findById(booking.organizer).select('name email phone')
+      : await User.findById(booking.customer).select('name email phone');
+    if (!requester?.phone) return;
 
     whatsappService
       .sendBookingConfirmedTemplate({
-        phone: organizer.phone,
-        customerName: organizer.name || organizer.email || 'Host',
+        phone: requester.phone,
+        customerName: requester.name || requester.email || 'Host',
         eventName: booking.event?.name || 'Artist booking',
         eventDate: formatArtistBookingDate(booking.event?.date),
         eventTime: [booking.event?.startTime, booking.event?.endTime].filter(Boolean).join(' - ') || 'Time TBA',
-        venue: booking.event?.venue || 'Venue TBA',
+        venue: booking.event?.venue?.name || booking.event?.venue?.address || 'Venue TBA',
         tickets: statusLabel || 'Artist booking',
         bookingId: booking._id,
-        ticketLink: `${getFrontendUrl()}/organizer/chat/${booking._id}`
+        ticketLink: booking.organizer
+          ? `${getFrontendUrl()}/organizer/chat/${booking._id}`
+          : `${getFrontendUrl()}/profile/artist-bookings/${booking._id}`
       })
       .then((result) => {
         if (result?.success === false) {
@@ -63,6 +68,7 @@ exports.getArtistBookings = async (req, res) => {
 
     const bookings = await ArtistBooking.find(query)
       .populate('organizer', 'name email phone')
+      .populate('customer', 'name email phone')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -94,7 +100,9 @@ exports.getBookingDetails = async (req, res) => {
     const booking = await ArtistBooking.findOne({
       _id: req.params.id,
       artist: req.user.id
-    }).populate('organizer', 'name email phone');
+    })
+      .populate('organizer', 'name email phone')
+      .populate('customer', 'name email phone');
 
     if (!booking) {
       return ApiResponse.notFound(res, 'Booking not found');
@@ -563,7 +571,10 @@ exports.getEarnings = async (req, res) => {
       'booking.status': { $in: ['confirmed', 'completed'] },
       'booking.finalAmount': { $exists: true, $ne: null },
       createdAt: { $gte: startDate }
-    }).sort({ createdAt: -1 });
+    })
+      .populate('organizer', 'name email phone')
+      .populate('customer', 'name email phone')
+      .sort({ createdAt: -1 });
 
     // Calculate totals
     let totalEarnings = 0;
@@ -585,7 +596,8 @@ exports.getEarnings = async (req, res) => {
         amount: amount,
         status: booking.booking.status,
         paymentStatus: booking.booking.paymentStatus,
-        organizer: booking.organizer
+        organizer: booking.organizer,
+        customer: booking.customer
       };
     });
 

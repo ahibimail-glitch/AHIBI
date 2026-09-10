@@ -29,10 +29,15 @@ interface Organizer {
 
 interface LatestBooking {
   _id: string;
-  organizer: {
+  organizer?: {
     _id: string;
     name: string;
     companyName?: string;
+    profilePic?: string;
+  };
+  customer?: {
+    _id: string;
+    name: string;
     profilePic?: string;
   };
   event: {
@@ -87,8 +92,9 @@ export default function OrganizerPage() {
         const uniqueOrganizers = new Map();
         
         bookings.forEach((booking: any) => {
-          if (booking.organizer && !uniqueOrganizers.has(booking.organizer._id)) {
-            uniqueOrganizers.set(booking.organizer._id, booking.organizer);
+          const requester = booking.organizer || booking.customer;
+          if (requester && !uniqueOrganizers.has(requester._id)) {
+            uniqueOrganizers.set(requester._id, requester);
           }
         });
 
@@ -197,11 +203,11 @@ export default function OrganizerPage() {
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex items-start gap-3 min-w-0 flex-1">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                            {booking.organizer?.name?.charAt(0)?.toUpperCase() || "O"}
+                            {(booking.organizer?.name || booking.customer?.name || "C").charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-semibold">{booking.organizer?.name || "Unknown Organizer"}</h4>
+                              <h4 className="font-semibold">{booking.organizer?.name || booking.customer?.name || "Customer"}</h4>
                               {booking.organizer?.companyName && (
                                 <span className="text-sm text-muted-foreground">
                                   ({booking.organizer.companyName})

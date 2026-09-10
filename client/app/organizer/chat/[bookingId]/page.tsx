@@ -34,7 +34,13 @@ interface Booking {
     phone: string;
     profilePic?: string;
   };
-  organizer: {
+  organizer?: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  customer?: {
     _id: string;
     name: string;
     email: string;
@@ -93,7 +99,7 @@ export default function ChatPage() {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("organizer_token");
+      const token = localStorage.getItem("organizer_token") || localStorage.getItem("token");
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/organizer/bookings/${bookingId}`,
         {
@@ -119,7 +125,7 @@ export default function ChatPage() {
 
     try {
       setSending(true);
-      const token = localStorage.getItem("organizer_token");
+      const token = localStorage.getItem("organizer_token") || localStorage.getItem("token");
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/organizer/bookings/${bookingId}/message`,
         { message },
@@ -270,7 +276,7 @@ export default function ChatPage() {
                     variant="outline"
                     onClick={async () => {
                       try {
-                        const token = localStorage.getItem("organizer_token");
+                        const token = localStorage.getItem("organizer_token") || localStorage.getItem("token");
                         await axios.put(
                           `${process.env.NEXT_PUBLIC_API_URL}/api/organizer/bookings/${bookingId}/accept-counter-offer`,
                           {},
@@ -293,7 +299,7 @@ export default function ChatPage() {
                       const reason = prompt("Reason for rejecting:");
                       if (reason) {
                         try {
-                          const token = localStorage.getItem("organizer_token");
+                          const token = localStorage.getItem("organizer_token") || localStorage.getItem("token");
                           await axios.put(
                             `${process.env.NEXT_PUBLIC_API_URL}/api/organizer/bookings/${bookingId}/reject-counter-offer`,
                             { reason },
@@ -332,12 +338,12 @@ export default function ChatPage() {
                   <div
                     key={index}
                     className={`flex ${
-                      msg.sender === "organizer" ? "justify-end" : "justify-start"
+                      (msg.sender === "organizer" || msg.sender === "user") ? "justify-end" : "justify-start"
                     }`}
                   >
                     <div
                       className={`max-w-[70%] rounded-lg p-3 ${
-                        msg.sender === "organizer"
+                        (msg.sender === "organizer" || msg.sender === "user")
                           ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white"
                           : "bg-gray-100 text-gray-900"
                       }`}
@@ -345,7 +351,7 @@ export default function ChatPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <User className="h-3 w-3" />
                         <span className="text-xs font-semibold">
-                          {msg.sender === "organizer" ? "You" : booking.artist.name}
+                          {(msg.sender === "organizer" || msg.sender === "user") ? "You" : booking.artist.name}
                         </span>
                       </div>
                       <p className="text-sm">{msg.message}</p>
