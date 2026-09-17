@@ -104,7 +104,7 @@ export default function EventsPreviewPage() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const response = await fetch(`${apiUrl}/api/events?limit=30`)
-        if (!response.ok) return
+        if (!response.ok) throw new Error("Preview API unavailable")
         const data: EventsResponse = await response.json()
         const today = new Date()
         today.setHours(0, 0, 0, 0)
