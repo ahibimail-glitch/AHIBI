@@ -363,13 +363,15 @@ exports.createBookingRequest = async (req, res) => {
     try {
       if (artist?.phone) {
         const requesterName = req.user?.companyName || req.user?.name || req.user?.email || getRequesterLabel(req);
-        const notifyResult = await whatsappService.sendTaskAssignedTemplate({
+        const notifyResult = await whatsappService.sendArtistBookingRequestTemplate({
           phone: artist.phone,
-          task: 'Review new artist booking request',
-          project: event.name || 'Artist booking',
-          department: 'Artist booking',
-          assignedBy: requesterName,
-          dueDate: `${formatBookingDate(event.date)} ${event.startTime || ''}`.trim(),
+          organizerName: requesterName,
+          eventName: event.name || 'Artist booking',
+          eventDate: formatBookingDate(event.date),
+          eventTime: `${event.startTime || ''} - ${event.endTime || ''}`.trim(),
+          venue: event.venue || 'Venue TBA',
+          offer: requestedAmount ? `₹${Number(requestedAmount).toLocaleString('en-IN')}` : 'Offer to be discussed',
+          bookingId: booking._id,
           link: `${getFrontendUrl()}/artist/chat/${booking._id}`
         });
 

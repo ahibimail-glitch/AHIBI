@@ -317,6 +317,73 @@ const whatsappService = {
     });
   },
 
+  // Artist booking requests can use a richer approved template when one is
+  // configured. Until then, keep the existing task_assigned template active
+  // so current WhatsApp delivery remains unchanged.
+  sendArtistBookingRequestTemplate: async ({
+    phone,
+    organizerName,
+    eventName,
+    eventDate,
+    eventTime,
+    venue,
+    offer,
+    bookingId,
+    link,
+    languageCode = 'en_US'
+  }) => {
+    const templateName = String(process.env.WHATSAPP_ARTIST_BOOKING_TEMPLATE_NAME || '').trim();
+
+    if (!templateName) {
+      return whatsappService.sendTaskAssignedTemplate({
+        phone,
+        task: 'Review new artist booking request',
+        project: eventName,
+        department: 'Artist booking',
+        assignedBy: organizerName,
+        dueDate: `${safeText(eventDate, 'Date TBA')} ${safeText(eventTime, '')}`.trim(),
+        link
+      });
+    }
+
+    return whatsappService.sendTemplateMessage({
+      to: phone,
+      templateName,
+      languageCode,
+      bodyParams: [
+        safeText(organizerName, 'Event organizer'),
+        safeText(eventName, 'Artist booking'),
+        safeText(eventDate, 'Date TBA'),
+        safeText(eventTime, 'Time TBA'),
+        safeText(venue, 'Venue TBA'),
+        safeText(offer, 'Offer to be discussed'),
+        safeText(bookingId)
+      ],
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            organizerName,
+            eventName,
+            eventDate,
+            eventTime,
+            venue,
+            offer,
+            bookingId
+          ].map((value) => ({ type: 'text', text: safeText(value) }))
+        },
+        {
+          type: 'button',
+          sub_type: 'url',
+          index: '0',
+          // Configure the approved Meta template URL as
+          // https://www.ahibi.in/artist/chat/{{1}} and pass only the booking id.
+          parameters: [{ type: 'text', text: safeText(bookingId) }]
+        }
+      ]
+    });
+  },
+
   sendTicketReadyTemplate: async ({
     phone,
     eventName,
