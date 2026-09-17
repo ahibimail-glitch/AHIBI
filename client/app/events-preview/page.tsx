@@ -9,6 +9,69 @@ import "./events-preview.css"
 
 const FALLBACK_EVENT_IMAGE = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1200&q=85"
 
+const LOCAL_PREVIEW_EVENTS: Event[] = [
+  {
+    _id: "preview-luna-ray",
+    title: "Luna Ray Live",
+    description: "An intimate live music experience.",
+    banner: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=900&q=85",
+    category: "Music",
+    startDate: "2026-05-17T19:30:00.000Z",
+    endDate: "2026-05-17T22:00:00.000Z",
+    location: { address: "Ahibi Arena", city: "Dimapur" },
+    ticketTypes: [{ name: "General", price: 799, quantity: 100 }],
+    status: "published",
+    isFeatured: true,
+    isFreeEvent: false,
+    slug: "luna-ray-live",
+  },
+  {
+    _id: "preview-better-days",
+    title: "Better Days Tour",
+    description: "A night of live music and stories.",
+    banner: "https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=900&q=85",
+    category: "Music",
+    startDate: "2026-05-24T19:00:00.000Z",
+    endDate: "2026-05-24T22:00:00.000Z",
+    location: { address: "City Hall", city: "Kohima" },
+    ticketTypes: [{ name: "General", price: 599, quantity: 100 }],
+    status: "published",
+    isFeatured: true,
+    isFreeEvent: false,
+    slug: "better-days-tour",
+  },
+  {
+    _id: "preview-hollow-years",
+    title: "The Hollow Years",
+    description: "A full-band live performance.",
+    banner: "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=900&q=85",
+    category: "Music",
+    startDate: "2026-06-01T18:30:00.000Z",
+    endDate: "2026-06-01T21:30:00.000Z",
+    location: { address: "The Courtyard", city: "Mokokchung" },
+    ticketTypes: [{ name: "General", price: 899, quantity: 100 }],
+    status: "published",
+    isFeatured: true,
+    isFreeEvent: false,
+    slug: "the-hollow-years",
+  },
+  {
+    _id: "preview-indie-nights",
+    title: "Indie Nights",
+    description: "New voices, one unforgettable evening.",
+    banner: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=85",
+    category: "Music",
+    startDate: "2026-06-03T19:00:00.000Z",
+    endDate: "2026-06-03T21:30:00.000Z",
+    location: { address: "Elsewhere", city: "Dimapur" },
+    ticketTypes: [{ name: "General", price: 499, quantity: 100 }],
+    status: "published",
+    isFeatured: false,
+    isFreeEvent: false,
+    slug: "indie-nights",
+  },
+]
+
 const formatDate = (value?: string | Date) => {
   if (!value) return { month: "TBA", day: "--", full: "Date TBA" }
   const date = new Date(value)
@@ -49,9 +112,9 @@ export default function EventsPreviewPage() {
           const end = new Date(event.endDate || event.startDate)
           return end >= today && event._id !== "68dac96e8d5dd14f277d5b1a"
         })
-        setEvents(upcoming)
+        setEvents(upcoming.length ? upcoming : (window.location.hostname === "localhost" ? LOCAL_PREVIEW_EVENTS : []))
       } catch {
-        setEvents([])
+        setEvents(window.location.hostname === "localhost" ? LOCAL_PREVIEW_EVENTS : [])
       } finally {
         setLoading(false)
       }
@@ -155,6 +218,9 @@ export default function EventsPreviewPage() {
       </section>
 
       <footer className="border-t border-black/10 bg-[#f6f4f1] px-5 py-7 text-center text-sm text-black/50">Events preview • Ahibi booking experience</footer>
+      <nav className="fixed inset-x-4 bottom-4 z-50 grid grid-cols-4 rounded-2xl border border-black/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl md:hidden" aria-label="Mobile navigation">
+        {[["Home", "/"], ["Explore", "/events"], ["Bookings", "/profile"], ["Profile", "/profile"]].map(([label, href], index) => <Link key={label} href={href} className={`flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold ${index === 0 ? "text-[#f04438]" : "text-black/50"}`}><span className="text-base">{index === 0 ? "⌂" : index === 1 ? "⌕" : index === 2 ? "♧" : "○"}</span>{label}</Link>)}
+      </nav>
     </main>
   )
 }
