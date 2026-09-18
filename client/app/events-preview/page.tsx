@@ -164,6 +164,7 @@ export default function EventsPreviewPage() {
             <Link href="/events" className="relative text-black after:absolute after:-bottom-7 after:left-0 after:h-0.5 after:w-full after:bg-[#f04438]">Explore Events</Link>
             <Link href="/allArtists" className="transition-colors hover:text-black">Artists</Link>
             <Link href="/allVenues" className="transition-colors hover:text-black">Venues</Link>
+            <Link href="/allOrganizers" className="transition-colors hover:text-black">Organizers</Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
             <label className="hidden h-10 w-[270px] items-center gap-2 rounded-full bg-[#f6f4f1] px-4 text-sm text-black/45 lg:flex">
@@ -198,6 +199,16 @@ export default function EventsPreviewPage() {
               <button type="button" className="flex items-center justify-center gap-2 rounded-xl bg-[#f04438] px-5 py-3 text-sm font-semibold text-white"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-[1280px] px-5 pb-10 lg:px-8">
+        <div className="mb-6 flex items-end justify-between"><div><p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f04438]">Everything happening around you</p><h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">What are you looking for?</h2></div><span className="hidden text-sm text-black/45 sm:block">One platform, every experience</span></div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ServiceCard title="Event tickets" description="Find your next live experience." href="/events" image="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&q=85" />
+          <ServiceCard title="Book an artist" description="Bring the right talent to your event." href="/allArtists" image="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=700&q=85" />
+          <ServiceCard title="Find a venue" description="Spaces made for memorable moments." href="/allVenues" image="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&q=85" />
+          <ServiceCard title="Connect with organizers" description="Discover trusted event creators." href="/allOrganizers" image="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=700&q=85" />
         </div>
       </section>
 
@@ -236,3 +247,7 @@ function TimelineEvent({ event }: { event: Event }) {
 }
 
 function EmptyState() { return <div className="rounded-2xl border border-dashed border-black/15 bg-[#f6f4f1] p-10 text-center text-black/55">No upcoming events match this search.</div> }
+
+function ServiceCard({ title, description, href, image }: { title: string; description: string; href: string; image: string }) {
+  return <Link href={href} className="group relative min-h-[220px] overflow-hidden rounded-2xl bg-[#111111] p-5 text-white transition-transform duration-500 hover:-translate-y-1"><Image src={image} alt="" fill unoptimized className="object-cover opacity-45 transition-transform duration-700 group-hover:scale-110" /><div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" /><div className="relative flex h-full min-h-[180px] flex-col justify-end"><h3 className="text-xl font-semibold tracking-[-0.03em]">{title}</h3><p className="mt-1 max-w-[190px] text-sm leading-5 text-white/70">{description}</p><span className="mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#ff8178]">Explore <ArrowRight className="h-3.5 w-3.5" /></span></div></Link>
+}

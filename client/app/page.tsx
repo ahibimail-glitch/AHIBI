@@ -9,6 +9,7 @@ import Link from "next/link"
 import Image from "next/image"
 import Navbar from "./Navbar"
 import Footer from "./Footer"
+import EventsPreviewPage from "./events-preview/page"
 import type { EventsResponse, Event } from "@/types/event"
 import StickyHeroCards from "@/components/StickyHeroCards"
 import { format } from "date-fns"
@@ -222,7 +223,7 @@ const Section = ({
   </section>
 )
 
-export default function HomePage() {
+function LegacyHomePage() {
   const [events, setEvents] = useState<Event[]>([])
   const [featuredEvents, setFeaturedEvents] = useState<Event[]>([])
   const [dailyEvents, setDailyEvents] = useState<DailyEvent[]>([])
@@ -1188,4 +1189,18 @@ export default function HomePage() {
       <Footer />
     </div>
   )
+}
+
+export default function HomePageRouter() {
+  const [showNewHome, setShowNewHome] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const forcedLegacy = params.get("home") === "legacy"
+    const forcedNew = params.get("home") === "new"
+    setShowNewHome((process.env.NEXT_PUBLIC_EVENT_HOME_V2 === "true" || forcedNew) && !forcedLegacy)
+  }, [])
+
+  if (showNewHome) return <EventsPreviewPage />
+  return <LegacyHomePage />
 }
