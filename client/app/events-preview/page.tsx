@@ -98,23 +98,40 @@ export default function EventsPreviewPage() {
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [query, setQuery] = useState("")
   const [location, setLocation] = useState("Your city")
+  const [dataSource, setDataSource] = useState<"live" | "preview">("live")
 
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-        const response = await fetch(`${apiUrl}/api/events?limit=30`)
+        // Use the app's API route so Vercel can apply its configured backend
+        // rewrite. Calling localhost here made the preview silently fall back
+        // to sample cards in production.
+        const response = await fetch(`/api/events?limit=1000`, { cache: "no-store" })
         if (!response.ok) throw new Error("Preview API unavailable")
         const data: EventsResponse = await response.json()
+        const apiEvents = Array.isArray(data?.events) ? data.events : (data?.data?.events || [])
         const today = new Date()
         today.setHours(0, 0, 0, 0)
-        const upcoming = (data.data?.events || []).filter((event) => {
+        const upcoming = apiEvents.filter((event) => {
           const end = new Date(event.endDate || event.startDate)
           return end >= today && event._id !== "68dac96e8d5dd14f277d5b1a"
         })
-        setEvents(upcoming.length ? upcoming : (window.location.hostname === "localhost" ? LOCAL_PREVIEW_EVENTS : []))
+        if (upcoming.length) {
+          setEvents(upcoming)
+          setDataSource("live")
+        } else if (window.location.hostname === "localhost") {
+          setEvents(LOCAL_PREVIEW_EVENTS)
+          setDataSource("preview")
+        } else {
+          setEvents([])
+        }
       } catch {
-        setEvents(window.location.hostname === "localhost" ? LOCAL_PREVIEW_EVENTS : [])
+        if (window.location.hostname === "localhost") {
+          setEvents(LOCAL_PREVIEW_EVENTS)
+          setDataSource("preview")
+        } else {
+          setEvents([])
+        }
       } finally {
         setLoading(false)
       }
@@ -190,6 +207,7 @@ export default function EventsPreviewPage() {
             <h1 className="max-w-[600px] text-5xl font-semibold leading-[0.98] tracking-[-0.06em] sm:text-6xl lg:text-7xl">Find your next unforgettable night</h1>
             <p className="mt-5 max-w-[430px] text-base leading-7 text-white/72 sm:text-lg">Discover the people, places, and moments worth showing up for.</p>
             <Link href="/events" className="mt-7 flex w-fit items-center gap-3 rounded-full bg-[#f04438] px-5 py-3 text-sm font-semibold transition-transform hover:-translate-y-1">Explore events <ArrowRight className="h-4 w-4" /></Link>
+            {heroEvent && <div className="mt-6 flex items-center gap-3 text-xs text-white/75 md:hidden"><span>{formatDate(heroEvent.startDate).full}</span><span className="h-1 w-1 rounded-full bg-white/50" /><span>{heroEvent.location?.city || "Your city"}</span><span className="h-1 w-1 rounded-full bg-white/50" /><span>{lowestPrice(heroEvent)}</span></div>}
           </div>
           <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-white p-2 shadow-2xl sm:bottom-7 sm:left-10 sm:right-10 lg:left-16 lg:right-16">
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
@@ -204,11 +222,19 @@ export default function EventsPreviewPage() {
 
       <section className="mx-auto max-w-[1280px] px-5 pb-10 lg:px-8">
         <div className="mb-6 flex items-end justify-between"><div><p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f04438]">Everything happening around you</p><h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">What are you looking for?</h2></div><span className="hidden text-sm text-black/45 sm:block">One platform, every experience</span></div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="hidden grid-cols-2 gap-4 sm:grid lg:grid-cols-4">
           <ServiceCard title="Event tickets" description="Find your next live experience." href="/events" image="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=700&q=85" />
           <ServiceCard title="Book an artist" description="Bring the right talent to your event." href="/allArtists" image="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=700&q=85" />
           <ServiceCard title="Find a venue" description="Spaces made for memorable moments." href="/allVenues" image="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&q=85" />
           <ServiceCard title="Connect with organizers" description="Discover trusted event creators." href="/allOrganizers" image="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=700&q=85" />
+        </div>
+        <div className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden">
+          {[
+            ["Events", "Browse live experiences", "/events", "🎟️"],
+            ["Artists", "Book the right talent", "/allArtists", "🎤"],
+            ["Venues", "Find your perfect space", "/allVenues", "📍"],
+            ["Organizers", "Meet event creators", "/allOrganizers", "✨"],
+          ].map(([title, description, href, icon]) => <Link key={title} href={href} className="min-w-[74vw] snap-start rounded-2xl border border-black/10 bg-[#f7f5f2] p-4 transition-transform active:scale-[.98]"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl shadow-sm">{icon}</span><h3 className="mt-5 text-lg font-semibold">{title}</h3><p className="mt-1 text-sm text-black/55">{description}</p><span className="mt-4 flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-[#f04438]">Open <ArrowRight className="h-3.5 w-3.5" /></span></Link>)}
         </div>
       </section>
 
@@ -219,8 +245,8 @@ export default function EventsPreviewPage() {
       </section>
 
       <section className="mx-auto max-w-[1280px] px-5 py-12 lg:px-8">
-        <div className="mb-6 flex items-end justify-between"><div><p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f04438]">Curated for you</p><h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">For you</h2></div><Link href="/events" className="hidden items-center gap-1 text-sm font-semibold text-[#f04438] sm:flex">See all events <ArrowRight className="h-4 w-4" /></Link></div>
-        {loading ? <div className="grid gap-5 md:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-[330px] animate-pulse rounded-2xl bg-[#f6f4f1]" />)}</div> : cardEvents.length ? <div className="grid gap-5 md:grid-cols-3">{cardEvents.map((event, index) => <EventCard key={event._id} event={event} featured={index === 0} />)}</div> : <EmptyState />}
+        <div className="mb-6 flex items-end justify-between"><div><p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f04438]">{dataSource === "live" ? "Live from Ahibi" : "Preview mode"}</p><h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">For you</h2></div><Link href="/events" className="hidden items-center gap-1 text-sm font-semibold text-[#f04438] sm:flex">See all events <ArrowRight className="h-4 w-4" /></Link></div>
+        {loading ? <div className="grid gap-5 md:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-[330px] animate-pulse rounded-2xl bg-[#f6f4f1]" />)}</div> : cardEvents.length ? <div className="-mx-5 flex snap-x gap-4 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0">{cardEvents.map((event, index) => <EventCard key={event._id} event={event} featured={index === 0} />)}</div> : <EmptyState />}
       </section>
 
       <section className="mx-auto max-w-[1280px] px-5 pb-20 lg:px-8">
@@ -238,7 +264,7 @@ export default function EventsPreviewPage() {
 
 function EventCard({ event, featured }: { event: Event; featured?: boolean }) {
   const date = formatDate(event.startDate)
-  return <Link href={`/events/${event._id}`} className={`event-reveal group relative overflow-hidden rounded-2xl border border-black/10 bg-white transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl ${featured ? "md:col-span-1" : ""}`}><div className="relative aspect-[1.45] overflow-hidden bg-[#f6f4f1]"><Image src={imageFor(event)} alt={event.title} fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute left-3 top-3 rounded-xl bg-white px-2.5 py-2 text-center shadow-sm"><div className="text-[10px] font-bold tracking-wider text-[#f04438]">{date.month}</div><div className="text-xl font-semibold leading-none">{date.day}</div></div><button type="button" aria-label={`Save ${event.title}`} onClick={(click) => click.preventDefault()} className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-black/70 backdrop-blur transition-colors hover:text-[#f04438]"><Heart className="h-4 w-4" /></button></div><div className="p-4"><div className="mb-2 flex items-center justify-between gap-3 text-xs text-black/50"><span>{event.category || "Event"}</span><span>{lowestPrice(event)}</span></div><h3 className="line-clamp-2 text-lg font-semibold tracking-[-0.03em]">{event.title}</h3><p className="mt-2 flex items-center gap-1 text-sm text-black/50"><MapPin className="h-3.5 w-3.5 text-[#f04438]" />{event.location?.city || "Location TBA"}</p></div></Link>
+  return <Link href={`/events/${event._id}`} className={`event-reveal group relative min-w-[82vw] snap-start overflow-hidden rounded-2xl border border-black/10 bg-white transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl md:min-w-0 ${featured ? "md:col-span-1" : ""}`}><div className="relative aspect-[1.45] overflow-hidden bg-[#f6f4f1]"><Image src={imageFor(event)} alt={event.title} fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute left-3 top-3 rounded-xl bg-white px-2.5 py-2 text-center shadow-sm"><div className="text-[10px] font-bold tracking-wider text-[#f04438]">{date.month}</div><div className="text-xl font-semibold leading-none">{date.day}</div></div><button type="button" aria-label={`Save ${event.title}`} onClick={(click) => click.preventDefault()} className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-black/70 backdrop-blur transition-colors hover:text-[#f04438]"><Heart className="h-4 w-4" /></button></div><div className="p-4"><div className="mb-2 flex items-center justify-between gap-3 text-xs text-black/50"><span>{event.category || "Event"}</span><span>{lowestPrice(event)}</span></div><h3 className="line-clamp-2 text-lg font-semibold tracking-[-0.03em]">{event.title}</h3><p className="mt-2 flex items-center gap-1 text-sm text-black/50"><MapPin className="h-3.5 w-3.5 text-[#f04438]" />{event.location?.city || "Location TBA"}</p></div></Link>
 }
 
 function TimelineEvent({ event }: { event: Event }) {
