@@ -52,6 +52,7 @@ const adminNotificationRoutes = require('./routes/adminNotification.routes');
 const adminTermsRoutes = require('./routes/adminTermsRoutes');
 const publicTermsRoutes = require('./routes/publicTermsRoutes');
 const futsalTournamentRoutes = require('./routes/futsalTournament.routes');
+const hornbillShowcaseRoutes = require('./routes/hornbillShowcase.routes');
 const {
   adminAnalyticsRoutes,
   organizerAnalyticsRoutes,
@@ -70,7 +71,9 @@ const paymentController = require('./controllers/paymentController');
 const allowedOrigins = [
 
   'https://ahibi.in',
+  'https://www.ahibi.in',
   'http://ahibi.in',
+  'http://www.ahibi.in',
   'http://localhost:3000',
   'https://ahibi.vercel.app',
   'https://ahibi-lac.vercel.app/'
@@ -215,6 +218,7 @@ app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/admin/terms', adminTermsRoutes);
 app.use('/api/public/terms', publicTermsRoutes);
 app.use('/api/futsal', futsalTournamentRoutes);
+app.use('/api/hornbill-showcase', hornbillShowcaseRoutes);
 
 logRouterRoutes('adminAnalyticsRoutes', adminAnalyticsRoutes, '/api/admin/analytics');
 
