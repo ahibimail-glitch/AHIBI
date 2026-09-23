@@ -181,49 +181,87 @@ exports.registerDay1 = async (req, res) => {
       }
     }
 
+    if (!user) {
+      return res.status(500).json({
+        success: false,
+        message: 'Could not create your registration profile. Please try again.',
+      });
+    }
+
+    // One pass per phone (and per user account) — check before create
     const existing = await Booking.findOne({
       event: event._id,
-      $or: [{ customerPhone: phone }, { user: user._id }],
       status: { $in: ['confirmed', 'checked-in'] },
-    }).sort({ bookedAt: -1 });
+      $or: [{ customerPhone: phone }, { user: user._id }],
+    }).sort({ bookedAt: 1 });
 
     if (existing) {
+      // Backfill phone if an older row is missing it
+      if (!existing.customerPhone) {
+        existing.customerPhone = phone;
+        existing.customerName = existing.customerName || name;
+        try {
+          await existing.save();
+        } catch (_) {}
+      }
       const qrCodeDataUrl = await buildQrDataUrl(existing, event._id);
       return res.status(200).json({
         success: true,
         alreadyRegistered: true,
-        message: 'You are already registered. Here is your pass.',
+        message: 'You are already registered with this phone number. Here is your pass.',
         data: passPayload(existing, event, qrCodeDataUrl),
       });
     }
 
-    const booking = await Booking.create({
-      event: event._id,
-      eventSnapshot: {
-        _id: event._id,
-        title: event.title,
-        banner: event.banner,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        location: {
-          address: event.location?.address,
-          city: event.location?.city,
+    let booking;
+    try {
+      booking = await Booking.create({
+        event: event._id,
+        eventSnapshot: {
+          _id: event._id,
+          title: event.title,
+          banner: event.banner,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          location: {
+            address: event.location?.address,
+            city: event.location?.city,
+          },
         },
-      },
-      user: user._id,
-      customerName: name,
-      customerPhone: phone,
-      ticketType: EVENT_DEF.ticketType.name,
-      quantity: 1,
-      price: 0,
-      total: 0,
-      status: 'confirmed',
-      paymentStatus: 'completed',
-      country,
-      state: city || undefined,
-      ticketIndex: 1,
-      totalTickets: 1,
-    });
+        user: user._id,
+        customerName: name,
+        customerPhone: phone,
+        ticketType: EVENT_DEF.ticketType.name,
+        quantity: 1,
+        price: 0,
+        total: 0,
+        status: 'confirmed',
+        paymentStatus: 'completed',
+        country,
+        state: city || undefined,
+        ticketIndex: 1,
+        totalTickets: 1,
+      });
+    } catch (createBookingErr) {
+      // Unique index race: another request just created this phone's pass
+      if (createBookingErr?.code === 11000) {
+        const raced = await Booking.findOne({
+          event: event._id,
+          $or: [{ customerPhone: phone }, { user: user._id }],
+          status: { $in: ['confirmed', 'checked-in'] },
+        }).sort({ bookedAt: 1 });
+        if (raced) {
+          const qrCodeDataUrl = await buildQrDataUrl(raced, event._id);
+          return res.status(200).json({
+            success: true,
+            alreadyRegistered: true,
+            message: 'You are already registered with this phone number. Here is your pass.',
+            data: passPayload(raced, event, qrCodeDataUrl),
+          });
+        }
+      }
+      throw createBookingErr;
+    }
 
     await Event.updateOne(
       { _id: event._id, 'ticketTypes.name': EVENT_DEF.ticketType.name },

@@ -14,6 +14,9 @@ const EVENT = {
   coverImage: '/images/hornbill-showcase-day1-mobile.jpg',
   category: 'Music',
   tags: ['Hornbill', 'Ticket to Hornbill', 'Nagaland', 'Free Entry', 'Cultural Showcase'],
+  isExternal: true,
+  externalBookingUrl: '/ticket-to-hornbill',
+  isFeatured: true,
   // 16 Oct 2026, gates 4:00 PM IST → store as UTC
   startDate: new Date('2026-10-16T10:30:00.000Z'), // 16:00 IST
   endDate: new Date('2026-10-16T18:29:59.000Z'), // end of day IST

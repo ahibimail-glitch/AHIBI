@@ -25,30 +25,54 @@ async function connect() {
   const srvUri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (!srvUri) throw new Error('MONGO_URI is not set');
 
-  const fallbackUri = srvUri
-    .replace('mongodb+srv://', 'mongodb://')
-    .replace(
-      '@cluster0.oasjxzb.mongodb.net',
-      '@ac-honjbme-shard-00-00.oasjxzb.mongodb.net:27017,ac-honjbme-shard-00-01.oasjxzb.mongodb.net:27017,ac-honjbme-shard-00-02.oasjxzb.mongodb.net:27017'
-    );
-  const uris = [
-    srvUri,
-    `${fallbackUri}${fallbackUri.includes('?') ? '&' : '?'}tls=true&authSource=admin`,
-  ];
+  const fallbackUri =
+    srvUri
+      .replace('mongodb+srv://', 'mongodb://')
+      .replace(
+        '@cluster0.oasjxzb.mongodb.net',
+        '@ac-honjbme-shard-00-00.oasjxzb.mongodb.net:27017,ac-honjbme-shard-00-01.oasjxzb.mongodb.net:27017,ac-honjbme-shard-00-02.oasjxzb.mongodb.net:27017'
+      ) +
+    (srvUri.includes('?') || srvUri.includes('mongodb+srv://') ? '' : '') ;
+
+  // Force a clean slate between attempts — srv DNS often fails on some networks.
+  const attempts = [];
+  attempts.push({ label: 'srv', uri: srvUri });
+  if (srvUri.startsWith('mongodb+srv://')) {
+    const base = srvUri
+      .replace('mongodb+srv://', 'mongodb://')
+      .replace(
+        '@cluster0.oasjxzb.mongodb.net',
+        '@ac-honjbme-shard-00-00.oasjxzb.mongodb.net:27017,ac-honjbme-shard-00-01.oasjxzb.mongodb.net:27017,ac-honjbme-shard-00-02.oasjxzb.mongodb.net:27017'
+      );
+    const withParams = `${base}${base.includes('?') ? '&' : '?'}tls=true&authSource=admin`;
+    attempts.push({ label: 'fallback-shards', uri: withParams });
+  }
 
   let lastError;
-  for (const uri of uris) {
+  for (const attempt of attempts) {
     try {
-      await mongoose.connect(uri, { family: 4, serverSelectionTimeoutMS: 20000 });
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.disconnect();
+      }
+      console.log('Connecting via', attempt.label, '...');
+      await mongoose.connect(attempt.uri, {
+        family: 4,
+        serverSelectionTimeoutMS: 25000,
+        bufferCommands: false,
+      });
+      // Prove the connection actually works before continuing.
+      await mongoose.connection.db.admin().command({ ping: 1 });
+      console.log('Mongo connected via', attempt.label);
       return;
     } catch (error) {
       lastError = error;
+      console.log('Connect failed via', attempt.label + ':', String(error.message || error).slice(0, 140));
       try {
         await mongoose.disconnect();
       } catch (_) {}
     }
   }
-  throw lastError;
+  throw lastError || new Error('Could not connect to MongoDB');
 }
 
 async function resolveOrganizer() {
@@ -82,8 +106,8 @@ async function run() {
   const organizer = await resolveOrganizer();
   console.log('Organizer:', organizer._id.toString(), organizer.name || organizer.email);
 
-  const banner = absoluteAsset(DEF.banner);
-  const coverImage = absoluteAsset(DEF.coverImage);
+  const banner = DEF.banner; // keep site-relative so Next/Image serves from /public
+  const coverImage = DEF.coverImage;
 
   const payload = {
     title: DEF.title,
@@ -97,11 +121,15 @@ async function run() {
     endDate: DEF.endDate,
     bookingEndTime: DEF.bookingEndTime,
     location: DEF.location,
-    isFreeEvent: true,
-    isVirtual: false,
-    status: 'approved',
-    approvalStatus: 'approved',
-    termsAndConditions: DEF.termsAndConditions,
+  isFreeEvent: true,
+  isVirtual: false,
+  isPublic: true,
+  isFeatured: true,
+  isExternal: true,
+  externalBookingUrl: '/ticket-to-hornbill',
+  status: 'approved',
+  approvalStatus: 'approved',
+  termsAndConditions: DEF.termsAndConditions,
     ticketTypes: [
       {
         name: DEF.ticketType.name,
