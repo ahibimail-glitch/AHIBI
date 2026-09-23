@@ -247,6 +247,79 @@ exports.registerDay1 = async (req, res) => {
   }
 };
 
+exports.listDay1Registrations = async (req, res) => {
+  try {
+    const event = await findDay1Event();
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Day 1 Showcase event is not configured yet.',
+      });
+    }
+
+    const q = String(req.query.q || '').trim();
+    const status = String(req.query.status || '').trim();
+    const filter = { event: event._id };
+    if (status) filter.status = status;
+
+    let bookings = await Booking.find(filter)
+      .populate('user', 'name email phone city')
+      .sort({ bookedAt: -1 })
+      .lean();
+
+    if (q) {
+      const needle = q.toLowerCase();
+      bookings = bookings.filter((b) => {
+        const hay = [
+          b.customerName,
+          b.customerPhone,
+          b.country,
+          b.state,
+          b.user?.name,
+          b.user?.email,
+          b.user?.phone,
+          String(b._id),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(needle);
+      });
+    }
+
+    const rows = bookings.map((b) => ({
+      _id: String(b._id),
+      registrationNumber: `TTH-D1-${String(b._id).slice(-8).toUpperCase()}`,
+      name: b.customerName || b.user?.name || '',
+      phone: b.customerPhone || b.user?.phone || '',
+      email: b.user?.email || '',
+      city: b.state || b.user?.city || '',
+      country: b.country || '',
+      ticketType: b.ticketType || '',
+      status: b.status || '',
+      paymentStatus: b.paymentStatus || '',
+      bookedAt: b.bookedAt,
+    }));
+
+    return res.json({
+      success: true,
+      data: {
+        event: {
+          id: String(event._id),
+          slug: event.slug,
+          title: event.title,
+          startDate: event.startDate,
+        },
+        total: rows.length,
+        registrations: rows,
+      },
+    });
+  } catch (error) {
+    console.error('[hornbill-showcase] listDay1Registrations failed:', error.message);
+    return res.status(500).json({ success: false, message: 'Could not load registrations' });
+  }
+};
+
 exports.getDay1Pass = async (req, res) => {
   try {
     const bookingId = String(req.params.bookingId || '').trim();
