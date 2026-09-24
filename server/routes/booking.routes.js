@@ -432,7 +432,7 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
     // Get regular event bookings
     const bookings = await Booking.find({ user: req.user._id })
       .sort({ bookedAt: -1 })
-      .populate('event', 'title banner startDate')
+      .populate('event', 'title banner startDate slug isExternal externalBookingUrl')
       .populate('dailyEvent', 'title banner startTime duration location')
       .lean();
 

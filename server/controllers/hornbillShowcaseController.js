@@ -39,8 +39,8 @@ function publicEventPayload(event) {
     title: event.title,
     subtitle: EVENT_DEF.subtitle,
     description: event.description,
-    bannerDesktop: EVENT_DEF.banner,
-    bannerMobile: EVENT_DEF.coverImage || EVENT_DEF.banner,
+    bannerDesktop: EVENT_DEF.bannerDesktop || EVENT_DEF.banner,
+    bannerMobile: EVENT_DEF.bannerMobile || EVENT_DEF.coverImage || EVENT_DEF.banner,
     startDate: event.startDate,
     endDate: event.endDate,
     gatesOpenLabel: 'Gates open at 04:00 PM',
@@ -85,9 +85,36 @@ function passPayload(booking, event, qrCodeDataUrl) {
       dateLabel: '16th October, 2026',
       gatesOpenLabel: 'Gates open at 04:00 PM',
       venue: 'Talkatora Stadium, New Delhi',
-      bannerDesktop: EVENT_DEF.banner,
+      bannerDesktop: EVENT_DEF.bannerDesktop || EVENT_DEF.banner,
     },
     message: `Thank you for registering, ${booking.customerName || 'guest'}! Your personalised Day 1 pass is ready. Show this QR code at the gate for check-in.`,
+  };
+}
+
+function authTokenForUser(user) {
+  try {
+    if (user && typeof user.getSignedJwtToken === 'function') {
+      return user.getSignedJwtToken();
+    }
+  } catch (_) {}
+  return null;
+}
+
+function registrationResponse({ alreadyRegistered, message, booking, event, qrCodeDataUrl, user, status = 200 }) {
+  const payload = passPayload(booking, event, qrCodeDataUrl);
+  const token = authTokenForUser(user);
+  return {
+    status,
+    body: {
+      success: true,
+      alreadyRegistered,
+      message,
+      data: {
+        ...payload,
+        ...(token ? { token } : {}),
+        passUrl: `/ticket-to-hornbill/pass/${payload.bookingId}`,
+      },
+    },
   };
 }
 
@@ -205,12 +232,15 @@ exports.registerDay1 = async (req, res) => {
         } catch (_) {}
       }
       const qrCodeDataUrl = await buildQrDataUrl(existing, event._id);
-      return res.status(200).json({
-        success: true,
+      const response = registrationResponse({
         alreadyRegistered: true,
         message: 'You are already registered with this phone number. Here is your pass.',
-        data: passPayload(existing, event, qrCodeDataUrl),
+        booking: existing,
+        event,
+        qrCodeDataUrl,
+        user,
       });
+      return res.status(response.status).json(response.body);
     }
 
     let booking;
@@ -252,12 +282,15 @@ exports.registerDay1 = async (req, res) => {
         }).sort({ bookedAt: 1 });
         if (raced) {
           const qrCodeDataUrl = await buildQrDataUrl(raced, event._id);
-          return res.status(200).json({
-            success: true,
+          const response = registrationResponse({
             alreadyRegistered: true,
             message: 'You are already registered with this phone number. Here is your pass.',
-            data: passPayload(raced, event, qrCodeDataUrl),
+            booking: raced,
+            event,
+            qrCodeDataUrl,
+            user,
           });
+          return res.status(response.status).json(response.body);
         }
       }
       throw createBookingErr;
@@ -269,13 +302,16 @@ exports.registerDay1 = async (req, res) => {
     );
 
     const qrCodeDataUrl = await buildQrDataUrl(booking, event._id);
-
-    return res.status(201).json({
-      success: true,
+    const response = registrationResponse({
       alreadyRegistered: false,
       message: 'Registration successful. Your personalised pass is ready.',
-      data: passPayload(booking, event, qrCodeDataUrl),
+      booking,
+      event,
+      qrCodeDataUrl,
+      user,
+      status: 201,
     });
+    return res.status(response.status).json(response.body);
   } catch (error) {
     console.error('[hornbill-showcase] registerDay1 failed:', error);
     return res.status(500).json({
