@@ -153,7 +153,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
   );
 };
 
-// CARD DETAILS
+// CARD DETAILS..
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 
@@ -508,7 +508,7 @@ export default function EventsPage() {
 
               {/* ── Events sections ─────────────────────────────────────── */}
               <div className="space-y-10">
-                  <section>
+                  {/* <section>
                     <SectionHeader title="Special RSVP" count={1} dot="bg-violet-500" />
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 sm:gap-4">
                       <Link
@@ -518,7 +518,7 @@ export default function EventsPage() {
                         <SpecialEventCard />
                       </Link>
                     </div>
-                  </section>
+                  </section> */}
 
                   {/* Live */}
                   {currentSorted.length > 0 && (
