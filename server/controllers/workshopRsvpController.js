@@ -1,17 +1,67 @@
 const WorkshopRsvpRegistration = require('../models/WorkshopRsvpRegistration');
 
 const EVENT_TITLE = 'AHIBI Workshop RSVP';
-const WORKSHOP_DAY_MAP = {
-  'Workshop 1': 'Day 1',
-  'Workshop 2': 'Day 1',
-  'Workshop 3': 'Day 2',
-  'Workshop 4': 'Day 2',
-  'Workshop 5': 'Day 3',
-  'Workshop 6': 'Day 3',
-  'Workshop 7': 'Day 3',
-};
-
-const WORKSHOPS = Object.entries(WORKSHOP_DAY_MAP).map(([name, day]) => ({ name, day }));
+const WORKSHOPS = [
+  {
+    name: 'Loin Loom Weaving',
+    day: 'Day 1',
+    dateLabel: '15 Oct 2026',
+    timeLabel: '12:30 PM - 2:00 PM',
+    speaker: 'Vekuvolu Dozo',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.22 PM.jpeg',
+  },
+  {
+    name: 'Textile Dyeing Techniques',
+    day: 'Day 1',
+    dateLabel: '15 Oct 2026',
+    timeLabel: '2:30 PM - 3:30 PM',
+    speaker: 'Ninoto Zhimomi',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.19 PM.jpeg',
+  },
+  {
+    name: 'Product Photography Using Smartphones',
+    day: 'Day 2',
+    dateLabel: '16 Oct 2026',
+    timeLabel: '12:30 PM - 1:30 PM',
+    speaker: 'Beltezzar Thong',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.21 PM (1).jpeg',
+  },
+  {
+    name: 'Branding & Design for MSEs',
+    day: 'Day 2',
+    dateLabel: '16 Oct 2026',
+    timeLabel: '2:00 PM - 3:00 PM',
+    speaker: 'Sinlo Kemp',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.21 PM.jpeg',
+  },
+  {
+    name: 'Startup Readiness & Innovation',
+    day: 'Day 3',
+    dateLabel: '17 Oct 2026',
+    timeLabel: '12:30 PM - 1:30 PM',
+    speaker: 'Yanpvuo Kikon',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.20 PM.jpeg',
+  },
+  {
+    name: 'Art & About',
+    day: 'Day 3',
+    dateLabel: '17 Oct 2026',
+    timeLabel: '2:00 PM - 3:00 PM',
+    speaker: 'Ariapongla',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.20 PM (1).jpeg',
+  },
+  {
+    name: 'Banana-Fibre Tapestry Weaving',
+    day: 'Day 3',
+    dateLabel: '17 Oct 2026',
+    timeLabel: '2:00 PM - 3:00 PM',
+    speaker: 'Nengneithem Hengna',
+    image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.19 PM (1).jpeg',
+  },
+];
+const WORKSHOP_DAY_MAP = Object.fromEntries(
+  WORKSHOPS.map((workshop) => [workshop.name, workshop.day])
+);
 const DAYS = ['Day 1', 'Day 2', 'Day 3'];
 
 function normalizePhone(raw) {

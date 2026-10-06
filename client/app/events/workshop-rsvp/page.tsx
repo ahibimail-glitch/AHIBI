@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   CalendarDays,
   ArrowRight,
-  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/Navbar";
@@ -19,6 +18,10 @@ import Footer from "@/app/Footer";
 type Workshop = {
   name: string;
   day: string;
+  dateLabel?: string;
+  timeLabel?: string;
+  speaker?: string;
+  image?: string;
 };
 
 type EventConfig = {
@@ -123,6 +126,10 @@ export default function WorkshopRsvpPage() {
     );
   }, [config, form.workshop]);
 
+  const workshopCards = useMemo(() => {
+    return config?.workshops || [];
+  }, [config]);
+
   const handleChange = (
     field: keyof typeof initialForm,
     value: string
@@ -140,6 +147,12 @@ export default function WorkshopRsvpPage() {
 
     setSubmitting(true);
     setError("");
+
+    if (!form.workshop) {
+      setError("Please select a workshop to continue.");
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/workshop-rsvp/register", {
@@ -181,70 +194,7 @@ export default function WorkshopRsvpPage() {
       <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         {/* Main Card */}
         <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_20px_70px_rgba(15,23,42,0.08)]">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            {/* LEFT SIDE */}
-            <div className="relative overflow-hidden bg-slate-950 px-7 py-10 text-white sm:px-10 lg:px-14 lg:py-16">
-              {/* Decorative elements */}
-              <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
-              <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
-
-              <div className="relative z-10 flex h-full flex-col justify-between">
-                <div>
-                 
-                  {/* Heading */}
-                  <h1 className="mt-7 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-[52px]">
-                    {config?.title || "AHIBI Workshop"}
-                  </h1>
-
-                  <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
-                    {config?.description ||
-                      "Join us for an engaging workshop experience. Reserve your spot by completing the registration form."}
-                  </p>
-
-                  {/* Stats */}
-                  <div className="mt-10 grid max-w-lg grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
-                    <div className="px-3 first:pl-0">
-                      <p className="text-2xl font-bold">
-                        {config?.workshops?.length || 7}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        Workshops
-                      </p>
-                    </div>
-
-                    <div className="px-4">
-                      <p className="text-2xl font-bold">3</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        Event Days
-                      </p>
-                    </div>
-
-                    <div className="px-3 last:pr-0">
-                      <p className="text-2xl font-bold">₹0</p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        Entry Fee
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom info */}
-                <div className="mt-14 hidden lg:block">
-                  <div className="flex items-center gap-3 text-sm text-slate-400">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    </div>
-
-                    <span>
-                      Instant confirmation after registration
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT SIDE */}
-            <div className="bg-white px-6 py-8 sm:px-10 lg:px-12 lg:py-12">
+          <div className="bg-white px-6 py-8 sm:px-10 lg:px-12 lg:py-12">
               {loading ? (
                 <div className="flex min-h-[520px] items-center justify-center">
                   <div className="flex flex-col items-center gap-4">
@@ -339,7 +289,7 @@ export default function WorkshopRsvpPage() {
                 </div>
               ) : (
                 /* FORM */
-                <div className="mx-auto max-w-md">
+                <div className="mx-auto w-full max-w-3xl">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
                       Registration
@@ -350,8 +300,7 @@ export default function WorkshopRsvpPage() {
                     </h2>
 
                     <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Enter your details and select the workshop you want
-                      to attend.
+                      Enter your details and select one workshop session to attend.
                     </p>
                   </div>
 
@@ -427,42 +376,77 @@ export default function WorkshopRsvpPage() {
                     </label>
 
                     {/* Workshop */}
-                    <label className="block">
+                    <div>
                       <span className="mb-2 block text-sm font-semibold text-slate-700">
                         Select Workshop
                       </span>
 
-                      <div className="relative">
-                        <CalendarDays className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {workshopCards.map((workshop) => {
+                          const isSelected = form.workshop === workshop.name;
 
-                        <select
-                          value={form.workshop}
-                          onChange={(event) =>
-                            handleChange(
-                              "workshop",
-                              event.target.value
-                            )
-                          }
-                          className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-11 pr-10 text-sm outline-none transition hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                          required
-                        >
-                          <option value="">
-                            Choose a workshop
-                          </option>
+                          return (
+                            <button
+                              key={workshop.name}
+                              type="button"
+                              onClick={() => handleChange("workshop", workshop.name)}
+                              className={`overflow-hidden rounded-2xl border text-left transition-all focus:outline-none focus:ring-4 ${
+                                isSelected
+                                  ? "border-blue-500 ring-blue-500/15 shadow-lg shadow-blue-500/10"
+                                  : "border-slate-200 hover:border-slate-300 hover:shadow-md focus:ring-blue-500/10"
+                              }`}
+                              aria-pressed={isSelected}
+                            >
+                              <div className="relative aspect-[3/4] overflow-hidden bg-slate-100">
+                                <img
+                                  src={encodeURI(workshop.image || "")}
+                                  alt={workshop.name}
+                                  className="h-full w-full object-cover"
+                                />
+                                {/* <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3">
+                                  <p className="text-sm font-semibold text-white">
+                                    {workshop.name}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-white/80">
+                                    {workshop.day} {workshop.timeLabel ? `• ${workshop.timeLabel}` : ""}
+                                  </p>
+                                </div> */}
+                              </div>
 
-                          {(config?.workshops || []).map(
-                            (workshop) => (
-                              <option
-                                key={workshop.name}
-                                value={workshop.name}
-                              >
-                                {workshop.name}
-                              </option>
-                            )
-                          )}
-                        </select>
+                              <div className="flex items-start justify-between gap-3 px-4 py-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {workshop.name}
+                                  </p>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {workshop.dateLabel} {workshop.timeLabel ? `• ${workshop.timeLabel}` : ""}
+                                  </p>
+                                  {workshop.speaker ? (
+                                    <p className="mt-1 text-xs font-medium text-slate-600">
+                                      {workshop.speaker}
+                                    </p>
+                                  ) : null}
+                                </div>
+
+                                <span
+                                  className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                                    isSelected
+                                      ? "border-blue-600 bg-blue-600"
+                                      : "border-slate-300 bg-white"
+                                  }`}
+                                >
+                                  <span
+                                    className={`h-2 w-2 rounded-full ${
+                                      isSelected ? "bg-white" : "bg-transparent"
+                                    }`}
+                                  />
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                    </label>
+                    </div>
 
                     {/* Selected day */}
                     {selectedDay && (
@@ -514,7 +498,6 @@ export default function WorkshopRsvpPage() {
                   </form>
                 </div>
               )}
-            </div>
           </div>
         </section>
 
