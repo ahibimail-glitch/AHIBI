@@ -190,12 +190,7 @@ export default function WorkshopRsvpPage() {
 
               <div className="relative z-10 flex h-full flex-col justify-between">
                 <div>
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Free Event
-                  </div>
-
+                 
                   {/* Heading */}
                   <h1 className="mt-7 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-[52px]">
                     {config?.title || "AHIBI Workshop"}
