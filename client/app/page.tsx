@@ -151,6 +151,13 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
   return minPrice === 0 ? 'Free' : `₹${minPrice.toFixed(2)}`;
 };
 
+const RSVP_WORKSHOP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
+
+const getEventHref = (event: { _id: string }) =>
+  String(event._id) === RSVP_WORKSHOP_EVENT_ID
+    ? "/events/workshop-rsvp"
+    : `/events/${event._id}`;
+
 const DailyEventCard = ({ event }: { event: DailyEvent }) => {
   return (
     <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
@@ -732,7 +739,7 @@ function LegacyHomePage() {
                     <div className="flex gap-3 snap-x snap-mandatory">
                       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {featuredEvents.slice(0, 10).map((event) => (
-                          <Link key={event._id} href={`/events/${event._id}`}>
+                          <Link key={event._id} href={getEventHref(event)}>
                             <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
 
                               {/* Poster */}
@@ -774,7 +781,7 @@ function LegacyHomePage() {
 
                   <div className="hidden sm:grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {featuredEvents.slice(0, 10).map((event) => (
-                      <Link key={event._id} href={`/events/${event._id}`}>
+                      <Link key={event._id} href={getEventHref(event)}>
                         <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
                           {/* POSTER */}
                           <div className="relative w-full overflow-hidden">
