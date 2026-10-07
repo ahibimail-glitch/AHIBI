@@ -154,7 +154,57 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
 };
 
 // CARD DETAILS..
+const SpecialEventCard: React.FC = () => {
+  return (
+    <div className="group">
+      <div className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-blue-700 to-indigo-700 shadow-sm">
+        <div className="aspect-[4/5] p-4 sm:p-5">
+          <div className="flex h-full flex-col justify-between">
+            <div className="flex items-start justify-between gap-2">
+              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-100">
+                Workshop Series
+              </span>
+            </div>
 
+            <div>
+              <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-100 backdrop-blur-sm">
+                Complimentary Registration
+              </div>
+              <h3 className="mt-3 text-xl font-bold leading-tight text-white sm:text-2xl">
+                AHIBI Workshop RSVP
+              </h3>
+              <p className="mt-2 line-clamp-3 text-[12px] leading-5 text-blue-50/90 sm:text-[13px]">
+                Register for the workshop session of your choice. The corresponding event day will be assigned automatically upon selection.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-blue-100/80">
+                7 workshops available
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-2 right-2 opacity-0 transition-all duration-300 translate-y-1 group-hover:translate-y-0 group-hover:opacity-100">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-md">
+            <ArrowRight className="h-3.5 w-3.5 text-gray-900" />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-0.5 pt-2.5">
+        <h3 className="text-[13px] font-semibold leading-snug text-gray-900 transition-colors duration-200 group-hover:text-blue-600 sm:text-sm">
+          AHIBI Workshop RSVP
+        </h3>
+        <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-400">
+          <MapPin className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">Workshop registration • Day assigned automatically</span>
+        </p>
+      </div>
+    </div>
+  );
+};
 // ─── Section Header ───────────────────────────────────────────────────────────
 
 const SectionHeader: React.FC<{ title: string; count: number; dot?: string }> = ({
@@ -508,7 +558,7 @@ export default function EventsPage() {
 
               {/* ── Events sections ─────────────────────────────────────── */}
               <div className="space-y-10">
-                  {/* <section>
+                   <section>
                     <SectionHeader title="Special RSVP" count={1} dot="bg-violet-500" />
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 sm:gap-4">
                       <Link
@@ -518,7 +568,7 @@ export default function EventsPage() {
                         <SpecialEventCard />
                       </Link>
                     </div>
-                  </section> */}
+                  </section> 
 
                   {/* Live */}
                   {currentSorted.length > 0 && (
