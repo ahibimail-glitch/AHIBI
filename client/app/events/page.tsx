@@ -66,6 +66,14 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
   return min === 0 ? "Free" : `₹${min.toLocaleString("en-IN")}`;
 };
 
+const RSVP_WORKSHOP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
+
+const getEventHref = (event: Event): string => {
+  return String(event._id) === RSVP_WORKSHOP_EVENT_ID
+    ? "/events/workshop-rsvp"
+    : `/events/${event._id}`;
+};
+
 // ─── Event Card ───────────────────────────────────────────────────────────────
 
 interface EventCardProps {
@@ -576,7 +584,7 @@ export default function EventsPage() {
                       <SectionHeader title="Live Now" count={currentSorted.length} dot="bg-red-500" />
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                         {currentSorted.map((event, i) => (
-                          <Link key={event._id} href={`/events/${event._id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                          <Link key={event._id} href={getEventHref(event)} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
                             <EventCard event={event} index={i} />
                           </Link>
                         ))}
@@ -590,7 +598,7 @@ export default function EventsPage() {
                       <SectionHeader title="Upcoming Events" count={upcomingSorted.length} dot="bg-blue-500" />
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                         {upcomingSorted.map((event, i) => (
-                          <Link key={event._id} href={`/events/${event._id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                          <Link key={event._id} href={getEventHref(event)} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
                             <EventCard event={event} index={i} />
                           </Link>
                         ))}
@@ -604,7 +612,7 @@ export default function EventsPage() {
                       <SectionHeader title="Past Events" count={pastSorted.length} dot="bg-gray-300" />
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                         {pastSorted.map((event, i) => (
-                          <Link key={event._id} href={`/events/${event._id}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                          <Link key={event._id} href={getEventHref(event)} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
                             <EventCard event={event} index={i} />
                           </Link>
                         ))}
