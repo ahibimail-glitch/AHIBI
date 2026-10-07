@@ -20,11 +20,14 @@ type Workshop = {
   day: string;
   dateLabel?: string;
   timeLabel?: string;
+  startDateTime?: string;
+  endDateTime?: string;
   speaker?: string;
   image?: string;
 };
 
 type EventConfig = {
+  eventId: string;
   title: string;
   slug: string;
   isFreeEvent: boolean;
@@ -130,6 +133,10 @@ export default function WorkshopRsvpPage() {
     return config?.workshops || [];
   }, [config]);
 
+  const selectedWorkshop = useMemo(() => {
+    return workshopCards.find((item) => item.name === form.workshop) || null;
+  }, [form.workshop, workshopCards]);
+
   const handleChange = (
     field: keyof typeof initialForm,
     value: string
@@ -154,24 +161,58 @@ export default function WorkshopRsvpPage() {
       return;
     }
 
+    if (!config?.eventId) {
+      setError("Workshop event is not configured correctly.");
+      setSubmitting(false);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push(`/auth?redirect=${encodeURIComponent("/events/workshop-rsvp")}`);
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const response = await fetch("/api/workshop-rsvp/register", {
+      const response = await fetch("/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          event: config?.eventId,
+          quantity: 1,
+          price: 0,
+          ticketType: `${selectedWorkshop?.day || selectedDay} • ${form.workshop}`,
+          customerName: form.name.trim(),
+          customerPhone: form.phone.trim(),
+          state: form.location.trim(),
+          eventSnapshotStartDate: selectedWorkshop?.startDateTime,
+          eventSnapshotEndDate: selectedWorkshop?.endDateTime,
+        }),
       });
 
       const result = await response.json();
 
-      if (!response.ok || !result?.success) {
+      if (!response.ok) {
         throw new Error(
           result?.message || "Failed to complete registration."
         );
       }
 
-      setSuccess(result.data);
+      const createdBookingId = result?.booking?.id;
+
+      if (createdBookingId && typeof window !== "undefined") {
+        localStorage.setItem("lastBookingId", createdBookingId);
+      }
+
+      router.push(
+        createdBookingId
+          ? `/events/${config?.eventId}/bookings?bookingId=${createdBookingId}`
+          : `/events/${config?.eventId}/bookings`
+      );
     } catch (submitError: any) {
       setError(
         submitError?.message || "Failed to complete registration."

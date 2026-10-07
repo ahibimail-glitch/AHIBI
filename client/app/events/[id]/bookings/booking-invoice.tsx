@@ -122,6 +122,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
     const formatCurrency = (amount: number) =>
         new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
 
+    const formatPriceLabel = (amount: number) => (Number(amount) === 0 ? 'RSVP' : formatCurrency(amount));
+
     const getEndTime = (booking: any) => {
         const end = booking.event?.endDate || booking.event?.endTime || booking.endTime;
         if (end) return formatTime(end);
@@ -227,8 +229,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
         ticketIndex: booking.ticketIndex || ticketIndex,
         totalTickets: booking.totalTickets || totalTickets,
         ...(showEventSerial && { ticketSerialNumber: booking.ticketSerialNumber }),
-        pricePerTicket: formatCurrency(booking.price),
-        total: formatCurrency(booking.total),
+        pricePerTicket: formatPriceLabel(booking.price),
+        total: formatPriceLabel(booking.total),
         ticketId: showEventSerial
             ? `SN-${booking.ticketSerialNumber}`
             : `${booking._id}_ticket_${booking.ticketIndex || ticketIndex}`,
@@ -554,7 +556,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
                                 <DetailRow icon={<User size={12} />} label="Name" value={displayName} />
                                 <DetailRow icon={<Mail size={12} />} label="Email" value={displayEmail} />
                                 <DetailRow icon={<Phone size={12} />} label="Phone" value={displayPhone} />
-                                <DetailRow icon={<Ticket size={12} />} label="Price" value={formatCurrency(booking.price)} highlight />
+                                <DetailRow icon={<Ticket size={12} />} label="Price" value={formatPriceLabel(booking.price)} highlight />
                             </div>
                         </div>
 

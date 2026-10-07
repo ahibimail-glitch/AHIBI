@@ -104,6 +104,21 @@ function groupUserBookingsForDisplay(bookings) {
   });
 }
 
+function mergeEventWithSnapshot(eventDoc, eventSnapshot) {
+  if (!eventDoc && !eventSnapshot) return null;
+  if (!eventSnapshot) return eventDoc;
+  if (!eventDoc) return eventSnapshot;
+
+  return {
+    ...eventDoc,
+    ...eventSnapshot,
+    location: {
+      ...(eventDoc.location || {}),
+      ...(eventSnapshot.location || {}),
+    },
+  };
+}
+
 // @route   POST /api/bookings/verify-ticket
 // @desc    Verify a ticket for an event
 // @access  Private (Admin)
@@ -200,7 +215,19 @@ router.post("/verify-ticket", async (req, res) => {
 router.post("/", auth.protect, async (req, res) => {
   try {
     // console.log("Booking payload:", req.body);
-    const { event, user, quantity, price, ticketType, country, state } = req.body;
+    const {
+      event,
+      user,
+      quantity,
+      price,
+      ticketType,
+      country,
+      state,
+      customerName,
+      customerPhone,
+      eventSnapshotStartDate,
+      eventSnapshotEndDate,
+    } = req.body;
     const bodyUser = user || (req.user && req.user._id);
     //console.log("Booking payload:", { event, user, quantity });
 
@@ -263,6 +290,22 @@ router.post("/", auth.protect, async (req, res) => {
     
     console.log(price)
 
+    const resolvedStartDate = eventSnapshotStartDate
+      ? new Date(eventSnapshotStartDate)
+      : isEvent.startDate;
+    const resolvedEndDate = eventSnapshotEndDate
+      ? new Date(eventSnapshotEndDate)
+      : isEvent.endDate;
+
+    const snapshotStartDate =
+      resolvedStartDate instanceof Date && !Number.isNaN(resolvedStartDate.getTime())
+        ? resolvedStartDate
+        : isEvent.startDate;
+    const snapshotEndDate =
+      resolvedEndDate instanceof Date && !Number.isNaN(resolvedEndDate.getTime())
+        ? resolvedEndDate
+        : isEvent.endDate;
+
     // Create booking with snapshot of event details
     const booking = new Booking({
       event: event,
@@ -270,14 +313,16 @@ router.post("/", auth.protect, async (req, res) => {
         _id: isEvent._id,
         title: isEvent.title,
         banner: isEvent.banner,
-        startDate: isEvent.startDate,
-        endDate: isEvent.endDate,
+        startDate: snapshotStartDate,
+        endDate: snapshotEndDate,
         location: {
           address: isEvent.location?.address,
           city: isEvent.location?.city
         }
       },
       user: req.user._id,
+      ...(customerName && { customerName }),
+      ...(customerPhone && { customerPhone }),
       quantity: isFree ? 1 : quantity,
       price: isFree ? 0 : price,
       total: isFree ? 0 : price,
@@ -334,8 +379,8 @@ router.post("/", auth.protect, async (req, res) => {
       
       // SMS sending disabled for successful bookings
 
-      const displayEventDate = isEvent.startDate
-        ? new Date(isEvent.startDate).toLocaleString('en-IN', {
+      const displayEventDate = snapshotStartDate
+        ? new Date(snapshotStartDate).toLocaleString('en-IN', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -441,7 +486,7 @@ router.get("/my-bookings", auth.protect, async (req, res) => {
 
     const normalizedBookings = groupedBookings.map(b => ({
       ...b,
-      event: b.event || b.eventSnapshot || b.event,
+      event: mergeEventWithSnapshot(b.event, b.eventSnapshot),
       bookingType: 'event'
     }));
 
@@ -521,7 +566,7 @@ router.get("/organizer-bookings", auth.protect, async (req, res) => {
 
     const normalized = bookings.map(b => ({
       ...b,
-      event: b.event || b.eventSnapshot || b.event // keep original if present
+      event: mergeEventWithSnapshot(b.event, b.eventSnapshot)
     }));
 
     res.json({ bookings: normalized });
@@ -769,7 +814,7 @@ router.get("/related/:id", auth.protect, async (req, res) => {
       relatedBookings.map(async (b) => {
         const row = {
           ...b,
-          event: b.event || b.eventSnapshot || b.event,
+          event: mergeEventWithSnapshot(b.event, b.eventSnapshot),
         };
         const ticketSerialNumber = await computeTicketSerialNumber(row);
         if (ticketSerialNumber != null) {
@@ -809,7 +854,7 @@ router.get("/:id", auth.protect, async (req, res) => {
     // Fallback to snapshot if event was deleted
     const normalized = {
       ...booking,
-      event: booking.event || booking.eventSnapshot || booking.event
+      event: mergeEventWithSnapshot(booking.event, booking.eventSnapshot)
     };
 
     const ticketSerialNumber = await computeTicketSerialNumber(normalized);
@@ -1235,7 +1280,9 @@ router.get("/:bookingId/ticket", auth.protect, async (req, res) => {
     doc.moveDown(2);
 
     // Event details
-    const event = booking.isDailyEvent ? booking.dailyEvent : booking.event;
+    const event = booking.isDailyEvent
+      ? booking.dailyEvent
+      : mergeEventWithSnapshot(booking.event, booking.eventSnapshot);
     if (event) {
       doc.fontSize(18).font('Helvetica-Bold').text(event.title);
       doc.moveDown(0.5);

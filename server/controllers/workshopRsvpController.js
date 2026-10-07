@@ -1,12 +1,15 @@
-const WorkshopRsvpRegistration = require('../models/WorkshopRsvpRegistration');
+const Booking = require('../models/Booking');
 
 const EVENT_TITLE = 'AHIBI Workshop RSVP';
+const RSVP_EVENT_ID = '6ac644e31e7f6f9476b839c0';
 const WORKSHOPS = [
   {
     name: 'Loin Loom Weaving',
     day: 'Day 1',
     dateLabel: '15 Oct 2026',
     timeLabel: '12:30 PM - 2:00 PM',
+    startDateTime: '2026-10-15T12:30:00+05:30',
+    endDateTime: '2026-10-15T14:00:00+05:30',
     speaker: 'Vekuvolu Dozo',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.22 PM.jpeg',
   },
@@ -15,6 +18,8 @@ const WORKSHOPS = [
     day: 'Day 1',
     dateLabel: '15 Oct 2026',
     timeLabel: '2:30 PM - 3:30 PM',
+    startDateTime: '2026-10-15T14:30:00+05:30',
+    endDateTime: '2026-10-15T15:30:00+05:30',
     speaker: 'Ninoto Zhimomi',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.19 PM.jpeg',
   },
@@ -23,6 +28,8 @@ const WORKSHOPS = [
     day: 'Day 2',
     dateLabel: '16 Oct 2026',
     timeLabel: '12:30 PM - 1:30 PM',
+    startDateTime: '2026-10-16T12:30:00+05:30',
+    endDateTime: '2026-10-16T13:30:00+05:30',
     speaker: 'Beltezzar Thong',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.21 PM (1).jpeg',
   },
@@ -31,6 +38,8 @@ const WORKSHOPS = [
     day: 'Day 2',
     dateLabel: '16 Oct 2026',
     timeLabel: '2:00 PM - 3:00 PM',
+    startDateTime: '2026-10-16T14:00:00+05:30',
+    endDateTime: '2026-10-16T15:00:00+05:30',
     speaker: 'Sinlo Kemp',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.21 PM.jpeg',
   },
@@ -39,6 +48,8 @@ const WORKSHOPS = [
     day: 'Day 3',
     dateLabel: '17 Oct 2026',
     timeLabel: '12:30 PM - 1:30 PM',
+    startDateTime: '2026-10-17T12:30:00+05:30',
+    endDateTime: '2026-10-17T13:30:00+05:30',
     speaker: 'Yanpvuo Kikon',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.20 PM.jpeg',
   },
@@ -47,6 +58,8 @@ const WORKSHOPS = [
     day: 'Day 3',
     dateLabel: '17 Oct 2026',
     timeLabel: '2:00 PM - 3:00 PM',
+    startDateTime: '2026-10-17T14:00:00+05:30',
+    endDateTime: '2026-10-17T15:00:00+05:30',
     speaker: 'Ariapongla',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.20 PM (1).jpeg',
   },
@@ -55,6 +68,8 @@ const WORKSHOPS = [
     day: 'Day 3',
     dateLabel: '17 Oct 2026',
     timeLabel: '2:00 PM - 3:00 PM',
+    startDateTime: '2026-10-17T14:00:00+05:30',
+    endDateTime: '2026-10-17T15:00:00+05:30',
     speaker: 'Nengneithem Hengna',
     image: '/rsvp-workshop/WhatsApp Image 2026-10-06 at 10.33.19 PM (1).jpeg',
   },
@@ -63,6 +78,28 @@ const WORKSHOP_DAY_MAP = Object.fromEntries(
   WORKSHOPS.map((workshop) => [workshop.name, workshop.day])
 );
 const DAYS = ['Day 1', 'Day 2', 'Day 3'];
+
+function getWorkshopMetaFromTicketType(ticketType) {
+  const normalized = String(ticketType || '').trim();
+  const match = WORKSHOPS.find(
+    (workshop) =>
+      normalized === workshop.name ||
+      normalized.endsWith(`• ${workshop.name}`) ||
+      normalized.endsWith(`- ${workshop.name}`)
+  );
+
+  if (!match) {
+    return {
+      workshopName: normalized,
+      day: WORKSHOP_DAY_MAP[normalized] || '',
+    };
+  }
+
+  return {
+    workshopName: match.name,
+    day: match.day,
+  };
+}
 
 function normalizePhone(raw) {
   const digits = String(raw || '').replace(/\D/g, '');
@@ -77,6 +114,7 @@ function isValidPhone(phone) {
 
 function buildPublicPayload() {
   return {
+    eventId: RSVP_EVENT_ID,
     title: EVENT_TITLE,
     slug: 'workshop-rsvp',
     isFreeEvent: true,
@@ -98,95 +136,46 @@ exports.getEventConfig = async (req, res) => {
   });
 };
 
-exports.register = async (req, res) => {
-  try {
-    const name = String(req.body?.name || '').trim();
-    const phone = normalizePhone(req.body?.phone);
-    const location = String(req.body?.location || '').trim();
-    const workshop = String(req.body?.workshop || '').trim();
-    const day = WORKSHOP_DAY_MAP[workshop];
-
-    if (!name || name.length < 2) {
-      return res.status(400).json({ success: false, message: 'Please enter your full name.' });
-    }
-
-    if (!isValidPhone(phone)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter a valid 10-digit phone number.',
-      });
-    }
-
-    if (!location) {
-      return res.status(400).json({ success: false, message: 'Please enter your location.' });
-    }
-
-    if (!day) {
-      return res.status(400).json({ success: false, message: 'Please select a valid workshop.' });
-    }
-
-    const existing = await WorkshopRsvpRegistration.findOne({ phone, workshop }).lean();
-    if (existing) {
-      return res.status(200).json({
-        success: true,
-        alreadyRegistered: true,
-        message: 'You are already registered for this workshop.',
-        data: existing,
-      });
-    }
-
-    const registration = await WorkshopRsvpRegistration.create({
-      name,
-      phone,
-      location,
-      workshop,
-      day,
-      eventTitle: EVENT_TITLE,
-      status: 'confirmed',
-    });
-
-    return res.status(201).json({
-      success: true,
-      alreadyRegistered: false,
-      message: 'Registration confirmed.',
-      data: registration,
-    });
-  } catch (error) {
-    if (error?.code === 11000) {
-      const existing = await WorkshopRsvpRegistration.findOne({
-        phone: normalizePhone(req.body?.phone),
-        workshop: String(req.body?.workshop || '').trim(),
-      }).lean();
-
-      return res.status(200).json({
-        success: true,
-        alreadyRegistered: true,
-        message: 'You are already registered for this workshop.',
-        data: existing,
-      });
-    }
-
-    console.error('[workshop-rsvp] register failed:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'We could not complete your registration. Please try again.',
-    });
-  }
-};
-
 exports.getAdminRegistrations = async (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
     const day = String(req.query.day || '').trim();
     const workshop = String(req.query.workshop || '').trim();
 
-    const filter = {};
-    if (day) filter.day = day;
-    if (workshop) filter.workshop = workshop;
+    const filter = {
+      event: RSVP_EVENT_ID,
+      status: { $in: ['confirmed', 'checked-in'] },
+    };
 
-    let registrations = await WorkshopRsvpRegistration.find(filter)
+    let registrations = await Booking.find(filter)
       .sort({ createdAt: -1 })
+      .populate('user', 'name phone city')
       .lean();
+
+    registrations = registrations
+      .map((booking) => {
+        const { workshopName, day: mappedDay } = getWorkshopMetaFromTicketType(booking.ticketType);
+        return {
+          _id: String(booking._id),
+          registrationNumber: `AWR-${String(booking._id).slice(-6).toUpperCase()}`,
+          name: booking.customerName || booking.user?.name || '',
+          phone: booking.customerPhone || booking.user?.phone || '',
+          location: booking.state || booking.user?.city || '',
+          workshop: workshopName,
+          day: mappedDay,
+          status: booking.status || '',
+          createdAt: booking.createdAt || booking.bookedAt,
+        };
+      })
+      .filter((registration) => registration.workshop && registration.day);
+
+    if (day) {
+      registrations = registrations.filter((registration) => registration.day === day);
+    }
+
+    if (workshop) {
+      registrations = registrations.filter((registration) => registration.workshop === workshop);
+    }
 
     if (q) {
       const needle = q.toLowerCase();
