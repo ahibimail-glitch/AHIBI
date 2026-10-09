@@ -303,7 +303,7 @@ export default function GeBlasterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a1628] text-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-[#0a1628] text-slate-100">
       <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       <Navbar />
 
@@ -363,7 +363,7 @@ export default function GeBlasterPage() {
         <>
           {/* ── Hero ─────────────────────────────────────────────────────────── */}
           <section className="relative">
-            <div className="relative h-[46vh] min-h-[320px] w-full overflow-hidden">
+            <div className="relative h-[60vh] min-h-[400px] w-full overflow-hidden sm:h-[46vh] sm:min-h-[340px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={config!.banner} alt={config!.title} className="h-full w-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-[#0a1628]/70 to-[#0a1628]/30" />
@@ -372,7 +372,7 @@ export default function GeBlasterPage() {
                   <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#6f9bff]">
                     Precision • Power • Performance
                   </p>
-                  <h1 className="mt-2 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
+                  <h1 className="mt-2 text-[28px] font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
                     GE Blaster
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm text-slate-300 sm:text-base">
@@ -400,11 +400,11 @@ export default function GeBlasterPage() {
             </div>
           </section>
 
-          <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
-            <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
+          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+            <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:gap-8">
               {/* Booking flow */}
-              <form onSubmit={handleBook} className="order-2 lg:order-1">
-                <div className="rounded-3xl border border-white/10 bg-[#0e1f3b] p-6 sm:p-7">
+              <form onSubmit={handleBook} className="order-1 lg:order-1">
+                <div className="rounded-3xl border border-white/10 bg-[#0e1f3b] p-4 sm:p-7">
                   <h2 className="text-lg font-bold text-white">Book your session</h2>
 
                   {/* Step 1 — Date */}
@@ -638,7 +638,7 @@ export default function GeBlasterPage() {
               </form>
 
               {/* Gallery + info */}
-              <aside className="order-1 space-y-6 lg:order-2">
+              <aside className="order-2 space-y-6 lg:order-2">
                 <div className="rounded-3xl border border-white/10 bg-[#0e1f3b] p-6">
                   <h3 className="text-sm font-bold uppercase tracking-wide text-[#6f9bff]">The Arena</h3>
                   <div className="mt-4 grid grid-cols-2 gap-2.5">
