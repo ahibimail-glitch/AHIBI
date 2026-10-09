@@ -52,6 +52,24 @@ export default function GeBlasterBookings() {
     }
   };
 
+  const seedEvent = async () => {
+    const ownerEmail = window.prompt("Venue owner's AHIBI email to give them the dashboard (optional — leave blank to skip):", "") || "";
+    try {
+      const token = localStorage.getItem("admin_token");
+      const res = await fetch(`/api/ge-blaster/admin/seed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(ownerEmail.trim() ? { ownerEmail: ownerEmail.trim() } : {}),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) throw new Error(json?.message || "Setup failed.");
+      alert(`GE Blaster event is ready.\nEvent id: ${json.data.eventId}\nSlots: ${json.data.slots.length}\nActive dates: ${json.data.activeDates}${json.data.organizerPromoted ? "\nOwner promoted to organizer." : ""}`);
+      fetchBookings();
+    } catch (e: any) {
+      alert(e?.message || "Setup failed.");
+    }
+  };
+
   useEffect(() => {
     fetchBookings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,6 +107,9 @@ export default function GeBlasterBookings() {
           <p className="text-sm text-gray-500">Daily Blaster Experience — exclusive 40-minute slots.</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={seedEvent} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+            Set up / refresh event
+          </button>
           <button onClick={fetchBookings} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>

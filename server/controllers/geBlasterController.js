@@ -433,3 +433,124 @@ exports.getAdminBookings = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Could not load GE Blaster bookings.' });
   }
 };
+
+// POST /api/ge-blaster/admin/seed  (admin) — create/refresh the event using the LIVE app connection
+exports.adminSeed = async (req, res) => {
+  try {
+    const ownerEmail = String((req.body && req.body.ownerEmail) || '').toLowerCase().trim();
+
+    let owner = null;
+    if (ownerEmail) {
+      owner = await User.findOne({ email: ownerEmail });
+      if (owner && owner.role !== 'organizer') {
+        owner.role = 'organizer';
+        await owner.save();
+      }
+    }
+    if (!owner) owner = await User.findOne().sort({ createdAt: 1 });
+    if (!owner) {
+      return res.status(400).json({ success: false, message: 'No users exist to own the event. Create a user first.' });
+    }
+
+    const SLOTS = ['3:00 PM – 3:40 PM', '3:40 PM – 4:20 PM', '4:20 PM – 5:00 PM'];
+    const GALLERY = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ url: `/ge-blaster/gallery-${n}.jpg`, caption: 'GE Blaster Nagaland' }));
+    const DESCRIPTION = [
+      'Book a private 40-minute GE Blaster session for your group. Each time slot is exclusive to one booking and can accommodate 2 to 6 players.',
+      '',
+      'How it works: pick a date, choose an available 40-minute slot, and select how many players (2–6). The total is calculated automatically at ₹350 per player. Once payment is successful, the full slot is reserved for your group and becomes unavailable to everyone else.',
+      '',
+      'Precision • Power • Performance. Quality gel, max impact, non-toxic. Play hard, stay safe.',
+      '',
+      'Participation is subject to GE Blaster safety rules and operator eligibility requirements. Need special bullets? Contact +91 8787401331 (call or WhatsApp).',
+    ].join('\n');
+
+    const istNow = new Date(Date.now() + 5.5 * 3600 * 1000);
+    const startStr = istNow.toISOString().slice(0, 10);
+    const base = new Date(`${startStr}T12:00:00+05:30`);
+    const days = 60;
+    const activeDates = [];
+    for (let i = 0; i < days; i += 1) activeDates.push(new Date(base.getTime() + i * 86400000));
+
+    const address = 'GE Blaster, Nagaland';
+    const city = 'Dimapur';
+
+    let event = await DailyEvent.findOne({ slug: EVENT_SLUG });
+
+    const baseFields = {
+      title: 'GE Blaster — Daily Blaster Experience',
+      description: DESCRIPTION,
+      banner: '/ge-blaster/banner.jpg',
+      coverImage: '/ge-blaster/banner.jpg',
+      gallery: GALLERY,
+      organizer: owner._id,
+      organizerInfo: { id: owner._id, name: owner.name || 'GE Blaster' },
+      duration: { hours: 0, minutes: 40 },
+      startTime: '15:00',
+      periodStartDate: activeDates[0],
+      periodEndDate: activeDates[activeDates.length - 1],
+      activeDates,
+      category: 'Sports',
+      status: 'approved',
+      approvalStatus: 'approved',
+      isPublic: true,
+      isFreeEvent: false,
+      location: { address, city },
+    };
+
+    if (!event) {
+      event = new DailyEvent({
+        ...baseFields,
+        slug: EVENT_SLUG,
+        createdBy: owner._id,
+        tags: ['gel blaster', 'adventure', 'team', 'nagaland'],
+        ticketTypes: SLOTS.map((name) => ({
+          name,
+          description: 'Exclusive 40-minute slot · 2–6 players · ₹350 per player',
+          price: PRICE_PER_PLAYER,
+          quantity: 1,
+          sold: 0,
+          capacity: 6,
+        })),
+        termsAndConditions:
+          'One slot = one booking. A successful booking reserves the full 40-minute session for your group (2–6 players). Participation is subject to GE Blaster safety rules and operator eligibility.',
+      });
+      await event.save();
+    } else {
+      Object.assign(event, baseFields);
+      if (!event.ticketTypes || event.ticketTypes.length === 0) {
+        event.ticketTypes = SLOTS.map((name) => ({
+          name,
+          description: 'Exclusive 40-minute slot · 2–6 players · ₹350 per player',
+          price: PRICE_PER_PLAYER,
+          quantity: 1,
+          sold: 0,
+          capacity: 6,
+        }));
+      } else {
+        event.ticketTypes.forEach((t) => {
+          t.price = PRICE_PER_PLAYER;
+          t.capacity = 6;
+          t.description = 'Exclusive 40-minute slot · 2–6 players · ₹350 per player';
+        });
+        event.markModified('ticketTypes');
+      }
+      await event.save();
+    }
+
+    return res.json({
+      success: true,
+      message: 'GE Blaster event created/refreshed.',
+      data: {
+        eventId: String(event._id),
+        slug: event.slug,
+        organizer: String(event.organizer),
+        organizerPromoted: !!ownerEmail && owner.role === 'organizer',
+        activeDates: event.activeDates.length,
+        slots: event.ticketTypes.map((t) => ({ id: String(t._id), name: t.name, price: t.price })),
+      },
+    });
+  } catch (error) {
+    console.error('[ge-blaster] adminSeed failed:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Seed failed.' });
+  }
+};
