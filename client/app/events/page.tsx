@@ -182,6 +182,7 @@ export default function EventsPage() {
   const [selectedCity, setSelectedCity]     = useState("all");
   const [selectedGenre, setSelectedGenre]   = useState("all");
   const [events, setEvents]                 = useState<Event[]>([]);
+  const [dailyEvents, setDailyEvents]       = useState<any[]>([]);
   const [isLoading, setIsLoading]           = useState(true);
   const [error, setError]                   = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen]     = useState(false);
@@ -203,6 +204,21 @@ export default function EventsPage() {
         setError(e instanceof Error ? e.message : "Failed to load events");
       } finally {
         setIsLoading(false);
+      }
+    })();
+  }, []);
+
+  // ── Fetch daily events ─────────────────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/daily-events?limit=1000`);
+        if (res.ok) {
+          const data = await res.json();
+          setDailyEvents(data.data?.dailyEvents || []);
+        }
+      } catch {
+        /* ignore */
       }
     })();
   }, []);
@@ -238,6 +254,11 @@ export default function EventsPage() {
     setSearchQuery(""); setSelectedCity("all"); setSelectedGenre("all");
     setIsFilterOpen(false);
   };
+  const dailyToShow = (selectedGenre === "all" || selectedGenre === "Daily")
+    ? dailyEvents.filter((d: any) => (d?.title || "").toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
+  const dailyHref = (d: any) => (d?.slug === "ge-blaster" ? "/ge-blaster" : `/events/daily/${d?._id}`);
+
   const hasActiveFilters = searchQuery !== "" || selectedCity !== "all" || selectedGenre !== "all";
 
   // ── Filtered & sorted events ───────────────────────────────────────────────
@@ -496,6 +517,17 @@ export default function EventsPage() {
 
               {/* ── Genre pill row ──────────────────────────────────────── */}
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+                <button
+                  onClick={() => setSelectedGenre(selectedGenre === "Daily" ? "all" : "Daily")}
+                  className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium transition-all border ${
+                    selectedGenre === "Daily"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-blue-200 hover:text-blue-600"
+                  }`}
+                >
+                  <span>🗓️</span>
+                  <span>Daily</span>
+                </button>
                 {GENRES.map((genre) => (
                   <button
                     key={genre}
@@ -514,6 +546,30 @@ export default function EventsPage() {
 
               {/* ── Events sections ─────────────────────────────────────── */}
               <div className="space-y-10">
+
+                  {/* Daily Experiences */}
+                  {dailyToShow.length > 0 && (
+                    <section>
+                      <SectionHeader title="Daily Experiences" count={dailyToShow.length} dot="bg-blue-500" />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        {dailyToShow.map((d: any) => (
+                          <Link key={d._id} href={dailyHref(d)} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
+                            <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                              <div className="relative aspect-[4/5] overflow-hidden bg-gray-100">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={d.banner} alt={d.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <span className="absolute left-2.5 top-2.5 rounded-lg bg-blue-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Daily</span>
+                              </div>
+                              <div className="p-3">
+                                <h3 className="line-clamp-2 text-sm font-bold text-gray-900">{d.title}</h3>
+                                <p className="mt-1 text-xs font-medium text-blue-600">Book a slot →</p>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </section>
+                  )}
                   
 
                   {/* Live */}
@@ -559,7 +615,7 @@ export default function EventsPage() {
                   )} */}
 
                   {/* Empty state */}
-                  {!currentSorted.length && !upcomingSorted.length && !pastSorted.length && (
+                  {!currentSorted.length && !upcomingSorted.length && !pastSorted.length && !dailyToShow.length && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-center justify-center py-20 text-center">
                       <div className="text-5xl mb-4">🔍</div>

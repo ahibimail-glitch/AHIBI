@@ -108,6 +108,25 @@ const BookingSchema = new mongoose.Schema({
   customerPhone: {
     type: String,
   },
+  // GE Blaster: number of players in the exclusive slot booking (2-6)
+  playerCount: {
+    type: Number,
+  },
+  // GE Blaster: whether the group requested special bullets
+  needSpecialBullets: {
+    type: Boolean,
+    default: false,
+  },
+  // Razorpay identifiers (set on verify)
+  razorpayPaymentId: {
+    type: String,
+  },
+  razorpayOrderId: {
+    type: String,
+  },
+  qrCode: {
+    type: String,
+  },
   // Country selection for HMF events
   country: {
     type: String,

@@ -83,6 +83,7 @@ import SupportChat from "./components/SupportChat";
 import LivestreamUserManagement from "./components/LivestreamUserManagement";
 import FutsalTournamentRegistrations from "./components/FutsalTournamentRegistrations";
 import WorkshopRsvpRegistrations from "./components/WorkshopRsvpRegistrations";
+import GeBlasterBookings from "./components/GeBlasterBookings";
 // import AikoHallManagement from "../allVenues/aiko-hall/adminDashboard.tsx/page";
 
 // --- Helper component for sidebar buttons ---
@@ -325,6 +326,8 @@ export default function AdminDashboard() {
         return <FutsalTournamentRegistrations />;
       case "workshop-rsvp":
         return <WorkshopRsvpRegistrations />;
+      case "ge-blaster":
+        return <GeBlasterBookings />;
       default:
         return <Dashboard stats={stats} setActiveView={setActiveView} />;
     }
@@ -474,6 +477,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={Video} label="NWA Wrestling" active={activeView === "nwa-wrestling-bookings"} onClick={() => { setActiveView("nwa-wrestling-bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Workshop RSVP" active={activeView === "workshop-rsvp"} onClick={() => { setActiveView("workshop-rsvp"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Ticket} label="GE Blaster" active={activeView === "ge-blaster"} onClick={() => { setActiveView("ge-blaster"); setSidebarOpen(false); }} />
           <SidebarButton icon={Heart} label="Donations" active={activeView === "donations"} onClick={() => { setActiveView("donations"); setSidebarOpen(false); }} />
        
           <div className="pt-4 pb-2 px-2">

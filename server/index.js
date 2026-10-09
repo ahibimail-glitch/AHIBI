@@ -54,6 +54,7 @@ const publicTermsRoutes = require('./routes/publicTermsRoutes');
 const futsalTournamentRoutes = require('./routes/futsalTournament.routes');
 const hornbillShowcaseRoutes = require('./routes/hornbillShowcase.routes');
 const workshopRsvpRoutes = require('./routes/workshopRsvp.routes');
+const geBlasterRoutes = require('./routes/geBlaster.routes');
 const {
   adminAnalyticsRoutes,
   organizerAnalyticsRoutes,
@@ -221,6 +222,7 @@ app.use('/api/public/terms', publicTermsRoutes);
 app.use('/api/futsal', futsalTournamentRoutes);
 app.use('/api/hornbill-showcase', hornbillShowcaseRoutes);
 app.use('/api/workshop-rsvp', workshopRsvpRoutes);
+app.use('/api/ge-blaster', geBlasterRoutes);
 
 logRouterRoutes('adminAnalyticsRoutes', adminAnalyticsRoutes, '/api/admin/analytics');
 
