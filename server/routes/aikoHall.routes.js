@@ -1,0 +1,46 @@
+const express = require('express');
+const { check } = require('express-validator');
+const aikoHallController = require('../controllers/aikoHallController');
+const aikoHallAuthController = require('../controllers/aikoHallAuthController');
+const { protectAiko } = require('../middlewares/aikoAuth');
+const { protect } = require('../middlewares/auth');
+
+const router = express.Router();
+
+// Public routes
+router.get('/', aikoHallController.getAikoHallDetails);
+router.get('/bookings', aikoHallController.getBookings);
+router.get('/bookings/:id', protect, aikoHallController.getBookingById);
+
+// Create booking with validation
+router.post('/bookings', protect, [
+  check('bookingDate', 'Booking date is required').isISO8601(),
+  check('startTime', 'Start time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  check('endTime', 'End time is required').matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/),
+  check('guestCount', 'Guest count is required').isInt({ min: 1, max: 250 }),
+  check('specialNotes', 'Special notes must be a string').optional().isString()
+], aikoHallController.createBooking);
+
+// Payment routes
+router.post('/bookings/create-order', protect, aikoHallController.createOrder);
+router.post('/bookings/verify-payment', protect, aikoHallController.verifyPayment);
+
+// Aiko Hall Admin Auth routes
+router.post('/auth/login', [
+  check('email', 'Please include a valid email').isEmail(),
+  check('password', 'Password is required').exists()
+], aikoHallAuthController.login);
+
+// Admin protected routes
+router.get('/stats', protectAiko, aikoHallController.getBookingStats);
+router.put('/settings', protectAiko, aikoHallController.updateSettings);
+router.put('/bookings/:id/status', [
+  protectAiko,
+  check('status', 'Status is required').isIn(['pending', 'approved', 'rejected', 'cancelled', 'completed']),
+  check('rejectionReason', 'Rejection reason is required when rejecting').if(
+    check('status').equals('rejected')
+  ).notEmpty(),
+  check('adminNotes', 'Admin notes must be a string').optional().isString()
+], aikoHallController.updateBookingStatus);
+
+module.exports = router;

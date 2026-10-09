@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment / secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build output
+.next/
+**/.next/
+dist/
+build/
+out/
+
+# Vercel
+.vercel/
+**/.vercel/
+
+# Logs
+*.log
+logs/
+**/logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Server runtime artifacts
+server/temp/
+server/exports/
