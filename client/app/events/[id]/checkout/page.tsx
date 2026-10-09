@@ -128,6 +128,7 @@ export default function CheckoutPage() {
   const isHMFEvent = HMF_id.includes(eventId);
   const isHFEvent = HF_id.includes(eventId);
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
+  const isAdmitEvent = eventId === "6ab29573107ecaa252c1d3be";
   const CHEESE_EVENT_ID = "6a28ecaba70d7b412aa9efb4";
   const CHEESE_GROUP_COUPONS: Record<string, string> = {
     GROUP10D1B1: "General Admission (June 26, BATCH 1)",
@@ -1061,8 +1062,13 @@ export default function CheckoutPage() {
                                   <p className="text-xs text-gray-600 mt-1">{quantity} ticket{quantity > 1 ? 's' : ''} added</p>
                                 )}
                                 <p className="mt-2 text-s text-gray-600">
-                                  Capacity: {ticket.capacity} {ticket.capacity === 1 ? "person" : "people"}
+                                  {isAdmitEvent ? "Admit" : "Capacity"}: {ticket.capacity} {ticket.capacity === 1 ? "person" : "people"}
                                 </p>
+                                {isAdmitEvent && (
+                                  <p className="mt-1 text-xs font-medium text-gray-500">
+                                    {Math.max(0, ticket.quantity - ticket.sold)} ticket{Math.max(0, ticket.quantity - ticket.sold) === 1 ? "" : "s"} remaining
+                                  </p>
+                                )}
                               </div>
                               <div className="text-left sm:text-right">
                                 <p className="text-lg font-bold text-gray-900">
