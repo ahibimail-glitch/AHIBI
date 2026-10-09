@@ -1,0 +1,233 @@
+{"level":"error","message":"Photo upload failed: Cannot read properties of undefined (reading 'id')","service":"ahibi-association","timestamp":"2025-07-21 00:25:16"}
+{"level":"error","message":"Photo upload failed: Cannot read properties of undefined (reading 'id')","service":"ahibi-association","timestamp":"2025-07-21 00:29:22"}
+{"level":"error","message":"Photo upload failed: Upload failed: Missing required parameter - file","service":"ahibi-association","timestamp":"2025-07-21 00:31:47"}
+{"level":"error","message":"Photo upload failed: Cannot read properties of undefined (reading 'id')","service":"pickleball-association","timestamp":"2025-07-21 00:34:40"}
+{"level":"info","message":"Photo uploaded successfully: pickleball/tgv2sbwysd0khfvtxqj6 by user anonymous","service":"pickleball-association","timestamp":"2025-07-21 00:37:38"}
+{"level":"info","message":"Photo uploaded successfully: pickleball/ratwtdqdl1ri3zewcjv9 by user anonymous","service":"pickleball-association","timestamp":"2025-07-21 00:38:54"}
+{"level":"info","message":"Photo uploaded successfully: pickleball/vjs2eb3izbjgnq1fuiyp by user anonymous","service":"pickleball-association","timestamp":"2025-07-21 00:42:14"}
+{"level":"info","message":"Photo uploaded successfully: pickleball/pc7bity32ezrrd3l7ryp by user anonymous","service":"pickleball-association","timestamp":"2025-07-21 00:47:51"}
+{"level":"info","message":"Photo uploaded successfully: pickleball/pa6qrrpozm8geid9902q by user anonymous","service":"pickleball-association","timestamp":"2025-07-21 00:51:07"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/y9qk7du1tnimkbvwtjoy by user anonymous","service":"ahibi-association","timestamp":"2025-07-21 00:55:53"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ns6qwbhbigz9lwwlhxdw by user anonymous","service":"ahibi-association","timestamp":"2025-07-22 09:17:38"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/iqzobm1q7o6zndiekhsm by user anonymous","service":"ahibi-association","timestamp":"2025-07-22 09:32:33"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/yia34gwe65hgy89ttton by user anonymous","service":"ahibi-association","timestamp":"2025-07-24 08:48:31"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/a5ilrbkdxyrrqyxfqucq by user anonymous","service":"ahibi-association","timestamp":"2025-07-24 13:55:48"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/wcg251xuonffqwuvcw1x by user anonymous","service":"ahibi-association","timestamp":"2025-07-24 14:01:39"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qvqmcw7hlbjpbpmewl3u by user anonymous","service":"ahibi-association","timestamp":"2025-07-24 14:05:45"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qhckgrbyaxuin1watebu by user anonymous","service":"ahibi-association","timestamp":"2025-07-24 23:19:03"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/o95k02lmvwpsxzisuys7 by user anonymous","service":"ahibi-association","timestamp":"2025-07-24 23:22:57"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/rmfxjbmssa0iwliaveax by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 16:31:03"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-07-25 17:04:01"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xtlliuxfchm9hgyadxhf by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:04:24"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/g8r47wrhpgpt8t2e0gpi by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:09:04"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/pldimvkw8lh5ex921zev by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:11:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/edybz2zfr98fkjxe0zzq by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:15:28"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/strrcahvsqgijlkc9p45 by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:17:37"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/bwjby2cm63ntrem3yx2d by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:22:04"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/uutmhjlinmenmweulqlk by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 17:27:30"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-07-25 17:27:32"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xlxrsszz9wpipjoatmub by user anonymous","service":"ahibi-association","timestamp":"2025-07-25 20:12:20"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/jm90dhpoyknfsfvdvxjk by user anonymous","service":"ahibi-association","timestamp":"2025-07-26 11:47:43"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/amc5omsfjt2piyrijwoe by user anonymous","service":"ahibi-association","timestamp":"2025-07-26 12:35:58"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/hgtze3o9wtqn79gcuyxy by user anonymous","service":"ahibi-association","timestamp":"2025-07-26 14:12:29"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/mlba7uvyrocbdl9klkty by user anonymous","service":"ahibi-association","timestamp":"2025-07-28 20:29:28"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tjc5v08cghae1qf2duyg by user anonymous","service":"ahibi-association","timestamp":"2025-08-01 17:59:44"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/kkx9pbatxo9ibgv4sutq by user anonymous","service":"ahibi-association","timestamp":"2025-08-05 21:15:27"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-09 13:26:21"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/uixrtdj7flmljbddajkb by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 16:14:25"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/l58qwe0rnvgeb9etdamw by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 16:52:30"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nmss3dbpy3zwgssime11 by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 16:53:09"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qza8emk4j9ziikzyyyw0 by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 16:53:41"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/us4dwbct7ks1a4r0knox by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:21:31"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tigmiw0vkgdyy0wlruni by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:22:21"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/v7lqu4tkmnfuck8zv0iz by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:27:15"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/smyxhio8xmbd9psovnmf by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:27:16"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qnrc8jhxctc1papcwnlc by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:31:07"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/k9pa6bwghfaexgqpdk8u by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:31:49"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/iqjvplpeh5eodmzhgi3y by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:32:39"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nbvo1fzkzm4gvvzudtft by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:34:17"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/bkzv1u49ey9jbfreplkk by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:36:11"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nuwhqemmydtynnvaqml8 by user anonymous","service":"ahibi-association","timestamp":"2025-08-11 17:41:26"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ef3hauprxjxtmbm21ebp by user anonymous","service":"ahibi-association","timestamp":"2025-08-20 18:32:51"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/heu7juszsxe0hc2xi9pl by user anonymous","service":"ahibi-association","timestamp":"2025-08-22 18:22:02"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/g7x0qqqeduzj8bxtqx0l by user anonymous","service":"ahibi-association","timestamp":"2025-08-22 18:30:05"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ask0o1td8kvict9yvcxj by user anonymous","service":"ahibi-association","timestamp":"2025-08-22 18:40:15"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-22 21:14:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/riwdqrdxtiimuwc3xo4o by user anonymous","service":"ahibi-association","timestamp":"2025-08-22 21:15:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qcaogkna7hcozdgvvldt by user anonymous","service":"ahibi-association","timestamp":"2025-08-27 00:10:32"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-28 16:26:29"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-28 16:26:51"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-08-28 16:26:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xrwwnoem4tffgnfrsafp by user anonymous","service":"ahibi-association","timestamp":"2025-08-28 16:28:50"}
+{"level":"error","message":"Photo upload failed: Upload failed: cloud_name is disabled","service":"ahibi-association","timestamp":"2025-09-02 00:44:35"}
+{"level":"error","message":"Photo upload failed: Upload failed: cloud_name is disabled","service":"ahibi-association","timestamp":"2025-09-02 00:47:29"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/iu59j4zm5c5qpmlspedq by user anonymous","service":"ahibi-association","timestamp":"2025-09-02 00:50:51"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ef5xalwncogtgin2qgz4 by user anonymous","service":"ahibi-association","timestamp":"2025-09-02 00:51:19"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/vhhoygs9pjlxk9slkirk by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 22:48:03"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 22:55:12"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 22:55:29"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/m6g8tmsgihwlncbjv0oh by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 22:56:40"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:03:27"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:04:28"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:04:48"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:06:37"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:07:23"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/b3vpjaaq3rngygp7kbxb by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 23:07:38"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/x3unaf0w9rhni9njzwoc by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 23:10:14"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/vub1sikv5xxqrelshghk by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 23:20:22"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:21:15"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/sw8o4tjmmqyzkbewpor2 by user anonymous","service":"ahibi-association","timestamp":"2025-09-06 23:21:27"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-06 23:21:51"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/i5bhkdfi5mxw6wl29wd4 by user anonymous","service":"ahibi-association","timestamp":"2025-09-08 14:25:28"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-08 15:32:35"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/bvnlnypqymuijxnavzlo by user anonymous","service":"ahibi-association","timestamp":"2025-09-08 15:35:24"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-11 17:56:49"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/puamqfwsppfdrvsd3sa3 by user anonymous","service":"ahibi-association","timestamp":"2025-09-11 17:57:58"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-09-11 18:00:32"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/budvsu4taatjcdr29z0y by user anonymous","service":"ahibi-association","timestamp":"2025-09-18 00:11:54"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/khd4wb8yw78lfdq6julh by user anonymous","service":"ahibi-association","timestamp":"2025-09-21 19:16:27"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/m2c0flal9ifoeep8sx9x by user anonymous","service":"ahibi-association","timestamp":"2025-09-22 19:58:42"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/iskm3q1flnlxi9bwbb0g by user anonymous","service":"ahibi-association","timestamp":"2025-09-22 19:59:04"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/dtk6jhafjgrixhruk1yg by user anonymous","service":"ahibi-association","timestamp":"2025-09-23 12:53:26"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/fdyhnmkyj8xqrykidart by user anonymous","service":"ahibi-association","timestamp":"2025-09-23 12:55:06"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tlgkielehhhzfhx6kcwb by user anonymous","service":"ahibi-association","timestamp":"2025-09-24 10:09:04"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nrgwf9we5gopk5hkc0va by user anonymous","service":"ahibi-association","timestamp":"2025-09-25 19:38:46"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/mvqn0cfgtfsn82u1sabg by user anonymous","service":"ahibi-association","timestamp":"2025-09-26 14:07:59"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/m2lktyrnwwssweaylg5a by user anonymous","service":"ahibi-association","timestamp":"2025-09-27 09:10:46"}
+{"level":"info","message":"Document uploaded successfully: ahibi/nis-analytics/dmuset15holaohnwcqej by user anonymous","service":"ahibi-association","timestamp":"2025-09-29 18:00:58"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/zk0hgdojtg3llooromnb by user anonymous","service":"ahibi-association","timestamp":"2025-09-29 23:30:19"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ao1tx6eck5xqhrnrkcjt by user anonymous","service":"ahibi-association","timestamp":"2025-10-06 13:15:48"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/e5uelm3hcoxhmhxn1qiw by user anonymous","service":"ahibi-association","timestamp":"2025-10-06 13:19:37"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/grsoaiimv8jvotjtqzgk by user anonymous","service":"ahibi-association","timestamp":"2025-10-24 13:49:53"}
+{"level":"info","message":"Photo uploaded successfully: venues/evi8woziczwh9jvjuvkd by user anonymous","service":"ahibi-association","timestamp":"2025-10-26 23:45:53"}
+{"level":"info","message":"Photo uploaded successfully: venues/gwsvhg12zlxwgzmo70jl by user anonymous","service":"ahibi-association","timestamp":"2025-11-12 17:05:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tegd9due1nb99fnnecsn by user anonymous","service":"ahibi-association","timestamp":"2025-11-14 21:24:59"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/wobtzjdzmdiatze4gqcv by user anonymous","service":"ahibi-association","timestamp":"2025-11-14 22:37:00"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/v8ellw2fsjl8xbumqsyq by user anonymous","service":"ahibi-association","timestamp":"2025-11-14 23:23:52"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/rwfaahgcjx4xfxthje9u by user anonymous","service":"ahibi-association","timestamp":"2025-11-14 23:26:21"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/cqfvhbd3ktiutkvlm5lj by user anonymous","service":"ahibi-association","timestamp":"2025-11-15 15:25:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ivxp4je1uhldk75nmnw0 by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 17:26:31"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/of9kv5uaftv39uyxdnst by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 17:36:28"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/lag2ewz3xsjipzu2q7lg by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 17:52:34"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/whhojx6ttczcgrnddijf by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 17:55:45"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/aspfl0083quxz3x7caxa by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 17:57:43"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/aqnditleykreufyq4qos by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 17:59:47"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/fvq5g1sztrui9zbxnmoi by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 18:01:31"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/maikrmqsxeggoizmtik1 by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 18:02:28"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/lqoqeot5doy9bxh1vdmt by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 18:03:18"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xgrw7pluo1qghlehrtdy by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 18:08:02"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/hiyne9iyuzlzfiyf2um4 by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 20:59:24"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/kbyiqcvjlkmndxtwtn9u by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:01:19"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qnrosgcurbfllhwnw3pz by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:04:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/bz1seiy8ncvusmyy0z5f by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:05:15"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/babk6nqyl1xj9gngcwtf by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:06:40"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tgelnttoxkxo086xbypx by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:07:26"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ecrqekzgjgflwumetqyh by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:09:54"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/zilfpd1un5uombal49ij by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:11:05"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/zt23jyuauq6ohe2sgiab by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:12:21"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/utymjxn0cwqiuawuuuwp by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:13:18"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/yr2jsja6ojlhj7gokgs6 by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:20:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/owacbmnlaplimvvsbrfl by user anonymous","service":"ahibi-association","timestamp":"2025-11-17 21:36:00"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-11-18 22:45:25"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2025-11-18 22:45:53"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/lmbl4zjcpeidkpxgajcy by user anonymous","service":"ahibi-association","timestamp":"2025-11-18 22:47:24"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/mes0wjw3nzahmzwrc5yi by user anonymous","service":"ahibi-association","timestamp":"2025-11-18 22:47:57"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/sb3a2ewealrrhfczly3w by user anonymous","service":"ahibi-association","timestamp":"2025-11-18 23:08:45"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/rlrslx2tqhh3s6xpf8t7 by user anonymous","service":"ahibi-association","timestamp":"2025-11-18 23:14:28"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nwcteyaffdmnbfmjvxjy by user anonymous","service":"ahibi-association","timestamp":"2025-11-19 20:27:50"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/flqxae9o4zmp3zee2pn6 by user anonymous","service":"ahibi-association","timestamp":"2025-11-26 15:04:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/buuhna0ucakphms1kw05 by user anonymous","service":"ahibi-association","timestamp":"2025-12-05 09:36:46"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/uomxk2sckvilxw0sjupt by user anonymous","service":"ahibi-association","timestamp":"2025-12-05 09:47:09"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/zrhavymu6rj8mjyhankn by user anonymous","service":"ahibi-association","timestamp":"2025-12-20 20:58:22"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/etvdujiyhq9yct3ouf6j by user anonymous","service":"ahibi-association","timestamp":"2026-01-28 17:31:46"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/lslruabmexofpq2208fg by user anonymous","service":"ahibi-association","timestamp":"2026-01-28 17:31:50"}
+{"level":"info","message":"Document uploaded successfully: artists/tech-rider/skbmwynk8rao5mze5jla by user anonymous","service":"ahibi-association","timestamp":"2026-01-31 00:16:18"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/prslsfxvioyttyuf1nwy by user anonymous","service":"ahibi-association","timestamp":"2026-02-01 15:07:39"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ycwzfh7mwbe7nprvjibo by user anonymous","service":"ahibi-association","timestamp":"2026-02-05 14:44:03"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/bmxz0qq2ys3rlqbfeivs by user anonymous","service":"ahibi-association","timestamp":"2026-02-05 14:44:06"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/swdotnncdvvb4wz2xsk7 by user anonymous","service":"ahibi-association","timestamp":"2026-02-05 14:52:20"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/mcrneb4qkarufl952m2v by user anonymous","service":"ahibi-association","timestamp":"2026-02-05 14:52:28"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/jarhtfqkn1nm4dcmeak9 by user anonymous","service":"ahibi-association","timestamp":"2026-02-06 14:31:54"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/x0rnpligd0aofna7mm1l by user anonymous","service":"ahibi-association","timestamp":"2026-02-06 14:32:00"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/meoxf5kxtri20gokallj by user anonymous","service":"ahibi-association","timestamp":"2026-02-06 14:34:58"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/cei9aaqfdfgdg4bgupfg by user anonymous","service":"ahibi-association","timestamp":"2026-02-06 14:35:01"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/al2s8xllifmscvj7vicq by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 17:59:52"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/mgfspdrzabxwcfd80uae by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:03:02"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xm6kh4jd3hfwzooeumtt by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:03:06"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/kbvibwfbrtpxzqkj6plq by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:04:25"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/m4zfdv4j8tphjd7ozln2 by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:04:32"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tpawlj01schjanh9qqev by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:38:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/pekuxivrgsixc9qg0iws by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:39:00"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ybj613k5bhr9nisxzm47 by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 18:39:04"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/o7tpctx3gv7p9qavnwqo by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:01:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xvssufva8vys08rtejeb by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:01:39"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ryjufgocsmicwbui9uco by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:06:02"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ziq4wyrpmx4pg41gmde0 by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:06:06"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/kaxajfdwczaynzkqizsd by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:10:04"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/p5qnyc9fhxl1bezlhdv7 by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:10:07"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/bjtzv5tzw7djuhrtgiay by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:23:32"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nnt6vycgjpgvdt9txpv3 by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:23:36"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/anjc84cacq6j7zhethg8 by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:24:49"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/o76eeut3hq7vjtjxtidg by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:24:51"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/xmh7fqpne8m5ht6swvds by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:27:01"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/rexeqdowhwpwf86cmqvm by user anonymous","service":"ahibi-association","timestamp":"2026-02-07 19:27:09"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 00:12:38"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 00:16:34"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 00:28:14"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 16:27:00"}
+{"level":"info","message":"1 photos uploaded successfully by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 16:27:15"}
+{"level":"info","message":"Photo deleted successfully: venue-images/szlzpuvhc68mcvprj42q by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:34:15"}
+{"level":"info","message":"Cover image set successfully: venue-images/yi3blmzgwdgazuiijy4f by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:37:56"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:38:10"}
+{"level":"info","message":"Cover image set successfully: venue-images/t6unsxn7qqjo6a8ofbmo by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:40:04"}
+{"level":"info","message":"2 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:44:12"}
+{"level":"info","message":"3 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:46:20"}
+{"level":"info","message":"Space cover image set successfully: space-images/waeo1xm2inxmlcwfwdoo for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:46:43"}
+{"level":"info","message":"Space cover image set successfully: space-images/juuepk3pbavodo9fkase for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:49:13"}
+{"level":"info","message":"Space cover image set successfully: space-images/p1xfsut8honkem7vieqi for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:49:33"}
+{"level":"info","message":"Space cover image set successfully: space-images/waeo1xm2inxmlcwfwdoo for space 6996f0f18ffa1d878c2aedbb by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:49:35"}
+{"level":"info","message":"Photo deleted successfully: space-images/juuepk3pbavodo9fkase by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:50:37"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:57:19"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:57:49"}
+{"level":"info","message":"Space cover image set successfully: space-images/xsbp9wtlqu0mmvy1vfkk for space 6996f3898ffa1d878c2af0fe by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:58:10"}
+{"level":"info","message":"Space cover image set successfully: space-images/xsbp9wtlqu0mmvy1vfkk for space 6996f3898ffa1d878c2af0fe by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 16:58:15"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 17:11:37"}
+{"level":"info","message":"Photo deleted successfully: space-images/tcuuzbqcl3iyhzt7byzj by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 17:12:17"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 17:13:05"}
+{"level":"info","message":"Space cover image set successfully: space-images/ryyf8sjjn9wi4c09orcy for space 6996f3898ffa1d878c2af0fe by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 17:13:08"}
+{"level":"info","message":"1 photos uploaded successfully by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 17:13:44"}
+{"level":"info","message":"Cover image set successfully: venue-images/x5zkpktpjtwn5idcw0gk by venue 6996da8e0d58e9dacdb38f2c","service":"ahibi-association","timestamp":"2026-02-19 17:13:54"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/k41egmkhz7sha2tkdnmb by user anonymous","service":"ahibi-association","timestamp":"2026-02-19 17:45:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/jozgh4nx3bx43pycupeb by user anonymous","service":"ahibi-association","timestamp":"2026-03-19 19:43:35"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/geua3bqc3af6baeqyukj by user anonymous","service":"ahibi-association","timestamp":"2026-03-19 19:44:13"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/yv8j7vcfbakpil5hpsti by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:32:13"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/zlv9saihy6bpqkcjowqn by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:32:40"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/vinxvj0c81dzxftm3bed by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:52:30"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/nzewzyjuwjqedc2pjc4w by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:52:41"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/tbvvbfcbsgesi5iaksz1 by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:55:25"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/jtk8t8xbnkgoiiramhxz by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:55:41"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/s2a7dniif6hebloryrty by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:58:30"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/owx1fqyajevpx29uqtoq by user anonymous","service":"ahibi-association","timestamp":"2026-03-22 23:58:34"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/cxcnonopm4ihbbdka9uu by user anonymous","service":"ahibi-association","timestamp":"2026-03-31 14:41:53"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/wfhvitpnlizrojziobl3 by user anonymous","service":"ahibi-association","timestamp":"2026-03-31 14:42:05"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/otzfewe1j5t6w8pw1gnz by user anonymous","service":"ahibi-association","timestamp":"2026-03-31 16:55:22"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/oxmj4rdgmucj7l3lxlyk by user anonymous","service":"ahibi-association","timestamp":"2026-03-31 16:55:26"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/igmbr417xafmsvjzmger by user anonymous","service":"ahibi-association","timestamp":"2026-03-31 16:57:15"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/cqjlntvycvhr7pzfssj3 by user anonymous","service":"ahibi-association","timestamp":"2026-03-31 16:57:18"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/fli0nrep5tuotchtozsp by user anonymous","service":"ahibi-association","timestamp":"2026-04-23 03:14:37"}
+{"level":"info","message":"Document uploaded successfully: artists/tech-rider/xm80tkbifl3xweejk2ay by user anonymous","service":"ahibi-association","timestamp":"2026-04-23 03:45:07"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/m4vtatjukq8ykga8tavk by user anonymous","service":"ahibi-association","timestamp":"2026-04-30 21:50:45"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/i8o6tq45hqnzx31ndwez by user anonymous","service":"ahibi-association","timestamp":"2026-05-12 14:05:52"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/trqyaqcuioquw4h9h44b by user anonymous","service":"ahibi-association","timestamp":"2026-05-12 14:16:06"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/vtk2pfctsitqsmdix7sz by user anonymous","service":"ahibi-association","timestamp":"2026-05-12 14:17:02"}
+{"level":"error","message":"Photo upload failed: Upload failed: undefined","service":"ahibi-association","timestamp":"2026-06-01 20:30:55"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/thalxjehrndoyo8pi1g3 by user anonymous","service":"ahibi-association","timestamp":"2026-06-01 20:32:19"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ejpz9tu9mrpf7gcizt1q by user anonymous","service":"ahibi-association","timestamp":"2026-06-01 20:38:41"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/t7tmszwglc40zkevl8xt by user anonymous","service":"ahibi-association","timestamp":"2026-06-01 20:39:02"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/ie97acc5zgmv1x8dwycq by user anonymous","service":"ahibi-association","timestamp":"2026-06-01 20:39:44"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/eaaxxfptz8hmwhzqovpm by user anonymous","service":"ahibi-association","timestamp":"2026-07-06 18:39:53"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/qoyde0z5fvccw6jmgojf by user anonymous","service":"ahibi-association","timestamp":"2026-07-06 18:39:58"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/blziek5v4tcoqrsk0csl by user anonymous","service":"ahibi-association","timestamp":"2026-10-06 19:17:56"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/actfl8zs3mj1hdantd6l by user anonymous","service":"ahibi-association","timestamp":"2026-10-06 19:17:58"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/lkquwgwpunlxtto6ay0j by user anonymous","service":"ahibi-association","timestamp":"2026-10-07 18:37:16"}
+{"level":"info","message":"Photo uploaded successfully: ahibi/hc456yu3fjmbylovmgpj by user anonymous","service":"ahibi-association","timestamp":"2026-10-07 18:37:16"}
