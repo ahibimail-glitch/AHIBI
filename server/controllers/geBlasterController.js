@@ -494,7 +494,7 @@ exports.adminSeed = async (req, res) => {
       approvalStatus: 'approved',
       isPublic: true,
       isFreeEvent: false,
-      location: { address, city },
+      location: { address, city, coordinates: { type: 'Point', coordinates: [93.7266, 25.9091] } },
     };
 
     if (!event) {

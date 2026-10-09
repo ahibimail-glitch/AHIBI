@@ -137,7 +137,7 @@ async function main() {
       approvalStatus: 'approved',
       isPublic: true,
       isFreeEvent: false,
-      location: { address, city },
+      location: { address, city, coordinates: { type: 'Point', coordinates: [93.7266, 25.9091] } },
     });
     await event.save();
     console.log('Created GE Blaster event.');
@@ -160,7 +160,7 @@ async function main() {
     event.approvalStatus = 'approved';
     event.isPublic = true;
     event.isFreeEvent = false;
-    event.location = { address, city };
+    event.location = { address, city, coordinates: { type: 'Point', coordinates: [93.7266, 25.9091] } };
 
     if (!event.ticketTypes || event.ticketTypes.length === 0) {
       event.ticketTypes = SLOTS.map((name) => ({
