@@ -61,13 +61,16 @@ function buildActiveDates(startStr, days) {
 }
 
 async function main() {
-  const uri = process.env.MONGODB_URI;
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
   if (!uri) {
-    console.error('MONGODB_URI is not set. Run this from the server/ directory with your .env present.');
+    console.error('MONGO_URI (or MONGODB_URI) is not set. Run this from the server/ directory with your .env present.');
     process.exit(1);
   }
 
-  await mongoose.connect(uri);
+  mongoose.set('strictQuery', true);
+  mongoose.set('bufferTimeoutMS', 30000);
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 30000 });
+  await mongoose.connection.asPromise();
   console.log('Connected to MongoDB.');
 
   // Resolve organizer / createdBy user
