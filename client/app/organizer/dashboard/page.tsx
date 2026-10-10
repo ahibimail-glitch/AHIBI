@@ -41,6 +41,7 @@ import {
 import Dashboard from "../components/Dashboard"
 import Events from "../components/Events"
 import Bookings from "../components/Bookings"
+import WorkshopRsvp from "../components/WorkshopRsvp"
 import CreateEventForm from "../components/CreateEventForm"
 import CreateDailyEventForm from "../components/CreateDailyEventForm"
 import EditDailyEventForm from "../components/EditDailyEventForm"
@@ -146,6 +147,8 @@ export default function OrganizerDashboard() {
 
   // Dashboard data is now fetched internally by the Dashboard component
 
+  const isWorkshopOrganizer = String((user as any)?.phone || "").replace(/\D/g, "").endsWith("8837227218");
+
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
@@ -185,6 +188,8 @@ export default function OrganizerDashboard() {
         ) : <DailyEvents />
       case "bookings":
         return <Bookings />
+      case "workshop-rsvp":
+        return <WorkshopRsvp />
       case "artists":
         return <Artists />
       case "artist-booking":
@@ -327,6 +332,17 @@ export default function OrganizerDashboard() {
                 setSidebarOpen(false)
               }}
             />
+            {isWorkshopOrganizer && (
+              <SidebarButton
+                icon={ScrollText}
+                label="Workshop RSVP"
+                active={activeView === "workshop-rsvp"}
+                onClick={() => {
+                  setActiveView("workshop-rsvp")
+                  setSidebarOpen(false)
+                }}
+              />
+            )}
             <SidebarButton
               icon={Music}
               label="Artists"

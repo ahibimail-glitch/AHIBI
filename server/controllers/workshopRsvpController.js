@@ -251,3 +251,22 @@ exports.getAdminRegistrations = async (req, res) => {
     });
   }
 };
+
+// Organizer-facing view of workshop RSVP registrations.
+// Gated to the WENN Bazaar organizer (matched by phone); override via WORKSHOP_RSVP_ORGANIZER_PHONE.
+exports.getOrganizerRegistrations = async (req, res) => {
+  try {
+    const allowed = normalizePhone(process.env.WORKSHOP_RSVP_ORGANIZER_PHONE || '8837227218');
+    const mine = normalizePhone(req.user && (req.user.phone || req.user.contactInfo?.phone));
+    if (!mine || mine !== allowed) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your organizer account is not linked to the Workshop RSVP event.',
+      });
+    }
+    return exports.getAdminRegistrations(req, res);
+  } catch (error) {
+    console.error('[workshop-rsvp] getOrganizerRegistrations failed:', error);
+    return res.status(500).json({ success: false, message: 'Could not load workshop registrations.' });
+  }
+};
