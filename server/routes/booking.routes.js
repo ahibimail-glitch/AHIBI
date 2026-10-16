@@ -10,11 +10,13 @@ const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
 const whatsappService = require('../services/whatsappService');
 const Scan = require("../models/Scan");
+const workshopRsvpController = require("../controllers/workshopRsvpController");
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
 const MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT = 10;
 const SERIAL_NUMBER_EVENT_ID = LIMITED_EVENT_ID;
+const WORKSHOP_RSVP_EVENT_ID = workshopRsvpController.RSVP_EVENT_ID;
 
 async function computeTicketSerialNumber(booking) {
   const eventId =
@@ -250,6 +252,14 @@ router.post("/", auth.protect, async (req, res) => {
     const cutoff = isEvent.bookingEndTime ? new Date(isEvent.bookingEndTime) : (isEvent.endDate ? new Date(isEvent.endDate) : null);
     if (cutoff && !isNaN(cutoff.getTime()) && now > cutoff) {
       return res.status(400).json({ message: "Bookings are closed for this event." });
+    }
+
+    // Workshop RSVP: auto-close per day, and shut down after Day 3
+    if (String(event) === String(WORKSHOP_RSVP_EVENT_ID)) {
+      const blockReason = workshopRsvpController.getWorkshopRegistrationBlockReason(ticketType, now);
+      if (blockReason) {
+        return res.status(400).json({ message: blockReason });
+      }
     }
 
     // Determine if this is a free/RSVP booking

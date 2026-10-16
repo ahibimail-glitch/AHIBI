@@ -99,6 +99,59 @@ const WORKSHOP_DAY_MAP = Object.fromEntries(
 );
 const DAYS = ['Day 1', 'Day 2', 'Day 3'];
 
+/** Calendar date (YYYY-MM-DD) for each workshop day, IST. */
+const DAY_DATES = {
+  'Day 1': '2026-10-15',
+  'Day 2': '2026-10-16',
+  'Day 3': '2026-10-17',
+};
+
+/**
+ * Per-day RSVP cutoff (IST):
+ * - Day 1 & Day 2 close at the start of that day (00:00 IST) so past/current days stop taking RSVPs.
+ * - Day 3 stays open through the day and closes at end of Day 3; then the whole RSVP shuts down.
+ */
+function getDayCloseAt(day) {
+  const date = DAY_DATES[day];
+  if (!date) return null;
+  const isFinalDay = day === DAYS[DAYS.length - 1];
+  return isFinalDay
+    ? new Date(`${date}T23:59:59.999+05:30`)
+    : new Date(`${date}T00:00:00+05:30`);
+}
+
+function getEventCloseAt() {
+  const lastDay = DAYS[DAYS.length - 1];
+  const date = DAY_DATES[lastDay];
+  return date ? new Date(`${date}T23:59:59.999+05:30`) : null;
+}
+
+function isDayClosed(day, now = new Date()) {
+  const closeAt = getDayCloseAt(day);
+  if (!closeAt || Number.isNaN(closeAt.getTime())) return false;
+  return now.getTime() >= closeAt.getTime();
+}
+
+function isEventClosed(now = new Date()) {
+  const closeAt = getEventCloseAt();
+  if (!closeAt || Number.isNaN(closeAt.getTime())) return false;
+  return now.getTime() > closeAt.getTime();
+}
+
+function getWorkshopRegistrationBlockReason(ticketType, now = new Date()) {
+  if (isEventClosed(now)) {
+    return 'Workshop RSVP has closed. Registration is no longer available.';
+  }
+  const { workshopName, day } = getWorkshopMetaFromTicketType(ticketType);
+  if (!day) {
+    return null;
+  }
+  if (isDayClosed(day, now)) {
+    return `Registration for ${day}${workshopName ? ` (${workshopName})` : ''} has closed.`;
+  }
+  return null;
+}
+
 const WORKSHOP_CAPACITY = {
   'Loin Loom Weaving': 20,
   'Textile Dyeing Techniques': 50,
@@ -144,7 +197,11 @@ function isValidPhone(phone) {
   return /^\d{10}$/.test(phone);
 }
 
-function buildPublicPayload() {
+function buildPublicPayload(now = new Date()) {
+  const eventClosed = isEventClosed(now);
+  const eventCloseAt = getEventCloseAt();
+  const dayClosedMap = Object.fromEntries(DAYS.map((day) => [day, eventClosed || isDayClosed(day, now)]));
+
   return {
     eventId: RSVP_EVENT_ID,
     title: EVENT_TITLE,
@@ -153,16 +210,29 @@ function buildPublicPayload() {
     registrationLabel: 'Free RSVP',
     description:
       'Submit your registration to attend an AHIBI workshop. Your selected workshop is assigned to the corresponding event day automatically.',
-    days: DAYS.map((day) => ({
-      day,
-      workshops: WORKSHOPS.filter((workshop) => workshop.day === day).map((workshop) => workshop.name),
-    })),
+    isClosed: eventClosed,
+    closesAt: eventCloseAt ? eventCloseAt.toISOString() : null,
+    days: DAYS.map((day) => {
+      const closeAt = getDayCloseAt(day);
+      return {
+        day,
+        isClosed: Boolean(dayClosedMap[day]),
+        closesAt: closeAt ? closeAt.toISOString() : null,
+        workshops: WORKSHOPS.filter((workshop) => workshop.day === day).map((workshop) => workshop.name),
+      };
+    }),
     workshops: WORKSHOPS.map((workshop) => ({
       ...workshop,
+      isClosed: Boolean(dayClosedMap[workshop.day]),
       capacity: WORKSHOP_CAPACITY[workshop.name] || null,
     })),
   };
 }
+
+exports.RSVP_EVENT_ID = RSVP_EVENT_ID;
+exports.isEventClosed = isEventClosed;
+exports.isDayClosed = isDayClosed;
+exports.getWorkshopRegistrationBlockReason = getWorkshopRegistrationBlockReason;
 
 exports.getEventConfig = async (req, res) => {
   return res.json({

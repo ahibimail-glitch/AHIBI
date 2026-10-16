@@ -15,6 +15,7 @@ import {
   ArrowRight,
   PartyPopper,
   Ticket,
+  Ban,
 } from "lucide-react";
 
 type Workshop = {
@@ -27,6 +28,7 @@ type Workshop = {
   speaker?: string;
   image?: string;
   capacity?: number | string | null;
+  isClosed?: boolean;
 };
 
 type EventConfig = {
@@ -36,8 +38,10 @@ type EventConfig = {
   isFreeEvent: boolean;
   registrationLabel: string;
   description: string;
+  isClosed?: boolean;
+  closesAt?: string | null;
   workshops: Workshop[];
-  days: Array<{ day: string; workshops: string[] }>;
+  days: Array<{ day: string; workshops: string[]; isClosed?: boolean; closesAt?: string | null }>;
 };
 
 type ConfirmedItem = {
@@ -105,6 +109,15 @@ export default function WorkshopRsvp() {
           throw new Error(result?.message || "Failed to load workshop details.");
         }
         setConfig(result.data);
+        // Drop any selections that belong to days already closed.
+        const closedNames = new Set(
+          (result.data?.workshops || [])
+            .filter((w: Workshop) => w.isClosed)
+            .map((w: Workshop) => w.name)
+        );
+        if (closedNames.size > 0) {
+          setSelected((prev) => prev.filter((name) => !closedNames.has(name)));
+        }
       } catch (fetchError: any) {
         setError(fetchError?.message || "Failed to load workshop details.");
       } finally {
@@ -135,24 +148,40 @@ export default function WorkshopRsvp() {
   }, [authChecked]);
 
   const workshopsByDay = useMemo(() => {
-    const groups: Array<{ day: string; items: Workshop[] }> = [];
+    const groups: Array<{ day: string; items: Workshop[]; isClosed: boolean }> = [];
     (config?.workshops || []).forEach((w) => {
       let group = groups.find((g) => g.day === w.day);
       if (!group) {
-        group = { day: w.day, items: [] };
+        const dayMeta = config?.days?.find((d) => d.day === w.day);
+        group = {
+          day: w.day,
+          items: [],
+          isClosed: Boolean(w.isClosed || dayMeta?.isClosed),
+        };
         groups.push(group);
       }
       group.items.push(w);
+      if (w.isClosed) group.isClosed = true;
     });
     return groups;
   }, [config]);
 
+  const openWorkshops = useMemo(
+    () => (config?.workshops || []).filter((w) => !w.isClosed),
+    [config]
+  );
+
   const selectedWorkshops = useMemo(
-    () => (config?.workshops || []).filter((w) => selected.includes(w.name)),
-    [config, selected]
+    () => openWorkshops.filter((w) => selected.includes(w.name)),
+    [openWorkshops, selected]
   );
 
   const toggle = (name: string) => {
+    const workshop = config?.workshops?.find((w) => w.name === name);
+    if (workshop?.isClosed) {
+      setError(`Registration for ${workshop.day} has closed.`);
+      return;
+    }
     setError("");
     setSelected((prev) =>
       prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
@@ -165,7 +194,11 @@ export default function WorkshopRsvp() {
   };
 
   const validate = () => {
-    if (selected.length === 0) return "Please select at least one workshop to attend.";
+    if (selectedWorkshops.length === 0) {
+      return openWorkshops.length === 0
+        ? "Workshop RSVP has closed."
+        : "Please select at least one open workshop to attend.";
+    }
     if (!form.name.trim()) return "Please enter your full name.";
     const phoneDigits = form.phone.replace(/\D/g, "");
     const normalized =
@@ -271,6 +304,35 @@ export default function WorkshopRsvp() {
     );
   }
 
+  // ─── Fully closed after Day 3 ───────────────────────────────────────────────────
+  if (config?.isClosed || (config && openWorkshops.length === 0)) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center bg-[#faf6ef] px-4 py-12">
+        <div className="w-full max-w-lg overflow-hidden rounded-[28px] border border-[#ecdfc9] bg-white text-center shadow-[0_24px_70px_rgba(90,60,20,0.12)]">
+          <div className="bg-gradient-to-br from-[#b23a33] to-[#8f2d27] px-8 py-10 text-white">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15">
+              <Ban className="h-8 w-8" />
+            </div>
+            <h2 className="mt-5 text-2xl font-bold tracking-tight">Registration closed</h2>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/85">
+              Workshop RSVP for WENN Bazaar 2026 has ended. Thank you to everyone who registered.
+            </p>
+          </div>
+          <div className="px-6 py-6 sm:px-8">
+            <button
+              type="button"
+              onClick={() => router.push("/events")}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#b23a33] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#8f2d27]"
+            >
+              Browse other events
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ─── Success / confirmation ─────────────────────────────────────────────────────
   if (confirmed) {
     return (
@@ -355,12 +417,18 @@ export default function WorkshopRsvp() {
             Workshop RSVP
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-white/90 sm:text-base">
-            Agri Expo, 4th Mile, Chumoukedima · 15–17 October 2026. Pick the hands-on workshops you'd
-            like to attend — select as many as you like. Entry is completely free.
+            Agri Expo, 4th Mile, Chumoukedima · 15–17 October 2026. Day 1 and Day 2 registration is
+            closed. Day 3 workshops are still open — entry is free.
           </p>
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur">
-            <CheckCircle2 className="h-4 w-4" />
-            Free RSVP
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur">
+              <CheckCircle2 className="h-4 w-4" />
+              Free RSVP
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-black/20 px-4 py-1.5 text-sm font-semibold text-white backdrop-blur">
+              <Ban className="h-4 w-4" />
+              Day 1 & Day 2 closed
+            </div>
           </div>
         </div>
       </section>
@@ -369,38 +437,55 @@ export default function WorkshopRsvp() {
         {/* Workshop selection, grouped by day */}
         <div className="space-y-10">
           {workshopsByDay.map((group) => (
-            <div key={group.day}>
-              <div className="mb-4 flex items-center gap-3">
-                <span className="rounded-full bg-[#b23a33] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            <div key={group.day} className={group.isClosed ? "opacity-75" : undefined}>
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide text-white ${
+                    group.isClosed ? "bg-[#8a7a66]" : "bg-[#b23a33]"
+                  }`}
+                >
                   {group.day}
                 </span>
                 <span className="text-sm font-semibold text-[#6b5e4d]">{DAY_META[group.day]}</span>
+                {group.isClosed ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f1e7d5] px-2.5 py-1 text-xs font-semibold text-[#6b5e4d]">
+                    <Ban className="h-3 w-3" />
+                    Registration closed
+                  </span>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {group.items.map((workshop) => {
-                  const isSelected = selected.includes(workshop.name);
+                  const isClosed = Boolean(workshop.isClosed || group.isClosed);
+                  const isSelected = !isClosed && selected.includes(workshop.name);
                   return (
                     <button
                       key={workshop.name}
                       type="button"
                       onClick={() => toggle(workshop.name)}
+                      disabled={isClosed}
                       aria-pressed={isSelected}
+                      aria-disabled={isClosed}
                       className={`group relative overflow-hidden rounded-3xl border-2 bg-white text-left transition-all focus:outline-none ${
-                        isSelected
+                        isClosed
+                          ? "cursor-not-allowed border-transparent opacity-70 shadow-[0_10px_30px_rgba(90,60,20,0.06)]"
+                          : isSelected
                           ? "border-[#b23a33] shadow-[0_18px_50px_rgba(178,58,51,0.22)]"
                           : "border-transparent shadow-[0_10px_30px_rgba(90,60,20,0.08)] hover:border-[#ecdfc9] hover:shadow-[0_16px_40px_rgba(90,60,20,0.14)]"
                       }`}
                     >
-                      {/* Selected badge */}
+                      {/* Selected / closed badge */}
                       <span
                         className={`absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${
-                          isSelected
+                          isClosed
+                            ? "border-white/80 bg-[#6b5e4d] text-white"
+                            : isSelected
                             ? "border-white bg-[#b23a33] text-white"
                             : "border-white/80 bg-white/70 text-transparent backdrop-blur group-hover:bg-white"
                         }`}
                       >
-                        <Check className="h-4 w-4" />
+                        {isClosed ? <Ban className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                       </span>
 
                       <div className="relative aspect-[3/4] overflow-hidden bg-[#f1e7d5]">
@@ -409,8 +494,15 @@ export default function WorkshopRsvp() {
                           src={encodeURI(workshop.image || "")}
                           alt={workshop.name}
                           loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                          className={`h-full w-full object-cover transition-transform duration-500 ${
+                            isClosed ? "grayscale-[35%]" : "group-hover:scale-[1.03]"
+                          }`}
                         />
+                        {isClosed && (
+                          <span className="absolute inset-x-0 bottom-0 bg-black/55 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide text-white">
+                            Closed
+                          </span>
+                        )}
                         {isSelected && (
                           <span className="absolute inset-0 ring-4 ring-inset ring-[#b23a33]/70" />
                         )}
@@ -455,9 +547,16 @@ export default function WorkshopRsvp() {
           <div className="border-b border-[#f0e7d6] bg-[#faf6ef] px-6 py-5 sm:px-8">
             <h2 className="text-lg font-bold text-[#2f261a]">Your details</h2>
             <p className="mt-1 text-sm text-[#6b5e4d]">
-              {selected.length > 0
-                ? `${selected.length} workshop${selected.length > 1 ? "s" : ""} selected`
-                : "Select your workshops above, then fill in your details."}
+              {selectedWorkshops.length > 0
+                ? `${selectedWorkshops.length} workshop${selectedWorkshops.length > 1 ? "s" : ""} selected`
+                : openWorkshops.length > 0
+                ? (() => {
+                    const openDays = [...new Set(openWorkshops.map((w) => w.day))];
+                    return `Only ${openDays.join(" & ")} ${
+                      openDays.length === 1 ? "is" : "are"
+                    } open for RSVP. Select a workshop above, then fill in your details.`;
+                  })()
+                : "Registration is closed for all workshop days."}
             </p>
           </div>
 
@@ -555,7 +654,7 @@ export default function WorkshopRsvp() {
           <div className="px-6 pb-7 pt-4 sm:px-8">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || openWorkshops.length === 0}
               className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#b23a33] px-5 py-4 text-sm font-bold text-white shadow-lg shadow-[#b23a33]/20 transition hover:bg-[#8f2d27] disabled:cursor-not-allowed disabled:bg-[#d8a9a5] disabled:shadow-none"
             >
               {submitting ? (
@@ -566,7 +665,7 @@ export default function WorkshopRsvp() {
               ) : (
                 <>
                   Confirm Free RSVP
-                  {selected.length > 0 ? ` (${selected.length})` : ""}
+                  {selectedWorkshops.length > 0 ? ` (${selectedWorkshops.length})` : ""}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </>
               )}
