@@ -14,6 +14,9 @@ import {
   Ticket,
   Ban,
   ExternalLink,
+  CalendarDays,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
@@ -44,6 +47,8 @@ type PassResult = {
   message: string;
   alreadyRegistered?: boolean;
 };
+
+const BANNER = "/images/hornbill-showcase-day1-desktop.jpg";
 
 export default function TicketToHornbillPage() {
   const router = useRouter();
@@ -171,12 +176,15 @@ export default function TicketToHornbillPage() {
     }
   };
 
+  const venue = [config?.location?.address, config?.location?.city].filter(Boolean).join(", ");
+  const bannerSrc = config?.bannerDesktop || config?.bannerMobile || BANNER;
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0b0b0f]">
+      <div className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <div className="flex min-h-[70vh] items-center justify-center">
-          <Loader2 className="h-7 w-7 animate-spin text-amber-300" />
+          <Loader2 className="h-7 w-7 animate-spin text-[#ff0e0e]" />
         </div>
         <Footer />
       </div>
@@ -185,11 +193,11 @@ export default function TicketToHornbillPage() {
 
   if (result) {
     return (
-      <div className="min-h-screen bg-[#0b0b0f] text-white">
+      <div className="min-h-screen bg-[#f5f5f5]">
         <Navbar />
         <main className="mx-auto max-w-xl px-4 py-12 sm:px-6">
-          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#14141c] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-            <div className="bg-gradient-to-br from-amber-500 to-orange-700 px-6 py-10 text-center">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="bg-[#ff0e0e] px-6 py-10 text-center text-white">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
@@ -201,11 +209,11 @@ export default function TicketToHornbillPage() {
 
             <div className="space-y-5 px-6 py-6">
               {result.qrCodeDataUrl ? (
-                <div className="flex flex-col items-center rounded-2xl bg-white p-5 text-[#111]">
+                <div className="flex flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={result.qrCodeDataUrl} alt="Entry QR pass" className="h-52 w-52" />
-                  <p className="mt-3 text-sm font-semibold">{result.name}</p>
-                  <p className="font-mono text-xs text-[#666]">{result.registrationNumber}</p>
+                  <p className="mt-3 text-sm font-semibold text-gray-900">{result.name}</p>
+                  <p className="font-mono text-xs text-gray-500">{result.registrationNumber}</p>
                 </div>
               ) : null}
 
@@ -213,7 +221,7 @@ export default function TicketToHornbillPage() {
                 <button
                   type="button"
                   onClick={() => router.push(result.passUrl)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-3.5 text-sm font-bold text-black transition hover:bg-amber-400"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff0e0e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#e00d0d]"
                 >
                   <Ticket className="h-4 w-4" />
                   View / download pass
@@ -221,7 +229,7 @@ export default function TicketToHornbillPage() {
                 <button
                   type="button"
                   onClick={() => router.push(result.dashboardUrl || "/profile")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-50"
                 >
                   Open dashboard
                   <ArrowRight className="h-4 w-4" />
@@ -236,57 +244,72 @@ export default function TicketToHornbillPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0b0f] text-white">
+    <div className="min-h-screen bg-[#f5f5f5]">
       <Navbar />
 
-      <section className="relative w-full bg-black">
-        {/* Mobile portrait banner */}
-        <div className="relative w-full sm:hidden">
+      {/* Same banner for desktop + mobile */}
+      <section className="w-full bg-white">
+        <div className="relative mx-auto w-full max-w-5xl">
           <Image
-            src={config?.bannerMobile || "/images/hornbill-showcase-day1-mobile.jpg"}
+            src={bannerSrc}
             alt={config?.title || "Ticket to Hornbill"}
-            width={819}
-            height={1024}
+            width={800}
+            height={1000}
             priority
-            className="h-auto w-full object-cover object-center"
-            sizes="100vw"
-          />
-        </div>
-        {/* Desktop landscape banner */}
-        <div className="relative hidden w-full sm:block">
-          <Image
-            src={config?.bannerDesktop || "/images/hornbill-showcase-day1-desktop.jpg"}
-            alt={config?.title || "Ticket to Hornbill"}
-            width={1024}
-            height={576}
-            priority
-            className="h-auto w-full object-cover object-center"
-            sizes="100vw"
+            className="h-auto w-full object-contain object-center"
+            sizes="(max-width: 1024px) 100vw, 1024px"
           />
         </div>
       </section>
 
-      <main className="mx-auto grid max-w-5xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-xl font-bold">About the event</h2>
-            <p className="mt-3 whitespace-pre-line text-sm leading-7 text-white/75">
+      <main className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 lg:py-10">
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff0e0e]">
+              Free registration · Personalised pass
+            </p>
+            <h1 className="mt-2 text-2xl font-bold leading-tight text-[#1C1C1C] sm:text-3xl">
+              {config?.title || "Ticket to Hornbill"}
+            </h1>
+            {config?.subtitle ? (
+              <p className="mt-2 text-sm font-medium text-gray-600 sm:text-base">{config.subtitle}</p>
+            ) : null}
+
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-gray-700">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5">
+                <CalendarDays className="h-4 w-4 text-[#ff0e0e]" />
+                {config?.dateLabel || "6th November, 2026"}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5">
+                <Clock className="h-4 w-4 text-[#ff0e0e]" />
+                {config?.gatesOpenLabel || "Gates open at 4:00 PM"}
+                {config?.endTimeLabel ? ` · Ends ${config.endTimeLabel}` : ""}
+              </span>
+              {venue ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5">
+                  <MapPin className="h-4 w-4 text-[#ff0e0e]" />
+                  {venue}
+                </span>
+              ) : null}
+            </div>
+
+            <p className="mt-5 whitespace-pre-line text-sm leading-7 text-gray-600">
               {config?.description}
             </p>
           </div>
 
           {config?.termsAndConditions ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-300">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-gray-500">
                 Terms & conditions
               </h3>
-              <p className="mt-3 text-sm leading-6 text-white/70">{config.termsAndConditions}</p>
+              <p className="mt-3 text-sm leading-6 text-gray-600">{config.termsAndConditions}</p>
               {config.website ? (
                 <a
                   href={config.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-amber-300 hover:text-amber-200"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[#ff0e0e] hover:underline"
                 >
                   hornbillmusicfestival.com
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -296,19 +319,19 @@ export default function TicketToHornbillPage() {
           ) : null}
         </div>
 
-        <div className="rounded-[28px] border border-white/10 bg-[#14141c] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.35)] sm:p-7">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
           {!config?.isOpen ? (
             <div className="text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/10">
-                <Ban className="h-6 w-6 text-white/80" />
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <Ban className="h-6 w-6 text-[#ff0e0e]" />
               </div>
-              <h2 className="mt-4 text-xl font-bold">Registration closed</h2>
-              <p className="mt-2 text-sm text-white/65">
+              <h2 className="mt-4 text-xl font-bold text-[#1C1C1C]">Registration closed</h2>
+              <p className="mt-2 text-sm text-gray-500">
                 Free registration for Ticket to Hornbill is no longer available.
               </p>
               <Link
                 href="/events"
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 text-sm font-bold text-black"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#ff0e0e] px-5 py-3 text-sm font-bold text-white hover:bg-[#e00d0d]"
               >
                 Browse other events
                 <ArrowRight className="h-4 w-4" />
@@ -317,59 +340,59 @@ export default function TicketToHornbillPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <h2 className="text-xl font-bold">Register for free</h2>
-                <p className="mt-1 text-sm text-white/65">
+                <h2 className="text-xl font-bold text-[#1C1C1C]">Register for free</h2>
+                <p className="mt-1 text-sm text-gray-500">
                   One pass per phone number. Your pass will appear on your dashboard after you register.
                 </p>
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-white/85">Full name</span>
+                <span className="mb-2 block text-sm font-semibold text-gray-800">Full name</span>
                 <div className="relative">
-                  <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                  <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     value={form.name}
                     onChange={(e) => handleChange("name", e.target.value)}
                     placeholder="Enter your full name"
-                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 pl-11 pr-4 text-sm outline-none transition placeholder:text-white/30 focus:border-amber-400"
+                    className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#ff0e0e] focus:ring-2 focus:ring-[#ff0e0e]/15"
                     required
                   />
                 </div>
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-white/85">Email</span>
+                <span className="mb-2 block text-sm font-semibold text-gray-800">Email</span>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="email"
                     value={form.email}
                     onChange={(e) => handleChange("email", e.target.value)}
                     placeholder="you@example.com"
-                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 pl-11 pr-4 text-sm outline-none transition placeholder:text-white/30 focus:border-amber-400"
+                    className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#ff0e0e] focus:ring-2 focus:ring-[#ff0e0e]/15"
                     required
                   />
                 </div>
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-white/85">Phone number</span>
+                <span className="mb-2 block text-sm font-semibold text-gray-800">Phone number</span>
                 <div className="relative">
-                  <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                  <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="tel"
                     inputMode="numeric"
                     value={form.phone}
                     onChange={(e) => handleChange("phone", e.target.value)}
                     placeholder="10-digit mobile number"
-                    className="h-12 w-full rounded-xl border border-white/10 bg-black/30 pl-11 pr-4 text-sm outline-none transition placeholder:text-white/30 focus:border-amber-400"
+                    className="h-12 w-full rounded-xl border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#ff0e0e] focus:ring-2 focus:ring-[#ff0e0e]/15"
                     required
                   />
                 </div>
               </label>
 
               {error ? (
-                <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
               ) : null}
@@ -377,7 +400,7 @@ export default function TicketToHornbillPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-4 text-sm font-bold text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-amber-500/40"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#ff0e0e] px-5 py-4 text-sm font-bold text-white transition hover:bg-[#e00d0d] disabled:cursor-not-allowed disabled:bg-red-300"
               >
                 {submitting ? (
                   <>
@@ -391,7 +414,7 @@ export default function TicketToHornbillPage() {
                   </>
                 )}
               </button>
-              <p className="text-center text-xs leading-5 text-white/45">
+              <p className="text-center text-xs leading-5 text-gray-400">
                 By registering you confirm your details are accurate. One free pass per phone number.
               </p>
             </form>

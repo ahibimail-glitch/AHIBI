@@ -67,13 +67,13 @@ export default function TicketToHornbillPassPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0f] text-white">
+    <div className="min-h-screen bg-[#f5f5f5]">
       <Navbar />
       <main className="mx-auto max-w-lg px-4 py-10 sm:px-6">
         <button
           type="button"
           onClick={() => router.push("/profile")}
-          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to dashboard
@@ -81,15 +81,15 @@ export default function TicketToHornbillPassPage() {
 
         {loading ? (
           <div className="flex min-h-[50vh] items-center justify-center">
-            <Loader2 className="h-7 w-7 animate-spin text-amber-300" />
+            <Loader2 className="h-7 w-7 animate-spin text-[#ff0e0e]" />
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-red-400/30 bg-red-500/10 px-6 py-10 text-center">
-            <p className="text-sm text-red-100">{error}</p>
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-10 text-center">
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         ) : pass ? (
-          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[#14141c] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-            <div className="bg-gradient-to-br from-amber-500 to-orange-700 px-6 py-8 text-center">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div className="bg-[#ff0e0e] px-6 py-8 text-center text-white">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/85">
                 Free entry pass
               </p>
@@ -102,38 +102,38 @@ export default function TicketToHornbillPassPage() {
             </div>
 
             <div className="space-y-5 px-6 py-6">
-              <div className="flex flex-col items-center rounded-2xl bg-white p-5 text-[#111]">
+              <div className="flex flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-5">
                 {pass.qrCodeDataUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={pass.qrCodeDataUrl} alt="Entry QR pass" className="h-56 w-56" />
                 ) : null}
-                <p className="mt-3 text-base font-bold">{pass.name}</p>
-                <p className="font-mono text-xs text-[#666]">{pass.registrationNumber}</p>
+                <p className="mt-3 text-base font-bold text-gray-900">{pass.name}</p>
+                <p className="font-mono text-xs text-gray-500">{pass.registrationNumber}</p>
               </div>
 
-              <div className="space-y-2 text-sm text-white/75">
+              <div className="space-y-2 text-sm text-gray-600">
                 {pass.event?.dateLabel ? (
                   <p className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-amber-300" />
+                    <CalendarDays className="h-4 w-4 text-[#ff0e0e]" />
                     {pass.event.dateLabel}
                   </p>
                 ) : null}
                 {pass.event?.gatesOpenLabel ? (
                   <p className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-amber-300" />
+                    <Clock className="h-4 w-4 text-[#ff0e0e]" />
                     {pass.event.gatesOpenLabel}
                   </p>
                 ) : null}
                 {pass.event?.venue ? (
                   <p className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-amber-300" />
+                    <MapPin className="h-4 w-4 text-[#ff0e0e]" />
                     {pass.event.venue}
                   </p>
                 ) : null}
               </div>
 
               {pass.message ? (
-                <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-white/75">
+                <p className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-600">
                   {pass.message}
                 </p>
               ) : null}
@@ -142,7 +142,7 @@ export default function TicketToHornbillPassPage() {
                 <button
                   type="button"
                   onClick={downloadPass}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-3.5 text-sm font-bold text-black transition hover:bg-amber-400"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff0e0e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#e00d0d]"
                 >
                   <Download className="h-4 w-4" />
                   Download pass
@@ -150,7 +150,7 @@ export default function TicketToHornbillPassPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/profile")}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3.5 text-sm font-semibold transition hover:bg-white/10"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-50"
                 >
                   <Ticket className="h-4 w-4" />
                   My Tickets
