@@ -6,9 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Loader2,
-  MapPin,
-  CalendarDays,
-  Clock,
   Mail,
   Phone,
   User,
@@ -238,52 +235,34 @@ export default function TicketToHornbillPage() {
     );
   }
 
-  const venue = [config?.location?.address, config?.location?.city].filter(Boolean).join(", ");
-
   return (
     <div className="min-h-screen bg-[#0b0b0f] text-white">
       <Navbar />
 
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="relative w-full bg-black">
+        {/* Mobile portrait banner */}
+        <div className="relative w-full sm:hidden">
+          <Image
+            src={config?.bannerMobile || "/images/hornbill-showcase-day1-mobile.jpg"}
+            alt={config?.title || "Ticket to Hornbill"}
+            width={819}
+            height={1024}
+            priority
+            className="h-auto w-full object-cover object-center"
+            sizes="100vw"
+          />
+        </div>
+        {/* Desktop landscape banner */}
+        <div className="relative hidden w-full sm:block">
           <Image
             src={config?.bannerDesktop || "/images/hornbill-showcase-day1-desktop.jpg"}
             alt={config?.title || "Ticket to Hornbill"}
-            fill
+            width={1024}
+            height={576}
             priority
-            className="object-cover object-center"
+            className="h-auto w-full object-cover object-center"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0b0b0f] via-[#0b0b0f]/75 to-[#0b0b0f]/35" />
-        </div>
-
-        <div className="relative mx-auto max-w-5xl px-4 pb-10 pt-24 sm:px-6 sm:pb-14 sm:pt-28">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-300">
-            Free registration · Personalised pass
-          </p>
-          <h1 className="mt-3 max-w-3xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
-            {config?.title || "Ticket to Hornbill"}
-          </h1>
-          {config?.subtitle ? (
-            <p className="mt-3 text-base font-medium text-amber-100/90 sm:text-lg">{config.subtitle}</p>
-          ) : null}
-          <div className="mt-5 flex flex-wrap gap-3 text-sm text-white/85">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur">
-              <CalendarDays className="h-4 w-4 text-amber-300" />
-              {config?.dateLabel || "6th November, 2026"}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur">
-              <Clock className="h-4 w-4 text-amber-300" />
-              {config?.gatesOpenLabel || "Gates open at 4:00 PM"}
-              {config?.endTimeLabel ? ` · Ends ${config.endTimeLabel}` : ""}
-            </span>
-            {venue ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 backdrop-blur">
-                <MapPin className="h-4 w-4 text-amber-300" />
-                {venue}
-              </span>
-            ) : null}
-          </div>
         </div>
       </section>
 

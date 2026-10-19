@@ -83,6 +83,8 @@ async function ensureShowcaseEvent() {
     const needsSync =
       event.status !== 'approved' ||
       event.title !== EVENT_DEF.title ||
+      String(event.banner || '') !== EVENT_DEF.banner ||
+      String(event.coverImage || '') !== EVENT_DEF.coverImage ||
       String(event.externalBookingUrl || '') !== EVENT_DEF.externalBookingUrl ||
       !event.isFreeEvent ||
       !event.isPublic ||
