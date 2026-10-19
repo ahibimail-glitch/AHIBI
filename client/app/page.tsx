@@ -762,14 +762,13 @@ function LegacyHomePage() {
                             <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
 
                               {/* Poster */}
-                              <div className="relative w-full overflow-hidden">
+                              <div className="relative aspect-[2/3] w-full overflow-hidden">
                                 <Image
                                   src={event.banner || "/placeholder.svg"}
                                   alt={event.title}
-                                  width={0}
-                                  height={0}
+                                  fill
                                   sizes="(max-width: 640px) 50vw, 20vw"
-                                  className="w-full h-auto block"
+                                  className="object-cover object-center"
                                 />
                                 {!!formatDayDate((event as any)?.startDate) && (
                                   <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -803,14 +802,13 @@ function LegacyHomePage() {
                       <Link key={event._id} href={getEventHref(event)}>
                         <Card className="group overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
                           {/* POSTER */}
-                          <div className="relative w-full overflow-hidden">
+                          <div className="relative aspect-[2/3] w-full overflow-hidden">
                             <Image
                               src={event.banner || "/placeholder.svg"}
                               alt={event.title}
-                              width={0}
-                              height={0}
-                              sizes="50vw"
-                              className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
+                              fill
+                              sizes="20vw"
+                              className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                             />
                             {!!formatDayDate((event as any)?.startDate) && (
                               <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -882,16 +880,15 @@ function LegacyHomePage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {musicEvents.map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
+                <Link key={event._id} href={getEventHref(event)}>
                   <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
-                    <div className="relative w-full overflow-hidden">
+                    <div className="relative aspect-[2/3] w-full overflow-hidden">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
-                        width={0}
-                        height={0}
-                        sizes="50vw"
-                        className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
+                        fill
+                        sizes="20vw"
+                        className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                       />
                       {!!formatDayDate((event as any)?.startDate) && (
                         <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -960,16 +957,15 @@ function LegacyHomePage() {
                 </Card>
               </Link>
               {sportsEvents.map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
+                <Link key={event._id} href={getEventHref(event)}>
                   <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-green-500/25">
-                    <div className="relative w-full overflow-hidden rounded-t-xl">
+                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-t-xl">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
-                        width={0}
-                        height={0}
-                        sizes="50vw"
-                        className="w-full h-auto block transition-transform duration-500 group-hover:scale-110"
+                        fill
+                        sizes="20vw"
+                        className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
@@ -1011,16 +1007,15 @@ function LegacyHomePage() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
               {comedyEvents.map((event) => (
-                <Link key={event._id} href={`/events/${event._id}`}>
+                <Link key={event._id} href={getEventHref(event)}>
                   <Card className="group overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-300 hover:scale-105 hover:bg-white/15 hover:shadow-2xl hover:shadow-yellow-500/25">
-                    <div className="relative w-full overflow-hidden rounded-t-xl">
+                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-t-xl">
                       <Image
                         src={event.banner || "/placeholder.svg"}
                         alt={event.title}
-                        width={0}
-                        height={0}
-                        sizes="50vw"
-                        className="w-full h-auto block transition-transform duration-500 group-hover:scale-110"
+                        fill
+                        sizes="20vw"
+                        className="object-cover object-center transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>

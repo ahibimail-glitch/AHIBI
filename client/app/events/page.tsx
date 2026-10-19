@@ -100,16 +100,15 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       role="article"
       aria-labelledby={`event-title-${event._id}`}
     >
-      {/* Poster */}
-      <div className="relative w-full overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
+      {/* Poster — fixed 2:3 so all event cards match (standard Ahibi poster ratio) */}
+      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
         <Image
           src={event.banner || "/placeholder.svg"}
           alt={event.title}
-          width={0}
-          height={0}
+          fill
           sizes="(max-width: 640px) 50vw, 20vw"
           priority={index < 8}
-          className={`w-full h-auto block transition-transform duration-500 group-hover:scale-105 ${isPast ? "grayscale-[40%]" : ""}`}
+          className={`object-cover object-center transition-transform duration-500 group-hover:scale-105 ${isPast ? "grayscale-[40%]" : ""}`}
         />
 
         {/* Gradient overlay */}
