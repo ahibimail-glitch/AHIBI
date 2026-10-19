@@ -574,13 +574,15 @@ export default function EventsPage() {
                         {dailyToShow.map((d: any) => (
                           <Link key={d._id} href={dailyHref(d)} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-2xl">
                             <div className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
-                              <div className="relative aspect-[4/5] overflow-hidden bg-gray-100">
+                              <div className="relative aspect-[2/3] overflow-hidden bg-gray-100">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={d.banner} alt={d.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <img src={d.banner} alt={d.title} loading="lazy" className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105" />
                                 <span className="absolute left-2.5 top-2.5 rounded-lg bg-blue-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Daily</span>
                               </div>
                               <div className="p-3">
-                                <h3 className="line-clamp-2 text-sm font-bold text-gray-900">{d.title}</h3>
+                                <h3 className="line-clamp-2 text-sm font-bold text-gray-900">
+                                  {String(d.title || "").replace(/GE Blaster/gi, "GEL Blaster")}
+                                </h3>
                                 <p className="mt-1 text-xs font-medium text-blue-600">Book a slot →</p>
                               </div>
                             </div>

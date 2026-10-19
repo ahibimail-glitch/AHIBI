@@ -477,7 +477,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={Video} label="NWA Wrestling" active={activeView === "nwa-wrestling-bookings"} onClick={() => { setActiveView("nwa-wrestling-bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Workshop RSVP" active={activeView === "workshop-rsvp"} onClick={() => { setActiveView("workshop-rsvp"); setSidebarOpen(false); }} />
-          <SidebarButton icon={Ticket} label="GE Blaster" active={activeView === "ge-blaster"} onClick={() => { setActiveView("ge-blaster"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Ticket} label="GEL Blaster" active={activeView === "ge-blaster"} onClick={() => { setActiveView("ge-blaster"); setSidebarOpen(false); }} />
           <SidebarButton icon={Heart} label="Donations" active={activeView === "donations"} onClick={() => { setActiveView("donations"); setSidebarOpen(false); }} />
        
           <div className="pt-4 pb-2 px-2">

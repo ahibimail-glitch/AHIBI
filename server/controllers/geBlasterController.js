@@ -60,12 +60,28 @@ function isActiveDate(event, dateStr) {
   return active.includes(dateStr);
 }
 
+const DISPLAY_TITLE = 'GEL Blaster — Daily Blaster Experience';
+
 // GET /api/ge-blaster
 exports.getConfig = async (req, res) => {
   try {
     const event = await getEvent();
     if (!event) {
-      return res.status(404).json({ success: false, message: 'GE Blaster event is not set up yet.' });
+      return res.status(404).json({ success: false, message: 'GEL Blaster event is not set up yet.' });
+    }
+
+    // Keep listing + booking page title on the GEL Blaster branding.
+    if (event.title !== DISPLAY_TITLE || /GE Blaster/i.test(String(event.description || ''))) {
+      event.title = DISPLAY_TITLE;
+      if (event.description) {
+        event.description = String(event.description).replace(/GE Blaster/gi, 'GEL Blaster');
+      }
+      if (event.organizerInfo?.name && /GE Blaster/i.test(event.organizerInfo.name)) {
+        event.organizerInfo.name = 'GEL Blaster';
+      }
+      try {
+        await event.save();
+      } catch (_) {}
     }
 
     const slots = (event.ticketTypes || []).map((t) => ({
@@ -79,7 +95,7 @@ exports.getConfig = async (req, res) => {
       data: {
         eventId: String(event._id),
         slug: EVENT_SLUG,
-        title: event.title,
+        title: DISPLAY_TITLE,
         description: event.description,
         banner: event.banner,
         gallery: (event.gallery || []).map((g) => ({ url: g.url, caption: g.caption || '' })),
@@ -96,7 +112,7 @@ exports.getConfig = async (req, res) => {
     });
   } catch (error) {
     console.error('[ge-blaster] getConfig failed:', error);
-    return res.status(500).json({ success: false, message: 'Could not load GE Blaster details.' });
+    return res.status(500).json({ success: false, message: 'Could not load GEL Blaster details.' });
   }
 };
 
@@ -110,7 +126,7 @@ exports.getAvailability = async (req, res) => {
 
     const event = await getEvent();
     if (!event) {
-      return res.status(404).json({ success: false, message: 'GE Blaster event is not set up yet.' });
+      return res.status(404).json({ success: false, message: 'GEL Blaster event is not set up yet.' });
     }
 
     const active = isActiveDate(event, dateStr);
@@ -169,11 +185,11 @@ exports.initiate = async (req, res) => {
 
     const event = await getEvent();
     if (!event) {
-      return res.status(404).json({ success: false, message: 'GE Blaster event is not set up yet.' });
+      return res.status(404).json({ success: false, message: 'GEL Blaster event is not set up yet.' });
     }
 
     if (!isActiveDate(event, dateStr)) {
-      return res.status(400).json({ success: false, message: 'GE Blaster is not running on the selected date.' });
+      return res.status(400).json({ success: false, message: 'GEL Blaster is not running on the selected date.' });
     }
 
     const slot = slotFromEvent(event, slotId);
@@ -345,10 +361,10 @@ exports.verify = async (req, res) => {
           .sendBookingConfirmedTemplate({
             phone,
             customerName: booking.customerName || (u && u.name) || 'Guest',
-            eventName: 'GE Blaster — Daily Blaster Experience',
+            eventName: 'GEL Blaster — Daily Blaster Experience',
             eventDate: toIstDateStr(booking.selectedDate),
             eventTime: booking.ticketType,
-            venue: (booking.eventSnapshot && booking.eventSnapshot.location && booking.eventSnapshot.location.address) || 'GE Blaster, Nagaland',
+            venue: (booking.eventSnapshot && booking.eventSnapshot.location && booking.eventSnapshot.location.address) || 'GEL Blaster, Nagaland',
             tickets: `${booking.playerCount} players`,
             bookingId: String(booking._id),
             eventId: String(booking.dailyEvent),
@@ -383,7 +399,7 @@ exports.getAdminBookings = async (req, res) => {
   try {
     const event = await getEvent();
     if (!event) {
-      return res.status(404).json({ success: false, message: 'GE Blaster event is not set up yet.' });
+      return res.status(404).json({ success: false, message: 'GEL Blaster event is not set up yet.' });
     }
 
     const filter = {
@@ -430,7 +446,7 @@ exports.getAdminBookings = async (req, res) => {
     });
   } catch (error) {
     console.error('[ge-blaster] getAdminBookings failed:', error);
-    return res.status(500).json({ success: false, message: 'Could not load GE Blaster bookings.' });
+    return res.status(500).json({ success: false, message: 'Could not load GEL Blaster bookings.' });
   }
 };
 
@@ -453,15 +469,15 @@ exports.adminSeed = async (req, res) => {
     }
 
     const SLOTS = ['3:00 PM – 3:40 PM', '3:40 PM – 4:20 PM', '4:20 PM – 5:00 PM'];
-    const GALLERY = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ url: `/ge-blaster/gallery-${n}.jpg`, caption: 'GE Blaster Nagaland' }));
+    const GALLERY = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ url: `/ge-blaster/gallery-${n}.jpg`, caption: 'GEL Blaster Nagaland' }));
     const DESCRIPTION = [
-      'Book a private 40-minute GE Blaster session for your group. Each time slot is exclusive to one booking and can accommodate 2 to 6 players.',
+      'Book a private 40-minute GEL Blaster session for your group. Each time slot is exclusive to one booking and can accommodate 2 to 6 players.',
       '',
       'How it works: pick a date, choose an available 40-minute slot, and select how many players (2–6). The total is calculated automatically at ₹350 per player. Once payment is successful, the full slot is reserved for your group and becomes unavailable to everyone else.',
       '',
       'Precision • Power • Performance. Quality gel, max impact, non-toxic. Play hard, stay safe.',
       '',
-      'Participation is subject to GE Blaster safety rules and operator eligibility requirements. Need special bullets? Contact +91 8787401331 (call or WhatsApp).',
+      'Participation is subject to GEL Blaster safety rules and operator eligibility requirements. Need special bullets? Contact +91 8787401331 (call or WhatsApp).',
     ].join('\n');
 
     const istNow = new Date(Date.now() + 5.5 * 3600 * 1000);
@@ -471,19 +487,19 @@ exports.adminSeed = async (req, res) => {
     const activeDates = [];
     for (let i = 0; i < days; i += 1) activeDates.push(new Date(base.getTime() + i * 86400000));
 
-    const address = 'GE Blaster, Nagaland';
+    const address = 'GEL Blaster, Nagaland';
     const city = 'Dimapur';
 
     let event = await DailyEvent.findOne({ slug: EVENT_SLUG });
 
     const baseFields = {
-      title: 'GE Blaster — Daily Blaster Experience',
+      title: 'GEL Blaster — Daily Blaster Experience',
       description: DESCRIPTION,
       banner: '/ge-blaster/banner.jpg',
       coverImage: '/ge-blaster/banner.jpg',
       gallery: GALLERY,
       organizer: owner._id,
-      organizerInfo: { id: owner._id, name: owner.name || 'GE Blaster' },
+      organizerInfo: { id: owner._id, name: owner.name || 'GEL Blaster' },
       duration: { hours: 0, minutes: 40 },
       startTime: '15:00',
       periodStartDate: activeDates[0],
@@ -512,7 +528,7 @@ exports.adminSeed = async (req, res) => {
           capacity: 6,
         })),
         termsAndConditions:
-          'One slot = one booking. A successful booking reserves the full 40-minute session for your group (2–6 players). Participation is subject to GE Blaster safety rules and operator eligibility.',
+          'One slot = one booking. A successful booking reserves the full 40-minute session for your group (2–6 players). Participation is subject to GEL Blaster safety rules and operator eligibility.',
       });
       await event.save();
     } else {
@@ -539,7 +555,7 @@ exports.adminSeed = async (req, res) => {
 
     return res.json({
       success: true,
-      message: 'GE Blaster event created/refreshed.',
+      message: 'GEL Blaster event created/refreshed.',
       data: {
         eventId: String(event._id),
         slug: event.slug,

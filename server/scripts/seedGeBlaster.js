@@ -1,5 +1,5 @@
 /**
- * Seed / update the GE Blaster — Daily Blaster Experience event.
+ * Seed / update the GEL Blaster — Daily Blaster Experience event.
  *
  * Usage (from the server/ directory):
  *   node scripts/seedGeBlaster.js
@@ -9,7 +9,7 @@
  *                     If omitted/not found, the first user in the DB is used.
  *   GEB_START_DATE    First active date, YYYY-MM-DD (default: today, IST).
  *   GEB_DAYS          Number of consecutive active days to create (default: 60).
- *   GEB_ADDRESS       Venue address string (default: "GE Blaster, Nagaland").
+ *   GEB_ADDRESS       Venue address string (default: "GEL Blaster, Nagaland").
  *   GEB_CITY          Venue city (default: "Dimapur").
  *
  * Safe to re-run: if the event already exists it updates content (banner,
@@ -33,17 +33,17 @@ const SLOTS = [
 
 const GALLERY = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
   url: `/ge-blaster/gallery-${n}.jpg`,
-  caption: 'GE Blaster Nagaland',
+  caption: 'GEL Blaster Nagaland',
 }));
 
 const DESCRIPTION = [
-  'Book a private 40-minute GE Blaster session for your group. Each time slot is exclusive to one booking and can accommodate 2 to 6 players.',
+  'Book a private 40-minute GEL Blaster session for your group. Each time slot is exclusive to one booking and can accommodate 2 to 6 players.',
   '',
   'How it works: pick a date, choose an available 40-minute slot, and select how many players (2–6). The total is calculated automatically at ₹350 per player. Once payment is successful, the full slot is reserved for your group and becomes unavailable to everyone else.',
   '',
   'Precision • Power • Performance. Quality gel, max impact, non-toxic. Play hard, stay safe.',
   '',
-  'Participation is subject to GE Blaster safety rules and operator eligibility requirements. Need special bullets? Contact +91 8787401331 (call or WhatsApp).',
+  'Participation is subject to GEL Blaster safety rules and operator eligibility requirements. Need special bullets? Contact +91 8787401331 (call or WhatsApp).',
 ].join('\n');
 
 function istTodayStr() {
@@ -82,7 +82,7 @@ async function main() {
     if (owner && owner.role !== 'organizer') {
       owner.role = 'organizer';
       await owner.save();
-      console.log(`Promoted ${owner.email} to role 'organizer' (so they see GE Blaster bookings in the organizer dashboard).`);
+      console.log(`Promoted ${owner.email} to role 'organizer' (so they see GEL Blaster bookings in the organizer dashboard).`);
     }
   }
   if (!owner) {
@@ -99,21 +99,21 @@ async function main() {
   const activeDates = buildActiveDates(startStr, days);
   const periodStartDate = activeDates[0];
   const periodEndDate = activeDates[activeDates.length - 1];
-  const address = process.env.GEB_ADDRESS || 'GE Blaster, Nagaland';
+  const address = process.env.GEB_ADDRESS || 'GEL Blaster, Nagaland';
   const city = process.env.GEB_CITY || 'Dimapur';
 
   let event = await DailyEvent.findOne({ slug: SLUG });
 
   if (!event) {
     event = new DailyEvent({
-      title: 'GE Blaster — Daily Blaster Experience',
+      title: 'GEL Blaster — Daily Blaster Experience',
       slug: SLUG,
       description: DESCRIPTION,
       banner: '/ge-blaster/banner.jpg',
       coverImage: '/ge-blaster/banner.jpg',
       gallery: GALLERY,
       organizer: owner._id,
-      organizerInfo: { id: owner._id, name: owner.name || 'GE Blaster' },
+      organizerInfo: { id: owner._id, name: owner.name || 'GEL Blaster' },
       createdBy: owner._id,
       duration: { hours: 0, minutes: 40 },
       startTime: '15:00',
@@ -132,7 +132,7 @@ async function main() {
         capacity: 6,
       })),
       termsAndConditions:
-        'One slot = one booking. A successful booking reserves the full 40-minute session for your group (2–6 players). Participation is subject to GE Blaster safety rules and operator eligibility.',
+        'One slot = one booking. A successful booking reserves the full 40-minute session for your group (2–6 players). Participation is subject to GEL Blaster safety rules and operator eligibility.',
       status: 'approved',
       approvalStatus: 'approved',
       isPublic: true,
@@ -140,16 +140,16 @@ async function main() {
       location: { address, city, coordinates: { type: 'Point', coordinates: [93.7266, 25.9091] } },
     });
     await event.save();
-    console.log('Created GE Blaster event.');
+    console.log('Created GEL Blaster event.');
   } else {
     // Update content but preserve slot ticketTypes & their ids
-    event.title = 'GE Blaster — Daily Blaster Experience';
+    event.title = 'GEL Blaster — Daily Blaster Experience';
     event.description = DESCRIPTION;
     event.banner = '/ge-blaster/banner.jpg';
     event.coverImage = '/ge-blaster/banner.jpg';
     event.gallery = GALLERY;
     event.organizer = owner._id;
-    event.organizerInfo = { id: owner._id, name: owner.name || 'GE Blaster' };
+    event.organizerInfo = { id: owner._id, name: owner.name || 'GEL Blaster' };
     event.duration = { hours: 0, minutes: 40 };
     event.startTime = '15:00';
     event.periodStartDate = periodStartDate;
@@ -181,10 +181,10 @@ async function main() {
       event.markModified('ticketTypes');
     }
     await event.save();
-    console.log('Updated existing GE Blaster event (slots preserved).');
+    console.log('Updated existing GEL Blaster event (slots preserved).');
   }
 
-  console.log('\n==== GE BLASTER EVENT ====');
+  console.log('\n==== GEL Blaster EVENT ====');
   console.log('Event _id   :', String(event._id));
   console.log('Slug        :', event.slug);
   console.log('Organizer   :', String(event.organizer));

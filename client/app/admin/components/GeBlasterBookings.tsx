@@ -63,7 +63,7 @@ export default function GeBlasterBookings() {
       });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.message || "Setup failed.");
-      alert(`GE Blaster event is ready.\nEvent id: ${json.data.eventId}\nSlots: ${json.data.slots.length}\nActive dates: ${json.data.activeDates}${json.data.organizerPromoted ? "\nOwner promoted to organizer." : ""}`);
+      alert(`GEL Blaster event is ready.\nEvent id: ${json.data.eventId}\nSlots: ${json.data.slots.length}\nActive dates: ${json.data.activeDates}${json.data.organizerPromoted ? "\nOwner promoted to organizer." : ""}`);
       fetchBookings();
     } catch (e: any) {
       alert(e?.message || "Setup failed.");
@@ -103,7 +103,7 @@ export default function GeBlasterBookings() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">GE Blaster Bookings</h2>
+          <h2 className="text-2xl font-bold text-gray-900">GEL Blaster Bookings</h2>
           <p className="text-sm text-gray-500">Daily Blaster Experience — exclusive 40-minute slots.</p>
         </div>
         <div className="flex items-center gap-2">

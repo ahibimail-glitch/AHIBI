@@ -122,7 +122,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
     };
   }, [params.id]);
 
-  // GE Blaster uses a dedicated booking experience
+  // GEL Blaster uses a dedicated booking experience
   useEffect(() => {
     if ((event as any)?.slug === "ge-blaster") {
       router.replace("/ge-blaster");

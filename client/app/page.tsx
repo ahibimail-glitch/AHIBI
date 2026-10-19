@@ -167,17 +167,17 @@ const getEventHref = (event: { _id: string; slug?: string; externalBookingUrl?: 
 };
 
 const DailyEventCard = ({ event }: { event: DailyEvent }) => {
+  const title = String(event.title || "").replace(/GE Blaster/gi, "GEL Blaster");
   return (
     <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
-      {/* POSTER */}
-      <div className="relative w-full overflow-hidden">
+      {/* POSTER — match regular event card 2:3 ratio */}
+      <div className="relative aspect-[2/3] w-full overflow-hidden">
         <Image
           src={event.banner || "/placeholder.svg"}
-          alt={event.title}
-          width={0}
-          height={0}
-          sizes="50vw"
-          className="w-full h-auto block transition-transform duration-300 group-hover:scale-105"
+          alt={title}
+          fill
+          sizes="20vw"
+          className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
           <p className="text-[10px] text-white text-center font-medium truncate">
@@ -192,7 +192,7 @@ const DailyEventCard = ({ event }: { event: DailyEvent }) => {
       {/* TEXT */}
       <div className="px-2 pt-2 pb-1.5">
         <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
-          {event.title}
+          {title}
         </h3>
         <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
           {event.category || "Event"}{event.location?.city ? ` | ${event.location.city}` : ""}
