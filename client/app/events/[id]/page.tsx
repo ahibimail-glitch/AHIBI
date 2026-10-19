@@ -43,6 +43,7 @@ import { trackBookingStarted, trackEventView } from "@/lib/analytics/google-anal
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 const WORKSHOP_RSVP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
+const HORNBILL_SHOWCASE_EVENT_ID = "6ab402a990e6bc7f24d420a2";
 
 interface TicketType {
   _id: string;
@@ -74,6 +75,7 @@ interface Event {
   _id: string;
   title: string;
   subtitle?: string;
+  slug?: string;
   description: string;
   banner: string;
   coverImage?: string;
@@ -98,6 +100,7 @@ interface Event {
   isPublic: boolean;
   isSponsored: boolean;
   isExternal: boolean;
+  externalBookingUrl?: string;
   isVirtual: boolean;
   isFreeEvent?: boolean;
   discounts: any[];
@@ -283,6 +286,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   // ─── Data fetching ───────────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (String(params.id) === HORNBILL_SHOWCASE_EVENT_ID) {
+      router.replace("/ticket-to-hornbill");
+    }
+  }, [params.id, router]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const fetchEvent = async () => {
@@ -296,6 +305,14 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           throw new Error(`HTTP error: ${res.status}`);
         }
         const data = await res.json();
+        if (
+          data?._id === HORNBILL_SHOWCASE_EVENT_ID ||
+          data?.slug === "ticket-to-hornbill-showcase-day1" ||
+          String(data?.externalBookingUrl || "").includes("/ticket-to-hornbill")
+        ) {
+          router.replace("/ticket-to-hornbill");
+          return;
+        }
         if (isMounted) setEvent(data);
       } catch (err) {
         if (isMounted) setError(err instanceof Error ? err.message : "Failed to load event");

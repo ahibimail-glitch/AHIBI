@@ -1,5 +1,5 @@
 /**
- * Ensure Ticket to Hornbill — Day 1 Festival Showcase (16 Oct 2026) exists.
+ * Ensure Ticket to Hornbill — Band Battle & Festival Showcase (6 Nov 2026) exists.
  *
  * Usage (from server/):
  *   node scripts/ensure-hornbill-showcase-day1.js
@@ -166,15 +166,16 @@ async function run() {
       ],
     });
     await event.save();
-    console.log('Updated existing Day 1 event:', event._id.toString());
+    console.log('Updated existing Ticket to Hornbill event:', event._id.toString());
   } else {
     event = await Event.create(payload);
-    console.log('Created Day 1 event:', event._id.toString());
+    console.log('Created Ticket to Hornbill event:', event._id.toString());
   }
 
-  console.log('\n--- Day 1 Showcase ready ---');
+  console.log('\n--- Ticket to Hornbill ready ---');
   console.log('slug:', event.slug);
   console.log('_id:', event._id.toString());
+  console.log('date:', '6 Nov 2026, 4:00 PM – 10:30 PM IST');
   console.log('Public page: https://www.ahibi.in/ticket-to-hornbill');
   console.log('API: GET /api/hornbill-showcase/day1');
   console.log(

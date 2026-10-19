@@ -152,11 +152,19 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
 };
 
 const RSVP_WORKSHOP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
+const HORNBILL_SHOWCASE_EVENT_ID = "6ab402a990e6bc7f24d420a2";
 
-const getEventHref = (event: { _id: string }) =>
-  String(event._id) === RSVP_WORKSHOP_EVENT_ID
-    ? "/events/workshop-rsvp"
-    : `/events/${event._id}`;
+const getEventHref = (event: { _id: string; slug?: string; externalBookingUrl?: string }) => {
+  if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
+  if (
+    String(event._id) === HORNBILL_SHOWCASE_EVENT_ID ||
+    String(event.slug || "") === "ticket-to-hornbill-showcase-day1" ||
+    String(event.externalBookingUrl || "").includes("/ticket-to-hornbill")
+  ) {
+    return "/ticket-to-hornbill";
+  }
+  return `/events/${event._id}`;
+};
 
 const DailyEventCard = ({ event }: { event: DailyEvent }) => {
   return (

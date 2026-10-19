@@ -43,6 +43,8 @@ export interface Event {
   isFreeEvent?: boolean;
   tags?: string[];
   slug: string;
+  isExternal?: boolean;
+  externalBookingUrl?: string;
   attendees?: number;
   totalTickets?: number;
   createdAt?: string | Date;

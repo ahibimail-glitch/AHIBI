@@ -16,12 +16,130 @@ function isValidPhone(phone) {
 }
 
 function isValidEmail(email) {
-  if (!email) return true;
-  return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email);
+  return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/.test(String(email || ''));
 }
 
-async function findDay1Event() {
-  return Event.findOne({ slug: SLUG });
+async function resolveOrganizer() {
+  if (process.env.HORNBILL_SHOWCASE_ORGANIZER_ID) {
+    const byId = await User.findById(process.env.HORNBILL_SHOWCASE_ORGANIZER_ID);
+    if (byId) return byId;
+  }
+
+  const preferred = await User.findOne({
+    role: 'organizer',
+    status: 'active',
+    $or: [{ email: /tafma/i }, { name: /tafma/i }, { email: /ahibi/i }],
+  });
+  if (preferred) return preferred;
+
+  const anyOrganizer = await User.findOne({ role: 'organizer', status: 'active' });
+  if (anyOrganizer) return anyOrganizer;
+
+  return User.findOne({ role: 'admin', status: 'active' });
+}
+
+/**
+ * Keep the rescheduled showcase event live: restore cancelled/outdated rows
+ * and sync title/dates/copy from config whenever the public API is hit.
+ */
+async function ensureShowcaseEvent() {
+  let event = await Event.findOne({ slug: SLUG });
+  const organizer = event?.organizer ? null : await resolveOrganizer();
+
+  const ticketTypePayload = {
+    name: EVENT_DEF.ticketType.name,
+    description: EVENT_DEF.ticketType.description,
+    price: 0,
+    basePrice: 0,
+    quantity: EVENT_DEF.ticketType.quantity,
+    capacity: EVENT_DEF.ticketType.capacity,
+    benefits: EVENT_DEF.ticketType.benefits,
+  };
+
+  const sharedFields = {
+    title: EVENT_DEF.title,
+    slug: SLUG,
+    description: EVENT_DEF.description,
+    banner: EVENT_DEF.banner,
+    coverImage: EVENT_DEF.coverImage,
+    category: EVENT_DEF.category,
+    tags: EVENT_DEF.tags,
+    startDate: EVENT_DEF.startDate,
+    endDate: EVENT_DEF.endDate,
+    bookingEndTime: EVENT_DEF.bookingEndTime,
+    location: EVENT_DEF.location,
+    isFreeEvent: true,
+    isVirtual: false,
+    isPublic: true,
+    isFeatured: true,
+    isExternal: true,
+    externalBookingUrl: EVENT_DEF.externalBookingUrl,
+    status: 'approved',
+    approvalStatus: 'approved',
+    termsAndConditions: EVENT_DEF.termsAndConditions,
+  };
+
+  if (event) {
+    const needsSync =
+      event.status !== 'approved' ||
+      event.title !== EVENT_DEF.title ||
+      String(event.externalBookingUrl || '') !== EVENT_DEF.externalBookingUrl ||
+      !event.isFreeEvent ||
+      !event.isPublic ||
+      !event.isExternal ||
+      new Date(event.startDate).getTime() !== new Date(EVENT_DEF.startDate).getTime() ||
+      new Date(event.endDate).getTime() !== new Date(EVENT_DEF.endDate).getTime() ||
+      new Date(event.bookingEndTime || 0).getTime() !== new Date(EVENT_DEF.bookingEndTime).getTime();
+
+    if (!needsSync) return event;
+
+    const keepSold =
+      (event.ticketTypes || []).find((t) => t.name === EVENT_DEF.ticketType.name)?.sold || 0;
+    Object.assign(event, sharedFields);
+    event.ticketTypes = [
+      {
+        ...(event.ticketTypes?.[0]?.toObject?.() || event.ticketTypes?.[0] || {}),
+        ...ticketTypePayload,
+        sold: keepSold,
+      },
+    ];
+    if (organizer) {
+      event.organizer = organizer._id;
+      event.createdBy = event.createdBy || organizer._id;
+      event.organizerInfo = {
+        id: organizer._id,
+        name: organizer.name || 'TAFMA',
+        email: organizer.email || '',
+        phone: organizer.phone || '',
+      };
+    }
+    event.markModified('ticketTypes');
+    event.markModified('location');
+    await event.save();
+    return event;
+  }
+
+  if (!organizer) {
+    return null;
+  }
+
+  event = await Event.create({
+    ...sharedFields,
+    ticketTypes: [{ ...ticketTypePayload, sold: 0 }],
+    organizer: organizer._id,
+    createdBy: organizer._id,
+    organizerInfo: {
+      id: organizer._id,
+      name: organizer.name || 'TAFMA',
+      email: organizer.email || '',
+      phone: organizer.phone || '',
+    },
+  });
+  return event;
+}
+
+async function findShowcaseEvent() {
+  return ensureShowcaseEvent();
 }
 
 function publicEventPayload(event) {
@@ -39,13 +157,15 @@ function publicEventPayload(event) {
     title: event.title,
     subtitle: EVENT_DEF.subtitle,
     description: event.description,
-    bannerDesktop: EVENT_DEF.bannerDesktop || EVENT_DEF.banner,
-    bannerMobile: EVENT_DEF.bannerMobile || EVENT_DEF.coverImage || EVENT_DEF.banner,
+    bannerDesktop: EVENT_DEF.banner,
+    bannerMobile: EVENT_DEF.coverImage || EVENT_DEF.banner,
     startDate: event.startDate,
     endDate: event.endDate,
-    gatesOpenLabel: 'Gates open at 04:00 PM',
-    dateLabel: '16th October, 2026',
+    gatesOpenLabel: EVENT_DEF.gatesOpenLabel,
+    dateLabel: EVENT_DEF.dateLabel,
+    endTimeLabel: '10:30 PM',
     location: event.location,
+    termsAndConditions: EVENT_DEF.termsAndConditions || event.termsAndConditions,
     isFreeEvent: true,
     isOpen,
     website: 'https://www.hornbillmusicfestival.com',
@@ -69,10 +189,11 @@ async function buildQrDataUrl(booking, eventId) {
 }
 
 function passPayload(booking, event, qrCodeDataUrl) {
+  const guestName = booking.customerName || booking.user?.name || 'Guest';
   return {
     bookingId: String(booking._id),
-    registrationNumber: `TTH-D1-${String(booking._id).slice(-8).toUpperCase()}`,
-    name: booking.customerName || booking.user?.name || 'Guest',
+    registrationNumber: `TTH-${String(booking._id).slice(-8).toUpperCase()}`,
+    name: guestName,
     phone: booking.customerPhone || '',
     email: booking.user?.email || '',
     city: booking.state || '',
@@ -82,12 +203,12 @@ function passPayload(booking, event, qrCodeDataUrl) {
     event: {
       title: event.title,
       subtitle: EVENT_DEF.subtitle,
-      dateLabel: '16th October, 2026',
-      gatesOpenLabel: 'Gates open at 04:00 PM',
-      venue: 'Talkatora Stadium, New Delhi',
-      bannerDesktop: EVENT_DEF.bannerDesktop || EVENT_DEF.banner,
+      dateLabel: EVENT_DEF.dateLabel,
+      gatesOpenLabel: EVENT_DEF.gatesOpenLabel,
+      venue: EVENT_DEF.venueLabel,
+      bannerDesktop: EVENT_DEF.banner,
     },
-    message: `Thank you for registering, ${booking.customerName || 'guest'}! Your personalised Day 1 pass is ready. Show this QR code at the gate for check-in.`,
+    message: `Thank you for registering, ${guestName}! Your free pass is ready. Download it below or open My Tickets on your dashboard anytime. Show this QR code at the gate for check-in.`,
   };
 }
 
@@ -100,7 +221,15 @@ function authTokenForUser(user) {
   return null;
 }
 
-function registrationResponse({ alreadyRegistered, message, booking, event, qrCodeDataUrl, user, status = 200 }) {
+function registrationResponse({
+  alreadyRegistered,
+  message,
+  booking,
+  event,
+  qrCodeDataUrl,
+  user,
+  status = 200,
+}) {
   const payload = passPayload(booking, event, qrCodeDataUrl);
   const token = authTokenForUser(user);
   return {
@@ -113,6 +242,7 @@ function registrationResponse({ alreadyRegistered, message, booking, event, qrCo
         ...payload,
         ...(token ? { token } : {}),
         passUrl: `/ticket-to-hornbill/pass/${payload.bookingId}`,
+        dashboardUrl: '/profile',
       },
     },
   };
@@ -120,12 +250,12 @@ function registrationResponse({ alreadyRegistered, message, booking, event, qrCo
 
 exports.getDay1Event = async (req, res) => {
   try {
-    const event = await findDay1Event();
+    const event = await findShowcaseEvent();
     if (!event) {
       return res.status(404).json({
         success: false,
         message:
-          'Day 1 Showcase event is not configured yet. Run the ensure-hornbill-showcase-day1 script on the server.',
+          'Ticket to Hornbill event is not configured yet. Run the ensure-hornbill-showcase-day1 script on the server.',
       });
     }
     return res.json({ success: true, data: publicEventPayload(event) });
@@ -152,11 +282,11 @@ exports.registerDay1 = async (req, res) => {
         message: 'Please enter a valid 10-digit phone number',
       });
     }
-    if (!isValidEmail(email)) {
+    if (!email || !isValidEmail(email)) {
       return res.status(400).json({ success: false, message: 'Please enter a valid email address' });
     }
 
-    const event = await findDay1Event();
+    const event = await findShowcaseEvent();
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -174,7 +304,10 @@ exports.registerDay1 = async (req, res) => {
         ? new Date(event.endDate).getTime()
         : null;
     if (cutoff && now > cutoff) {
-      return res.status(400).json({ success: false, message: 'Registration for Day 1 has closed' });
+      return res.status(400).json({
+        success: false,
+        message: 'Registration for Ticket to Hornbill has closed',
+      });
     }
 
     let user = await User.findOne({ phone });
@@ -182,12 +315,12 @@ exports.registerDay1 = async (req, res) => {
       const userPayload = {
         phone,
         name,
+        email,
         role: 'user',
         status: 'active',
         authProvider: 'phone_otp',
         city: city || '',
       };
-      if (email) userPayload.email = email;
       try {
         user = await User.create(userPayload);
       } catch (createErr) {
@@ -200,7 +333,7 @@ exports.registerDay1 = async (req, res) => {
     } else {
       const updates = {};
       if (name && user.name !== name) updates.name = name;
-      if (email && !user.email) updates.email = email;
+      if (email && user.email !== email) updates.email = email;
       if (city && !user.city) updates.city = city;
       if (Object.keys(updates).length) {
         await User.updateOne({ _id: user._id }, { $set: updates });
@@ -215,7 +348,6 @@ exports.registerDay1 = async (req, res) => {
       });
     }
 
-    // One pass per phone (and per user account) — check before create
     const existing = await Booking.findOne({
       event: event._id,
       status: { $in: ['confirmed', 'checked-in'] },
@@ -223,7 +355,6 @@ exports.registerDay1 = async (req, res) => {
     }).sort({ bookedAt: 1 });
 
     if (existing) {
-      // Backfill phone if an older row is missing it
       if (!existing.customerPhone) {
         existing.customerPhone = phone;
         existing.customerName = existing.customerName || name;
@@ -234,7 +365,8 @@ exports.registerDay1 = async (req, res) => {
       const qrCodeDataUrl = await buildQrDataUrl(existing, event._id);
       const response = registrationResponse({
         alreadyRegistered: true,
-        message: 'You are already registered with this phone number. Here is your pass.',
+        message:
+          'You are already registered with this phone number. Your pass is ready — download it below or check My Tickets on your dashboard.',
         booking: existing,
         event,
         qrCodeDataUrl,
@@ -273,7 +405,6 @@ exports.registerDay1 = async (req, res) => {
         totalTickets: 1,
       });
     } catch (createBookingErr) {
-      // Unique index race: another request just created this phone's pass
       if (createBookingErr?.code === 11000) {
         const raced = await Booking.findOne({
           event: event._id,
@@ -284,7 +415,8 @@ exports.registerDay1 = async (req, res) => {
           const qrCodeDataUrl = await buildQrDataUrl(raced, event._id);
           const response = registrationResponse({
             alreadyRegistered: true,
-            message: 'You are already registered with this phone number. Here is your pass.',
+            message:
+              'You are already registered with this phone number. Your pass is ready — download it below or check My Tickets on your dashboard.',
             booking: raced,
             event,
             qrCodeDataUrl,
@@ -304,7 +436,8 @@ exports.registerDay1 = async (req, res) => {
     const qrCodeDataUrl = await buildQrDataUrl(booking, event._id);
     const response = registrationResponse({
       alreadyRegistered: false,
-      message: 'Registration successful. Your personalised pass is ready.',
+      message:
+        'Thank you for registering! Your free pass is ready — download it below or find it anytime under My Tickets on your dashboard.',
       booking,
       event,
       qrCodeDataUrl,
@@ -323,11 +456,11 @@ exports.registerDay1 = async (req, res) => {
 
 exports.listDay1Registrations = async (req, res) => {
   try {
-    const event = await findDay1Event();
+    const event = await findShowcaseEvent();
     if (!event) {
       return res.status(404).json({
         success: false,
-        message: 'Day 1 Showcase event is not configured yet.',
+        message: 'Ticket to Hornbill event is not configured yet.',
       });
     }
 
@@ -363,7 +496,7 @@ exports.listDay1Registrations = async (req, res) => {
 
     const rows = bookings.map((b) => ({
       _id: String(b._id),
-      registrationNumber: `TTH-D1-${String(b._id).slice(-8).toUpperCase()}`,
+      registrationNumber: `TTH-${String(b._id).slice(-8).toUpperCase()}`,
       name: b.customerName || b.user?.name || '',
       phone: b.customerPhone || b.user?.phone || '',
       email: b.user?.email || '',
@@ -401,7 +534,7 @@ exports.getDay1Pass = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Booking ID is required' });
     }
 
-    const event = await findDay1Event();
+    const event = await findShowcaseEvent();
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
@@ -421,3 +554,6 @@ exports.getDay1Pass = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Could not load pass' });
   }
 };
+
+exports.SHOWCASE_EVENT_ID_HINT = '6ab402a990e6bc7f24d420a2';
+exports.SLUG = SLUG;

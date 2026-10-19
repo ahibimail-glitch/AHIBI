@@ -39,8 +39,9 @@ const HF_IDS = [
   "6927f7102cd1c48b94f5bedb",
   "6927f73c2cd1c48b94f5bee0",
   "6927f7a32cd1c48b94f5bf36",
-  "6927f7dd2cd1c48b94f5bf3b", 
-  "6927f84d2cd1c48b94f5bf48"
+  "6927f7dd2cd1c48b94f5bf3b",
+  "6927f84d2cd1c48b94f5bf48",
+  "6ab402a990e6bc7f24d420a2", // Ticket to Hornbill showcase (rescheduled 6 Nov 2026)
 ];
 
 export default function HFTickets() {

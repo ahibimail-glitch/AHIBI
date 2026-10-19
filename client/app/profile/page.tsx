@@ -183,7 +183,14 @@ export default function ProfilePage() {
   };
 
   const handleViewTicket = (booking: any) => {
-    if (booking.bookingType === "annie-musical") router.push(`/annie-musical/bookings/${booking._id}`);
+    const eventSlug = String(booking.event?.slug || "");
+    const externalUrl = String(booking.event?.externalBookingUrl || "");
+    const isHornbillShowcase =
+      eventSlug === "ticket-to-hornbill-showcase-day1" ||
+      externalUrl.includes("/ticket-to-hornbill");
+
+    if (isHornbillShowcase) router.push(`/ticket-to-hornbill/pass/${booking._id}`);
+    else if (booking.bookingType === "annie-musical") router.push(`/annie-musical/bookings/${booking._id}`);
     else if (booking.isDailyEvent && booking.dailyEvent) router.push(`/events/daily/${booking.dailyEvent._id}/bookings?bookingId=${booking._id}`);
     else if (booking.event) router.push(`/events/${booking.event._id}/bookings?bookingId=${booking._id}`);
   };
