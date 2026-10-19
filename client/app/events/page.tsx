@@ -35,7 +35,7 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CITIES = [
-  "Mumbai", "Delhi", "Bangalore", "Pune", "Chennai", "Hyderabad",
+  "Mumbai", "Delhi", "New Delhi", "Bangalore", "Pune", "Chennai", "Hyderabad",
   "Dimapur", "Guwahati", "Kohima", "Shillong", "Silchar", "Tezpur",
 ];
 
@@ -203,7 +203,7 @@ export default function EventsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000&includePast=true`);
         if (!res.ok) throw new Error("Failed to fetch events");
         const data: EventsResponse = await res.json();
         setEvents(data.data.events);
@@ -269,10 +269,23 @@ export default function EventsPage() {
   const hasActiveFilters = searchQuery !== "" || selectedCity !== "all" || selectedGenre !== "all";
 
   // ── Filtered & sorted events ───────────────────────────────────────────────
+  const cityMatches = (eventCity: string | undefined, selected: string) => {
+    if (selected === "all") return true;
+    const city = (eventCity || "").toLowerCase().trim();
+    const needle = selected.toLowerCase().trim();
+    if (!city) return false;
+    if (city === needle) return true;
+    // Treat Delhi / New Delhi as the same market for filtering.
+    if ((needle === "delhi" || needle === "new delhi") && (city === "delhi" || city === "new delhi")) {
+      return true;
+    }
+    return city.includes(needle) || needle.includes(city);
+  };
+
   const filtered = events.filter((e) =>
     (e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (e.description ?? "").toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (selectedCity === "all" || e.location?.city?.toLowerCase() === selectedCity.toLowerCase()) &&
+    cityMatches(e.location?.city, selectedCity) &&
     (selectedGenre === "all" || e.category?.toLowerCase() === selectedGenre.toLowerCase())
   );
 

@@ -341,14 +341,26 @@ const rejectEvent = async (req, res) => {
 const getPublicEvents = async (req, res) => {
   try {
     // Get query parameters for filtering
-    const { category, city, search, limit = 20, page = 1, isFeatured } = req.query;
+    const { category, city, search, limit = 20, page = 1, isFeatured, includePast } = req.query;
 
     // Build query for approved events only (paused events won't appear)
     const query = {
       status: 'approved'
-      // Optionally, only show upcoming events:
-      // startDate: { $gte: new Date() }
     };
+
+    // Default to current/upcoming events so small homepage limits don't fill with past events.
+    // Pass includePast=true to get the full catalogue (events page can still filter client-side).
+    const shouldIncludePast =
+      includePast === 'true' ||
+      includePast === true ||
+      includePast === '1';
+    if (!shouldIncludePast) {
+      query.$or = [
+        { endDate: { $gte: new Date() } },
+        { endDate: null, startDate: { $gte: new Date() } },
+        { endDate: { $exists: false }, startDate: { $gte: new Date() } },
+      ];
+    }
 
     // Add filters if provided
     if (category) {
@@ -360,17 +372,25 @@ const getPublicEvents = async (req, res) => {
     }
 
     // Filter by featured status if provided
-    if (isFeatured !== undefined) {
-      query.isFeatured = isFeatured === 'true' || isFeatured === true;
+    if (isFeatured !== undefined && isFeatured !== '') {
+      const featuredRequested =
+        isFeatured === 'true' ||
+        isFeatured === true ||
+        isFeatured === '1' ||
+        isFeatured === 1;
+      query.isFeatured = featuredRequested;
     }
 
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { 'location.address': { $regex: search, $options: 'i' } },
-        { 'location.city': { $regex: search, $options: 'i' } }
-      ];
+      const searchClause = {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { 'location.address': { $regex: search, $options: 'i' } },
+          { 'location.city': { $regex: search, $options: 'i' } }
+        ]
+      };
+      query.$and = [...(query.$and || []), searchClause];
     }
 
     // Parse limit and page

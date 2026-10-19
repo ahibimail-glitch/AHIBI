@@ -316,7 +316,8 @@ function LegacyHomePage() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const [eventsRes, venuesRes, artistsRes, dailyEventsRes] = await Promise.all([
-          fetch(`${apiUrl}/api/events?limit=30`),
+          // Higher limit: API sorts by startDate ascending, so a small limit only returns old/past events.
+          fetch(`${apiUrl}/api/events?limit=1000`),
           fetch(`${apiUrl}/api/venue`),
           fetch(`${apiUrl}/api/artist/public?limit=12`),
           fetch(`${apiUrl}/api/daily-events?limit=10`)
@@ -325,12 +326,17 @@ function LegacyHomePage() {
         if (eventsRes.ok) {
           const data: EventsResponse = await eventsRes.json()
           const currentDate = new Date()
-          const normalized = (data.data?.events || []).filter((event) => {
-            const eventEndDate = new Date(event.endDate || event.startDate)
-            const isUpcoming = eventEndDate >= currentDate
-            const isNotExcluded = event._id !== "68dac96e8d5dd14f277d5b1a"
-            return isUpcoming && isNotExcluded
-          })
+          const normalized = (data.data?.events || [])
+            .filter((event) => {
+              const eventEndDate = new Date(event.endDate || event.startDate)
+              const isUpcoming = eventEndDate >= currentDate
+              const isNotExcluded = event._id !== "68dac96e8d5dd14f277d5b1a"
+              return isUpcoming && isNotExcluded
+            })
+            .sort(
+              (a, b) =>
+                new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+            )
           setEvents(normalized)
         }
 
@@ -417,12 +423,17 @@ function LegacyHomePage() {
         }
         const data: EventsResponse = await response.json()
         const currentDate = new Date()
-        const normalized = (data.data?.events || []).filter((event) => {
-          const eventEndDate = new Date(event.endDate || event.startDate)
-          const isUpcoming = eventEndDate >= currentDate
-          const isNotExcluded = event._id !== "68dac96e8d5dd14f277d5b1a"
-          return isUpcoming && isNotExcluded
-        })
+        const normalized = (data.data?.events || [])
+          .filter((event) => {
+            const eventEndDate = new Date(event.endDate || event.startDate)
+            const isUpcoming = eventEndDate >= currentDate
+            const isNotExcluded = event._id !== "68dac96e8d5dd14f277d5b1a"
+            return isUpcoming && isNotExcluded
+          })
+          .sort(
+            (a, b) =>
+              new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          )
         setFeaturedEvents(normalized)
       } catch {
         setFeaturedEvents([])
