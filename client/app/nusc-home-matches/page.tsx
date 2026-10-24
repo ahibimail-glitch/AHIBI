@@ -262,7 +262,7 @@ export default function NuscHomeMatchesPage() {
             </div>
             <div className="rounded-xl border border-[#f0c6ca] bg-[#fff7f7] px-5 py-4 sm:max-w-sm">
               <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#b7192d]">Ticket sales</p>
-              <p className="mt-1 font-semibold text-[#2d302d]">Go-live date on AHIBI: To be announced</p>
+              <p className="mt-1 font-semibold text-[#2d302d]">Tickets are live on AHIBI</p>
             </div>
           </div>
 
