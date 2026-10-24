@@ -13,6 +13,7 @@ import EventsPreviewPage from "./events-preview/page"
 import type { EventsResponse, Event } from "@/types/event"
 import StickyHeroCards from "@/components/StickyHeroCards"
 import { format } from "date-fns"
+import { getNextNuscMatchDate } from "@/lib/nuscHomeMatches"
 
 type PublicArtist = {
   _id: string
@@ -153,8 +154,25 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
 
 const RSVP_WORKSHOP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
 const HORNBILL_SHOWCASE_EVENT_ID = "6ab402a990e6bc7f24d420a2";
+const NUSC_HOME_MATCH_SERIES_ID = "nusc-home-match-series";
+
+const NUSC_HOME_MATCH_SERIES: Event = {
+  _id: NUSC_HOME_MATCH_SERIES_ID,
+  title: "Indian Football League: NUSC Home Matches",
+  description: "Follow NUSC's home fixtures at Chümoukedima Football Stadium.",
+  banner: "/images/match-1.jpeg",
+  category: "Sports",
+  startDate: `${getNextNuscMatchDate()}T18:30:00+05:30`,
+  endDate: `${getNextNuscMatchDate()}T18:30:00+05:30`,
+  location: { address: "Chümoukedima Football Stadium", city: "" },
+  ticketTypes: [],
+  status: "published",
+  isFeatured: true,
+  slug: "nusc-home-matches",
+};
 
 const getEventHref = (event: { _id: string; slug?: string; externalBookingUrl?: string }) => {
+  if (String(event._id) === NUSC_HOME_MATCH_SERIES_ID) return "/nusc-home-matches";
   if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
   if (
     String(event._id) === HORNBILL_SHOWCASE_EVENT_ID ||
@@ -417,8 +435,7 @@ function LegacyHomePage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=100`)
         if (!response.ok) {
-          setFeaturedEvents([])
-          setError("Failed to fetch featured events")
+          setFeaturedEvents([NUSC_HOME_MATCH_SERIES])
           return
         }
         const data: EventsResponse = await response.json()
@@ -434,10 +451,13 @@ function LegacyHomePage() {
             (a, b) =>
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
           )
-        setFeaturedEvents(normalized)
+        setFeaturedEvents(
+          [...normalized, NUSC_HOME_MATCH_SERIES].sort(
+            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+          )
+        )
       } catch {
-        setFeaturedEvents([])
-        setError("Failed to fetch featured events")
+        setFeaturedEvents([NUSC_HOME_MATCH_SERIES])
       } finally {
         setIsLoading(false)
       }

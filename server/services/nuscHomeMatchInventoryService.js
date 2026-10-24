@@ -1,0 +1,594 @@
+const Inventory = require('../models/NuscHomeMatchInventory');
+
+const BOX_COUNT = 4;
+const SEATS_PER_BOX = 8;
+const BUYER_TICKET_LIMIT = 10;
+const HOLD_MINUTES = 15;
+function getMongoDatabaseName() {
+  try {
+    return decodeURIComponent(new URL(process.env.MONGO_URI).pathname.replace(/^\/+/, '')).split('/')[0];
+  } catch {
+    return '';
+  }
+}
+const NUSC_TEST_MODE_ENABLED = process.env.NUSC_HOME_MATCH_TEST_MODE === 'true' &&
+  process.env.NODE_ENV !== 'production' &&
+  /^rzp_test_/.test(process.env.RAZORPAY_KEY_ID || '') &&
+  getMongoDatabaseName() === 'ahibi-test';
+const NUSC_LIVE_SALES_ENABLED = process.env.NODE_ENV === 'production' &&
+  process.env.NUSC_HOME_MATCH_TICKET_SALES_ENABLED === 'true' &&
+  /^rzp_live_/.test(process.env.RAZORPAY_KEY_ID || '') &&
+  getMongoDatabaseName() === 'ahibi';
+const TICKET_SALES_ENABLED = (
+  NUSC_TEST_MODE_ENABLED || NUSC_LIVE_SALES_ENABLED
+) && process.env.NUSC_HOME_MATCH_TICKET_SALES_ENABLED === 'true';
+const GENERAL_SEATING_AREAS = [
+  { name: 'G1', capacity: 600 },
+  { name: 'G2', capacity: 600 },
+  { name: 'G3', capacity: 450 },
+  { name: 'G4', capacity: 650 },
+  { name: 'G5', capacity: 600 },
+];
+const TICKET_CAPACITIES = {
+  'General Pass': GENERAL_SEATING_AREAS.reduce((sum, area) => sum + area.capacity, 0),
+  'Premium Pass': 300,
+};
+const INVENTORY_KEY = 'nusc-il-2026-27';
+const FIXTURE_MATCHES = [
+  { date: '2026-11-14', opponent: 'Gokulam Kerala FC' },
+  { date: '2026-11-30', opponent: 'Dempo SC' },
+  { date: '2026-12-15', opponent: 'Sreenidi Deccan FC' },
+  { date: '2026-12-19', opponent: 'Mohammedan SC' },
+  { date: '2027-01-04', opponent: 'Rajasthan United FC' },
+  { date: '2027-01-09', opponent: 'FC Bengaluru United' },
+  { date: '2027-01-16', opponent: 'Shillong Lajong FC' },
+  { date: '2027-02-06', opponent: 'Chanmari FC' },
+  { date: '2027-03-13', opponent: 'Samaleswari SC' },
+  { date: '2027-03-20', opponent: 'Real Kashmir FC' },
+];
+const FIXTURE_DATES = FIXTURE_MATCHES.map((match) => match.date);
+
+const SUITE_SINGLE = 'United Suite — Single pass';
+const SUITE_FULL_BOX = 'United Suite — Full Box';
+const SUITE_SEASON = 'United Suite — Season';
+const SEASON_PASS_TICKET_TYPES = ['General Pass', 'Premium Pass'];
+
+class InventoryConflict extends Error {
+  constructor(message, code = 'INVENTORY_UNAVAILABLE') {
+    super(message);
+    this.name = 'InventoryConflict';
+    this.code = code;
+  }
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+async function ensureInventory() {
+  await Inventory.updateOne(
+    { key: INVENTORY_KEY },
+    { $setOnInsert: { key: INVENTORY_KEY, orders: [], seasonPassOrders: [], seasonReservations: [] } },
+    { upsert: true }
+  );
+  return Inventory.findOne({ key: INVENTORY_KEY }).lean();
+}
+
+function pruneExpiredHolds(state, now = new Date()) {
+  state.orders = (state.orders || []).filter((order) => (
+    order.status === 'confirmed' ||
+    (order.status === 'held' && new Date(order.expiresAt) > now)
+  ));
+  state.seasonPassOrders = (state.seasonPassOrders || []).filter((order) => (
+    order.status === 'confirmed' ||
+    (order.status === 'held' && new Date(order.expiresAt) > now)
+  ));
+}
+
+async function mutateInventory(mutator) {
+  await ensureInventory();
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const current = await Inventory.findOne({ key: INVENTORY_KEY }).lean();
+    if (!current) throw new Error('NUSC suite inventory could not be initialized');
+    const state = clone(current);
+    state.seasonPassOrders ||= [];
+    pruneExpiredHolds(state);
+    const result = await mutator(state);
+    const update = await Inventory.updateOne(
+      { _id: current._id, __v: current.__v || 0 },
+      {
+        $set: {
+          orders: state.orders,
+          seasonPassOrders: state.seasonPassOrders,
+          seasonReservations: state.seasonReservations,
+          updatedAt: new Date(),
+        },
+        $inc: { __v: 1 },
+      }
+    );
+    if (update.modifiedCount === 1) return result;
+  }
+  throw new InventoryConflict('Suite inventory changed during checkout. Please try again.', 'INVENTORY_BUSY');
+}
+
+function isSuiteType(ticketType) {
+  return ticketType === SUITE_SINGLE || ticketType === SUITE_FULL_BOX;
+}
+
+function buyerTicketUnits(ticketType, quantity) {
+  return ticketType === SUITE_FULL_BOX ? quantity * SEATS_PER_BOX : quantity;
+}
+
+function activeOrdersForDate(state, matchDate) {
+  const now = new Date();
+  return state.orders.filter((order) => (
+    order.matchDate === matchDate &&
+    (order.status === 'confirmed' || (order.status === 'held' && new Date(order.expiresAt) > now))
+  ));
+}
+
+function activeSeasonPassOrdersForDate(state, matchDate) {
+  const now = new Date();
+  return (state.seasonPassOrders || []).filter((order) => (
+    (order.matchDates || []).includes(matchDate) &&
+    ((order.status === 'confirmed' && !order.stockApplied) || (order.status === 'held' && new Date(order.expiresAt) > now))
+  ));
+}
+
+function getBoxState(state, matchDate) {
+  const activeSeasonBoxes = new Set(
+    state.seasonReservations
+      .filter((reservation) => reservation.status === 'active')
+      .map((reservation) => reservation.boxNumber)
+  );
+  const orders = activeOrdersForDate(state, matchDate);
+
+  return Array.from({ length: BOX_COUNT }, (_, index) => {
+    const boxNumber = index + 1;
+    const allocations = orders.flatMap((order) => order.suiteAllocations || [])
+      .filter((allocation) => allocation.boxNumber === boxNumber);
+    return {
+      boxNumber,
+      seasonReserved: activeSeasonBoxes.has(boxNumber),
+      fullBoxReserved: allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX),
+      singlePassCount: allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length,
+    };
+  });
+}
+
+function getSuiteAvailability(state, matchDate) {
+  const boxes = getBoxState(state, matchDate);
+  const eligible = boxes.filter((box) => !box.seasonReserved && !box.fullBoxReserved);
+  return {
+    fullBoxes: eligible.filter((box) => box.singlePassCount === 0).length,
+    singleSeats: eligible.reduce((sum, box) => sum + Math.max(0, SEATS_PER_BOX - box.singlePassCount), 0),
+  };
+}
+
+function normalizeTicketLines(lines) {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    throw new InventoryConflict('Choose at least one ticket.', 'INVALID_TICKETS');
+  }
+  return lines.map((line) => {
+    const quantity = Number(line.quantity);
+    if (!line.ticketType || !Number.isInteger(quantity) || quantity < 1) {
+      throw new InventoryConflict('Ticket selection is invalid.', 'INVALID_TICKETS');
+    }
+    return { ticketType: String(line.ticketType), quantity };
+  });
+}
+
+async function reserveMatchOrder({ orderId, userId, matchDate, ticketLines, eventTicketTypes, existingUserTicketCount = 0, allowSalesClosed = false }) {
+  if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
+    throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
+  }
+  const normalizedLines = normalizeTicketLines(ticketLines);
+  if (!FIXTURE_DATES.includes(matchDate)) {
+    throw new InventoryConflict('This NUSC match date is not available.', 'INVALID_MATCH_DATE');
+  }
+
+  return mutateInventory((state) => {
+    const existing = state.orders.find((order) => order.orderId === orderId);
+    if (existing) {
+      const sameLines = JSON.stringify(existing.ticketLines) === JSON.stringify(normalizedLines);
+      if (!sameLines || String(existing.userId) !== String(userId) || existing.matchDate !== matchDate) {
+        throw new InventoryConflict('This checkout order already has a different ticket selection.', 'ORDER_CONFLICT');
+      }
+      return existing;
+    }
+
+    const activeOrders = activeOrdersForDate(state, matchDate);
+    const activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate);
+    const requestedBuyerUnits = normalizedLines.reduce((sum, line) => sum + buyerTicketUnits(line.ticketType, line.quantity), 0);
+    const buyerHeldUnits = activeOrders
+      .filter((order) => String(order.userId) === String(userId))
+      .reduce((sum, order) => sum + (order.ticketLines || []).reduce((lineSum, line) => lineSum + buyerTicketUnits(line.ticketType, line.quantity), 0), 0);
+    const seasonBuyerHeldUnits = activeSeasonOrders
+      .filter((order) => String(order.userId) === String(userId))
+      .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
+
+    if (Number(existingUserTicketCount) + buyerHeldUnits + seasonBuyerHeldUnits + requestedBuyerUnits > BUYER_TICKET_LIMIT) {
+      throw new InventoryConflict(`You can buy at most ${BUYER_TICKET_LIMIT} tickets per match, including Suite capacity.`, 'BUYER_TICKET_LIMIT');
+    }
+
+    const stockByName = new Map((eventTicketTypes || []).map((ticket) => [ticket.name, ticket]));
+    const heldByTicketType = new Map();
+    for (const order of activeOrders) {
+      if (order.stockApplied) continue;
+      for (const line of order.ticketLines || []) {
+        heldByTicketType.set(line.ticketType, (heldByTicketType.get(line.ticketType) || 0) + line.quantity);
+      }
+    }
+    for (const order of activeSeasonOrders) {
+      heldByTicketType.set(order.ticketType, (heldByTicketType.get(order.ticketType) || 0) + Number(order.quantity || 0));
+    }
+
+    for (const line of normalizedLines) {
+      if (line.ticketType === SUITE_SEASON) {
+        throw new InventoryConflict('United Suite season bookings are handled by staff.', 'CALL_TO_BOOK');
+      }
+      if (isSuiteType(line.ticketType)) continue;
+      const ticket = stockByName.get(line.ticketType);
+      if (!ticket) throw new InventoryConflict(`Ticket type ${line.ticketType} is not configured for this match.`, 'TICKET_NOT_CONFIGURED');
+      const capacity = TICKET_CAPACITIES[line.ticketType] ?? Number(ticket.quantity || 0);
+      const available = Math.max(0, capacity - Number(ticket.sold || 0) - (heldByTicketType.get(line.ticketType) || 0));
+      if (line.quantity > available) {
+        throw new InventoryConflict(`Only ${available} ${line.ticketType} ticket(s) remain for this match.`, 'TICKETS_UNAVAILABLE');
+      }
+    }
+
+    const seasonBoxes = new Set(state.seasonReservations
+      .filter((reservation) => reservation.status === 'active')
+      .map((reservation) => reservation.boxNumber));
+    const activeAllocations = activeOrders.flatMap((order) => order.suiteAllocations || []);
+    const allocationByBox = new Map();
+    for (let boxNumber = 1; boxNumber <= BOX_COUNT; boxNumber += 1) {
+      allocationByBox.set(boxNumber, activeAllocations.filter((allocation) => allocation.boxNumber === boxNumber));
+    }
+
+    const suiteAllocations = [];
+    let ticketIndex = 1;
+    const linesWithIndex = normalizedLines.map((line) => {
+      const indexed = { ...line, startIndex: ticketIndex };
+      ticketIndex += line.quantity;
+      return indexed;
+    });
+
+    for (const line of linesWithIndex.filter((item) => item.ticketType === SUITE_FULL_BOX)) {
+      for (let i = 0; i < line.quantity; i += 1) {
+        const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
+          const allocations = allocationByBox.get(candidate) || [];
+          return !seasonBoxes.has(candidate) && allocations.length === 0;
+        });
+        if (!boxNumber) throw new InventoryConflict('No full United Suite boxes remain for this match.', 'SUITE_BOXES_UNAVAILABLE');
+        const allocation = { ticketType: SUITE_FULL_BOX, ticketIndex: line.startIndex + i, boxNumber };
+        suiteAllocations.push(allocation);
+        allocationByBox.get(boxNumber).push(allocation);
+      }
+    }
+
+    for (const line of linesWithIndex.filter((item) => item.ticketType === SUITE_SINGLE)) {
+      for (let i = 0; i < line.quantity; i += 1) {
+        const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
+          if (seasonBoxes.has(candidate)) return false;
+          const allocations = allocationByBox.get(candidate) || [];
+          return !allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX) &&
+            allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length < SEATS_PER_BOX;
+        });
+        if (!boxNumber) throw new InventoryConflict('No United Suite seats remain for this match.', 'SUITE_SEATS_UNAVAILABLE');
+        const allocation = { ticketType: SUITE_SINGLE, ticketIndex: line.startIndex + i, boxNumber };
+        suiteAllocations.push(allocation);
+        allocationByBox.get(boxNumber).push(allocation);
+      }
+    }
+
+    const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60 * 1000);
+    const order = {
+      orderId,
+      userId,
+      matchDate,
+      ticketLines: normalizedLines,
+      suiteAllocations,
+      status: 'held',
+      expiresAt,
+      stockApplied: false,
+      createdAt: new Date(),
+    };
+    state.orders.push(order);
+    return order;
+  });
+}
+
+async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, matches, existingUserTicketCountByDate = {}, allowSalesClosed = false }) {
+  if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
+    throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
+  }
+  const normalizedQuantity = Number(quantity);
+  if (!SEASON_PASS_TICKET_TYPES.includes(ticketType) || !Number.isInteger(normalizedQuantity) || normalizedQuantity < 1 || normalizedQuantity > BUYER_TICKET_LIMIT) {
+    throw new InventoryConflict('Season pass selection is invalid.', 'INVALID_TICKETS');
+  }
+  if (!Array.isArray(matches) || matches.length !== FIXTURE_DATES.length ||
+      new Set(matches.map((match) => match.matchDate)).size !== FIXTURE_DATES.length ||
+      FIXTURE_DATES.some((date) => !matches.some((match) => match.matchDate === date))) {
+    throw new InventoryConflict('All 10 NUSC home fixtures must be available for a season pass.', 'INVALID_MATCH_DATE');
+  }
+
+  return mutateInventory((state) => {
+    const existing = state.seasonPassOrders.find((order) => order.orderId === orderId);
+    if (existing) {
+      const sameDates = JSON.stringify(existing.matchDates) === JSON.stringify(FIXTURE_DATES);
+      if (!sameDates || existing.ticketType !== ticketType || Number(existing.quantity) !== normalizedQuantity || String(existing.userId) !== String(userId)) {
+        throw new InventoryConflict('This season checkout already has a different pass selection.', 'ORDER_CONFLICT');
+      }
+      return existing;
+    }
+
+    for (const match of matches) {
+      const activeOrders = activeOrdersForDate(state, match.matchDate);
+      const activeSeasonOrders = activeSeasonPassOrdersForDate(state, match.matchDate);
+      const userMatchHolds = activeOrders
+        .filter((order) => String(order.userId) === String(userId))
+        .reduce((sum, order) => sum + (order.ticketLines || []).reduce((lineSum, line) => lineSum + buyerTicketUnits(line.ticketType, line.quantity), 0), 0);
+      const userSeasonHolds = activeSeasonOrders
+        .filter((order) => String(order.userId) === String(userId))
+        .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
+      if (Number(existingUserTicketCountByDate[match.matchDate] || 0) + userMatchHolds + userSeasonHolds + normalizedQuantity > BUYER_TICKET_LIMIT) {
+        throw new InventoryConflict(`You can buy at most ${BUYER_TICKET_LIMIT} tickets for ${match.matchDate}, including season passes.`, 'BUYER_TICKET_LIMIT');
+      }
+
+      const ticket = (match.ticketTypes || []).find((item) => item.name === ticketType);
+      if (!ticket) throw new InventoryConflict(`${ticketType} is not configured for every home match.`, 'TICKET_NOT_CONFIGURED');
+      const capacity = TICKET_CAPACITIES[ticketType] ?? Number(ticket.quantity || 0);
+      const matchHeld = activeOrders.reduce((sum, order) => order.stockApplied ? sum : sum + (order.ticketLines || [])
+        .filter((line) => line.ticketType === ticketType)
+        .reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0), 0);
+      const seasonHeld = activeSeasonOrders
+        .filter((order) => order.ticketType === ticketType)
+        .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
+      const available = Math.max(0, capacity - Number(ticket.sold || 0) - matchHeld - seasonHeld);
+      if (normalizedQuantity > available) {
+        throw new InventoryConflict(`Only ${available} ${ticketType} season pass(es) remain across all fixtures.`, 'TICKETS_UNAVAILABLE');
+      }
+    }
+
+    const hold = {
+      orderId,
+      userId,
+      ticketType,
+      quantity: normalizedQuantity,
+      matchDates: FIXTURE_DATES,
+      status: 'held',
+      expiresAt: new Date(Date.now() + HOLD_MINUTES * 60 * 1000),
+      createdAt: new Date(),
+    };
+    state.seasonPassOrders.push(hold);
+    return hold;
+  });
+}
+
+async function confirmSeasonPassOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
+    if (!order) throw new InventoryConflict('This season pass hold expired. Contact support if payment was captured.', 'HOLD_EXPIRED');
+    if (order.status === 'confirmed') return order;
+    if (new Date(order.expiresAt) <= new Date()) {
+      throw new InventoryConflict('This season pass hold expired. Contact support if payment was captured.', 'HOLD_EXPIRED');
+    }
+    order.status = 'confirmed';
+    return order;
+  });
+}
+
+async function releaseSeasonPassOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
+    if (!order || order.status === 'confirmed') return order || null;
+    state.seasonPassOrders = state.seasonPassOrders.filter((item) => item.orderId !== orderId);
+    return order;
+  });
+}
+
+async function markSeasonPassStockApplied(orderId) {
+  return mutateInventory((state) => {
+    const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
+    if (!order) return null;
+    order.stockApplied = true;
+    return order;
+  });
+}
+
+async function finalizeSeasonPassOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
+    if (!order) return null;
+    state.seasonPassOrders = state.seasonPassOrders.filter((item) => item.orderId !== orderId);
+    return order;
+  });
+}
+
+async function confirmMatchOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = state.orders.find((item) => item.orderId === orderId);
+    if (!order) throw new InventoryConflict('This ticket hold expired. Contact support if payment was captured.', 'HOLD_EXPIRED');
+    if (order.status === 'confirmed') return order;
+    if (new Date(order.expiresAt) <= new Date()) {
+      throw new InventoryConflict('This ticket hold expired. Contact support if payment was captured.', 'HOLD_EXPIRED');
+    }
+    order.status = 'confirmed';
+    return order;
+  });
+}
+
+async function releaseMatchOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = state.orders.find((item) => item.orderId === orderId);
+    if (!order) return null;
+    if (order.status === 'confirmed') return order;
+    state.orders = state.orders.filter((item) => item.orderId !== orderId);
+    return order;
+  });
+}
+
+async function markTicketStockApplied(orderId) {
+  return mutateInventory((state) => {
+    const order = state.orders.find((item) => item.orderId === orderId);
+    if (!order) return null;
+    order.stockApplied = true;
+    order.ticketLines = [];
+    return order;
+  });
+}
+
+async function finalizeMatchOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = state.orders.find((item) => item.orderId === orderId);
+    if (!order) return null;
+    if (order.suiteAllocations?.length) {
+      order.stockApplied = true;
+      order.ticketLines = [];
+      return order;
+    }
+    state.orders = state.orders.filter((item) => item.orderId !== orderId);
+    return order;
+  });
+}
+
+function getPublicTicketTypes(state, matchDate, eventTicketTypes = []) {
+  if (!TICKET_SALES_ENABLED) {
+    return eventTicketTypes.map((source) => {
+      const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
+      return { ...ticket, quantity: 0, sold: 0 };
+    });
+  }
+  const activeOrders = activeOrdersForDate(state, matchDate);
+  const suite = getSuiteAvailability(state, matchDate);
+  const heldByTicketType = new Map();
+  for (const order of activeOrders) {
+    if (order.stockApplied) continue;
+    for (const line of order.ticketLines || []) {
+      heldByTicketType.set(line.ticketType, (heldByTicketType.get(line.ticketType) || 0) + line.quantity);
+    }
+  }
+  for (const order of activeSeasonPassOrdersForDate(state, matchDate)) {
+    heldByTicketType.set(order.ticketType, (heldByTicketType.get(order.ticketType) || 0) + Number(order.quantity || 0));
+  }
+  return eventTicketTypes.map((source) => {
+    const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
+    if (ticket.name === SUITE_SINGLE) return { ...ticket, quantity: suite.singleSeats, sold: 0 };
+    if (ticket.name === SUITE_FULL_BOX) return { ...ticket, quantity: suite.fullBoxes, sold: 0 };
+    const capacity = TICKET_CAPACITIES[ticket.name] ?? Number(ticket.quantity || 0);
+    const available = Math.max(0, capacity - Number(ticket.sold || 0) - (heldByTicketType.get(ticket.name) || 0));
+    return { ...ticket, quantity: available, sold: 0 };
+  });
+}
+
+async function getMatchAvailability(matchDate, eventTicketTypes = []) {
+  if (!FIXTURE_DATES.includes(matchDate)) return null;
+  return mutateInventory((state) => getPublicTicketTypes(state, matchDate, eventTicketTypes));
+}
+
+async function getMatchAvailabilities(matches = []) {
+  const validMatches = matches.filter((match) => FIXTURE_DATES.includes(match.matchDate));
+  if (validMatches.length === 0) return {};
+  return mutateInventory((state) => Object.fromEntries(validMatches.map((match) => [
+    match.key,
+    getPublicTicketTypes(state, match.matchDate, match.ticketTypes),
+  ])));
+}
+
+async function reserveSeasonBox({ bookingReference, adminId }) {
+  const reference = String(bookingReference || '').trim();
+  if (reference.length < 3 || reference.length > 80) {
+    throw new InventoryConflict('Enter a season booking reference between 3 and 80 characters.', 'INVALID_REFERENCE');
+  }
+
+  return mutateInventory((state) => {
+    const existing = state.seasonReservations.find((item) => item.bookingReference.toLowerCase() === reference.toLowerCase() && item.status === 'active');
+    if (existing) return existing;
+
+    const alreadySeasonReserved = new Set(state.seasonReservations
+      .filter((item) => item.status === 'active')
+      .map((item) => item.boxNumber));
+    const activeOrders = state.orders.filter((order) => order.status === 'confirmed' || (order.status === 'held' && new Date(order.expiresAt) > new Date()));
+    const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
+      if (alreadySeasonReserved.has(candidate)) return false;
+      return !FIXTURE_DATES.some((date) => activeOrders.some((order) => (
+        order.matchDate === date && (order.suiteAllocations || []).some((allocation) => allocation.boxNumber === candidate)
+      )));
+    });
+    if (!boxNumber) throw new InventoryConflict('No single box is free across every match for a season booking.', 'NO_SEASON_BOX');
+
+    const reservation = {
+      bookingReference: reference,
+      boxNumber,
+      status: 'active',
+      createdBy: adminId,
+      createdAt: new Date(),
+    };
+    state.seasonReservations.push(reservation);
+    return reservation;
+  });
+}
+
+async function cancelSeasonBox(reservationId, adminId) {
+  return mutateInventory((state) => {
+    const reservation = state.seasonReservations.find((item) => String(item._id) === String(reservationId));
+    if (!reservation || reservation.status !== 'active') return null;
+    reservation.status = 'cancelled';
+    reservation.cancelledAt = new Date();
+    reservation.cancelledBy = adminId;
+    return reservation;
+  });
+}
+
+async function releaseRefundedMatchOrder(orderId) {
+  return mutateInventory((state) => {
+    const order = state.orders.find((item) => item.orderId === orderId);
+    if (!order) return null;
+    state.orders = state.orders.filter((item) => item.orderId !== orderId);
+    return order;
+  });
+}
+
+async function listSeasonBoxes() {
+  const state = await ensureInventory();
+  return (state.seasonReservations || []).filter((reservation) => reservation.status === 'active');
+}
+
+function matchDateFromSlug(slug) {
+  const match = /^nusc-home-match-(\d{4})(\d{2})(\d{2})$/.exec(String(slug || ''));
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+}
+
+module.exports = {
+  BOX_COUNT,
+  BUYER_TICKET_LIMIT,
+  FIXTURE_DATES,
+  GENERAL_SEATING_AREAS,
+  HOLD_MINUTES,
+  FIXTURE_MATCHES,
+  InventoryConflict,
+  NUSC_TEST_MODE_ENABLED,
+  SUITE_FULL_BOX,
+  SUITE_SEASON,
+  SUITE_SINGLE,
+  TICKET_CAPACITIES,
+  TICKET_SALES_ENABLED,
+  cancelSeasonBox,
+  confirmMatchOrder,
+  confirmSeasonPassOrder,
+  finalizeMatchOrder,
+  finalizeSeasonPassOrder,
+  getMatchAvailability,
+  getMatchAvailabilities,
+  listSeasonBoxes,
+  markTicketStockApplied,
+  markSeasonPassStockApplied,
+  matchDateFromSlug,
+  releaseMatchOrder,
+  reserveMatchOrder,
+  reserveSeasonPassOrder,
+  releaseSeasonPassOrder,
+  releaseRefundedMatchOrder,
+  reserveSeasonBox,
+};

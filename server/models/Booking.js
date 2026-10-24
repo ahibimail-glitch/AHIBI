@@ -80,6 +80,26 @@ const BookingSchema = new mongoose.Schema({
   paymentId: {
     type: String
   },
+  nuscOrderId: {
+    type: String,
+  },
+  nuscTicketIndex: {
+    type: Number,
+  },
+  nuscSuiteBoxNumber: {
+    type: Number,
+    min: 1,
+    max: 4,
+  },
+  nuscSeasonPassType: {
+    type: String,
+    enum: ['general-season', 'premium-season'],
+  },
+  nuscSeasonMatchIndex: {
+    type: Number,
+    min: 1,
+    max: 10,
+  },
   // QR code verification fields
   entryVerified: {
     type: Boolean,
@@ -168,5 +188,9 @@ BookingSchema.pre('save', function(next) {
 
 // Add index for better query performance
 BookingSchema.index({ event: 1, user: 1, status: 1 });
+BookingSchema.index(
+  { nuscOrderId: 1, nuscTicketIndex: 1 },
+  { unique: true, partialFilterExpression: { nuscOrderId: { $type: 'string' } } }
+);
 
 module.exports = mongoose.model('Booking', BookingSchema);

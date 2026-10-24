@@ -16,6 +16,7 @@ const venueRoutes = require('./routes/venue.routes');
 const organizerRoutes = require('./routes/organizer.routes');
 const eventTeamRoutes = require('./routes/eventTeam.routes');
 const eventRoutes = require('./routes/event.routes');
+const nuscHomeMatchRoutes = require('./routes/nuscHomeMatch.routes');
 const dailyEventRoutes = require('./routes/dailyEvent.routes');
 
 const uploadRoutes = require('./routes/upload.routes');
@@ -185,6 +186,7 @@ app.use('/api/organizer/analytics', organizerAnalyticsRoutes);
 app.use('/api/organizer', organizerRoutes);
 app.use('/api/event-team', eventTeamRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/nusc-home-matches', nuscHomeMatchRoutes);
 app.use('/api/daily-events', dailyEventRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/qrs', qrRoutes);

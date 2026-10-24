@@ -12,6 +12,8 @@ const PendingPaymentSession = require('../models/PendingPaymentSession');
 const BikerBash = require('../models/BikerBash');
 const Coupon = require('../models/Coupon');
 const { computeCouponDiscount } = require('../utils/couponDiscount');
+const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
+const nuscHomeMatchController = require('./nuscHomeMatchController');
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -49,6 +51,14 @@ exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
   try {
     const { amount, currency, receipt, bookingDetails, coupon } = req.body;
+    // NUSC home match orders must use the inventory-aware checkout flow.
+    const requestedEventId = bookingDetails?.event?._id;
+    if (requestedEventId) {
+      const requestedEvent = await Event.findById(requestedEventId).select('slug');
+      if (requestedEvent?.slug?.startsWith('nusc-home-match-')) {
+        return res.status(409).json({ message: 'Use the NUSC home match checkout for these tickets.' });
+      }
+    }
 
     // Enforce per-user ticket cap for specific event before taking payment
     try {
@@ -612,6 +622,29 @@ exports.razorpayWebhook = async (req, res) => {
     }
     const eventType = event.event;
     console.log('[Razorpay Webhook] Event received:', eventType);
+    if (eventType === 'payment.captured' || eventType === 'order.paid') {
+      const nuscPayment = event.payload.payment?.entity;
+      const nuscOrderId = nuscPayment?.order_id || event.payload.order?.entity?.id;
+      const nuscOrder = nuscOrderId
+        ? await NuscHomeMatchOrder.findOne({ orderId: nuscOrderId })
+        : null;
+      if (nuscOrder) {
+        if (!nuscPayment?.id) {
+          if (eventType === 'order.paid') {
+            return res.json({ status: 'awaiting_payment_capture_webhook' });
+          }
+          console.error('[Razorpay Webhook] NUSC capture payload did not include a payment.');
+          return res.status(400).send('Payment details missing');
+        }
+        try {
+          await nuscHomeMatchController.settleCapturedPayment(nuscOrderId, nuscPayment);
+        } catch (settlementError) {
+          if (settlementError.code !== 'PAID_NO_BOOKING') throw settlementError;
+          console.error('[Razorpay Webhook] Captured NUSC payment requires manual resolution:', nuscOrderId);
+        }
+        return res.json({ status: 'ok' });
+      }
+    }
 
     if (eventType === 'payment.captured' || eventType === 'order.paid') {
       const payment = event.payload.payment?.entity;

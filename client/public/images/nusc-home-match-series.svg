@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1800" viewBox="0 0 1200 1800" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="65" y1="90" x2="1100" y2="1710" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07140F"/>
+      <stop offset=".58" stop-color="#10251A"/>
+      <stop offset="1" stop-color="#07100D"/>
+    </linearGradient>
+    <linearGradient id="light" x1="210" y1="280" x2="985" y2="1030" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4FFF3" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#F4FFF3" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="red" x1="120" y1="1110" x2="1030" y2="1580" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E21B32"/>
+      <stop offset="1" stop-color="#A90F25"/>
+    </linearGradient>
+    <pattern id="stripes" width="52" height="52" patternUnits="userSpaceOnUse" patternTransform="rotate(34)">
+      <path d="M0 0V52" stroke="#E7F3E9" stroke-opacity=".055" stroke-width="16"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="1800" fill="url(#bg)"/>
+  <rect width="1200" height="1800" fill="url(#stripes)"/>
+  <circle cx="1014" cy="316" r="346" fill="#E21B32" fill-opacity=".13"/>
+  <circle cx="1014" cy="316" r="235" stroke="#E8F1E8" stroke-opacity=".1" stroke-width="2"/>
+  <path d="M-80 1115C165 932 370 849 635 815c280-36 467 15 720 179v478H-80v-357Z" fill="#0C1F16" stroke="#D9EBDD" stroke-opacity=".18" stroke-width="3"/>
+  <path d="M-74 1190c233-179 457-258 712-285 279-29 490 33 712 178" stroke="#D9EBDD" stroke-opacity=".18" stroke-width="2"/>
+  <path d="M-57 1304c228-166 460-241 695-263 280-27 498 26 672 140" stroke="#D9EBDD" stroke-opacity=".13" stroke-width="2"/>
+  <path d="M80 1256v343M1120 1230v369M294 1111v488M906 1084v515" stroke="#D9EBDD" stroke-opacity=".13" stroke-width="2"/>
+  <path d="M256 1600c67-148 202-226 344-226 146 0 277 78 344 226" stroke="#E21B32" stroke-opacity=".8" stroke-width="4"/>
+  <path d="M489 1378v222M711 1378v222" stroke="#E21B32" stroke-opacity=".8" stroke-width="3"/>
+  <path d="M429 1473h342" stroke="#E21B32" stroke-opacity=".8" stroke-width="3"/>
+  <path d="M600 1375v225" stroke="#EAF3E9" stroke-opacity=".22" stroke-width="2"/>
+  <circle cx="600" cy="1490" r="52" stroke="#EAF3E9" stroke-opacity=".3" stroke-width="2"/>
+  <rect x="63" y="78" width="1074" height="1644" rx="22" stroke="#E8F1E8" stroke-opacity=".18" stroke-width="2"/>
+  <path d="M120 226h960" stroke="#E8F1E8" stroke-opacity=".32" stroke-width="2"/>
+  <text x="120" y="183" fill="#F1F7F0" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="12">NUSC  /  HOME FIXTURES</text>
+  <text x="120" y="390" fill="#E21B32" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="9">INDIAN FOOTBALL LEAGUE</text>
+  <text x="105" y="590" fill="#F5F7F1" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="800" letter-spacing="-5">HOME</text>
+  <text x="105" y="740" fill="#F5F7F1" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="800" letter-spacing="-5">MATCHES</text>
+  <rect x="120" y="815" width="160" height="9" rx="4.5" fill="#E21B32"/>
+  <text x="120" y="895" fill="#D8E2D8" font-family="Arial, Helvetica, sans-serif" font-size="31" letter-spacing="5">THE SEASON STARTS AT HOME</text>
+  <path d="M120 1015h960" stroke="#E8F1E8" stroke-opacity=".32" stroke-width="2"/>
+  <text x="120" y="1102" fill="#E8F1E8" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" letter-spacing="6">NEXT KICKOFF</text>
+  <text x="120" y="1195" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" letter-spacing="1">14 NOV 2026</text>
+  <text x="120" y="1264" fill="#C4D0C5" font-family="Arial, Helvetica, sans-serif" font-size="27" letter-spacing="2">6:30 PM  ·  CHÜMOUKEDIMA FOOTBALL STADIUM</text>
+  <rect x="120" y="1500" width="960" height="2" fill="#E8F1E8" fill-opacity=".26"/>
+  <text x="120" y="1580" fill="#E8F1E8" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="7">TEN HOME DATES  ·  ONE CLUB</text>
+  <text x="120" y="1660" fill="#B9C7BB" font-family="Arial, Helvetica, sans-serif" font-size="22" letter-spacing="4">COME BE PART OF THE NOISE</text>
+  <rect x="788" y="1514" width="292" height="132" rx="66" fill="url(#red)"/>
+  <text x="934" y="1597" fill="#FFFFFF" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="3">NUSC</text>
+</svg>

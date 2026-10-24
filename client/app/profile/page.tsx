@@ -382,9 +382,14 @@ export default function ProfilePage() {
                         <h3 className="font-bold text-lg text-slate-900 leading-tight mb-2 line-clamp-2">
                           {booking.event?.title || booking.dailyEvent?.title || "Event Name Unavailable"}
                         </h3>
+                        {booking.nuscSeasonPassType && (
+                          <p className="mb-2 text-xs font-semibold text-emerald-700">
+                            Season pass · Match {booking.nuscSeasonMatchIndex || "—"} of 10
+                          </p>
+                        )}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
                           <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
-                            {new Date(booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {new Date(booking.nuscSeasonPassType ? booking.event?.startDate || booking.bookedAt : booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                           <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
                         </div>
