@@ -34,6 +34,7 @@ import HMFTermsContent from "@/components/HMFTermsContent";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import CheckoutDetailedBreakdown from "@/components/CheckoutDetailedBreakdown";
+import NuscPriceBreakdown from "@/components/NuscPriceBreakdown";
 import {
   trackCheckoutStarted,
   trackPaymentFailed,
@@ -44,6 +45,12 @@ import {
   runAfterRazorpay,
   setRazorpayCheckoutActive,
 } from "@/lib/razorpayUi";
+import {
+  clearNuscCheckoutRequestId,
+  getNuscCheckoutRequestId,
+  getNuscMatchSlug,
+  NUSC_HOME_MATCHES,
+} from "@/lib/nuscHomeMatches";
 
 // Types
 interface TicketType {
@@ -60,6 +67,7 @@ interface TicketType {
 
 interface Event {
   _id: string;
+  slug?: string;
   title: string;
   description: string;
   banner: string;
@@ -95,6 +103,16 @@ interface RazorpayResponse {
   razorpay_signature: string;
 }
 
+const NUSC_PASS_TICKET_TYPE_NAMES: Record<string, string> = {
+  "general-single": "General Pass",
+  "premium-single": "Premium Pass",
+  "suite-single": "United Suite — Single pass",
+  "suite-box-single": "United Suite — Full Box",
+};
+
+const getNuscBuyerTicketUnits = (ticketName: string, quantity: number) =>
+  ticketName === NUSC_PASS_TICKET_TYPE_NAMES["suite-box-single"] ? quantity * 8 : quantity;
+
 export default function CheckoutPage() {
   const router = useRouter();
   const params = useParams();
@@ -116,6 +134,7 @@ export default function CheckoutPage() {
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const checkoutStartedKeyRef = useRef<string | null>(null);
+  const nuscPassPreselectionRef = useRef(false);
 
   // HMF event state
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -236,6 +255,28 @@ export default function CheckoutPage() {
     fetchEvent();
   }, [eventId, router]);
 
+  useEffect(() => {
+    if (!event?.slug?.startsWith("nusc-home-match-") || nuscPassPreselectionRef.current) return;
+    const passId = new URLSearchParams(window.location.search).get("nuscPass");
+    if (!passId) return;
+    nuscPassPreselectionRef.current = true;
+
+    const ticketName = NUSC_PASS_TICKET_TYPE_NAMES[passId];
+    const ticket = ticketName
+      ? event.ticketTypes.find((item) => item.name === ticketName)
+      : undefined;
+
+    if (!ticket || ticket.quantity <= ticket.sold) {
+      toast.error("That NUSC pass is not available for this match.");
+      return;
+    }
+
+    setSelectedTickets((current) => {
+      if (current.size > 0) return current;
+      return new Map(current).set(ticket._id, { ticket, quantity: 1 });
+    });
+  }, [event]);
+
   const subtotalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);
   const baseSubtotalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => {
     const base = typeof item.ticket.basePrice === "number" ? item.ticket.basePrice : item.ticket.price;
@@ -246,6 +287,7 @@ export default function CheckoutPage() {
   const payableAmount = Math.max(0, subtotalAmount - discountAmount);
 
   const isFreeEvent = event?.isFreeEvent || false;
+  const isNuscHomeMatchEvent = !!event?.slug?.startsWith("nusc-home-match-");
 
   const getAnalyticsEventPayload = () => {
     if (!event?._id || !event?.title) return null;
@@ -466,9 +508,18 @@ export default function CheckoutPage() {
 
     // Check 10 ticket limit (only for paid events)
     if (!isFreeEvent) {
-      const totalTickets = Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0);
-      if (totalTickets >= 10) {
-        toast.error("You can add up to 10 tickets only");
+      const totalBuyerUnits = Array.from(selectedTickets.values()).reduce((sum, item) => (
+        sum + (isNuscHomeMatchEvent
+          ? getNuscBuyerTicketUnits(item.ticket.name, item.quantity)
+          : item.quantity)
+      ), 0);
+      const requestedBuyerUnits = isNuscHomeMatchEvent
+        ? getNuscBuyerTicketUnits(ticket.name, 1)
+        : 1;
+      if (totalBuyerUnits + requestedBuyerUnits > 10) {
+        toast.error(isNuscHomeMatchEvent
+          ? "You can buy up to 10 match tickets, including Suite seats"
+          : "You can add up to 10 tickets only");
         return;
       }
     }
@@ -730,9 +781,22 @@ export default function CheckoutPage() {
       }
 
 // ...
+      const nuscTicketSelection = isNuscHomeMatchEvent
+        ? Array.from(selectedTickets.values())
+          .map(({ ticket, quantity }) => `${ticket.name}:${quantity}:${ticket.price}`)
+          .sort()
+          .join("|")
+        : "";
+      const nuscCheckoutScope = isNuscHomeMatchEvent
+        ? `match:${String((user as any)?._id || "signed-in")}:${event._id}:${nuscTicketSelection}`
+        : null;
+      const nuscCheckoutRequestId = nuscCheckoutScope
+        ? getNuscCheckoutRequestId(nuscCheckoutScope)
+        : null;
+
       // Create Razorpay order
       const orderResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/create-order`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${isNuscHomeMatchEvent ? "/api/nusc-home-matches/checkout/create-order" : "/api/payments/create-order"}`,
         {
           method: "POST",
           headers: {
@@ -740,6 +804,7 @@ export default function CheckoutPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            ...(nuscCheckoutRequestId ? { checkoutRequestId: nuscCheckoutRequestId } : {}),
             amount: totalAmount,
             currency: "INR",
             receipt: `receipt_event_${event._id}`,
@@ -756,21 +821,30 @@ export default function CheckoutPage() {
                 state: selectedState,
               }),
             },
-            ...(appliedCoupon ? { coupon: { code: appliedCoupon.code } } : {}),
+            ...(!isNuscHomeMatchEvent && appliedCoupon ? { coupon: { code: appliedCoupon.code } } : {}),
           }),
         }
       );
 
       const orderData = await orderResponse.json();
+      if (orderResponse.ok && isNuscHomeMatchEvent && orderData.alreadyCompleted) {
+        if (nuscCheckoutScope && nuscCheckoutRequestId) {
+          clearNuscCheckoutRequestId(nuscCheckoutScope, nuscCheckoutRequestId);
+        }
+        toast.success("This NUSC payment is already confirmed. Opening your ticket.");
+        router.push(`/events/${eventId}/bookings`);
+        return;
+      }
       if (!orderResponse.ok) {
         throw new Error(orderData.message || "Failed to create payment order");
       }
+      if (!orderData.id) throw new Error("The payment service did not return a checkout order. Please try again.");
 
       const verifyEventPayment = async (response: RazorpayResponse) => {
         setIsProcessingPayment(true);
         try {
           const verificationResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/verify-payment`,
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${isNuscHomeMatchEvent ? "/api/nusc-home-matches/checkout/verify-payment" : "/api/payments/verify-payment"}`,
             {
               method: "POST",
               headers: {
@@ -793,7 +867,7 @@ export default function CheckoutPage() {
                     country: selectedCountry,
                     state: selectedState,
                   }),
-                  ...(appliedCoupon ? {
+                ...(!isNuscHomeMatchEvent && appliedCoupon ? {
                     coupon: {
                       code: appliedCoupon.code,
                       ticketCategory: appliedCoupon.ticketCategory,
@@ -810,7 +884,10 @@ export default function CheckoutPage() {
           const verificationData = await verificationResponse.json();
 
           if (verificationResponse.ok && verificationData.success) {
-            toast.success("Booking confirmed!");
+            if (nuscCheckoutScope && nuscCheckoutRequestId) {
+              clearNuscCheckoutRequestId(nuscCheckoutScope, nuscCheckoutRequestId);
+            }
+            if (!event.slug?.startsWith("nusc-home-match-")) toast.success("Booking confirmed!");
             localStorage.setItem('lastBookingId', verificationData.booking._id);
             const analyticsPayload = getAnalyticsEventPayload();
             const currency = orderData.currency || "INR";
@@ -835,6 +912,37 @@ export default function CheckoutPage() {
               })),
             });
             setIsProcessingPayment(false);
+            if (event.slug?.startsWith("nusc-home-match-")) {
+              const params = new URLSearchParams(window.location.search);
+              const selectedDates = (params.get("nuscDates") || "")
+                .split(",")
+                .filter((date) => NUSC_HOME_MATCHES.some((match) => match.date === date));
+              const currentDate = NUSC_HOME_MATCHES.find((match) => getNuscMatchSlug(match.date) === event.slug)?.date;
+              const remainingDates = selectedDates.filter((date) => date !== currentDate);
+              const passId = params.get("nuscPass");
+              const previousCompletedCount = Number.parseInt(params.get("nuscCompletedCount") || "0", 10);
+              const completedCount = Number.isInteger(previousCompletedCount) && previousCompletedCount > 0
+                ? previousCompletedCount + 1
+                : 1;
+
+              if (remainingDates.length > 0 && passId && currentDate) {
+                toast.success("Match booked. Continue with the remaining fixture checkout.");
+                const continuation = new URLSearchParams({
+                  continueDates: remainingDates.join(","),
+                  nuscPass: passId,
+                  nuscCompletedCount: String(completedCount),
+                  nuscCompletedDate: currentDate,
+                });
+                router.push(`/nusc-home-matches?${continuation.toString()}#nusc-match-checkout-options`);
+                return;
+              }
+
+              if (selectedDates.length > 1 || previousCompletedCount > 0) {
+                toast.success("All selected NUSC match checkouts are complete.");
+              } else {
+                toast.success("Booking confirmed!");
+              }
+            }
             router.push(`/events/${eventId}/bookings`);
           } else {
             const analyticsPayload = getAnalyticsEventPayload();
@@ -1208,7 +1316,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Coupon Section */}
-                {!isFreeEvent && (
+                {!isFreeEvent && !isNuscHomeMatchEvent && (
                   <div className="border-t border-gray-200 mt-6 pt-6">
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Input
@@ -1251,7 +1359,7 @@ export default function CheckoutPage() {
                 <div className="border-t border-gray-200 mt-6 pt-6 space-y-3">
 
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Subtotal</span>
+                    <span>{isNuscHomeMatchEvent ? "Ticket price (fees included)" : "Subtotal"}</span>
                     <span>
                       {subtotalAmount === 0
                         ? "FREE"
@@ -1267,10 +1375,20 @@ export default function CheckoutPage() {
                   )}
 
                   {!isFreeEvent && subtotalAmount > 0 && (
-                    <CheckoutDetailedBreakdown
-                      selectedTickets={selectedTickets}
-                      convenience={event?.convenience}
-                    />
+                    isNuscHomeMatchEvent ? (
+                      <NuscPriceBreakdown
+                        items={Array.from(selectedTickets.values()).map(({ ticket, quantity }) => ({
+                          passId: Object.keys(NUSC_PASS_TICKET_TYPE_NAMES).find((id) => NUSC_PASS_TICKET_TYPE_NAMES[id] === ticket.name) || "",
+                          quantity,
+                          checkoutUnitPrice: ticket.price,
+                        }))}
+                      />
+                    ) : (
+                      <CheckoutDetailedBreakdown
+                        selectedTickets={selectedTickets}
+                        convenience={event?.convenience}
+                      />
+                    )
                   )}
 
                   <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2">

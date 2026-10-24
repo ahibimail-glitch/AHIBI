@@ -72,9 +72,15 @@ function groupUserBookingsForDisplay(bookings) {
   const groups = new Map();
 
   for (const booking of bookings) {
-    const groupKey = booking.parentBookingId
+    const parentGroupKey = booking.parentBookingId
       ? booking.parentBookingId.toString()
       : booking._id.toString();
+    // A NUSC season pass links bookings for different events to one order parent.
+    // Keep each fixture separate in the dashboard while grouping seats for that fixture.
+    const seasonMatchGroupKey = booking.nuscSeasonPassType
+      ? `${parentGroupKey}:${booking.event?._id?.toString() || booking.eventSnapshot?._id?.toString() || booking.event?.toString() || 'unknown-event'}`
+      : parentGroupKey;
+    const groupKey = seasonMatchGroupKey;
 
     if (!groups.has(groupKey)) {
       groups.set(groupKey, []);
@@ -801,6 +807,7 @@ router.get("/related/:id", auth.protect, async (req, res) => {
     if (parentBooking.parentBookingId) {
       // This is a child booking, find all siblings and parent
       relatedBookings = await Booking.find({
+        event: parentBooking.event,
         $or: [
           { _id: parentBooking.parentBookingId },
           { parentBookingId: parentBooking.parentBookingId }
@@ -809,6 +816,7 @@ router.get("/related/:id", auth.protect, async (req, res) => {
     } else {
       // This is a parent booking, find all children
       relatedBookings = await Booking.find({
+        event: parentBooking.event,
         $or: [
           { _id: parentBooking._id },
           { parentBookingId: parentBooking._id }

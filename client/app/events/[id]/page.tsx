@@ -206,6 +206,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   };
 
   const getEventImage = (e: any) => {
+    if (e?.slug === "nusc-home-match-20261114") return "/images/match-1.jpeg";
     const url = e?.banner || e?.coverImage || "";
     if (!url) return "/placeholder.svg";
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
@@ -505,8 +506,8 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               {/* Banner */}
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden">
                 <Image
-                  src={event.coverImage || event.banner || "/placeholder.svg"}
-                  alt={event.title}
+                  src={event.slug === "nusc-home-match-20261114" ? "/images/match-2.jpeg" : event.coverImage || event.banner || "/placeholder.svg"}
+                  alt={event.slug === "nusc-home-match-20261114" ? "NUSC vs Gokulam Kerala FC at Chümoukedima Football Stadium on 14 November 2026" : event.title}
                   fill
                   className="object-cover"
                   priority

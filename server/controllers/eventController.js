@@ -7,6 +7,7 @@ const adminNotificationController = require('./adminNotificationController');
 const emailService = require('../services/emailService');
 const Organizer = require('../models/Organizer');
 const User = require('../models/User');
+const nuscHomeMatchInventory = require('../services/nuscHomeMatchInventoryService');
 
 /**
  * @desc    Create a new event (Admin only)
@@ -418,6 +419,19 @@ const getPublicEvents = async (req, res) => {
         .lean();
     }
 
+    const nuscEvents = events.filter((event) => event.slug?.startsWith('nusc-home-match-'));
+    if (nuscEvents.length > 0) {
+      const availabilityByEvent = await nuscHomeMatchInventory.getMatchAvailabilities(nuscEvents.map((event) => ({
+        key: String(event._id),
+        matchDate: nuscHomeMatchInventory.matchDateFromSlug(event.slug),
+        ticketTypes: event.ticketTypes || [],
+      })));
+      events = events.map((event) => {
+        const ticketTypes = availabilityByEvent[String(event._id)];
+        return ticketTypes ? { ...event, ticketTypes } : event;
+      });
+    }
+
     return ApiResponse.success(res, 'Events fetched successfully', {
       events,
       pagination: {
@@ -610,6 +624,15 @@ const getPublicEventById = async (req, res) => {
     }
 
     console.log('Event retrieved successfully:', event._id);
+    if (event.slug?.startsWith('nusc-home-match-')) {
+      const matchDate = nuscHomeMatchInventory.matchDateFromSlug(event.slug);
+      const availableTicketTypes = await nuscHomeMatchInventory.getMatchAvailability(matchDate, event.ticketTypes || []);
+      if (availableTicketTypes) {
+        const publicEvent = event.toObject();
+        publicEvent.ticketTypes = availableTicketTypes;
+        return res.status(200).json(publicEvent);
+      }
+    }
     return res.status(200).json(event);
   } catch (error) {
     console.error('Error fetching event:', error);
