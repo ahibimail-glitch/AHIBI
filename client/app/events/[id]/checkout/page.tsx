@@ -1193,12 +1193,23 @@ export default function CheckoutPage() {
                       return (
                         <div
                           key={ticket._id}
-                          className="border border-gray-200 rounded-lg overflow-hidden bg-white"
+                          className={`rounded-lg overflow-hidden border-2 transition-colors ${
+                            quantity > 0
+                              ? "border-red-600 bg-red-50/40 shadow-sm ring-1 ring-red-600/10"
+                              : "border-gray-200 bg-white"
+                          }`}
                         >
                           <div className="p-5">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0">
                               <div className="flex-1">
-                                <h3 className="text-base font-bold text-gray-900">{ticket.name}</h3>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-base font-bold text-gray-900">{ticket.name}</h3>
+                                  {quantity > 0 && (
+                                    <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                                      Selected
+                                    </span>
+                                  )}
+                                </div>
                                 {quantity > 0 && (
                                   <p className="text-xs text-gray-600 mt-1">{quantity} ticket{quantity > 1 ? 's' : ''} added</p>
                                 )}
