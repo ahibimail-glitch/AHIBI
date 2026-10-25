@@ -323,7 +323,7 @@ function LegacyHomePage() {
   }, [statsInView, stats])
 
   const [currentBgSlide, setCurrentBgSlide] = useState(0)
-  const [backgroundImages, setBackgroundImages] = useState<Array<{ url: string; mobileUrl?: string }>>([])
+  const [backgroundImages, setBackgroundImages] = useState<Array<{ url: string; mobileUrl?: string; title?: string }>>([])
   const [loadingHeroImages, setLoadingHeroImages] = useState(true)
   const [isMobileViewport, setIsMobileViewport] = useState(false)
   const heroMobileTrackRef = useRef<HTMLDivElement | null>(null)
@@ -406,6 +406,7 @@ function LegacyHomePage() {
           const images = data.data.map((img: any) => ({
             url: resolveImageUrl(img?.url),
             mobileUrl: img?.mobileUrl ? resolveImageUrl(img.mobileUrl) : undefined,
+            title: typeof img?.title === "string" ? img.title : "",
           }))
           setBackgroundImages(images)
         } else {
@@ -649,6 +650,16 @@ function LegacyHomePage() {
                     priority={index === 0}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
+                  {isMobileViewport && image.title?.toLowerCase().includes("nusc") && (
+                    <Link
+                      href="/nusc-home-matches#passes"
+                      aria-label="Book NUSC home match tickets"
+                      className="absolute bottom-[12%] left-1/2 z-10 inline-flex min-h-11 -translate-x-1/2 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-white/80 bg-[#e31837] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-black/30 transition-transform active:scale-95 sm:hidden"
+                    >
+                      Book tickets
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  )}
                 </div>
               )
             })}
