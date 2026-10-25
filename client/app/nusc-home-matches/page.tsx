@@ -176,7 +176,7 @@ export default function NuscHomeMatchesPage() {
             <h1 className="max-w-xl text-[clamp(3rem,13vw,4.5rem)] font-black leading-[.95] tracking-[-.055em] sm:text-7xl">
               NUSC <span className="text-[#ff3347]">at home.</span>
             </h1>
-            <p className="mt-4 max-w-lg text-[15px] leading-6 text-white/75 sm:mt-6 sm:text-lg sm:leading-7">
+            <p className="mt-4 hidden max-w-lg text-[15px] leading-6 text-white/75 sm:mt-6 sm:block sm:text-lg sm:leading-7">
               Ten home dates. One stadium. Come stand behind NUSC through the Indian Football League season.
             </p>
             <div className="mt-7 grid grid-cols-2 gap-3 text-[13px] sm:mt-9 sm:flex sm:flex-wrap sm:text-sm">
@@ -193,7 +193,12 @@ export default function NuscHomeMatchesPage() {
                 Match tickets <Ticket className="h-4 w-4" />
               </a>
             </div>
-            <div className="mt-8 grid max-w-xl grid-cols-2 gap-x-5 gap-y-5 border-t border-white/20 pt-5 sm:mt-12 sm:grid-cols-3 sm:gap-x-8 sm:pt-6">
+            <div className="relative mx-auto mt-8 w-full max-w-[280px] sm:max-w-[320px] lg:hidden">
+              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
+                <Image src="/images/match-1.jpeg" alt="NUSC vs Gokulam Kerala FC, 14 November 2026 at 6:30 PM" fill priority sizes="(max-width: 640px) 280px, 320px" className="object-cover" />
+              </div>
+            </div>
+            <div className="mt-8 hidden max-w-xl grid-cols-2 gap-x-5 gap-y-5 border-t border-white/20 pt-5 sm:mt-12 sm:grid sm:grid-cols-3 sm:gap-x-8 sm:pt-6">
               <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/45">Next match</p><p className="mt-2 font-semibold">{nextMatch.label}</p><p className="mt-1 text-sm text-white/65">vs {nextMatch.opponent}</p></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/45">Kickoff</p><p className="mt-2 font-semibold">6:30 PM</p></div>
               <div className="col-span-2 sm:col-span-1"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/45">Ground</p><p className="mt-2 font-semibold">Chümoukedima Football Stadium</p></div>
