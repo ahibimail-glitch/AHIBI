@@ -3,6 +3,7 @@
 type NuscPriceItem = {
   passId: string;
   quantity: number;
+  actualUnitPrice: number;
   checkoutUnitPrice: number;
 };
 
@@ -25,14 +26,11 @@ const formatRupees = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount);
 
-function getPriceBreakdown(afterTax: number) {
-  // The listed checkout price includes two 10% fees and 18% GST on those amounts.
-  const actual = roundRupees(afterTax / 1.416);
-  const ssf = roundRupees(actual * 0.1);
-  const aHibi = roundRupees(actual * 0.1);
-  const gst = roundRupees(afterTax - actual - ssf - aHibi);
+function getPriceBreakdown(actual: number, afterTax: number) {
+  const sportsDevelopmentFund = roundRupees(actual * 0.1);
+  const convenienceFee = roundRupees(actual * 0.1);
 
-  return { actual, ssf, aHibi, gst, afterTax };
+  return { actual, sportsDevelopmentFund, convenienceFee, afterTax };
 }
 
 export default function NuscPriceBreakdown({ items }: { items: NuscPriceItem[] }) {
@@ -43,8 +41,8 @@ export default function NuscPriceBreakdown({ items }: { items: NuscPriceItem[] }
     <section aria-label="NUSC ticket price summary" className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
       <h3 className="text-sm font-semibold text-gray-900">Ticket price summary</h3>
       <div className="mt-3 space-y-4">
-        {lines.map(({ passId, quantity, checkoutUnitPrice }) => {
-          const price = getPriceBreakdown(checkoutUnitPrice);
+        {lines.map(({ passId, quantity, actualUnitPrice, checkoutUnitPrice }) => {
+          const price = getPriceBreakdown(actualUnitPrice, checkoutUnitPrice);
           const amount = (value: number) => formatRupees(value * quantity);
 
           return (
@@ -55,9 +53,8 @@ export default function NuscPriceBreakdown({ items }: { items: NuscPriceItem[] }
               </div>
               <div className="space-y-1 text-xs text-gray-600">
                 <div className="flex justify-between gap-3"><span>Actual price</span><span>{amount(price.actual)}</span></div>
-                <div className="flex justify-between gap-3"><span>SSF (10%)</span><span>{amount(price.ssf)}</span></div>
-                <div className="flex justify-between gap-3"><span>AHIBI (10%)</span><span>{amount(price.aHibi)}</span></div>
-                <div className="flex justify-between gap-3"><span>GST (18%)</span><span>{amount(price.gst)}</span></div>
+                <div className="flex justify-between gap-3"><span>Sports Development Fund (10%)</span><span>{amount(price.sportsDevelopmentFund)}</span></div>
+                <div className="flex justify-between gap-3"><span>Convenience fee (10%)</span><span>{amount(price.convenienceFee)}</span></div>
                 <div className="flex justify-between gap-3 border-t border-gray-200 pt-1 font-semibold text-gray-900">
                   <span>After Tax</span><span>{amount(price.afterTax)}</span>
                 </div>

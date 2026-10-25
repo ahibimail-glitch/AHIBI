@@ -8,8 +8,8 @@ const User = require('../models/User');
 const inventory = require('../services/nuscHomeMatchInventoryService');
 
 const SEASON_PASS_OPTIONS = {
-  'general-season': { ticketType: 'General Pass', amount: 3825.2 },
-  'premium-season': { ticketType: 'Premium Pass', amount: 12744 },
+  'general-season': { ticketType: 'General Pass', amount: 3240 },
+  'premium-season': { ticketType: 'Premium Pass', amount: 10800 },
 };
 
 let razorpayClient;
@@ -71,7 +71,7 @@ function normalizeTicketSelection(selection, event) {
       throw new inventory.InventoryConflict(`Ticket type ${ticketType} is not configured for this match.`, 'TICKET_NOT_CONFIGURED');
     }
 
-    const price = Number(eventTicket.price);
+    const price = Number(inventory.MATCH_TICKET_PRICES[ticketType]?.price ?? eventTicket.price);
     if (!Number.isFinite(price) || price < 0) {
       throw new inventory.InventoryConflict(`Ticket price for ${ticketType} is unavailable.`, 'TICKET_NOT_CONFIGURED');
     }
@@ -1211,10 +1211,10 @@ async function seedTestFixtures(req, res) {
     if (!user) return res.status(401).json({ success: false, message: 'Sign in with your AHIBI test account.' });
 
     const ticketTypes = [
-      { name: 'General Pass', description: 'General Gallery seating and digital QR entry.', price: 360, basePrice: 360, quantity: inventory.TICKET_CAPACITIES['General Pass'], capacity: 1, benefits: ['General Gallery seating', 'Designated General Gates', 'Digital QR ticket entry'] },
-      { name: 'Premium Pass', description: 'Reserved premium seating with a complimentary snack box.', price: 1416, basePrice: 1416, quantity: inventory.TICKET_CAPACITIES['Premium Pass'], capacity: 1, benefits: ['Reserved chair seating', 'Better viewing location', 'Complimentary snack box'] },
-      { name: inventory.SUITE_SINGLE, description: 'One person, one match, one seat in a United Suite box.', price: 8896, basePrice: 8896, quantity: inventory.BOX_COUNT * 8, capacity: 1, benefits: ['Private VIP Box access', 'Food and beverages', 'Dedicated VIP entry and parking'] },
-      { name: inventory.SUITE_FULL_BOX, description: 'One private United Suite box for up to eight people for one match.', price: 70800, basePrice: 70800, quantity: inventory.BOX_COUNT, capacity: 8, benefits: ['Private VIP Box access', 'Food and beverages', 'Butler service and dedicated parking'] },
+      { name: 'General Pass', description: 'General Gallery seating and digital QR ticket entry.', ...inventory.MATCH_TICKET_PRICES['General Pass'], quantity: inventory.TICKET_CAPACITIES['General Pass'], capacity: 1, benefits: ['General Gallery seating', 'Designated General Gates', 'Digital QR ticket entry'] },
+      { name: 'Premium Pass', description: 'Reserved premium chair seating with a complimentary snack box.', ...inventory.MATCH_TICKET_PRICES['Premium Pass'], quantity: inventory.TICKET_CAPACITIES['Premium Pass'], capacity: 1, benefits: ['Reserved chair seating', 'Better viewing location', 'Complimentary snack box'] },
+      { name: inventory.SUITE_SINGLE, description: 'One person, one match, one seat in a United Suite box.', ...inventory.MATCH_TICKET_PRICES[inventory.SUITE_SINGLE], quantity: inventory.BOX_COUNT * 8, capacity: 1, benefits: ['Private VIP Box access', 'Food and beverages', 'Dedicated VIP entry and parking'] },
+      { name: inventory.SUITE_FULL_BOX, description: 'One private United Suite box for up to eight people for one match.', ...inventory.MATCH_TICKET_PRICES[inventory.SUITE_FULL_BOX], quantity: inventory.BOX_COUNT, capacity: 8, benefits: ['Private VIP Box access', 'Food and beverages', 'Butler service and dedicated parking'] },
     ];
 
     let createdCount = 0;

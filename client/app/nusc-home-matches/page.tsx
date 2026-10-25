@@ -16,28 +16,28 @@ const SINGLE_MATCH_PASSES = [
   {
     id: "general-single",
     name: "General Pass",
-    price: "₹360 / match",
+    price: "₹358.80 / match",
     detail: "Single match ticket",
     benefits: ["General Gallery seating", "Designated General Gates", "Digital QR ticket entry"],
   },
   {
     id: "premium-single",
     name: "Premium Pass",
-    price: "₹1,416 / match",
+    price: "₹1,500 / match",
     detail: "Single match premium experience",
     benefits: ["Reserved chair seating", "Better viewing location", "Complimentary snack box"],
   },
   {
     id: "suite-single",
     name: "United Suite — Single pass",
-    price: "₹8,896 / person",
+    price: "₹7,200 / person",
     detail: "Single person · single match",
     benefits: ["One seat in an 8-person VIP box", "Food and beverages", "Dedicated VIP entry and parking"],
   },
   {
     id: "suite-box-single",
     name: "United Suite — Full Box",
-    price: "₹70,800 / match",
+    price: "₹60,000 / match",
     detail: "One private box · up to 8 people · one match",
     benefits: ["Private VIP Box and best viewing", "Food, beverages and butler service", "Merchandise and dedicated parking"],
   },
@@ -46,23 +46,24 @@ const SINGLE_MATCH_PASSES = [
 const SEASON_PASSES = [
   {
     id: "general-season",
-    amount: 3825.2,
+    amount: 3240,
     name: "General Season Pass",
-    price: "₹3,825.2",
+    price: "₹3,240",
     detail: "All 10 home matches · 1 match day free",
     benefits: ["General Gallery access for all fixtures", "Early access to important match tickets"],
   },
   {
     id: "premium-season",
-    amount: 12744,
+    amount: 10800,
     name: "Premium Season Pass",
-    price: "₹12,744",
+    price: "₹10,800",
     detail: "All 10 home matches · 1 match day free",
     benefits: ["Reserved premium chair at every match", "Premium entry and snack box each match"],
   },
   {
     id: "suite-season",
     name: "United Suite — Season",
+    price: "₹4,50,000",
     detail: "All 10 home matches · call to book",
     benefits: ["One reserved box for up to 8 guests at every match", "Hospitality, parking and merchandise", "Season-long VIP experiences"],
   },
@@ -333,7 +334,7 @@ export default function NuscHomeMatchesPage() {
                     <span className="text-lg font-bold leading-6 text-[#151b16]">{pass.name}</span>
                     <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#d41e32] bg-[#d41e32]" : "border-[#c8d0c8]"}`} aria-hidden="true">{selected && <span className="h-2 w-2 rounded-full bg-white" />}</span>
                   </span>
-                  {!isCallToBook && <span className="mt-5 text-2xl font-black tracking-tight text-[#111713]">{pass.price}</span>}
+                  {pass.price && <span className="mt-5 text-2xl font-black tracking-tight text-[#111713]">{pass.price}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
                   <span className="space-y-2 text-sm leading-5 text-[#4c554d]">

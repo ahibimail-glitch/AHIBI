@@ -5,6 +5,12 @@ const SEATS_PER_BOX = 8;
 const BUYER_TICKET_LIMIT = 10;
 const HOLD_MINUTES = 15;
 const GENERAL_TICKET_TYPE = 'General Pass';
+const MATCH_TICKET_PRICES = {
+  'General Pass': { price: 358.8, basePrice: 299 },
+  'Premium Pass': { price: 1500, basePrice: 1250 },
+  'United Suite — Single pass': { price: 7200, basePrice: 6000 },
+  'United Suite — Full Box': { price: 60000, basePrice: 50000 },
+};
 function getMongoDatabaseName() {
   try {
     return decodeURIComponent(new URL(process.env.MONGO_URI).pathname.replace(/^\/+/, '')).split('/')[0];
@@ -550,6 +556,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = []) {
       const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
       return {
         ...ticket,
+        ...(MATCH_TICKET_PRICES[ticket.name] || {}),
         quantity: 0,
         sold: 0,
         ...(ticket.name === GENERAL_TICKET_TYPE && {
@@ -579,6 +586,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = []) {
     const available = Math.max(0, capacity - Number(ticket.sold || 0) - (heldByTicketType.get(ticket.name) || 0));
     return {
       ...ticket,
+      ...(MATCH_TICKET_PRICES[ticket.name] || {}),
       quantity: available,
       sold: 0,
       ...(ticket.name === GENERAL_TICKET_TYPE && {
@@ -673,6 +681,7 @@ module.exports = {
   FIXTURE_DATES,
   GENERAL_TICKET_TYPE,
   GENERAL_SEATING_AREAS,
+  MATCH_TICKET_PRICES,
   HOLD_MINUTES,
   FIXTURE_MATCHES,
   InventoryConflict,

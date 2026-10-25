@@ -17,8 +17,8 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const SEASON_PASSES = {
-  "general-season": { name: "General Season Pass", ticketType: "General Pass", price: 3825.2 },
-  "premium-season": { name: "Premium Season Pass", ticketType: "Premium Pass", price: 12744 },
+  "general-season": { name: "General Season Pass", ticketType: "General Pass", actualPrice: 2700, price: 3240 },
+  "premium-season": { name: "Premium Season Pass", ticketType: "Premium Pass", actualPrice: 9000, price: 10800 },
 } as const;
 
 type SeasonPassId = keyof typeof SEASON_PASSES;
@@ -411,7 +411,7 @@ export default function NuscSeasonCheckoutPage() {
                     </select>
                     <div className="mt-6 flex justify-between border-t border-[#e7ebe6] pt-4 text-sm"><span>Each pass</span><span>{formatRupees(pass.price)}</span></div>
                     <div className="mt-3 flex justify-between text-lg font-black"><span>Total</span><span>{formatRupees(totalAmount)}</span></div>
-                    <NuscPriceBreakdown items={[{ passId: passId || "", quantity, checkoutUnitPrice: pass.price }]} />
+                    <NuscPriceBreakdown items={[{ passId: passId || "", quantity, actualUnitPrice: pass.actualPrice, checkoutUnitPrice: pass.price }]} />
                     <p className="mt-3 text-xs leading-5 text-[#737b73]">Season pricing includes the one free match day. No extra checkout fee is added to this pass.</p>
 
                     <label className="mt-6 flex cursor-pointer items-start gap-3 text-sm leading-5 text-[#4c554d]">

@@ -1445,6 +1445,7 @@ export default function CheckoutPage() {
                         items={Array.from(selectedTickets.values()).map(({ ticket, quantity }) => ({
                           passId: Object.keys(NUSC_PASS_TICKET_TYPE_NAMES).find((id) => NUSC_PASS_TICKET_TYPE_NAMES[id] === ticket.name) || "",
                           quantity,
+                          actualUnitPrice: typeof ticket.basePrice === "number" ? ticket.basePrice : ticket.price,
                           checkoutUnitPrice: ticket.price,
                         }))}
                       />
