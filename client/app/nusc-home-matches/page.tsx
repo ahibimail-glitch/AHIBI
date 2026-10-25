@@ -340,8 +340,7 @@ export default function NuscHomeMatchesPage() {
                     <span className="text-lg font-bold leading-6 text-[#151b16]">{pass.name}</span>
                     <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#d41e32] bg-[#d41e32]" : "border-[#c8d0c8]"}`} aria-hidden="true">{selected && <span className="h-2 w-2 rounded-full bg-white" />}</span>
                   </span>
-                  {pass.price && <span className="mt-5 text-2xl font-black tracking-tight text-[#111713]">{pass.price}</span>}
-                  {"actualPrice" in pass && <span className="mt-2 text-sm font-semibold text-[#343b35]">Actual Price: {pass.actualPrice}</span>}
+                  {"actualPrice" in pass && <span className="mt-5 text-lg font-bold text-[#111713]">Actual Price: {pass.actualPrice}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
                   <span className="space-y-2 text-sm leading-5 text-[#4c554d]">
