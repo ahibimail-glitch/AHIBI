@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
+import Image from "next/image";
 import {
   Loader2,
   ArrowLeft,
@@ -124,6 +125,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTickets, setSelectedTickets] = useState<Map<string, { ticket: TicketType; quantity: number }>>(new Map());
   const [selectedGeneralZones, setSelectedGeneralZones] = useState<Record<string, string>>({});
+  const [isSeatingMapOpen, setIsSeatingMapOpen] = useState(false);
   const [expandedTickets, setExpandedTickets] = useState<Set<string>>(new Set());
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -1289,6 +1291,25 @@ export default function CheckoutPage() {
                                     ? `All ${quantity} General Pass${quantity === 1 ? "" : "es"} in this checkout will be assigned to the selected zone.`
                                     : "Zone availability is unavailable. Refresh the page before continuing."}
                                 </p>
+                                <figure className="mt-4">
+                                  <figcaption className="mb-2 text-sm font-semibold text-gray-900">Stadium seating map</figcaption>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsSeatingMapOpen(true)}
+                                    aria-label="Enlarge the stadium seating map"
+                                    className="block w-full max-w-4xl overflow-hidden rounded-lg border border-gray-200 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                                  >
+                                    <Image
+                                      src="/images/site-map.webp"
+                                      alt="Map showing General seating zones G-1 through G-5, Premium seating, United Suite, and stadium gates"
+                                      width={1600}
+                                      height={900}
+                                      sizes="(max-width: 768px) calc(100vw - 72px), 896px"
+                                      className="h-auto w-full"
+                                    />
+                                  </button>
+                                  <p className="mt-1 text-xs text-gray-500">Tap the map to enlarge.</p>
+                                </figure>
                               </div>
                             )}
 
@@ -1625,6 +1646,23 @@ export default function CheckoutPage() {
               <HMFTermsContent />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isSeatingMapOpen} onOpenChange={setIsSeatingMapOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-6xl max-h-[90vh] overflow-y-auto p-3 sm:p-5">
+          <DialogHeader>
+            <DialogTitle>Stadium seating map</DialogTitle>
+            <DialogDescription>Find General zones G-1 through G-5 and other seating areas.</DialogDescription>
+          </DialogHeader>
+          <Image
+            src="/images/site-map.webp"
+            alt="Map showing General seating zones G-1 through G-5, Premium seating, United Suite, and stadium gates"
+            width={1600}
+            height={900}
+            sizes="(max-width: 768px) calc(100vw - 56px), 1152px"
+            className="h-auto max-h-[72vh] w-full object-contain"
+          />
         </DialogContent>
       </Dialog>
 
