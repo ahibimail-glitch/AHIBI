@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import {
   Loader2,
+  ArrowRight,
   ArrowLeft,
   ChevronDown,
   ChevronUp,
@@ -1187,7 +1188,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-full mx-auto px-4 py-8 sm:max-w-4xl">
+        <div className={`max-w-full mx-auto px-4 py-8 sm:max-w-4xl ${isNuscHomeMatchEvent ? "pb-40 lg:pb-8" : ""}`}>
           {currentStep === 1 && (
             <>
               {/* HMF Country Selection */}
@@ -1406,7 +1407,7 @@ export default function CheckoutPage() {
               <button
                 onClick={handleProceed}
                 disabled={selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
-                className="
+                className={`${isNuscHomeMatchEvent ? "hidden lg:block" : ""}
     w-full
     py-3 sm:py-4
     bg-red-600
@@ -1421,7 +1422,7 @@ export default function CheckoutPage() {
     disabled:opacity-50
     disabled:cursor-not-allowed
     disabled:shadow-none
-  "
+  `}
               >
                 {isFreeEvent ? "Proceed to Confirm RSVP" : "Proceed"}
               </button>
@@ -1661,6 +1662,20 @@ export default function CheckoutPage() {
 
         </div>
       </div>
+
+      {currentStep === 1 && isNuscHomeMatchEvent && (
+        <div className="lg:hidden fixed bottom-16 inset-x-0 z-40 border-t border-gray-100 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={handleProceed}
+            disabled={selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-base font-semibold text-white shadow-md transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            {isFreeEvent ? "Continue to RSVP review" : "Continue to review"}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {/* Payment Processing Overlay */}
       {isProcessingPayment && (
