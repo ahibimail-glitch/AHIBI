@@ -319,7 +319,7 @@ export default function NuscHomeMatchesPage() {
           </div>
 
           {passCategory === "single-match" && (
-            <fieldset className="mt-7">
+            <fieldset className="mt-7 w-full min-w-0 max-w-full">
               <legend className="text-sm font-semibold text-[#343b35]">Step 1 · Choose match dates</legend>
               <p className="mt-1 text-sm leading-5 text-[#69716a]">Select one or more matches. Next, choose a pass below.</p>
               {selectedMatchDates.length > 0 && (
