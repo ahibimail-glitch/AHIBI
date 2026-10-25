@@ -1236,7 +1236,11 @@ export default function CheckoutPage() {
                               </div>
                               <div className="text-left sm:text-right">
                                 <p className="text-lg font-bold text-gray-900">
-                                  {ticket.price === 0 ? 'FREE' : `₹${ticket.price.toLocaleString()}`}
+                                  {ticket.price === 0
+                                    ? 'FREE'
+                                    : isNuscHomeMatchEvent
+                                      ? `Actual Price: ₹${(typeof ticket.basePrice === "number" ? ticket.basePrice : ticket.price).toLocaleString()}${ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["suite-single"] ? " / Person" : " / Match"}`
+                                      : `₹${ticket.price.toLocaleString()}`}
                                 </p>
                                 {isFastFilling && (
                                   <p className="text-xs text-orange-600 font-medium">Fast Filling</p>
