@@ -226,6 +226,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
         phone: displayPhone,
         event: booking.event?.title,
         ticketType: booking.ticketType,
+        ...(booking.nuscGeneralZone && { seatingZone: booking.nuscGeneralZone }),
         ticketIndex: booking.ticketIndex || ticketIndex,
         totalTickets: booking.totalTickets || totalTickets,
         ...(showEventSerial && { ticketSerialNumber: booking.ticketSerialNumber }),
@@ -539,6 +540,11 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
                         <div className="mbt-type-box">
                             <p className="mbt-type-label">Ticket Type</p>
                             <h2 className="mbt-type-name">{booking.ticketType}</h2>
+                            {booking.nuscGeneralZone && (
+                                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 800, color: '#166534' }}>
+                                    Seating Zone: {booking.nuscGeneralZone}
+                                </p>
+                            )}
                             {ticketBenefits.length > 0 && (
                                 <p className="mbt-benefits">{ticketBenefits.slice(0, 2).join(' · ')}</p>
                             )}

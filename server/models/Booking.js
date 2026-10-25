@@ -91,6 +91,10 @@ const BookingSchema = new mongoose.Schema({
     min: 1,
     max: 4,
   },
+  nuscGeneralZone: {
+    type: String,
+    enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'],
+  },
   nuscSeasonPassType: {
     type: String,
     enum: ['general-season', 'premium-season'],

@@ -63,6 +63,7 @@ interface TicketType {
   description: string;
   benefits?: string[];
   capacity: number;
+  zones?: Array<{ name: string; capacity: number; available: number }>;
 }
 
 interface Event {
@@ -122,6 +123,7 @@ export default function CheckoutPage() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTickets, setSelectedTickets] = useState<Map<string, { ticket: TicketType; quantity: number }>>(new Map());
+  const [selectedGeneralZones, setSelectedGeneralZones] = useState<Record<string, string>>({});
   const [expandedTickets, setExpandedTickets] = useState<Set<string>>(new Set());
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -288,6 +290,11 @@ export default function CheckoutPage() {
 
   const isFreeEvent = event?.isFreeEvent || false;
   const isNuscHomeMatchEvent = !!event?.slug?.startsWith("nusc-home-match-");
+  const hasRequiredGeneralZones = Array.from(selectedTickets.entries()).every(([ticketId, item]) => {
+    if (!isNuscHomeMatchEvent || item.ticket.name !== NUSC_PASS_TICKET_TYPE_NAMES["general-single"]) return true;
+    const zone = item.ticket.zones?.find((area) => area.name === selectedGeneralZones[ticketId]);
+    return !!zone && zone.available >= item.quantity;
+  });
 
   const getAnalyticsEventPayload = () => {
     if (!event?._id || !event?.title) return null;
@@ -505,6 +512,13 @@ export default function CheckoutPage() {
       toast.error("No more tickets available");
       return;
     }
+    if (isNuscHomeMatchEvent && ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"]) {
+      const selectedZone = ticket.zones?.find((area) => area.name === selectedGeneralZones[ticket._id]);
+      if (selectedZone && newQuantity > selectedZone.available) {
+        toast.error(`Only ${selectedZone.available} seat(s) remain in ${selectedZone.name} for this match`);
+        return;
+      }
+    }
 
     // Check 10 ticket limit (only for paid events)
     if (!isFreeEvent) {
@@ -538,6 +552,11 @@ export default function CheckoutPage() {
         const newMap = new Map(prev);
         newMap.delete(ticketId);
         return newMap;
+      });
+      setSelectedGeneralZones((prev) => {
+        const next = { ...prev };
+        delete next[ticketId];
+        return next;
       });
     } else {
       setSelectedTickets(prev => new Map(prev).set(ticketId, { ticket: currentItem.ticket, quantity: newQuantity }));
@@ -621,6 +640,10 @@ export default function CheckoutPage() {
       toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket");
       return;
     }
+    if (isNuscHomeMatchEvent && !hasRequiredGeneralZones) {
+      toast.error("Select an available seating zone for your General Pass before continuing");
+      return;
+    }
 
     const analyticsPayload = getAnalyticsEventPayload();
     const checkoutKey = `${eventId}:${payableAmount}:${totalTicketQuantity}`;
@@ -649,6 +672,10 @@ export default function CheckoutPage() {
     }
     if (selectedTickets.size === 0) {
       toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket type");
+      return;
+    }
+    if (isNuscHomeMatchEvent && !hasRequiredGeneralZones) {
+      toast.error("Select an available seating zone for your General Pass before checkout");
       return;
     }
     if (!acceptedTerms) {
@@ -783,7 +810,7 @@ export default function CheckoutPage() {
 // ...
       const nuscTicketSelection = isNuscHomeMatchEvent
         ? Array.from(selectedTickets.values())
-          .map(({ ticket, quantity }) => `${ticket.name}:${quantity}:${ticket.price}`)
+          .map(({ ticket, quantity }) => `${ticket.name}:${quantity}:${ticket.price}:${selectedGeneralZones[ticket._id] || ''}`)
           .sort()
           .join("|")
         : "";
@@ -815,6 +842,9 @@ export default function CheckoutPage() {
                 ticketType: item.ticket.name,
                 quantity: item.quantity,
                 price: item.ticket.price,
+                ...(item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && {
+                  zone: selectedGeneralZones[item.ticket._id],
+                }),
               })),
               ...(isHMFEvent && {
                 country: selectedCountry,
@@ -862,6 +892,9 @@ export default function CheckoutPage() {
                     ticketType: item.ticket.name,
                     quantity: item.quantity,
                     price: item.ticket.price,
+                    ...(item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && {
+                      zone: selectedGeneralZones[item.ticket._id],
+                    }),
                   })),
                   ...(isHMFEvent && {
                     country: selectedCountry,
@@ -1205,6 +1238,33 @@ export default function CheckoutPage() {
                               </div>
                             )}
 
+                            {isNuscHomeMatchEvent && quantity > 0 && ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && (
+                              <div className="mb-4 rounded-lg border border-[#d8e2d8] bg-[#f7faf6] p-4">
+                                <label htmlFor={`nusc-zone-${ticket._id}`} className="block text-sm font-semibold text-gray-900">
+                                  General seating zone <span className="text-red-600">*</span>
+                                </label>
+                                <select
+                                  id={`nusc-zone-${ticket._id}`}
+                                  value={selectedGeneralZones[ticket._id] || ""}
+                                  onChange={(e) => setSelectedGeneralZones((prev) => ({ ...prev, [ticket._id]: e.target.value }))}
+                                  className="mt-2 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                                  aria-describedby={`nusc-zone-help-${ticket._id}`}
+                                >
+                                  <option value="">Choose a zone</option>
+                                  {(ticket.zones || []).map((zone) => (
+                                    <option key={zone.name} value={zone.name} disabled={zone.available < quantity}>
+                                      {zone.name} · {zone.available} of {zone.capacity} seats available
+                                    </option>
+                                  ))}
+                                </select>
+                                <p id={`nusc-zone-help-${ticket._id}`} className="mt-2 text-xs leading-5 text-gray-600">
+                                  {ticket.zones?.length
+                                    ? `All ${quantity} General Pass${quantity === 1 ? "" : "es"} in this checkout will be assigned to the selected zone.`
+                                    : "Zone availability is unavailable. Refresh the page before continuing."}
+                                </p>
+                              </div>
+                            )}
+
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
                               <button
                                 onClick={() => toggleTicketExpansion(ticket._id)}
@@ -1252,7 +1312,7 @@ export default function CheckoutPage() {
               {/* Proceed Button */}
               <button
                 onClick={handleProceed}
-                disabled={selectedTickets.size === 0}
+                disabled={selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
                 className="
     w-full
     py-3 sm:py-4
@@ -1304,6 +1364,11 @@ export default function CheckoutPage() {
                             ? "FREE"
                             : `₹${item.ticket.price.toLocaleString()}`}
                         </p>
+                        {isNuscHomeMatchEvent && item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && (
+                          <p className="mt-1 text-sm font-medium text-[#315c38]">
+                            Seating zone: {selectedGeneralZones[item.ticket._id]}
+                          </p>
+                        )}
                       </div>
 
                       <p className="font-semibold text-gray-900 text-right">

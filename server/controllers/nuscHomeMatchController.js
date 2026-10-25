@@ -52,8 +52,15 @@ function normalizeTicketSelection(selection, event) {
   return selection.map((item) => {
     const ticketType = String(item.ticketType || '').trim();
     const quantity = Number(item.quantity);
+    const zone = item.zone == null ? '' : String(item.zone).trim();
     if (!ticketType || !Number.isInteger(quantity) || quantity < 1) {
       throw new inventory.InventoryConflict('Ticket selection is invalid.', 'INVALID_TICKETS');
+    }
+    if (ticketType === inventory.GENERAL_TICKET_TYPE && !inventory.GENERAL_SEATING_AREAS.some((area) => area.name === zone)) {
+      throw new inventory.InventoryConflict('Choose a General seating zone before checkout.', 'GENERAL_ZONE_REQUIRED');
+    }
+    if (ticketType !== inventory.GENERAL_TICKET_TYPE && zone) {
+      throw new inventory.InventoryConflict('A seating zone can only be selected for General Pass tickets.', 'INVALID_GENERAL_ZONE');
     }
     if (ticketType === inventory.SUITE_SEASON) {
       throw new inventory.InventoryConflict('United Suite season bookings are call-to-book.', 'CALL_TO_BOOK');
@@ -69,7 +76,7 @@ function normalizeTicketSelection(selection, event) {
       throw new inventory.InventoryConflict(`Ticket price for ${ticketType} is unavailable.`, 'TICKET_NOT_CONFIGURED');
     }
 
-    return { ticketType, quantity, price };
+    return { ticketType, quantity, price, ...(zone && { zone }) };
   });
 }
 
@@ -192,7 +199,9 @@ async function createOrder(req, res) {
       userId: String(user._id),
       eventId: String(event._id),
       matchDate,
-      tickets: [...tickets].sort((left, right) => left.ticketType.localeCompare(right.ticketType)),
+      tickets: [...tickets].sort((left, right) => (
+        left.ticketType.localeCompare(right.ticketType) || String(left.zone || '').localeCompare(String(right.zone || ''))
+      )),
     });
     const existingCheckout = await findExistingCheckoutOrder({
       userId: user._id,
@@ -535,6 +544,7 @@ async function createBookingsForOrder(order, payment) {
           nuscOrderId: order.orderId,
           nuscTicketIndex: ticketIndex,
           ...(allocationByTicketIndex.has(ticketIndex) && { nuscSuiteBoxNumber: allocationByTicketIndex.get(ticketIndex) }),
+          ...(item.ticketType === inventory.GENERAL_TICKET_TYPE && { nuscGeneralZone: item.zone }),
           ticketIndex,
           totalTickets,
           parentBookingId: null,
@@ -780,7 +790,9 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
           eventTime: isSeasonPass ? '6:30 PM' : (event.startDate ? new Date(event.startDate).toLocaleTimeString('en-IN') : 'TBA'),
           ticketType: isSeasonPass
             ? `${claimed.bookingDetails.ticketType} · all 10 matches`
-            : claimed.bookingDetails.tickets.map((ticket) => `${ticket.ticketType} (${ticket.quantity})`).join(', '),
+            : claimed.bookingDetails.tickets.map((ticket) => (
+              `${ticket.ticketType}${ticket.zone ? ` · ${ticket.zone}` : ''} (${ticket.quantity})`
+            )).join(', '),
           quantity: isSeasonPass
             ? claimed.bookingDetails.quantity
             : claimed.bookingDetails.tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),

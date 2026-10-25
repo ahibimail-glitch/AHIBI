@@ -3,6 +3,14 @@ const mongoose = require('mongoose');
 const TicketLineSchema = new mongoose.Schema({
   ticketType: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1 },
+  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'] },
+}, { _id: false });
+
+const GeneralZoneSaleSchema = new mongoose.Schema({
+  orderId: { type: String, required: true },
+  matchDate: { type: String, required: true },
+  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'], required: true },
+  quantity: { type: Number, required: true, min: 1 },
 }, { _id: false });
 
 const SuiteAllocationSchema = new mongoose.Schema({
@@ -47,6 +55,7 @@ const SeasonReservationSchema = new mongoose.Schema({
 const NuscHomeMatchInventorySchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, default: 'nusc-il-2026-27' },
   orders: { type: [OrderHoldSchema], default: [] },
+  generalZoneSales: { type: [GeneralZoneSaleSchema], default: [] },
   seasonPassOrders: { type: [SeasonPassOrderHoldSchema], default: [] },
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
 }, { timestamps: true });
