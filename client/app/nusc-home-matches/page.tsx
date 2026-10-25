@@ -88,6 +88,7 @@ export default function NuscHomeMatchesPage() {
   const [matchEvents, setMatchEvents] = useState<Record<string, Event>>({});
   const [passCategory, setPassCategory] = useState<PassCategory>("single-match");
   const [selectedPass, setSelectedPass] = useState<string | null>(null);
+  const [hasReachedOriginalCheckout, setHasReachedOriginalCheckout] = useState(false);
   const [selectedMatchDates, setSelectedMatchDates] = useState<string[]>([]);
   const [seasonPassQuantity, setSeasonPassQuantity] = useState(1);
   const [seasonPassZone, setSeasonPassZone] = useState<GeneralZone | "">("");
@@ -121,7 +122,45 @@ export default function NuscHomeMatchesPage() {
       : null;
   };
   const canBuySeasonPass = canBuySeasonPassQuantity &&
-    (selectedPass !== "general-season" || (!!seasonPassZone && (seasonZoneAvailability(seasonPassZone) ?? 0) >= seasonPassQuantity));
+     (selectedPass !== "general-season" || (!!seasonPassZone && (seasonZoneAvailability(seasonPassZone) ?? 0) >= seasonPassQuantity));
+  const firstBookableMatch = NUSC_HOME_MATCHES.find((match) => {
+    if (!selectedMatchDates.includes(match.date) || !selectedPass) return false;
+    const event = matchEvents[getNuscMatchSlug(match.date)];
+    const ticketName = NUSC_PASS_TICKET_TYPES[selectedPass];
+    const ticket = ticketName ? event?.ticketTypes?.find((item) => item.name === ticketName) : undefined;
+    return !!event && !!ticket && ticket.quantity > (ticket.sold || 0);
+  });
+  const firstBookableEvent = firstBookableMatch ? matchEvents[getNuscMatchSlug(firstBookableMatch.date)] : undefined;
+  const firstBookableCheckoutHref = firstBookableEvent && selectedPass
+    ? "/events/" + firstBookableEvent._id + "/checkout?" + new URLSearchParams({ nuscPass: selectedPass, nuscDates: selectedMatchDates.join(",") }).toString()
+      + (completedMatchCount > 0 ? "&nuscCompletedCount=" + completedMatchCount : "")
+      + (lastCompletedMatchDate ? "&nuscCompletedDate=" + encodeURIComponent(lastCompletedMatchDate) : "")
+    : undefined;
+  const seasonCheckoutHref = selectedPass && (selectedPass === "general-season" || selectedPass === "premium-season")
+    ? "/nusc-home-matches/season-checkout?passId=" + encodeURIComponent(selectedPass) + "&quantity=" + seasonPassQuantity
+      + (selectedPass === "general-season" ? "&zone=" + encodeURIComponent(seasonPassZone) : "")
+    : undefined;
+
+  useEffect(() => {
+    setHasReachedOriginalCheckout(false);
+    const selector = passCategory === "single-match"
+      ? '[data-nusc-checkout-action="match"]'
+      : '[data-nusc-checkout-action="season"]';
+    const originalCheckout = document.querySelector<HTMLElement>(selector);
+    if (!originalCheckout || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setHasReachedOriginalCheckout(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    observer.observe(originalCheckout);
+    return () => observer.disconnect();
+  }, [passCategory, selectedPass, selectedMatchDates, matchEvents, canBuySeasonPass]);
+  const mobileCheckoutHref = passCategory === "single-match"
+    ? firstBookableCheckoutHref
+    : canBuySeasonPass ? seasonCheckoutHref : undefined;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -464,7 +503,7 @@ export default function NuscHomeMatchesPage() {
                   if (completedMatchCount > 0) checkoutParams.set("nuscCompletedCount", String(completedMatchCount));
                   if (lastCompletedMatchDate) checkoutParams.set("nuscCompletedDate", lastCompletedMatchDate);
                   return event && selectedPass && hasSelectedTicket ? (
-                    <Link key={match.date} href={`/events/${event._id}/checkout?${checkoutParams.toString()}`} aria-label={`${completedMatchCount > 0 ? "Continue checkout for" : "Checkout"} NUSC vs ${match.opponent}, ${match.label}`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
+                    <Link key={match.date} href={`/events/${event._id}/checkout?${checkoutParams.toString()}`} data-nusc-checkout-action="match" aria-label={`${completedMatchCount > 0 ? "Continue checkout for" : "Checkout"} NUSC vs ${match.opponent}, ${match.label}`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
                       <span className="min-w-0 leading-5">{completedMatchCount > 0 ? "Continue: " : ""}NUSC vs {match.opponent} · {match.label}</span><ArrowRight className="h-4 w-4 shrink-0" />
                     </Link>
                   ) : event && !selectedPass ? (
@@ -529,7 +568,7 @@ export default function NuscHomeMatchesPage() {
               </div>
               {canBuySeasonPass ? (
                 <Link
-                  href={`/nusc-home-matches/season-checkout?passId=${encodeURIComponent(selectedPass)}&quantity=${seasonPassQuantity}${selectedPass === "general-season" ? `&zone=${encodeURIComponent(seasonPassZone)}` : ""}`}
+                  href={`/nusc-home-matches/season-checkout?passId=${encodeURIComponent(selectedPass)}&quantity=${seasonPassQuantity}${selectedPass === "general-season" ? `&zone=${encodeURIComponent(seasonPassZone)}` : ""}`} data-nusc-checkout-action="season"
                   className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11"
                 >
                   Continue to checkout <ArrowRight className="h-4 w-4" />
@@ -562,6 +601,17 @@ export default function NuscHomeMatchesPage() {
       </section>
 
       <Footer />
+      {mobileCheckoutHref && !hasReachedOriginalCheckout && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-40 px-4 pr-20 sm:hidden">
+          <Link
+            href={mobileCheckoutHref}
+            aria-label="Proceed to checkout"
+            className="pointer-events-auto flex min-h-12 w-full items-center justify-between gap-3 whitespace-nowrap rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(120,10,25,0.28)] transition hover:bg-[#b91629] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d41e32]"
+          >
+            Proceed to checkout <ArrowRight className="h-4 w-4 shrink-0" />
+          </Link>
+        </div>
+      )}
     </main>
   );
 }
