@@ -1376,41 +1376,61 @@ export default function CheckoutPage() {
 
                 {/* Selected Tickets */}
                 <div className="space-y-5">
-                  {Array.from(selectedTickets.values()).map((item) => (
-                    <div
-                      key={item.ticket._id}
-                      className="flex justify-between items-start sm:items-center gap-4"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {item.ticket.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {isNuscHomeMatchEvent
-                            ? `${item.quantity} ${item.quantity === 1 ? "ticket" : "tickets"}`
-                            : <>
-                                {item.quantity} ×{" "}
-                                {item.ticket.price === 0
-                                  ? "FREE"
-                                  : `₹${item.ticket.price.toLocaleString()}`}
-                              </>}
-                        </p>
-                        {isNuscHomeMatchEvent && item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && (
-                          <p className="mt-1 text-sm font-medium text-[#315c38]">
-                            Seating zone: {selectedGeneralZones[item.ticket._id]}
+                  {Array.from(selectedTickets.values()).map((item) => {
+                    const nuscPassId = Object.keys(NUSC_PASS_TICKET_TYPE_NAMES).find(
+                      (id) => NUSC_PASS_TICKET_TYPE_NAMES[id] === item.ticket.name,
+                    );
+                    const seatingZone = isNuscHomeMatchEvent && nuscPassId === "general-single"
+                      ? selectedGeneralZones[item.ticket._id]
+                      : undefined;
+                    const nuscPassLabel = isNuscHomeMatchEvent
+                      ? nuscPassId?.endsWith("-season")
+                        ? item.ticket.name
+                        : `${item.ticket.name} · Single Match`
+                      : item.ticket.name;
+                    const nuscQuantityLabel = nuscPassId === "suite-box-single"
+                      ? `${item.quantity} ${item.quantity === 1 ? "box" : "boxes"}`
+                      : nuscPassId === "suite-single"
+                        ? `${item.quantity} ${item.quantity === 1 ? "person" : "people"}`
+                        : nuscPassId?.endsWith("-season")
+                          ? `${item.quantity} ${item.quantity === 1 ? "season pass" : "season passes"}`
+                          : `${item.quantity} ${item.quantity === 1 ? "ticket" : "tickets"}`;
+
+                    return (
+                      <div
+                        key={item.ticket._id}
+                        className="flex justify-between items-start gap-4"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900">
+                            {nuscPassLabel}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {isNuscHomeMatchEvent
+                              ? `${nuscQuantityLabel}${seatingZone ? ` · Seating Zone ${seatingZone}` : ""}`
+                              : <>
+                                  {item.quantity} ×{" "}
+                                  {item.ticket.price === 0
+                                    ? "FREE"
+                                    : `₹${item.ticket.price.toLocaleString()}`}
+                                </>}
+                          </p>
+                        </div>
+
+                        {isNuscHomeMatchEvent ? (
+                          <span className="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                            Qty: {item.quantity}
+                          </span>
+                        ) : (
+                          <p className="font-semibold text-gray-900 text-right">
+                            {item.ticket.price === 0
+                              ? "FREE"
+                              : `₹${(item.ticket.price * item.quantity).toLocaleString()}`}
                           </p>
                         )}
                       </div>
-
-                      {!isNuscHomeMatchEvent && (
-                        <p className="font-semibold text-gray-900 text-right">
-                          {item.ticket.price === 0
-                            ? "FREE"
-                            : `₹${(item.ticket.price * item.quantity).toLocaleString()}`}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Coupon Section */}
@@ -1454,7 +1474,7 @@ export default function CheckoutPage() {
                 )}
 
                 {/* Totals */}
-                <div className="border-t border-gray-200 mt-6 pt-6 space-y-3">
+                <div className={isNuscHomeMatchEvent ? "mt-4 space-y-3" : "border-t border-gray-200 mt-6 pt-6 space-y-3"}>
 
                   {!isNuscHomeMatchEvent && (
                     <div className="flex justify-between text-sm text-gray-600">
@@ -1477,6 +1497,7 @@ export default function CheckoutPage() {
                   {!isFreeEvent && subtotalAmount > 0 && (
                     isNuscHomeMatchEvent ? (
                       <NuscPriceBreakdown
+                        compact
                         items={Array.from(selectedTickets.values()).map(({ ticket, quantity }) => ({
                           passId: Object.keys(NUSC_PASS_TICKET_TYPE_NAMES).find((id) => NUSC_PASS_TICKET_TYPE_NAMES[id] === ticket.name) || "",
                           quantity,

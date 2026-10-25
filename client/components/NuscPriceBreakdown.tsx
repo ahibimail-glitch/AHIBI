@@ -29,9 +29,11 @@ const formatRupees = (amount: number) =>
 export default function NuscPriceBreakdown({
   items,
   totalPayable,
+  compact = false,
 }: {
   items: NuscPriceItem[];
   totalPayable?: number;
+  compact?: boolean;
 }) {
   const lines = items.filter((item) => item.quantity > 0 && PASS_NAMES[item.passId]);
   if (lines.length === 0) return null;
@@ -41,7 +43,10 @@ export default function NuscPriceBreakdown({
   const convenienceFee = roundRupees(basePrice * 0.1);
 
   return (
-    <section aria-label="NUSC price breakdown" className="mt-6 border-t border-gray-200 pt-5">
+    <section
+      aria-label="NUSC price breakdown"
+      className={compact ? "mt-0 border-t border-gray-200 pt-4" : "mt-6 border-t border-gray-200 pt-5"}
+    >
       <h3 className="text-sm font-semibold text-gray-900">Price breakdown</h3>
       <div className="mt-3 space-y-2 text-sm text-gray-600">
         <div className="flex justify-between gap-3">
