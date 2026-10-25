@@ -194,7 +194,7 @@ const DailyEventCard = ({ event }: { event: DailyEvent }) => {
           src={event.banner || "/placeholder.svg"}
           alt={title}
           fill
-          sizes="20vw"
+          sizes="(max-width: 639px) 43vw, 20vw"
           className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
@@ -271,7 +271,6 @@ function LegacyHomePage() {
   const [slidesPerView, setSlidesPerView] = useState(1)
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
-  const featuredMobileCarouselRef = useRef<HTMLDivElement | null>(null)
 
   const stats = useMemo(
     () => [
@@ -327,6 +326,9 @@ function LegacyHomePage() {
   const [backgroundImages, setBackgroundImages] = useState<Array<{ url: string; mobileUrl?: string }>>([])
   const [loadingHeroImages, setLoadingHeroImages] = useState(true)
   const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const heroMobileTrackRef = useRef<HTMLDivElement | null>(null)
+  const heroSlideRefs = useRef<Array<HTMLDivElement | null>>([])
+  const [heroMobileHeight, setHeroMobileHeight] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -418,6 +420,23 @@ function LegacyHomePage() {
 
     fetchHeroImages()
   }, [])
+
+  useEffect(() => {
+    if (!isMobileViewport) return
+
+    const activeSlide = heroSlideRefs.current[currentBgSlide]
+    if (!activeSlide) return
+
+    const updateHeight = () => {
+      const nextHeight = activeSlide.getBoundingClientRect().height
+      if (nextHeight > 0) setHeroMobileHeight(Math.ceil(nextHeight))
+    }
+
+    updateHeight()
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(activeSlide)
+    return () => observer.disconnect()
+  }, [backgroundImages, currentBgSlide, isMobileViewport])
 
   // useEffect(() => {
   //   if (backgroundImages.length <= 1) return
@@ -580,41 +599,6 @@ function LegacyHomePage() {
     [events]
   )
 
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const el = featuredMobileCarouselRef.current
-    if (!el) return
-    if (isLoading) return
-    if (error) return
-    if (featuredEvents.length <= 1) return
-
-    const isMobile = window.matchMedia("(max-width: 639px)").matches
-    if (!isMobile) return
-
-    const gapPx = 12
-    const getStep = () => {
-      const track = el.firstElementChild as HTMLElement | null
-      const firstCard = (track?.firstElementChild as HTMLElement | null) ?? null
-      if (!firstCard) return 0
-      return firstCard.offsetWidth + gapPx
-    }
-
-    const id = window.setInterval(() => {
-      const step = getStep()
-      if (!step) return
-
-      const maxScrollLeft = el.scrollWidth - el.clientWidth
-      const atEnd = el.scrollLeft >= maxScrollLeft - 4
-
-      if (atEnd) {
-        el.scrollTo({ left: 0, behavior: "smooth" })
-      } else {
-        el.scrollBy({ left: step, behavior: "smooth" })
-      }
-    }, 3500)
-
-    return () => window.clearInterval(id)
-  }, [featuredEvents.length, isLoading, error])
 
   return (
     <div className="min-h-screen bg-[#f5f5f5]">
@@ -625,7 +609,19 @@ function LegacyHomePage() {
         {loadingHeroImages ? (
           <div className="w-full aspect-[2560/900] bg-gray-200 animate-pulse" />
         ) : (
-          <div className="relative w-full">
+          <div
+            ref={heroMobileTrackRef}
+            className="relative flex w-full items-start snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth scrollbar-hide sm:block sm:overflow-visible sm:snap-none"
+            style={isMobileViewport && heroMobileHeight ? { height: `${heroMobileHeight}px` } : undefined}
+            role="region"
+            aria-label="Hero banners"
+            tabIndex={0}
+            onScroll={(event) => {
+              const track = event.currentTarget
+              const nextSlide = Math.round(track.scrollLeft / track.clientWidth)
+              setCurrentBgSlide((current) => current === nextSlide ? current : nextSlide)
+            }}
+          >
             {backgroundImages.map((image, index) => {
               const src =
                 (isMobileViewport && image.mobileUrl ? image.mobileUrl : image.url) ||
@@ -635,10 +631,11 @@ function LegacyHomePage() {
               return (
                 <div
                   key={index}
-                  className={`w-full transition-opacity duration-700 ${
+                  ref={(element) => { heroSlideRefs.current[index] = element }}
+                  className={`relative w-full shrink-0 snap-start transition-opacity duration-700 ${
                     isActive
-                      ? "relative opacity-100 z-10"
-                      : "absolute inset-x-0 top-0 opacity-0 pointer-events-none"
+                      ? "sm:relative sm:opacity-100 sm:z-10"
+                      : "sm:absolute sm:inset-x-0 sm:top-0 sm:opacity-0 sm:pointer-events-none"
                   }`}
                   aria-hidden={!isActive}
                 >
@@ -666,9 +663,9 @@ function LegacyHomePage() {
                       backgroundImages.length
                   )
                 }
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20
+                className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-20
                      bg-black/40 hover:bg-black/60 text-white
-                     w-9 h-9 rounded-full flex items-center justify-center
+                     w-9 h-9 rounded-full items-center justify-center
                      backdrop-blur-sm transition"
                 aria-label="Previous slide"
               >
@@ -684,9 +681,9 @@ function LegacyHomePage() {
                     (prev) => (prev + 1) % backgroundImages.length
                   )
                 }
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20
+                className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-20
                      bg-black/40 hover:bg-black/60 text-white
-                     w-9 h-9 rounded-full flex items-center justify-center
+                     w-9 h-9 rounded-full items-center justify-center
                      backdrop-blur-sm transition"
                 aria-label="Next slide"
               >
@@ -700,7 +697,13 @@ function LegacyHomePage() {
                 {backgroundImages.map((_, index) => (
                   <button
                     key={index}
-                    onClick={() => setCurrentBgSlide(index)}
+                    onClick={() => {
+                      setCurrentBgSlide(index)
+                      const track = heroMobileTrackRef.current
+                      if (isMobileViewport && track) {
+                        track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" })
+                      }
+                    }}
                     className={`h-1 rounded-full transition-all ${index === currentBgSlide
                       ? "bg-white w-6"
                       : "bg-white/50 w-1"
@@ -745,12 +748,12 @@ function LegacyHomePage() {
               {isLoading ? (
                 /* SKELETONS */
                 <>
-                  <div className="sm:hidden -mx-3 px-3 overflow-x-auto">
-                    <div className="flex gap-3 snap-x snap-mandatory">
+                  <div className="sm:hidden -mx-3 overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3">
+                    <div className="flex w-max gap-3 px-3 pb-1">
                       {[...Array(5)].map((_, i) => (
                         <div
                           key={i}
-                          className="shrink-0 w-[78%] max-w-[320px] bg-gray-200 rounded-lg aspect-[2560/460] animate-pulse snap-center"
+                          className="w-[43vw] min-w-[138px] max-w-[220px] shrink-0 snap-start rounded-xl aspect-[2/3] bg-gray-200 animate-pulse"
                         />
                       ))}
                     </div>
@@ -774,46 +777,47 @@ function LegacyHomePage() {
               ) : (
                 /* EVENTS GRID */
                 <>
-                  <div className="sm:hidden -mx-3 px-3 overflow-x-auto" ref={featuredMobileCarouselRef}>
-                    <div className="flex gap-3 snap-x snap-mandatory">
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {featuredEvents.slice(0, 10).map((event) => (
-                          <Link key={event._id} href={getEventHref(event)}>
-                            <Card className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-
-                              {/* Poster */}
-                              <div className="relative aspect-[2/3] w-full overflow-hidden">
-                                <Image
-                                  src={event.banner || "/placeholder.svg"}
-                                  alt={event.title}
-                                  fill
-                                  sizes="(max-width: 640px) 50vw, 20vw"
-                                  className="object-cover object-center"
-                                />
-                                {!!formatDayDate((event as any)?.startDate) && (
-                                  <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
-                                    <p className="text-[10px] text-white text-center font-medium truncate">
-                                      {formatDayDate((event as any)?.startDate)}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Text */}
-                              <div className="px-2 pt-2 pb-2">
-                                <h3 className="text-[13px] font-semibold line-clamp-1 text-gray-900">
-                                  {event.title}
-                                </h3>
-                                <p className="text-[11px] text-gray-500 mt-0.5">
-                                  {event.category}
-                                </p>
-                              </div>
-
-                            </Card>
-                          </Link>
-                        ))}
-                      </div>
-
+                  <div
+                    className="sm:hidden -mx-3 overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
+                    role="region"
+                    aria-label="Recommended events"
+                    tabIndex={0}
+                  >
+                    <div className="flex w-max gap-3 px-3 pb-1">
+                      {featuredEvents.slice(0, 10).map((event) => (
+                        <Link
+                          key={event._id}
+                          href={getEventHref(event)}
+                          className="w-[43vw] min-w-[138px] max-w-[220px] shrink-0 snap-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                        >
+                          <Card className="h-full overflow-hidden rounded-xl border border-gray-200 bg-white">
+                            <div className="relative aspect-[2/3] w-full overflow-hidden">
+                              <Image
+                                src={event.banner || "/placeholder.svg"}
+                                alt={event.title}
+                                fill
+                                sizes="(max-width: 639px) 43vw, 20vw"
+                                className="object-cover object-center"
+                              />
+                              {!!formatDayDate((event as any)?.startDate) && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+                                  <p className="text-[10px] text-white text-center font-medium truncate">
+                                    {formatDayDate((event as any)?.startDate)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="px-2 pt-2 pb-2">
+                              <h3 className="text-[13px] font-semibold line-clamp-1 text-gray-900">
+                                {event.title}
+                              </h3>
+                              <p className="text-[11px] text-gray-500 mt-0.5">
+                                {event.category}
+                              </p>
+                            </div>
+                          </Card>
+                        </Link>
+                      ))}
                     </div>
                   </div>
 
@@ -872,22 +876,42 @@ function LegacyHomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div
+            className="sm:hidden -mx-3 overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
+            role="region"
+            aria-label="Daily events"
+            tabIndex={0}
+          >
+            <div className="flex w-max gap-3 px-3 pb-1">
+              {dailyEvents.slice(0, 10).map((event) => (
+                <Link
+                  key={event._id}
+                  href={`/events/daily/${event._id}`}
+                  className="w-[43vw] min-w-[138px] max-w-[220px] shrink-0 snap-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                >
+                  <DailyEventCard event={event} />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {dailyEvents.slice(0, 10).map((event) => (
               <Link key={event._id} href={`/events/daily/${event._id}`}>
                 <DailyEventCard event={event} />
               </Link>
             ))}
           </div>
+          </div>
         </div>
       </section>
       <StickyHeroCards />
       {/* Music Events Section */}
       {musicEvents.length > 0 && (
-        <section className="py-4 sm:py-6 md:py-8 bg-[#2b3148]">
+        <section className="py-4 sm:py-6 md:py-8 bg-[#f5f5f5]">
           <div className="container mx-auto px-3 sm:px-4">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#1C1C1C]">
                 Music Events
               </h2>
               <Link
@@ -898,7 +922,51 @@ function LegacyHomePage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div
+              className="sm:hidden -mx-3 overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
+              role="region"
+              aria-label="Music events"
+              tabIndex={0}
+            >
+              <div className="flex w-max gap-3 px-3 pb-1">
+                {musicEvents.map((event) => (
+                  <Link
+                    key={event._id}
+                    href={getEventHref(event)}
+                    className="w-[43vw] min-w-[138px] max-w-[220px] shrink-0 snap-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                  >
+                    <Card className="group h-full overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
+                      <div className="relative aspect-[2/3] w-full overflow-hidden">
+                        <Image
+                          src={event.banner || "/placeholder.svg"}
+                          alt={event.title}
+                          fill
+                          sizes="(max-width: 639px) 43vw, 20vw"
+                          className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                        />
+                        {!!formatDayDate((event as any)?.startDate) && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/90 py-1 px-2">
+                            <p className="text-[10px] text-white text-center font-medium truncate">
+                              {formatDayDate((event as any)?.startDate)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2 pt-2 pb-1.5">
+                        <h3 className="font-medium text-[12px] sm:text-xs md:text-sm line-clamp-1 text-gray-900">
+                          {event.title}
+                        </h3>
+                        <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
+                          {event.location?.city}
+                        </p>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="hidden sm:grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {musicEvents.map((event) => (
                 <Link key={event._id} href={getEventHref(event)}>
                   <Card className="group overflow-hidden rounded-lg bg-white border border-gray-200 transition-shadow hover:shadow-lg">
@@ -1057,7 +1125,7 @@ function LegacyHomePage() {
 
       {/* Popular Venues Section */}
       {venues.length > 0 && (
-        <section className=" mt-40 py-10 bg-[#f8fafc]">
+        <section className="mt-6 py-6 sm:mt-40 sm:py-10 bg-[#f8fafc]">
           <div className="container mx-auto px-4">
 
             {/* Section Header */}
