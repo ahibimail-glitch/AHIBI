@@ -877,7 +877,7 @@ function LegacyHomePage() {
           </div>
 
           <div
-            className="sm:hidden -mx-3 overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
+            className="sm:hidden overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
             role="region"
             aria-label="Daily events"
             tabIndex={0}
@@ -922,7 +922,7 @@ function LegacyHomePage() {
             </div>
 
             <div
-              className="sm:hidden -mx-3 overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
+              className="sm:hidden overflow-x-auto overscroll-x-contain scroll-smooth scrollbar-hide snap-x snap-mandatory scroll-pl-3"
               role="region"
               aria-label="Music events"
               tabIndex={0}
