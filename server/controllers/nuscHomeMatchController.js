@@ -113,11 +113,11 @@ function getCheckoutReceipt(userId, requestId) {
   return `nusc_${digest.slice(0, 32)}`;
 }
 
-async function findExistingCheckoutOrder({ userId, requestId, requestHash, amountMinor }) {
+async function findExistingCheckoutOrder({ userId, requestId, requestHash, amountMinor, compatibleRequestHashes = [] }) {
   await NuscHomeMatchOrder.init();
   const existing = await NuscHomeMatchOrder.findOne({ user: userId, checkoutRequestId: requestId });
   if (!existing) return null;
-  if (existing.checkoutRequestHash !== requestHash) {
+  if (existing.checkoutRequestHash !== requestHash && !compatibleRequestHashes.includes(existing.checkoutRequestHash)) {
     throw new inventory.InventoryConflict('This checkout request was already used for a different ticket selection. Refresh checkout and try again.', 'CHECKOUT_REQUEST_CONFLICT');
   }
   if (existing.status === 'completed') return { alreadyCompleted: true, existing };
@@ -161,6 +161,7 @@ async function createOrder(req, res) {
   let createdOrderId = null;
   let checkoutRequestId = null;
   let checkoutRequestHash = null;
+  let legacyCheckoutRequestHash = null;
   try {
     const bookingDetails = req.body?.bookingDetails;
     const eventId = bookingDetails?.event?._id;
@@ -204,11 +205,23 @@ async function createOrder(req, res) {
         left.ticketType.localeCompare(right.ticketType) || String(left.zone || '').localeCompare(String(right.zone || ''))
       )),
     });
+    // Orders created before basePrice was added to the server's ticket snapshot
+    // used the same buyer selection but a different request hash.
+    legacyCheckoutRequestHash = hashCheckoutRequest({
+      orderType: 'match',
+      userId: String(user._id),
+      eventId: String(event._id),
+      matchDate,
+      tickets: [...tickets].sort((left, right) => (
+        left.ticketType.localeCompare(right.ticketType) || String(left.zone || '').localeCompare(String(right.zone || ''))
+      )).map(({ ticketType, quantity, price, zone }) => ({ ticketType, quantity, price, ...(zone && { zone }) })),
+    });
     const existingCheckout = await findExistingCheckoutOrder({
       userId: user._id,
       requestId: checkoutRequestId,
       requestHash: checkoutRequestHash,
       amountMinor,
+      compatibleRequestHashes: [legacyCheckoutRequestHash],
     });
     if (existingCheckout?.alreadyCompleted) {
       return res.status(200).json({ success: true, alreadyCompleted: true });
@@ -281,7 +294,7 @@ async function createOrder(req, res) {
     if (error?.code === 11000 && checkoutRequestId && req.user?._id) {
       try {
         const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
-        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'created' && !existing.paymentId) {
+        if (existing && [checkoutRequestHash, legacyCheckoutRequestHash].includes(existing.checkoutRequestHash) && existing.status === 'created' && !existing.paymentId) {
           if (createdOrderId && createdOrderId !== existing.orderId) {
             try { await inventory.releaseMatchOrder(createdOrderId); } catch (releaseError) {
               console.error('[NUSC checkout] Failed to release a duplicate request hold:', releaseError.message);
@@ -290,7 +303,7 @@ async function createOrder(req, res) {
           const providerOrder = await getRazorpay().orders.fetch(existing.orderId);
           return res.status(200).json(providerOrder);
         }
-        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'completed') {
+        if (existing && [checkoutRequestHash, legacyCheckoutRequestHash].includes(existing.checkoutRequestHash) && existing.status === 'completed') {
           return res.status(200).json({ success: true, alreadyCompleted: true });
         }
       } catch (recoveryError) {
