@@ -295,7 +295,7 @@ export default function NuscHomeMatchesPage() {
         </div>
       </section>
 
-      <section id="passes" className="scroll-mt-20 bg-white px-5 py-12 sm:scroll-mt-24 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+      <section id="passes" className="scroll-mt-20 overflow-x-clip bg-white px-5 py-12 sm:scroll-mt-24 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-5 border-b border-[#e2e6e1] pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:pb-8">
             <div className="max-w-2xl">
@@ -334,7 +334,7 @@ export default function NuscHomeMatchesPage() {
               <div
                 role="region"
                 aria-label="Swipe horizontally to browse match dates"
-                className="-mx-5 mt-3 flex snap-x snap-mandatory scroll-smooth gap-2 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
+                className="box-border mt-3 flex w-full min-w-0 max-w-full snap-x snap-mandatory scroll-smooth gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
               >
                 {NUSC_HOME_MATCHES.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
