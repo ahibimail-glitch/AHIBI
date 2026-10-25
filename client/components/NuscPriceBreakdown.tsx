@@ -4,6 +4,7 @@ type NuscPriceItem = {
   passId: string;
   quantity: number;
   actualUnitPrice: number;
+  checkoutUnitPrice?: number;
 };
 
 const PASS_NAMES: Record<string, string> = {
