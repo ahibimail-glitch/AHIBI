@@ -44,12 +44,12 @@ const GENERAL_SEATING_AREAS = [
   { name: 'G-1', capacity: 600 },
   { name: 'G-2', capacity: 600 },
   { name: 'G-3', capacity: 450 },
-  { name: 'G-4', capacity: 650 },
+  { name: 'G-4', capacity: 600 },
   { name: 'G-5', capacity: 600 },
 ];
 const TICKET_CAPACITIES = {
   'General Pass': GENERAL_SEATING_AREAS.reduce((sum, area) => sum + area.capacity, 0),
-  'Premium Pass': 300,
+  'Premium Pass': 250,
 };
 const INVENTORY_KEY = 'nusc-il-2026-27';
 const FIXTURE_MATCHES = [
