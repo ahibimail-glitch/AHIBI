@@ -39,6 +39,7 @@ import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import WorkshopRsvp from "@/components/WorkshopRsvp";
 import { trackBookingStarted, trackEventView } from "@/lib/analytics/google-analytics";
+import { getNuscMatchDateFromSlug, getNuscMatchPassSelectionUrl } from "@/lib/nuscHomeMatches";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -250,6 +251,12 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         event_id: event._id,
         event_name: event.title,
       });
+    }
+
+    const nuscMatchDate = getNuscMatchDateFromSlug(event?.slug);
+    if (nuscMatchDate) {
+      router.push(getNuscMatchPassSelectionUrl(nuscMatchDate));
+      return;
     }
 
     const token = localStorage.getItem("token");

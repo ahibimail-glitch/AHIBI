@@ -17,6 +17,25 @@ export function getNuscMatchSlug(date: string) {
   return `${NUSC_MATCH_EVENT_SLUG_PREFIX}${date.replace(/-/g, "")}`;
 }
 
+export function getNuscMatchDateFromSlug(slug?: string) {
+  const match = /^nusc-home-match-(\d{4})(\d{2})(\d{2})$/.exec(slug || "");
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+}
+
+export function getNuscMatchPassSelectionUrl(
+  matchDates: string | readonly string[],
+  passId = "general-single",
+  progress?: { completedCount?: string | null; completedDate?: string | null }
+) {
+  const params = new URLSearchParams({
+    continueDates: typeof matchDates === "string" ? matchDates : matchDates.join(","),
+    nuscPass: passId,
+  });
+  if (progress?.completedCount) params.set("nuscCompletedCount", progress.completedCount);
+  if (progress?.completedDate) params.set("nuscCompletedDate", progress.completedDate);
+  return `/nusc-home-matches?${params.toString()}#passes`;
+}
+
 function nuscCheckoutStorageKey(scope: string) {
   return `ahibi:nusc-checkout:v1:${encodeURIComponent(scope)}`;
 }

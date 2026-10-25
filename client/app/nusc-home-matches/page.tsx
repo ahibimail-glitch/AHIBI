@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowLeft, ArrowRight, CalendarDays, Clock3, MapPin, Phone, Ticket, Trophy } from "lucide-react";
@@ -91,6 +91,7 @@ export default function NuscHomeMatchesPage() {
   const [selectedMatchDates, setSelectedMatchDates] = useState<string[]>([]);
   const [seasonPassQuantity, setSeasonPassQuantity] = useState(1);
   const [seasonPassZone, setSeasonPassZone] = useState<GeneralZone | "">("");
+  const shouldScrollToPassOptions = useRef(false);
   const [completedMatchCount, setCompletedMatchCount] = useState(0);
   const [lastCompletedMatchDate, setLastCompletedMatchDate] = useState<string | null>(null);
   const nextMatch = getNextNuscMatch();
@@ -131,7 +132,10 @@ export default function NuscHomeMatchesPage() {
     const validPass = SINGLE_MATCH_PASSES.some((pass) => pass.id === passId);
     const completedCount = Number.parseInt(params.get("nuscCompletedCount") || "0", 10);
     const completedDate = params.get("nuscCompletedDate");
-    if (dates.length > 0) setSelectedMatchDates(dates);
+    if (dates.length > 0) {
+      setSelectedMatchDates(dates);
+      if (validPass) shouldScrollToPassOptions.current = true;
+    }
     if (Number.isInteger(completedCount) && completedCount > 0) setCompletedMatchCount(completedCount);
     if (NUSC_HOME_MATCHES.some((match) => match.date === completedDate)) {
       setLastCompletedMatchDate(completedDate);
@@ -141,6 +145,12 @@ export default function NuscHomeMatchesPage() {
       setSelectedPass(passId);
     }
   }, []);
+
+  useEffect(() => {
+    if (!shouldScrollToPassOptions.current || !selectedMatchDates.length || !selectedPass || completedMatchCount > 0) return;
+    shouldScrollToPassOptions.current = false;
+    document.getElementById("pass-card-options")?.scrollIntoView({ block: "start" });
+  }, [selectedMatchDates.length, selectedPass, completedMatchCount]);
 
   useEffect(() => {
     if (completedMatchCount > 0) {

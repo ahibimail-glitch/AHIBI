@@ -49,6 +49,8 @@ import {
 import {
   clearNuscCheckoutRequestId,
   getNuscCheckoutRequestId,
+  getNuscMatchDateFromSlug,
+  getNuscMatchPassSelectionUrl,
   getNuscMatchSlug,
   NUSC_HOME_MATCHES,
 } from "@/lib/nuscHomeMatches";
@@ -1078,6 +1080,31 @@ export default function CheckoutPage() {
   }
 
   const totalTicketsSelected = Array.from(selectedTickets.values()).reduce((sum, item) => sum + item.quantity, 0);
+  const handleBackToTicketOptions = () => {
+    if (isNuscHomeMatchEvent) {
+      const matchDate = getNuscMatchDateFromSlug(event.slug);
+      if (matchDate) {
+        const checkoutParams = new URLSearchParams(window.location.search);
+        const selectedDates = (checkoutParams.get("nuscDates") || matchDate)
+          .split(",")
+          .filter((date) => NUSC_HOME_MATCHES.some((match) => match.date === date));
+        const requestedPass = checkoutParams.get("nuscPass");
+        const passId = requestedPass && Object.prototype.hasOwnProperty.call(NUSC_PASS_TICKET_TYPE_NAMES, requestedPass)
+          ? requestedPass
+          : "general-single";
+        router.push(getNuscMatchPassSelectionUrl(
+          selectedDates.length ? selectedDates : [matchDate],
+          passId,
+          {
+            completedCount: checkoutParams.get("nuscCompletedCount"),
+            completedDate: checkoutParams.get("nuscCompletedDate"),
+          }
+        ));
+        return;
+      }
+    }
+    router.push(`/events/${eventId}`);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -1089,7 +1116,7 @@ export default function CheckoutPage() {
         <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
           <div className="max-w-full mx-auto px-4 py-4 sm:max-w-4xl">
             <button
-              onClick={() => router.push(`/events/${eventId}`)}
+              onClick={handleBackToTicketOptions}
               className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors mb-4"
             >
               <ArrowLeft className="w-5 h-5" />
