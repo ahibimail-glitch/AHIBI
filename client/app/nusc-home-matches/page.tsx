@@ -17,6 +17,7 @@ const SINGLE_MATCH_PASSES = [
     id: "general-single",
     name: "General Pass",
     price: "₹358.80 / match",
+    actualPrice: "₹299 / Match",
     detail: "Single match ticket",
     benefits: ["General Gallery seating", "Designated General Gates", "Digital QR ticket entry"],
   },
@@ -24,6 +25,7 @@ const SINGLE_MATCH_PASSES = [
     id: "premium-single",
     name: "Premium Pass",
     price: "₹1,500 / match",
+    actualPrice: "₹1,250 / Match",
     detail: "Single match premium experience",
     benefits: ["Reserved chair seating", "Better viewing location", "Complimentary snack box"],
   },
@@ -31,6 +33,7 @@ const SINGLE_MATCH_PASSES = [
     id: "suite-single",
     name: "United Suite — Single pass",
     price: "₹7,200 / person",
+    actualPrice: "₹6,000 / Person",
     detail: "Single person · single match",
     benefits: ["One seat in an 8-person VIP box", "Food and beverages", "Dedicated VIP entry and parking"],
   },
@@ -38,6 +41,7 @@ const SINGLE_MATCH_PASSES = [
     id: "suite-box-single",
     name: "United Suite — Full Box",
     price: "₹60,000 / match",
+    actualPrice: "₹50,000 / Match",
     detail: "One private box · up to 8 people · one match",
     benefits: ["Private VIP Box and best viewing", "Food, beverages and butler service", "Merchandise and dedicated parking"],
   },
@@ -49,6 +53,7 @@ const SEASON_PASSES = [
     amount: 3240,
     name: "General Season Pass",
     price: "₹3,240",
+    actualPrice: "₹2,700",
     detail: "All 10 home matches · 1 match day free",
     benefits: ["General Gallery access for all fixtures", "Early access to important match tickets"],
   },
@@ -57,6 +62,7 @@ const SEASON_PASSES = [
     amount: 10800,
     name: "Premium Season Pass",
     price: "₹10,800",
+    actualPrice: "₹9,000",
     detail: "All 10 home matches · 1 match day free",
     benefits: ["Reserved premium chair at every match", "Premium entry and snack box each match"],
   },
@@ -335,6 +341,7 @@ export default function NuscHomeMatchesPage() {
                     <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#d41e32] bg-[#d41e32]" : "border-[#c8d0c8]"}`} aria-hidden="true">{selected && <span className="h-2 w-2 rounded-full bg-white" />}</span>
                   </span>
                   {pass.price && <span className="mt-5 text-2xl font-black tracking-tight text-[#111713]">{pass.price}</span>}
+                  {"actualPrice" in pass && <span className="mt-2 text-sm font-semibold text-[#343b35]">Actual Price: {pass.actualPrice}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
                   <span className="space-y-2 text-sm leading-5 text-[#4c554d]">
