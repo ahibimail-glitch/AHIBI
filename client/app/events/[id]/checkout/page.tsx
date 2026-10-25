@@ -141,7 +141,23 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const checkoutStartedKeyRef = useRef<string | null>(null);
   const nuscPassPreselectionRef = useRef(false);
+  const pendingNuscPassScrollRef = useRef<string | null>(null);
   const reviewStepRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const ticketId = pendingNuscPassScrollRef.current;
+    if (!ticketId) return;
+
+    pendingNuscPassScrollRef.current = null;
+    if (!window.matchMedia("(max-width: 639px)").matches) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      document.getElementById(`nusc-ticket-${ticketId}`)?.scrollIntoView({ behavior, block: "center" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedTickets]);
 
   useEffect(() => {
     if (currentStep !== 3) return;
@@ -289,6 +305,7 @@ export default function CheckoutPage() {
       return;
     }
 
+    pendingNuscPassScrollRef.current = ticket._id;
     setSelectedTickets((current) => {
       if (current.size > 0) return current;
       return new Map(current).set(ticket._id, { ticket, quantity: 1 });
@@ -1234,6 +1251,7 @@ export default function CheckoutPage() {
                       return (
                         <div
                           key={ticket._id}
+                          id={isNuscHomeMatchEvent ? `nusc-ticket-${ticket._id}` : undefined}
                           className={`rounded-lg overflow-hidden border-2 transition-colors ${
                             quantity > 0
                               ? "border-red-600 bg-red-50/40 shadow-sm ring-1 ring-red-600/10"
