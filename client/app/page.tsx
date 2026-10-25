@@ -902,7 +902,6 @@ function LegacyHomePage() {
               </Link>
             ))}
           </div>
-          </div>
         </div>
       </section>
       <StickyHeroCards />
