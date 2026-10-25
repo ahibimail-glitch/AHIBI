@@ -248,7 +248,7 @@ export default function NuscMultiMatchCheckoutPage() {
                   <article key={match.date} className="rounded-2xl border border-[#dfe4de] bg-white p-4 sm:p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div><h2 className="font-bold">{fixture?.label} · {fixture?.opponent}</h2><p className="mt-1 text-sm text-[#69716a]">{pass.name} · {fixture?.time}</p></div>
-                      <div className="flex items-center gap-3"><p className="font-bold">{formatRupees(pass.totalPrice * match.quantity)}</p>{matches.length > 2 && <button type="button" onClick={() => setMatches((current) => current.filter((item) => item.date !== match.date))} className="text-sm font-semibold text-[#a4172a] underline">Remove</button>}</div>
+                      <div className="flex items-center gap-3"><p className="font-bold">{formatRupees(pass.actualPrice * match.quantity)}</p>{matches.length > 2 && <button type="button" onClick={() => setMatches((current) => current.filter((item) => item.date !== match.date))} className="text-sm font-semibold text-[#a4172a] underline">Remove</button>}</div>
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <label className="text-sm font-semibold">Tickets
