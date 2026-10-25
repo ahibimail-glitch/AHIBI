@@ -1226,9 +1226,6 @@ export default function CheckoutPage() {
                                 <p className="text-lg font-bold text-gray-900">
                                   {ticket.price === 0 ? 'FREE' : `₹${ticket.price.toLocaleString()}`}
                                 </p>
-                                {isNuscHomeMatchEvent && ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && ticket.price === 1 && (
-                                  <p className="mt-1 text-xs font-semibold text-red-700">Temporary test price</p>
-                                )}
                                 {isFastFilling && (
                                   <p className="text-xs text-orange-600 font-medium">Fast Filling</p>
                                 )}

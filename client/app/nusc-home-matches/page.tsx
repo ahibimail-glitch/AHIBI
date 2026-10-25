@@ -16,7 +16,7 @@ const SINGLE_MATCH_PASSES = [
   {
     id: "general-single",
     name: "General Pass",
-    price: "₹1.00 / match (test)",
+    price: "₹358.80 / match",
     detail: "Single match ticket",
     benefits: ["General Gallery seating", "Designated General Gates", "Digital QR ticket entry"],
   },
