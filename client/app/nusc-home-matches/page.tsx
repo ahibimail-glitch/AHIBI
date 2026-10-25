@@ -158,29 +158,35 @@ export default function NuscHomeMatchesPage() {
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_78%_28%,rgba(210,24,48,0.2),transparent_42%)]" />
         <div aria-hidden="true" className="absolute -right-40 -top-44 -z-10 h-[34rem] w-[34rem] rounded-full border border-white/10" />
         <div aria-hidden="true" className="absolute -right-20 -top-24 -z-10 h-[27rem] w-[27rem] rounded-full border border-white/[0.07]" />
-        <div className="mx-auto grid min-h-[640px] max-w-7xl items-center gap-10 px-5 py-16 sm:px-8 lg:min-h-[720px] lg:grid-cols-[1.08fr_.92fr] lg:px-12">
+        <div className="mx-auto grid min-h-0 max-w-7xl items-center gap-8 px-5 py-10 sm:gap-10 sm:px-8 sm:py-16 lg:min-h-[720px] lg:grid-cols-[1.08fr_.92fr] lg:px-12">
           <div className="max-w-2xl">
-            <Link href="/" className="mb-12 inline-flex items-center gap-2 text-sm font-medium text-white/75 transition hover:text-white">
+            <Link href="/" className="mb-8 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-white/75 transition hover:text-white sm:mb-12">
               <ArrowLeft className="h-4 w-4" /> Back to Ahibi
             </Link>
-            <p className="mb-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[.28em] text-[#ff6c78]">
+            <p className="mb-4 flex items-center gap-3 text-[10px] font-bold uppercase tracking-[.22em] text-[#ff6c78] sm:mb-5 sm:text-xs sm:tracking-[.28em]">
               <span className="h-px w-8 bg-[#ff3347]" /> Indian Football League
             </p>
-            <h1 className="max-w-xl text-5xl font-black leading-[.95] tracking-[-.055em] sm:text-7xl">
+            <h1 className="max-w-xl text-[clamp(3rem,13vw,4.5rem)] font-black leading-[.95] tracking-[-.055em] sm:text-7xl">
               NUSC <span className="text-[#ff3347]">at home.</span>
             </h1>
-            <p className="mt-6 max-w-lg text-base leading-7 text-white/75 sm:text-lg">
+            <p className="mt-4 max-w-lg text-[15px] leading-6 text-white/75 sm:mt-6 sm:text-lg sm:leading-7">
               Ten home dates. One stadium. Come stand behind NUSC through the Indian Football League season.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3 text-sm">
-              <a href="#fixtures" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#ed2035] px-6 font-semibold text-white transition hover:bg-[#c9172a]">
+            <div className="mt-7 grid grid-cols-2 gap-3 text-[13px] sm:mt-9 sm:flex sm:flex-wrap sm:text-sm">
+              <a href="#passes" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#ed2035] px-3 font-semibold text-white transition hover:bg-[#c9172a] sm:hidden">
+                Choose tickets <ArrowDown className="h-4 w-4" />
+              </a>
+              <a href="#fixtures" className="hidden min-h-12 items-center justify-center gap-2 rounded-full bg-[#ed2035] px-3 font-semibold text-white transition hover:bg-[#c9172a] sm:inline-flex sm:px-6">
                 View fixtures <ArrowDown className="h-4 w-4" />
               </a>
-              <a href="#fixtures" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/35 px-6 font-semibold text-white transition hover:bg-white/10">
+              <a href="#passes" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/35 px-3 font-semibold text-white transition hover:bg-white/10 sm:hidden">
+                Match tickets <Ticket className="h-4 w-4" />
+              </a>
+              <a href="#fixtures" className="hidden min-h-12 items-center justify-center gap-2 rounded-full border border-white/35 px-3 font-semibold text-white transition hover:bg-white/10 sm:inline-flex sm:px-6">
                 Match tickets <Ticket className="h-4 w-4" />
               </a>
             </div>
-            <div className="mt-12 grid max-w-xl grid-cols-2 gap-x-8 gap-y-5 border-t border-white/20 pt-6 sm:grid-cols-3">
+            <div className="mt-8 grid max-w-xl grid-cols-2 gap-x-5 gap-y-5 border-t border-white/20 pt-5 sm:mt-12 sm:grid-cols-3 sm:gap-x-8 sm:pt-6">
               <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/45">Next match</p><p className="mt-2 font-semibold">{nextMatch.label}</p><p className="mt-1 text-sm text-white/65">vs {nextMatch.opponent}</p></div>
               <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/45">Kickoff</p><p className="mt-2 font-semibold">6:30 PM</p></div>
               <div className="col-span-2 sm:col-span-1"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/45">Ground</p><p className="mt-2 font-semibold">Chümoukedima Football Stadium</p></div>
@@ -200,7 +206,7 @@ export default function NuscHomeMatchesPage() {
         </div>
       </section>
 
-      <section className="border-b border-[#dfe3dc] bg-white">
+      <section className="hidden border-b border-[#dfe3dc] bg-white md:block">
         <div className="mx-auto grid max-w-7xl gap-0 px-5 sm:px-8 md:grid-cols-3 lg:px-12">
           <div className="flex items-center gap-4 border-b border-[#e7e9e4] py-6 md:border-b-0 md:border-r md:pr-8"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eef4ec] text-[#23573a]"><CalendarDays className="h-5 w-5" /></span><div><p className="text-xs uppercase tracking-[.14em] text-[#737b73]">The season</p><p className="mt-1 font-semibold">November 2026 — March 2027</p></div></div>
           <div className="flex items-center gap-4 border-b border-[#e7e9e4] py-6 md:border-b-0 md:border-r md:px-8"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fbeded] text-[#c91c30]"><Clock3 className="h-5 w-5" /></span><div><p className="text-xs uppercase tracking-[.14em] text-[#737b73]">Every kickoff</p><p className="mt-1 font-semibold">6:30 PM</p></div></div>
@@ -208,13 +214,13 @@ export default function NuscHomeMatchesPage() {
         </div>
       </section>
 
-      <section id="fixtures" className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-        <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-20">
+      <section id="fixtures" className="hidden mx-auto max-w-7xl px-5 py-12 sm:block sm:px-8 sm:py-20 lg:px-12 lg:py-24">
+        <div className="grid gap-7 lg:grid-cols-[.8fr_1.2fr] lg:gap-20">
           <div className="max-w-md">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-[#d41e32]">Mark the dates</p>
-            <h2 className="mt-4 text-4xl font-black tracking-[-.04em] sm:text-5xl">The home run.</h2>
-            <p className="mt-5 leading-7 text-[#626a63]">Choose a fixture below to select its date and jump to pass options. All listed matches kick off at 6:30 PM at Chümoukedima Football Stadium.</p>
-            <div className="mt-8 flex items-center gap-3 rounded-xl bg-[#eaf0e9] p-4 text-sm text-[#273c2d]"><Trophy className="h-5 w-5 shrink-0 text-[#d41e32]" /><span>Ten chances to make the home ground loud.</span></div>
+            <h2 className="mt-3 text-4xl font-black tracking-[-.04em] sm:mt-4 sm:text-5xl">The home run.</h2>
+            <p className="mt-4 text-[15px] leading-6 text-[#626a63] sm:mt-5 sm:leading-7">Choose a fixture below to select its date and jump to pass options. All listed matches kick off at 6:30 PM at Chümoukedima Football Stadium.</p>
+            <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#eaf0e9] p-4 text-sm text-[#273c2d] sm:mt-8"><Trophy className="h-5 w-5 shrink-0 text-[#d41e32]" /><span>Ten chances to make the home ground loud.</span></div>
           </div>
           <div className="divide-y divide-[#dce1db] border-y border-[#dce1db]">
             {NUSC_HOME_MATCHES.map((match) => {
@@ -225,7 +231,7 @@ export default function NuscHomeMatchesPage() {
                 <>
                   <span className="text-center"><span className="block text-[10px] font-bold uppercase tracking-[.14em] text-[#737b73]">{month}</span><span className="mt-0.5 block text-2xl font-black tracking-tight">{dayNumber}</span></span>
                   <span><span className="block font-semibold">NUSC vs {match.opponent}</span><span className="mt-1 block text-sm text-[#707970]">{match.label} · {match.day} · {match.time}</span></span>
-                  <span className="flex items-center gap-2 text-sm font-semibold text-[#c91d31]">
+                  <span className="col-span-2 flex items-center justify-between gap-2 text-sm font-semibold text-[#c91d31] sm:col-span-1 sm:justify-self-auto">
                     {event ? "Book tickets" : "Tickets soon"}
                     {event && <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d9dfd8] text-[#535e55] transition group-hover:border-[#d41e32] group-hover:bg-[#d41e32] group-hover:text-white"><ArrowRight className="h-4 w-4" /></span>}
                   </span>
@@ -240,25 +246,25 @@ export default function NuscHomeMatchesPage() {
                     setSelectedPass(null);
                     setSelectedMatchDates([match.date]);
                   }}
-                  className="group grid grid-cols-[54px_1fr_auto] items-center gap-4 py-4 transition hover:bg-white sm:grid-cols-[70px_1fr_auto] sm:gap-6 sm:py-5"
+                  className="group grid grid-cols-[42px_1fr] items-center gap-x-3 gap-y-2 py-4 transition hover:bg-white sm:grid-cols-[70px_1fr_auto] sm:gap-6 sm:py-5"
                 >
                   {row}
                 </Link>
               ) : (
-                <div key={match.date} className="group grid grid-cols-[54px_1fr_auto] items-center gap-4 py-4 text-left sm:grid-cols-[70px_1fr_auto] sm:gap-6 sm:py-5">{row}</div>
+                <div key={match.date} className="group grid grid-cols-[42px_1fr] items-center gap-x-3 gap-y-2 py-4 text-left sm:grid-cols-[70px_1fr_auto] sm:gap-6 sm:py-5">{row}</div>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section id="passes" className="scroll-mt-24 bg-white px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+      <section id="passes" className="scroll-mt-20 bg-white px-5 py-12 sm:scroll-mt-24 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col gap-6 border-b border-[#e2e6e1] pb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-5 border-b border-[#e2e6e1] pb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:pb-8">
             <div className="max-w-2xl">
-              <p className="text-xs font-bold uppercase tracking-[.24em] text-[#d41e32]">Choose your pass</p>
-              <h2 className="mt-4 text-4xl font-black tracking-[-.04em] sm:text-5xl">Make match day yours.</h2>
-              <p className="mt-4 leading-7 text-[#626a63]">Prices are displayed as supplied for each pass option.</p>
+              <p className="text-xs font-bold uppercase tracking-[.24em] text-[#d41e32]">NUSC home match tickets</p>
+              <h2 className="mt-3 text-4xl font-black tracking-[-.04em] sm:mt-4 sm:text-5xl">Make match day yours.</h2>
+              <p className="mt-3 text-[15px] leading-6 text-[#626a63] sm:mt-4 sm:leading-7">Prices are displayed as supplied for each pass option.</p>
             </div>
             <div className="rounded-xl border border-[#f0c6ca] bg-[#fff7f7] px-5 py-4 sm:max-w-sm">
               <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#b7192d]">Ticket sales</p>
@@ -266,34 +272,43 @@ export default function NuscHomeMatchesPage() {
             </div>
           </div>
 
-          <div role="tablist" aria-label="Ticket pass category" className="mt-8 inline-flex rounded-full bg-[#eef1ec] p-1">
-            <button type="button" role="tab" aria-selected={passCategory === "single-match"} onClick={() => { setPassCategory("single-match"); setSelectedPass(null); }} className={`rounded-full px-5 py-3 text-sm font-semibold transition ${passCategory === "single-match" ? "bg-[#0b1710] text-white shadow" : "text-[#5f675f] hover:text-[#111713]"}`}>
+          <div role="tablist" aria-label="Ticket pass category" className="mt-6 grid w-full grid-cols-2 rounded-full bg-[#eef1ec] p-1 sm:mt-8 sm:inline-flex sm:w-auto">
+            <button type="button" role="tab" aria-selected={passCategory === "single-match"} onClick={() => { setPassCategory("single-match"); setSelectedPass(null); }} className={`min-h-11 rounded-full px-3 py-3 text-[13px] font-semibold transition sm:px-5 sm:text-sm ${passCategory === "single-match" ? "bg-[#0b1710] text-white shadow" : "text-[#5f675f] hover:text-[#111713]"}`}>
               Single Match
             </button>
-            <button type="button" role="tab" aria-selected={passCategory === "season"} onClick={() => { setPassCategory("season"); setSelectedPass(null); }} className={`rounded-full px-5 py-3 text-sm font-semibold transition ${passCategory === "season" ? "bg-[#0b1710] text-white shadow" : "text-[#5f675f] hover:text-[#111713]"}`}>
+            <button type="button" role="tab" aria-selected={passCategory === "season"} onClick={() => { setPassCategory("season"); setSelectedPass(null); }} className={`min-h-11 rounded-full px-3 py-3 text-[13px] font-semibold transition sm:px-5 sm:text-sm ${passCategory === "season" ? "bg-[#0b1710] text-white shadow" : "text-[#5f675f] hover:text-[#111713]"}`}>
               Season Passes
             </button>
           </div>
 
           {passCategory === "single-match" && (
             <fieldset className="mt-7">
-              <legend className="text-sm font-semibold text-[#343b35]">Choose one or more match dates</legend>
-              <p className="mt-1 text-sm text-[#69716a]">Each selected match continues through its own AHIBI event checkout.</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <legend className="text-sm font-semibold text-[#343b35]">Step 1 · Choose match dates</legend>
+              <p className="mt-1 text-sm leading-5 text-[#69716a]">Select one or more matches. Next, choose a pass below.</p>
+              {selectedMatchDates.length > 0 && (
+                <Link
+                  href="#pass-card-options"
+                  className="mt-3 inline-flex min-h-12 w-full items-center justify-between gap-3 rounded-xl bg-[#0b1710] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1b3022] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d41e32] sm:hidden"
+                >
+                  <span>{selectedMatchDates.length} {selectedMatchDates.length === 1 ? "match" : "matches"} selected · Continue to passes</span>
+                  <ArrowDown className="h-4 w-4 shrink-0" />
+                </Link>
+              )}
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 {NUSC_HOME_MATCHES.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
                   return (
-                    <label key={match.date} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:border-[#b8c3b8]"}`}>
+                    <label key={match.date} className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition sm:gap-3 sm:p-4 ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:border-[#b8c3b8]"}`}>
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={(event) => setSelectedMatchDates((dates) => event.target.checked ? [...dates, match.date] : dates.filter((date) => date !== match.date))}
-                        className="mt-1 h-4 w-4 shrink-0 accent-[#c91d31]"
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-[#c91d31]"
                         aria-label={`${match.label}, ${match.opponent}, ${match.time}`}
                       />
                       <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-[#151b16]">{match.label}</span>
-                        <span className="mt-1 block text-sm text-[#4c554d]">vs {match.opponent}</span>
+                        <span className="block text-[13px] font-semibold leading-5 text-[#151b16] sm:text-sm">{match.label}</span>
+                        <span className="mt-1 block text-[13px] leading-5 text-[#4c554d] sm:text-sm">vs {match.opponent}</span>
                         <span className="mt-1 block text-xs text-[#737b73]">{match.day} · {match.time}</span>
                       </span>
                     </label>
@@ -303,12 +318,17 @@ export default function NuscHomeMatchesPage() {
             </fieldset>
           )}
 
-          <div className={`mt-7 grid gap-4 ${passCategory === "single-match" ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2 xl:grid-cols-3"}`}>
+          {passCategory === "single-match" ? (
+            <p id="pass-card-options" className="mb-3 mt-6 scroll-mt-20 text-sm font-semibold text-[#343b35] sm:mb-4 sm:mt-7">Step 2 · Choose a pass for your selected matches</p>
+          ) : (
+            <p id="pass-card-options" className="mb-3 mt-6 scroll-mt-20 text-sm font-semibold text-[#343b35] sm:mb-4 sm:mt-7">Choose your season pass</p>
+          )}
+          <div className={`grid gap-3 sm:gap-4 ${passCategory === "single-match" ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2 xl:grid-cols-3"}`}>
             {(passCategory === "single-match" ? SINGLE_MATCH_PASSES : SEASON_PASSES).map((pass) => {
               const selected = selectedPass === pass.id;
               const isCallToBook = pass.id === "suite-season";
               return (
-                <button key={pass.id} type="button" aria-pressed={selected} onClick={() => setSelectedPass(pass.id)} className={`group flex h-full min-h-[290px] flex-col rounded-2xl border p-6 text-left transition ${selected ? "border-[#d41e32] bg-[#fff8f8] shadow-[0_12px_35px_rgba(212,30,50,0.12)] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:-translate-y-1 hover:border-[#b8c3b8] hover:shadow-lg"}`}>
+              <button key={pass.id} type="button" aria-pressed={selected} onClick={() => setSelectedPass(pass.id)} className={`group flex h-full min-h-0 flex-col rounded-2xl border p-5 text-left transition sm:min-h-[290px] sm:p-6 ${selected ? "border-[#d41e32] bg-[#fff8f8] shadow-[0_12px_35px_rgba(212,30,50,0.12)] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:-translate-y-1 hover:border-[#b8c3b8] hover:shadow-lg"}`}>
                   <span className="flex w-full items-start justify-between gap-3">
                     <span className="text-lg font-bold leading-6 text-[#151b16]">{pass.name}</span>
                     <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#d41e32] bg-[#d41e32]" : "border-[#c8d0c8]"}`} aria-hidden="true">{selected && <span className="h-2 w-2 rounded-full bg-white" />}</span>
@@ -332,7 +352,7 @@ export default function NuscHomeMatchesPage() {
           )}
 
           {passCategory === "single-match" && selectedMatchDates.length > 0 && (
-            <div id="nusc-match-checkout-options" className="mt-7 scroll-mt-24 rounded-xl border border-[#e2e6e1] bg-[#f8faf7] p-5">
+            <div id="nusc-match-checkout-options" className="mt-6 scroll-mt-20 rounded-xl border border-[#e2e6e1] bg-[#f8faf7] p-4 sm:mt-7 sm:scroll-mt-24 sm:p-5">
               <p className="font-semibold text-[#151b16]">
                 {selectedPass && `${SINGLE_MATCH_PASSES.find((pass) => pass.id === selectedPass)?.name} · `}
                 {completedMatchCount > 0
@@ -382,8 +402,8 @@ export default function NuscHomeMatchesPage() {
                   if (completedMatchCount > 0) checkoutParams.set("nuscCompletedCount", String(completedMatchCount));
                   if (lastCompletedMatchDate) checkoutParams.set("nuscCompletedDate", lastCompletedMatchDate);
                   return event && selectedPass && hasSelectedTicket ? (
-                    <Link key={match.date} href={`/events/${event._id}/checkout?${checkoutParams.toString()}`} aria-label={`${completedMatchCount > 0 ? "Continue checkout for" : "Checkout"} NUSC vs ${match.opponent}, ${match.label}`} className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-full bg-[#d51f34] px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-[#b91629]">
-                      <span>{completedMatchCount > 0 ? "Continue: " : ""}NUSC vs {match.opponent} · {match.label}</span><ArrowRight className="h-4 w-4 shrink-0" />
+                    <Link key={match.date} href={`/events/${event._id}/checkout?${checkoutParams.toString()}`} aria-label={`${completedMatchCount > 0 ? "Continue checkout for" : "Checkout"} NUSC vs ${match.opponent}, ${match.label}`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
+                      <span className="min-w-0 leading-5">{completedMatchCount > 0 ? "Continue: " : ""}NUSC vs {match.opponent} · {match.label}</span><ArrowRight className="h-4 w-4 shrink-0" />
                     </Link>
                   ) : event && !selectedPass ? (
                     <span key={match.date} className="inline-flex min-h-10 items-center rounded-full bg-[#ecefea] px-4 text-sm font-medium text-[#6d756e]">
@@ -407,14 +427,14 @@ export default function NuscHomeMatchesPage() {
             </div>
           )}
           {selectedPass && (selectedPass === "general-season" || selectedPass === "premium-season") && passCategory === "season" && (
-            <div className="mt-6 flex flex-col gap-4 rounded-xl border border-[#e2e6e1] bg-[#f8faf7] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-6 flex flex-col gap-4 rounded-xl border border-[#e2e6e1] bg-[#f8faf7] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div>
                 <label htmlFor="season-pass-quantity" className="font-semibold text-[#151b16]">Season pass quantity</label>
                 <select
                   id="season-pass-quantity"
                   value={seasonPassQuantity}
                   onChange={(event) => setSeasonPassQuantity(Number(event.target.value))}
-                  className="ml-3 rounded-lg border border-[#cfd7cf] bg-white px-3 py-2"
+                  className="ml-2 min-h-11 rounded-lg border border-[#cfd7cf] bg-white px-3 py-2 sm:ml-3"
                   aria-label="Season pass quantity"
                 >
                   {Array.from({ length: Math.max(1, Math.min(10, seasonPassAvailableQuantity)) }, (_, index) => index + 1).map((quantity) => (
@@ -426,7 +446,7 @@ export default function NuscHomeMatchesPage() {
               {canBuySeasonPass ? (
                 <Link
                   href={`/nusc-home-matches/season-checkout?passId=${encodeURIComponent(selectedPass)}&quantity=${seasonPassQuantity}`}
-                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629]"
+                  className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11"
                 >
                   Continue to checkout <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -438,7 +458,7 @@ export default function NuscHomeMatchesPage() {
           {selectedPass === "suite-season" && (
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#f0d2d6] bg-[#fff8f8] p-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm leading-6 text-[#4c554d]">United Suite season bookings are by phone. Call to ask about availability and booking details.</p>
-              <a href="tel:+917005427394" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629]">
+              <a href="tel:+917005427394" className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11">
                 <Phone className="h-4 w-4" /> Call +91 7005427394
               </a>
             </div>
@@ -447,9 +467,9 @@ export default function NuscHomeMatchesPage() {
       </section>
 
       <section className="bg-[#0b1710] px-5 py-12 text-white sm:px-8 lg:px-12">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
           <div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#ff6977]">See you at the ground</p><h2 className="mt-2 text-2xl font-bold">Chümoukedima Football Stadium · 6:30 PM</h2></div>
-          <Link href="/events" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/35 px-6 text-sm font-semibold transition hover:bg-white/10">Browse all events <ArrowRight className="h-4 w-4" /></Link>
+          <Link href="/events" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-white/35 px-6 text-sm font-semibold transition hover:bg-white/10 sm:w-auto">Browse all events <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </section>
 
