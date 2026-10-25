@@ -1386,10 +1386,14 @@ export default function CheckoutPage() {
                           {item.ticket.name}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {item.quantity} ×{" "}
-                          {item.ticket.price === 0
-                            ? "FREE"
-                            : `₹${item.ticket.price.toLocaleString()}`}
+                          {isNuscHomeMatchEvent
+                            ? `${item.quantity} ${item.quantity === 1 ? "ticket" : "tickets"}`
+                            : <>
+                                {item.quantity} ×{" "}
+                                {item.ticket.price === 0
+                                  ? "FREE"
+                                  : `₹${item.ticket.price.toLocaleString()}`}
+                              </>}
                         </p>
                         {isNuscHomeMatchEvent && item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && (
                           <p className="mt-1 text-sm font-medium text-[#315c38]">
@@ -1398,11 +1402,13 @@ export default function CheckoutPage() {
                         )}
                       </div>
 
-                      <p className="font-semibold text-gray-900 text-right">
-                        {item.ticket.price === 0
-                          ? "FREE"
-                          : `₹${(item.ticket.price * item.quantity).toLocaleString()}`}
-                      </p>
+                      {!isNuscHomeMatchEvent && (
+                        <p className="font-semibold text-gray-900 text-right">
+                          {item.ticket.price === 0
+                            ? "FREE"
+                            : `₹${(item.ticket.price * item.quantity).toLocaleString()}`}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1450,14 +1456,16 @@ export default function CheckoutPage() {
                 {/* Totals */}
                 <div className="border-t border-gray-200 mt-6 pt-6 space-y-3">
 
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>{isNuscHomeMatchEvent ? "Ticket price (fees included)" : "Subtotal"}</span>
-                    <span>
-                      {subtotalAmount === 0
-                        ? "FREE"
-                        : `₹${subtotalAmount.toLocaleString()}`}
-                    </span>
-                  </div>
+                  {!isNuscHomeMatchEvent && (
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Subtotal</span>
+                      <span>
+                        {subtotalAmount === 0
+                          ? "FREE"
+                          : `₹${subtotalAmount.toLocaleString()}`}
+                      </span>
+                    </div>
+                  )}
 
                   {discountAmount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
@@ -1473,8 +1481,8 @@ export default function CheckoutPage() {
                           passId: Object.keys(NUSC_PASS_TICKET_TYPE_NAMES).find((id) => NUSC_PASS_TICKET_TYPE_NAMES[id] === ticket.name) || "",
                           quantity,
                           actualUnitPrice: typeof ticket.basePrice === "number" ? ticket.basePrice : ticket.price,
-                          checkoutUnitPrice: ticket.price,
                         }))}
+                        totalPayable={payableAmount}
                       />
                     ) : (
                       <CheckoutDetailedBreakdown
@@ -1484,14 +1492,16 @@ export default function CheckoutPage() {
                     )
                   )}
 
-                  <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2">
-                    <span>{isFreeEvent ? "RSVP Status" : "Total"}</span>
-                    <span>
-                      {payableAmount === 0
-                        ? "Confirmed"
-                        : `₹${payableAmount.toLocaleString()}`}
-                    </span>
-                  </div>
+                  {(!isNuscHomeMatchEvent || isFreeEvent) && (
+                    <div className="flex justify-between text-lg font-semibold text-gray-900 pt-2">
+                      <span>{isFreeEvent ? "RSVP Status" : "Total"}</span>
+                      <span>
+                        {payableAmount === 0
+                          ? "Confirmed"
+                          : `₹${payableAmount.toLocaleString()}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

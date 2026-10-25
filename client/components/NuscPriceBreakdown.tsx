@@ -4,7 +4,6 @@ type NuscPriceItem = {
   passId: string;
   quantity: number;
   actualUnitPrice: number;
-  checkoutUnitPrice: number;
 };
 
 const PASS_NAMES: Record<string, string> = {
@@ -22,46 +21,47 @@ const formatRupees = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
 
-function getPriceBreakdown(actual: number, afterTax: number) {
-  const sportsDevelopmentFund = roundRupees(actual * 0.1);
-  const convenienceFee = roundRupees(actual * 0.1);
-
-  return { actual, sportsDevelopmentFund, convenienceFee, afterTax };
-}
-
-export default function NuscPriceBreakdown({ items }: { items: NuscPriceItem[] }) {
+export default function NuscPriceBreakdown({
+  items,
+  totalPayable,
+}: {
+  items: NuscPriceItem[];
+  totalPayable: number;
+}) {
   const lines = items.filter((item) => item.quantity > 0 && PASS_NAMES[item.passId]);
   if (lines.length === 0) return null;
 
-  return (
-    <section aria-label="NUSC ticket price summary" className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-      <h3 className="text-sm font-semibold text-gray-900">Ticket price summary</h3>
-      <div className="mt-3 space-y-4">
-        {lines.map(({ passId, quantity, actualUnitPrice, checkoutUnitPrice }) => {
-          const price = getPriceBreakdown(actualUnitPrice, checkoutUnitPrice);
-          const amount = (value: number) => formatRupees(value * quantity);
+  const basePrice = lines.reduce((total, item) => total + item.actualUnitPrice * item.quantity, 0);
+  const sportsDevelopmentFund = roundRupees(basePrice * 0.1);
+  const convenienceFee = roundRupees(basePrice * 0.1);
 
-          return (
-            <div key={passId} className="border-t border-gray-200 pt-3 first:border-0 first:pt-0">
-              <div className="mb-2 flex justify-between gap-3 text-xs font-semibold text-gray-800">
-                <span>{PASS_NAMES[passId]}{quantity > 1 ? ` × ${quantity}` : ""}</span>
-                <span>{amount(price.afterTax)}</span>
-              </div>
-              <div className="space-y-1 text-xs text-gray-600">
-                <div className="flex justify-between gap-3"><span>Actual price</span><span>{amount(price.actual)}</span></div>
-                <div className="flex justify-between gap-3"><span>Sports Development Fund (10%)</span><span>{amount(price.sportsDevelopmentFund)}</span></div>
-                <div className="flex justify-between gap-3"><span>Convenience fee (10%)</span><span>{amount(price.convenienceFee)}</span></div>
-                <div className="flex justify-between gap-3 border-t border-gray-200 pt-1 font-semibold text-gray-900">
-                  <span>After Tax</span><span>{amount(price.afterTax)}</span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+  return (
+    <section aria-label="NUSC price breakdown" className="mt-6 border-t border-gray-200 pt-5">
+      <h3 className="text-sm font-semibold text-gray-900">Price breakdown</h3>
+      <div className="mt-3 space-y-2 text-sm text-gray-600">
+        <div className="flex justify-between gap-3">
+          <span>Base ticket price</span>
+          <span>{formatRupees(basePrice)}</span>
+        </div>
+        <div className="flex justify-between gap-3">
+          <span>Sports Development Fund (10%)</span>
+          <span>{formatRupees(sportsDevelopmentFund)}</span>
+        </div>
+        <div className="flex justify-between gap-3">
+          <span>Convenience fee (10%)</span>
+          <span>{formatRupees(convenienceFee)}</span>
+        </div>
+      </div>
+      <div className="mt-5 flex items-center justify-between gap-4 border-t border-gray-200 pt-4 text-gray-900">
+        <div>
+          <p className="font-semibold">Total payable</p>
+          <p className="mt-1 text-xs text-gray-500">Includes all applicable fees</p>
+        </div>
+        <p className="text-lg font-bold">{formatRupees(totalPayable)}</p>
       </div>
     </section>
   );
