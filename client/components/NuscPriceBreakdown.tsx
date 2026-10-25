@@ -31,7 +31,7 @@ export default function NuscPriceBreakdown({
   totalPayable,
 }: {
   items: NuscPriceItem[];
-  totalPayable: number;
+  totalPayable?: number;
 }) {
   const lines = items.filter((item) => item.quantity > 0 && PASS_NAMES[item.passId]);
   if (lines.length === 0) return null;
@@ -57,13 +57,15 @@ export default function NuscPriceBreakdown({
           <span>{formatRupees(convenienceFee)}</span>
         </div>
       </div>
-      <div className="mt-5 flex items-center justify-between gap-4 border-t border-gray-200 pt-4 text-gray-900">
-        <div>
-          <p className="font-semibold">Total payable</p>
-          <p className="mt-1 text-xs text-gray-500">Includes all applicable fees</p>
+      {typeof totalPayable === "number" && (
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-gray-200 pt-4 text-gray-900">
+          <div>
+            <p className="font-semibold">Total payable</p>
+            <p className="mt-1 text-xs text-gray-500">Includes all applicable fees</p>
+          </div>
+          <p className="text-lg font-bold">{formatRupees(totalPayable)}</p>
         </div>
-        <p className="text-lg font-bold">{formatRupees(totalPayable)}</p>
-      </div>
+      )}
     </section>
   );
 }
