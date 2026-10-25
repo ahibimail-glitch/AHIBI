@@ -15,13 +15,25 @@ const PASS_NAMES: Record<string, string> = {
   "suite-box-single": "United Suite · Full Box",
 };
 
+const roundRupees = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
+
 const formatRupees = (amount: number) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
+
+function getPriceBreakdown(afterTax: number) {
+  // The listed checkout price includes two 10% fees and 18% GST on those amounts.
+  const actual = roundRupees(afterTax / 1.416);
+  const ssf = roundRupees(actual * 0.1);
+  const aHibi = roundRupees(actual * 0.1);
+  const gst = roundRupees(afterTax - actual - ssf - aHibi);
+
+  return { actual, ssf, aHibi, gst, afterTax };
+}
 
 export default function NuscPriceBreakdown({ items }: { items: NuscPriceItem[] }) {
   const lines = items.filter((item) => item.quantity > 0 && PASS_NAMES[item.passId]);
@@ -30,13 +42,29 @@ export default function NuscPriceBreakdown({ items }: { items: NuscPriceItem[] }
   return (
     <section aria-label="NUSC ticket price summary" className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
       <h3 className="text-sm font-semibold text-gray-900">Ticket price summary</h3>
-      <div className="mt-3 space-y-2">
-        {lines.map(({ passId, quantity, checkoutUnitPrice }) => (
-          <div key={passId} className="flex justify-between gap-3 text-xs font-semibold text-gray-800">
-            <span>{PASS_NAMES[passId]}{quantity > 1 ? " × " + quantity : ""}</span>
-            <span>{formatRupees(checkoutUnitPrice * quantity)}</span>
-          </div>
-        ))}
+      <div className="mt-3 space-y-4">
+        {lines.map(({ passId, quantity, checkoutUnitPrice }) => {
+          const price = getPriceBreakdown(checkoutUnitPrice);
+          const amount = (value: number) => formatRupees(value * quantity);
+
+          return (
+            <div key={passId} className="border-t border-gray-200 pt-3 first:border-0 first:pt-0">
+              <div className="mb-2 flex justify-between gap-3 text-xs font-semibold text-gray-800">
+                <span>{PASS_NAMES[passId]}{quantity > 1 ? ` × ${quantity}` : ""}</span>
+                <span>{amount(price.afterTax)}</span>
+              </div>
+              <div className="space-y-1 text-xs text-gray-600">
+                <div className="flex justify-between gap-3"><span>Actual price</span><span>{amount(price.actual)}</span></div>
+                <div className="flex justify-between gap-3"><span>SSF (10%)</span><span>{amount(price.ssf)}</span></div>
+                <div className="flex justify-between gap-3"><span>AHIBI (10%)</span><span>{amount(price.aHibi)}</span></div>
+                <div className="flex justify-between gap-3"><span>GST (18%)</span><span>{amount(price.gst)}</span></div>
+                <div className="flex justify-between gap-3 border-t border-gray-200 pt-1 font-semibold text-gray-900">
+                  <span>After Tax</span><span>{amount(price.afterTax)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
