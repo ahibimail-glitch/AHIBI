@@ -22,6 +22,7 @@ const SEASON_PASSES = {
 } as const;
 
 type SeasonPassId = keyof typeof SEASON_PASSES;
+type GeneralZone = "G-1" | "G-2" | "G-3" | "G-4" | "G-5";
 type UserProfile = { name: string; email: string; phone: string };
 type SeasonMatchReceipt = { matchDate: string; eventId: string; eventTitle?: string; bookingIds: string[] };
 type RazorpayPaymentResponse = { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string };
@@ -30,6 +31,7 @@ type SeasonTicketBooking = {
   ticketCode?: string;
   bookingCode?: string;
   ticketType: string;
+  nuscGeneralZone?: GeneralZone;
   ticketIndex?: number;
   totalTickets?: number;
   price: number;
@@ -52,6 +54,7 @@ export default function NuscSeasonCheckoutPage() {
   const router = useRouter();
   const [passId, setPassId] = useState<SeasonPassId | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [seasonZone, setSeasonZone] = useState<GeneralZone | "">("");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -171,6 +174,7 @@ export default function NuscSeasonCheckoutPage() {
         const detailRows = [
           ["MATCH", `Match ${fixtureIndex + 1} of 10${quantity > 1 ? ` · Pass ${ticketNumber} of ${quantity}` : ""}`],
           ["TICKET TYPE", booking.ticketType],
+          ...(booking.nuscGeneralZone ? [["SEATING ZONE", booking.nuscGeneralZone]] : []),
           ["ATTENDEE", booking.user?.name || "Season pass holder"],
           ["VENUE", venue],
           ["PRICE", money(booking.price)],
@@ -224,8 +228,10 @@ export default function NuscSeasonCheckoutPage() {
     const params = new URLSearchParams(window.location.search);
     const rawPassId = params.get("passId");
     const rawQuantity = Number(params.get("quantity") || 1);
+    const rawZone = params.get("zone") || "";
     if (rawPassId === "general-season" || rawPassId === "premium-season") setPassId(rawPassId);
     if (Number.isInteger(rawQuantity) && rawQuantity >= 1 && rawQuantity <= 10) setQuantity(rawQuantity);
+    if (["G-1", "G-2", "G-3", "G-4", "G-5"].includes(rawZone)) setSeasonZone(rawZone as GeneralZone);
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -256,6 +262,10 @@ export default function NuscSeasonCheckoutPage() {
       setErrorMessage("Choose a valid season pass from the NUSC home matches page.");
       return;
     }
+    if (passId === "general-season" && !seasonZone) {
+      setErrorMessage("Choose a General seating zone for all 10 match tickets.");
+      return;
+    }
     if (!acceptedTerms) {
       setErrorMessage("Accept the Terms and Conditions to continue.");
       return;
@@ -270,13 +280,15 @@ export default function NuscSeasonCheckoutPage() {
     setIsBooking(true);
     setErrorMessage(null);
     try {
-      const checkoutScope = `season:${passId}:${quantity}`;
+      const checkoutScope = passId === "general-season"
+        ? `season:${passId}:${quantity}:${seasonZone}`
+        : `season:${passId}:${quantity}`;
       const checkoutRequestId = getNuscCheckoutRequestId(checkoutScope);
       if (!window.Razorpay) throw new Error("Secure checkout is still loading. Please try again in a moment.");
       const orderResponse = await fetch(`${API_URL}/api/nusc-home-matches/checkout/season/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ passId, quantity, checkoutRequestId }),
+        body: JSON.stringify({ passId, quantity, ...(passId === "general-season" && { zone: seasonZone }), checkoutRequestId }),
       });
       const order = await orderResponse.json();
       if (orderResponse.ok && order.alreadyCompleted) {
@@ -346,7 +358,7 @@ export default function NuscSeasonCheckoutPage() {
             <div className="mt-7 rounded-3xl border border-[#dfe4de] bg-white p-6 shadow-sm sm:p-9">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#edf7ed] px-4 py-2 text-sm font-bold text-[#23573a]"><CheckCircle2 className="h-4 w-4" /> Payment confirmed</span>
               <h1 className="mt-5 text-3xl font-black tracking-tight">Your season pass is ready</h1>
-              <p className="mt-2 text-[#69716a]">We created one AHIBI ticket for each home match. Open each match booking to view its ticket.</p>
+              <p className="mt-2 text-[#69716a]">We created one AHIBI ticket for each home match{seasonZone ? ` in seating zone ${seasonZone}` : ""}. Open each match booking to view its ticket.</p>
               <div className="mt-5">
                 <button
                   type="button"
@@ -409,6 +421,12 @@ export default function NuscSeasonCheckoutPage() {
                     <select id="season-quantity" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))} className="mt-2 h-11 w-full rounded-lg border border-[#cfd7cf] bg-white px-3">
                       {Array.from({ length: 10 }, (_, index) => index + 1).map((count) => <option key={count} value={count}>{count}</option>)}
                     </select>
+                    {passId === "general-season" && (
+                      <div className="mt-5 rounded-xl border border-[#dfe4de] bg-[#f8faf7] p-4">
+                        <p className="text-sm font-semibold">General seating zone</p>
+                        <p className="mt-1 text-sm text-[#69716a]">All 10 match tickets will be assigned to {seasonZone || "the zone you selected"}.</p>
+                      </div>
+                    )}
                     <div className="mt-6 flex justify-between border-t border-[#e7ebe6] pt-4 text-sm"><span>Each pass</span><span>{formatRupees(pass.price)}</span></div>
                     <div className="mt-3 flex justify-between text-lg font-black"><span>Total</span><span>{formatRupees(totalAmount)}</span></div>
                     <NuscPriceBreakdown items={[{ passId: passId || "", quantity, actualUnitPrice: pass.actualPrice, checkoutUnitPrice: pass.price }]} />
@@ -419,7 +437,7 @@ export default function NuscSeasonCheckoutPage() {
                       <span>I accept AHIBI’s <Link href="/terms" target="_blank" className="font-semibold underline">Terms and Conditions</Link>.</span>
                     </label>
                     {errorMessage && <p role="alert" className="mt-4 rounded-lg border border-[#f0c4c8] bg-[#fff4f4] p-3 text-sm text-[#9c1b2b]">{errorMessage}</p>}
-                    <button type="button" onClick={handleBooking} disabled={loading || isBooking || !acceptedTerms || !passId} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#d51f34] px-5 font-bold text-white shadow-sm transition hover:bg-[#b91629] disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="button" onClick={handleBooking} disabled={loading || isBooking || !acceptedTerms || !passId || (passId === "general-season" && !seasonZone)} className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#d51f34] px-5 font-bold text-white shadow-sm transition hover:bg-[#b91629] disabled:cursor-not-allowed disabled:opacity-50">
                       {loading || isBooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                       {isBooking ? "Starting secure checkout…" : "Proceed to payment"}
                     </button>

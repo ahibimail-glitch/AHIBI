@@ -36,8 +36,10 @@ const SeasonPassOrderHoldSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   ticketType: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1 },
+  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'] },
   matchDates: { type: [String], required: true },
   status: { type: String, enum: ['held', 'confirmed'], default: 'held' },
+  stockApplied: { type: Boolean, default: false },
   expiresAt: { type: Date, required: true },
   createdAt: { type: Date, default: Date.now },
 }, { _id: false });

@@ -235,9 +235,14 @@ function getGeneralZoneAvailability(
       }
     }
   }
-  unassignedHeld += activeSeasonOrders
-    .filter((order) => order.ticketType === GENERAL_TICKET_TYPE)
-    .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
+  for (const order of activeSeasonOrders.filter((item) => item.ticketType === GENERAL_TICKET_TYPE)) {
+    if (heldByZone.has(order.zone)) {
+      heldByZone.set(order.zone, heldByZone.get(order.zone) + Number(order.quantity || 0));
+      if (order.status === 'confirmed') pendingConfirmedZoneSales += Number(order.quantity || 0);
+    } else if (order.status === 'held') {
+      unassignedHeld += Number(order.quantity || 0);
+    }
+  }
 
   const recordedZoneSales = [...salesByZone.values()].reduce((sum, quantity) => sum + quantity, 0);
   const unknownSold = Math.max(0, Number(ticketSold || 0) - recordedZoneSales - pendingConfirmedZoneSales);
@@ -391,13 +396,20 @@ async function reserveMatchOrder({ orderId, userId, matchDate, ticketLines, even
   });
 }
 
-async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, matches, existingUserTicketCountByDate = {}, allowSalesClosed = false }) {
+async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, zone = '', matches, existingUserTicketCountByDate = {}, allowSalesClosed = false }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
   const normalizedQuantity = Number(quantity);
+  const normalizedZone = zone == null ? '' : String(zone).trim();
   if (!SEASON_PASS_TICKET_TYPES.includes(ticketType) || !Number.isInteger(normalizedQuantity) || normalizedQuantity < 1 || normalizedQuantity > BUYER_TICKET_LIMIT) {
     throw new InventoryConflict('Season pass selection is invalid.', 'INVALID_TICKETS');
+  }
+  if (ticketType === GENERAL_TICKET_TYPE && !GENERAL_SEATING_AREAS.some((area) => area.name === normalizedZone)) {
+    throw new InventoryConflict('Choose a General seating zone before checkout.', 'GENERAL_ZONE_REQUIRED');
+  }
+  if (ticketType !== GENERAL_TICKET_TYPE && normalizedZone) {
+    throw new InventoryConflict('A seating zone can only be selected for General Season Pass tickets.', 'INVALID_GENERAL_ZONE');
   }
   if (!Array.isArray(matches) || matches.length !== FIXTURE_DATES.length ||
       new Set(matches.map((match) => match.matchDate)).size !== FIXTURE_DATES.length ||
@@ -409,7 +421,7 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, m
     const existing = state.seasonPassOrders.find((order) => order.orderId === orderId);
     if (existing) {
       const sameDates = JSON.stringify(existing.matchDates) === JSON.stringify(FIXTURE_DATES);
-      if (!sameDates || existing.ticketType !== ticketType || Number(existing.quantity) !== normalizedQuantity || String(existing.userId) !== String(userId)) {
+      if (!sameDates || existing.ticketType !== ticketType || Number(existing.quantity) !== normalizedQuantity || String(existing.userId) !== String(userId) || String(existing.zone || '') !== normalizedZone) {
         throw new InventoryConflict('This season checkout already has a different pass selection.', 'ORDER_CONFLICT');
       }
       return existing;
@@ -441,6 +453,13 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, m
       if (normalizedQuantity > available) {
         throw new InventoryConflict(`Only ${available} ${ticketType} season pass(es) remain across all fixtures.`, 'TICKETS_UNAVAILABLE');
       }
+      if (ticketType === GENERAL_TICKET_TYPE) {
+        const zoneAvailability = getGeneralZoneAvailability(state, match.matchDate, ticket.sold || 0, activeOrders, activeSeasonOrders)
+          .find((area) => area.name === normalizedZone)?.available || 0;
+        if (normalizedQuantity > zoneAvailability) {
+          throw new InventoryConflict(`Only ${zoneAvailability} seat(s) remain in ${normalizedZone} across all home matches.`, 'GENERAL_ZONE_UNAVAILABLE');
+        }
+      }
     }
 
     const hold = {
@@ -448,6 +467,7 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, m
       userId,
       ticketType,
       quantity: normalizedQuantity,
+      ...(normalizedZone && { zone: normalizedZone }),
       matchDates: FIXTURE_DATES,
       status: 'held',
       expiresAt: new Date(Date.now() + HOLD_MINUTES * 60 * 1000),
@@ -484,6 +504,12 @@ async function markSeasonPassStockApplied(orderId) {
   return mutateInventory((state) => {
     const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
     if (!order) return null;
+    if (order.ticketType === GENERAL_TICKET_TYPE && order.zone) {
+      for (const matchDate of order.matchDates || []) {
+        const existingSale = state.generalZoneSales.find((sale) => sale.orderId === orderId && sale.matchDate === matchDate && sale.zone === order.zone);
+        if (!existingSale) state.generalZoneSales.push({ orderId, matchDate, zone: order.zone, quantity: order.quantity });
+      }
+    }
     order.stockApplied = true;
     return order;
   });

@@ -335,8 +335,15 @@ async function createSeasonPassOrder(req, res) {
     const passId = String(req.body?.passId || '');
     const pass = SEASON_PASS_OPTIONS[passId];
     const quantity = Number(req.body?.quantity);
+    const zone = req.body?.zone == null ? '' : String(req.body.zone).trim();
     if (!pass || !Number.isInteger(quantity) || quantity < 1 || quantity > inventory.BUYER_TICKET_LIMIT) {
       return res.status(400).json({ success: false, message: 'Choose a valid season pass and quantity.' });
+    }
+    if (passId === 'general-season' && !inventory.GENERAL_SEATING_AREAS.some((area) => area.name === zone)) {
+      return res.status(400).json({ success: false, message: 'Choose a General seating zone before checkout.', code: 'GENERAL_ZONE_REQUIRED' });
+    }
+    if (passId !== 'general-season' && zone) {
+      return res.status(400).json({ success: false, message: 'A seating zone can only be selected for General Season Pass tickets.', code: 'INVALID_GENERAL_ZONE' });
     }
 
     const user = await User.findById(req.user._id).select('name email phone');
@@ -378,6 +385,7 @@ async function createSeasonPassOrder(req, res) {
       passId,
       ticketType: pass.ticketType,
       quantity,
+      ...(zone && { zone }),
       matchDates: inventory.FIXTURE_DATES,
       amountMinor,
     });
@@ -397,6 +405,7 @@ async function createSeasonPassOrder(req, res) {
         userId: user._id,
         ticketType: pass.ticketType,
         quantity,
+        zone,
         matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
         existingUserTicketCountByDate,
       });
@@ -423,6 +432,7 @@ async function createSeasonPassOrder(req, res) {
       userId: user._id,
       ticketType: pass.ticketType,
       quantity,
+      zone,
       matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
       existingUserTicketCountByDate,
     });
@@ -431,6 +441,7 @@ async function createSeasonPassOrder(req, res) {
       passId,
       ticketType: pass.ticketType,
       quantity,
+      ...(zone && { zone }),
       user: {
         id: user._id,
         name: user.name,
@@ -645,6 +656,7 @@ async function createSeasonPassBookingsForOrder(order, payment) {
           nuscSeasonMatchIndex: fixtureIndex + 1,
           ticketIndex,
           totalTickets: quantity,
+          ...(fixture.ticketType === inventory.GENERAL_TICKET_TYPE && order.bookingDetails.zone && { nuscGeneralZone: order.bookingDetails.zone }),
           parentBookingId: null,
         });
         try {
@@ -789,7 +801,7 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
           eventDate: isSeasonPass ? 'All 10 home fixtures' : (event.startDate ? new Date(event.startDate).toLocaleDateString('en-IN') : 'TBA'),
           eventTime: isSeasonPass ? '6:30 PM' : (event.startDate ? new Date(event.startDate).toLocaleTimeString('en-IN') : 'TBA'),
           ticketType: isSeasonPass
-            ? `${claimed.bookingDetails.ticketType} · all 10 matches`
+            ? `${claimed.bookingDetails.ticketType}${claimed.bookingDetails.zone ? ` · ${claimed.bookingDetails.zone}` : ''} · all 10 matches`
             : claimed.bookingDetails.tickets.map((ticket) => (
               `${ticket.ticketType}${ticket.zone ? ` · ${ticket.zone}` : ''} (${ticket.quantity})`
             )).join(', '),
@@ -1019,6 +1031,7 @@ async function retryPaidOrder(req, res) {
         userId: order.user,
         ticketType: order.bookingDetails.ticketType,
         quantity: order.bookingDetails.quantity,
+        zone: order.bookingDetails.zone,
         matches,
         existingUserTicketCountByDate,
         allowSalesClosed: true,

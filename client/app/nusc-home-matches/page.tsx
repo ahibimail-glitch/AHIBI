@@ -11,6 +11,8 @@ import { getNextNuscMatch, getNuscMatchSlug, NUSC_HOME_MATCHES, NUSC_MATCH_EVENT
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 type PassCategory = "single-match" | "season";
+const GENERAL_ZONES = ["G-1", "G-2", "G-3", "G-4", "G-5"] as const;
+type GeneralZone = typeof GENERAL_ZONES[number];
 
 const SINGLE_MATCH_PASSES = [
   {
@@ -88,6 +90,7 @@ export default function NuscHomeMatchesPage() {
   const [selectedPass, setSelectedPass] = useState<string | null>(null);
   const [selectedMatchDates, setSelectedMatchDates] = useState<string[]>([]);
   const [seasonPassQuantity, setSeasonPassQuantity] = useState(1);
+  const [seasonPassZone, setSeasonPassZone] = useState<GeneralZone | "">("");
   const [completedMatchCount, setCompletedMatchCount] = useState(0);
   const [lastCompletedMatchDate, setLastCompletedMatchDate] = useState<string | null>(null);
   const nextMatch = getNextNuscMatch();
@@ -103,9 +106,21 @@ export default function NuscHomeMatchesPage() {
       return Number(ticket?.quantity || 0);
     }))
     : 0;
-  const canBuySeasonPass = !!seasonTicketType &&
-    seasonPassAvailableQuantity > 0 &&
+  const canBuySeasonPassQuantity = !!seasonTicketType && seasonPassAvailableQuantity > 0 &&
     seasonPassQuantity <= Math.min(10, seasonPassAvailableQuantity);
+  const seasonZoneAvailability = (zoneName: GeneralZone) => {
+    const availability = NUSC_HOME_MATCHES.map((match) => {
+      const event = matchEvents[getNuscMatchSlug(match.date)];
+      const ticket = event?.ticketTypes?.find((item) => item.name === "General Pass") as
+        { zones?: Array<{ name: string; available: number }> } | undefined;
+      return ticket?.zones?.find((zone) => zone.name === zoneName)?.available;
+    });
+    return availability.every((value) => typeof value === "number")
+      ? Math.min(...availability as number[])
+      : null;
+  };
+  const canBuySeasonPass = canBuySeasonPassQuantity &&
+    (selectedPass !== "general-season" || (!!seasonPassZone && (seasonZoneAvailability(seasonPassZone) ?? 0) >= seasonPassQuantity));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -454,16 +469,42 @@ export default function NuscHomeMatchesPage() {
                   ))}
                 </select>
                 <p className="mt-2 text-sm text-[#69716a]">Each pass covers one seat at all 10 home matches. Maximum 10 tickets per match per account.</p>
+                {selectedPass === "general-season" && (
+                  <div className="mt-5 max-w-xl">
+                    <label htmlFor="general-season-zone" className="block font-semibold text-[#151b16]">General seating zone <span className="text-[#d51f34]">*</span></label>
+                    <select
+                      id="general-season-zone"
+                      value={seasonPassZone}
+                      onChange={(event) => setSeasonPassZone(event.target.value as GeneralZone | "")}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-[#cfd7cf] bg-white px-3"
+                    >
+                      <option value="">Choose a zone</option>
+                      {GENERAL_ZONES.map((zone) => {
+                        const available = seasonZoneAvailability(zone);
+                        return <option key={zone} value={zone} disabled={available === null || available < seasonPassQuantity}>{zone}{available === null ? " · availability loading" : ` · ${available} seats across all 10 matches`}</option>;
+                      })}
+                    </select>
+                    <p className="mt-2 text-sm text-[#69716a]">All 10 match tickets for each pass will use this zone.</p>
+                    <figure className="mt-4">
+                      <figcaption className="mb-2 text-sm font-semibold text-[#151b16]">Stadium seating map</figcaption>
+                      <Image src="/images/site-map.webp" alt="Stadium seating map showing General zones G-1 through G-5" width={1600} height={900} sizes="(max-width: 640px) calc(100vw - 64px), 560px" className="h-auto w-full max-w-xl rounded-lg border border-[#dfe4de]" />
+                    </figure>
+                  </div>
+                )}
               </div>
               {canBuySeasonPass ? (
                 <Link
-                  href={`/nusc-home-matches/season-checkout?passId=${encodeURIComponent(selectedPass)}&quantity=${seasonPassQuantity}`}
+                  href={`/nusc-home-matches/season-checkout?passId=${encodeURIComponent(selectedPass)}&quantity=${seasonPassQuantity}${selectedPass === "general-season" ? `&zone=${encodeURIComponent(seasonPassZone)}` : ""}`}
                   className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11"
                 >
                   Continue to checkout <ArrowRight className="h-4 w-4" />
                 </Link>
               ) : (
-                <span className="text-sm font-medium text-[#69716a]">Season pass sales are not available yet.</span>
+                <span className="text-sm font-medium text-[#69716a]">
+                  {canBuySeasonPassQuantity && selectedPass === "general-season"
+                    ? "Choose a zone with enough seats across all 10 matches."
+                    : "Season pass sales are not available yet."}
+                </span>
               )}
             </div>
           )}
