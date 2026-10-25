@@ -193,9 +193,9 @@ export default function NuscHomeMatchesPage() {
                 Match tickets <Ticket className="h-4 w-4" />
               </a>
             </div>
-            <div className="relative mx-auto mt-8 w-full max-w-[280px] sm:max-w-[320px] lg:hidden">
-              <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
-                <Image src="/images/match-1.jpeg" alt="NUSC vs Gokulam Kerala FC, 14 November 2026 at 6:30 PM" fill priority sizes="(max-width: 640px) 280px, 320px" className="object-cover" />
+            <div className="relative mx-auto mt-8 w-full max-w-[370px] sm:max-w-[440px] lg:hidden">
+              <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
+                <Image src="/images/match-2.jpeg" alt="NUSC vs Gokulam Kerala FC, 14 November 2026 at 6:30 PM" fill priority sizes="(max-width: 640px) calc(100vw - 40px), 440px" className="object-cover" />
               </div>
             </div>
             <div className="mt-8 hidden max-w-xl grid-cols-2 gap-x-5 gap-y-5 border-t border-white/20 pt-5 sm:mt-12 sm:grid sm:grid-cols-3 sm:gap-x-8 sm:pt-6">
