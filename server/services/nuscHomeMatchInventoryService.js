@@ -591,8 +591,12 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = []) {
   }
   return eventTicketTypes.map((source) => {
     const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
-    if (ticket.name === SUITE_SINGLE) return { ...ticket, quantity: suite.singleSeats, sold: 0 };
-    if (ticket.name === SUITE_FULL_BOX) return { ...ticket, quantity: suite.fullBoxes, sold: 0 };
+    if (ticket.name === SUITE_SINGLE) {
+      return { ...ticket, ...(getMatchTicketPrice(ticket.name) || {}), quantity: suite.singleSeats, sold: 0 };
+    }
+    if (ticket.name === SUITE_FULL_BOX) {
+      return { ...ticket, ...(getMatchTicketPrice(ticket.name) || {}), quantity: suite.fullBoxes, sold: 0 };
+    }
     const capacity = TICKET_CAPACITIES[ticket.name] ?? Number(ticket.quantity || 0);
     const available = Math.max(0, capacity - Number(ticket.sold || 0) - (heldByTicketType.get(ticket.name) || 0));
     return {
