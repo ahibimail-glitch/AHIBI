@@ -1287,7 +1287,7 @@ export default function CheckoutPage() {
                                   {ticket.price === 0
                                     ? 'FREE'
                                     : isNuscHomeMatchEvent
-                                      ? `Actual Price: ₹${(typeof ticket.basePrice === "number" ? ticket.basePrice : ticket.price).toLocaleString()}${ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["suite-single"] ? " / Person" : " / Match"}`
+                                      ? `Ticket price: ₹${(typeof ticket.basePrice === "number" ? ticket.basePrice : ticket.price).toLocaleString()}${ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["suite-single"] ? " / Person" : " / Match"}`
                                       : `₹${ticket.price.toLocaleString()}`}
                                 </p>
                                 {isFastFilling && (
