@@ -331,7 +331,32 @@ export default function NuscHomeMatchesPage() {
                   <ArrowDown className="h-4 w-4 shrink-0" />
                 </Link>
               )}
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
+              <div
+                role="region"
+                aria-label="Swipe horizontally to browse match dates"
+                className="-mx-5 mt-3 flex snap-x snap-mandatory scroll-smooth gap-2 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
+              >
+                {NUSC_HOME_MATCHES.map((match) => {
+                  const checked = selectedMatchDates.includes(match.date);
+                  return (
+                    <label key={match.date} className={`flex w-[76%] max-w-[290px] shrink-0 snap-start cursor-pointer items-start gap-2 rounded-xl border p-3 transition ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white"}`}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => setSelectedMatchDates((dates) => event.target.checked ? [...dates, match.date] : dates.filter((date) => date !== match.date))}
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-[#c91d31]"
+                        aria-label={`${match.label}, ${match.opponent}, ${match.time}`}
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold leading-5 text-[#151b16]">{match.label}</span>
+                        <span className="mt-1 block text-[13px] leading-5 text-[#4c554d]">vs {match.opponent}</span>
+                        <span className="mt-1 block text-xs text-[#737b73]">{match.day} Â· {match.time}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-3 hidden grid-cols-2 gap-2 sm:mt-4 sm:grid sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 {NUSC_HOME_MATCHES.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
                   return (
