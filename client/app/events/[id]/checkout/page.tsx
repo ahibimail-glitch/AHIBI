@@ -1130,7 +1130,7 @@ export default function CheckoutPage() {
 
       <div className="flex-1">
         {/* Header */}
-        <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
+        <div className="border-b border-gray-200 bg-white">
           <div className="max-w-full mx-auto px-4 py-4 sm:max-w-4xl">
             <button
               onClick={handleBackToTicketOptions}
