@@ -76,7 +76,8 @@ function normalizeTicketSelection(selection, event) {
       throw new inventory.InventoryConflict(`Ticket price for ${ticketType} is unavailable.`, 'TICKET_NOT_CONFIGURED');
     }
 
-    return { ticketType, quantity, price, ...(zone && { zone }) };
+    const priceConfig = inventory.getMatchTicketPrice(ticketType);
+    return { ticketType, quantity, price, basePrice: Number(priceConfig?.basePrice ?? price), ...(zone && { zone }) };
   });
 }
 
@@ -319,6 +320,152 @@ async function createOrder(req, res) {
     }
     console.error('[NUSC checkout] Order creation failed:', error?.message || providerError?.description || 'Unknown error');
     return res.status(500).json({ message: 'Unable to start checkout. Please try again.' });
+  }
+}
+
+async function createMultiMatchOrder(req, res) {
+  let createdOrderId = null;
+  let checkoutRequestId = null;
+  let checkoutRequestHash = null;
+  try {
+    if (!req.user?._id) return res.status(401).json({ success: false, message: 'Please sign in to buy match tickets.' });
+    if (!inventory.TICKET_SALES_ENABLED) {
+      return res.status(409).json({ success: false, message: 'Tickets for NUSC home matches are not on sale yet.', code: 'SALES_NOT_OPEN' });
+    }
+    const selections = req.body?.matches;
+    if (!Array.isArray(selections) || selections.length < 2 || selections.length > inventory.FIXTURE_DATES.length) {
+      return res.status(400).json({ success: false, message: 'Select at least two match dates.' });
+    }
+    const normalizedDates = selections.map((item) => String(item.matchDate || ''));
+    if (new Set(normalizedDates).size !== normalizedDates.length || normalizedDates.some((date) => !inventory.FIXTURE_DATES.includes(date))) {
+      return res.status(400).json({ success: false, message: 'The selected match dates are invalid.' });
+    }
+
+    const user = await User.findById(req.user._id).select('name email phone');
+    if (!user) return res.status(401).json({ success: false, message: 'Please sign in with a user account to buy tickets.' });
+    const fixtures = [];
+    for (const selection of selections) {
+      const event = await Event.findById(selection.eventId).select('+ticketTypes');
+      if (!event || !event.slug?.startsWith('nusc-home-match-') || inventory.matchDateFromSlug(event.slug) !== selection.matchDate) {
+        throw new inventory.InventoryConflict('One of the selected NUSC match listings could not be found.', 'MATCH_NOT_FOUND');
+      }
+      if (event.status !== 'approved' || event.isPublic === false) {
+        throw new inventory.InventoryConflict(`Tickets for ${selection.matchDate} are not available.`, 'MATCH_UNAVAILABLE');
+      }
+      const cutoff = event.bookingEndTime || event.endDate;
+      if (cutoff && new Date() > new Date(cutoff)) {
+        throw new inventory.InventoryConflict(`Bookings for ${selection.matchDate} are closed.`, 'BOOKING_CLOSED');
+      }
+      const ticketLines = normalizeTicketSelection([{
+        ticketType: selection.ticketType,
+        quantity: selection.quantity,
+        zone: selection.zone,
+      }], event);
+      fixtures.push({
+        matchDate: selection.matchDate,
+        eventId: event._id,
+        event: getSafeEventSnapshot(event),
+        ticketLines,
+        existingUserTicketCount: await getExistingBuyerTicketUnits(event._id, user._id),
+      });
+    }
+    fixtures.sort((left, right) => left.matchDate.localeCompare(right.matchDate));
+    const amountMinor = fixtures.reduce((sum, fixture) => sum + fixture.ticketLines.reduce((lineSum, line) => (
+      lineSum + Math.round(line.price * 100) * line.quantity
+    ), 0), 0);
+    const totalAmount = amountMinor / 100;
+    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+      throw new inventory.InventoryConflict('Ticket total is invalid.', 'INVALID_TICKET_TOTAL');
+    }
+    checkoutRequestId = getCheckoutRequestId(req);
+    checkoutRequestHash = hashCheckoutRequest({
+      orderType: 'multiMatch',
+      userId: String(user._id),
+      fixtures: fixtures.map((fixture) => ({
+        matchDate: fixture.matchDate,
+        eventId: String(fixture.eventId),
+        tickets: fixture.ticketLines.map(({ ticketType, quantity, zone, price }) => ({ ticketType, quantity, zone: zone || '', price })),
+      })),
+    });
+    const existingCheckout = await findExistingCheckoutOrder({ userId: user._id, requestId: checkoutRequestId, requestHash: checkoutRequestHash, amountMinor });
+    if (existingCheckout?.alreadyCompleted) return res.status(200).json({ success: true, alreadyCompleted: true });
+
+    const holdMatches = fixtures.map((fixture) => ({
+      matchDate: fixture.matchDate,
+      ticketLines: fixture.ticketLines,
+      eventTicketTypes: fixture.event.ticketTypes,
+      existingUserTicketCount: fixture.existingUserTicketCount,
+    }));
+    if (existingCheckout) {
+      await inventory.reserveMultiMatchOrder({ orderId: existingCheckout.existing.orderId, userId: user._id, matches: holdMatches });
+      return res.status(200).json(existingCheckout.providerOrder);
+    }
+
+    const providerOrder = await createOrRecoverProviderOrder(getRazorpay(), {
+      amount: amountMinor,
+      currency: 'INR',
+      receipt: getCheckoutReceipt(user._id, checkoutRequestId),
+      notes: { nuscHomeMatch: 'true', orderType: 'multiMatch', userId: String(user._id), checkoutRequestHash },
+    }, checkoutRequestHash);
+    createdOrderId = providerOrder.id;
+    await inventory.reserveMultiMatchOrder({ orderId: providerOrder.id, userId: user._id, matches: holdMatches });
+    await NuscHomeMatchOrder.create({
+      orderId: providerOrder.id,
+      orderType: 'multiMatch',
+      event: fixtures[0].eventId,
+      user: user._id,
+      bookingDetails: {
+        user: { id: user._id, name: user.name, email: user.email, phone: user.phone },
+        fixtures: fixtures.map(({ matchDate, eventId, event, ticketLines }) => ({ matchDate, eventId, event, tickets: ticketLines })),
+        tickets: fixtures.flatMap(({ matchDate, event, ticketLines }) => ticketLines.map((ticket) => ({ ...ticket, matchDate, eventTitle: event.title }))),
+        priceSummary: fixtures.reduce((summary, fixture) => {
+          for (const line of fixture.ticketLines) {
+            const baseMinor = Math.round(line.basePrice * 100) * line.quantity;
+            summary.baseAmountMinor += baseMinor;
+            summary.sportsFundMinor += Math.round(line.basePrice * line.quantity * 0.1 * 100);
+            summary.convenienceFeeMinor += Math.round(line.basePrice * line.quantity * 0.1 * 100);
+          }
+          return summary;
+        }, { baseAmountMinor: 0, sportsFundMinor: 0, convenienceFeeMinor: 0, totalAmountMinor: amountMinor }),
+      },
+      amount: totalAmount,
+      amountMinor,
+      currency: 'INR',
+      checkoutRequestId,
+      checkoutRequestHash,
+      status: 'created',
+    });
+    return res.status(200).json(providerOrder);
+  } catch (error) {
+    if (error?.code === 11000 && checkoutRequestId && req.user?._id) {
+      try {
+        const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
+        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'created' && !existing.paymentId) {
+          if (createdOrderId && createdOrderId !== existing.orderId) await inventory.releaseMultiMatchOrder(createdOrderId);
+          return res.status(200).json(await getRazorpay().orders.fetch(existing.orderId));
+        }
+        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'completed') {
+          return res.status(200).json({ success: true, alreadyCompleted: true });
+        }
+      } catch (recoveryError) {
+        console.error('[NUSC multi-match checkout] Idempotent request recovery failed:', recoveryError.message);
+      }
+    }
+    if (createdOrderId) {
+      try { await inventory.releaseMultiMatchOrder(createdOrderId); } catch (releaseError) {
+        console.error('[NUSC multi-match checkout] Failed to release ticket holds:', releaseError.message);
+      }
+    }
+    if (error instanceof inventory.InventoryConflict) {
+      return res.status(409).json({ success: false, message: error.message, code: error.code });
+    }
+    const providerError = error?.error;
+    if (Number(error?.statusCode) === 401) {
+      console.error('[NUSC multi-match checkout] Razorpay rejected configured credentials:', providerError?.description || error.message);
+      return res.status(502).json({ success: false, message: 'Razorpay rejected the configured credentials.', code: 'PAYMENT_PROVIDER_AUTH' });
+    }
+    console.error('[NUSC multi-match checkout] Order creation failed:', error?.message || 'Unknown error');
+    return res.status(500).json({ success: false, message: 'Unable to start checkout. Please try again.' });
   }
 }
 
@@ -597,6 +744,105 @@ async function createBookingsForOrder(order, payment) {
   return { bookings: createdBookings, bookingIds, event };
 }
 
+async function createMultiMatchBookingsForOrder(order, payment) {
+  const fixtures = order.bookingDetails?.fixtures;
+  if (!Array.isArray(fixtures) || fixtures.length < 2 || fixtures.length > inventory.FIXTURE_DATES.length) {
+    throw new Error('Multi-match order details are incomplete');
+  }
+  const normalizedFixtures = [...fixtures].sort((left, right) => left.matchDate.localeCompare(right.matchDate));
+  if (new Set(normalizedFixtures.map((fixture) => fixture.matchDate)).size !== normalizedFixtures.length ||
+      normalizedFixtures.some((fixture) => !inventory.FIXTURE_DATES.includes(fixture.matchDate))) {
+    throw new Error('Multi-match dates do not match the published home schedule');
+  }
+  const holds = await inventory.confirmMultiMatchOrder(order.orderId, normalizedFixtures.map((fixture) => fixture.matchDate));
+  const holdByDate = new Map(holds.map((hold) => [hold.matchDate, hold]));
+  const events = [];
+  for (const fixture of normalizedFixtures) {
+    const event = await Event.findById(fixture.eventId).select('+ticketTypes');
+    if (!event || !event.slug?.startsWith('nusc-home-match-') || inventory.matchDateFromSlug(event.slug) !== fixture.matchDate) {
+      throw new Error(`NUSC match listing for ${fixture.matchDate} is unavailable`);
+    }
+    events.push({ fixture, event });
+  }
+
+  const totalTickets = normalizedFixtures.reduce((sum, fixture) => sum + fixture.tickets.reduce((lineSum, line) => lineSum + line.quantity, 0), 0);
+  const createdBookings = [];
+  const bookingIds = [];
+  let orderTicketIndex = 1;
+  for (const { fixture, event } of events) {
+    const hold = holdByDate.get(fixture.matchDate);
+    const allocationByTicketIndex = new Map((hold?.suiteAllocations || []).map((allocation) => [allocation.ticketIndex, allocation.boxNumber]));
+    let matchTicketIndex = 1;
+    for (const item of fixture.tickets) {
+      for (let itemIndex = 0; itemIndex < item.quantity; itemIndex += 1) {
+        let booking = await Booking.findOne({ nuscOrderId: order.orderId, nuscTicketIndex: orderTicketIndex });
+        if (!booking) {
+          booking = new Booking({
+            event: event._id,
+            eventSnapshot: {
+              _id: event._id,
+              title: event.title,
+              banner: event.banner,
+              startDate: event.startDate,
+              endDate: event.endDate,
+              location: { address: event.location?.address, city: event.location?.city },
+            },
+            user: order.bookingDetails.user.id,
+            ticketType: item.ticketType,
+            quantity: 1,
+            price: item.price,
+            total: item.price,
+            status: 'confirmed',
+            paymentStatus: 'completed',
+            paymentId: payment.id,
+            razorpayPaymentId: payment.id,
+            razorpayOrderId: order.orderId,
+            nuscOrderId: order.orderId,
+            nuscTicketIndex: orderTicketIndex,
+            ...(allocationByTicketIndex.has(matchTicketIndex) && { nuscSuiteBoxNumber: allocationByTicketIndex.get(matchTicketIndex) }),
+            ...(item.ticketType === inventory.GENERAL_TICKET_TYPE && { nuscGeneralZone: item.zone }),
+            ticketIndex: orderTicketIndex,
+            totalTickets,
+            parentBookingId: null,
+          });
+          try {
+            await booking.save();
+          } catch (error) {
+            if (error.code !== 11000) throw error;
+            booking = await Booking.findOne({ nuscOrderId: order.orderId, nuscTicketIndex: orderTicketIndex });
+            if (!booking) throw error;
+          }
+        }
+        createdBookings.push(booking);
+        bookingIds.push(booking._id);
+        orderTicketIndex += 1;
+        matchTicketIndex += 1;
+      }
+    }
+  }
+
+  const parentBookingId = createdBookings[0]?._id;
+  if (parentBookingId) {
+    await Booking.updateMany(
+      { nuscOrderId: order.orderId, parentBookingId: null, _id: { $ne: parentBookingId } },
+      { $set: { parentBookingId } }
+    );
+  }
+  for (const { event } of events) {
+    for (const ticket of event.ticketTypes) {
+      ticket.sold = await Booking.countDocuments({
+        event: event._id,
+        ticketType: ticket.name,
+        status: { $in: ['confirmed', 'checked-in'] },
+        paymentStatus: 'completed',
+      });
+    }
+    await event.save();
+  }
+  await inventory.finalizeMultiMatchOrder(order.orderId, normalizedFixtures.map((fixture) => fixture.matchDate));
+  return { bookings: createdBookings, bookingIds, event: events[0].event };
+}
+
 function summarizeSeasonBookings(fixtures = [], bookings = []) {
   return fixtures.map((fixture) => {
     const fixtureBookings = bookings.filter((booking) => String(booking.event) === String(fixture.eventId));
@@ -750,7 +996,9 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
 
     const { bookings, bookingIds, event, seasonMatches } = claimed.orderType === 'seasonPass'
       ? await createSeasonPassBookingsForOrder(claimed, payment)
-      : await createBookingsForOrder(claimed, payment);
+      : claimed.orderType === 'multiMatch'
+        ? await createMultiMatchBookingsForOrder(claimed, payment)
+        : await createBookingsForOrder(claimed, payment);
     await PaymentTransaction.findOneAndUpdate(
       { orderId: claimed.orderId, paymentId: payment.id },
       {
@@ -780,6 +1028,8 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
     try {
       if (claimed.orderType === 'seasonPass') {
         await inventory.finalizeSeasonPassOrder(claimed.orderId);
+      } else if (claimed.orderType === 'multiMatch') {
+        await inventory.finalizeMultiMatchOrder(claimed.orderId, claimed.bookingDetails.fixtures.map((fixture) => fixture.matchDate));
       } else {
         await inventory.finalizeMatchOrder(claimed.orderId);
       }
@@ -790,6 +1040,7 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
     if (bookings.length && claimed.bookingDetails.user.email) {
       const emailService = require('../services/emailService');
       const isSeasonPass = claimed.orderType === 'seasonPass';
+      const isMultiMatch = claimed.orderType === 'multiMatch';
       const seasonPassName = claimed.bookingDetails.passId === 'premium-season'
         ? 'Premium Season Pass'
         : 'General Season Pass';
@@ -797,17 +1048,25 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
         claimed.bookingDetails.user.email,
         claimed.bookingDetails.user.name || 'Customer',
         {
-          eventName: isSeasonPass ? `NUSC ${seasonPassName}` : event.title,
-          eventDate: isSeasonPass ? 'All 10 home fixtures' : (event.startDate ? new Date(event.startDate).toLocaleDateString('en-IN') : 'TBA'),
-          eventTime: isSeasonPass ? '6:30 PM' : (event.startDate ? new Date(event.startDate).toLocaleTimeString('en-IN') : 'TBA'),
+          eventName: isSeasonPass ? `NUSC ${seasonPassName}` : isMultiMatch ? 'NUSC Home Match Tickets' : event.title,
+          eventDate: isSeasonPass
+            ? 'All 10 home fixtures'
+            : isMultiMatch
+              ? claimed.bookingDetails.fixtures.map((fixture) => fixture.matchDate).join(', ')
+              : (event.startDate ? new Date(event.startDate).toLocaleDateString('en-IN') : 'TBA'),
+          eventTime: isSeasonPass || isMultiMatch ? '6:30 PM' : (event.startDate ? new Date(event.startDate).toLocaleTimeString('en-IN') : 'TBA'),
           ticketType: isSeasonPass
             ? `${claimed.bookingDetails.ticketType}${claimed.bookingDetails.zone ? ` · ${claimed.bookingDetails.zone}` : ''} · all 10 matches`
-            : claimed.bookingDetails.tickets.map((ticket) => (
+            : isMultiMatch
+              ? claimed.bookingDetails.fixtures.map((fixture) => `${fixture.matchDate}: ${fixture.tickets.map((ticket) => `${ticket.ticketType}${ticket.zone ? ` · ${ticket.zone}` : ''} (${ticket.quantity})`).join(', ')}`).join('; ')
+              : claimed.bookingDetails.tickets.map((ticket) => (
               `${ticket.ticketType}${ticket.zone ? ` · ${ticket.zone}` : ''} (${ticket.quantity})`
             )).join(', '),
           quantity: isSeasonPass
             ? claimed.bookingDetails.quantity
-            : claimed.bookingDetails.tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
+            : isMultiMatch
+              ? claimed.bookingDetails.fixtures.reduce((sum, fixture) => sum + fixture.tickets.reduce((lineSum, ticket) => lineSum + ticket.quantity, 0), 0)
+              : claimed.bookingDetails.tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
           bookingId: bookings[0]._id,
           qrCode: null,
         }
@@ -1036,6 +1295,21 @@ async function retryPaidOrder(req, res) {
         existingUserTicketCountByDate,
         allowSalesClosed: true,
       });
+    } else if (order.orderType === 'multiMatch') {
+      const matches = [];
+      for (const fixture of order.bookingDetails.fixtures || []) {
+        const event = await Event.findById(fixture.eventId).select('+ticketTypes');
+        if (!event || inventory.matchDateFromSlug(event.slug) !== fixture.matchDate) {
+          return res.status(409).json({ success: false, message: `The match listing for ${fixture.matchDate} is unavailable; restore its listing before ticket recovery.` });
+        }
+        matches.push({
+          matchDate: fixture.matchDate,
+          ticketLines: fixture.tickets,
+          eventTicketTypes: event.ticketTypes,
+          existingUserTicketCount: await getExistingBuyerTicketUnits(event._id, order.user),
+        });
+      }
+      await inventory.reserveMultiMatchOrder({ orderId: order.orderId, userId: order.user, matches, allowSalesClosed: true });
     } else {
       const event = await Event.findById(order.event).select('+ticketTypes');
       if (!event || !event.slug?.startsWith('nusc-home-match-')) {
@@ -1087,7 +1361,7 @@ async function applyRefundToTickets(order, adminId, refund) {
     }
     await event.save();
   }
-  if (order.orderType === 'match') await inventory.releaseRefundedMatchOrder(order.orderId);
+  if (order.orderType === 'match' || order.orderType === 'multiMatch') await inventory.releaseRefundedMatchOrder(order.orderId);
 
   const fullyProcessed = refund.status === 'processed';
   const now = new Date();
@@ -1294,6 +1568,7 @@ async function seedTestFixtures(req, res) {
 module.exports = {
   cancelSeason,
   createOrder,
+  createMultiMatchOrder,
   createSeasonPassOrder,
   listSeasonReservations,
   listAdminOrders,

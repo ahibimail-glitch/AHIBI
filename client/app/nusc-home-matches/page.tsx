@@ -122,19 +122,21 @@ export default function NuscHomeMatchesPage() {
       : null;
   };
   const canBuySeasonPass = canBuySeasonPassQuantity &&
-     (selectedPass !== "general-season" || (!!seasonPassZone && (seasonZoneAvailability(seasonPassZone) ?? 0) >= seasonPassQuantity));
-  const firstBookableMatch = NUSC_HOME_MATCHES.find((match) => {
-    if (!selectedMatchDates.includes(match.date) || !selectedPass) return false;
-    const event = matchEvents[getNuscMatchSlug(match.date)];
+    (selectedPass !== "general-season" || (!!seasonPassZone && (seasonZoneAvailability(seasonPassZone) ?? 0) >= seasonPassQuantity));
+  const selectedMatchesBookable = !!selectedPass && selectedMatchDates.length > 0 && selectedMatchDates.every((date) => {
+    const event = matchEvents[getNuscMatchSlug(date)];
     const ticketName = NUSC_PASS_TICKET_TYPES[selectedPass];
     const ticket = ticketName ? event?.ticketTypes?.find((item) => item.name === ticketName) : undefined;
     return !!event && !!ticket && ticket.quantity > (ticket.sold || 0);
   });
-  const firstBookableEvent = firstBookableMatch ? matchEvents[getNuscMatchSlug(firstBookableMatch.date)] : undefined;
-  const firstBookableCheckoutHref = firstBookableEvent && selectedPass
-    ? "/events/" + firstBookableEvent._id + "/checkout?" + new URLSearchParams({ nuscPass: selectedPass, nuscDates: selectedMatchDates.join(",") }).toString()
-      + (completedMatchCount > 0 ? "&nuscCompletedCount=" + completedMatchCount : "")
-      + (lastCompletedMatchDate ? "&nuscCompletedDate=" + encodeURIComponent(lastCompletedMatchDate) : "")
+  const firstSelectedEvent = selectedMatchDates[0] ? matchEvents[getNuscMatchSlug(selectedMatchDates[0])] : undefined;
+  const multiMatchCheckoutHref = selectedMatchDates.length > 1 && selectedPass
+    ? `/nusc-home-matches/checkout?${new URLSearchParams({ dates: selectedMatchDates.join(","), passId: selectedPass }).toString()}`
+    : undefined;
+  const firstBookableCheckoutHref = selectedMatchesBookable && firstSelectedEvent && selectedPass
+    ? selectedMatchDates.length > 1
+      ? multiMatchCheckoutHref
+      : `/events/${firstSelectedEvent._id}/checkout?${new URLSearchParams({ nuscPass: selectedPass, nuscDates: selectedMatchDates.join(",") }).toString()}${completedMatchCount > 0 ? `&nuscCompletedCount=${completedMatchCount}` : ""}${lastCompletedMatchDate ? `&nuscCompletedDate=${encodeURIComponent(lastCompletedMatchDate)}` : ""}`
     : undefined;
   const seasonCheckoutHref = selectedPass && (selectedPass === "general-season" || selectedPass === "premium-season")
     ? "/nusc-home-matches/season-checkout?passId=" + encodeURIComponent(selectedPass) + "&quantity=" + seasonPassQuantity
@@ -485,11 +487,21 @@ export default function NuscHomeMatchesPage() {
                 {completedMatchCount > 0
                   ? "Each remaining match has its own AHIBI checkout and payment."
                   : selectedPass
-                  ? "Each match has a separate AHIBI checkout. Your selected pass will be preselected; confirm the quantity and complete checkout for each date."
-                  : "Choose a pass to continue. Each match will use its own AHIBI checkout."}
+                  ? selectedMatchDates.length > 1
+                    ? "Review all selected matches together. Choose a quantity and, for General Pass, a seating zone for each date, then pay once."
+                    : "Review your match and complete one secure checkout."
+                  : selectedMatchDates.length > 1
+                    ? "Choose a pass to review all selected matches and pay once."
+                    : "Choose a pass to continue to secure checkout."}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
+                {selectedPass && selectedMatchDates.length > 1 ? (
+                  selectedMatchesBookable && multiMatchCheckoutHref ? (
+                    <Link href={multiMatchCheckoutHref} data-nusc-checkout-action="match" aria-label={`Review and checkout ${selectedMatchDates.length} NUSC home matches`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
+                      <span className="min-w-0 leading-5">Review {selectedMatchDates.length} matches and pay once</span><ArrowRight className="h-4 w-4 shrink-0" />
+                    </Link>
+                  ) : <p role="status" className="text-sm text-[#a4172a]">At least one selected match is unavailable for this pass. Remove it to continue with one payment.</p>
+                ) : NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
                   const event = matchEvents[getNuscMatchSlug(match.date)];
                   const selectedTicketName = selectedPass ? NUSC_PASS_TICKET_TYPES[selectedPass] : undefined;
                   const selectedTicket = selectedTicketName

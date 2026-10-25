@@ -259,7 +259,7 @@ function getGeneralZoneAvailability(
   });
 }
 
-async function reserveMatchOrder({ orderId, userId, matchDate, ticketLines, eventTicketTypes, existingUserTicketCount = 0, allowSalesClosed = false }) {
+function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLines, eventTicketTypes, existingUserTicketCount = 0, allowSalesClosed = false }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
@@ -268,7 +268,6 @@ async function reserveMatchOrder({ orderId, userId, matchDate, ticketLines, even
     throw new InventoryConflict('This NUSC match date is not available.', 'INVALID_MATCH_DATE');
   }
 
-  return mutateInventory((state) => {
     const existing = state.orders.find((order) => order.orderId === orderId);
     if (existing) {
       const sameLines = JSON.stringify(existing.ticketLines) === JSON.stringify(normalizedLines);
@@ -393,6 +392,68 @@ async function reserveMatchOrder({ orderId, userId, matchDate, ticketLines, even
     };
     state.orders.push(order);
     return order;
+}
+
+async function reserveMatchOrder(args) {
+  return mutateInventory((state) => reserveMatchOrderInState(state, args));
+}
+
+async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClosed = false }) {
+  if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
+    throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
+  }
+  if (!Array.isArray(matches) || matches.length < 2 || matches.length > FIXTURE_DATES.length ||
+      new Set(matches.map((match) => match.matchDate)).size !== matches.length ||
+      matches.some((match) => !FIXTURE_DATES.includes(match.matchDate))) {
+    throw new InventoryConflict('Select at least two valid NUSC match dates.', 'INVALID_MATCH_DATE');
+  }
+  return mutateInventory((state) => matches.map((match) => reserveMatchOrderInState(state, {
+    orderId: `${orderId}|${match.matchDate}`,
+    userId,
+    matchDate: match.matchDate,
+    ticketLines: match.ticketLines,
+    eventTicketTypes: match.eventTicketTypes,
+    existingUserTicketCount: match.existingUserTicketCount || 0,
+    allowSalesClosed: true,
+  })));
+}
+
+async function confirmMultiMatchOrder(orderId, matchDates) {
+  return mutateInventory((state) => {
+    const holds = matchDates.map((matchDate) => state.orders.find((item) => item.orderId === `${orderId}|${matchDate}`));
+    if (holds.some((hold) => !hold)) throw new InventoryConflict('One or more ticket holds expired. Contact support if payment was captured.', 'HOLD_EXPIRED');
+    if (holds.some((hold) => hold.status !== 'confirmed' && new Date(hold.expiresAt) <= new Date())) {
+      throw new InventoryConflict('One or more ticket holds expired. Contact support if payment was captured.', 'HOLD_EXPIRED');
+    }
+    for (const hold of holds) hold.status = 'confirmed';
+    return holds;
+  });
+}
+
+async function releaseMultiMatchOrder(orderId) {
+  return mutateInventory((state) => {
+    const holds = state.orders.filter((item) => item.orderId.startsWith(`${orderId}|`));
+    if (holds.some((hold) => hold.status === 'confirmed')) return holds;
+    state.orders = state.orders.filter((item) => !item.orderId.startsWith(`${orderId}|`));
+    return holds;
+  });
+}
+
+async function finalizeMultiMatchOrder(orderId, matchDates) {
+  return mutateInventory((state) => {
+    const holds = matchDates.map((matchDate) => state.orders.find((item) => item.orderId === `${orderId}|${matchDate}`));
+    if (holds.some((hold) => !hold)) return null;
+    for (const hold of holds) {
+      for (const line of hold.ticketLines || []) {
+        if (line.ticketType !== GENERAL_TICKET_TYPE || !line.zone) continue;
+        const existingSale = state.generalZoneSales.find((sale) => sale.orderId === hold.orderId && sale.matchDate === hold.matchDate && sale.zone === line.zone);
+        if (!existingSale) state.generalZoneSales.push({ orderId: hold.orderId, matchDate: hold.matchDate, zone: line.zone, quantity: line.quantity });
+      }
+      hold.stockApplied = true;
+      hold.ticketLines = [];
+    }
+    state.orders = state.orders.filter((hold) => holds.includes(hold) && hold.suiteAllocations?.length || !holds.includes(hold));
+    return holds;
   });
 }
 
@@ -698,11 +759,11 @@ async function cancelSeasonBox(reservationId, adminId) {
 
 async function releaseRefundedMatchOrder(orderId) {
   return mutateInventory((state) => {
-    const order = state.orders.find((item) => item.orderId === orderId);
-    if (!order) return null;
-    state.generalZoneSales = (state.generalZoneSales || []).filter((sale) => sale.orderId !== orderId);
-    state.orders = state.orders.filter((item) => item.orderId !== orderId);
-    return order;
+    const orders = state.orders.filter((item) => item.orderId === orderId || item.orderId.startsWith(`${orderId}|`));
+    if (!orders.length) return null;
+    state.generalZoneSales = (state.generalZoneSales || []).filter((sale) => sale.orderId !== orderId && !String(sale.orderId || '').startsWith(`${orderId}|`));
+    state.orders = state.orders.filter((item) => item.orderId !== orderId && !item.orderId.startsWith(`${orderId}|`));
+    return orders;
   });
 }
 
@@ -746,6 +807,10 @@ module.exports = {
   matchDateFromSlug,
   releaseMatchOrder,
   reserveMatchOrder,
+  reserveMultiMatchOrder,
+  confirmMultiMatchOrder,
+  releaseMultiMatchOrder,
+  finalizeMultiMatchOrder,
   reserveSeasonPassOrder,
   releaseSeasonPassOrder,
   releaseRefundedMatchOrder,
