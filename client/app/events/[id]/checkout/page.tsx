@@ -137,6 +137,18 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const checkoutStartedKeyRef = useRef<string | null>(null);
   const nuscPassPreselectionRef = useRef(false);
+  const reviewStepRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (currentStep !== 3) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      reviewStepRef.current?.scrollIntoView({ behavior, block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentStep]);
 
   // HMF event state
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -1348,7 +1360,7 @@ export default function CheckoutPage() {
           )}
 
           {currentStep === 3 && (
-            <div className="mb-10">
+            <div ref={reviewStepRef} className="mb-10 scroll-mt-36">
 
               {/* Heading */}
               <h2 className="text-xl font-semibold text-gray-900 mb-6">
