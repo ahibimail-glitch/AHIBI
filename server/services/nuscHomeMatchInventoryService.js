@@ -6,7 +6,7 @@ const BUYER_TICKET_LIMIT = 10;
 const HOLD_MINUTES = 15;
 const GENERAL_TICKET_TYPE = 'General Pass';
 const MATCH_TICKET_PRICES = {
-  'general pass': { price: 358.8, basePrice: 299 },
+  'general pass': { price: 1, basePrice: 0.84 },
   'premium pass': { price: 1500, basePrice: 1250 },
   'united suite - single pass': { price: 7200, basePrice: 6000 },
   'united suite - full box': { price: 60000, basePrice: 50000 },
