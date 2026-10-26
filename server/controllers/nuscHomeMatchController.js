@@ -71,7 +71,8 @@ function normalizeTicketSelection(selection, event) {
       throw new inventory.InventoryConflict(`Ticket type ${ticketType} is not configured for this match.`, 'TICKET_NOT_CONFIGURED');
     }
 
-    const price = Number(eventTicket.price);
+    const configuredPrice = inventory.getMatchTicketPrice(ticketType);
+    const price = Number(configuredPrice?.price);
     if (!Number.isFinite(price) || price < 0) {
       throw new inventory.InventoryConflict(`Ticket price for ${ticketType} is unavailable.`, 'TICKET_NOT_CONFIGURED');
     }
@@ -83,7 +84,7 @@ function normalizeTicketSelection(selection, event) {
       );
     }
 
-    const basePrice = Number(eventTicket.basePrice ?? eventTicket.price);
+    const basePrice = Number(configuredPrice.basePrice ?? price);
     return { ticketType, quantity, price, basePrice, ...(zone && { zone }) };
   });
 }
