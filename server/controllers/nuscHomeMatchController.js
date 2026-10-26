@@ -71,14 +71,27 @@ function normalizeTicketSelection(selection, event) {
       throw new inventory.InventoryConflict(`Ticket type ${ticketType} is not configured for this match.`, 'TICKET_NOT_CONFIGURED');
     }
 
-    const price = Number(inventory.getMatchTicketPrice(ticketType)?.price ?? eventTicket.price);
+    const price = Number(eventTicket.price);
     if (!Number.isFinite(price) || price < 0) {
       throw new inventory.InventoryConflict(`Ticket price for ${ticketType} is unavailable.`, 'TICKET_NOT_CONFIGURED');
     }
 
-    const priceConfig = inventory.getMatchTicketPrice(ticketType);
-    return { ticketType, quantity, price, basePrice: Number(priceConfig?.basePrice ?? price), ...(zone && { zone }) };
+    const basePrice = Number(eventTicket.basePrice ?? eventTicket.price);
+    return { ticketType, quantity, price, basePrice, ...(zone && { zone }) };
   });
+}
+
+function calculateMatchOrderAmountMinor(fixtures) {
+  const amountMinor = fixtures.reduce((sum, fixture) => sum + (fixture.ticketLines || fixture.tickets || []).reduce((lineSum, line) => (
+    lineSum + Math.round(Number(line.price) * 100) * Number(line.quantity)
+  ), 0), 0);
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
+    throw new inventory.InventoryConflict('Ticket total is invalid.', 'INVALID_TICKET_TOTAL');
+  }
+  if (amountMinor >= 10000000) {
+    throw new inventory.InventoryConflict('Orders must total less than ₹1,00,000. Split your selection into separate checkouts.', 'ORDER_AMOUNT_LIMIT');
+  }
+  return amountMinor;
 }
 
 function getSafeEventSnapshot(event) {
@@ -159,6 +172,7 @@ async function createOrRecoverProviderOrder(client, orderParams, requestHash) {
 
 async function createOrder(req, res) {
   let createdOrderId = null;
+  let inventoryHoldId = null;
   let checkoutRequestId = null;
   let checkoutRequestHash = null;
   let legacyCheckoutRequestHash = null;
@@ -189,11 +203,8 @@ async function createOrder(req, res) {
     }
 
     const tickets = normalizeTicketSelection(bookingDetails.tickets, event);
-    const totalAmount = tickets.reduce((sum, ticket) => sum + ticket.price * ticket.quantity, 0);
-    const amountMinor = Math.round(totalAmount * 100);
-    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
-      return res.status(400).json({ message: 'Ticket total is invalid.' });
-    }
+    const amountMinor = calculateMatchOrderAmountMinor([{ ticketLines: tickets }]);
+    const totalAmount = amountMinor / 100;
 
     checkoutRequestId = getCheckoutRequestId(req);
     checkoutRequestHash = hashCheckoutRequest({
@@ -230,7 +241,7 @@ async function createOrder(req, res) {
     const existingUserTicketCount = await getExistingBuyerTicketUnits(event._id, user._id);
     if (existingCheckout) {
       await inventory.reserveMatchOrder({
-        orderId: existingCheckout.existing.orderId,
+        orderId: existingCheckout.existing.inventoryHoldId || existingCheckout.existing.orderId,
         userId: user._id,
         matchDate,
         ticketLines: tickets,
@@ -239,6 +250,16 @@ async function createOrder(req, res) {
       });
       return res.status(200).json(existingCheckout.providerOrder);
     }
+
+    inventoryHoldId = `nusc-hold-${String(user._id)}-${checkoutRequestId}`;
+    await inventory.reserveMatchOrder({
+      orderId: inventoryHoldId,
+      userId: user._id,
+      matchDate,
+      ticketLines: tickets,
+      eventTicketTypes: event.ticketTypes,
+      existingUserTicketCount,
+    });
 
     const client = getRazorpay();
     const orderParams = {
@@ -256,15 +277,6 @@ async function createOrder(req, res) {
     const providerOrder = await createOrRecoverProviderOrder(client, orderParams, checkoutRequestHash);
     createdOrderId = providerOrder.id;
 
-    await inventory.reserveMatchOrder({
-      orderId: providerOrder.id,
-      userId: user._id,
-      matchDate,
-      ticketLines: tickets,
-      eventTicketTypes: event.ticketTypes,
-      existingUserTicketCount,
-    });
-
     const canonicalBookingDetails = {
       event: getSafeEventSnapshot(event),
       user: {
@@ -278,6 +290,8 @@ async function createOrder(req, res) {
 
     await NuscHomeMatchOrder.create({
       orderId: providerOrder.id,
+      inventoryHoldId,
+      matchDates: [matchDate],
       event: event._id,
       user: user._id,
       bookingDetails: canonicalBookingDetails,
@@ -295,6 +309,11 @@ async function createOrder(req, res) {
       try {
         const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
         if (existing && [checkoutRequestHash, legacyCheckoutRequestHash].includes(existing.checkoutRequestHash) && existing.status === 'created' && !existing.paymentId) {
+          if (inventoryHoldId && inventoryHoldId !== (existing.inventoryHoldId || existing.orderId)) {
+            try { await inventory.releaseMatchOrder(inventoryHoldId); } catch (releaseError) {
+              console.error('[NUSC checkout] Failed to release a duplicate request hold:', releaseError.message);
+            }
+          }
           if (createdOrderId && createdOrderId !== existing.orderId) {
             try { await inventory.releaseMatchOrder(createdOrderId); } catch (releaseError) {
               console.error('[NUSC checkout] Failed to release a duplicate request hold:', releaseError.message);
@@ -308,6 +327,11 @@ async function createOrder(req, res) {
         }
       } catch (recoveryError) {
         console.error('[NUSC checkout] Failed to recover an idempotent checkout request:', recoveryError.message);
+      }
+    }
+    if (inventoryHoldId) {
+      try { await inventory.releaseMatchOrder(inventoryHoldId); } catch (releaseError) {
+        console.error('[NUSC checkout] Failed to release an unused inventory hold:', releaseError.message);
       }
     }
     if (createdOrderId) {
@@ -338,6 +362,7 @@ async function createOrder(req, res) {
 
 async function createMultiMatchOrder(req, res) {
   let createdOrderId = null;
+  let inventoryHoldId = null;
   let checkoutRequestId = null;
   let checkoutRequestHash = null;
   try {
@@ -383,13 +408,12 @@ async function createMultiMatchOrder(req, res) {
       });
     }
     fixtures.sort((left, right) => left.matchDate.localeCompare(right.matchDate));
-    const amountMinor = fixtures.reduce((sum, fixture) => sum + fixture.ticketLines.reduce((lineSum, line) => (
-      lineSum + Math.round(line.price * 100) * line.quantity
-    ), 0), 0);
-    const totalAmount = amountMinor / 100;
-    if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
-      throw new inventory.InventoryConflict('Ticket total is invalid.', 'INVALID_TICKET_TOTAL');
+    const includesFullBox = fixtures.some((fixture) => fixture.ticketLines.some((line) => line.ticketType === inventory.SUITE_FULL_BOX));
+    if (includesFullBox && fixtures.length !== 1) {
+      throw new inventory.InventoryConflict('United Suite — Full Box orders must cover one match date. Place a separate order for each date.', 'FULL_BOX_SINGLE_DATE');
     }
+    const amountMinor = calculateMatchOrderAmountMinor(fixtures);
+    const totalAmount = amountMinor / 100;
     checkoutRequestId = getCheckoutRequestId(req);
     checkoutRequestHash = hashCheckoutRequest({
       orderType: 'multiMatch',
@@ -410,9 +434,12 @@ async function createMultiMatchOrder(req, res) {
       existingUserTicketCount: fixture.existingUserTicketCount,
     }));
     if (existingCheckout) {
-      await inventory.reserveMultiMatchOrder({ orderId: existingCheckout.existing.orderId, userId: user._id, matches: holdMatches });
+      await inventory.reserveMultiMatchOrder({ orderId: existingCheckout.existing.inventoryHoldId || existingCheckout.existing.orderId, userId: user._id, matches: holdMatches });
       return res.status(200).json(existingCheckout.providerOrder);
     }
+
+    inventoryHoldId = `nusc-hold-${String(user._id)}-${checkoutRequestId}`;
+    await inventory.reserveMultiMatchOrder({ orderId: inventoryHoldId, userId: user._id, matches: holdMatches });
 
     const providerOrder = await createOrRecoverProviderOrder(getRazorpay(), {
       amount: amountMinor,
@@ -421,9 +448,10 @@ async function createMultiMatchOrder(req, res) {
       notes: { nuscHomeMatch: 'true', orderType: 'multiMatch', userId: String(user._id), checkoutRequestHash },
     }, checkoutRequestHash);
     createdOrderId = providerOrder.id;
-    await inventory.reserveMultiMatchOrder({ orderId: providerOrder.id, userId: user._id, matches: holdMatches });
     await NuscHomeMatchOrder.create({
       orderId: providerOrder.id,
+      inventoryHoldId,
+      matchDates: fixtures.map((fixture) => fixture.matchDate),
       orderType: 'multiMatch',
       event: fixtures[0].eventId,
       user: user._id,
@@ -454,6 +482,7 @@ async function createMultiMatchOrder(req, res) {
       try {
         const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
         if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'created' && !existing.paymentId) {
+          if (inventoryHoldId && inventoryHoldId !== (existing.inventoryHoldId || existing.orderId)) await inventory.releaseMultiMatchOrder(inventoryHoldId);
           if (createdOrderId && createdOrderId !== existing.orderId) await inventory.releaseMultiMatchOrder(createdOrderId);
           return res.status(200).json(await getRazorpay().orders.fetch(existing.orderId));
         }
@@ -462,6 +491,11 @@ async function createMultiMatchOrder(req, res) {
         }
       } catch (recoveryError) {
         console.error('[NUSC multi-match checkout] Idempotent request recovery failed:', recoveryError.message);
+      }
+    }
+    if (inventoryHoldId) {
+      try { await inventory.releaseMultiMatchOrder(inventoryHoldId); } catch (releaseError) {
+        console.error('[NUSC multi-match checkout] Failed to release inventory holds:', releaseError.message);
       }
     }
     if (createdOrderId) {
@@ -681,7 +715,7 @@ async function createBookingsForOrder(order, payment) {
   const event = await Event.findById(order.event);
   if (!event) throw new Error('Match event no longer exists');
   const { user, tickets } = order.bookingDetails;
-  const hold = await inventory.confirmMatchOrder(order.orderId);
+  const hold = await inventory.confirmMatchOrder(order.inventoryHoldId || order.orderId);
   const allocationByTicketIndex = new Map((hold.suiteAllocations || []).map((allocation) => [allocation.ticketIndex, allocation.boxNumber]));
   const totalTickets = tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
   const createdBookings = [];
@@ -752,7 +786,7 @@ async function createBookingsForOrder(order, payment) {
     ticket.sold = sold;
   }
   await event.save();
-  await inventory.markTicketStockApplied(order.orderId);
+  await inventory.markTicketStockApplied(order.inventoryHoldId || order.orderId);
 
   return { bookings: createdBookings, bookingIds, event };
 }
@@ -767,7 +801,8 @@ async function createMultiMatchBookingsForOrder(order, payment) {
       normalizedFixtures.some((fixture) => !inventory.FIXTURE_DATES.includes(fixture.matchDate))) {
     throw new Error('Multi-match dates do not match the published home schedule');
   }
-  const holds = await inventory.confirmMultiMatchOrder(order.orderId, normalizedFixtures.map((fixture) => fixture.matchDate));
+  const inventoryHoldId = order.inventoryHoldId || order.orderId;
+  const holds = await inventory.confirmMultiMatchOrder(inventoryHoldId, normalizedFixtures.map((fixture) => fixture.matchDate));
   const holdByDate = new Map(holds.map((hold) => [hold.matchDate, hold]));
   const events = [];
   for (const fixture of normalizedFixtures) {
@@ -852,7 +887,7 @@ async function createMultiMatchBookingsForOrder(order, payment) {
     }
     await event.save();
   }
-  await inventory.finalizeMultiMatchOrder(order.orderId, normalizedFixtures.map((fixture) => fixture.matchDate));
+  await inventory.finalizeMultiMatchOrder(inventoryHoldId, normalizedFixtures.map((fixture) => fixture.matchDate));
   return { bookings: createdBookings, bookingIds, event: events[0].event };
 }
 
@@ -1042,9 +1077,9 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
       if (claimed.orderType === 'seasonPass') {
         await inventory.finalizeSeasonPassOrder(claimed.orderId);
       } else if (claimed.orderType === 'multiMatch') {
-        await inventory.finalizeMultiMatchOrder(claimed.orderId, claimed.bookingDetails.fixtures.map((fixture) => fixture.matchDate));
+        await inventory.finalizeMultiMatchOrder(claimed.inventoryHoldId || claimed.orderId, claimed.bookingDetails.fixtures.map((fixture) => fixture.matchDate));
       } else {
-        await inventory.finalizeMatchOrder(claimed.orderId);
+        await inventory.finalizeMatchOrder(claimed.inventoryHoldId || claimed.orderId);
       }
     } catch (cleanupError) {
       console.error('[NUSC checkout] Completed order inventory cleanup failed:', cleanupError.message);
@@ -1322,14 +1357,14 @@ async function retryPaidOrder(req, res) {
           existingUserTicketCount: await getExistingBuyerTicketUnits(event._id, order.user),
         });
       }
-      await inventory.reserveMultiMatchOrder({ orderId: order.orderId, userId: order.user, matches, allowSalesClosed: true });
+      await inventory.reserveMultiMatchOrder({ orderId: order.inventoryHoldId || order.orderId, userId: order.user, matches, allowSalesClosed: true });
     } else {
       const event = await Event.findById(order.event).select('+ticketTypes');
       if (!event || !event.slug?.startsWith('nusc-home-match-')) {
         return res.status(409).json({ success: false, message: 'The match listing is unavailable; refund this order or restore its listing.' });
       }
       await inventory.reserveMatchOrder({
-        orderId: order.orderId,
+        orderId: order.inventoryHoldId || order.orderId,
         userId: order.user,
         matchDate: inventory.matchDateFromSlug(event.slug),
         ticketLines: order.bookingDetails.tickets,
@@ -1374,7 +1409,7 @@ async function applyRefundToTickets(order, adminId, refund) {
     }
     await event.save();
   }
-  if (order.orderType === 'match' || order.orderType === 'multiMatch') await inventory.releaseRefundedMatchOrder(order.orderId);
+  if (order.orderType === 'match' || order.orderType === 'multiMatch') await inventory.releaseRefundedMatchOrder(order.inventoryHoldId || order.orderId);
 
   const fullyProcessed = refund.status === 'processed';
   const now = new Date();
@@ -1579,6 +1614,8 @@ async function seedTestFixtures(req, res) {
 }
 
 module.exports = {
+  calculateMatchOrderAmountMinor,
+  normalizeTicketSelection,
   cancelSeason,
   createOrder,
   createMultiMatchOrder,

@@ -2,6 +2,8 @@ const Inventory = require('../models/NuscHomeMatchInventory');
 
 const BOX_COUNT = 4;
 const SEATS_PER_BOX = 8;
+const SINGLE_PASS_BOX_NUMBER = 1;
+const FULL_BOX_NUMBERS = [2, 3, 4];
 const BUYER_TICKET_LIMIT = 10;
 const HOLD_MINUTES = 15;
 const GENERAL_TICKET_TYPE = 'General Pass';
@@ -178,10 +180,13 @@ function getBoxState(state, matchDate) {
 
 function getSuiteAvailability(state, matchDate) {
   const boxes = getBoxState(state, matchDate);
-  const eligible = boxes.filter((box) => !box.seasonReserved && !box.fullBoxReserved);
+  const singlePassBox = boxes.find((box) => box.boxNumber === SINGLE_PASS_BOX_NUMBER);
+  const fullBoxes = boxes.filter((box) => FULL_BOX_NUMBERS.includes(box.boxNumber));
   return {
-    fullBoxes: eligible.filter((box) => box.singlePassCount === 0).length,
-    singleSeats: eligible.reduce((sum, box) => sum + Math.max(0, SEATS_PER_BOX - box.singlePassCount), 0),
+    fullBoxes: fullBoxes.filter((box) => !box.seasonReserved && !box.fullBoxReserved && box.singlePassCount === 0).length,
+    singleSeats: singlePassBox && !singlePassBox.seasonReserved && !singlePassBox.fullBoxReserved
+      ? Math.max(0, SEATS_PER_BOX - singlePassBox.singlePassCount)
+      : 0,
   };
 }
 
@@ -352,7 +357,7 @@ function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLin
 
     for (const line of linesWithIndex.filter((item) => item.ticketType === SUITE_FULL_BOX)) {
       for (let i = 0; i < line.quantity; i += 1) {
-        const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
+        const boxNumber = FULL_BOX_NUMBERS.find((candidate) => {
           const allocations = allocationByBox.get(candidate) || [];
           return !seasonBoxes.has(candidate) && allocations.length === 0;
         });
@@ -365,16 +370,14 @@ function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLin
 
     for (const line of linesWithIndex.filter((item) => item.ticketType === SUITE_SINGLE)) {
       for (let i = 0; i < line.quantity; i += 1) {
-        const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
-          if (seasonBoxes.has(candidate)) return false;
-          const allocations = allocationByBox.get(candidate) || [];
-          return !allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX) &&
-            allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length < SEATS_PER_BOX;
-        });
-        if (!boxNumber) throw new InventoryConflict('No United Suite seats remain for this match.', 'SUITE_SEATS_UNAVAILABLE');
-        const allocation = { ticketType: SUITE_SINGLE, ticketIndex: line.startIndex + i, boxNumber };
+        const allocations = allocationByBox.get(SINGLE_PASS_BOX_NUMBER) || [];
+        if (seasonBoxes.has(SINGLE_PASS_BOX_NUMBER) || allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX) ||
+            allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length >= SEATS_PER_BOX) {
+          throw new InventoryConflict('No United Suite seats remain in the single-pass box for this match.', 'SUITE_SEATS_UNAVAILABLE');
+        }
+        const allocation = { ticketType: SUITE_SINGLE, ticketIndex: line.startIndex + i, boxNumber: SINGLE_PASS_BOX_NUMBER };
         suiteAllocations.push(allocation);
-        allocationByBox.get(boxNumber).push(allocation);
+        allocationByBox.get(SINGLE_PASS_BOX_NUMBER).push(allocation);
       }
     }
 
@@ -406,6 +409,9 @@ async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClos
       new Set(matches.map((match) => match.matchDate)).size !== matches.length ||
       matches.some((match) => !FIXTURE_DATES.includes(match.matchDate))) {
     throw new InventoryConflict('Select at least two valid NUSC match dates.', 'INVALID_MATCH_DATE');
+  }
+  if (matches.some((match) => (match.ticketLines || []).some((line) => line.ticketType === SUITE_FULL_BOX))) {
+    throw new InventoryConflict('United Suite — Full Box orders must cover one match date. Place a separate order for each date.', 'FULL_BOX_SINGLE_DATE');
   }
   return mutateInventory((state) => matches.map((match) => reserveMatchOrderInState(state, {
     orderId: `${orderId}|${match.matchDate}`,
