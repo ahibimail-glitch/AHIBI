@@ -11,9 +11,9 @@ const PaymentTransaction = require('../models/PaymentTransaction');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
 const BikerBash = require('../models/BikerBash');
 const Coupon = require('../models/Coupon');
-const { computeCouponDiscount } = require('../utils/couponDiscount');
 const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const nuscHomeMatchController = require('./nuscHomeMatchController');
+const eventPaymentSettlement = require('../services/eventPaymentSettlementService');
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -50,7 +50,7 @@ exports.createOrder = async (req, res) => {
   console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
   console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
   try {
-    const { amount, currency, receipt, bookingDetails, coupon } = req.body;
+    const { currency, receipt, bookingDetails, coupon } = req.body;
     // NUSC home match orders must use the inventory-aware checkout flow.
     const requestedEventId = bookingDetails?.event?._id;
     if (requestedEventId) {
@@ -101,92 +101,60 @@ exports.createOrder = async (req, res) => {
       // If event lookup fails, do not block order creation here
     }
 
-    // Recompute server-side total from bookingDetails to avoid tampering
-    let computedTotal = 0;
-    if (Array.isArray(bookingDetails?.tickets)) {
-      computedTotal = bookingDetails.tickets.reduce((s, t) => s + (Number(t.price) || 0) * (Number(t.quantity) || 0), 0);
+    if (String(currency || 'INR').toUpperCase() !== 'INR') {
+      return res.status(400).json({ message: 'Only INR checkout is supported.' });
     }
 
-    // Apply coupon if provided and structurally valid. Validate against DB to avoid tampering.
-    let discountAmount = 0;
-    let appliedCoupon = null;
+    const canonical = await eventPaymentSettlement.buildCanonicalCheckout({
+      bookingDetails,
+      coupon,
+      authenticatedUser: req.user,
+    });
+    const orderIntentId = crypto.randomUUID();
+    const pending = await PendingPaymentSession.create({
+      orderIntentId,
+      settlementVersion: 2,
+      amount: canonical.amountPaise / 100,
+      amountPaise: canonical.amountPaise,
+      currency: 'INR',
+      bookingDetails: canonical.bookingDetails,
+      user: req.user._id,
+      event: canonical.event._id,
+      status: 'creating_order',
+    });
+
+    let order;
     try {
-      if (coupon && coupon.code) {
-        const dbCoupon = await Coupon.findOne({ code: String(coupon.code).trim().toUpperCase() });
-        if (dbCoupon && String(dbCoupon.event?.id) === String(bookingDetails?.event?._id) && (!dbCoupon.expiresAt || new Date(dbCoupon.expiresAt) >= new Date())) {
-          const discountResult = computeCouponDiscount(dbCoupon, bookingDetails?.tickets || []);
-          if (!discountResult.error && discountResult.discountAmount > 0) {
-            discountAmount = discountResult.discountAmount;
-            appliedCoupon = {
-              code: dbCoupon.code,
-              ticketCategory: discountResult.ticketCategory || dbCoupon.ticketCategory,
-              discountPercentage: dbCoupon.discountPercentage,
-              discountPrice: dbCoupon.discountPrice,
-              discountAmount,
-            };
-          }
-        }
-      }
-    } catch (e) {
-      // ignore coupon if malformed
-      discountAmount = 0;
-      appliedCoupon = null;
-    }
-
-    const payable = Math.max(0, computedTotal - discountAmount);
-
-    const options = {
-      amount: payable * 100, // amount in the smallest currency unit
-      currency,
-      receipt,
-      notes: {
-        userId: bookingDetails?.user?.id || '',
-        eventId: bookingDetails?.event?._id || '',
-        userName: bookingDetails?.user?.name || '',
-        userEmail: bookingDetails?.user?.email || '',
-        userPhone: bookingDetails?.user?.phone || '',
-        tickets: bookingDetails?.tickets ? JSON.stringify(bookingDetails.tickets) : '[]',
-        coupon: appliedCoupon ? JSON.stringify(appliedCoupon) : undefined,
-      }
-    };
-
-    const order = await razorpay.orders.create(options);
-
-    if (!order) {
-      return res.status(500).send('Error creating Razorpay order');
-    }
-
-    // Store a pending session with booking details to recover later via webhook if needed
-    try {
-      console.log('[Create Order] Storing pending session for orderId:', order.id);
-      console.log('[Create Order] Booking details:', JSON.stringify(bookingDetails, null, 2));
-
-      await PendingPaymentSession.findOneAndUpdate(
-        { orderId: order.id },
-        {
-          $set: {
-            amount: payable,
-            currency,
-            bookingDetails: appliedCoupon ? { ...bookingDetails, coupon: appliedCoupon } : bookingDetails,
-            user: bookingDetails?.user?.id,
-            event: bookingDetails?.event?._id,
-            status: 'created'
-          }
+      order = await razorpay.orders.create({
+        amount: canonical.amountPaise,
+        currency: 'INR',
+        receipt,
+        notes: {
+          orderIntentId,
+          checkoutSessionId: pending._id.toString(),
+          userId: req.user._id.toString(),
+          eventId: canonical.event._id.toString(),
+          tickets: JSON.stringify(canonical.bookingDetails.tickets.map(({ ticketType, quantity, price }) => ({ ticketType, quantity, price }))),
+          coupon: canonical.bookingDetails.coupon ? JSON.stringify(canonical.bookingDetails.coupon) : undefined,
         },
-        { upsert: true }
+      });
+      if (!order?.id) throw new Error('Razorpay did not return an order ID.');
+
+      const savedOrder = await PendingPaymentSession.updateOne(
+        { _id: pending._id, status: 'creating_order' },
+        { $set: { orderId: order.id, status: 'created' } },
       );
-
-      console.log('[Create Order] Pending session stored successfully');
-
-      // Test: Check if the session was actually stored
-      const testSession = await PendingPaymentSession.findOne({ orderId: order.id });
-      console.log('[Create Order] Test query result:', !!testSession, 'Session data:', JSON.stringify(testSession, null, 2));
-
-    } catch (e) {
-      console.error('Failed to persist pending payment session:', e);
+      if (savedOrder.matchedCount !== 1) {
+        throw new Error('Could not attach the Razorpay order to its saved checkout.');
+      }
+    } catch (orderError) {
+      await PendingPaymentSession.updateOne({ _id: pending._id }, {
+        $set: { status: 'failed', errorMessage: orderError.message },
+      });
+      throw orderError;
     }
 
-    res.status(200).json(order);
+    return res.status(200).json(order);
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
     res.status(500).send(error.message);
@@ -232,6 +200,45 @@ exports.verifyPayment = async (req, res) => {
     if (digest !== razorpay_signature) {
       console.error('Invalid payment signature');
       return res.status(400).json({ success: false, message: 'Transaction not legit!' });
+    }
+
+    const savedCheckout = await eventPaymentSettlement.findSession(razorpay_order_id);
+    if (savedCheckout?.settlementVersion === 2) {
+      if (savedCheckout.user?.toString() !== req.user?._id?.toString()) {
+        return res.status(403).json({ success: false, message: 'This checkout belongs to a different account.' });
+      }
+      let settled;
+      try {
+        settled = await eventPaymentSettlement.settleCapturedPayment({
+          razorpay,
+          orderId: razorpay_order_id,
+          paymentId: razorpay_payment_id,
+          signature: razorpay_signature,
+        });
+      } catch (settlementError) {
+        return res.status(settlementError.statusCode || 503).json({
+          success: false,
+          pending: true,
+          code: settlementError.code || 'SETTLEMENT_PENDING',
+          message: settlementError.terminal
+            ? 'Payment was received, but ticket issuance needs reconciliation. Please do not pay again.'
+            : 'Payment is being checked and ticket issuance will retry. Please do not pay again.',
+        });
+      }
+      return res.status(201).json({
+        success: true,
+        message: 'Bookings created successfully',
+        booking: settled.bookings[0],
+        allBookings: settled.bookings,
+        bookingIds: settled.bookings.map((booking) => booking._id),
+        totalTickets: settled.bookings.length,
+        ticketTypes: savedCheckout.bookingDetails.tickets.map((ticket) => ({
+          type: ticket.ticketType,
+          quantity: ticket.quantity,
+          price: ticket.price,
+        })),
+        alreadyProcessed: settled.alreadyCompleted,
+      });
     }
 
     // Create or update a transaction record first
@@ -608,8 +615,13 @@ exports.razorpayWebhook = async (req, res) => {
       .update(body)
       .digest('hex');
 
-    if (expectedSignature !== signature) {
-      console.error('[Razorpay Webhook] Invalid signature. Expected:', expectedSignature, 'Received:', signature);
+    const expectedSignatureBytes = Buffer.from(expectedSignature, 'hex');
+    const receivedSignatureBytes = typeof signature === 'string' && /^[a-f0-9]+$/i.test(signature)
+      ? Buffer.from(signature, 'hex')
+      : Buffer.alloc(0);
+    if (receivedSignatureBytes.length !== expectedSignatureBytes.length ||
+        !crypto.timingSafeEqual(expectedSignatureBytes, receivedSignatureBytes)) {
+      console.error('[Razorpay Webhook] Invalid signature.');
       return res.status(400).send('Invalid signature');
     }
 
@@ -643,6 +655,30 @@ exports.razorpayWebhook = async (req, res) => {
           console.error('[Razorpay Webhook] Captured NUSC payment requires manual resolution:', nuscOrderId);
         }
         return res.json({ status: 'ok' });
+      }
+    }
+
+    if (eventType === 'payment.captured' || eventType === 'order.paid') {
+      const payment = event.payload.payment?.entity;
+      const order = event.payload.order?.entity;
+      const orderId = payment?.order_id || order?.id;
+      const paymentId = payment?.id;
+      if (eventType === 'order.paid' && !paymentId) {
+        return res.json({ status: 'awaiting_payment_capture_webhook' });
+      }
+      if (orderId && paymentId) {
+        const pending = await eventPaymentSettlement.findSession(orderId, payment?.notes?.orderIntentId);
+        if (pending?.settlementVersion === 2 || payment?.notes?.orderIntentId) {
+          let settled;
+          try {
+            settled = await eventPaymentSettlement.settleCapturedPayment({ razorpay, orderId, paymentId });
+          } catch (settlementError) {
+            if (!settlementError.terminal) throw settlementError;
+            console.error('[Razorpay Webhook] Captured payment needs reconciliation:', orderId, settlementError.code);
+            return res.json({ status: 'manual_reconciliation_required' });
+          }
+          return res.json({ status: 'ok', settled: true, alreadyCompleted: settled.alreadyCompleted });
+        }
       }
     }
 

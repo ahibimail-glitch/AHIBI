@@ -80,6 +80,9 @@ const BookingSchema = new mongoose.Schema({
   paymentId: {
     type: String
   },
+  paymentTicketKey: {
+    type: String,
+  },
   nuscOrderId: {
     type: String,
   },
@@ -192,6 +195,10 @@ BookingSchema.pre('save', function(next) {
 
 // Add index for better query performance
 BookingSchema.index({ event: 1, user: 1, status: 1 });
+BookingSchema.index(
+  { paymentTicketKey: 1 },
+  { unique: true, partialFilterExpression: { paymentTicketKey: { $type: 'string' } } }
+);
 BookingSchema.index(
   { nuscOrderId: 1, nuscTicketIndex: 1 },
   { unique: true, partialFilterExpression: { nuscOrderId: { $type: 'string' } } }

@@ -1105,6 +1105,27 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
       { _id: claimed._id, status: 'settling' },
       { $set: { status: adminRecovery ? 'paid_no_booking' : 'created', errorMessage: error.message, settlementLeaseUntil: null } }
     );
+    await PaymentTransaction.findOneAndUpdate(
+      { orderId: claimed.orderId, paymentId: payment.id },
+      {
+        $set: {
+          orderId: claimed.orderId,
+          paymentId: payment.id,
+          signature,
+          amount: claimed.amount,
+          currency: claimed.currency,
+          user: claimed.user,
+          userSnapshot: claimed.bookingDetails.user,
+          event: claimed.event,
+          bookingDetails: claimed.bookingDetails,
+          status: 'paid_no_booking',
+          errorMessage: error.message,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).catch((recordError) => {
+      console.error('[NUSC checkout] Failed to persist captured-payment recovery record:', recordError.message);
+    });
     throw error;
   }
 }
@@ -1241,6 +1262,8 @@ async function listAdminOrders(req, res) {
         ...order,
         refundStatus: order.refundStatus || 'not_requested',
         recoveryAvailable: order.status === 'paid_no_booking' || (
+          order.status === 'created' && Boolean(order.paymentId)
+        ) || (
           order.status === 'settling' && order.settlementLeaseUntil && new Date(order.settlementLeaseUntil).getTime() <= now
         ),
         bookings: bookingsByOrder.get(order.orderId) || [],
@@ -1261,7 +1284,8 @@ async function retryPaidOrder(req, res) {
     const order = await NuscHomeMatchOrder.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'NUSC order was not found.' });
     const staleSettlement = order.status === 'settling' && order.settlementLeaseUntil && new Date(order.settlementLeaseUntil) <= new Date();
-    if (order.status !== 'paid_no_booking' && !staleSettlement) {
+    const capturedPaymentNeedsRecovery = order.status === 'created' && Boolean(order.paymentId);
+    if (order.status !== 'paid_no_booking' && !staleSettlement && !capturedPaymentNeedsRecovery) {
       return res.status(409).json({ success: false, message: 'Only paid orders without tickets or expired settlement attempts can be retried.' });
     }
 

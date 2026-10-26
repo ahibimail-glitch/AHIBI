@@ -7,6 +7,8 @@ const AnnieBooking = require('../models/AnnieBooking');
 const AnnieSeat = require('../models/AnnieSeat'); 
 const slugify = require('slugify');
 const mongoose = require('mongoose'); 
+const Razorpay = require('razorpay');
+const eventPaymentSettlement = require('../services/eventPaymentSettlementService');
 
 // Helper to generate slug
 const generateSlug = (title) => {
@@ -110,6 +112,25 @@ exports.resolveTransaction = async (req, res) => {
       return res.status(400).json({ success: false, message: `Transaction status is '${tx.status}', not resolvable` });
     }
 
+    const savedSession = await PendingPaymentSession.findOne({ orderId: tx.orderId });
+    if (savedSession?.settlementVersion === 2) {
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+      const settled = await eventPaymentSettlement.settleCapturedPayment({
+        razorpay,
+        orderId: tx.orderId,
+        paymentId: tx.paymentId,
+        signature: tx.signature,
+      });
+      return res.json({
+        success: true,
+        message: 'Captured payment reconciled and tickets confirmed.',
+        data: { bookingIds: settled.bookings.map((booking) => booking._id) },
+      });
+    }
+
     console.log('[Resolve Transaction] Transaction data:', JSON.stringify(tx, null, 2));
 
     // Check if this is an Annie Musical booking - improved detection
@@ -192,18 +213,14 @@ exports.resolveTransaction = async (req, res) => {
       });
     }
 
-    // Extract tickets from bookingDetails or create default
-    let tickets = [];
-    if (bookingDetails && Array.isArray(bookingDetails.tickets)) {
-      tickets = bookingDetails.tickets;
-    } else {
-      // Create a default ticket based on the transaction amount
-      tickets = [{
-        ticketType: 'General',
-        quantity: 1,
-        price: tx.amount || 0
-      }];
+    // Do not guess quantity or ticket type from the payment amount.
+    if (!bookingDetails || !Array.isArray(bookingDetails.tickets) || bookingDetails.tickets.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'Saved ticket selection is missing. Reconcile the captured payment against the provider order before issuing tickets.',
+      });
     }
+    const tickets = bookingDetails.tickets;
 
     console.log('[Resolve Transaction] Using tickets:', JSON.stringify(tickets, null, 2));
 
