@@ -668,10 +668,15 @@ export default function NuscHomeMatchesPage() {
           )}
           {selectedPass === "suite-season" && (
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#f0d2d6] bg-[#fff8f8] p-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm leading-6 text-[#4c554d]">United Suite season bookings are by phone. Call to ask about availability and booking details.</p>
-              <a href="tel:+917005427394" className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11">
-                <Phone className="h-4 w-4" /> Call +91 7005427394
-              </a>
+              <p className="text-sm leading-6 text-[#4c554d]">United Suite season bookings are by phone. Call either number to ask about availability and booking details.</p>
+              <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+                <a href="tel:+918787495260" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11">
+                  <Phone className="h-4 w-4" /> Call +91 878 749 5260
+                </a>
+                <a href="tel:+917005427394" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#d51f34] px-5 text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:min-h-11">
+                  <Phone className="h-4 w-4" /> Call +91 7005427394
+                </a>
+              </div>
             </div>
           )}
         </div>
