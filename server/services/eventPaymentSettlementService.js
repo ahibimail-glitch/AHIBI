@@ -65,12 +65,20 @@ async function buildCanonicalCheckout({ bookingDetails, coupon, authenticatedUse
       throw new PaymentSettlementError('A selected ticket type is no longer available.', 'TICKET_TYPE_NOT_FOUND', 409);
     }
     const ticket = matches[0];
+    const pricePaise = toPaise(ticket.price);
+    if (requested.price != null && toPaise(requested.price) !== pricePaise) {
+      throw new PaymentSettlementError(
+        'Ticket prices changed while checkout was open. Refresh checkout and review the updated total before paying.',
+        'TICKET_PRICE_CHANGED',
+        409,
+      );
+    }
     return {
       ticketType: ticket.name,
       ticketTypeId: ticket._id,
       quantity,
-      price: Number(ticket.price),
-      pricePaise: toPaise(ticket.price),
+      price: pricePaise / 100,
+      pricePaise,
     };
   });
 

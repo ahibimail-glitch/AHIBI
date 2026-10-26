@@ -75,6 +75,13 @@ function normalizeTicketSelection(selection, event) {
     if (!Number.isFinite(price) || price < 0) {
       throw new inventory.InventoryConflict(`Ticket price for ${ticketType} is unavailable.`, 'TICKET_NOT_CONFIGURED');
     }
+    if (item.price != null && (!Number.isFinite(Number(item.price)) ||
+        Math.round((Number(item.price) + Number.EPSILON) * 100) !== Math.round((price + Number.EPSILON) * 100))) {
+      throw new inventory.InventoryConflict(
+        'Ticket prices changed while checkout was open. Refresh checkout and review the updated total before paying.',
+        'TICKET_PRICE_CHANGED',
+      );
+    }
 
     const basePrice = Number(eventTicket.basePrice ?? eventTicket.price);
     return { ticketType, quantity, price, basePrice, ...(zone && { zone }) };
