@@ -127,6 +127,10 @@ export default function NuscMultiMatchCheckoutPage() {
 
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (passId === "suite-box-single" && matches.length > 1) {
+      setErrorMessage("A Full Box order covers one match date. Return to match selection and place a separate order for each additional date.");
+      return;
+    }
     if (!passId || !pass || matches.length < 2) {
       setErrorMessage("Return to match selection and choose at least two dates and a pass.");
       return;

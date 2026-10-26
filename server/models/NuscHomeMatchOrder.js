@@ -4,6 +4,8 @@ const NuscHomeMatchOrderSchema = new mongoose.Schema({
   orderId: { type: String, required: true, unique: true, index: true },
   checkoutRequestId: { type: String, default: null },
   checkoutRequestHash: { type: String, default: null },
+  inventoryHoldId: { type: String, default: null },
+  matchDates: { type: [String], default: [] },
   paymentId: { type: String, default: null, index: true },
   orderType: { type: String, enum: ['match', 'multiMatch', 'seasonPass'], default: 'match', index: true },
   event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },

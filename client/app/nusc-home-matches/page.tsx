@@ -487,7 +487,9 @@ export default function NuscHomeMatchesPage() {
                 {completedMatchCount > 0
                   ? "Each remaining match has its own AHIBI checkout and payment."
                   : selectedPass
-                  ? selectedMatchDates.length > 1
+                  ? selectedPass === "suite-box-single" && selectedMatchDates.length > 1
+                    ? "A Full Box order covers one match date. Place a separate order for each additional date."
+                    : selectedMatchDates.length > 1
                     ? "Review all selected matches together. Choose a quantity and, for General Pass, a seating zone for each date, then pay once."
                     : "Review your match and complete one secure checkout."
                   : selectedMatchDates.length > 1
@@ -495,7 +497,21 @@ export default function NuscHomeMatchesPage() {
                     : "Choose a pass to continue to secure checkout."}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {selectedPass && selectedMatchDates.length > 1 ? (
+                {selectedPass === "suite-box-single" && selectedMatchDates.length > 1 ? (
+                  NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
+                    const event = matchEvents[getNuscMatchSlug(match.date)];
+                    const checkoutParams = new URLSearchParams({ nuscPass: selectedPass, nuscDates: match.date });
+                    const ticket = event?.ticketTypes?.find((item) => item.name === NUSC_PASS_TICKET_TYPES[selectedPass]);
+                    const available = !!ticket && ticket.quantity > (ticket.sold || 0);
+                    return event && available ? (
+                      <Link key={match.date} href={`/events/${event._id}/checkout?${checkoutParams.toString()}`} data-nusc-checkout-action="match" aria-label={`Checkout United Suite Full Box for NUSC vs ${match.opponent}, ${match.label}`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
+                        <span className="min-w-0 leading-5">Full Box · {match.label}</span><ArrowRight className="h-4 w-4 shrink-0" />
+                      </Link>
+                    ) : (
+                      <span key={match.date} className="inline-flex min-h-10 items-center rounded-full bg-[#ecefea] px-4 text-sm font-medium text-[#6d756e]">NUSC vs {match.opponent} · Tickets soon</span>
+                    );
+                  })
+                ) : selectedPass && selectedMatchDates.length > 1 ? (
                   selectedMatchesBookable && multiMatchCheckoutHref ? (
                     <Link href={multiMatchCheckoutHref} data-nusc-checkout-action="match" aria-label={`Review and checkout ${selectedMatchDates.length} NUSC home matches`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
                       <span className="min-w-0 leading-5">Review {selectedMatchDates.length} matches and pay once</span><ArrowRight className="h-4 w-4 shrink-0" />
