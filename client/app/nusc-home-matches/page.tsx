@@ -86,6 +86,7 @@ const NUSC_PASS_TICKET_TYPES: Record<string, string> = {
 
 export default function NuscHomeMatchesPage() {
   const [matchEvents, setMatchEvents] = useState<Record<string, Event>>({});
+  const [matchAvailabilityState, setMatchAvailabilityState] = useState<"loading" | "ready" | "error">("loading");
   const [passCategory, setPassCategory] = useState<PassCategory>("single-match");
   const [selectedPass, setSelectedPass] = useState<string | null>(null);
   const [hasReachedOriginalCheckout, setHasReachedOriginalCheckout] = useState(false);
@@ -205,7 +206,10 @@ export default function NuscHomeMatchesPage() {
     const loadMatchEvents = async () => {
       try {
         const response = await fetch(`${API_URL}/api/events?limit=10000&includePast=true`, { cache: "no-store" });
-        if (!response.ok) return;
+        if (!response.ok) {
+          if (!cancelled) setMatchAvailabilityState("error");
+          return;
+        }
         const result: EventsResponse = await response.json();
         const events = result.data?.events || [];
         const indexed = Object.fromEntries(
@@ -213,15 +217,47 @@ export default function NuscHomeMatchesPage() {
             .filter((event) => event.slug?.startsWith(NUSC_MATCH_EVENT_SLUG_PREFIX))
             .map((event) => [event.slug!, event])
         );
-        if (!cancelled) setMatchEvents(indexed);
+        if (!cancelled) {
+          setMatchEvents(indexed);
+          setMatchAvailabilityState("ready");
+        }
       } catch {
-        // Keep the fixture list visible if event booking data is unavailable.
+        if (!cancelled) setMatchAvailabilityState("error");
       }
     };
 
     loadMatchEvents();
     return () => { cancelled = true; };
   }, []);
+
+  const getSuiteAvailabilityText = (matchDate: string, passName: string, capacity: number, unit: string) => {
+    if (matchAvailabilityState === "loading") return "Checking…";
+    if (matchAvailabilityState === "error") return "Unavailable";
+
+    const event = matchEvents[getNuscMatchSlug(matchDate)];
+    const ticket = event?.ticketTypes?.find((item) => item.name === passName);
+    if (!ticket) return "Unavailable";
+
+    const remaining = Math.max(0, Number(ticket.quantity || 0) - Number(ticket.sold || 0));
+    if (remaining === 0) return "Sold out";
+    return `${remaining}/${capacity} ${unit}`;
+  };
+
+  const renderSuiteAvailability = (matchDate: string) => (
+    <span
+      className="mt-2 grid grid-cols-1 gap-1 text-[10px] leading-4 sm:text-[11px]"
+      aria-label={`United Suite availability for ${matchDate}`}
+    >
+      <span className="inline-flex min-w-0 items-center justify-between gap-1 rounded-md bg-[#eef4ec] px-2 py-1 text-[#31533c]">
+        <span className="shrink-0 font-medium">Single pass</span>
+        <span className="truncate text-right">{getSuiteAvailabilityText(matchDate, NUSC_PASS_TICKET_TYPES["suite-single"], 8, "seats")}</span>
+      </span>
+      <span className="inline-flex min-w-0 items-center justify-between gap-1 rounded-md bg-[#f4f1e9] px-2 py-1 text-[#68562b]">
+        <span className="shrink-0 font-medium">Full Box</span>
+        <span className="truncate text-right">{getSuiteAvailabilityText(matchDate, NUSC_PASS_TICKET_TYPES["suite-box-single"], 3, "boxes")}</span>
+      </span>
+    </span>
+  );
 
   return (
     <main className="min-h-screen bg-[#f4f5f1] text-[#111713]">
@@ -308,7 +344,7 @@ export default function NuscHomeMatchesPage() {
               const row = (
                 <>
                   <span className="text-center"><span className="block text-[10px] font-bold uppercase tracking-[.14em] text-[#737b73]">{month}</span><span className="mt-0.5 block text-2xl font-black tracking-tight">{dayNumber}</span></span>
-                  <span><span className="block font-semibold">NUSC vs {match.opponent}</span><span className="mt-1 block text-sm text-[#707970]">{match.label} · {match.day} · {match.time}</span></span>
+                  <span><span className="block font-semibold">NUSC vs {match.opponent}</span><span className="mt-1 block text-sm text-[#707970]">{match.label} · {match.day} · {match.time}</span>{renderSuiteAvailability(match.date)}</span>
                   <span className="col-span-2 flex items-center justify-between gap-2 text-sm font-semibold text-[#c91d31] sm:col-span-1 sm:justify-self-auto">
                     {event ? "Book tickets" : "Tickets soon"}
                     {event && <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d9dfd8] text-[#535e55] transition group-hover:border-[#d41e32] group-hover:bg-[#d41e32] group-hover:text-white"><ArrowRight className="h-4 w-4" /></span>}
@@ -392,6 +428,7 @@ export default function NuscHomeMatchesPage() {
                         <span className="block text-[13px] font-semibold leading-5 text-[#151b16]">{match.label}</span>
                         <span className="mt-1 block text-[13px] leading-5 text-[#4c554d]">vs {match.opponent}</span>
                         <span className="mt-1 block text-xs text-[#737b73]">{match.day} Â· {match.time}</span>
+                        {renderSuiteAvailability(match.date)}
                       </span>
                     </label>
                   );
@@ -413,6 +450,7 @@ export default function NuscHomeMatchesPage() {
                         <span className="block text-[13px] font-semibold leading-5 text-[#151b16] sm:text-sm">{match.label}</span>
                         <span className="mt-1 block text-[13px] leading-5 text-[#4c554d] sm:text-sm">vs {match.opponent}</span>
                         <span className="mt-1 block text-xs text-[#737b73]">{match.day} · {match.time}</span>
+                        {renderSuiteAvailability(match.date)}
                       </span>
                     </label>
                   );
