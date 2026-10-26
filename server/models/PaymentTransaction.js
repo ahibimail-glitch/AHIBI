@@ -5,6 +5,7 @@ const PaymentTransactionSchema = new mongoose.Schema({
   paymentId: { type: String, index: true },
   signature: { type: String },
   amount: { type: Number },
+  amountPaise: { type: Number },
   currency: { type: String, default: 'INR' },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   userSnapshot: {
@@ -25,6 +26,7 @@ const PaymentTransactionSchema = new mongoose.Schema({
   },
   errorMessage: { type: String },
   bookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
+  couponUsageApplied: { type: Boolean, default: false },
 }, { timestamps: true });
 
 PaymentTransactionSchema.index({ orderId: 1, paymentId: 1 }, { unique: false });
