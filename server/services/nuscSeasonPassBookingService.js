@@ -14,15 +14,21 @@ async function createSeasonPassTicketRecords({
   reservationId = null,
   partnerId = null,
 }) {
-  if (!Array.isArray(fixtures) || fixtures.length !== 10 || quantity !== 1 || !paymentId) {
+  if (!Array.isArray(fixtures) || fixtures.length < 1 || fixtures.length > 10 || quantity !== 1 || !paymentId) {
     throw new Error('Season pass ticket issuance details are incomplete');
+  }
+  const matchIndices = fixtures.map((fixture) => Number(fixture.matchIndex));
+  if (new Set(matchIndices).size !== fixtures.length || matchIndices.some((index, indexInList) => (
+    !Number.isInteger(index) || index < 1 || index > 10 || (indexInList > 0 && index <= matchIndices[indexInList - 1])
+  ))) {
+    throw new Error('Season pass fixture indices are invalid');
   }
   await Booking.init();
 
   const bookings = [];
   for (let fixtureIndex = 0; fixtureIndex < fixtures.length; fixtureIndex += 1) {
     const fixture = fixtures[fixtureIndex];
-    if (fixture.matchIndex !== fixtureIndex + 1) throw new Error('Season pass fixture order is invalid');
+    const matchIndex = Number(fixture.matchIndex);
     const event = await Event.findById(fixture.eventId).select('+ticketTypes');
     if (!event || !event.slug?.startsWith('nusc-home-match-')) throw new Error('A season pass match listing no longer exists');
 
@@ -30,9 +36,9 @@ async function createSeasonPassTicketRecords({
       ? await Booking.findOne({
         'nuscPartnerTicket.partnerId': partnerId,
         'nuscPartnerTicket.partnerOrderId': orderId,
-        'nuscPartnerTicket.ticketIndex': fixtureIndex + 1,
+        'nuscPartnerTicket.ticketIndex': matchIndex,
       })
-      : await Booking.findOne({ nuscOrderId: orderId, nuscTicketIndex: fixtureIndex + 1 });
+      : await Booking.findOne({ nuscOrderId: orderId, nuscTicketIndex: matchIndex });
 
     if (!booking) {
       const bookingData = {
@@ -55,7 +61,7 @@ async function createSeasonPassTicketRecords({
         paymentProvider,
         externalPaymentId: paymentId,
         nuscSeasonPassType: passId,
-        nuscSeasonMatchIndex: fixtureIndex + 1,
+        nuscSeasonMatchIndex: matchIndex,
         ...(zone && { nuscGeneralZone: zone }),
         ...(partnerId ? {
           nuscPartnerTicket: {
@@ -63,14 +69,14 @@ async function createSeasonPassTicketRecords({
             memberReferenceHash,
             reservationId,
             partnerOrderId: orderId,
-            ticketIndex: fixtureIndex + 1,
+            ticketIndex: matchIndex,
           },
         } : {
           paymentId,
           razorpayPaymentId: paymentId,
           razorpayOrderId: orderId,
           nuscOrderId: orderId,
-          nuscTicketIndex: fixtureIndex + 1,
+          nuscTicketIndex: matchIndex,
           ticketIndex: 1,
           totalTickets: 1,
         }),

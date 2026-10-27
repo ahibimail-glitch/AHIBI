@@ -118,6 +118,7 @@ const BookingSchema = new mongoose.Schema({
     reservationId: { type: String },
     partnerOrderId: { type: String },
     ticketIndex: { type: Number, min: 1, max: 10 },
+    replacedByReservationId: { type: String },
   },
   // QR code verification fields
   entryVerified: {

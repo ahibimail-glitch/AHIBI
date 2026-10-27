@@ -6,6 +6,7 @@ const serverRequire = createRequire(path.join(__dirname, '..', 'package.json'));
 const mongoose = serverRequire('mongoose');
 const Event = require('../models/Event');
 const Booking = require('../models/Booking');
+const Scan = require('../models/Scan');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const NuscPartnerRequest = require('../models/NuscPartnerRequest');
 const usedRequestIds = [];
@@ -95,6 +96,7 @@ async function run() {
   const testRun = crypto.randomUUID();
   const prefix = `nusc-test-${testRun}`;
   const trackedReservations = [];
+  const testScanBookingIds = [];
   const originalSold = new Map();
   let allEvents = [];
   let passed = 0;
@@ -247,6 +249,135 @@ async function run() {
     assert(invalidPostPdfSignature.status === 401 && invalidPostPdfBody.code === 'INVALID_PARTNER_SIGNATURE', 'POST PDF retrieval must reject an invalid HMAC signature.');
     passed += 1;
 
+    const upgradeOldReservationId = reserved.json.reservation.reservationId;
+    const upgradeOldBookings = await Booking.find({
+      'nuscPartnerTicket.partnerId': 'nusc',
+      'nuscPartnerTicket.reservationId': upgradeOldReservationId,
+    }).sort({ nuscSeasonMatchIndex: 1 }).lean();
+    assert(upgradeOldBookings.length === 10, 'Upgrade source General pass must contain ten issued tickets.');
+    const usedGeneralTicket = upgradeOldBookings[0];
+    await Booking.updateOne(
+      { _id: usedGeneralTicket._id, status: 'confirmed' },
+      { $set: { status: 'checked-in', entryVerified: true, entryVerifiedAt: new Date() } },
+    );
+    const usedScan = await Scan.create({
+      ticket: usedGeneralTicket._id,
+      event: usedGeneralTicket.event,
+      partnerId: 'nusc',
+      requestId: `${prefix}-upgrade-used-match`,
+    });
+    testScanBookingIds.push(usedGeneralTicket._id);
+
+    const upgradePremiumHold = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-upgrade-premium`,
+      memberReference,
+      passId: 'premium-season',
+    } });
+    assert(upgradePremiumHold.status === 201, 'The same member should be able to hold a Premium pass for an upgrade.');
+    trackedReservations.push(upgradePremiumHold.json.reservation.reservationId);
+    const premiumReservationId = upgradePremiumHold.json.reservation.reservationId;
+    const replacementPath = `/reservations/${encodeURIComponent(premiumReservationId)}/replace-general`;
+    const replacementBody = { oldReservationId: upgradeOldReservationId, paymentId: `${prefix}-upgrade-payment` };
+    const replacement = await callApi(replacementPath, { method: 'POST', body: replacementBody });
+    assert(
+      replacement.status === 201 &&
+      replacement.json.replacement?.issuedTicketCount === 9 &&
+      replacement.json.replacement?.retainedUsedTicketCount === 1 &&
+      replacement.json.replacement?.cancelledUnusedTicketCount === 9 &&
+      replacement.json.tickets?.length === 9 &&
+      !replacement.json.tickets.some((ticket) => ticket.match.matchIndex === 1),
+      'Replacement must issue only the nine unused matches and report the retained checked-in ticket.',
+    );
+    const replacementRetry = await callApi(replacementPath, { method: 'POST', body: replacementBody });
+    assert(
+      replacementRetry.status === 200 &&
+      replacementRetry.json.replacement?.issuedTicketCount === 9 &&
+      JSON.stringify(replacementRetry.json.tickets.map((ticket) => ticket.ticketId)) === JSON.stringify(replacement.json.tickets.map((ticket) => ticket.ticketId)),
+      'A duplicate replacement request must return the same Premium ticket IDs without issuing another set.',
+    );
+    const oldReservationAfterUpgrade = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const oldPassRecord = oldReservationAfterUpgrade.partnerSeasonPassReservations.find((item) => item.reservationId === upgradeOldReservationId);
+    const premiumPassRecord = oldReservationAfterUpgrade.partnerSeasonPassReservations.find((item) => item.reservationId === premiumReservationId);
+    const oldPassBookingsAfterUpgrade = await Booking.find({ _id: { $in: oldPassRecord.bookingIds } })
+      .select('_id status entryVerified nuscSeasonMatchIndex').lean();
+    assert(
+      oldPassRecord.status === 'replaced' &&
+      premiumPassRecord.status === 'issued' &&
+      oldPassBookingsAfterUpgrade.find((booking) => booking.nuscSeasonMatchIndex === 1)?.status === 'checked-in' &&
+      oldPassBookingsAfterUpgrade.filter((booking) => booking.nuscSeasonMatchIndex !== 1).every((booking) => booking.status === 'cancelled') &&
+      await Scan.countDocuments({ ticket: usedGeneralTicket._id, requestId: usedScan.requestId }) === 1,
+      'Replacement must preserve the used ticket and scan history while cancelling every unused old ticket.',
+    );
+
+    const scannerOrigin = new URL(base).origin;
+    const oldUnusedTicket = upgradeOldBookings[1];
+    const oldQrResponse = await fetch(`${scannerOrigin}/api/bookings/verify-qr`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ bookingId: String(oldUnusedTicket._id) }),
+    });
+    const oldQrResult = await oldQrResponse.json();
+    assert(
+      oldQrResponse.status === 200 &&
+      oldQrResult.status === 'INVALID' &&
+      String(oldQrResult.message).includes('cancelled'),
+      'The scanner must reject an unused General QR after its reservation has been replaced.',
+    );
+
+    const replacementStatus = await callApi(`/reservations/${encodeURIComponent(premiumReservationId)}`);
+    assert(
+      replacementStatus.status === 200 &&
+      replacementStatus.json.reservation?.status === 'issued' &&
+      replacementStatus.json.replacement?.issuedTicketCount === 9 &&
+      replacementStatus.json.tickets?.length === 9,
+      'Status lookup must report an issued partial Premium pass with only its nine tickets.',
+    );
+
+    const wrongMemberGeneral = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-wrong-member-general`,
+      memberReference: `member-wrong-general-${testRun}`,
+      passId: 'general-season',
+      zone: selectedZone,
+    } });
+    assert(wrongMemberGeneral.status === 201, 'Wrong-member General fixture reservation should succeed.');
+    trackedReservations.push(wrongMemberGeneral.json.reservation.reservationId);
+    const wrongMemberGeneralId = wrongMemberGeneral.json.reservation.reservationId;
+    const wrongMemberIssued = await callApi(`/reservations/${encodeURIComponent(wrongMemberGeneralId)}/confirm`, {
+      method: 'POST', body: { paymentId: `${prefix}-wrong-member-general-payment` },
+    });
+    assert(wrongMemberIssued.status === 201 && wrongMemberIssued.json.tickets?.length === 10, 'Wrong-member General fixture should issue ten test tickets.');
+    const wrongMemberPremium = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-wrong-member-premium`,
+      memberReference: `member-wrong-premium-${testRun}`,
+      passId: 'premium-season',
+    } });
+    assert(wrongMemberPremium.status === 201, 'Different-member Premium hold should succeed.');
+    trackedReservations.push(wrongMemberPremium.json.reservation.reservationId);
+    const wrongMemberPremiumId = wrongMemberPremium.json.reservation.reservationId;
+    const wrongMemberReplacement = await callApi(`/reservations/${encodeURIComponent(wrongMemberPremiumId)}/replace-general`, {
+      method: 'POST',
+      body: { oldReservationId: wrongMemberGeneralId, paymentId: `${prefix}-wrong-member-upgrade-payment` },
+    });
+    const afterWrongMemberAttempt = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const wrongOldRecord = afterWrongMemberAttempt.partnerSeasonPassReservations.find((item) => item.reservationId === wrongMemberGeneralId);
+    const wrongPremiumRecord = afterWrongMemberAttempt.partnerSeasonPassReservations.find((item) => item.reservationId === wrongMemberPremiumId);
+    assert(
+      wrongMemberReplacement.status === 409 &&
+      wrongMemberReplacement.json.code === 'MEMBER_MISMATCH' &&
+      wrongOldRecord.status === 'issued' &&
+      wrongPremiumRecord.status === 'held',
+      'A replacement between different member reservations must fail without changing either pass.',
+    );
+    const invalidReplacementSignature = await callApi(replacementPath, {
+      method: 'POST', body: replacementBody, invalidSignature: true,
+    });
+    assert(
+      invalidReplacementSignature.status === 401 &&
+      invalidReplacementSignature.json.code === 'INVALID_PARTNER_SIGNATURE',
+      'Replacement must reject an invalid partner HMAC.',
+    );
+    passed += 1;
+
     const releaseBody = { partnerOrderId: `${prefix}-release`, memberReference: `member-release-${testRun}`, passId: 'premium-season' };
     const releasable = await callApi(reservePath, { method: 'POST', body: releaseBody });
     assert(releasable.status === 201, 'Premium reservation should succeed in available test inventory.');
@@ -299,6 +430,9 @@ async function run() {
       cleanupErrors.push(`Mongo connection unavailable; cleanup skipped (state ${connectionState})`);
     } else {
       const testOrderPattern = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+      if (testScanBookingIds.length) {
+        await cleanupStep('scan cleanup', () => Scan.deleteMany({ ticket: { $in: testScanBookingIds } }));
+      }
       await cleanupStep('booking cleanup', () => Booking.deleteMany({ 'nuscPartnerTicket.partnerOrderId': testOrderPattern }));
       await cleanupStep('inventory cleanup', () => Inventory.updateOne(
         { key: 'nusc-il-2026-27' },

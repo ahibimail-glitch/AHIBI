@@ -5,6 +5,11 @@ const Inventory = require('../models/NuscHomeMatchInventory');
 const inventory = require('../services/nuscHomeMatchInventoryService');
 const { createSeasonPassTicketRecords } = require('../services/nuscSeasonPassBookingService');
 const {
+  ReplacementError,
+  beginPartnerSeasonPassReplacement,
+  completePartnerSeasonPassReplacement,
+} = require('../services/nuscSeasonPassReplacementService');
+const {
   createOfficialTicketPdfBuffer,
   mergeTicketEvent,
 } = require('../services/officialTicketPdfService');
@@ -63,6 +68,7 @@ function shapeTickets(reservation, bookings) {
     const fixture = inventory.FIXTURE_MATCHES[index];
     return {
       match: {
+        matchIndex: index + 1,
         eventId: String(eventId),
         matchDate: fixture?.date,
         opponent: fixture?.opponent,
@@ -272,6 +278,75 @@ async function confirmAndIssue(req, res) {
   }
 }
 
+
+async function replaceGeneralWithPremium(req, res) {
+  const premiumReservationId = String(req.params.reservationId || '');
+  const oldReservationId = String(req.body?.oldReservationId || '').trim();
+  const paymentId = String(req.body?.paymentId || '').trim();
+  if (
+    !/^nsp_[a-f0-9]{40}$/.test(premiumReservationId) ||
+    !/^nsp_[a-f0-9]{40}$/.test(oldReservationId) ||
+    oldReservationId === premiumReservationId ||
+    !/^[A-Za-z0-9._:-]{6,128}$/.test(paymentId) ||
+    Object.keys(req.body || {}).some((key) => !['oldReservationId', 'paymentId'].includes(key))
+  ) {
+    return res.status(400).json({ success: false, code: 'INVALID_REPLACEMENT_REQUEST' });
+  }
+  try {
+    const transition = await beginPartnerSeasonPassReplacement({ premiumReservationId, oldReservationId, paymentId });
+    let current = transition.premiumReservation;
+    if (!transition.alreadyIssued) {
+      const fixtures = transition.remainingMatchIndices.map((matchIndex) => ({
+        eventId: current.eventIds[matchIndex - 1],
+        matchDate: current.matchDates[matchIndex - 1],
+        matchIndex,
+        ticketType: current.ticketType,
+      }));
+      const issued = await createSeasonPassTicketRecords({
+        orderId: current.partnerOrderId,
+        fixtures,
+        passId: current.passId,
+        quantity: 1,
+        paymentId,
+        paymentProvider: 'nusc-partner',
+        memberReferenceHash: current.memberReferenceHash,
+        reservationId: premiumReservationId,
+        partnerId: PARTNER_ID,
+      });
+      current = await completePartnerSeasonPassReplacement(premiumReservationId, issued.bookingIds);
+    }
+    const bookings = current.bookingIds.length
+      ? await Booking.find({
+        _id: { $in: current.bookingIds },
+        'nuscPartnerTicket.partnerId': PARTNER_ID,
+        'nuscPartnerTicket.reservationId': premiumReservationId,
+      }).sort({ nuscSeasonMatchIndex: 1 }).lean()
+      : [];
+    if (bookings.length !== current.bookingIds.length) {
+      return res.status(500).json({ success: false, code: 'REPLACEMENT_PENDING' });
+    }
+    const tickets = shapeTickets(current, bookings).filter((ticket) => ticket.ticketId);
+    return res.status(transition.isRetry ? 200 : 201).json({
+      success: true,
+      replacement: {
+        oldReservationId,
+        premiumReservationId,
+        status: 'issued',
+        issuedTicketCount: tickets.length,
+        retainedUsedTicketCount: transition.retainedUsedTicketCount,
+        cancelledUnusedTicketCount: transition.cancelledUnusedTicketCount,
+      },
+      tickets,
+    });
+  } catch (error) {
+    if (error instanceof ReplacementError) {
+      return res.status(error.status).json({ success: false, code: error.code });
+    }
+    console.error('[NUSC partner API] Season pass replacement failed:', error.message);
+    return res.status(500).json({ success: false, code: 'REPLACEMENT_PENDING' });
+  }
+}
+
 async function releaseReservation(req, res) {
   try {
     const reservation = await inventory.releasePartnerSeasonPassReservation(String(req.params.reservationId || ''));
@@ -296,10 +371,26 @@ async function getReservation(req, res) {
       'nuscPartnerTicket.partnerId': PARTNER_ID,
       'nuscPartnerTicket.partnerOrderId': reservation.partnerOrderId,
     }).sort({ 'nuscPartnerTicket.ticketIndex': 1 }).lean();
-    if (bookings.length !== inventory.FIXTURE_DATES.length) {
+    const expectedTicketCount = reservation.replacesReservationId
+      ? (reservation.replacementMatchIndices || []).length
+      : inventory.FIXTURE_DATES.length;
+    if (bookings.length !== expectedTicketCount) {
       return res.status(500).json({ success: false, code: 'ISSUANCE_PENDING' });
     }
-    return res.json({ success: true, reservation: reservationResponse(reservation), tickets: shapeTickets(reservation, bookings) });
+    const tickets = shapeTickets(reservation, bookings);
+    return res.json({
+      success: true,
+      reservation: reservationResponse(reservation),
+      ...(reservation.replacesReservationId && {
+        replacement: {
+          oldReservationId: reservation.replacesReservationId,
+          issuedTicketCount: bookings.length,
+          retainedUsedTicketCount: Number(reservation.replacementUsedTicketCount || 0),
+          cancelledUnusedTicketCount: Number(reservation.replacementCancelledTicketCount || 0),
+        },
+      }),
+      tickets: reservation.replacesReservationId ? tickets.filter((ticket) => ticket.ticketId) : tickets,
+    });
   } catch (error) {
     console.error('[NUSC partner API] Reservation lookup failed:', error.message);
     return res.status(500).json({ success: false, code: 'LOOKUP_FAILED' });
@@ -428,4 +519,4 @@ async function postTicketPdf(req, res) {
   return serveTicketPdf(req, res, { requireAttendee: true });
 }
 
-module.exports = { confirmAndIssue, getCatalog, getReservation, getTicket, getTicketPdf, postTicketPdf, releaseReservation, reserveSeasonPass, validatePdfAttendee };
+module.exports = { confirmAndIssue, getCatalog, getReservation, getTicket, getTicketPdf, postTicketPdf, releaseReservation, replaceGeneralWithPremium, reserveSeasonPass, validatePdfAttendee };

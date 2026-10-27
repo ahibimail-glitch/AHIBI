@@ -128,6 +128,54 @@ Call only after NUSC has verified capture server-side. AHIBI trusts this asserti
 
 The `tickets` array contains ten items. It contains no QR payload. The signed ticket endpoint below supplies the QR payload to NUSC's backend when needed; keep it out of application logs and public events.
 
+### Replace an issued General pass with a held Premium pass
+
+After NUSC verifies and captures the upgrade payment, call:
+
+`POST /reservations/{premiumReservationId}/replace-general`
+
+`premiumReservationId` must be a currently held `premium-season` reservation created for the same NUSC member as the issued General reservation. The signed JSON body is:
+
+```json
+{
+  "oldReservationId": "nsp_<issued-general-reservation-id>",
+  "paymentId": "<NUSC_RAZORPAY_UPGRADE_PAYMENT_ID>"
+}
+```
+
+Use the existing partner HMAC headers. Sign method `POST`, the complete path and query beginning `/api/nusc-partner/v1`, and the exact UTF-8 JSON body bytes. Use a fresh timestamp and unique request ID for every HTTP attempt. Reuse the same old reservation ID, Premium reservation ID, and NUSC payment ID for business retries. AHIBI creates no payment order and makes no payment-provider call.
+
+AHIBI verifies both reservations, their common hashed member reference, their matching ten event IDs, the old issued General pass, and the new held Premium pass. In one database transaction it marks the old reservation `replaced`, cancels its still-confirmed unused tickets, and moves the Premium hold to the matches being replaced. Checked-in General bookings and scan records remain unchanged as history. The old QR tickets cannot be checked in after replacement because the scanner requires an issued reservation. Premium tickets are issued only for matches whose General tickets were still unused.
+
+Success returns only the newly issued Premium ticket records. With one match already checked in, the response contains nine Premium tickets:
+
+```json
+{
+  "success": true,
+  "replacement": {
+    "oldReservationId": "nsp_<old-id>",
+    "premiumReservationId": "nsp_<premium-id>",
+    "status": "issued",
+    "issuedTicketCount": 9,
+    "retainedUsedTicketCount": 1,
+    "cancelledUnusedTicketCount": 9
+  },
+  "tickets": [
+    {
+      "match": { "matchIndex": 2, "eventId": "<AHIBI_EVENT_ID>", "matchDate": "2026-11-21", "opponent": "<opponent>" },
+      "ticketId": "<AHIBI_BOOKING_ID>",
+      "status": "confirmed",
+      "ticketType": "Premium Pass",
+      "ticketAccessPath": "/api/nusc-partner/v1/reservations/<premium-id>/tickets/<booking-id>"
+    }
+  ]
+}
+```
+
+The `tickets` array contains only newly issued Premium tickets, and its length equals `issuedTicketCount`. `retainedUsedTicketCount` reports checked-in General tickets retained as history; `cancelledUnusedTicketCount` reports old unused tickets disabled by replacement. A retry with the same reservation IDs and payment ID returns the same ticket IDs with HTTP `200`; if issuance was interrupted, retry resumes from the recorded replacement state.
+
+If no unused General matches remain, AHIBI returns `409 NO_REMAINING_MATCHES` without replacing either reservation. NUSC should reconcile or refund the captured upgrade payment. Other validation failures leave both passes unchanged; once a replacement enters `issuing`, retry the same operation rather than creating a second Premium hold.
+
 ### Release an unpaid hold
 
 `POST /reservations/{reservationId}/release`
@@ -188,7 +236,8 @@ The supplied attendee fields are used only while rendering this response. AHIBI 
 
 - `held`: inventory reserved until `expiresAt`.
 - `issuing`: NUSC payment ID has been accepted; retry confirm with the same payment ID or query status to complete/recover partial ticket writes. The original hold expiry no longer blocks an issuance already in progress.
-- `issued`: the same ten booking IDs are returned on every confirm/status retry.
+- `issued`: the same booking IDs are returned on every confirm/status retry; a replacement Premium reservation may contain fewer than ten tickets.
+- `replaced`: an issued General reservation superseded by a Premium upgrade. Its checked-in bookings remain as history; its unused tickets are cancelled and scanner validation rejects the old QRs.
 - `released` / `expired`: no tickets were issued. A newly paid order must be refunded or reconciled by NUSC rather than confirmed against this reservation.
 - No outbound webhook is used in v1. Confirm response plus signed status lookup is the recovery path.
 
