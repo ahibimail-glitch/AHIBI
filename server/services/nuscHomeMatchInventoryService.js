@@ -627,6 +627,106 @@ async function reacquirePartnerReplacementInventory({ orderId, paymentId, matchD
   });
 }
 
+async function beginPartnerMissingTicketRecovery({ orderId, oldReservationId, paymentId, matchIndices, matchDates, matches }) {
+  if (!orderId || !oldReservationId || !paymentId || !Array.isArray(matchIndices) ||
+      !Array.isArray(matchDates) || !Array.isArray(matches) || matchDates.length !== matches.length ||
+      new Set(matchIndices).size !== matchIndices.length ||
+      matchIndices.some((index) => !Number.isInteger(index) || index < 1 || index > 10) ||
+      matchDates.some((date) => !FIXTURE_DATES.includes(date)) ||
+      matches.some((match) => !matchDates.includes(match.matchDate))) {
+    throw new InventoryConflict('Premium recovery request is invalid.', 'INVALID_RECOVERY_REQUEST');
+  }
+
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === orderId);
+    if (!reservation || reservation.passId !== 'premium-season' || reservation.ticketType !== 'Premium Pass') {
+      throw new InventoryConflict('Premium reservation was not found.', 'RESERVATION_NOT_FOUND');
+    }
+    if (reservation.status !== 'issued' || reservation.replacesReservationId !== oldReservationId ||
+        reservation.paymentId !== paymentId) {
+      throw new InventoryConflict('Premium replacement does not match the paid issued reservation.', 'RECOVERY_RESERVATION_MISMATCH');
+    }
+    if ((state.partnerSeasonPassReservations || []).some((item) => item.reservationId !== orderId && item.paymentId === paymentId)) {
+      throw new InventoryConflict('This NUSC payment is already attached to another reservation.', 'PAYMENT_ALREADY_USED');
+    }
+    const existingIndices = (reservation.recoveryMatchIndices || []).map(Number);
+    if (reservation.recoveryStatus === 'issued') {
+      return { alreadyIssued: true, recoveryMatchIndices: existingIndices };
+    }
+    if (reservation.recoveryStatus === 'issuing' &&
+        (existingIndices.length !== matchIndices.length || existingIndices.some((value, index) => value !== matchIndices[index]))) {
+      throw new InventoryConflict('A different recovery is already in progress.', 'RECOVERY_CONFLICT');
+    }
+    if (reservation.recoveryStatus !== 'issuing') {
+      reservation.recoveryStatus = 'issuing';
+      reservation.recoveryMatchIndices = [...matchIndices];
+      reservation.recoveryBookingIds = [];
+    }
+
+    const recoveryHoldId = `nusc-recovery:${orderId}`;
+    const existingHold = (state.seasonPassOrders || []).find((item) => item.orderId === recoveryHoldId);
+    if (matchDates.length) {
+      for (const match of matches) {
+        const ticket = (match.ticketTypes || []).find((item) => item.name === 'Premium Pass');
+        if (!ticket) throw new InventoryConflict('Premium Pass is not configured for a recovery match.', 'TICKET_NOT_CONFIGURED');
+        const capacity = TICKET_CAPACITIES['Premium Pass'] ?? Number(ticket.quantity || 0);
+        const activeOrders = activeOrdersForDate(state, match.matchDate);
+        const otherSeasonOrders = activeSeasonPassOrdersForDate(state, match.matchDate)
+          .filter((item) => item.orderId !== recoveryHoldId);
+        const matchHeld = activeOrders.reduce((sum, item) => item.stockApplied ? sum : sum + (item.ticketLines || [])
+          .filter((line) => line.ticketType === 'Premium Pass')
+          .reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0), 0);
+        const seasonHeld = otherSeasonOrders
+          .filter((item) => item.ticketType === 'Premium Pass')
+          .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        if (capacity - Number(ticket.sold || 0) - matchHeld - seasonHeld < 1) {
+          throw new InventoryConflict(`Premium Pass inventory is unavailable for ${match.matchDate}.`, 'PREMIUM_INVENTORY_UNAVAILABLE');
+        }
+      }
+      const hold = existingHold || {
+        orderId: recoveryHoldId,
+        userId: reservation.memberReferenceHash.slice(0, 24),
+        ticketType: 'Premium Pass',
+        quantity: 1,
+        status: 'held',
+        createdAt: new Date(),
+      };
+      hold.matchDates = [...matchDates];
+      hold.expiresAt = new Date(Date.now() + HOLD_MINUTES * 60 * 1000);
+      hold.status = 'held';
+      if (!existingHold) state.seasonPassOrders.push(hold);
+    }
+    return { alreadyIssued: false, recoveryMatchIndices: [...reservation.recoveryMatchIndices] };
+  });
+}
+
+async function completePartnerMissingTicketRecovery(orderId, oldReservationId, recoveryBookingIds, allBookingIds, matchIndices, retainedUsedTicketCount, cancelledUnusedTicketCount) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === orderId);
+    const oldReservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === oldReservationId);
+    if (!reservation || !oldReservation || reservation.status !== 'issued' ||
+        reservation.replacesReservationId !== oldReservationId) {
+      throw new InventoryConflict('Premium recovery is not in progress.', 'RECOVERY_NOT_IN_PROGRESS');
+    }
+    const expected = (reservation.recoveryMatchIndices || []).map(Number);
+    if (expected.length !== matchIndices.length || expected.some((index, position) => index !== matchIndices[position]) ||
+        recoveryBookingIds.length !== expected.length) {
+      throw new InventoryConflict('Premium recovery ticket set is incomplete.', 'RECOVERY_TICKET_SET_INCOMPLETE');
+    }
+    if (reservation.recoveryStatus === 'issued') return reservation;
+    if (reservation.recoveryStatus !== 'issuing') throw new InventoryConflict('Premium recovery is not in progress.', 'RECOVERY_NOT_IN_PROGRESS');
+    const recoveryHoldId = `nusc-recovery:${orderId}`;
+    state.seasonPassOrders = (state.seasonPassOrders || []).filter((item) => item.orderId !== recoveryHoldId);
+    reservation.recoveryBookingIds = [...recoveryBookingIds];
+    reservation.bookingIds = [...allBookingIds];
+    reservation.replacementMatchIndices = [...new Set([...(reservation.replacementMatchIndices || []), ...matchIndices])].sort((a, b) => a - b);
+    reservation.replacementUsedTicketCount = retainedUsedTicketCount;
+    reservation.replacementCancelledTicketCount = cancelledUnusedTicketCount;
+    reservation.recoveryStatus = 'issued';
+    return reservation;
+  });
+}
+
 async function confirmSeasonPassOrder(orderId) {
   return mutateInventory((state) => {
     const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
@@ -984,6 +1084,8 @@ module.exports = {
   finalizeMultiMatchOrder,
   reserveSeasonPassOrder,
   reacquirePartnerReplacementInventory,
+  beginPartnerMissingTicketRecovery,
+  completePartnerMissingTicketRecovery,
   releaseSeasonPassOrder,
   releaseRefundedMatchOrder,
   reserveSeasonBox,

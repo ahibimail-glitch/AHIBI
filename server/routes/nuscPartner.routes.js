@@ -9,6 +9,7 @@ router.get('/catalog/season-passes', controller.getCatalog);
 router.post('/season-pass/reservations', controller.reserveSeasonPass);
 router.post('/reservations/:reservationId/confirm', controller.confirmAndIssue);
 router.post('/reservations/:reservationId/replace-general', controller.replaceGeneralWithPremium);
+router.post('/reservations/:reservationId/recover-missing-general-tickets', controller.recoverMissingGeneralTickets);
 router.post('/reservations/:reservationId/release', controller.releaseReservation);
 router.get('/reservations/:reservationId', controller.getReservation);
 router.get('/reservations/:reservationId/tickets/:bookingId', controller.getTicket);
