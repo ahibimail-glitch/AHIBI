@@ -45,7 +45,7 @@ const BookingSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: function() { return !this.nuscPartnerTicket?.memberReferenceHash; }
   },
   ticketType: {
     type: String,
@@ -80,6 +80,11 @@ const BookingSchema = new mongoose.Schema({
   paymentId: {
     type: String
   },
+  paymentProvider: {
+    type: String,
+    enum: ['razorpay', 'nusc-partner'],
+  },
+  externalPaymentId: { type: String },
   paymentTicketKey: {
     type: String,
   },
@@ -106,6 +111,13 @@ const BookingSchema = new mongoose.Schema({
     type: Number,
     min: 1,
     max: 10,
+  },
+  nuscPartnerTicket: {
+    partnerId: { type: String, enum: ['nusc'] },
+    memberReferenceHash: { type: String },
+    reservationId: { type: String },
+    partnerOrderId: { type: String },
+    ticketIndex: { type: Number, min: 1, max: 10 },
   },
   // QR code verification fields
   entryVerified: {
@@ -202,6 +214,11 @@ BookingSchema.index(
 BookingSchema.index(
   { nuscOrderId: 1, nuscTicketIndex: 1 },
   { unique: true, partialFilterExpression: { nuscOrderId: { $type: 'string' } } }
+);
+
+BookingSchema.index(
+  { 'nuscPartnerTicket.partnerId': 1, 'nuscPartnerTicket.partnerOrderId': 1, 'nuscPartnerTicket.ticketIndex': 1 },
+  { unique: true, partialFilterExpression: { 'nuscPartnerTicket.partnerOrderId': { $type: 'string' } } }
 );
 
 module.exports = mongoose.model('Booking', BookingSchema);

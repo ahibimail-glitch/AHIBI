@@ -17,6 +17,7 @@ const organizerRoutes = require('./routes/organizer.routes');
 const eventTeamRoutes = require('./routes/eventTeam.routes');
 const eventRoutes = require('./routes/event.routes');
 const nuscHomeMatchRoutes = require('./routes/nuscHomeMatch.routes');
+const nuscPartnerRoutes = require('./routes/nuscPartner.routes');
 const dailyEventRoutes = require('./routes/dailyEvent.routes');
 
 const uploadRoutes = require('./routes/upload.routes');
@@ -156,6 +157,8 @@ app.post('/api/donations/webhook', express.raw({ type: '*/*' }), (req, res, next
   donationController.handleDonationWebhook(req, res);
 });
 
+app.use('/api/nusc-partner/v1', express.raw({ type: 'application/json', limit: '64kb' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -187,6 +190,7 @@ app.use('/api/organizer', organizerRoutes);
 app.use('/api/event-team', eventTeamRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/nusc-home-matches', nuscHomeMatchRoutes);
+app.use('/api/nusc-partner/v1', nuscPartnerRoutes);
 app.use('/api/daily-events', dailyEventRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/qrs', qrRoutes);

@@ -30,9 +30,6 @@ async function getUserTicketCountForEvent({ eventId, userId }) {
 }
 
 // Debug environment variables
-console.log('Environment variables for Razorpay:');
-console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
-console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
 
 // Initialize Razorpay with error handling
 let razorpay;
@@ -47,8 +44,6 @@ try {
 }
 
 exports.createOrder = async (req, res) => {
-  console.log('RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
-  console.log('RAZORPAY_KEY_SECRET exists:', !!process.env.RAZORPAY_KEY_SECRET);
   try {
     const { currency, receipt, bookingDetails, coupon } = req.body;
     // NUSC home match orders must use the inventory-aware checkout flow.
@@ -186,7 +181,6 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-    console.log('Verifying payment signature with key secret:', !!process.env.RAZORPAY_KEY_SECRET);
     const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
     shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
     const digest = shasum.digest('hex');

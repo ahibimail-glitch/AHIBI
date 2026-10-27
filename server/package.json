@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "dev:nusc-test": "node scripts/devNuscTest.js",
+    "test:nusc-partner": "node scripts/testNuscPartnerApi.js",
     "seed": "node seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

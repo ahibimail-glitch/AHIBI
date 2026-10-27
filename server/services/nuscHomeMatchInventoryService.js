@@ -88,7 +88,7 @@ function clone(value) {
 async function ensureInventory() {
   await Inventory.updateOne(
     { key: INVENTORY_KEY },
-    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], seasonReservations: [] } },
+    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [] } },
     { upsert: true }
   );
   return Inventory.findOne({ key: INVENTORY_KEY }).lean();
@@ -113,6 +113,7 @@ async function mutateInventory(mutator) {
     const state = clone(current);
     state.generalZoneSales ||= [];
     state.seasonPassOrders ||= [];
+    state.partnerSeasonPassReservations ||= [];
     pruneExpiredHolds(state);
     const result = await mutator(state);
     const update = await Inventory.updateOne(
@@ -122,6 +123,7 @@ async function mutateInventory(mutator) {
           orders: state.orders,
           generalZoneSales: state.generalZoneSales,
           seasonPassOrders: state.seasonPassOrders,
+          partnerSeasonPassReservations: state.partnerSeasonPassReservations,
           seasonReservations: state.seasonReservations,
           updatedAt: new Date(),
         },
@@ -567,6 +569,89 @@ async function releaseSeasonPassOrder(orderId) {
   });
 }
 
+async function recordPartnerSeasonPassReservation(reservation) {
+  return mutateInventory((state) => {
+    const existing = (state.partnerSeasonPassReservations || []).find((item) =>
+      item.reservationId === reservation.reservationId || item.partnerOrderId === reservation.partnerOrderId
+    );
+    if (existing) {
+      const same = existing.reservationId === reservation.reservationId &&
+        existing.memberReferenceHash === reservation.memberReferenceHash &&
+        existing.passId === reservation.passId && existing.zone === reservation.zone;
+      if (!same) throw new InventoryConflict('This NUSC order already has a different pass reservation.', 'ORDER_CONFLICT');
+      return existing;
+    }
+    state.partnerSeasonPassReservations.push(reservation);
+    return reservation;
+  });
+}
+
+async function getPartnerSeasonPassReservation(reservationId) {
+  const state = await ensureInventory();
+  return (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId) || null;
+}
+
+async function beginPartnerSeasonPassIssuance(reservationId, paymentId) {
+  const result = await mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation) return { error: 'RESERVATION_NOT_FOUND' };
+    if (reservation.status === 'issued') {
+      if (reservation.paymentId !== paymentId) return { error: 'PAYMENT_CONFLICT' };
+      return { reservation, alreadyIssued: true };
+    }
+    if (reservation.paymentId && reservation.paymentId !== paymentId) return { error: 'PAYMENT_CONFLICT' };
+    const duplicatePayment = (state.partnerSeasonPassReservations || []).find((item) =>
+      item.reservationId !== reservationId && item.paymentId === paymentId
+    );
+    if (duplicatePayment) return { error: 'PAYMENT_ALREADY_USED' };
+    if (reservation.status !== 'held' && reservation.status !== 'issuing') return { error: 'RESERVATION_NOT_ACTIVE' };
+    if (reservation.status === 'held' && new Date(reservation.expiresAt) <= new Date()) {
+      reservation.status = 'expired';
+      state.seasonPassOrders = (state.seasonPassOrders || []).filter((item) => item.orderId !== reservationId);
+      return { error: 'HOLD_EXPIRED' };
+    }
+    const hold = (state.seasonPassOrders || []).find((item) => item.orderId === reservationId);
+    if (!hold) return { error: 'INVENTORY_HOLD_MISSING' };
+    reservation.status = 'issuing';
+    reservation.paymentId = paymentId;
+    hold.status = 'confirmed';
+    return { reservation };
+  });
+  if (result.error) {
+    const error = new Error(result.error);
+    error.code = result.error;
+    throw error;
+  }
+  return result;
+}
+
+async function completePartnerSeasonPassIssuance(reservationId, bookingIds) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation) throw new InventoryConflict('NUSC pass reservation was not found.', 'RESERVATION_NOT_FOUND');
+    if (reservation.status === 'issued') return reservation;
+    if (reservation.status !== 'issuing') throw new InventoryConflict('NUSC pass reservation is not being issued.', 'RESERVATION_NOT_ACTIVE');
+    reservation.bookingIds = bookingIds;
+    reservation.status = 'issued';
+    reservation.issuedAt = new Date();
+    state.seasonPassOrders = (state.seasonPassOrders || []).filter((item) => item.orderId !== reservationId);
+    return reservation;
+  });
+}
+
+async function releasePartnerSeasonPassReservation(reservationId) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation) return null;
+    if (reservation.status === 'issued' || reservation.status === 'issuing') {
+      throw new InventoryConflict('A pass that is issuing or issued cannot be released.', 'RESERVATION_NOT_RELEASABLE');
+    }
+    if (reservation.status === 'held') reservation.status = 'released';
+    state.seasonPassOrders = (state.seasonPassOrders || []).filter((item) => item.orderId !== reservationId);
+    return reservation;
+  });
+}
+
 async function markSeasonPassStockApplied(orderId) {
   return mutateInventory((state) => {
     const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
@@ -821,4 +906,9 @@ module.exports = {
   releaseSeasonPassOrder,
   releaseRefundedMatchOrder,
   reserveSeasonBox,
+  recordPartnerSeasonPassReservation,
+  getPartnerSeasonPassReservation,
+  beginPartnerSeasonPassIssuance,
+  completePartnerSeasonPassIssuance,
+  releasePartnerSeasonPassReservation,
 };

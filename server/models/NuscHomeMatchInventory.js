@@ -44,6 +44,23 @@ const SeasonPassOrderHoldSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 }, { _id: false });
 
+const PartnerSeasonPassReservationSchema = new mongoose.Schema({
+  reservationId: { type: String, required: true },
+  partnerOrderId: { type: String, required: true },
+  memberReferenceHash: { type: String, required: true },
+  passId: { type: String, enum: ['general-season', 'premium-season'], required: true },
+  ticketType: { type: String, enum: ['General Pass', 'Premium Pass'], required: true },
+  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'], default: null },
+  matchDates: { type: [String], required: true },
+  eventIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],
+  status: { type: String, enum: ['held', 'issuing', 'issued', 'released', 'expired'], default: 'held' },
+  expiresAt: { type: Date, required: true },
+  paymentId: { type: String, default: null },
+  bookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
+  createdAt: { type: Date, default: Date.now },
+  issuedAt: { type: Date, default: null },
+}, { _id: false });
+
 const SeasonReservationSchema = new mongoose.Schema({
   bookingReference: { type: String, required: true, trim: true },
   boxNumber: { type: Number, required: true, min: 1, max: 4 },
@@ -59,6 +76,7 @@ const NuscHomeMatchInventorySchema = new mongoose.Schema({
   orders: { type: [OrderHoldSchema], default: [] },
   generalZoneSales: { type: [GeneralZoneSaleSchema], default: [] },
   seasonPassOrders: { type: [SeasonPassOrderHoldSchema], default: [] },
+  partnerSeasonPassReservations: { type: [PartnerSeasonPassReservationSchema], default: [] },
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
 }, { timestamps: true });
 
