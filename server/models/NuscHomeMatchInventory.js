@@ -76,6 +76,9 @@ const PartnerSeasonPassReservationSchema = new mongoose.Schema({
   replacementMatchIndices: { type: [Number], default: [] },
   replacementUsedTicketCount: { type: Number, min: 0, max: 10, default: null },
   replacementCancelledTicketCount: { type: Number, min: 0, max: 10, default: null },
+  recoveryStatus: { type: String, enum: ['none', 'issuing', 'issued'], default: 'none' },
+  recoveryMatchIndices: { type: [Number], default: [] },
+  recoveryBookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
   createdAt: { type: Date, default: Date.now },
   issuedAt: { type: Date, default: null },
 }, { _id: false });

@@ -8,6 +8,7 @@ const {
   ReplacementError,
   beginPartnerSeasonPassReplacement,
   completePartnerSeasonPassReplacement,
+  recoverMissingGeneralReplacementTickets,
 } = require('../services/nuscSeasonPassReplacementService');
 const {
   createOfficialTicketPdfBuffer,
@@ -347,6 +348,52 @@ async function replaceGeneralWithPremium(req, res) {
   }
 }
 
+async function recoverMissingGeneralTickets(req, res) {
+  const premiumReservationId = String(req.params.reservationId || '');
+  const oldReservationId = String(req.body?.oldReservationId || '').trim();
+  const paymentId = String(req.body?.paymentId || '').trim();
+  if (
+    !/^nsp_[a-f0-9]{40}$/.test(premiumReservationId) ||
+    !/^nsp_[a-f0-9]{40}$/.test(oldReservationId) ||
+    oldReservationId === premiumReservationId ||
+    !/^[A-Za-z0-9._:-]{6,128}$/.test(paymentId) ||
+    Object.keys(req.body || {}).some((key) => !['oldReservationId', 'paymentId'].includes(key))
+  ) {
+    return res.status(400).json({ success: false, code: 'INVALID_RECOVERY_REQUEST' });
+  }
+  try {
+    const recovery = await recoverMissingGeneralReplacementTickets({ premiumReservationId, oldReservationId, paymentId });
+    const reservation = recovery.reservation;
+    const bookings = await Booking.find({
+      _id: { $in: reservation.bookingIds },
+      'nuscPartnerTicket.partnerId': PARTNER_ID,
+      'nuscPartnerTicket.reservationId': premiumReservationId,
+    }).sort({ nuscSeasonMatchIndex: 1 }).lean();
+    if (bookings.length !== reservation.bookingIds.length || bookings.length !== 10) {
+      return res.status(500).json({ success: false, code: 'RECOVERY_PENDING' });
+    }
+    return res.status(recovery.alreadyIssued ? 200 : 201).json({
+      success: true,
+      recovery: {
+        oldReservationId,
+        premiumReservationId,
+        status: 'issued',
+        issuedTicketCount: bookings.length,
+        recoveredTicketCount: 2,
+        recoveredMatchIndices: [1, 2],
+        retainedUsedTicketCount: recovery.retainedUsedTicketCount,
+      },
+      tickets: shapeTickets(reservation, bookings).filter((ticket) => ticket.ticketId),
+    });
+  } catch (error) {
+    if (error instanceof ReplacementError) {
+      return res.status(error.status).json({ success: false, code: error.code });
+    }
+    console.error('[NUSC partner API] Missing ticket recovery failed:', error.message);
+    return res.status(500).json({ success: false, code: 'RECOVERY_PENDING' });
+  }
+}
+
 async function releaseReservation(req, res) {
   try {
     const reservation = await inventory.releasePartnerSeasonPassReservation(String(req.params.reservationId || ''));
@@ -372,7 +419,7 @@ async function getReservation(req, res) {
       'nuscPartnerTicket.partnerOrderId': reservation.partnerOrderId,
     }).sort({ 'nuscPartnerTicket.ticketIndex': 1 }).lean();
     const expectedTicketCount = reservation.replacesReservationId
-      ? (reservation.replacementMatchIndices || []).length
+      ? (reservation.recoveryStatus === 'issued' ? 10 : (reservation.replacementMatchIndices || []).length)
       : inventory.FIXTURE_DATES.length;
     if (bookings.length !== expectedTicketCount) {
       return res.status(500).json({ success: false, code: 'ISSUANCE_PENDING' });
@@ -519,4 +566,4 @@ async function postTicketPdf(req, res) {
   return serveTicketPdf(req, res, { requireAttendee: true });
 }
 
-module.exports = { confirmAndIssue, getCatalog, getReservation, getTicket, getTicketPdf, postTicketPdf, releaseReservation, replaceGeneralWithPremium, reserveSeasonPass, validatePdfAttendee };
+module.exports = { confirmAndIssue, getCatalog, getReservation, getTicket, getTicketPdf, postTicketPdf, recoverMissingGeneralTickets, releaseReservation, replaceGeneralWithPremium, reserveSeasonPass, validatePdfAttendee };

@@ -178,6 +178,53 @@ The `tickets` array contains only newly issued Premium tickets, and its length e
 
 If no unused General matches remain, AHIBI returns `409 NO_REMAINING_MATCHES` without replacing either reservation. NUSC should reconcile or refund the captured upgrade payment. Other validation failures leave both passes unchanged; once a replacement enters `issuing`, retry the same operation rather than creating a second Premium hold.
 
+### Recover missing Premium tickets after a completed replacement
+
+For a one-time recovery where an already-issued Premium replacement is missing the first two fixtures, NUSC may call:
+
+`POST /reservations/{premiumReservationId}/recover-missing-general-tickets`
+
+Sign the exact JSON bytes with the normal partner HMAC headers:
+
+```json
+{
+  "oldReservationId": "nsp_<replaced-general-reservation-id>",
+  "paymentId": "<same-nusc-upgrade-payment-id>"
+}
+```
+
+This operation is limited to the paid, issued Premium reservation that already replaced the supplied General reservation. AHIBI verifies the member hash, pass types, fixture mapping, replacement links, and existing payment ID. It will proceed only if the 14 November and 30 November General tickets have no valid NUSC Scan record for their exact ticket and event, and both old ticket records are still in a replaceable state. The `entryVerified` flag alone is not check-in evidence. If either fixture has a matching Scan, the endpoint returns `409 TARGET_MATCH_ALREADY_CHECKED_IN` and does not issue either recovery ticket. Contradictory ticket states return `409 TARGET_TICKET_STATE_REVIEW_REQUIRED`.
+
+AHIBI reserves Premium inventory for both fixtures before creating tickets, then issues only match indices 1 and 2. It keeps the existing eight Premium booking IDs and any scans on them. It does not create an AHIBI payment or charge. Use the same Premium reservation ID, General reservation ID, and NUSC payment ID for retries; retries return the same ten booking IDs. A sold-out fixture returns `409 PREMIUM_INVENTORY_UNAVAILABLE` before changing the General tickets. Status lookup reports all ten Premium tickets after recovery.
+
+Success returns HTTP `201` on first completion and `200` on a retry:
+
+```json
+{
+  "success": true,
+  "recovery": {
+    "oldReservationId": "nsp_<old-id>",
+    "premiumReservationId": "nsp_<premium-id>",
+    "status": "issued",
+    "issuedTicketCount": 10,
+    "recoveredTicketCount": 2,
+    "recoveredMatchIndices": [1, 2],
+    "retainedUsedTicketCount": 0
+  },
+  "tickets": [
+    {
+      "match": { "matchIndex": 1, "eventId": "<AHIBI_EVENT_ID>", "matchDate": "2026-11-14", "opponent": "Gokulam Kerala FC" },
+      "ticketId": "<AHIBI_BOOKING_ID>",
+      "status": "confirmed",
+      "ticketType": "Premium Pass",
+      "ticketAccessPath": "/api/nusc-partner/v1/reservations/<premium-id>/tickets/<booking-id>"
+    }
+  ]
+}
+```
+
+The `tickets` array contains all ten Premium records, including the existing eight, in fixture order. `retainedUsedTicketCount` counts General tickets with a matching Scan record for their own event; QR payloads are omitted.
+
 ### Release an unpaid hold
 
 `POST /reservations/{reservationId}/release`

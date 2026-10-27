@@ -9,6 +9,7 @@ const Booking = require('../models/Booking');
 const Scan = require('../models/Scan');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const NuscPartnerRequest = require('../models/NuscPartnerRequest');
+const { createSeasonPassTicketRecords } = require('../services/nuscSeasonPassBookingService');
 const usedRequestIds = [];
 
 function fail(message) {
@@ -409,6 +410,169 @@ async function run() {
     );
     const fullRecoveryStatus = await callApi(`/reservations/${encodeURIComponent(fullRecoveryPremiumId)}`);
     assert(fullRecoveryStatus.status === 200 && fullRecoveryStatus.json.tickets?.length === 10, 'Recovered full pass status must list all ten tickets.');
+    passed += 1;
+
+    const missingRecoveryMember = `member-missing-recovery-${testRun}`;
+    const missingRecoveryGeneral = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-missing-recovery-general`, memberReference: missingRecoveryMember,
+      passId: 'general-season', zone: selectedZone,
+    } });
+    assert(missingRecoveryGeneral.status === 201, 'Missing-ticket recovery General fixture should succeed.');
+    trackedReservations.push(missingRecoveryGeneral.json.reservation.reservationId);
+    const missingRecoveryGeneralId = missingRecoveryGeneral.json.reservation.reservationId;
+    const missingRecoveryGeneralIssued = await callApi(`/reservations/${encodeURIComponent(missingRecoveryGeneralId)}/confirm`, {
+      method: 'POST', body: { paymentId: `${prefix}-missing-recovery-general-payment` },
+    });
+    assert(missingRecoveryGeneralIssued.status === 201, 'Missing-ticket recovery General pass should issue ten tickets.');
+    const missingRecoveryPremium = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-missing-recovery-premium`, memberReference: missingRecoveryMember, passId: 'premium-season',
+    } });
+    assert(missingRecoveryPremium.status === 201, 'Missing-ticket recovery Premium reservation should succeed.');
+    trackedReservations.push(missingRecoveryPremium.json.reservation.reservationId);
+    const missingRecoveryPremiumId = missingRecoveryPremium.json.reservation.reservationId;
+    const missingRecoveryPaymentId = `${prefix}-missing-recovery-upgrade-payment`;
+    const missingRecoverySetup = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const missingRecoveryPremiumSetup = missingRecoverySetup.partnerSeasonPassReservations.find((item) => item.reservationId === missingRecoveryPremiumId);
+    const generalBookings = await Booking.find({ _id: { $in: missingRecoveryGeneralIssued.json.tickets.map((ticket) => ticket.ticketId) } });
+    const generalByIndex = new Map(generalBookings.map((booking) => [Number(booking.nuscSeasonMatchIndex), booking]));
+    await Booking.updateMany({ _id: { $in: [generalByIndex.get(1)._id, generalByIndex.get(2)._id] } }, {
+      $set: { entryVerified: true, entryVerifiedAt: new Date() },
+    });
+    await Booking.updateMany({ _id: { $in: [...generalByIndex.entries()].filter(([index]) => index > 2).map(([, booking]) => booking._id) } }, {
+      $set: { status: 'cancelled', 'nuscPartnerTicket.replacedByReservationId': missingRecoveryPremiumId },
+    });
+
+    const partialPremiumTickets = await createSeasonPassTicketRecords({
+      orderId: missingRecoveryPremium.json.reservation.partnerOrderId,
+      fixtures: catalog.json.matches.filter((match) => match.matchIndex >= 3).map((match) => ({
+        eventId: match.eventId, matchDate: match.matchDate, matchIndex: match.matchIndex, ticketType: 'Premium Pass',
+      })),
+      passId: 'premium-season', quantity: 1, paymentId: missingRecoveryPaymentId,
+      paymentProvider: 'nusc-partner', memberReferenceHash: missingRecoveryPremiumSetup.memberReferenceHash,
+      reservationId: missingRecoveryPremiumId, partnerId: 'nusc',
+    });
+    const preservedPremiumTicket = partialPremiumTickets.bookings.find((booking) => booking.nuscSeasonMatchIndex === 3);
+    preservedPremiumTicket.status = 'checked-in';
+    preservedPremiumTicket.entryVerified = true;
+    preservedPremiumTicket.entryVerifiedAt = new Date();
+    await preservedPremiumTicket.save();
+    const preservedPremiumScan = await Scan.create({
+      ticket: preservedPremiumTicket._id, event: preservedPremiumTicket.event, partnerId: 'nusc',
+      requestId: `${prefix}-preserved-premium-scan`,
+    });
+    testScanBookingIds.push(preservedPremiumTicket._id);
+    const missingRecoveryInventory = await Inventory.findOne({ key: 'nusc-il-2026-27' });
+    const generalPassRecord = missingRecoveryInventory.partnerSeasonPassReservations.find((item) => item.reservationId === missingRecoveryGeneralId);
+    const missingRecoveryPremiumRecord = missingRecoveryInventory.partnerSeasonPassReservations.find((item) => item.reservationId === missingRecoveryPremiumId);
+    generalPassRecord.status = 'replaced';
+    generalPassRecord.replacedByReservationId = missingRecoveryPremiumId;
+    missingRecoveryPremiumRecord.status = 'issued';
+    missingRecoveryPremiumRecord.paymentId = missingRecoveryPaymentId;
+    missingRecoveryPremiumRecord.replacesReservationId = missingRecoveryGeneralId;
+    missingRecoveryPremiumRecord.replacementMatchIndices = [3, 4, 5, 6, 7, 8, 9, 10];
+    missingRecoveryPremiumRecord.replacementUsedTicketCount = 2;
+    missingRecoveryPremiumRecord.replacementCancelledTicketCount = 8;
+    missingRecoveryPremiumRecord.bookingIds = partialPremiumTickets.bookingIds;
+    missingRecoveryInventory.seasonPassOrders = missingRecoveryInventory.seasonPassOrders.filter((item) => item.orderId !== missingRecoveryPremiumId);
+    await missingRecoveryInventory.save();
+    await Inventory.updateOne(
+      { key: 'nusc-il-2026-27', 'partnerSeasonPassReservations.reservationId': missingRecoveryPremiumId },
+      { $unset: { 'partnerSeasonPassReservations.$.recoveryStatus': 1 } },
+    );
+
+    const recoverPath = `/reservations/${encodeURIComponent(missingRecoveryPremiumId)}/recover-missing-general-tickets`;
+    const recoveryBody = { oldReservationId: missingRecoveryGeneralId, paymentId: missingRecoveryPaymentId };
+    const invalidRecovery = await callApi(recoverPath, { method: 'POST', body: recoveryBody, invalidSignature: true });
+    const beforeInvalidRecovery = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const untouchedPremium = beforeInvalidRecovery.partnerSeasonPassReservations.find((item) => item.reservationId === missingRecoveryPremiumId);
+    assert(invalidRecovery.status === 401 && untouchedPremium.recoveryStatus !== 'issuing' && untouchedPremium.bookingIds.length === 8,
+      'Invalid recovery signatures must not reserve inventory or issue tickets.');
+
+    const [missingRecovery, missingRecoveryRetry] = await Promise.all([
+      callApi(recoverPath, { method: 'POST', body: recoveryBody }),
+      callApi(recoverPath, { method: 'POST', body: recoveryBody }),
+    ]);
+    const recoveredIds = missingRecovery.json.tickets?.map((ticket) => ticket.ticketId);
+    assert(
+      [missingRecovery, missingRecoveryRetry].every((result) => [200, 201].includes(result.status)) &&
+      missingRecovery.json.recovery?.issuedTicketCount === 10 &&
+      missingRecovery.json.recovery?.recoveredTicketCount === 2 &&
+      missingRecovery.json.recovery?.retainedUsedTicketCount === 0 &&
+      missingRecovery.json.tickets?.length === 10 &&
+      missingRecovery.json.tickets.find((ticket) => ticket.match.matchIndex === 1)?.match.opponent === 'Gokulam Kerala FC' &&
+      missingRecovery.json.tickets.find((ticket) => ticket.match.matchIndex === 2)?.match.opponent === 'Dempo SC' &&
+      JSON.stringify(recoveredIds) === JSON.stringify(missingRecoveryRetry.json.tickets?.map((ticket) => ticket.ticketId)),
+      'Concurrent recovery retries must issue exactly the missing two fixtures and return the same ten Premium tickets.',
+    );
+    const recoveredPremium = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const recoveredPremiumRecord = recoveredPremium.partnerSeasonPassReservations.find((item) => item.reservationId === missingRecoveryPremiumId);
+    const recoveredPremiumBookings = await Booking.find({ _id: { $in: recoveredPremiumRecord.bookingIds } }).lean();
+    const oldTargetsAfterRecovery = await Booking.find({ _id: { $in: [generalByIndex.get(1)._id, generalByIndex.get(2)._id] } }).lean();
+    assert(
+      recoveredPremiumBookings.length === 10 && recoveredPremiumBookings.every((booking) => booking.paymentProvider === 'nusc-partner' && !booking.razorpayOrderId && !booking.razorpayPaymentId) &&
+      recoveredPremiumBookings.filter((booking) => booking.nuscSeasonMatchIndex >= 3).every((booking) => partialPremiumTickets.bookingIds.some((id) => String(id) === String(booking._id))) &&
+      oldTargetsAfterRecovery.every((booking) => booking.status === 'cancelled') &&
+      await Scan.countDocuments({ _id: preservedPremiumScan._id, ticket: preservedPremiumTicket._id, event: preservedPremiumTicket.event }) === 1,
+      'Recovery must preserve all eight existing Premium booking IDs and scan history, cancel the two old unused General tickets, and create no AHIBI Razorpay order.',
+    );
+    const missingRecoveryStatus = await callApi(`/reservations/${encodeURIComponent(missingRecoveryPremiumId)}`);
+    assert(missingRecoveryStatus.status === 200 && missingRecoveryStatus.json.tickets?.length === 10,
+      'Status lookup must report all ten Premium tickets after missing-ticket recovery.');
+    passed += 1;
+
+    const scannedTargetMember = `member-scanned-target-${testRun}`;
+    const scannedTargetGeneral = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-scanned-target-general`, memberReference: scannedTargetMember,
+      passId: 'general-season', zone: selectedZone,
+    } });
+    trackedReservations.push(scannedTargetGeneral.json.reservation.reservationId);
+    const scannedTargetGeneralId = scannedTargetGeneral.json.reservation.reservationId;
+    const scannedTargetIssued = await callApi(`/reservations/${encodeURIComponent(scannedTargetGeneralId)}/confirm`, {
+      method: 'POST', body: { paymentId: `${prefix}-scanned-target-general-payment` },
+    });
+    const scannedTargetPremium = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-scanned-target-premium`, memberReference: scannedTargetMember, passId: 'premium-season',
+    } });
+    trackedReservations.push(scannedTargetPremium.json.reservation.reservationId);
+    const scannedTargetPremiumId = scannedTargetPremium.json.reservation.reservationId;
+    const scannedTargetPayment = `${prefix}-scanned-target-upgrade-payment`;
+    const scannedTargetSetup = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const scannedTargetPremiumSetup = scannedTargetSetup.partnerSeasonPassReservations.find((item) => item.reservationId === scannedTargetPremiumId);
+    const scannedTargetGeneralBookings = await Booking.find({ _id: { $in: scannedTargetIssued.json.tickets.map((ticket) => ticket.ticketId) } });
+    const scannedTarget = scannedTargetGeneralBookings.find((booking) => booking.nuscSeasonMatchIndex === 1);
+    await Scan.create({ ticket: scannedTarget._id, event: scannedTarget.event, partnerId: 'nusc', requestId: `${prefix}-scanned-target` });
+    testScanBookingIds.push(scannedTarget._id);
+    const scannedTargetPremiumBookings = await createSeasonPassTicketRecords({
+      orderId: scannedTargetPremium.json.reservation.partnerOrderId,
+      fixtures: catalog.json.matches.filter((match) => match.matchIndex >= 3).map((match) => ({
+        eventId: match.eventId, matchDate: match.matchDate, matchIndex: match.matchIndex, ticketType: 'Premium Pass',
+      })),
+      passId: 'premium-season', quantity: 1, paymentId: scannedTargetPayment, paymentProvider: 'nusc-partner',
+      memberReferenceHash: scannedTargetPremiumSetup.memberReferenceHash,
+      reservationId: scannedTargetPremiumId, partnerId: 'nusc',
+    });
+    const scannedTargetInventory = await Inventory.findOne({ key: 'nusc-il-2026-27' });
+    const scannedGeneralRecord = scannedTargetInventory.partnerSeasonPassReservations.find((item) => item.reservationId === scannedTargetGeneralId);
+    const scannedPremiumRecord = scannedTargetInventory.partnerSeasonPassReservations.find((item) => item.reservationId === scannedTargetPremiumId);
+    scannedGeneralRecord.status = 'replaced';
+    scannedGeneralRecord.replacedByReservationId = scannedTargetPremiumId;
+    scannedPremiumRecord.status = 'issued';
+    scannedPremiumRecord.paymentId = scannedTargetPayment;
+    scannedPremiumRecord.replacesReservationId = scannedTargetGeneralId;
+    scannedPremiumRecord.replacementMatchIndices = [3, 4, 5, 6, 7, 8, 9, 10];
+    scannedPremiumRecord.replacementUsedTicketCount = 2;
+    scannedPremiumRecord.replacementCancelledTicketCount = 8;
+    scannedPremiumRecord.bookingIds = scannedTargetPremiumBookings.bookingIds;
+    scannedTargetInventory.seasonPassOrders = scannedTargetInventory.seasonPassOrders.filter((item) => item.orderId !== scannedTargetPremiumId);
+    await scannedTargetInventory.save();
+    const scannedTargetResponse = await callApi(`/reservations/${encodeURIComponent(scannedTargetPremiumId)}/recover-missing-general-tickets`, {
+      method: 'POST', body: { oldReservationId: scannedTargetGeneralId, paymentId: scannedTargetPayment },
+    });
+    const afterScannedTarget = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const scannedTargetRecordAfter = afterScannedTarget.partnerSeasonPassReservations.find((item) => item.reservationId === scannedTargetPremiumId);
+    assert(scannedTargetResponse.status === 409 && scannedTargetResponse.json.code === 'TARGET_MATCH_ALREADY_CHECKED_IN' &&
+      scannedTargetRecordAfter.recoveryStatus !== 'issuing' && scannedTargetRecordAfter.bookingIds.length === 8,
+      'Recovery must refuse both missing tickets if either target fixture has a valid event-scoped Scan record.');
     passed += 1;
 
     const soldOutRecoveryMember = `member-sold-out-recovery-${testRun}`;
