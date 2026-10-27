@@ -547,6 +547,86 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, z
   });
 }
 
+async function reacquirePartnerReplacementInventory({ orderId, paymentId, matchDates, matches }) {
+  if (!orderId || !paymentId || !Array.isArray(matchDates) || !matchDates.length ||
+      new Set(matchDates).size !== matchDates.length ||
+      matchDates.some((date) => !FIXTURE_DATES.includes(date)) ||
+      !Array.isArray(matches) || matches.length !== matchDates.length ||
+      matches.some((match) => !matchDates.includes(match.matchDate))) {
+    throw new InventoryConflict('Premium replacement inventory request is invalid.', 'INVALID_REPLACEMENT_INVENTORY');
+  }
+
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === orderId);
+    if (!reservation || reservation.passId !== 'premium-season' || reservation.ticketType !== 'Premium Pass') {
+      throw new InventoryConflict('Premium replacement reservation was not found.', 'RESERVATION_NOT_FOUND');
+    }
+    if (reservation.paymentId && reservation.paymentId !== paymentId) {
+      throw new InventoryConflict('This Premium reservation is already tied to another payment.', 'PAYMENT_CONFLICT');
+    }
+    if (['issuing', 'issued'].includes(reservation.status) &&
+        reservation.replacesReservationId && reservation.paymentId === paymentId) {
+      return { alreadyReplacing: true, matchDates: reservation.replacementMatchIndices.map((index) => reservation.matchDates[index - 1]) };
+    }
+    if (!['held', 'expired'].includes(reservation.status)) {
+      throw new InventoryConflict('Premium replacement reservation is no longer available.', 'RESERVATION_NOT_ACTIVE');
+    }
+    if ((state.partnerSeasonPassReservations || []).some((item) => (
+      item.reservationId !== orderId && item.paymentId === paymentId
+    ))) {
+      throw new InventoryConflict('This payment has already been used for another season pass.', 'PAYMENT_ALREADY_USED');
+    }
+
+    const existing = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
+    if (existing && (
+      existing.status !== 'held' || existing.ticketType !== 'Premium Pass' ||
+      Number(existing.quantity) !== 1 || String(existing.userId) !== String(reservation.memberReferenceHash.slice(0, 24))
+    )) {
+      throw new InventoryConflict('Premium replacement hold conflicts with the reservation.', 'ORDER_CONFLICT');
+    }
+
+    for (const match of matches) {
+      const ticket = (match.ticketTypes || []).find((item) => item.name === 'Premium Pass');
+      if (!ticket) throw new InventoryConflict('Premium Pass is not configured for every remaining match.', 'TICKET_NOT_CONFIGURED');
+      const capacity = TICKET_CAPACITIES['Premium Pass'] ?? Number(ticket.quantity || 0);
+      const activeOrders = activeOrdersForDate(state, match.matchDate);
+      const activeSeasonOrders = activeSeasonPassOrdersForDate(state, match.matchDate)
+        .filter((item) => item.orderId !== orderId);
+      const matchHeld = activeOrders.reduce((sum, item) => item.stockApplied ? sum : sum + (item.ticketLines || [])
+        .filter((line) => line.ticketType === 'Premium Pass')
+        .reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0), 0);
+      const seasonHeld = activeSeasonOrders
+        .filter((item) => item.ticketType === 'Premium Pass')
+        .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+      const available = Math.max(0, capacity - Number(ticket.sold || 0) - matchHeld - seasonHeld);
+      if (available < 1) {
+        throw new InventoryConflict(`Premium Pass inventory is unavailable for ${match.matchDate}.`, 'PREMIUM_INVENTORY_UNAVAILABLE');
+      }
+    }
+
+    const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60 * 1000);
+    if (existing) {
+      existing.matchDates = [...matchDates];
+      existing.expiresAt = expiresAt;
+    } else {
+      state.seasonPassOrders.push({
+        orderId,
+        userId: reservation.memberReferenceHash.slice(0, 24),
+        ticketType: 'Premium Pass',
+        quantity: 1,
+        matchDates: [...matchDates],
+        status: 'held',
+        expiresAt,
+        createdAt: new Date(),
+      });
+    }
+    reservation.status = 'held';
+    reservation.expiresAt = expiresAt;
+    reservation.paymentId = paymentId;
+    return { expiresAt, matchDates: [...matchDates] };
+  });
+}
+
 async function confirmSeasonPassOrder(orderId) {
   return mutateInventory((state) => {
     const order = (state.seasonPassOrders || []).find((item) => item.orderId === orderId);
@@ -903,6 +983,7 @@ module.exports = {
   releaseMultiMatchOrder,
   finalizeMultiMatchOrder,
   reserveSeasonPassOrder,
+  reacquirePartnerReplacementInventory,
   releaseSeasonPassOrder,
   releaseRefundedMatchOrder,
   reserveSeasonBox,

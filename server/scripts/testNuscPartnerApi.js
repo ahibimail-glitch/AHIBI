@@ -278,15 +278,42 @@ async function run() {
     const premiumReservationId = upgradePremiumHold.json.reservation.reservationId;
     const replacementPath = `/reservations/${encodeURIComponent(premiumReservationId)}/replace-general`;
     const replacementBody = { oldReservationId: upgradeOldReservationId, paymentId: `${prefix}-upgrade-payment` };
-    const replacement = await callApi(replacementPath, { method: 'POST', body: replacementBody });
+    await Inventory.updateOne(
+      { key: 'nusc-il-2026-27', 'partnerSeasonPassReservations.reservationId': premiumReservationId },
+      { $set: {
+        'partnerSeasonPassReservations.$.expiresAt': new Date(Date.now() - 1000),
+        'seasonPassOrders.$[hold].expiresAt': new Date(Date.now() - 1000),
+      } },
+      { arrayFilters: [{ 'hold.orderId': premiumReservationId }] },
+    );
+    const invalidExpiredReplacement = await callApi(replacementPath, {
+      method: 'POST', body: replacementBody, invalidSignature: true,
+    });
+    const beforeExpiredReplacement = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const beforeExpiredGeneral = beforeExpiredReplacement.partnerSeasonPassReservations.find((item) => item.reservationId === upgradeOldReservationId);
+    const beforeExpiredPremium = beforeExpiredReplacement.partnerSeasonPassReservations.find((item) => item.reservationId === premiumReservationId);
+    const beforeExpiredGeneralBookings = await Booking.find({ _id: { $in: beforeExpiredGeneral.bookingIds } }).select('_id status').lean();
     assert(
-      replacement.status === 201 &&
+      invalidExpiredReplacement.status === 401 && beforeExpiredGeneral.status === 'issued' &&
+      beforeExpiredPremium.paymentId == null &&
+      beforeExpiredGeneralBookings.filter((booking) => booking.status === 'confirmed').length === 9,
+      'An invalid signature must not recover inventory or mutate the issued General pass.',
+    );
+    const [replacement, concurrentReplacement] = await Promise.all([
+      callApi(replacementPath, { method: 'POST', body: replacementBody }),
+      callApi(replacementPath, { method: 'POST', body: replacementBody }),
+    ]);
+    assert([replacement.status, concurrentReplacement.status].some((status) => status === 201), 'One concurrent expired-hold recovery must perform the replacement.');
+    assert(
+      [replacement, concurrentReplacement].every((result) => [200, 201].includes(result.status)) &&
       replacement.json.replacement?.issuedTicketCount === 9 &&
+      concurrentReplacement.json.replacement?.issuedTicketCount === 9 &&
       replacement.json.replacement?.retainedUsedTicketCount === 1 &&
       replacement.json.replacement?.cancelledUnusedTicketCount === 9 &&
+      JSON.stringify(replacement.json.tickets.map((ticket) => ticket.ticketId)) === JSON.stringify(concurrentReplacement.json.tickets.map((ticket) => ticket.ticketId)) &&
       replacement.json.tickets?.length === 9 &&
       !replacement.json.tickets.some((ticket) => ticket.match.matchIndex === 1),
-      'Replacement must issue only the nine unused matches and report the retained checked-in ticket.',
+      'Expired-hold recovery must issue only nine unused matches; concurrent retries must return the same Premium tickets.',
     );
     const replacementRetry = await callApi(replacementPath, { method: 'POST', body: replacementBody });
     assert(
@@ -307,6 +334,14 @@ async function run() {
       oldPassBookingsAfterUpgrade.filter((booking) => booking.nuscSeasonMatchIndex !== 1).every((booking) => booking.status === 'cancelled') &&
       await Scan.countDocuments({ ticket: usedGeneralTicket._id, requestId: usedScan.requestId }) === 1,
       'Replacement must preserve the used ticket and scan history while cancelling every unused old ticket.',
+    );
+    const replacementBookings = await Booking.find({ _id: { $in: premiumPassRecord.bookingIds } })
+      .select('_id paymentProvider razorpayOrderId razorpayPaymentId').lean();
+    assert(
+      replacementBookings.length === 9 && replacementBookings.every((booking) => (
+        booking.paymentProvider === 'nusc-partner' && !booking.razorpayOrderId && !booking.razorpayPaymentId
+      )),
+      'Expired-hold recovery must issue tickets without creating an AHIBI Razorpay payment order.',
     );
 
     const scannerOrigin = new URL(base).origin;
@@ -332,6 +367,94 @@ async function run() {
       replacementStatus.json.tickets?.length === 9,
       'Status lookup must report an issued partial Premium pass with only its nine tickets.',
     );
+
+    const fullRecoveryMember = `member-full-recovery-${testRun}`;
+    const fullRecoveryGeneral = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-full-recovery-general`, memberReference: fullRecoveryMember,
+      passId: 'general-season', zone: selectedZone,
+    } });
+    assert(fullRecoveryGeneral.status === 201, 'Full recovery General reservation should succeed.');
+    trackedReservations.push(fullRecoveryGeneral.json.reservation.reservationId);
+    const fullRecoveryGeneralId = fullRecoveryGeneral.json.reservation.reservationId;
+    const fullRecoveryIssued = await callApi(`/reservations/${encodeURIComponent(fullRecoveryGeneralId)}/confirm`, {
+      method: 'POST', body: { paymentId: `${prefix}-full-recovery-general-payment` },
+    });
+    assert(fullRecoveryIssued.status === 201 && fullRecoveryIssued.json.tickets?.length === 10, 'Full recovery General pass should issue ten tickets.');
+    const fullRecoveryPremium = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-full-recovery-premium`, memberReference: fullRecoveryMember, passId: 'premium-season',
+    } });
+    assert(fullRecoveryPremium.status === 201, 'Full recovery Premium reservation should succeed.');
+    trackedReservations.push(fullRecoveryPremium.json.reservation.reservationId);
+    const fullRecoveryPremiumId = fullRecoveryPremium.json.reservation.reservationId;
+    await Inventory.updateOne(
+      { key: 'nusc-il-2026-27', 'partnerSeasonPassReservations.reservationId': fullRecoveryPremiumId },
+      { $set: {
+        'partnerSeasonPassReservations.$.expiresAt': new Date(Date.now() - 1000),
+        'seasonPassOrders.$[hold].expiresAt': new Date(Date.now() - 1000),
+      } },
+      { arrayFilters: [{ 'hold.orderId': fullRecoveryPremiumId }] },
+    );
+    const fullRecovery = await callApi(`/reservations/${encodeURIComponent(fullRecoveryPremiumId)}/replace-general`, {
+      method: 'POST', body: { oldReservationId: fullRecoveryGeneralId, paymentId: `${prefix}-full-recovery-payment` },
+    });
+    assert(
+      fullRecovery.status === 201 && fullRecovery.json.tickets?.length === 10 &&
+      fullRecovery.json.replacement?.issuedTicketCount === 10 && fullRecovery.json.replacement?.retainedUsedTicketCount === 0,
+      'Expired Premium inventory must be reacquired for all ten unused matches.',
+    );
+    const fullRecoveryStatus = await callApi(`/reservations/${encodeURIComponent(fullRecoveryPremiumId)}`);
+    assert(fullRecoveryStatus.status === 200 && fullRecoveryStatus.json.tickets?.length === 10, 'Recovered full pass status must list all ten tickets.');
+    passed += 1;
+
+    const soldOutRecoveryMember = `member-sold-out-recovery-${testRun}`;
+    const soldOutRecoveryGeneral = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-sold-out-recovery-general`, memberReference: soldOutRecoveryMember,
+      passId: 'general-season', zone: selectedZone,
+    } });
+    assert(soldOutRecoveryGeneral.status === 201, 'Sold-out recovery General reservation should succeed.');
+    trackedReservations.push(soldOutRecoveryGeneral.json.reservation.reservationId);
+    const soldOutRecoveryGeneralId = soldOutRecoveryGeneral.json.reservation.reservationId;
+    const soldOutRecoveryIssued = await callApi(`/reservations/${encodeURIComponent(soldOutRecoveryGeneralId)}/confirm`, {
+      method: 'POST', body: { paymentId: `${prefix}-sold-out-general-payment` },
+    });
+    assert(soldOutRecoveryIssued.status === 201 && soldOutRecoveryIssued.json.tickets?.length === 10, 'Sold-out recovery General pass should issue ten tickets.');
+    const soldOutRecoveryPremium = await callApi(reservePath, { method: 'POST', body: {
+      partnerOrderId: `${prefix}-sold-out-recovery-premium`, memberReference: soldOutRecoveryMember, passId: 'premium-season',
+    } });
+    assert(soldOutRecoveryPremium.status === 201, 'Sold-out recovery Premium reservation should initially succeed.');
+    trackedReservations.push(soldOutRecoveryPremium.json.reservation.reservationId);
+    const soldOutRecoveryPremiumId = soldOutRecoveryPremium.json.reservation.reservationId;
+    await Inventory.updateOne(
+      { key: 'nusc-il-2026-27', 'partnerSeasonPassReservations.reservationId': soldOutRecoveryPremiumId },
+      { $set: {
+        'partnerSeasonPassReservations.$.expiresAt': new Date(Date.now() - 1000),
+        'seasonPassOrders.$[hold].expiresAt': new Date(Date.now() - 1000),
+      } },
+      { arrayFilters: [{ 'hold.orderId': soldOutRecoveryPremiumId }] },
+    );
+    const soldOutPremiumTicket = allEvents[0].ticketTypes.find((ticket) => ticket.name === 'Premium Pass');
+    soldOutPremiumTicket.sold = Number(soldOutPremiumTicket.quantity || 250);
+    await allEvents[0].save();
+    const soldOutRecovery = await callApi(`/reservations/${encodeURIComponent(soldOutRecoveryPremiumId)}/replace-general`, {
+      method: 'POST', body: { oldReservationId: soldOutRecoveryGeneralId, paymentId: `${prefix}-sold-out-upgrade-payment` },
+    });
+    const afterSoldOutRecovery = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    const soldOutOldRecord = afterSoldOutRecovery.partnerSeasonPassReservations.find((item) => item.reservationId === soldOutRecoveryGeneralId);
+    const soldOutPremiumRecord = afterSoldOutRecovery.partnerSeasonPassReservations.find((item) => item.reservationId === soldOutRecoveryPremiumId);
+    const soldOutExpiredHold = afterSoldOutRecovery.seasonPassOrders.find((item) => item.orderId === soldOutRecoveryPremiumId);
+    const soldOutOldBookings = await Booking.find({ _id: { $in: soldOutOldRecord.bookingIds } }).select('_id status').lean();
+    assert(
+      soldOutRecovery.status === 409 && soldOutRecovery.json.code === 'PREMIUM_INVENTORY_UNAVAILABLE' &&
+      soldOutOldRecord.status === 'issued' && soldOutOldBookings.length === 10 && soldOutOldBookings.every((booking) => booking.status === 'confirmed') &&
+      soldOutPremiumRecord.status === 'held' && soldOutPremiumRecord.paymentId == null &&
+      soldOutExpiredHold && new Date(soldOutExpiredHold.expiresAt) < new Date(),
+      'Sold-out recovery must leave General tickets unchanged and must not bind or issue the Premium reservation.',
+    );
+    const originalFirstEventPremium = originalSold.get(String(allEvents[0]._id))
+      .find((ticket) => ticket.name === 'Premium Pass');
+    allEvents[0].ticketTypes.find((ticket) => ticket.name === 'Premium Pass').sold = originalFirstEventPremium.sold;
+    await allEvents[0].save();
+    passed += 1;
 
     const wrongMemberGeneral = await callApi(reservePath, { method: 'POST', body: {
       partnerOrderId: `${prefix}-wrong-member-general`,
