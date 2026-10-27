@@ -90,9 +90,9 @@ async function createSeasonPassTicketRecords({
           ? await Booking.findOne({
             'nuscPartnerTicket.partnerId': partnerId,
             'nuscPartnerTicket.partnerOrderId': orderId,
-            'nuscPartnerTicket.ticketIndex': fixtureIndex + 1,
+            'nuscPartnerTicket.ticketIndex': matchIndex,
           })
-          : await Booking.findOne({ nuscOrderId: orderId, nuscTicketIndex: fixtureIndex + 1 });
+          : await Booking.findOne({ nuscOrderId: orderId, nuscTicketIndex: matchIndex });
         if (!booking) throw error;
       }
     }
