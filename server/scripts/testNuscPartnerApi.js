@@ -386,6 +386,11 @@ async function run() {
     assert(fullRecoveryPremium.status === 201, 'Full recovery Premium reservation should succeed.');
     trackedReservations.push(fullRecoveryPremium.json.reservation.reservationId);
     const fullRecoveryPremiumId = fullRecoveryPremium.json.reservation.reservationId;
+    const fullRecoveryPremiumRecord = await Inventory.findOne({ key: 'nusc-il-2026-27' }).lean();
+    assert(
+      fullRecoveryPremiumRecord.partnerSeasonPassReservations.find((item) => item.reservationId === fullRecoveryPremiumId)?.zone === null,
+      'Premium recovery fixture must retain a null zone before its hold expires.',
+    );
     await Inventory.updateOne(
       { key: 'nusc-il-2026-27', 'partnerSeasonPassReservations.reservationId': fullRecoveryPremiumId },
       { $set: {
@@ -447,6 +452,7 @@ async function run() {
       soldOutRecovery.status === 409 && soldOutRecovery.json.code === 'PREMIUM_INVENTORY_UNAVAILABLE' &&
       soldOutOldRecord.status === 'issued' && soldOutOldBookings.length === 10 && soldOutOldBookings.every((booking) => booking.status === 'confirmed') &&
       soldOutPremiumRecord.status === 'held' && soldOutPremiumRecord.paymentId == null &&
+      soldOutPremiumRecord.zone === null &&
       soldOutExpiredHold && new Date(soldOutExpiredHold.expiresAt) < new Date(),
       'Sold-out recovery must leave General tickets unchanged and must not bind or issue the Premium reservation.',
     );

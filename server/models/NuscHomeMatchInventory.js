@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const GENERAL_PASS_ZONES = ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'];
 
 const TicketLineSchema = new mongoose.Schema({
   ticketType: { type: String, required: true },
@@ -50,7 +51,20 @@ const PartnerSeasonPassReservationSchema = new mongoose.Schema({
   memberReferenceHash: { type: String, required: true },
   passId: { type: String, enum: ['general-season', 'premium-season'], required: true },
   ticketType: { type: String, enum: ['General Pass', 'Premium Pass'], required: true },
-  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'], default: null },
+  zone: {
+    type: String,
+    default: null,
+    required() {
+      return this.passId === 'general-season';
+    },
+    validate: {
+      validator(value) {
+        if (this.passId === 'premium-season') return value === null || value === undefined;
+        return this.passId === 'general-season' && GENERAL_PASS_ZONES.includes(value);
+      },
+      message: 'General season passes require a G-1 through G-5 zone; Premium season passes must not have a zone.',
+    },
+  },
   matchDates: { type: [String], required: true },
   eventIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],
   status: { type: String, enum: ['held', 'issuing', 'issued', 'released', 'expired', 'replaced'], default: 'held' },
