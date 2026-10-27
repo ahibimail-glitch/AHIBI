@@ -10,6 +10,7 @@ const emailService = require('../services/emailService');
 const smsService = require('../services/smsService');
 const whatsappService = require('../services/whatsappService');
 const Scan = require("../models/Scan");
+const { CheckInError, checkInBooking } = require("../services/bookingCheckInService");
 const workshopRsvpController = require("../controllers/workshopRsvpController");
 
 // Per-event purchase limits
@@ -889,72 +890,36 @@ router.get("/:id", auth.protect, async (req, res) => {
 
 // @route   POST /api/bookings/check-in
 // @desc    Mark a ticket as checked-in
-// @access  Private (Admin)
-router.post("/check-in", async (req, res) => {
+// @access  Private (Admin/Organizer)
+router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
-    const { bookingId } = req.body;
-
-    if (!bookingId) {
-      return res.status(400).json({ message: 'Booking ID is required' });
+    const { bookingId, eventId, requestId } = req.body || {};
+    const idempotencyKey = requestId || req.get('Idempotency-Key');
+    if (!bookingId || !eventId) {
+      return res.status(400).json({ message: 'Booking ID and event ID are required', code: 'CHECK_IN_IDENTITY_REQUIRED' });
     }
 
-    const booking = await Booking.findById(bookingId).populate('event');
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    // Get the event to check ticket capacity
-    const event = await Event.findById(booking.event._id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-
-    // Find the ticket type in the event to get capacity
-    const ticketTypeInfo = event.ticketTypes.find(t => t.name === booking.ticketType);
-    const capacity = ticketTypeInfo?.capacity || 1; // Default to 1 if not specified
-
-    // Get scan count for this booking
-    const scanCount = await Scan.countDocuments({ ticket: bookingId });
-
-    // Check if all entries are used
-    if (scanCount >= capacity) {
-      return res.status(400).json({ 
-        message: `This ticket has reached its maximum capacity (${capacity}). No more entries allowed.`,
-        error: 'TICKET_EXHAUSTED'
-      });
-    }
-
-    // Create a new scan record
-    const newScan = new Scan({
-      ticket: bookingId,
-      event: booking.event._id,
-      user: booking.user, // Add the user field from the booking
+    const result = await checkInBooking({
+      bookingId,
+      eventId,
+      requestId: idempotencyKey,
+      staffId: req.user?._id,
     });
-    await newScan.save();
-
-    // Mark as checked-in (only update status if this is the first scan)
-    if (scanCount === 0) {
-      booking.status = 'checked-in';
-      booking.checkedInAt = new Date();
-      await booking.save();
-    }
-
-    // Calculate remaining entries
-    const remainingEntries = capacity - scanCount - 1;
-
-    res.status(200).json({
+    const remainingEntries = result.remainingEntries;
+    return res.status(200).json({
       message: `Check-in successful. ${remainingEntries > 0 ? remainingEntries + ' entries remaining.' : 'No more entries remaining.'}`,
-      status: 'CHECKED_IN',
-      checkedInAt: booking.checkedInAt,
-      capacity: capacity,
-      usedEntries: scanCount + 1,
-      remainingEntries: remainingEntries
+      ...result,
     });
 
   } catch (error) {
     console.error('Error during check-in:', error);
-    res.status(500).json({ message: 'Server error during check-in' });
+    if (error instanceof CheckInError) {
+      return res.status(error.status).json({ message: error.message, code: error.code });
+    }
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: 'This check-in request was already processed.', code: 'REQUEST_ALREADY_PROCESSED' });
+    }
+    return res.status(500).json({ message: 'Server error during check-in' });
   }
 });
 

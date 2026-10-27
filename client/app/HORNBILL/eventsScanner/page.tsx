@@ -21,6 +21,8 @@ interface Event {
 
 interface BookingVerification {
   bookingId: string;
+  eventId?: string;
+  checkInRequestId?: string;
   eventDate: string;
   userId: string;
   ticketType: string;
@@ -262,6 +264,8 @@ const QrScanner = () => {
       const verifiedBooking: BookingVerification = {
         ...bookingData,
         ...result, // Populate with response from backend
+        eventId: selectedEvent,
+        checkInRequestId: crypto.randomUUID(),
       };
       console.log(verifiedBooking);
       setVerification(verifiedBooking);
@@ -354,9 +358,15 @@ const QrScanner = () => {
     if (!verification || !verification.bookingId) return;
 
     try {
+      const staffToken = localStorage.getItem('admin_token') || localStorage.getItem('organizer_token');
+      if (!staffToken) throw new Error('Staff session expired. Please log in again.');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const response = await axios.post(`${apiUrl}/api/bookings/check-in`, {
         bookingId: verification.bookingId,
+        eventId: verification.eventId,
+        requestId: verification.checkInRequestId,
+      }, {
+        headers: { Authorization: `Bearer ${staffToken}` },
       });
 
       const result = response.data;
