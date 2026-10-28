@@ -18,42 +18,178 @@ const generateSlug = (title) => {
 // List transactions that are paid but no booking exists (excluding Annie Musical)
 exports.getPaidNoBooking = async (req, res) => {
   try {
-    const items = await PaymentTransaction.find({ status: 'paid_no_booking' })
-      .populate('user', 'name email phone')
-      .populate('event', 'title startDate')
-      .sort({ createdAt: -1 });
+    const parsePositiveInteger = (value, fallback) => {
+      if (value === undefined || value === '') return fallback;
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+    };
+    const page = parsePositiveInteger(req.query.page, 1);
+    const requestedLimit = parsePositiveInteger(req.query.limit, 25);
+    const limit = requestedLimit == null ? null : Math.min(requestedLimit, 100);
+    const amount = req.query.amount === undefined || req.query.amount === ''
+      ? null
+      : Number(req.query.amount);
 
-    // Filter out Annie Musical transactions
-    const filteredItems = items.filter(item => {
-      const isAnnieMusical = (
-        (item.notes && (
-          item.notes.includes('Annie Musical') || 
-          item.notes.includes('annie-musical') || 
-          item.notes.toLowerCase().includes('annie')
-        )) ||
-        (item.description && item.description.toLowerCase().includes('annie'))
-      );
-      return !isAnnieMusical;
+    if (page == null || limit == null || !Number.isSafeInteger((page - 1) * limit) ||
+        (amount !== null && (!Number.isFinite(amount) || amount < 0))) {
+      return res.status(400).json({ success: false, message: 'Invalid pagination or amount query.' });
+    }
+
+    const skip = (page - 1) * limit;
+    const matchesAnnie = (field) => ({
+      $regexMatch: {
+        input: { $cond: [{ $eq: [{ $type: field }, 'string'] }, field, ''] },
+        regex: 'annie',
+        options: 'i',
+      },
     });
 
-    // Process items to ensure we have user and event info
-    const processedItems = filteredItems.map(item => {
-      const processed = item.toObject();
-      
-      // If user population failed, try to get from userSnapshot or notes
-      if (!processed.user && processed.userSnapshot) {
-        processed.user = processed.userSnapshot;
-      }
-      
-      // If event population failed, try to get from notes or other sources
-      if (!processed.event && processed.bookingDetails?.event) {
-        processed.event = processed.bookingDetails.event;
-      }
-      
-      return processed;
+    const pipeline = [
+      { $match: { status: 'paid_no_booking' } },
+      {
+        $project: {
+          _id: 1,
+          orderId: 1,
+          paymentId: 1,
+          amount: { $ifNull: ['$amount', { $divide: ['$amountPaise', 100] }] },
+          currency: 1,
+          status: 1,
+          createdAt: 1,
+          user: 1,
+          userSnapshot: 1,
+          event: 1,
+          bookingDetails: 1,
+          notes: 1,
+          description: 1,
+          errorMessage: 1,
+          source: { $literal: 'transaction' },
+          sourcePriority: { $literal: 0 },
+        },
+      },
+      {
+        $unionWith: {
+          coll: PendingPaymentSession.collection.name,
+          pipeline: [
+            {
+              $match: {
+                status: 'paid_no_booking',
+                orderId: { $type: 'string', $ne: '' },
+                paymentId: { $type: 'string', $ne: '' },
+              },
+            },
+            {
+              $lookup: {
+                from: PaymentTransaction.collection.name,
+                let: { sessionOrderId: '$orderId', sessionPaymentId: '$paymentId' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$orderId', '$$sessionOrderId'] },
+                          { $eq: ['$paymentId', '$$sessionPaymentId'] },
+                        ],
+                      },
+                    },
+                  },
+                  { $limit: 1 },
+                  { $project: { _id: 1 } },
+                ],
+                as: 'matchingTransactions',
+              },
+            },
+            { $match: { $expr: { $eq: [{ $size: '$matchingTransactions' }, 0] } } },
+            {
+              $project: {
+                _id: 1,
+                orderId: 1,
+                paymentId: 1,
+                amount: { $ifNull: ['$amount', { $divide: ['$amountPaise', 100] }] },
+                currency: { $ifNull: ['$currency', 'INR'] },
+                status: { $literal: 'paid_no_booking' },
+                createdAt: { $ifNull: ['$updatedAt', '$createdAt'] },
+                user: 1,
+                userSnapshot: '$bookingDetails.user',
+                event: 1,
+                bookingDetails: 1,
+                notes: '$bookingDetails.notes',
+                description: '$bookingDetails.description',
+                errorMessage: 1,
+                source: { $literal: 'session' },
+                sourcePriority: { $literal: 1 },
+              },
+            },
+          ],
+        },
+      },
+      {
+        $match: {
+          $expr: {
+            $not: [{ $or: [matchesAnnie('$notes'), matchesAnnie('$description')] }],
+          },
+        },
+      },
+    ];
+
+    if (amount !== null) pipeline.push({ $match: { amount } });
+
+    pipeline.push({
+      $facet: {
+        items: [
+          { $sort: { createdAt: -1, sourcePriority: 1, _id: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+          { $project: { notes: 0, description: 0, sourcePriority: 0 } },
+        ],
+        total: [{ $count: 'value' }],
+      },
     });
 
-    res.json({ success: true, data: { items: processedItems } });
+    const [result = { items: [], total: [] }] = await PaymentTransaction.aggregate(pipeline).allowDiskUse(true);
+    const total = result.total[0]?.value || 0;
+    const pageItems = result.items || [];
+    const userIds = [...new Set(pageItems
+      .map((item) => item.user?._id || item.user)
+      .filter((id) => mongoose.isValidObjectId(id))
+      .map((id) => id.toString()))];
+    const eventIds = [...new Set(pageItems
+      .map((item) => item.event?._id || item.event)
+      .filter((id) => mongoose.isValidObjectId(id))
+      .map((id) => id.toString()))];
+
+    const [users, events] = await Promise.all([
+      userIds.length ? User.find({ _id: { $in: userIds } }).select('name email phone').lean() : [],
+      eventIds.length ? Event.find({ _id: { $in: eventIds } }).select('title startDate').lean() : [],
+    ]);
+    const usersById = new Map(users.map((user) => [user._id.toString(), user]));
+    const eventsById = new Map(events.map((event) => [event._id.toString(), event]));
+
+    const processedItems = pageItems.map((item) => {
+      const userId = item.user?._id || item.user;
+      const eventId = item.event?._id || item.event;
+      return {
+        ...item,
+        _id: item.source === 'session' ? `session:${item._id}` : item._id.toString(),
+        user: (userId && usersById.get(userId.toString())) || item.userSnapshot || item.bookingDetails?.user || null,
+        event: (eventId && eventsById.get(eventId.toString())) || item.bookingDetails?.event || null,
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    res.json({
+      success: true,
+      data: {
+        items: processedItems,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasPreviousPage: page > 1 && totalPages > 0,
+          hasNextPage: page < totalPages,
+        },
+      },
+    });
   } catch (error) {
     console.error('[Admin Payments] Error listing paid-no-booking:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
@@ -103,6 +239,39 @@ exports.getAnnieFailedBookings = async (req, res) => {
 exports.resolveTransaction = async (req, res) => {
   try {
     const { id } = req.params;
+    if (id.startsWith('session:')) {
+      const sessionId = id.slice('session:'.length);
+      if (!mongoose.isValidObjectId(sessionId)) {
+        return res.status(404).json({ success: false, message: 'Payment session not found' });
+      }
+
+      const pendingSession = await PendingPaymentSession.findById(sessionId);
+      if (!pendingSession) {
+        return res.status(404).json({ success: false, message: 'Payment session not found' });
+      }
+      if (!['paid_no_booking', 'completed'].includes(pendingSession.status)) {
+        return res.status(400).json({ success: false, message: `Payment session status is '${pendingSession.status}', not resolvable` });
+      }
+      if (!pendingSession.orderId || !pendingSession.paymentId) {
+        return res.status(409).json({ success: false, message: 'Captured payment details are missing from this session.' });
+      }
+
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+      const settled = await eventPaymentSettlement.settleCapturedPayment({
+        razorpay,
+        orderId: pendingSession.orderId,
+        paymentId: pendingSession.paymentId,
+      });
+      return res.json({
+        success: true,
+        message: 'Captured payment reconciled and tickets confirmed.',
+        data: { bookingIds: settled.bookings.map((booking) => booking._id) },
+      });
+    }
+
     const tx = await PaymentTransaction.findById(id);
     if (!tx) {
       return res.status(404).json({ success: false, message: 'Transaction not found' });

@@ -30,6 +30,14 @@ type LivestreamPurchaseItem = {
   user?: { _id: string; email?: string; phone?: string } | null;
 };
 
+type PaginationInfo = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+const PAGE_SIZE = 25;
 const TARGET_LIVESTREAM_ID = "699f410d5797a2d4ead1e556";
 
 export default function NWAFailedPayments() {
@@ -39,6 +47,13 @@ export default function NWAFailedPayments() {
   const [grantingAccessId, setGrantingAccessId] = useState<string | null>(null);
   const [grantingAllAccess, setGrantingAllAccess] = useState(false);
   const [livestreamStatusByUser, setLivestreamStatusByUser] = useState<Record<string, { status: string; accessGranted: boolean }>>({});
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
 
   const token = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -93,20 +108,40 @@ export default function NWAFailedPayments() {
     }
   };
 
-  const fetchItems = async () => {
+  const fetchPaidNoBookingPage = async (pageToLoad: number, limit = PAGE_SIZE) => {
+    const params = new URLSearchParams({
+      page: String(pageToLoad),
+      limit: String(limit),
+      amount: "199",
+    });
+    const res = await fetch(`${apiUrl}/api/admin/payments/paid-no-booking?${params.toString()}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.message || "Failed to fetch failed payments");
+    return {
+      items: Array.isArray(json.data?.items) ? json.data.items as TxItem[] : [],
+      pagination: json.data?.pagination as PaginationInfo | undefined,
+    };
+  };
+
+  const fetchItems = async (pageToLoad = page) => {
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/api/admin/payments/paid-no-booking`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
+      const data = await fetchPaidNoBookingPage(pageToLoad);
+      const nextPage = data.pagination?.page || pageToLoad;
+      setItems(data.items);
+      setPage(nextPage);
+      setPagination({
+        page: nextPage,
+        limit: data.pagination?.limit || PAGE_SIZE,
+        total: data.pagination?.total || 0,
+        totalPages: data.pagination?.totalPages || 0,
       });
-      if (!res.ok) throw new Error("Failed to fetch failed payments");
-      const json = await res.json();
-      const filteredItems = (json.data?.items || []).filter((item: TxItem) => Number(item.amount) === 199);
-      setItems(filteredItems);
     } catch (e: any) {
       toast.error(e.message || "Failed to load data");
     } finally {
@@ -115,7 +150,7 @@ export default function NWAFailedPayments() {
   };
 
   useEffect(() => {
-    fetchItems();
+    fetchItems(1);
     fetchLivestreamStatuses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -146,7 +181,9 @@ export default function NWAFailedPayments() {
       console.log('[FailedPayments] Success response:', result);
       
       toast.success("Booking confirmed successfully");
-      setItems((prev) => prev.filter((x) => x._id !== id));
+      const pageToLoad = items.length === 1 && page > 1 ? page - 1 : page;
+      setPage(pageToLoad);
+      await fetchItems(pageToLoad);
     } catch (e: any) {
       console.error('[FailedPayments] Error in handleResolve:', e);
       toast.error(e.message || "Failed to resolve");
@@ -198,30 +235,39 @@ export default function NWAFailedPayments() {
   };
 
   const handleGrantAllLivestreamAccess = async () => {
-    const pendingItems = items.filter((item) => !getItemLivestreamMatch(item)?.accessGranted && Boolean(getItemUserId(item)));
-
-    if (pendingItems.length === 0) {
-      toast.error("No users available to grant livestream access");
-      return;
-    }
-
     setGrantingAllAccess(true);
 
     let successCount = 0;
     let failureCount = 0;
+    let eligibleCount = 0;
 
     try {
-      for (const item of pendingItems) {
-        try {
-          await grantLivestreamAccessForItem(item);
-          successCount += 1;
-        } catch {
-          failureCount += 1;
+      let pageToProcess = 1;
+      let totalPages = 1;
+      while (pageToProcess <= totalPages) {
+        const data = await fetchPaidNoBookingPage(pageToProcess);
+        totalPages = data.pagination?.totalPages || 0;
+
+        for (const item of data.items) {
+          const existingStatus = getItemLivestreamMatch(item);
+          if (existingStatus?.accessGranted || !getItemUserId(item)) continue;
+          eligibleCount += 1;
+          try {
+            await grantLivestreamAccessForItem(item);
+            successCount += 1;
+          } catch {
+            failureCount += 1;
+          }
         }
+
+        pageToProcess += 1;
       }
 
       await fetchLivestreamStatuses();
 
+      if (eligibleCount === 0) {
+        toast.error("No users available to grant livestream access");
+      }
       if (successCount > 0) {
         toast.success(`Granted livestream access to ${successCount} user${successCount > 1 ? "s" : ""}`);
       }
@@ -229,6 +275,8 @@ export default function NWAFailedPayments() {
       if (failureCount > 0) {
         toast.error(`Failed to grant access for ${failureCount} user${failureCount > 1 ? "s" : ""}`);
       }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load all failed payments");
     } finally {
       setGrantingAllAccess(false);
     }
@@ -248,7 +296,7 @@ export default function NWAFailedPayments() {
               >
                 {grantingAllAccess ? "Granting Access..." : "Grant Access To All"}
               </Button>
-              <Button variant="outline" onClick={fetchItems} disabled={loading || grantingAllAccess}>
+              <Button variant="outline" onClick={() => fetchItems()} disabled={loading || grantingAllAccess}>
                 {loading ? "Refreshing..." : "Refresh"}
               </Button>
             </div>
@@ -342,6 +390,40 @@ export default function NWAFailedPayments() {
                 })}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {pagination.total === 0
+                ? "0 records"
+                : `Showing ${(page - 1) * pagination.limit + 1}–${Math.min(page * pagination.limit, pagination.total)} of ${pagination.total} records`}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const previousPage = page - 1;
+                  setPage(previousPage);
+                  fetchItems(previousPage);
+                }}
+                disabled={loading || grantingAllAccess || page <= 1}
+              >
+                Previous
+              </Button>
+              <span>Page {pagination.totalPages === 0 ? 0 : page} of {Math.max(pagination.totalPages, 1)}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const nextPage = page + 1;
+                  setPage(nextPage);
+                  fetchItems(nextPage);
+                }}
+                disabled={loading || grantingAllAccess || page >= pagination.totalPages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

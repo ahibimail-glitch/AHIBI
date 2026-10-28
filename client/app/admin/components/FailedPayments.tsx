@@ -21,10 +21,26 @@ type TxItem = {
   bookingDetails?: any;
 };
 
+type PaginationInfo = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+const PAGE_SIZE = 25;
+
 export default function FailedPayments() {
   const [items, setItems] = useState<TxItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: PAGE_SIZE,
+    total: 0,
+    totalPages: 0,
+  });
 
   const token = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -33,10 +49,11 @@ export default function FailedPayments() {
 
   const apiUrl = useMemo(() => process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", []);
 
-  const fetchItems = async () => {
+  const fetchItems = async (pageToLoad = page) => {
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/api/admin/payments/paid-no-booking`, {
+      const params = new URLSearchParams({ page: String(pageToLoad), limit: String(PAGE_SIZE) });
+      const res = await fetch(`${apiUrl}/api/admin/payments/paid-no-booking?${params.toString()}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -45,7 +62,16 @@ export default function FailedPayments() {
       });
       if (!res.ok) throw new Error("Failed to fetch failed payments");
       const json = await res.json();
-      setItems(json.data?.items || []);
+      const data = json.data || {};
+      const nextPage = data.pagination?.page || pageToLoad;
+      setItems(Array.isArray(data.items) ? data.items : []);
+      setPage(nextPage);
+      setPagination({
+        page: nextPage,
+        limit: data.pagination?.limit || PAGE_SIZE,
+        total: data.pagination?.total || 0,
+        totalPages: data.pagination?.totalPages || 0,
+      });
     } catch (e: any) {
       toast.error(e.message || "Failed to load data");
     } finally {
@@ -54,7 +80,7 @@ export default function FailedPayments() {
   };
 
   useEffect(() => {
-    fetchItems();
+    fetchItems(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -84,7 +110,9 @@ export default function FailedPayments() {
       console.log('[FailedPayments] Success response:', result);
       
       toast.success("Booking confirmed successfully");
-      setItems((prev) => prev.filter((x) => x._id !== id));
+      const pageToLoad = items.length === 1 && page > 1 ? page - 1 : page;
+      setPage(pageToLoad);
+      await fetchItems(pageToLoad);
     } catch (e: any) {
       console.error('[FailedPayments] Error in handleResolve:', e);
       toast.error(e.message || "Failed to resolve");
@@ -99,7 +127,7 @@ export default function FailedPayments() {
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Paid but Not Booked</h2>
-            <Button variant="outline" onClick={fetchItems} disabled={loading}>
+            <Button variant="outline" onClick={() => fetchItems()} disabled={loading}>
               {loading ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
@@ -169,6 +197,40 @@ export default function FailedPayments() {
                 })}
               </TableBody>
             </Table>
+          </div>
+          <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {pagination.total === 0
+                ? "0 records"
+                : `Showing ${(page - 1) * pagination.limit + 1}–${Math.min(page * pagination.limit, pagination.total)} of ${pagination.total} records`}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const previousPage = page - 1;
+                  setPage(previousPage);
+                  fetchItems(previousPage);
+                }}
+                disabled={loading || page <= 1}
+              >
+                Previous
+              </Button>
+              <span>Page {pagination.totalPages === 0 ? 0 : page} of {Math.max(pagination.totalPages, 1)}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const nextPage = page + 1;
+                  setPage(nextPage);
+                  fetchItems(nextPage);
+                }}
+                disabled={loading || page >= pagination.totalPages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
