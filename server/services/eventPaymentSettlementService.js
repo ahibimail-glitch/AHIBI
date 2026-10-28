@@ -176,6 +176,62 @@ async function recordPaymentNeedsReview({ orderId, paymentId, payment, pending, 
   }
 }
 
+async function recordCapturedPaymentPending({ orderId, paymentId, payment, pending, signature, confirmedByWebhook = false }) {
+  const confirmedCapture = confirmedByWebhook || (payment?.status === 'captured' && payment?.captured === true);
+  if (!confirmedCapture || !orderId || !paymentId || payment?.id !== paymentId || (payment.order_id && payment.order_id !== orderId)) {
+    throw new PaymentSettlementError('Captured payment details are incomplete or do not match the order.', 'CAPTURE_DETAILS_INVALID', 409);
+  }
+
+  const now = new Date();
+  const errorMessage = 'Payment was captured and is awaiting booking settlement.';
+  const terminalStatuses = ['completed', 'resolved', 'refund_pending', 'refunded'];
+  // Record a verified capture before booking side effects. The conditional status
+  // keeps duplicate webhooks from downgrading an already settled transaction.
+  await PaymentTransaction.collection.updateOne({ orderId, paymentId }, [{
+    $set: {
+      signature: { $ifNull: ['$signature', { $literal: signature ?? null }] },
+      amount: { $literal: payment.amount == null ? (pending?.amount ?? null) : payment.amount / 100 },
+      amountPaise: { $literal: payment.amount ?? pending?.amountPaise ?? null },
+      currency: { $literal: payment.currency || pending?.currency || 'INR' },
+      user: { $ifNull: ['$user', { $literal: pending?.user ?? null }] },
+      userSnapshot: { $ifNull: ['$userSnapshot', { $literal: pending?.bookingDetails?.user ?? null }] },
+      event: { $ifNull: ['$event', { $literal: pending?.event ?? null }] },
+      bookingDetails: { $ifNull: ['$bookingDetails', { $literal: pending?.bookingDetails ?? null }] },
+      status: {
+        $cond: [
+          { $in: [{ $ifNull: ['$status', ''] }, { $literal: terminalStatuses }] },
+          '$status',
+          { $literal: 'paid_no_booking' },
+        ],
+      },
+      errorMessage: {
+        $cond: [
+          { $in: [{ $ifNull: ['$status', ''] }, { $literal: terminalStatuses }] },
+          '$errorMessage',
+          { $literal: errorMessage },
+        ],
+      },
+      createdAt: { $ifNull: ['$createdAt', { $literal: now }] },
+      updatedAt: { $literal: now },
+    },
+  }], { upsert: true });
+
+  if (pending && pending.status !== 'completed' && (!pending.paymentId || pending.paymentId === paymentId)) {
+    await PendingPaymentSession.updateOne({
+      _id: pending._id,
+      status: { $ne: 'completed' },
+      $or: [
+        { status: { $ne: 'settling' } },
+        { settlementLeaseUntil: { $lte: now } },
+        { settlementLeaseUntil: { $exists: false } },
+      ],
+    }, {
+      $set: { status: 'paid_no_booking', paymentId, errorMessage },
+      $unset: { settlementLeaseId: 1, settlementLeaseUntil: 1 },
+    });
+  }
+}
+
 async function settleCapturedPayment({ razorpay, orderId, paymentId, orderIntentId, signature }) {
   const pending = await findSession(orderId, orderIntentId);
   if (!paymentId) throw new PaymentSettlementError('Captured payment ID is missing.', 'PAYMENT_ID_MISSING', 400);
@@ -205,6 +261,7 @@ async function settleCapturedPayment({ razorpay, orderId, paymentId, orderIntent
     throw error;
   }
   if (pending.paymentId && pending.paymentId !== paymentId) {
+    await recordCapturedPaymentPending({ orderId, paymentId, payment, pending, signature });
     throw new PaymentSettlementError('A different payment is already associated with this checkout.', 'PAYMENT_CONFLICT', 409);
   }
   if (pending.status === 'completed') {
@@ -217,6 +274,8 @@ async function settleCapturedPayment({ razorpay, orderId, paymentId, orderIntent
     await recordPaymentNeedsReview({ orderId, paymentId, payment, pending, signature, message: error.message });
     throw error;
   }
+
+  await recordCapturedPaymentPending({ orderId, paymentId, payment, pending, signature });
 
   const now = new Date();
   const leaseId = crypto.randomUUID();
@@ -442,6 +501,7 @@ module.exports = {
   buildCanonicalCheckout,
   findSession,
   recordPaymentNeedsReview,
+  recordCapturedPaymentPending,
   settleCapturedPayment,
   toPaise,
 };

@@ -657,11 +657,24 @@ exports.razorpayWebhook = async (req, res) => {
       const order = event.payload.order?.entity;
       const orderId = payment?.order_id || order?.id;
       const paymentId = payment?.id;
+      const captureConfirmed = eventType === 'payment.captured' || (
+        payment?.status === 'captured' && payment?.captured === true
+      );
       if (eventType === 'order.paid' && !paymentId) {
         return res.json({ status: 'awaiting_payment_capture_webhook' });
       }
       if (orderId && paymentId) {
         const pending = await eventPaymentSettlement.findSession(orderId, payment?.notes?.orderIntentId);
+        if (captureConfirmed) {
+          // Preserve the signed capture before settlement makes another provider call.
+          await eventPaymentSettlement.recordCapturedPaymentPending({
+            orderId,
+            paymentId,
+            payment,
+            pending,
+            confirmedByWebhook: eventType === 'payment.captured',
+          });
+        }
         if (pending?.settlementVersion === 2 || payment?.notes?.orderIntentId) {
           let settled;
           try {
