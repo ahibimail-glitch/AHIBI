@@ -9,7 +9,7 @@ const inventory = require('../services/nuscHomeMatchInventoryService');
 
 const SEASON_PASS_OPTIONS = {
   'general-season': { ticketType: 'General Pass', amount: 3240 },
-  'premium-season': { ticketType: 'Premium Pass', amount: 10800 },
+  'premium-season': { ticketType: 'Premium Pass', amount: 13500 },
 };
 
 let razorpayClient;

@@ -61,10 +61,10 @@ const SEASON_PASSES = [
   },
   {
     id: "premium-season",
-    amount: 10800,
+    amount: 13500,
     name: "Premium Season Pass",
-    price: "₹10,800",
-    actualPrice: "₹9,000",
+    price: "₹13,500",
+    actualPrice: "₹11,250",
     detail: "All 10 home matches · 1 match day free",
     benefits: ["Reserved premium chair at every match", "Premium entry and snack box each match"],
   },
@@ -491,7 +491,7 @@ export default function NuscHomeMatchesPage() {
                     <span className="text-lg font-bold leading-6 text-[#151b16]">{pass.name}</span>
                     <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#d41e32] bg-[#d41e32]" : "border-[#c8d0c8]"}`} aria-hidden="true">{selected && <span className="h-2 w-2 rounded-full bg-white" />}</span>
                   </span>
-                  {"actualPrice" in pass && <span className="mt-5 text-lg font-bold text-[#111713]">Ticket price: {pass.actualPrice}</span>}
+                  {"actualPrice" in pass && <span className="mt-5 text-lg font-bold text-[#111713]">Ticket price: {pass.id === "premium-season" ? pass.price : pass.actualPrice}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
                   {passCategory === "single-match" && renderSuitePassAvailability(pass.id)}
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
