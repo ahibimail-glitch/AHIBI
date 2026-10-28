@@ -282,7 +282,7 @@ export default function NuscSeasonCheckoutPage() {
     try {
       const checkoutScope = passId === "general-season"
         ? `season:${passId}:${quantity}:${seasonZone}`
-        : `season:${passId}:${quantity}`;
+        : `season:${passId}:${quantity}:price:${pass.price}`;
       const checkoutRequestId = getNuscCheckoutRequestId(checkoutScope);
       if (!window.Razorpay) throw new Error("Secure checkout is still loading. Please try again in a moment.");
       const orderResponse = await fetch(`${API_URL}/api/nusc-home-matches/checkout/season/create-order`, {
