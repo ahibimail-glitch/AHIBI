@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 type TxItem = {
@@ -28,13 +29,15 @@ type PaginationInfo = {
   totalPages: number;
 };
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+const PAGE_SIZE = PAGE_SIZE_OPTIONS[0];
 
 export default function FailedPayments() {
   const [items, setItems] = useState<TxItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: PAGE_SIZE,
@@ -49,10 +52,10 @@ export default function FailedPayments() {
 
   const apiUrl = useMemo(() => process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", []);
 
-  const fetchItems = async (pageToLoad = page) => {
+  const fetchItems = async (pageToLoad = page, pageSizeToLoad = pageSize) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(pageToLoad), limit: String(PAGE_SIZE) });
+      const params = new URLSearchParams({ page: String(pageToLoad), limit: String(pageSizeToLoad) });
       const res = await fetch(`${apiUrl}/api/admin/payments/paid-no-booking?${params.toString()}`, {
         headers: {
           "Content-Type": "application/json",
@@ -66,9 +69,10 @@ export default function FailedPayments() {
       const nextPage = data.pagination?.page || pageToLoad;
       setItems(Array.isArray(data.items) ? data.items : []);
       setPage(nextPage);
+      setPageSize(data.pagination?.limit || pageSizeToLoad);
       setPagination({
         page: nextPage,
-        limit: data.pagination?.limit || PAGE_SIZE,
+        limit: data.pagination?.limit || pageSizeToLoad,
         total: data.pagination?.total || 0,
         totalPages: data.pagination?.totalPages || 0,
       });
@@ -83,6 +87,10 @@ export default function FailedPayments() {
     fetchItems(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const rangeSummary = pagination.total === 0
+    ? "0 records"
+    : `Showing ${(page - 1) * pagination.limit + 1}–${Math.min(page * pagination.limit, pagination.total)} of ${pagination.total} records`;
 
   const handleResolve = async (id: string) => {
     setResolvingId(id);
@@ -125,11 +133,34 @@ export default function FailedPayments() {
     <div className="space-y-6">
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Paid but Not Booked</h2>
-            <Button variant="outline" onClick={() => fetchItems()} disabled={loading}>
-              {loading ? "Refreshing..." : "Refresh"}
-            </Button>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold">Paid but Not Booked</h2>
+              <p className="text-sm text-gray-600" aria-live="polite">{rangeSummary}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <label htmlFor="failed-payments-page-size" className="text-sm text-gray-600">Rows per page</label>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  const nextPageSize = Number(value);
+                  fetchItems(1, nextPageSize);
+                }}
+                disabled={loading}
+              >
+                <SelectTrigger id="failed-payments-page-size" aria-label="Rows per page" className="w-[88px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => fetchItems()} disabled={loading}>
+                {loading ? "Refreshing..." : "Refresh"}
+              </Button>
+            </div>
           </div>
           <div className="rounded-md border overflow-x-auto">
             <Table>
@@ -199,11 +230,7 @@ export default function FailedPayments() {
             </Table>
           </div>
           <div className="mt-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              {pagination.total === 0
-                ? "0 records"
-                : `Showing ${(page - 1) * pagination.limit + 1}–${Math.min(page * pagination.limit, pagination.total)} of ${pagination.total} records`}
-            </span>
+            <span aria-live="polite">{rangeSummary}</span>
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
