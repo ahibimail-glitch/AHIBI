@@ -1,6 +1,7 @@
 name: Ticketing release checks
 
 on:
+  push:
   pull_request:
 
 permissions:
