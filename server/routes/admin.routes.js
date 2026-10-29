@@ -9,9 +9,14 @@ const Booking = require('../models/Booking');
 const router = express.Router();
 const paymentTxController = require('../controllers/paymentTransactionController');
 const heliTaxiiController = require('../controllers/heliTaxiiController');
+const onSpotBookingController = require('../controllers/onSpotBookingController');
 
 // Public admin routes (unprotected)
 router.get('/users', adminController.getUsers);
+
+// On-spot sales are admin-only; declare their authorization alongside each route.
+router.get('/bookings/on-spot/events', protect, authorize('admin'), onSpotBookingController.listEvents);
+router.post('/bookings/on-spot', protect, authorize('admin'), onSpotBookingController.createBooking);
 
 // Protect all admin routes
 router.use(protect);
@@ -178,6 +183,7 @@ router.get("/bookings/all",  async (req, res) => {
           status: 1,
           paymentId: 1,
           paymentStatus: 1,
+          bookingSource: { $ifNull: ['$bookingSource', 'online'] },
           country: 1,
           state: 1,
           modeOfPayment: 1,
@@ -198,6 +204,12 @@ router.get("/bookings/all",  async (req, res) => {
               { $ifNull: ['$userDoc.phone', ''] }
             ]
           },
+          customerEmail: {
+            $ifNull: [
+              '$customerEmail',
+              { $ifNull: ['$userDoc.email', ''] }
+            ]
+          },
           user: {
             name: {
               $ifNull: [
@@ -205,7 +217,12 @@ router.get("/bookings/all",  async (req, res) => {
                 { $ifNull: ['$userDoc.name', 'Guest'] }
               ]
             },
-            email: { $ifNull: ['$userDoc.email', ''] },
+            email: {
+              $ifNull: [
+                '$customerEmail',
+                { $ifNull: ['$userDoc.email', ''] }
+              ]
+            },
             phone: {
               $ifNull: [
                 '$customerPhone',

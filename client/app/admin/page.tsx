@@ -66,6 +66,7 @@ import NWAFailedPayments from "./components/NWAFAILED";
 import FeaturedEvents from "./components/FeaturedEvents";
 import ArtistManagement from "./components/ArtistManagement";
 import VenueManagement from "./components/VenueManagement";
+import OnSpotBooking from "./components/OnSpotBooking";
 
 import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
@@ -262,6 +263,8 @@ export default function AdminDashboard() {
         return <SettingsComponent />;
       case "failed-payments":
         return <FailedPayments />;
+      case "on-spot-booking":
+        return <OnSpotBooking />;
       case "system":
         return <System />;
       case "hero-images":
@@ -405,6 +408,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Ticket} label="On spot booking" active={activeView === "on-spot-booking"} onClick={() => { setActiveView("on-spot-booking"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="NWA Failed Payments" active={activeView === "nwa-failed-payments"} onClick={() => { setActiveView("nwa-failed-payments"); setSidebarOpen(false); }} />
       

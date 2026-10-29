@@ -52,7 +52,10 @@ interface Booking {
   quantity: number;
   total: number;
   status: string;
+  paymentStatus?: string;
   ticketType?: string;
+  bookingSource?: "online" | "on-spot";
+  modeOfPayment?: "Cash" | "UPI" | "Card";
 }
 
 interface BookingsProps {
@@ -67,6 +70,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   
   // Filter states
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [nameFilter, setNameFilter] = useState<string>("");
   const [phoneFilter, setPhoneFilter] = useState<string>("");
@@ -183,7 +187,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Apply filters whenever filter values change
   useEffect(() => {
     applyFilters();
-  }, [categoryFilter, eventFilter, nameFilter, phoneFilter, ticketTypeFilter, dateFilter, bookings]);
+  }, [categoryFilter, sourceFilter, eventFilter, nameFilter, phoneFilter, ticketTypeFilter, dateFilter, bookings]);
   
   // Filter function
   const applyFilters = () => {
@@ -191,6 +195,10 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
     
     if (categoryFilter && categoryFilter !== "all") {
       result = result.filter((booking: Booking) => getBookingCategory(booking) === categoryFilter);
+    }
+
+    if (sourceFilter !== "all") {
+      result = result.filter((booking: Booking) => (booking.bookingSource || "online") === sourceFilter);
     }
 
     if (eventFilter && eventFilter !== "all") {
@@ -227,6 +235,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Reset all filters
   const resetFilters = () => {
     setCategoryFilter("all");
+    setSourceFilter("all");
     setEventFilter("all");
     setNameFilter("");
     setPhoneFilter("");
@@ -268,7 +277,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
   // Export to Excel function
   const exportToExcel = () => {
     // Prepare data for Excel export
-    const headers = ["Event", "Customer", "Email", "Phone", "Booked Date", "Ticket Type", "Quantity", "Total Amount"];
+    const headers = ["Event", "Customer", "Email", "Phone", "Booked Date", "Ticket Type", "Source", "Payment Status", "Payment Method", "Quantity", "Total Amount"];
     
     const data = [
       headers,
@@ -279,6 +288,9 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         booking.user?.phone || "NA",
         new Date(booking.bookedAt).toLocaleDateString(),
         booking.ticketType || "NA",
+        booking.bookingSource === "on-spot" ? "On spot" : "Online",
+        booking.paymentStatus === "completed" ? "Paid" : booking.paymentStatus || "NA",
+        booking.modeOfPayment || "NA",
         booking.quantity,   
         `₹${booking.total}`
       ])
@@ -295,6 +307,9 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       { wch: 15 }, // Phone
       { wch: 15 }, // Booked Date
       { wch: 15 }, // Ticket Type
+      { wch: 12 }, // Booking source
+      { wch: 15 }, // Payment status
+      { wch: 15 }, // Payment method
       { wch: 10 }, // Quantity
       { wch: 15 }, // Total Amount
     ];
@@ -351,7 +366,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
       </CardHeader>
       <CardContent>
         {/* Filter section */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 xl:grid-cols-7 gap-4">
           <div>
             <Label htmlFor="category-filter">Event Category</Label>
             <Select value={categoryFilter} onValueChange={handleCategoryFilterChange}>
@@ -365,6 +380,20 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
                     {category}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="source-filter">Booking Source</Label>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger id="source-filter">
+                <SelectValue placeholder="All bookings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All bookings</SelectItem>
+                <SelectItem value="on-spot">On spot only</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -474,7 +503,7 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
         </div>
         
         {/* Active filters display */}
-        {(categoryFilter !== "all" || eventFilter !== "all" || nameFilter || phoneFilter || ticketTypeFilter !== "all" || dateFilter) && (
+        {(categoryFilter !== "all" || sourceFilter !== "all" || eventFilter !== "all" || nameFilter || phoneFilter || ticketTypeFilter !== "all" || dateFilter) && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-gray-500">Active filters:</span>
             <div className="flex flex-wrap gap-2">
@@ -482,6 +511,14 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
                 <Badge variant="outline" className="flex items-center gap-1">
                   Category: {categoryFilter}
                   <button onClick={() => handleCategoryFilterChange("all")}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {sourceFilter !== "all" && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  Source: {sourceFilter === "on-spot" ? "On spot" : "Online"}
+                  <button onClick={() => setSourceFilter("all")}>
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
@@ -551,7 +588,12 @@ export default function Bookings({ bookings: propBookings }: BookingsProps) {
               <TableRow key={booking._id}>
                 <TableCell>{booking.eventTitle || booking.event?.title || booking.eventSnapshot?.title || "NA"}</TableCell>
                 <TableCell>
-                  <div>{booking.user?.name || "NA"}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{booking.user?.name || "NA"}</span>
+                    {booking.bookingSource === "on-spot" && (
+                      <Badge className="border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-50">On spot</Badge>
+                    )}
+                  </div>
                   <div className="text-xs text-gray-500">{booking.user?.email || "NA"}</div>
                 </TableCell>
                 <TableCell>{booking.user?.phone || "NA"}</TableCell>

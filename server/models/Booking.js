@@ -45,7 +45,22 @@ const BookingSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: function() { return !this.nuscPartnerTicket?.memberReferenceHash; }
+    required: function() {
+      return !this.nuscPartnerTicket?.memberReferenceHash && this.bookingSource !== 'on-spot';
+    }
+  },
+  bookingSource: {
+    type: String,
+    enum: ['online', 'on-spot'],
+    default: 'online',
+  },
+  onSpotRequestId: {
+    type: String,
+    trim: true,
+  },
+  onSpotCreatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
   },
   ticketType: {
     type: String,
@@ -148,6 +163,11 @@ const BookingSchema = new mongoose.Schema({
   customerPhone: {
     type: String,
   },
+  customerEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+  },
   // GE Blaster: number of players in the exclusive slot booking (2-6)
   playerCount: {
     type: Number,
@@ -220,6 +240,10 @@ BookingSchema.index(
 BookingSchema.index(
   { 'nuscPartnerTicket.partnerId': 1, 'nuscPartnerTicket.partnerOrderId': 1, 'nuscPartnerTicket.ticketIndex': 1 },
   { unique: true, partialFilterExpression: { 'nuscPartnerTicket.partnerOrderId': { $type: 'string' } } }
+);
+BookingSchema.index(
+  { onSpotRequestId: 1 },
+  { unique: true, partialFilterExpression: { onSpotRequestId: { $type: 'string' } } }
 );
 
 module.exports = mongoose.model('Booking', BookingSchema);
