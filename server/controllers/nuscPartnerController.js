@@ -129,6 +129,7 @@ async function reserveSeasonPass(req, res) {
           event: fixture.event._id,
           ticketType: pass.ticketType,
           nuscGeneralZone: zoneInput,
+          bookingSource: { $ne: 'on-spot' },
           status: { $in: ['confirmed', 'checked-in'] },
           paymentStatus: 'completed',
         });

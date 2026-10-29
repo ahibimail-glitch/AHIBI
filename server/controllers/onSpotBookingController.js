@@ -14,10 +14,79 @@ class OnSpotBookingError extends Error {
   }
 }
 
-function serializeEvent(event, now, nuscTicketTypes = null, matchDate = null) {
+function getSeasonPassOnlineStatus(matchesByDate, availabilityByEventId) {
+  const fixtureTickets = Object.fromEntries(nuscInventory.FIXTURE_DATES.map((date) => {
+    const match = matchesByDate.get(date);
+    const tickets = match ? availabilityByEventId[String(match.event._id)] || [] : [];
+    return [date, new Map(tickets.map((ticket) => [ticket.name, ticket]))];
+  }));
+
+  return Object.fromEntries(Object.entries(nuscInventory.SEASON_PASS_OPTIONS).map(([passId, option]) => {
+    const tickets = nuscInventory.FIXTURE_DATES.map((date) => fixtureTickets[date].get(option.ticketType));
+    if (option.ticketType === nuscInventory.GENERAL_TICKET_TYPE) {
+      const zones = nuscInventory.GENERAL_SEATING_AREAS.map((area) => ({
+        name: area.name,
+        onlineSoldOut: tickets.some((ticket) => {
+          const zone = ticket?.zones?.find((item) => item.name === area.name);
+          return !zone || Number(zone.available) < 1;
+        }),
+      }));
+      return [passId, {
+        onlineSoldOut: !zones.some((zone) => !zone.onlineSoldOut),
+        zones,
+      }];
+    }
+
+    return [passId, { onlineSoldOut: tickets.some((ticket) => !ticket || Number(ticket.quantity) < 1) }];
+  }));
+}
+
+function serializeEvent(event, now, nuscTicketTypes = null, matchDate = null, seasonPassOptions = null, seasonPassOnlineStatus = {}) {
   const cutoff = event.bookingEndTime || event.endDate;
   if (cutoff && new Date(cutoff) < now) return null;
   const ticketTypes = nuscTicketTypes || event.ticketTypes || [];
+  const isNuscHomeMatch = Boolean(nuscTicketTypes);
+
+  const serializedTicketTypes = ticketTypes.map((ticket) => {
+    const onlineAvailable = isNuscHomeMatch
+      ? Math.max(0, Number(ticket.quantity) || 0)
+      : Math.max(0, (Number(ticket.quantity) || 0) - (Number(ticket.sold) || 0));
+    return {
+      _id: String(ticket._id),
+      selectionKey: String(ticket._id),
+      ticketTypeId: String(ticket._id),
+      name: ticket.name,
+      price: Number(ticket.price),
+      onlineAvailable,
+      onlineSoldOut: onlineAvailable < 1,
+      ...(isNuscHomeMatch && Array.isArray(ticket.zones) && {
+        zones: ticket.zones.map((zone) => ({
+          name: zone.name,
+          onlineAvailable: Math.max(0, Number(zone.available) || 0),
+          onlineSoldOut: Number(zone.available) < 1,
+        })),
+      }),
+    };
+  }).filter((ticket) => Number.isFinite(ticket.price) && ticket.price >= 0);
+
+  if (isNuscHomeMatch && seasonPassOptions) {
+    for (const [passId, option] of Object.entries(seasonPassOptions)) {
+      const sourceTicket = (event.ticketTypes || []).find((ticket) => ticket.name === option.ticketType);
+      if (!sourceTicket) continue;
+      const selectionKey = `${String(sourceTicket._id)}:season:${passId}`;
+      const onlineStatus = seasonPassOnlineStatus[passId] || { onlineSoldOut: false };
+      serializedTicketTypes.push({
+        _id: String(sourceTicket._id),
+        selectionKey,
+        ticketTypeId: String(sourceTicket._id),
+        name: option.name,
+        price: Number(option.amount),
+        onlineSoldOut: Boolean(onlineStatus.onlineSoldOut),
+        nuscSeasonPassType: passId,
+        ...(Array.isArray(onlineStatus.zones) && { zones: onlineStatus.zones }),
+      });
+    }
+  }
 
   return {
     _id: String(event._id),
@@ -25,32 +94,9 @@ function serializeEvent(event, now, nuscTicketTypes = null, matchDate = null) {
     startDate: event.startDate,
     endDate: event.endDate,
     location: event.location,
-    isNuscHomeMatch: Boolean(nuscTicketTypes),
+    isNuscHomeMatch,
     matchDate,
-    ticketTypes: ticketTypes.map((ticket) => {
-      if (nuscTicketTypes) {
-        return {
-          _id: String(ticket._id),
-          name: ticket.name,
-          price: Number(ticket.price),
-          available: Math.max(0, Number(ticket.quantity) || 0),
-          ...(Array.isArray(ticket.zones) && {
-            zones: ticket.zones.map((zone) => ({
-              name: zone.name,
-              available: Math.max(0, Number(zone.available) || 0),
-            })),
-          }),
-        };
-      }
-      const capacity = Math.max(0, Number(ticket.quantity) || 0);
-      const sold = Math.max(0, Number(ticket.sold) || 0);
-      return {
-        _id: String(ticket._id),
-        name: ticket.name,
-        price: Number(ticket.price),
-        available: Math.max(0, capacity - sold),
-      };
-    }).filter((ticket) => Number.isFinite(ticket.price) && ticket.price >= 0),
+    ticketTypes: serializedTicketTypes,
   };
 }
 
@@ -59,10 +105,11 @@ exports.listEvents = async (req, res) => {
     const events = await Event.find({
       status: 'approved',
     })
-      .select('title slug startDate endDate bookingEndTime location ticketTypes')
+      .select('title slug startDate endDate bookingEndTime location ticketTypes isPublic')
       .sort({ startDate: 1 })
       .lean();
 
+    const now = new Date();
     const nuscMatches = events
       .map((event) => ({ event, matchDate: nuscInventory.matchDateFromSlug(event.slug) }))
       .filter(({ matchDate }) => matchDate && nuscInventory.FIXTURE_DATES.includes(matchDate));
@@ -74,7 +121,24 @@ exports.listEvents = async (req, res) => {
       })),
       { allowSalesClosed: true }
     );
-    const now = new Date();
+    const matchesByDate = new Map(nuscMatches.map((match) => [match.matchDate, match]));
+    const firstFixture = matchesByDate.get(nuscInventory.FIXTURE_DATES[0])?.event;
+    const allSeasonFixturesActive = nuscInventory.FIXTURE_DATES.every((date) => {
+      const match = matchesByDate.get(date);
+      if (!match || match.event.isPublic === false) return false;
+      const cutoff = match.event.bookingEndTime || match.event.endDate;
+      const active = !cutoff || new Date(cutoff) >= now;
+      const passesConfigured = Object.values(nuscInventory.SEASON_PASS_OPTIONS).every((option) => (
+        (match.event.ticketTypes || []).some((ticket) => ticket.name === option.ticketType)
+      ));
+      return active && passesConfigured;
+    });
+    const includeSeasonPasses = Boolean(
+      allSeasonFixturesActive && firstFixture && new Date(firstFixture.startDate) > now
+    );
+    const seasonPassOnlineStatus = includeSeasonPasses
+      ? getSeasonPassOnlineStatus(matchesByDate, nuscTicketTypesByEventId)
+      : {};
     const nuscEventIds = new Set(nuscMatches.map(({ event }) => String(event._id)));
     return res.json({
       events: events
@@ -82,7 +146,14 @@ exports.listEvents = async (req, res) => {
         .map((event) => {
           const match = nuscMatches.find(({ event: matchEvent }) => String(matchEvent._id) === String(event._id));
           return match
-            ? serializeEvent(event, now, nuscTicketTypesByEventId[String(event._id)] || [], match.matchDate)
+            ? serializeEvent(
+              event,
+              now,
+              nuscTicketTypesByEventId[String(event._id)] || [],
+              match.matchDate,
+              includeSeasonPasses ? nuscInventory.SEASON_PASS_OPTIONS : null,
+              seasonPassOnlineStatus,
+            )
             : serializeEvent(event, now);
         })
         .filter((event) => event && event.ticketTypes.length > 0),
@@ -96,6 +167,7 @@ exports.listEvents = async (req, res) => {
 exports.createBooking = async (req, res) => {
   const eventId = String(req.body?.eventId || '').trim();
   const ticketTypeId = String(req.body?.ticketTypeId || '').trim();
+  const seasonPassType = String(req.body?.nuscSeasonPassType || '').trim();
   const customerName = String(req.body?.customerName || '').trim();
   const customerPhone = String(req.body?.customerPhone || '').trim();
   const customerEmail = String(req.body?.customerEmail || '').trim().toLowerCase();
@@ -106,6 +178,9 @@ exports.createBooking = async (req, res) => {
 
   if (!mongoose.isValidObjectId(eventId) || !mongoose.isValidObjectId(ticketTypeId)) {
     return res.status(400).json({ message: 'Select a valid event and ticket type.', code: 'INVALID_EVENT_OR_TICKET' });
+  }
+  if (seasonPassType && !nuscInventory.SEASON_PASS_OPTIONS[seasonPassType]) {
+    return res.status(400).json({ message: 'Select a valid NUSC season pass type.', code: 'INVALID_SEASON_PASS' });
   }
   if (!customerName || customerName.length > 100) {
     return res.status(400).json({ message: 'Enter a customer name of up to 100 characters.', code: 'INVALID_CUSTOMER_NAME' });
@@ -149,6 +224,7 @@ exports.createBooking = async (req, res) => {
         const matchesRequest = priorBookings.length === 1 &&
           String(priorBooking.event) === eventId &&
           String(priorBooking.ticketTypeId) === ticketTypeId &&
+          (priorBooking.nuscSeasonPassType || '') === seasonPassType &&
           priorBooking.customerName === customerName &&
           priorBooking.customerPhone === customerPhone &&
           (priorBooking.customerEmail || '') === customerEmail &&
@@ -190,18 +266,48 @@ exports.createBooking = async (req, res) => {
         throw new OnSpotBookingError('Ticket type not found for this event.', 404, 'TICKET_TYPE_NOT_FOUND');
       }
 
-      const capacity = Math.max(0, Number(ticketType.quantity) || 0);
-      const sold = Math.max(0, Number(ticketType.sold) || 0);
-      if (quantity > capacity - sold) {
-        throw new OnSpotBookingError(`Only ${Math.max(0, capacity - sold)} ticket(s) remain for this type.`, 409, 'TICKETS_UNAVAILABLE');
-      }
-
       const eventTicketPrice = Number(ticketType.price);
       if (!Number.isFinite(eventTicketPrice) || eventTicketPrice < 0) {
         throw new OnSpotBookingError('This ticket type has an invalid price.', 409, 'INVALID_TICKET_PRICE');
       }
 
-      if (isNuscHomeMatch) {
+      if (seasonPassType) {
+        const seasonPass = nuscInventory.SEASON_PASS_OPTIONS[seasonPassType];
+        if (!isNuscHomeMatch || ticketType.name !== seasonPass.ticketType) {
+          throw new OnSpotBookingError('Season passes are only available for matching NUSC ticket types.', 409, 'INVALID_SEASON_PASS');
+        }
+
+        const fixtureSlugs = nuscInventory.FIXTURE_DATES.map((date) => `nusc-home-match-${date.replace(/-/g, '')}`);
+        const fixtures = await Event.find({
+          slug: { $in: fixtureSlugs },
+          status: 'approved',
+          isPublic: { $ne: false },
+        })
+          .select('slug startDate ticketTypes')
+          .session(session);
+        const fixturesBySlug = new Map(fixtures.map((fixture) => [fixture.slug, fixture]));
+        if (nuscInventory.FIXTURE_DATES.some((date) => {
+          const fixture = fixturesBySlug.get(`nusc-home-match-${date.replace(/-/g, '')}`);
+          return !fixture || !fixture.ticketTypes.some((item) => item.name === seasonPass.ticketType);
+        })) {
+          throw new OnSpotBookingError('All 10 NUSC home matches must be active to record a season pass.', 409, 'SEASON_PASS_NOT_AVAILABLE');
+        }
+        const firstFixture = fixturesBySlug.get(fixtureSlugs[0]);
+        if (!firstFixture?.startDate || new Date(firstFixture.startDate) <= new Date()) {
+          throw new OnSpotBookingError('NUSC season pass sales have closed because the first home match has started.', 409, 'SEASON_PASS_SALES_CLOSED');
+        }
+
+        unitPrice = Number(seasonPass.amount);
+        ticketTypeName = seasonPass.name;
+        if (seasonPassType === 'general-season') {
+          if (!nuscInventory.GENERAL_SEATING_AREAS.some((area) => area.name === zone)) {
+            throw new OnSpotBookingError('Choose a General seating zone for this NUSC season pass.', 400, 'GENERAL_ZONE_REQUIRED');
+          }
+          recordedZone = zone;
+        } else if (zone) {
+          throw new OnSpotBookingError('A seating zone can only be selected for a General Season Pass.', 400, 'INVALID_GENERAL_ZONE');
+        }
+      } else if (isNuscHomeMatch) {
         const configuredPrice = nuscInventory.getMatchTicketPrice(ticketType.name);
         unitPrice = Number(configuredPrice?.price);
         if (!Number.isFinite(unitPrice) || unitPrice < 0) {
@@ -214,20 +320,12 @@ exports.createBooking = async (req, res) => {
         } else if (zone) {
           throw new OnSpotBookingError('A seating zone can only be selected for a NUSC General Pass.', 400, 'INVALID_GENERAL_ZONE');
         }
-
-        const onSpotInventory = await nuscInventory.recordOnSpotMatchSale({
-          saleId: `on-spot-${requestId}`,
-          adminId: req.user._id,
-          matchDate,
-          ticketLines: [{ ticketType: ticketType.name, quantity, ...(zone ? { zone } : {}) }],
-          eventTicketTypes: event.ticketTypes,
-        }, session);
-        nuscSuiteBoxNumbers = onSpotInventory.suiteAllocations.map((allocation) => allocation.boxNumber);
         recordedZone = zone;
       } else {
         if (zone) throw new OnSpotBookingError('Seating zones are only used for NUSC home matches.', 400, 'INVALID_ZONE');
         unitPrice = eventTicketPrice;
       }
+      if (!ticketTypeName) ticketTypeName = ticketType.name;
 
       const inventoryResult = await Event.updateOne(
         {
@@ -237,26 +335,17 @@ exports.createBooking = async (req, res) => {
             $elemMatch: {
               _id: ticketType._id,
               price: eventTicketPrice,
-              quantity: { $gte: quantity },
-              $or: [
-                { sold: { $lte: capacity - quantity } },
-                { sold: { $exists: false } },
-              ],
             },
           },
         },
         {
-          $inc: {
-            'ticketTypes.$.sold': quantity,
-            ticketsSold: quantity,
-            totalRevenue: unitPrice * quantity,
-          },
+          $inc: { totalRevenue: unitPrice * quantity },
         },
         { session }
       );
 
-      if ((inventoryResult.modifiedCount ?? inventoryResult.nModified) !== 1) {
-        throw new OnSpotBookingError('Tickets or pricing changed. Refresh the event and try again.', 409, 'TICKET_INVENTORY_CHANGED');
+      if ((inventoryResult.matchedCount ?? inventoryResult.n) !== 1) {
+        throw new OnSpotBookingError('Ticket pricing changed. Refresh the event and try again.', 409, 'TICKET_PRICE_CHANGED');
       }
 
       const eventSnapshot = {
@@ -278,7 +367,7 @@ exports.createBooking = async (req, res) => {
         customerName,
         customerPhone,
         ...(customerEmail ? { customerEmail } : {}),
-        ticketType: ticketType.name,
+        ticketType: ticketTypeName,
         ticketTypeId: ticketType._id,
         quantity,
         price: unitPrice,
@@ -289,6 +378,7 @@ exports.createBooking = async (req, res) => {
         bookingSource: 'on-spot',
         onSpotRequestId: requestId,
         onSpotCreatedBy: req.user._id,
+        ...(seasonPassType ? { nuscSeasonPassType: seasonPassType } : {}),
         ...(recordedZone ? { nuscGeneralZone: recordedZone } : {}),
         ...(nuscSuiteBoxNumbers.length ? {
           nuscSuiteBoxNumbers,
@@ -302,7 +392,7 @@ exports.createBooking = async (req, res) => {
       await booking.save({ session });
       createdBookings = [booking];
       eventTitle = event.title;
-      ticketTypeName = ticketType.name;
+      ticketTypeName = booking.ticketType;
     });
 
     return res.status(201).json({
@@ -323,6 +413,7 @@ exports.createBooking = async (req, res) => {
         modeOfPayment: createdBookings[0].modeOfPayment,
         nuscGeneralZone: createdBookings[0].nuscGeneralZone || '',
         nuscSuiteBoxNumbers: createdBookings[0].nuscSuiteBoxNumbers || [],
+        nuscSeasonPassType: createdBookings[0].nuscSeasonPassType || '',
       },
     });
   } catch (error) {

@@ -6,11 +6,7 @@ const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const User = require('../models/User');
 const inventory = require('../services/nuscHomeMatchInventoryService');
-
-const SEASON_PASS_OPTIONS = {
-  'general-season': { ticketType: 'General Pass', amount: 3240 },
-  'premium-season': { ticketType: 'Premium Pass', amount: 13500 },
-};
+const SEASON_PASS_OPTIONS = inventory.SEASON_PASS_OPTIONS;
 
 let razorpayClient;
 function getRazorpay() {
@@ -788,6 +784,7 @@ async function createBookingsForOrder(order, payment) {
     const sold = await Booking.countDocuments({
       event: event._id,
       ticketType: ticket.name,
+      bookingSource: { $ne: 'on-spot' },
       status: { $in: ['confirmed', 'checked-in'] },
       paymentStatus: 'completed',
     });
@@ -889,6 +886,7 @@ async function createMultiMatchBookingsForOrder(order, payment) {
       ticket.sold = await Booking.countDocuments({
         event: event._id,
         ticketType: ticket.name,
+        bookingSource: { $ne: 'on-spot' },
         status: { $in: ['confirmed', 'checked-in'] },
         paymentStatus: 'completed',
       });
@@ -977,6 +975,7 @@ async function createSeasonPassBookingsForOrder(order, payment) {
       ticket.sold = await Booking.countDocuments({
         event: event._id,
         ticketType: ticket.name,
+        bookingSource: { $ne: 'on-spot' },
         status: { $in: ['confirmed', 'checked-in'] },
         paymentStatus: 'completed',
       });
@@ -1435,6 +1434,7 @@ async function applyRefundToTickets(order, adminId, refund) {
       ticket.sold = await Booking.countDocuments({
         event: event._id,
         ticketType: ticket.name,
+        bookingSource: { $ne: 'on-spot' },
         status: { $in: ['confirmed', 'checked-in'] },
         paymentStatus: 'completed',
       });

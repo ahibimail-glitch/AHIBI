@@ -102,6 +102,7 @@ async function createSeasonPassTicketRecords({
       ticket.sold = await Booking.countDocuments({
         event: event._id,
         ticketType: ticket.name,
+        bookingSource: { $ne: 'on-spot' },
         status: { $in: ['confirmed', 'checked-in'] },
         paymentStatus: 'completed',
       });

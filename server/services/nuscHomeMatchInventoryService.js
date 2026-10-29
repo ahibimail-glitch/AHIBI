@@ -13,6 +13,10 @@ const MATCH_TICKET_PRICES = {
   'united suite - single pass': { price: 7200, basePrice: 6000 },
   'united suite - full box': { price: 60000, basePrice: 50000 },
 };
+const SEASON_PASS_OPTIONS = {
+  'general-season': { name: 'General Season Pass', ticketType: 'General Pass', amount: 3240 },
+  'premium-season': { name: 'Premium Season Pass', ticketType: 'Premium Pass', amount: 13500 },
+};
 function normalizeTicketTypeName(name) {
   return String(name || '')
     .normalize('NFKC')
@@ -152,6 +156,7 @@ function buyerTicketUnits(ticketType, quantity) {
 function activeOrdersForDate(state, matchDate) {
   const now = new Date();
   return state.orders.filter((order) => (
+    !order.createdByAdmin &&
     order.matchDate === matchDate &&
     (order.status === 'confirmed' || (order.status === 'held' && new Date(order.expiresAt) > now))
   ));
@@ -227,8 +232,13 @@ function getGeneralZoneAvailability(
   activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate)
 ) {
   const salesByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [area.name, 0]));
+  let onSpotZoneSales = 0;
   for (const sale of state.generalZoneSales || []) {
     if (sale.matchDate === matchDate && salesByZone.has(sale.zone)) {
+      if (String(sale.orderId || '').startsWith('on-spot-')) {
+        onSpotZoneSales += Number(sale.quantity || 0);
+        continue;
+      }
       salesByZone.set(sale.zone, salesByZone.get(sale.zone) + Number(sale.quantity || 0));
     }
   }
@@ -258,7 +268,8 @@ function getGeneralZoneAvailability(
   }
 
   const recordedZoneSales = [...salesByZone.values()].reduce((sum, quantity) => sum + quantity, 0);
-  const unknownSold = Math.max(0, Number(ticketSold || 0) - recordedZoneSales - pendingConfirmedZoneSales);
+  const onlineTicketSold = Math.max(0, Number(ticketSold || 0) - onSpotZoneSales);
+  const unknownSold = Math.max(0, onlineTicketSold - recordedZoneSales - pendingConfirmedZoneSales);
   let unassignedRemaining = unknownSold + unassignedHeld;
   return GENERAL_SEATING_AREAS.map((area) => {
     const knownUsed = salesByZone.get(area.name) + heldByZone.get(area.name);
@@ -1121,6 +1132,7 @@ module.exports = {
   GENERAL_SEATING_AREAS,
   getMatchTicketPrice,
   MATCH_TICKET_PRICES,
+  SEASON_PASS_OPTIONS,
   HOLD_MINUTES,
   FIXTURE_MATCHES,
   InventoryConflict,
