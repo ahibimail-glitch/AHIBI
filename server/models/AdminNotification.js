@@ -169,6 +169,14 @@ AdminNotificationSchema.index({ category: 1, createdAt: -1 });
 AdminNotificationSchema.index({ type: 1, createdAt: -1 });
 AdminNotificationSchema.index({ actionRequired: 1, status: 1 });
 AdminNotificationSchema.index({ priority: 1, createdAt: -1 });
+AdminNotificationSchema.index(
+  { 'metadata.dedupeKey': 1 },
+  {
+    name: 'admin_notification_dedupe_key_unique',
+    unique: true,
+    partialFilterExpression: { 'metadata.dedupeKey': { $type: 'string' } },
+  }
+);
 
 // Static method to create notification
 AdminNotificationSchema.statics.createNotification = async function(data) {

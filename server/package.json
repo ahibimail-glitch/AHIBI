@@ -8,6 +8,8 @@
     "dev": "nodemon index.js",
     "dev:nusc-test": "node scripts/devNuscTest.js",
     "test:check-in": "node --test tests/bookingCheckInService.test.js",
+    "test:payment-reliability": "node --test tests/paymentReliabilityContract.test.js",
+    "preflight:payment-indexes": "node scripts/preflightPaymentIndexes.js",
     "test:nusc-partner": "node scripts/testNuscPartnerApi.js",
     "seed": "node seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -88,6 +88,7 @@ export default function DailyEventCheckoutPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
+  const pendingTicketOrderStorageKey = `ahibiPendingTicketOrder:${eventId}`;
 
   const [event, setEvent] = useState<DailyEvent | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -97,6 +98,7 @@ export default function DailyEventCheckoutPage() {
   const [expandedTickets, setExpandedTickets] = useState<Set<string>>(new Set());
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentPending, setPaymentPending] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -106,6 +108,24 @@ export default function DailyEventCheckoutPage() {
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const checkoutStartedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const orderId = localStorage.getItem(pendingTicketOrderStorageKey);
+    const token = localStorage.getItem("token");
+    if (!orderId || !token) return;
+    setPaymentPending(true);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/status/${encodeURIComponent(orderId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(async (response) => {
+      const status = await response.json();
+      if (response.ok && status.success) {
+        localStorage.removeItem(pendingTicketOrderStorageKey);
+        router.push(`/events/daily/${eventId}/bookings`);
+      }
+    }).catch(() => {
+      // Keep checkout locked while a previously captured payment is unresolved.
+    });
+  }, [eventId, pendingTicketOrderStorageKey, router]);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -602,6 +622,8 @@ export default function DailyEventCheckoutPage() {
   const verifyPayment = async (razorpayResponse: RazorpayResponse, bookingIds: string[]) => {
     try {
       setIsProcessingPayment(true);
+      setPaymentPending(true);
+      localStorage.setItem(pendingTicketOrderStorageKey, razorpayResponse.razorpay_order_id);
 
       const token = localStorage.getItem("token");
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings/verify`, {
@@ -618,11 +640,30 @@ export default function DailyEventCheckoutPage() {
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Payment verification failed");
+      let data = await response.json();
+      if (data.pending) {
+        for (let attempt = 0; attempt < 20; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          const statusResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/payments/status/${encodeURIComponent(razorpayResponse.razorpay_order_id)}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const status = await statusResponse.json();
+          if (statusResponse.ok && status.success) {
+            data = status;
+            break;
+          }
+        }
       }
+      if (data.pending || !data.success) {
+        setIsProcessingPayment(false);
+        setIsBooking(false);
+        localStorage.setItem(pendingTicketOrderStorageKey, razorpayResponse.razorpay_order_id);
+        toast.info("Payment received. Your tickets are still being issued automatically. Please do not pay again.");
+        return;
+      }
+      localStorage.removeItem(pendingTicketOrderStorageKey);
+      setPaymentPending(false);
 
       toast.success("Payment successful! Booking confirmed.");
       const analyticsPayload = getAnalyticsEventPayload();
@@ -648,14 +689,11 @@ export default function DailyEventCheckoutPage() {
         })),
       });
       router.push(`/events/daily/${eventId}/bookings`);
-    } catch (err: any) {
-      const analyticsPayload = getAnalyticsEventPayload();
-      if (analyticsPayload) {
-        trackPaymentFailed(analyticsPayload);
-      }
-      toast.error(err.message || "Payment verification failed");
+    } catch {
+      setPaymentPending(true);
       setIsProcessingPayment(false);
       setIsBooking(false);
+      toast.info("Payment status is still being confirmed. Please do not pay again; ticket issuance will recover automatically if Razorpay captured the payment.");
     }
   };
 
@@ -922,14 +960,20 @@ export default function DailyEventCheckoutPage() {
 
                 <Button
                   onClick={handleProceedToPayment}
-                  disabled={isBooking || isProcessingPayment || selectedTickets.size === 0 || !acceptedTerms || !selectedDate}
+                  disabled={isBooking || isProcessingPayment || paymentPending || selectedTickets.size === 0 || !acceptedTerms || !selectedDate}
                   className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 >
                   {isBooking || isProcessingPayment ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : null}
-                  {isFreeEvent ? "Confirm RSVP" : "Proceed to Payment"}
+                  {paymentPending ? "Finishing your tickets" : isFreeEvent ? "Confirm RSVP" : "Proceed to Payment"}
                 </Button>
+
+                {paymentPending && (
+                  <p className="text-sm text-amber-700 mt-2" role="status">
+                    Payment was received. Ticket issuance is still processing, and you do not need to pay again. Your dashboard will show the tickets once recovery completes.
+                  </p>
+                )}
 
                 {bookingError && (
                   <p className="text-sm text-red-600 mt-2">{bookingError}</p>

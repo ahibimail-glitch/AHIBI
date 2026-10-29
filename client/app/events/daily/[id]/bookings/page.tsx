@@ -12,11 +12,16 @@ import { trackTicketGenerated } from "@/lib/analytics/google-analytics";
 
 interface DailyBooking {
   _id: string;
+  status?: string;
+  paymentStatus?: string;
   dailyEvent?: {
     _id: string;
     title?: string;
   };
   quantity?: number;
+  ticketIndex?: number;
+  totalTickets?: number;
+  qrCode?: string;
 }
 
 export default function DailyEventBookingsPage() {
@@ -24,9 +29,9 @@ export default function DailyEventBookingsPage() {
   const params = useParams();
   const eventId = params?.id as string;
 
-  const [booking, setBooking] = useState<DailyBooking | null>(null);
+  const [bookings, setBookings] = useState<DailyBooking[]>([]);
   const [loading, setLoading] = useState(true);
-  const trackedTicketGeneratedBookingId = useRef<string | null>(null);
+  const trackedTicketGeneratedBookingIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchDailyEventBooking = async () => {
@@ -52,13 +57,16 @@ export default function DailyEventBookingsPage() {
 
         const data = await res.json();
         const bookings: DailyBooking[] = data?.data?.bookings || [];
-        const filtered = bookings.filter((b) => b?.dailyEvent?._id === eventId);
-
-        // Keep one booking for this daily event page, matching existing expectation.
-        setBooking(filtered.length > 0 ? filtered[0] : null);
+        const filtered = bookings.filter((b) => (
+          b?.dailyEvent?._id === eventId &&
+          ["confirmed", "checked-in"].includes(b.status || "") &&
+          b.paymentStatus === "completed" &&
+          Boolean(b.qrCode)
+        )).sort((left, right) => (left.ticketIndex || 0) - (right.ticketIndex || 0));
+        setBookings(filtered);
       } catch (error) {
         console.error("Error fetching daily event booking:", error);
-        setBooking(null);
+        setBookings([]);
       } finally {
         setLoading(false);
       }
@@ -72,16 +80,18 @@ export default function DailyEventBookingsPage() {
   }, [eventId, router]);
 
   useEffect(() => {
-    if (loading || !booking?._id || trackedTicketGeneratedBookingId.current === booking._id) return;
-    if (!booking.dailyEvent?._id || !booking.dailyEvent?.title) return;
-
-    trackedTicketGeneratedBookingId.current = booking._id;
-    trackTicketGenerated({
-      event_id: booking.dailyEvent._id,
-      event_name: booking.dailyEvent.title,
-      ticket_count: booking.quantity || 1,
-    });
-  }, [loading, booking]);
+    if (loading) return;
+    for (const booking of bookings) {
+      if (!booking._id || trackedTicketGeneratedBookingIds.current.has(booking._id)) continue;
+      if (!booking.dailyEvent?._id || !booking.dailyEvent?.title) continue;
+      trackedTicketGeneratedBookingIds.current.add(booking._id);
+      trackTicketGenerated({
+        event_id: booking.dailyEvent._id,
+        event_name: booking.dailyEvent.title,
+        ticket_count: booking.quantity || 1,
+      });
+    }
+  }, [loading, bookings]);
 
   if (loading) {
     return (
@@ -91,7 +101,7 @@ export default function DailyEventBookingsPage() {
     );
   }
 
-  if (!booking?._id) {
+  if (bookings.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -105,7 +115,7 @@ export default function DailyEventBookingsPage() {
     );
   }
 
-  const ticketCount = booking.quantity || 1;
+  const ticketCount = bookings.reduce((sum, booking) => sum + (booking.quantity || 1), 0);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -132,11 +142,14 @@ export default function DailyEventBookingsPage() {
         </Card>
 
         <div className="space-y-8">
-          <ModernBookingTicket
-            bookingId={booking._id}
-            ticketIndex={1}
-            totalTickets={ticketCount}
-          />
+          {bookings.map((booking, index) => (
+            <ModernBookingTicket
+              key={booking._id}
+              bookingId={booking._id}
+              ticketIndex={booking.ticketIndex || index + 1}
+              totalTickets={booking.totalTickets || ticketCount}
+            />
+          ))}
         </div>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">

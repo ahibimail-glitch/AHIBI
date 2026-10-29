@@ -12,6 +12,8 @@ const whatsappService = require('../services/whatsappService');
 const Scan = require("../models/Scan");
 const { CheckInError, checkInBooking } = require("../services/bookingCheckInService");
 const workshopRsvpController = require("../controllers/workshopRsvpController");
+const eventPaymentSettlement = require("../services/eventPaymentSettlementService");
+const paymentController = require("../controllers/paymentController");
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -1473,247 +1475,74 @@ router.post("/free", auth.protect, async (req, res) => {
 });
 
 // @route   POST /api/bookings/initiate
-// @desc    Initiate payment for bookings (supports both events and daily events)
+// @desc    Create a server-priced Razorpay order for event tickets
 // @access  Private
 router.post("/initiate", auth.protect, async (req, res) => {
   try {
-    const { bookings, couponCode } = req.body;
-    const Razorpay = require('razorpay');
-
+    const { bookings, couponCode } = req.body || {};
     if (!Array.isArray(bookings) || bookings.length === 0) {
       return res.status(400).json({ message: "Please provide bookings array" });
     }
 
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    });
-
-    let totalAmount = 0;
-    const createdBookings = [];
-    const bookingIds = [];
-
-    // Enforce per-user ticket cap for specific event across the whole request
-    let limitedEventRequestedQty = 0;
-    for (const bookingData of bookings) {
-      if (bookingData?.event && String(bookingData.event) === LIMITED_EVENT_ID) {
-        limitedEventRequestedQty += Number(bookingData.quantity || 0);
-      }
+    const first = bookings[0];
+    const isDailyEvent = Boolean(first?.dailyEvent);
+    const parentId = String(isDailyEvent ? first.dailyEvent : first?.event || '');
+    const selectedDate = isDailyEvent ? first.selectedDate : undefined;
+    if (!parentId || bookings.some((item) => (
+      (Boolean(item?.dailyEvent) && Boolean(item?.event)) ||
+      String(isDailyEvent ? item?.dailyEvent || '' : item?.event || '') !== parentId ||
+      Boolean(item?.dailyEvent) !== isDailyEvent ||
+      (isDailyEvent && String(item?.selectedDate || '') !== String(selectedDate || ''))
+    ))) {
+      return res.status(400).json({ message: 'A checkout can contain tickets for one event and one event date.' });
     }
 
-    if (limitedEventRequestedQty > 0) {
-      if (!Number.isInteger(limitedEventRequestedQty) || limitedEventRequestedQty < 1) {
-        return res.status(400).json({ message: 'Invalid quantity' });
-      }
-
-      const existingCount = await getUserTicketCountForEvent({
-        eventId: LIMITED_EVENT_ID,
-        userId: req.user._id,
-      });
-
-      if (existingCount + limitedEventRequestedQty > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
+    const requestedQuantity = bookings.reduce((sum, item) => sum + Number(item?.quantity || 0), 0);
+    if (!isDailyEvent && parentId === LIMITED_EVENT_ID && requestedQuantity > 0) {
+      const existingCount = await getUserTicketCountForEvent({ eventId: parentId, userId: req.user._id });
+      if (existingCount + requestedQuantity > MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT) {
         return res.status(400).json({
           message: `You can buy at most ${MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT} tickets for this event in total.`,
           limit: MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT,
           alreadyBooked: existingCount,
-          requested: limitedEventRequestedQty,
+          requested: requestedQuantity,
           remaining: Math.max(0, MAX_TICKETS_PER_USER_FOR_LIMITED_EVENT - existingCount),
         });
       }
     }
 
-    for (const bookingData of bookings) {
-      const { dailyEvent, event, selectedDate, ticketType, quantity, price, total } = bookingData;
-
-      if (!dailyEvent && !event) {
-        return res.status(400).json({ message: "Please provide either event or dailyEvent" });
-      }
-
-      let eventDoc;
-      let eventSnapshot;
-
-      if (dailyEvent) {
-        eventDoc = await DailyEvent.findById(dailyEvent);
-        if (!eventDoc) {
-          return res.status(404).json({ message: "Daily event not found" });
-        }
-
-        if (!selectedDate) {
-          return res.status(400).json({ message: "Please provide selectedDate for daily event" });
-        }
-
-        eventSnapshot = {
-          _id: eventDoc._id,
-          title: eventDoc.title,
-          banner: eventDoc.banner,
-          startDate: selectedDate,
-          endDate: selectedDate,
-          location: {
-            address: eventDoc.location?.address,
-            city: eventDoc.location?.city
-          }
-        };
-      } else {
-        eventDoc = await Event.findById(event);
-        if (!eventDoc) {
-          return res.status(404).json({ message: "Event not found" });
-        }
-
-        eventSnapshot = {
-          _id: eventDoc._id,
-          title: eventDoc.title,
-          banner: eventDoc.banner,
-          startDate: eventDoc.startDate,
-          endDate: eventDoc.endDate,
-          location: {
-            address: eventDoc.location?.address,
-            city: eventDoc.location?.city
-          }
-        };
-      }
-
-      // Validate and get ticket type ID
-      let ticketTypeId = ticketType;
-      let ticketTypeName = ticketType;
-      
-      if (dailyEvent && ticketType) {
-        const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
-        if (ticketTypeObj) {
-          ticketTypeId = ticketTypeObj._id;
-          ticketTypeName = ticketTypeObj.name;
-        }
-      } else if (event && ticketType) {
-        const ticketTypeObj = eventDoc.ticketTypes?.find(tt => tt._id.toString() === ticketType.toString());
-        if (ticketTypeObj) {
-          ticketTypeId = ticketTypeObj._id;
-          ticketTypeName = ticketTypeObj.name;
-        }
-      }
-
-      const booking = new Booking({
-        ...(dailyEvent && { dailyEvent, isDailyEvent: true, selectedDate }),
-        ...(event && { event }),
-        eventSnapshot,
-        user: req.user._id,
-        quantity,
-        price,
-        total,
-        status: "pending",
-        paymentStatus: "pending",
-        ticketType: ticketTypeName,
-        ticketTypeId: ticketTypeId,
-      });
-
-      await booking.save();
-      createdBookings.push(booking);
-      bookingIds.push(booking._id);
-      totalAmount += total;
-    }
-
-    // Create Razorpay order
-    const order = await razorpay.orders.create({
-      amount: Math.round(totalAmount * 100), // Convert to paise
-      currency: "INR",
+    const bookingDetails = {
+      ...(isDailyEvent ? { dailyEvent: parentId, selectedDate } : { event: parentId }),
+      user: { id: req.user._id },
+      tickets: bookings.map((item) => ({
+        ticketType: item.ticketType,
+        ticketTypeId: item.ticketType,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    };
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+    const { order } = await eventPaymentSettlement.createPaymentOrder({
+      razorpay,
+      bookingDetails,
+      coupon: couponCode ? { code: couponCode } : undefined,
+      authenticatedUser: req.user,
       receipt: `receipt_${Date.now()}`,
-      notes: {
-        bookingIds: bookingIds.join(','),
-        userId: req.user._id.toString(),
-      },
     });
 
-    res.status(200).json({
-      success: true,
-      order,
-      bookingIds,
-    });
+    return res.status(200).json({ success: true, order, bookingIds: [] });
   } catch (error) {
-    console.error("Error initiating payment:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('[Booking checkout] Order creation failed:', error?.code || error?.message || 'Unknown error');
+    return res.status(error.statusCode || 500).json({ message: error.message || 'Unable to start ticket checkout.' });
   }
 });
 
 // @route   POST /api/bookings/verify
-// @desc    Verify payment and confirm bookings
+// @desc    Verify capture with Razorpay and settle tickets from the saved checkout
 // @access  Private
-router.post("/verify", auth.protect, async (req, res) => {
-  try {
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, bookingIds } = req.body;
-    const crypto = require('crypto');
-
-    // Verify signature
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
-      .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) {
-      // Mark bookings as failed
-      await Booking.updateMany(
-        { _id: { $in: bookingIds } },
-        { status: "failed", paymentStatus: "failed" }
-      );
-      return res.status(400).json({ message: "Invalid payment signature" });
-    }
-
-    // Update bookings to confirmed
-    const updatedBookings = await Booking.find({ _id: { $in: bookingIds } });
-
-    for (const booking of updatedBookings) {
-      booking.status = "confirmed";
-      booking.paymentStatus = "completed";
-      booking.razorpayPaymentId = razorpay_payment_id;
-      booking.razorpayOrderId = razorpay_order_id;
-      await booking.save();
-
-      // Update ticket sold count
-      if (booking.isDailyEvent && booking.dailyEvent && booking.ticketTypeId) {
-        await DailyEvent.updateOne(
-          { _id: booking.dailyEvent, "ticketTypes._id": booking.ticketTypeId },
-          { $inc: { "ticketTypes.$.sold": booking.quantity, totalRevenue: booking.total } }
-        );
-      } else if (booking.event && booking.ticketTypeId) {
-        await Event.updateOne(
-          { _id: booking.event, "ticketTypes._id": booking.ticketTypeId },
-          { $inc: { "ticketTypes.$.sold": booking.quantity, totalRevenue: booking.total } }
-        );
-      }
-
-      // Generate QR code
-      try {
-        const bookingData = JSON.stringify({
-          bookingId: booking._id,
-          eventId: booking.isDailyEvent ? booking.dailyEvent : booking.event,
-          ticketType: booking.ticketType,
-          quantity: booking.quantity,
-          selectedDate: booking.selectedDate
-        });
-
-        const qrCodeDataUrl = await QRCode.toDataURL(bookingData, {
-          errorCorrectionLevel: 'H',
-          margin: 2,
-          color: {
-            dark: '#4a154b',
-            light: '#ffffff'
-          }
-        });
-
-        booking.qrCode = qrCodeDataUrl;
-        await booking.save();
-      } catch (qrError) {
-        console.error('Error generating QR code:', qrError);
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Payment verified and bookings confirmed",
-      bookings: updatedBookings,
-    });
-  } catch (error) {
-    console.error("Error verifying payment:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
-
+router.post("/verify", auth.protect, paymentController.verifyPayment);
 module.exports = router;

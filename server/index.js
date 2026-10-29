@@ -66,6 +66,15 @@ const {
 const { logRouterRoutes } = require('./utils/logRouterRoutes');
 
 const User = require('./models/User');
+const Booking = require('./models/Booking');
+const PendingPaymentSession = require('./models/PendingPaymentSession');
+const PaymentTransaction = require('./models/PaymentTransaction');
+const AdminNotification = require('./models/AdminNotification');
+const paymentReconciliationService = require('./services/paymentReconciliationService');
+const { createGracefulShutdown } = require('./services/gracefulShutdownService');
+
+let serverReady = false;
+let shutdownRequested = false;
 
 // Create Express app
 const app = express();
@@ -239,12 +248,24 @@ app.get('/', (req, res) => {
   res.send('Welcome to Ahibi 3.0 API');
 });
 
-// Health check endpoint
+// Liveness check remains healthy until the process exits.
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     message: 'Server is running',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Configure Render's health check to this endpoint so traffic only reaches a
+// process with MongoDB connected and payment idempotency indexes initialized.
+app.get('/health/ready', (req, res) => {
+  const ready = serverReady && !shutdownLifecycle.isDraining() && mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'not_ready',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    draining: shutdownLifecycle.isDraining(),
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -290,20 +311,67 @@ const connectDB = async () => {
         }
       );
     }
+
+    // Finish additive payment/idempotency index builds before this instance
+    // accepts traffic during a rolling deploy.
+    await Promise.all([
+      Booking.createIndexes(),
+      PendingPaymentSession.createIndexes(),
+      PaymentTransaction.createIndexes(),
+      AdminNotification.createIndexes(),
+    ]);
   } catch (err) {
     console.error('MongoDB Connection Error:', err.message);
     process.exit(1);
   }
 };
 
+const shutdownLifecycle = createGracefulShutdown({
+  server,
+  socketServer: io,
+  stopBackgroundJobs: () => paymentReconciliationService.stop(),
+  disconnectDatabase: () => mongoose.disconnect(),
+});
+
+let shutdownPromise;
+function handleShutdown(signal) {
+  if (shutdownPromise) return shutdownPromise;
+  shutdownRequested = true;
+  serverReady = false;
+
+  const forceExitTimer = setTimeout(() => {
+    console.error(`[Shutdown] ${signal} grace period elapsed; forcing process exit.`);
+    process.exit(1);
+  }, 25_000);
+  forceExitTimer.unref?.();
+
+  shutdownPromise = shutdownLifecycle.shutdown(signal)
+    .then(() => {
+      clearTimeout(forceExitTimer);
+      process.exit(0);
+    })
+    .catch((error) => {
+      clearTimeout(forceExitTimer);
+      console.error('[Shutdown] Graceful shutdown failed:', error.message);
+      process.exit(1);
+    });
+  return shutdownPromise;
+}
+
+process.once('SIGTERM', () => handleShutdown('SIGTERM'));
+process.once('SIGINT', () => handleShutdown('SIGINT'));
+
 // Initialize server
 const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
+  if (shutdownRequested) return;
+  paymentReconciliationService.start();
   // // Start the booking cleanup service
   // const bookingCleanupService = require('./services/bookingCleanupService');
   // bookingCleanupService.start();
   
   server.listen(PORT, () => {
+    serverReady = true;
     console.log(`Server running on port ${PORT}`);
     console.log(`Socket.IO server ready for livestream chat`);
   });

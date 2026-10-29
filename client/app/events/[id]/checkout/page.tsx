@@ -122,6 +122,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
+  const pendingTicketOrderStorageKey = `ahibiPendingTicketOrder:${eventId}`;
 
   const [event, setEvent] = useState<Event | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -132,6 +133,7 @@ export default function CheckoutPage() {
   const [expandedTickets, setExpandedTickets] = useState<Set<string>>(new Set());
   const [isBooking, setIsBooking] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentPending, setPaymentPending] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
@@ -144,6 +146,24 @@ export default function CheckoutPage() {
   const nuscPassPreselectionRef = useRef(false);
   const pendingNuscPassScrollRef = useRef<string | null>(null);
   const reviewStepRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const orderId = localStorage.getItem(pendingTicketOrderStorageKey);
+    const token = localStorage.getItem("token");
+    if (!orderId || !token) return;
+    setPaymentPending(true);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/status/${encodeURIComponent(orderId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(async (response) => {
+      const status = await response.json();
+      if (response.ok && status.success) {
+        localStorage.removeItem(pendingTicketOrderStorageKey);
+        router.push(`/events/${eventId}/bookings`);
+      }
+    }).catch(() => {
+      // Keep checkout locked while a previously captured payment is unresolved.
+    });
+  }, [eventId, pendingTicketOrderStorageKey, router]);
 
   useEffect(() => {
     const ticketId = pendingNuscPassScrollRef.current;
@@ -906,6 +926,10 @@ export default function CheckoutPage() {
 
       const verifyEventPayment = async (response: RazorpayResponse) => {
         setIsProcessingPayment(true);
+        if (!isNuscHomeMatchEvent) {
+          setPaymentPending(true);
+          localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
+        }
         try {
           const verificationResponse = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}${isNuscHomeMatchEvent ? "/api/nusc-home-matches/checkout/verify-payment" : "/api/payments/verify-payment"}`,
@@ -948,9 +972,34 @@ export default function CheckoutPage() {
             }
           );
 
-          const verificationData = await verificationResponse.json();
+          let verificationData = await verificationResponse.json();
+          if (!isNuscHomeMatchEvent && verificationData.pending) {
+            for (let attempt = 0; attempt < 20; attempt += 1) {
+              await new Promise((resolve) => setTimeout(resolve, 3000));
+              const statusResponse = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/payments/status/${encodeURIComponent(response.razorpay_order_id)}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const status = await statusResponse.json();
+              if (statusResponse.ok && status.success) {
+                verificationData = status;
+                break;
+              }
+            }
+          }
 
-          if (verificationResponse.ok && verificationData.success) {
+          if (!isNuscHomeMatchEvent && verificationData.pending) {
+            setIsBooking(false);
+            localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
+            toast.info("Payment received. Your tickets are still being issued automatically. Please do not pay again.");
+            return;
+          }
+
+          if (verificationData.success && (verificationResponse.ok || verificationData.status === "completed")) {
+            if (!isNuscHomeMatchEvent) {
+              localStorage.removeItem(pendingTicketOrderStorageKey);
+              setPaymentPending(false);
+            }
             if (nuscCheckoutScope && nuscCheckoutRequestId) {
               clearNuscCheckoutRequestId(nuscCheckoutScope, nuscCheckoutRequestId);
             }
@@ -1012,19 +1061,32 @@ export default function CheckoutPage() {
             }
             router.push(`/events/${eventId}/bookings`);
           } else {
+            if (!isNuscHomeMatchEvent) {
+              setPaymentPending(true);
+              localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
+              toast.info("Payment status is still being confirmed. Please do not pay again; ticket issuance will recover automatically if Razorpay captured the payment.");
+            } else {
+              const analyticsPayload = getAnalyticsEventPayload();
+              if (analyticsPayload) {
+                trackPaymentFailed(analyticsPayload);
+              }
+              toast.error(verificationData.message || "Payment verification failed");
+            }
+          }
+        } catch (error) {
+          console.error("Error in payment handler:", error);
+          if (!isNuscHomeMatchEvent) {
+            setPaymentPending(true);
+            setIsBooking(false);
+            localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
+            toast.info("Payment status is still being confirmed. Please do not pay again; ticket issuance will recover automatically if Razorpay captured the payment.");
+          } else {
             const analyticsPayload = getAnalyticsEventPayload();
             if (analyticsPayload) {
               trackPaymentFailed(analyticsPayload);
             }
-            toast.error(verificationData.message || "Payment verification failed");
+            toast.error("An error occurred while processing your payment. Please contact support.");
           }
-        } catch (error) {
-          console.error("Error in payment handler:", error);
-          const analyticsPayload = getAnalyticsEventPayload();
-          if (analyticsPayload) {
-            trackPaymentFailed(analyticsPayload);
-          }
-          toast.error("An error occurred while processing your payment. Please contact support.");
         } finally {
           setIsProcessingPayment(false);
           setRazorpayCheckoutActive(false);
@@ -1626,7 +1688,7 @@ export default function CheckoutPage() {
 
                 <button
                   onClick={handleBooking}
-                  disabled={isBooking || !acceptedTerms}
+                  disabled={isBooking || paymentPending || !acceptedTerms}
                   className="
            w-full
     py-3 sm:py-4
@@ -1651,10 +1713,17 @@ export default function CheckoutPage() {
                     </span>
                   ) : isFreeEvent ? (
                     "Confirm RSVP"
+                  ) : paymentPending ? (
+                    "Finishing your tickets"
                   ) : (
                     "Proceed to Payment"
                   )}
                 </button>
+                {paymentPending && (
+                  <p className="mt-2 text-sm text-amber-700" role="status">
+                    Payment was received. Ticket issuance is still processing, and you do not need to pay again. Your dashboard will show the tickets once recovery completes.
+                  </p>
+                )}
 
               </div>
             </div>
