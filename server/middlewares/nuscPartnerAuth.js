@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const NuscPartnerRequest = require('../models/NuscPartnerRequest');
+const { measureStage } = require('./nuscSeasonPassTiming');
 
 function databaseName() {
   try {
@@ -30,7 +31,11 @@ function signedMessage({ timestamp, requestId, method, path, rawBody }) {
   return `${timestamp}\n${requestId}\n${method.toUpperCase()}\n${path}\n${bodyHash}`;
 }
 
-async function authenticateNuscPartner(req, res, next) {
+function authenticateNuscPartner(req, res, next) {
+  return measureStage(req, 'partner_auth_audit', () => authenticateNuscPartnerRequest(req, res, next));
+}
+
+async function authenticateNuscPartnerRequest(req, res, next) {
   const config = credentials();
   if (!config) return res.status(503).json({ success: false, code: 'PARTNER_API_DISABLED' });
 

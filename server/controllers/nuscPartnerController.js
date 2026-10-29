@@ -14,6 +14,12 @@ const {
   createOfficialTicketPdfBuffer,
   mergeTicketEvent,
 } = require('../services/officialTicketPdfService');
+const {
+  finishStage,
+  measureStage,
+  measureSyncStage,
+  startStage,
+} = require('../middlewares/nuscSeasonPassTiming');
 
 const PARTNER_ID = 'nusc';
 const INVENTORY_KEY = 'nusc-il-2026-27';
@@ -107,69 +113,83 @@ async function reserveSeasonPass(req, res) {
 
     const reservationId = deterministicReservationId(partnerOrderId);
     const memberReferenceHash = hashMemberReference(memberReference);
-    const existing = await inventory.getPartnerSeasonPassReservation(reservationId);
+    const existing = await measureStage(req, 'existing_reservation_lookup', () =>
+      inventory.getPartnerSeasonPassReservation(reservationId)
+    );
     if (existing) {
       if (existing.memberReferenceHash !== memberReferenceHash || existing.passId !== passId || (existing.zone || null) !== zoneInput) {
         return res.status(409).json({ success: false, code: 'ORDER_CONFLICT' });
       }
-      return res.status(200).json({ success: true, reservation: reservationResponse(existing) });
+      return sendReservationResponse(req, res, 200, existing);
     }
 
-    const fixtures = await loadSeasonFixtures();
-    for (const fixture of fixtures) {
-      if (!fixture.event.ticketTypes.some((ticket) => ticket.name === pass.ticketType)) {
-        return res.status(409).json({ success: false, code: 'PASS_NOT_CONFIGURED_FOR_ALL_FIXTURES' });
+    const fixtureStageStartedAt = startStage(req);
+    let fixtures;
+    try {
+      fixtures = await loadSeasonFixtures();
+      for (const fixture of fixtures) {
+        if (!fixture.event.ticketTypes.some((ticket) => ticket.name === pass.ticketType)) {
+          return res.status(409).json({ success: false, code: 'PASS_NOT_CONFIGURED_FOR_ALL_FIXTURES' });
+        }
       }
+    } finally {
+      finishStage(req, 'fixture_query_validation', fixtureStageStartedAt);
     }
 
     const zoneSoldByDate = {};
     if (zoneInput) {
-      await Promise.all(fixtures.map(async (fixture) => {
-        zoneSoldByDate[fixture.matchDate] = await Booking.countDocuments({
-          event: fixture.event._id,
-          ticketType: pass.ticketType,
-          nuscGeneralZone: zoneInput,
-          bookingSource: { $ne: 'on-spot' },
-          status: { $in: ['confirmed', 'checked-in'] },
-          paymentStatus: 'completed',
-        });
-      }));
+      await measureStage(req, 'general_zone_booking_counts', () =>
+        Promise.all(fixtures.map(async (fixture) => {
+          zoneSoldByDate[fixture.matchDate] = await Booking.countDocuments({
+            event: fixture.event._id,
+            ticketType: pass.ticketType,
+            nuscGeneralZone: zoneInput,
+            bookingSource: { $ne: 'on-spot' },
+            status: { $in: ['confirmed', 'checked-in'] },
+            paymentStatus: 'completed',
+          });
+        }))
+      );
     }
 
-    const hold = await inventory.reserveSeasonPassOrder({
-      orderId: reservationId,
-      userId: syntheticOwnerId(memberReferenceHash),
-      ticketType: pass.ticketType,
-      quantity: 1,
-      zone: zoneInput,
-      zoneSoldByDate,
-      allowSalesClosed: true,
-      matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
-    });
+    const hold = await measureStage(req, 'inventory_hold_cas', () =>
+      inventory.reserveSeasonPassOrder({
+        orderId: reservationId,
+        userId: syntheticOwnerId(memberReferenceHash),
+        ticketType: pass.ticketType,
+        quantity: 1,
+        zone: zoneInput,
+        zoneSoldByDate,
+        allowSalesClosed: true,
+        matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
+      })
+    );
 
     let reservation;
     try {
-      reservation = await inventory.recordPartnerSeasonPassReservation({
-        reservationId,
-        partnerOrderId,
-        memberReferenceHash,
-        passId,
-        ticketType: pass.ticketType,
-        zone: zoneInput,
-        matchDates: inventory.FIXTURE_DATES,
-        eventIds: fixtures.map(({ event }) => event._id),
-        status: 'held',
-        expiresAt: hold.expiresAt,
-        paymentId: null,
-        bookingIds: [],
-        createdAt: new Date(),
-        issuedAt: null,
-      });
+      reservation = await measureStage(req, 'partner_reservation_cas', () =>
+        inventory.recordPartnerSeasonPassReservation({
+          reservationId,
+          partnerOrderId,
+          memberReferenceHash,
+          passId,
+          ticketType: pass.ticketType,
+          zone: zoneInput,
+          matchDates: inventory.FIXTURE_DATES,
+          eventIds: fixtures.map(({ event }) => event._id),
+          status: 'held',
+          expiresAt: hold.expiresAt,
+          paymentId: null,
+          bookingIds: [],
+          createdAt: new Date(),
+          issuedAt: null,
+        })
+      );
     } catch (error) {
       await inventory.releaseSeasonPassOrder(reservationId).catch(() => {});
       throw error;
     }
-    return res.status(201).json({ success: true, reservation: reservationResponse(reservation) });
+    return sendReservationResponse(req, res, 201, reservation);
   } catch (error) {
     if (error.code && ['TICKETS_UNAVAILABLE', 'ZONE_UNAVAILABLE', 'BUYER_TICKET_LIMIT', 'TICKET_NOT_CONFIGURED', 'INVALID_ZONE', 'ORDER_CONFLICT'].includes(error.code)) {
       return res.status(409).json({ success: false, code: error.code, message: error.message });
@@ -180,6 +200,12 @@ async function reserveSeasonPass(req, res) {
     console.error('[NUSC partner API] Reservation failed:', error.message);
     return res.status(500).json({ success: false, code: 'RESERVATION_FAILED' });
   }
+}
+
+function sendReservationResponse(req, res, status, reservation) {
+  return measureSyncStage(req, 'response_build', () =>
+    res.status(status).json({ success: true, reservation: reservationResponse(reservation) })
+  );
 }
 
 async function getCatalog(req, res) {

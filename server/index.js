@@ -18,6 +18,7 @@ const eventTeamRoutes = require('./routes/eventTeam.routes');
 const eventRoutes = require('./routes/event.routes');
 const nuscHomeMatchRoutes = require('./routes/nuscHomeMatch.routes');
 const nuscPartnerRoutes = require('./routes/nuscPartner.routes');
+const { nuscSeasonPassReservationTiming } = require('./middlewares/nuscSeasonPassTiming');
 const dailyEventRoutes = require('./routes/dailyEvent.routes');
 
 const uploadRoutes = require('./routes/upload.routes');
@@ -166,7 +167,11 @@ app.post('/api/donations/webhook', express.raw({ type: '*/*' }), (req, res, next
   donationController.handleDonationWebhook(req, res);
 });
 
-app.use('/api/nusc-partner/v1', express.raw({ type: 'application/json', limit: '64kb' }));
+app.use(
+  '/api/nusc-partner/v1',
+  nuscSeasonPassReservationTiming,
+  express.raw({ type: 'application/json', limit: '64kb' })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
