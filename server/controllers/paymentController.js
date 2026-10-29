@@ -319,6 +319,23 @@ exports.razorpayWebhook = async (req, res) => {
       throw new Error('Captured payment webhook is missing its order or payment ID.');
     }
 
+    const captureConfirmedByWebhook = payment?.status === 'captured' &&
+      payment?.captured === true &&
+      payment?.id === paymentId &&
+      payment?.order_id === orderId;
+    if (captureConfirmedByWebhook) {
+      // The signed webhook contains the capture snapshot; persist it before a
+      // provider lookup can fail and leave the captured payment invisible.
+      const pending = await eventPaymentSettlement.findSession(orderId, payment?.notes?.orderIntentId);
+      await eventPaymentSettlement.recordCapturedPaymentPending({
+        orderId,
+        paymentId,
+        payment,
+        pending,
+        confirmedByWebhook: true,
+      });
+    }
+
     const providerPayment = await razorpay.payments.fetch(paymentId);
     if (providerPayment?.status !== 'captured' || providerPayment?.captured !== true ||
         providerPayment?.id !== paymentId || providerPayment?.order_id !== orderId) {
