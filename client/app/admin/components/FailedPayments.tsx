@@ -130,9 +130,9 @@ export default function FailedPayments() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardContent className="pt-6">
+    <div className="w-full min-w-0 max-w-full space-y-6">
+      <Card className="w-full min-w-0 max-w-full bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+        <CardContent className="min-w-0 pt-6">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">Paid but Not Booked</h2>
@@ -162,8 +162,8 @@ export default function FailedPayments() {
               </Button>
             </div>
           </div>
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
+          <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-md border">
+            <Table className="min-w-[1050px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Payment ID</TableHead>

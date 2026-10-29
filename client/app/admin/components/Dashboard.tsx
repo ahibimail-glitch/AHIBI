@@ -82,33 +82,35 @@ export default function Dashboard({ stats, setActiveView }: DashboardProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 xl:gap-6">
         {displayStats.map((stat) => (
           <Card
             key={stat.title}
-            className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+            className="min-w-0 overflow-hidden border-0 bg-white/70 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl"
           >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-600">
-                    {stat.title}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
-                  <div className="flex items-center">
-                    <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-                    <span className="text-sm font-medium text-green-600">
-                      {stat.change}
-                    </span>
-                  </div>
+            <CardContent className="relative min-h-[152px] min-w-0 p-4 sm:p-5">
+              <div className="min-w-0">
+                <p className="min-h-10 pr-12 text-sm font-medium leading-5 text-gray-600">
+                  {stat.title}
+                </p>
+                <p className="mt-2 max-w-full whitespace-nowrap text-[clamp(1.25rem,1.75vw,1.75rem)] font-bold leading-tight tracking-tight text-gray-900">
+                  {stat.value}
+                </p>
+                <div className="mt-3 flex min-w-0 items-center gap-1">
+                  <TrendingUp
+                    aria-hidden="true"
+                    className="h-3 w-3 shrink-0 text-green-600"
+                  />
+                  <span className="min-w-0 text-sm font-medium text-green-600">
+                    {stat.change}
+                  </span>
                 </div>
-                <div
-                  className={`p-3 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200`}
-                >
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
+              </div>
+              <div className="absolute right-4 top-4 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gray-100 sm:right-5 sm:top-5">
+                <stat.icon
+                  aria-hidden="true"
+                  className={`h-5 w-5 ${stat.color}`}
+                />
               </div>
             </CardContent>
           </Card>

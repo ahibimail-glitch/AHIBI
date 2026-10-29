@@ -128,6 +128,7 @@ export default function AdminDashboard() {
   const [activeView, setActiveView] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const lastUnreadCountRef = useRef<number | null>(null);
 
@@ -370,15 +371,19 @@ export default function AdminDashboard() {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* --- Sidebar --- */}
-      <aside className={`w-64 bg-white/80 backdrop-blur-sm border-r border-gray-200 fixed h-full flex flex-col p-4 shadow-sm z-50 overflow-y-auto transition-transform duration-300 ease-in-out ${
+      <aside
+        id="admin-sidebar"
+        aria-label="Admin navigation"
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0`}>
+      } ${sidebarCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}
+      >
         <div className="flex items-center justify-between mb-6 px-2">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
@@ -393,6 +398,9 @@ export default function AdminDashboard() {
             variant="ghost" 
             size="icon" 
             className="lg:hidden"
+            aria-label="Close navigation sidebar"
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-sidebar"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="h-5 w-5" />
@@ -520,8 +528,8 @@ export default function AdminDashboard() {
       </aside>
 
       {/* --- Main Content --- */}
-      <main className="flex-1 lg:ml-64 bg-gradient-to-br from-gray-50 to-blue-50">
-        <header className="bg-white/60 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-30">
+      <main className={`min-w-0 flex-1 bg-gradient-to-br from-gray-50 to-blue-50 transition-[margin] duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-64'}`}>
+        <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/60 backdrop-blur-sm">
           <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -529,9 +537,23 @@ export default function AdminDashboard() {
                   variant="ghost" 
                   size="icon" 
                   className="lg:hidden h-8 w-8 sm:h-10 sm:w-10"
+                  aria-label="Open navigation sidebar"
+                  aria-expanded={sidebarOpen}
+                  aria-controls="admin-sidebar"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <Menu className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden h-8 w-8 lg:inline-flex sm:h-10 sm:w-10"
+                  aria-label={sidebarCollapsed ? "Expand navigation sidebar" : "Collapse navigation sidebar"}
+                  aria-expanded={!sidebarCollapsed}
+                  aria-controls="admin-sidebar"
+                  onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+                >
+                  {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
                 </Button>
                 <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 capitalize">{activeView.replace(/-/g, " ")}</h1>
               </div>
@@ -557,7 +579,7 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        <div className="p-4 sm:p-6 md:p-8">
+        <div className="w-full min-w-0 max-w-full overflow-x-clip p-4 sm:p-6 md:p-8">
           {renderContent()}
         </div>
       </main>

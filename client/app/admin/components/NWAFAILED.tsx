@@ -283,10 +283,10 @@ export default function NWAFailedPayments() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
+    <div className="w-full min-w-0 max-w-full space-y-6">
+      <Card className="w-full min-w-0 max-w-full bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+        <CardContent className="min-w-0 pt-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold">Paid but Not Booked</h2>
             <div className="flex items-center gap-2">
               <Button
@@ -301,8 +301,8 @@ export default function NWAFailedPayments() {
               </Button>
             </div>
           </div>
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
+          <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-md border">
+            <Table className="min-w-[1280px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Payment ID</TableHead>
