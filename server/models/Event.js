@@ -362,6 +362,7 @@ EventSchema.methods.calculateAverageRating = async function() {
 
 // Create index for event search
 EventSchema.index({ title: 'text', description: 'text', 'location.city': 'text', category: 'text' });
+EventSchema.index({ category: 1 }, { name: 'event_category' });
 
 // Create index for location-based queries
 EventSchema.index({ 'location.coordinates': '2dsphere' });

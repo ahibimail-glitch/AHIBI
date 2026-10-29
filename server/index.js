@@ -68,6 +68,7 @@ const { logRouterRoutes } = require('./utils/logRouterRoutes');
 
 const User = require('./models/User');
 const Booking = require('./models/Booking');
+const Event = require('./models/Event');
 const PendingPaymentSession = require('./models/PendingPaymentSession');
 const PaymentTransaction = require('./models/PaymentTransaction');
 const AdminNotification = require('./models/AdminNotification');
@@ -321,6 +322,7 @@ const connectDB = async () => {
     // accepts traffic during a rolling deploy.
     await Promise.all([
       Booking.createIndexes(),
+      Event.createIndexes(),
       PendingPaymentSession.createIndexes(),
       PaymentTransaction.createIndexes(),
       AdminNotification.createIndexes(),

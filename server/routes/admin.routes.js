@@ -10,6 +10,7 @@ const router = express.Router();
 const paymentTxController = require('../controllers/paymentTransactionController');
 const heliTaxiiController = require('../controllers/heliTaxiiController');
 const onSpotBookingController = require('../controllers/onSpotBookingController');
+const adminBookingsController = require('../controllers/adminBookingsController');
 
 // Public admin routes (unprotected)
 router.get('/users', adminController.getUsers);
@@ -125,6 +126,11 @@ router.put('/users/:id/status', [
 
 
 //Booking management routes
+
+router.get('/bookings', adminBookingsController.listBookings);
+router.get('/bookings/options', adminBookingsController.getBookingOptions);
+router.get('/bookings/stats', adminBookingsController.getBookingStats);
+router.get('/bookings/export', adminBookingsController.exportBookings);
 
 // Delete a booking
 router.delete("/bookings/:id", async (req, res) => {
@@ -278,6 +284,8 @@ router.get("/bookings/all",  async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+router.get('/bookings/:id', adminBookingsController.getBookingDetails);
 
 // Delete booking
 router.delete("/bookings/:id", async (req, res) => {

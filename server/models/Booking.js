@@ -233,6 +233,16 @@ BookingSchema.pre('save', function(next) {
 
 // Add index for better query performance
 BookingSchema.index({ event: 1, user: 1, status: 1 });
+BookingSchema.index({ bookedAt: -1, _id: -1 }, { name: 'admin_bookings_booked_at' });
+BookingSchema.index({ event: 1, bookedAt: -1, _id: -1 }, { name: 'admin_bookings_event_date' });
+BookingSchema.index({ 'eventSnapshot._id': 1, bookedAt: -1, _id: -1 }, { name: 'admin_bookings_snapshot_event_date' });
+BookingSchema.index({ status: 1, bookedAt: -1, _id: -1 }, { name: 'admin_bookings_status_date' });
+BookingSchema.index({ bookingSource: 1, bookedAt: -1, _id: -1 }, { name: 'admin_bookings_source_date' });
+BookingSchema.index({ ticketType: 1, bookedAt: -1, _id: -1 }, { name: 'admin_bookings_ticket_type_date' });
+BookingSchema.index({ user: 1 }, { name: 'admin_bookings_user' });
+BookingSchema.index({ customerName: 1 }, { name: 'admin_bookings_customer_name' });
+BookingSchema.index({ customerEmail: 1 }, { name: 'admin_bookings_customer_email' });
+BookingSchema.index({ customerPhone: 1 }, { name: 'admin_bookings_customer_phone' });
 BookingSchema.index(
   { paymentTicketKey: 1 },
   { unique: true, partialFilterExpression: { paymentTicketKey: { $type: 'string' } } }
