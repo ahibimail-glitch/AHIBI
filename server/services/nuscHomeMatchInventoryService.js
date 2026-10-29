@@ -89,15 +89,21 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-async function ensureInventory(session) {
+async function loadInventory(session, projection) {
+  const query = projection
+    ? Inventory.findOne({ key: INVENTORY_KEY }, projection)
+    : Inventory.findOne({ key: INVENTORY_KEY });
+  if (session) query.session(session);
+  return query.lean();
+}
+
+async function ensureInventory(session, projection) {
   await Inventory.updateOne(
     { key: INVENTORY_KEY },
     { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [] } },
     { upsert: true, ...(session ? { session } : {}) }
   );
-  const query = Inventory.findOne({ key: INVENTORY_KEY });
-  if (session) query.session(session);
-  return query.lean();
+  return loadInventory(session, projection);
 }
 
 function pruneExpiredHolds(state, now = new Date()) {
@@ -112,11 +118,10 @@ function pruneExpiredHolds(state, now = new Date()) {
 }
 
 async function mutateInventory(mutator, session) {
-  await ensureInventory(session);
+  let current = await loadInventory(session);
+  if (!current) current = await ensureInventory(session);
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    const query = Inventory.findOne({ key: INVENTORY_KEY });
-    if (session) query.session(session);
-    const current = await query.lean();
+    if (attempt > 0) current = await loadInventory(session);
     if (!current) throw new Error('NUSC suite inventory could not be initialized');
     const state = clone(current);
     state.generalZoneSales ||= [];
@@ -843,7 +848,8 @@ async function recordPartnerSeasonPassReservation(reservation) {
 }
 
 async function getPartnerSeasonPassReservation(reservationId) {
-  const state = await ensureInventory();
+  const projection = { partnerSeasonPassReservations: 1 };
+  const state = (await loadInventory(null, projection)) || await ensureInventory(null, projection);
   return (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId) || null;
 }
 
