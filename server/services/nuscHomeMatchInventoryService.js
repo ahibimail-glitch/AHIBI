@@ -85,13 +85,15 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-async function ensureInventory() {
+async function ensureInventory(session) {
   await Inventory.updateOne(
     { key: INVENTORY_KEY },
     { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [] } },
-    { upsert: true }
+    { upsert: true, ...(session ? { session } : {}) }
   );
-  return Inventory.findOne({ key: INVENTORY_KEY }).lean();
+  const query = Inventory.findOne({ key: INVENTORY_KEY });
+  if (session) query.session(session);
+  return query.lean();
 }
 
 function pruneExpiredHolds(state, now = new Date()) {
@@ -105,10 +107,12 @@ function pruneExpiredHolds(state, now = new Date()) {
   ));
 }
 
-async function mutateInventory(mutator) {
-  await ensureInventory();
+async function mutateInventory(mutator, session) {
+  await ensureInventory(session);
   for (let attempt = 0; attempt < 12; attempt += 1) {
-    const current = await Inventory.findOne({ key: INVENTORY_KEY }).lean();
+    const query = Inventory.findOne({ key: INVENTORY_KEY });
+    if (session) query.session(session);
+    const current = await query.lean();
     if (!current) throw new Error('NUSC suite inventory could not be initialized');
     const state = clone(current);
     state.generalZoneSales ||= [];
@@ -128,9 +132,11 @@ async function mutateInventory(mutator) {
           updatedAt: new Date(),
         },
         $inc: { __v: 1 },
-      }
+      },
+      { ...(session ? { session } : {}) }
     );
     if (update.modifiedCount === 1) return result;
+    if (session) throw new InventoryConflict('Suite inventory changed during checkout. Please try again.', 'INVENTORY_BUSY');
   }
   throw new InventoryConflict('Suite inventory changed during checkout. Please try again.', 'INVENTORY_BUSY');
 }
@@ -266,7 +272,17 @@ function getGeneralZoneAvailability(
   });
 }
 
-function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLines, eventTicketTypes, existingUserTicketCount = 0, allowSalesClosed = false }) {
+function reserveMatchOrderInState(state, {
+  orderId,
+  userId,
+  adminId,
+  matchDate,
+  ticketLines,
+  eventTicketTypes,
+  existingUserTicketCount = 0,
+  allowSalesClosed = false,
+  skipBuyerLimit = false,
+}) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
@@ -294,7 +310,7 @@ function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLin
       .filter((order) => String(order.userId) === String(userId))
       .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
 
-    if (Number(existingUserTicketCount) + buyerHeldUnits + seasonBuyerHeldUnits + requestedBuyerUnits > BUYER_TICKET_LIMIT) {
+    if (!skipBuyerLimit && Number(existingUserTicketCount) + buyerHeldUnits + seasonBuyerHeldUnits + requestedBuyerUnits > BUYER_TICKET_LIMIT) {
       throw new InventoryConflict(`You can buy at most ${BUYER_TICKET_LIMIT} tickets per match, including Suite capacity.`, 'BUYER_TICKET_LIMIT');
     }
 
@@ -386,7 +402,8 @@ function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLin
     const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60 * 1000);
     const order = {
       orderId,
-      userId,
+      ...(userId ? { userId } : {}),
+      ...(adminId ? { createdByAdmin: adminId } : {}),
       matchDate,
       ticketLines: normalizedLines,
       suiteAllocations,
@@ -401,6 +418,54 @@ function reserveMatchOrderInState(state, { orderId, userId, matchDate, ticketLin
 
 async function reserveMatchOrder(args) {
   return mutateInventory((state) => reserveMatchOrderInState(state, args));
+}
+
+async function recordOnSpotMatchSale({ saleId, adminId, matchDate, ticketLines, eventTicketTypes }, session) {
+  if (!saleId || !adminId) throw new InventoryConflict('On-spot inventory sale details are invalid.', 'INVALID_ON_SPOT_SALE');
+
+  const normalizedLines = normalizeTicketLines(ticketLines);
+  return mutateInventory((state) => {
+    const order = reserveMatchOrderInState(state, {
+      orderId: saleId,
+      adminId,
+      matchDate,
+      ticketLines: normalizedLines,
+      eventTicketTypes,
+      existingUserTicketCount: 0,
+      allowSalesClosed: true,
+      skipBuyerLimit: true,
+    });
+
+    for (const line of normalizedLines) {
+      if (line.ticketType !== GENERAL_TICKET_TYPE || !line.zone) continue;
+      const existingSale = state.generalZoneSales.find((sale) => (
+        sale.orderId === saleId && sale.matchDate === matchDate && sale.zone === line.zone
+      ));
+      if (!existingSale) {
+        state.generalZoneSales.push({
+          orderId: saleId,
+          matchDate,
+          zone: line.zone,
+          quantity: line.quantity,
+        });
+      }
+    }
+
+    const suiteAllocations = (order.suiteAllocations || []).map((allocation) => ({
+      ticketType: allocation.ticketType,
+      ticketIndex: allocation.ticketIndex,
+      boxNumber: allocation.boxNumber,
+    }));
+    if (suiteAllocations.length) {
+      order.status = 'confirmed';
+      order.stockApplied = true;
+      order.ticketLines = [];
+    } else {
+      state.orders = state.orders.filter((item) => item.orderId !== saleId);
+    }
+
+    return { suiteAllocations };
+  }, session);
 }
 
 async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClosed = false }) {
@@ -919,8 +984,8 @@ async function finalizeMatchOrder(orderId) {
   });
 }
 
-function getPublicTicketTypes(state, matchDate, eventTicketTypes = []) {
-  if (!TICKET_SALES_ENABLED) {
+function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSalesClosed = false } = {}) {
+  if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     return eventTicketTypes.map((source) => {
       const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
       return {
@@ -974,12 +1039,12 @@ async function getMatchAvailability(matchDate, eventTicketTypes = []) {
   return mutateInventory((state) => getPublicTicketTypes(state, matchDate, eventTicketTypes));
 }
 
-async function getMatchAvailabilities(matches = []) {
+async function getMatchAvailabilities(matches = [], { allowSalesClosed = false } = {}) {
   const validMatches = matches.filter((match) => FIXTURE_DATES.includes(match.matchDate));
   if (validMatches.length === 0) return {};
   return mutateInventory((state) => Object.fromEntries(validMatches.map((match) => [
     match.key,
-    getPublicTicketTypes(state, match.matchDate, match.ticketTypes),
+    getPublicTicketTypes(state, match.matchDate, match.ticketTypes, { allowSalesClosed }),
   ])));
 }
 
@@ -1094,4 +1159,5 @@ module.exports = {
   beginPartnerSeasonPassIssuance,
   completePartnerSeasonPassIssuance,
   releasePartnerSeasonPassReservation,
+  recordOnSpotMatchSale,
 };

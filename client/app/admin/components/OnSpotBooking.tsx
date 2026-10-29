@@ -16,6 +16,7 @@ interface OnSpotTicketType {
   name: string;
   price: number;
   available: number;
+  zones?: { name: string; available: number }[];
 }
 
 interface OnSpotEvent {
@@ -23,6 +24,8 @@ interface OnSpotEvent {
   title: string;
   startDate: string;
   endDate: string;
+  isNuscHomeMatch?: boolean;
+  matchDate?: string | null;
   location?: { address?: string; city?: string };
   ticketTypes: OnSpotTicketType[];
 }
@@ -33,6 +36,8 @@ interface RecordedBooking {
   quantity: number;
   price: number;
   total: number;
+  nuscGeneralZone?: string;
+  nuscSuiteBoxNumbers?: number[];
 }
 
 interface BookingResult {
@@ -59,6 +64,7 @@ export default function OnSpotBooking() {
   const [loadError, setLoadError] = useState("");
   const [eventId, setEventId] = useState("");
   const [ticketTypeId, setTicketTypeId] = useState("");
+  const [zone, setZone] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -78,9 +84,13 @@ export default function OnSpotBooking() {
     () => selectedEvent?.ticketTypes.find((ticket) => ticket._id === ticketTypeId) || null,
     [selectedEvent, ticketTypeId]
   );
+  const selectedZone = selectedTicketType?.zones?.find((item) => item.name === zone) || null;
+  const requiresZone = Boolean(selectedTicketType?.zones?.length);
+  const selectedAvailable = requiresZone ? (selectedZone?.available || 0) : (selectedTicketType?.available || 0);
   const total = (selectedTicketType?.price || 0) * quantity;
   const canSubmit = Boolean(
-    selectedEvent && selectedTicketType && selectedTicketType.available >= quantity &&
+    selectedEvent && selectedTicketType && selectedAvailable >= quantity &&
+    (!requiresZone || zone) &&
     customerName.trim() && customerPhone.trim() && modeOfPayment && paymentConfirmed
   );
 
@@ -126,6 +136,7 @@ export default function OnSpotBooking() {
         {
           eventId,
           ticketTypeId,
+          ...(zone ? { zone } : {}),
           quantity,
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
@@ -146,6 +157,7 @@ export default function OnSpotBooking() {
     setBookingResult(null);
     setEventId("");
     setTicketTypeId("");
+    setZone("");
     setQuantity(1);
     setCustomerName("");
     setCustomerPhone("");
@@ -157,6 +169,7 @@ export default function OnSpotBooking() {
   };
 
   if (bookingResult) {
+    const suiteBoxNumbers = bookingResult.booking.nuscSuiteBoxNumbers || [];
     return (
       <div className="mx-auto w-full max-w-4xl space-y-6">
         <div>
@@ -167,6 +180,10 @@ export default function OnSpotBooking() {
           <p className="mt-1 text-sm text-slate-600">
             {bookingResult.event.title} · {bookingResult.booking.quantity} physical ticket(s) · {bookingResult.modeOfPayment}
           </p>
+              {bookingResult.booking.nuscGeneralZone && <p className="mt-1 text-sm text-slate-600">General seating zone {bookingResult.booking.nuscGeneralZone}</p>}
+              {!!suiteBoxNumbers.length && (
+                <p className="mt-1 text-sm text-slate-600">United Suite box{suiteBoxNumbers.length > 1 ? "es" : ""} {Array.from(new Set(suiteBoxNumbers)).join(", ")}</p>
+              )}
         </div>
 
         <Card className="border-slate-200 shadow-sm">
@@ -202,7 +219,7 @@ export default function OnSpotBooking() {
         <p className="mt-1 max-w-2xl text-sm text-slate-600">
           Record customer details and payment for printed physical tickets already held at the event. This form does not create a digital ticket.
         </p>
-        <p className="mt-2 text-xs text-slate-500">NUSC home-match fixtures use separate ticket inventory and are not listed in this form.</p>
+        <p className="mt-2 text-xs text-slate-500">NUSC home-match tickets show live match inventory, including General zones and United Suite allocations.</p>
       </div>
 
       {loadError ? (
@@ -231,6 +248,7 @@ export default function OnSpotBooking() {
                       <Select value={eventId} onValueChange={(value) => {
                         setEventId(value);
                         setTicketTypeId("");
+                        setZone("");
                         setQuantity(1);
                         resetPaymentConfirmation();
                       }}>
@@ -246,6 +264,7 @@ export default function OnSpotBooking() {
                       <Label htmlFor="on-spot-ticket-type">Ticket type</Label>
                       <Select value={ticketTypeId} onValueChange={(value) => {
                         setTicketTypeId(value);
+                        setZone("");
                         setQuantity(1);
                         resetPaymentConfirmation();
                       }} disabled={!selectedEvent}>
@@ -259,23 +278,46 @@ export default function OnSpotBooking() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {requiresZone && selectedTicketType && (
+                      <div className="space-y-2">
+                        <Label htmlFor="on-spot-zone">General seating zone</Label>
+                        <Select value={zone} onValueChange={(value) => {
+                          setZone(value);
+                          setQuantity(1);
+                          resetPaymentConfirmation();
+                        }}>
+                          <SelectTrigger id="on-spot-zone"><SelectValue placeholder="Choose a zone" /></SelectTrigger>
+                          <SelectContent>
+                            {selectedTicketType.zones.map((item) => (
+                              <SelectItem key={item.name} value={item.name} disabled={item.available < 1}>
+                                {item.name} · {item.available} available{item.available < 1 ? " · Sold out" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-2 sm:max-w-48">
                       <Label htmlFor="on-spot-quantity">Quantity</Label>
                       <Input
                         id="on-spot-quantity"
                         type="number"
                         min={1}
-                        max={selectedTicketType?.available || 1}
+                        max={selectedAvailable || 1}
                         step={1}
                         value={quantity}
                         onChange={(event) => {
                           const nextQuantity = Number.parseInt(event.target.value, 10);
-                          setQuantity(Number.isFinite(nextQuantity) ? Math.max(1, Math.min(nextQuantity, selectedTicketType?.available || 1)) : 1);
+                          setQuantity(Number.isFinite(nextQuantity) ? Math.max(1, Math.min(nextQuantity, selectedAvailable || 1)) : 1);
                           resetPaymentConfirmation();
                         }}
-                        disabled={!selectedTicketType || selectedTicketType.available < 1}
+                        disabled={!selectedTicketType || selectedAvailable < 1}
                       />
-                      {selectedTicketType && <p className="text-xs text-slate-500">{selectedTicketType.available} available</p>}
+                      {selectedTicketType && (requiresZone && !selectedZone ? (
+                        <p className="text-xs text-slate-500">Choose a zone to see availability</p>
+                      ) : (
+                        <p className="text-xs text-slate-500">{selectedAvailable} available{selectedZone ? ` in ${selectedZone.name}` : ""}</p>
+                      ))}
                     </div>
                   </div>
                 </section>
@@ -320,6 +362,7 @@ export default function OnSpotBooking() {
               <div className="mt-4 space-y-3 text-sm">
                 <div className="flex justify-between gap-4"><span className="text-slate-500">Event</span><span className="text-right font-medium text-slate-800">{selectedEvent?.title || "Select an event"}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-slate-500">Ticket</span><span className="text-right font-medium text-slate-800">{selectedTicketType?.name || "Select a ticket"}</span></div>
+                {selectedZone && <div className="flex justify-between gap-4"><span className="text-slate-500">Zone</span><span className="text-right font-medium text-slate-800">{selectedZone.name}</span></div>}
                 <div className="flex justify-between gap-4"><span className="text-slate-500">Price × quantity</span><span className="text-right text-slate-700">{selectedTicketType ? `${formatCurrency(selectedTicketType.price)} × ${quantity}` : "—"}</span></div>
                 <div className="flex justify-between gap-4 border-t border-slate-200 pt-3"><span className="font-medium text-slate-700">Total collected</span><span className="text-lg font-semibold text-slate-950">{formatCurrency(total)}</span></div>
               </div>

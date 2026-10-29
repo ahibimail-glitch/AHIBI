@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
+const nuscInventory = require('../services/nuscHomeMatchInventoryService');
 
 const PAYMENT_METHODS = new Set(['Cash', 'UPI', 'Card']);
 
@@ -13,9 +14,10 @@ class OnSpotBookingError extends Error {
   }
 }
 
-function serializeEvent(event, now) {
+function serializeEvent(event, now, nuscTicketTypes = null, matchDate = null) {
   const cutoff = event.bookingEndTime || event.endDate;
   if (cutoff && new Date(cutoff) < now) return null;
+  const ticketTypes = nuscTicketTypes || event.ticketTypes || [];
 
   return {
     _id: String(event._id),
@@ -23,7 +25,23 @@ function serializeEvent(event, now) {
     startDate: event.startDate,
     endDate: event.endDate,
     location: event.location,
-    ticketTypes: (event.ticketTypes || []).map((ticket) => {
+    isNuscHomeMatch: Boolean(nuscTicketTypes),
+    matchDate,
+    ticketTypes: ticketTypes.map((ticket) => {
+      if (nuscTicketTypes) {
+        return {
+          _id: String(ticket._id),
+          name: ticket.name,
+          price: Number(ticket.price),
+          available: Math.max(0, Number(ticket.quantity) || 0),
+          ...(Array.isArray(ticket.zones) && {
+            zones: ticket.zones.map((zone) => ({
+              name: zone.name,
+              available: Math.max(0, Number(zone.available) || 0),
+            })),
+          }),
+        };
+      }
       const capacity = Math.max(0, Number(ticket.quantity) || 0);
       const sold = Math.max(0, Number(ticket.sold) || 0);
       return {
@@ -40,16 +58,33 @@ exports.listEvents = async (req, res) => {
   try {
     const events = await Event.find({
       status: 'approved',
-      slug: { $not: /^nusc-home-match-/ },
     })
-      .select('title startDate endDate bookingEndTime location ticketTypes')
+      .select('title slug startDate endDate bookingEndTime location ticketTypes')
       .sort({ startDate: 1 })
       .lean();
 
+    const nuscMatches = events
+      .map((event) => ({ event, matchDate: nuscInventory.matchDateFromSlug(event.slug) }))
+      .filter(({ matchDate }) => matchDate && nuscInventory.FIXTURE_DATES.includes(matchDate));
+    const nuscTicketTypesByEventId = await nuscInventory.getMatchAvailabilities(
+      nuscMatches.map(({ event, matchDate }) => ({
+        key: String(event._id),
+        matchDate,
+        ticketTypes: event.ticketTypes,
+      })),
+      { allowSalesClosed: true }
+    );
     const now = new Date();
+    const nuscEventIds = new Set(nuscMatches.map(({ event }) => String(event._id)));
     return res.json({
       events: events
-        .map((event) => serializeEvent(event, now))
+        .filter((event) => !String(event.slug || '').startsWith('nusc-home-match-') || nuscEventIds.has(String(event._id)))
+        .map((event) => {
+          const match = nuscMatches.find(({ event: matchEvent }) => String(matchEvent._id) === String(event._id));
+          return match
+            ? serializeEvent(event, now, nuscTicketTypesByEventId[String(event._id)] || [], match.matchDate)
+            : serializeEvent(event, now);
+        })
         .filter((event) => event && event.ticketTypes.length > 0),
     });
   } catch (error) {
@@ -64,6 +99,7 @@ exports.createBooking = async (req, res) => {
   const customerName = String(req.body?.customerName || '').trim();
   const customerPhone = String(req.body?.customerPhone || '').trim();
   const customerEmail = String(req.body?.customerEmail || '').trim().toLowerCase();
+  const zone = String(req.body?.zone || '').trim();
   const modeOfPayment = String(req.body?.modeOfPayment || '').trim();
   const quantity = Number(req.body?.quantity);
   const requestId = String(req.get('Idempotency-Key') || req.body?.requestId || '').trim();
@@ -96,11 +132,15 @@ exports.createBooking = async (req, res) => {
   let eventTitle = '';
   let unitPrice = 0;
   let ticketTypeName = '';
+  let nuscSuiteBoxNumbers = [];
+  let recordedZone = '';
   let idempotentReplay = false;
 
   try {
     session = await mongoose.startSession();
     await session.withTransaction(async () => {
+      nuscSuiteBoxNumbers = [];
+      recordedZone = '';
       const priorBookings = await Booking.find({ onSpotRequestId: requestId })
         .sort({ ticketIndex: 1 })
         .session(session);
@@ -112,6 +152,7 @@ exports.createBooking = async (req, res) => {
           priorBooking.customerName === customerName &&
           priorBooking.customerPhone === customerPhone &&
           (priorBooking.customerEmail || '') === customerEmail &&
+          (priorBooking.nuscGeneralZone || '') === zone &&
           priorBooking.modeOfPayment === modeOfPayment &&
           priorBooking.quantity === quantity;
         if (!matchesRequest) {
@@ -122,14 +163,18 @@ exports.createBooking = async (req, res) => {
         eventTitle = priorBooking.eventSnapshot?.title || '';
         unitPrice = Number(priorBooking.price) || 0;
         ticketTypeName = priorBooking.ticketType;
+        nuscSuiteBoxNumbers = priorBooking.nuscSuiteBoxNumbers || (priorBooking.nuscSuiteBoxNumber ? [priorBooking.nuscSuiteBoxNumber] : []);
+        recordedZone = priorBooking.nuscGeneralZone || '';
         idempotentReplay = true;
         return;
       }
 
       const event = await Event.findById(eventId).session(session);
       if (!event) throw new OnSpotBookingError('Event not found.', 404, 'EVENT_NOT_FOUND');
-      if (String(event.slug || '').startsWith('nusc-home-match-')) {
-        throw new OnSpotBookingError('NUSC home-match tickets use their dedicated inventory flow.', 409, 'SPECIAL_EVENT_INVENTORY');
+      const matchDate = nuscInventory.matchDateFromSlug(event.slug);
+      const isNuscHomeMatch = String(event.slug || '').startsWith('nusc-home-match-');
+      if (isNuscHomeMatch && !nuscInventory.FIXTURE_DATES.includes(matchDate)) {
+        throw new OnSpotBookingError('This NUSC home match is not configured for on-spot sales.', 409, 'SPECIAL_EVENT_INVENTORY');
       }
       if (event.status !== 'approved') {
         throw new OnSpotBookingError('This event is not open for on-spot sales.', 409, 'EVENT_NOT_AVAILABLE');
@@ -151,9 +196,37 @@ exports.createBooking = async (req, res) => {
         throw new OnSpotBookingError(`Only ${Math.max(0, capacity - sold)} ticket(s) remain for this type.`, 409, 'TICKETS_UNAVAILABLE');
       }
 
-      unitPrice = Number(ticketType.price);
-      if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      const eventTicketPrice = Number(ticketType.price);
+      if (!Number.isFinite(eventTicketPrice) || eventTicketPrice < 0) {
         throw new OnSpotBookingError('This ticket type has an invalid price.', 409, 'INVALID_TICKET_PRICE');
+      }
+
+      if (isNuscHomeMatch) {
+        const configuredPrice = nuscInventory.getMatchTicketPrice(ticketType.name);
+        unitPrice = Number(configuredPrice?.price);
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          throw new OnSpotBookingError('This NUSC ticket type is not configured for on-spot sales.', 409, 'INVALID_TICKET_PRICE');
+        }
+        if (ticketType.name === nuscInventory.GENERAL_TICKET_TYPE) {
+          if (!nuscInventory.GENERAL_SEATING_AREAS.some((area) => area.name === zone)) {
+            throw new OnSpotBookingError('Choose a General seating zone for this NUSC ticket.', 400, 'GENERAL_ZONE_REQUIRED');
+          }
+        } else if (zone) {
+          throw new OnSpotBookingError('A seating zone can only be selected for a NUSC General Pass.', 400, 'INVALID_GENERAL_ZONE');
+        }
+
+        const onSpotInventory = await nuscInventory.recordOnSpotMatchSale({
+          saleId: `on-spot-${requestId}`,
+          adminId: req.user._id,
+          matchDate,
+          ticketLines: [{ ticketType: ticketType.name, quantity, ...(zone ? { zone } : {}) }],
+          eventTicketTypes: event.ticketTypes,
+        }, session);
+        nuscSuiteBoxNumbers = onSpotInventory.suiteAllocations.map((allocation) => allocation.boxNumber);
+        recordedZone = zone;
+      } else {
+        if (zone) throw new OnSpotBookingError('Seating zones are only used for NUSC home matches.', 400, 'INVALID_ZONE');
+        unitPrice = eventTicketPrice;
       }
 
       const inventoryResult = await Event.updateOne(
@@ -163,7 +236,7 @@ exports.createBooking = async (req, res) => {
           ticketTypes: {
             $elemMatch: {
               _id: ticketType._id,
-              price: unitPrice,
+              price: eventTicketPrice,
               quantity: { $gte: quantity },
               $or: [
                 { sold: { $lte: capacity - quantity } },
@@ -216,6 +289,11 @@ exports.createBooking = async (req, res) => {
         bookingSource: 'on-spot',
         onSpotRequestId: requestId,
         onSpotCreatedBy: req.user._id,
+        ...(recordedZone ? { nuscGeneralZone: recordedZone } : {}),
+        ...(nuscSuiteBoxNumbers.length ? {
+          nuscSuiteBoxNumbers,
+          ...(nuscSuiteBoxNumbers.length === 1 ? { nuscSuiteBoxNumber: nuscSuiteBoxNumbers[0] } : {}),
+        } : {}),
         ticketIndex: 1,
         totalTickets: quantity,
         bookedAt,
@@ -243,11 +321,16 @@ exports.createBooking = async (req, res) => {
         status: createdBookings[0].status,
         paymentStatus: createdBookings[0].paymentStatus,
         modeOfPayment: createdBookings[0].modeOfPayment,
+        nuscGeneralZone: createdBookings[0].nuscGeneralZone || '',
+        nuscSuiteBoxNumbers: createdBookings[0].nuscSuiteBoxNumbers || [],
       },
     });
   } catch (error) {
     if (error instanceof OnSpotBookingError) {
       return res.status(error.status).json({ message: error.message, code: error.code });
+    }
+    if (error instanceof nuscInventory.InventoryConflict) {
+      return res.status(409).json({ message: error.message, code: error.code });
     }
     console.error('Create on-spot booking error:', error);
     return res.status(500).json({ message: 'Could not record this on-spot booking.' });

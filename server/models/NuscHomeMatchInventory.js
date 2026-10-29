@@ -22,7 +22,12 @@ const SuiteAllocationSchema = new mongoose.Schema({
 
 const OrderHoldSchema = new mongoose.Schema({
   orderId: { type: String, required: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required() { return !this.createdByAdmin; },
+  },
+  createdByAdmin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
   matchDate: { type: String, required: true },
   ticketLines: { type: [TicketLineSchema], default: [] },
   suiteAllocations: { type: [SuiteAllocationSchema], default: [] },
