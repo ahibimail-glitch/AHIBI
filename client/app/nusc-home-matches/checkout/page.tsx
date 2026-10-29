@@ -16,7 +16,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const PASS_OPTIONS = {
   "general-single": { name: "General Pass", ticketType: "General Pass", actualPrice: 299, totalPrice: 358.8 },
   "premium-single": { name: "Premium Pass", ticketType: "Premium Pass", actualPrice: 1250, totalPrice: 1500 },
-  "suite-single": { name: "United Suite — Single pass", ticketType: "United Suite — Single pass", actualPrice: 6000, totalPrice: 7200 },
+  "suite-single": { name: "United Suite — Single pass", ticketType: "United Suite — Single pass", actualPrice: 6250, totalPrice: 7500 },
   "suite-box-single": { name: "United Suite — Full Box", ticketType: "United Suite — Full Box", actualPrice: 50000, totalPrice: 60000 },
 } as const;
 type PassId = keyof typeof PASS_OPTIONS;
