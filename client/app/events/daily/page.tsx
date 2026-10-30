@@ -41,6 +41,7 @@ interface DailyEvent {
   };
   ticketTypes: any[];
   isFreeEvent: boolean;
+  bookingType?: "ticketed" | "rsvp" | "call_to_book";
   slug: string;
 }
 
@@ -116,6 +117,9 @@ const DailyEventCard = ({ event, index = 0 }: { event: DailyEvent; index?: numbe
           <p className="text-[11px] text-blue-600 font-medium mt-1">
             {event.activeDates?.length || 0} active dates
           </p>
+          {(event.bookingType === "rsvp" || event.bookingType === "call_to_book") && (
+            <p className="text-[11px] text-red-600 font-semibold mt-1">RSVP request</p>
+          )}
         </div>
       </Card>
     </motion.div>

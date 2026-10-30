@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Clock,
   Ticket,
+  ClipboardList,
   ChevronDown,
   ChevronUp,
   Tag,
@@ -57,6 +58,7 @@ interface DailyEvent {
   activeDates: string[];
   excludedDates: string[];
   ticketTypes: TicketType[];
+  bookingType?: "ticketed" | "rsvp" | "call_to_book";
   location: {
     address: string;
     city: string;
@@ -89,6 +91,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
 
   const [descExpanded, setDescExpanded] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const isRsvpEvent = event?.bookingType === "rsvp" || event?.bookingType === "call_to_book";
 
   useEffect(() => {
     let isMounted = true;
@@ -140,6 +143,8 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
   }, [event]);
 
   const handleBuyNow = () => {
+    if (isRsvpEvent) return;
+
     if (event) {
       trackBookingStarted({
         event_id: event._id,
@@ -154,6 +159,10 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
       return;
     }
     router.push(`/events/daily/${params.id}/checkout`);
+  };
+
+  const handleRsvpRequest = () => {
+    router.push(`/events/daily/${params.id}/rsvp`);
   };
 
   const handleShare = async () => {
@@ -302,13 +311,15 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
                       </p>
                     </div>
 
-                    <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
-                      <Tag size={17} className="text-red-500 mt-0.5 shrink-0" />
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold text-gray-900">Ticket Info: </span>
-                        If your payment has been successfully completed but the ticket is not yet visible, please don’t worry — it will be generated automatically.
-                      </p>
-                    </div>
+                    {!isRsvpEvent && (
+                      <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-3.5 border border-gray-100">
+                        <Tag size={17} className="text-red-500 mt-0.5 shrink-0" />
+                        <p className="text-sm text-gray-600">
+                          <span className="font-semibold text-gray-900">Ticket Info: </span>
+                          If your payment has been successfully completed but the ticket is not yet visible, please don’t worry — it will be generated automatically.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>
@@ -518,28 +529,46 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
 
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 shrink-0 text-red-600">
-                        <Ticket size={18} />
+                        {isRsvpEvent ? <ClipboardList size={18} /> : <Ticket size={18} />}
                       </div>
                       <div className="text-sm leading-snug text-red-600 font-semibold text-base">
-                        {getEventPriceRange()}
+                        {isRsvpEvent ? (
+                          <div className="space-y-1">
+                            <div>RSVP request</div>
+                            <div className="text-sm font-medium text-gray-600">Organizer will contact you to confirm</div>
+                          </div>
+                        ) : getEventPriceRange()}
                       </div>
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleBuyNow}
-                    className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
-                  >
-                    {event.isFreeEvent ? "Register Now" : "Book Tickets"}
-                  </button>
+                  {isRsvpEvent ? (
+                    <button
+                      onClick={handleRsvpRequest}
+                      className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
+                    >
+                      Request RSVP
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleBuyNow}
+                      className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
+                    >
+                      {event.isFreeEvent ? "Register Now" : "Book Tickets"}
+                    </button>
+                  )}
 
-                  <div className="mt-4 text-center">
-                    <div className="text-xs text-gray-500">Price from</div>
-                    <div className="text-lg font-semibold text-gray-900">{getEventPriceRange()}</div>
-                    <div className={`mt-1 text-sm ${event.isFreeEvent ? "text-green-600 font-semibold" : "text-gray-500"}`}>
-                      {event.isFreeEvent ? "Free Entry" : "Available"}
+                  {isRsvpEvent ? (
+                    <div className="mt-4 text-center text-sm text-gray-500">Sending a request does not confirm a booking. The organizer will call you.</div>
+                  ) : (
+                    <div className="mt-4 text-center">
+                      <div className="text-xs text-gray-500">Price from</div>
+                      <div className="text-lg font-semibold text-gray-900">{getEventPriceRange()}</div>
+                      <div className={`mt-1 text-sm ${event.isFreeEvent ? "text-green-600 font-semibold" : "text-gray-500"}`}>
+                        {event.isFreeEvent ? "Free Entry" : "Available"}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -558,13 +587,19 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
               </p>
               <p className="text-sm text-gray-400 mt-0.5">{event.location.city}</p>
             </div>
-            <button
-              onClick={handleBuyNow}
-              className="shrink-0 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
-            >
-              {event.isFreeEvent ? "Register Now" : "Book Now"} ·{" "}
-              <span className="font-bold">{getEventPriceRange()}</span>
-            </button>
+            {isRsvpEvent ? (
+              <button onClick={handleRsvpRequest} className="shrink-0 rounded-xl bg-red-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700">
+                Request RSVP
+              </button>
+            ) : (
+              <button
+                onClick={handleBuyNow}
+                className="shrink-0 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+              >
+                {event.isFreeEvent ? "Register Now" : "Book Now"} ·{" "}
+                <span className="font-bold">{getEventPriceRange()}</span>
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -574,13 +609,19 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
       {/* Fixed mobile book bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 md:hidden z-50 safe-area-inset-bottom">
         <div className="space-y-2">
-          <button
-            onClick={handleBuyNow}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
-          >
-            {event.isFreeEvent ? "Register Now" : "Book Now"} ·{" "}
-            <span className="font-bold">{getEventPriceRange()}</span>
-          </button>
+          {isRsvpEvent ? (
+            <button onClick={handleRsvpRequest} className="w-full rounded-xl bg-red-600 py-3.5 text-center text-sm font-semibold text-white transition-colors hover:bg-red-700">
+              Request RSVP
+            </button>
+          ) : (
+            <button
+              onClick={handleBuyNow}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
+            >
+              {event.isFreeEvent ? "Register Now" : "Book Now"} ·{" "}
+              <span className="font-bold">{getEventPriceRange()}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

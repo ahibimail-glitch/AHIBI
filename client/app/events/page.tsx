@@ -583,7 +583,9 @@ export default function EventsPage() {
                                 <h3 className="line-clamp-2 text-sm font-bold text-gray-900">
                                   {String(d.title || "").replace(/GE Blaster/gi, "GEL Blaster")}
                                 </h3>
-                                <p className="mt-1 text-xs font-medium text-blue-600">Book a slot →</p>
+                                <p className={`mt-1 text-xs font-medium ${d.bookingType === "rsvp" || d.bookingType === "call_to_book" ? "text-red-600" : "text-blue-600"}`}>
+                                  {d.bookingType === "rsvp" || d.bookingType === "call_to_book" ? "Request RSVP" : "Book a slot"}
+                                </p>
                               </div>
                             </div>
                           </Link>

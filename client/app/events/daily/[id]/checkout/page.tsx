@@ -62,6 +62,7 @@ interface DailyEvent {
   activeDates: string[];
   category: string;
   ticketTypes: TicketType[];
+  bookingType?: "ticketed" | "rsvp" | "call_to_book";
   location: {
     address: string;
     city: string;
@@ -128,16 +129,23 @@ export default function DailyEventCheckoutPage() {
   }, [eventId, pendingTicketOrderStorageKey, router]);
 
   useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchEvent = async (): Promise<boolean> => {
       try {
         setLoading(true);
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/daily-events/${eventId}`);
         if (!response.ok) throw new Error("Failed to fetch daily event");
         const data = await response.json();
+        if (data.bookingType === "rsvp" || data.bookingType === "call_to_book") {
+          toast.info("Submit an RSVP request from the event page.");
+          router.replace(`/events/daily/${eventId}`);
+          return false;
+        }
         setEvent(data);
+        return true;
       } catch (err) {
         toast.error("Failed to load daily event details");
         router.push(`/events/daily/${eventId}`);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -173,8 +181,13 @@ export default function DailyEventCheckoutPage() {
       }
     };
 
-    fetchProfile();
-    fetchEvent();
+    const initializeCheckout = async () => {
+      if (await fetchEvent()) {
+        await fetchProfile();
+      }
+    };
+
+    initializeCheckout();
   }, [eventId, router]);
 
   const subtotalAmount = Array.from(selectedTickets.values()).reduce((sum, item) => sum + (item.ticket.price * item.quantity), 0);

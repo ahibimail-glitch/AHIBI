@@ -63,6 +63,7 @@ type DailyEvent = {
   };
   ticketTypes: any[];
   isFreeEvent: boolean;
+  bookingType?: "ticketed" | "rsvp" | "call_to_book";
   slug: string;
 }
 
@@ -215,6 +216,9 @@ const DailyEventCard = ({ event }: { event: DailyEvent }) => {
         <p className="text-[11px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5">
           {event.category || "Event"}{event.location?.city ? ` | ${event.location.city}` : ""}
         </p>
+        {(event.bookingType === "rsvp" || event.bookingType === "call_to_book") && (
+          <p className="text-[11px] font-semibold text-red-600 mt-1">RSVP request</p>
+        )}
         <p className="text-[11px] text-gray-400 mt-1">
           {event.periodStartDate && event.periodEndDate ? (
             <>

@@ -1,5 +1,7 @@
 const { check, validationResult } = require('express-validator');
 const DailyEvent = require('../models/DailyEvent');
+const DailyEventRsvpRequest = require('../models/DailyEventRsvpRequest');
+const mongoose = require('mongoose');
 const ApiResponse = require('../utils/apiResponse');
 const { generateUniqueEventSlug } = require('../utils/eventSlug');
 const Booking = require('../models/Booking');
@@ -8,6 +10,8 @@ const adminNotificationController = require('./adminNotificationController');
 const emailService = require('../services/emailService');
 const Organizer = require('../models/Organizer');
 const User = require('../models/User');
+
+const normalizeBookingType = (bookingType) => bookingType === 'call_to_book' ? 'rsvp' : bookingType;
 
 /**
  * @desc    Create a new daily event (Organizer only)
@@ -40,9 +44,15 @@ const createOrganizerDailyEvent = async (req, res) => {
       faqs = [],
       convenience = {},
       isFreeEvent = false,
+      bookingType: requestedBookingType = 'ticketed',
       socialLinks = {},
       bookingDeadlineHours = 0
     } = req.body;
+
+    const bookingType = normalizeBookingType(requestedBookingType);
+    if (!['ticketed', 'rsvp'].includes(bookingType)) {
+      return ApiResponse.error(res, 'Invalid daily event booking type', {}, 400);
+    }
 
     const slug = await generateUniqueEventSlug(title, DailyEvent);
 
@@ -73,23 +83,25 @@ const createOrganizerDailyEvent = async (req, res) => {
       excludedDates: excludedDates.map(date => new Date(date)),
       organizer: req.user.id,
       location: locationData,
-      ticketTypes: isFreeEvent ? [] : ticketTypes.map(ticket => ({
+      ticketTypes: bookingType === 'rsvp' || isFreeEvent ? [] : ticketTypes.map(ticket => ({
         ...ticket,
         sold: 0,
         benefits: ticket.benefits || []
       })),
+      bookingType,
+      bookingPhone: '',
       termsAndConditions,
       faqs,
       status: 'pending',
       isFeatured: false,
-      isFreeEvent,
+      isFreeEvent: bookingType === 'rsvp' ? false : isFreeEvent,
       createdBy: req.user.id,
       organizerInfo: {
         id: req.user.id,
         name: req.user.name
       },
       approvalStatus: 'pending',
-      convenience: isFreeEvent ? { percentage: 0, fixedAmount: 0 } : (convenience || {}),
+      convenience: bookingType === 'rsvp' || isFreeEvent ? { percentage: 0, fixedAmount: 0 } : (convenience || {}),
       socialLinks: socialLinks || {},
       bookingDeadlineHours: bookingDeadlineHours || 0
     });
@@ -316,12 +328,14 @@ const getPublicDailyEvents = async (req, res) => {
     let dailyEvents;
     if (parsedLimit >= 10000) {
       dailyEvents = await DailyEvent.find(query)
+        .select('-bookingPhone -__v')
         .sort({ periodStartDate: 1 })
         .lean();
     } else {
       const skip = (parsedPage - 1) * parsedLimit;
       
       dailyEvents = await DailyEvent.find(query)
+        .select('-bookingPhone -__v')
         .sort({ periodStartDate: 1 })
         .skip(skip)
         .limit(parsedLimit)
@@ -357,7 +371,7 @@ const getPublicDailyEventById = async (req, res) => {
         _id: req.params.id
       })
         .populate('organizer', 'name email avatar')
-        .select('-__v -createdAt -updatedAt');
+        .select('-__v -createdAt -updatedAt -bookingPhone');
     }
     
     if (!dailyEvent && req.params.id) {
@@ -365,7 +379,7 @@ const getPublicDailyEventById = async (req, res) => {
         slug: req.params.id
       })
         .populate('organizer', 'name email avatar')
-        .select('-__v -createdAt -updatedAt');
+        .select('-__v -createdAt -updatedAt -bookingPhone');
     }
     
     if (!dailyEvent && req.params.id) {
@@ -377,7 +391,7 @@ const getPublicDailyEventById = async (req, res) => {
         ]
       })
         .populate('organizer', 'name email avatar')
-        .select('-__v -createdAt -updatedAt');
+        .select('-__v -createdAt -updatedAt -bookingPhone');
     }
 
     if (!dailyEvent) {
@@ -744,9 +758,30 @@ const getOrganizerDailyEvents = async (req, res) => {
       query.status = status;
     }
 
-    const dailyEvents = await DailyEvent.find(query)
+    let dailyEvents = await DailyEvent.find(query)
       .sort({ createdAt: -1 })
       .lean();
+
+    const rsvpEventIds = dailyEvents
+      .filter(event => event.bookingType === 'rsvp' || event.bookingType === 'call_to_book')
+      .map(event => event._id);
+    if (rsvpEventIds.length > 0) {
+      const pendingCounts = await DailyEventRsvpRequest.aggregate([
+        {
+          $match: {
+            dailyEvent: { $in: rsvpEventIds },
+            organizer: new mongoose.Types.ObjectId(req.user.id),
+            status: 'pending',
+          },
+        },
+        { $group: { _id: '$dailyEvent', count: { $sum: 1 } } },
+      ]);
+      const countByEventId = new Map(pendingCounts.map(item => [String(item._id), item.count]));
+      dailyEvents = dailyEvents.map(event => ({
+        ...event,
+        pendingRsvpCount: countByEventId.get(String(event._id)) || 0,
+      }));
+    }
 
     return ApiResponse.success(res, 'Daily events fetched successfully', { dailyEvents });
   } catch (error) {
@@ -803,7 +838,29 @@ const updateOrganizerDailyEvent = async (req, res) => {
       return ApiResponse.error(res, 'Cannot modify completed daily events', {}, 400);
     }
 
-    const fieldsToUpdate = { ...req.body };
+    const bookingType = normalizeBookingType(req.body.bookingType ?? dailyEvent.bookingType ?? 'ticketed');
+    if (!['ticketed', 'rsvp'].includes(bookingType)) {
+      return ApiResponse.error(res, 'Invalid daily event booking type', {}, 400);
+    }
+    const existingTicketsSold = Math.max(
+      Number(dailyEvent.ticketsSold || 0),
+      (dailyEvent.ticketTypes || []).reduce((total, ticket) => total + Number(ticket.sold || 0), 0)
+    );
+    if (bookingType === 'rsvp' && dailyEvent.bookingType !== 'rsvp' && existingTicketsSold > 0) {
+      return ApiResponse.error(res, 'Booking type cannot be changed after tickets have been sold', {}, 400);
+    }
+
+    const fieldsToUpdate = {
+      ...req.body,
+      bookingType,
+      bookingPhone: ''
+    };
+
+    if (bookingType === 'rsvp') {
+      fieldsToUpdate.ticketTypes = [];
+      fieldsToUpdate.isFreeEvent = false;
+      fieldsToUpdate.convenience = { percentage: 0, fixedAmount: 0 };
+    }
 
     if (req.body.location) {
       fieldsToUpdate.location = {
@@ -844,12 +901,26 @@ const updateOrganizerDailyEvent = async (req, res) => {
       });
     }
 
+    if (bookingType === 'rsvp') {
+      fieldsToUpdate.ticketTypes = [];
+    }
+
+    if (req.body.ticketTypes || req.body.bookingType) {
+      const tickets = fieldsToUpdate.ticketTypes ?? dailyEvent.ticketTypes ?? [];
+      fieldsToUpdate.totalTickets = tickets.reduce((total, ticket) => total + Number(ticket.quantity || 0), 0);
+      fieldsToUpdate.ticketsSold = tickets.reduce((total, ticket) => total + Number(ticket.sold || 0), 0);
+    }
+
     if (req.body.duration) {
       fieldsToUpdate.duration = req.body.duration;
     }
 
     if (req.body.convenience) {
       fieldsToUpdate.convenience = req.body.convenience;
+    }
+
+    if (bookingType === 'rsvp') {
+      fieldsToUpdate.convenience = { percentage: 0, fixedAmount: 0 };
     }
 
     if (req.body.socialLinks) {

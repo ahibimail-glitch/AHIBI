@@ -3,6 +3,7 @@ const { check } = require('express-validator');
 const organizerAuthController = require('../controllers/organizerAuthController');
 const eventController = require('../controllers/eventController');
 const dailyEventController = require('../controllers/dailyEventController');
+const dailyEventRsvpController = require('../controllers/dailyEventRsvpController');
 const organizerBookingController = require('../controllers/organizerBookingController');
 const eventTeamController = require('../controllers/eventTeamController');
 const eventDepartmentController = require('../controllers/eventDepartmentController');
@@ -257,6 +258,9 @@ router.post('/daily-events', [
   check('activeDates', 'Active dates are required').isArray({ min: 1 }),
   check('location.address', 'Venue address is required').notEmpty(),
   check('ticketTypes').custom((value, { req }) => {
+    if (req.body.bookingType === 'rsvp' || req.body.bookingType === 'call_to_book') {
+      return true;
+    }
     if (req.body.isFreeEvent) {
       return true;
     }
@@ -268,6 +272,8 @@ router.post('/daily-events', [
 ], dailyEventController.createOrganizerDailyEvent);
 
 router.get('/daily-events', protect, dailyEventController.getOrganizerDailyEvents);
+router.get('/daily-events/:id/rsvps', protect, dailyEventRsvpController.getOrganizerRsvpRequests);
+router.patch('/daily-events/:id/rsvps/:requestId', protect, dailyEventRsvpController.updateOrganizerRsvpStatus);
 router.get('/daily-events/:id', protect, dailyEventController.getOrganizerDailyEventById);
 router.put('/daily-events/:id', [
   protect,

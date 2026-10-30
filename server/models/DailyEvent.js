@@ -146,6 +146,17 @@ const DailyEventSchema = new mongoose.Schema({
     type: String
   }],
   ticketTypes: [TicketTypeSchema],
+  bookingType: {
+    type: String,
+    // call_to_book is retained for old records; new events use rsvp.
+    enum: ['ticketed', 'rsvp', 'call_to_book'],
+    default: 'ticketed'
+  },
+  bookingPhone: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   termsAndConditions: {
     type: String,
     default: ''

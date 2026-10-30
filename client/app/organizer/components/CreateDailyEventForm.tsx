@@ -62,6 +62,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
     posterImage: "",
     coverImage: "",
     isFreeEvent: false,
+    bookingType: "ticketed",
     website: "",
     facebook: "",
     instagram: "",
@@ -364,7 +365,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
         throw new Error("Please select at least one active date for the daily event");
       }
 
-      if (!eventData.isFreeEvent && ticketTypes.some(t => !t.name || !t.price || !t.quantity)) {
+      if (eventData.bookingType !== "rsvp" && !eventData.isFreeEvent && ticketTypes.some(t => !t.name || !t.price || !t.quantity)) {
         throw new Error("Please fill in all ticket type details");
       }
 
@@ -399,7 +400,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
           pincode: eventData.pincode,
           coordinates: [0, 0]
         },
-        ticketTypes: eventData.isFreeEvent ? [] : ticketTypes.map(ticket => ({
+        ticketTypes: eventData.bookingType === "rsvp" || eventData.isFreeEvent ? [] : ticketTypes.map(ticket => ({
           name: ticket.name,
           description: ticket.description,
           price: parseFloat(ticket.price),
@@ -408,8 +409,9 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
           benefits: ticket.benefits.filter(b => b.trim() !== "")
         })),
         termsAndConditions: eventData.termsAndConditions,
-        isFreeEvent: eventData.isFreeEvent,
-        convenience: fees.includeConvenience ? {
+        bookingType: eventData.bookingType,
+        isFreeEvent: eventData.bookingType === "rsvp" ? false : eventData.isFreeEvent,
+        convenience: eventData.bookingType !== "rsvp" && fees.includeConvenience ? {
           percentage: fees.conveniencePercentage,
           fixedAmount: fees.convenienceFixedAmount
         } : {
@@ -877,18 +879,58 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                 </CardContent>
               </Card>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isFreeEvent"
-                  checked={eventData.isFreeEvent}
-                  onCheckedChange={(checked) =>
-                    setEventData(prev => ({ ...prev, isFreeEvent: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="isFreeEvent">This is a free event</Label>
-              </div>
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-medium text-gray-900">Booking method *</legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${eventData.bookingType === "ticketed" ? "border-purple-500 bg-purple-50" : "border-gray-200"}`}>
+                    <input
+                      type="radio"
+                      name="bookingType"
+                      value="ticketed"
+                      checked={eventData.bookingType === "ticketed"}
+                      onChange={() => setEventData(prev => ({ ...prev, bookingType: "ticketed" }))}
+                      className="mt-1 accent-purple-600"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">Online ticket booking</span>
+                      <span className="mt-1 block text-xs text-gray-600">Set ticket types, prices, and quantities.</span>
+                    </span>
+                  </label>
+                  <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${eventData.bookingType === "rsvp" ? "border-purple-500 bg-purple-50" : "border-gray-200"}`}>
+                    <input
+                      type="radio"
+                      name="bookingType"
+                      value="rsvp"
+                      checked={eventData.bookingType === "rsvp"}
+                      onChange={() => setEventData(prev => ({ ...prev, bookingType: "rsvp" }))}
+                      className="mt-1 accent-purple-600"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-900">RSVP request</span>
+                      <span className="mt-1 block text-xs text-gray-600">Guests send their contact details; you call to confirm.</span>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
 
-              {!eventData.isFreeEvent && (
+              {eventData.bookingType === "rsvp" ? (
+                <div className="rounded-lg border border-purple-100 bg-purple-50 p-4 text-sm text-purple-900">
+                  Ticket price and capacity fields are not needed for RSVP requests. You will review each request and contact the guest to confirm.
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isFreeEvent"
+                      checked={eventData.isFreeEvent}
+                      onCheckedChange={(checked) =>
+                        setEventData(prev => ({ ...prev, isFreeEvent: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="isFreeEvent">This is a free event</Label>
+                  </div>
+
+                  {!eventData.isFreeEvent && (
                 <div className="space-y-4">
                   <div className="sticky top-0 z-10 flex items-center justify-between bg-white/95 backdrop-blur-sm py-3 px-2 -mx-2 border-b border-gray-200 shadow-sm">
                     <Label className="text-lg font-semibold">
@@ -1019,6 +1061,8 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                     </Button>
                   </div>
                 </div>
+                  )}
+                </>
               )}
 
               {/* Social Links */}
