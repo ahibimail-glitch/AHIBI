@@ -7,13 +7,16 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +53,17 @@ interface UserProfile {
   [key: string]: any;
 }
 
+const isUpcomingDate = (value: unknown) => {
+  if (!value) return false;
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value as string | number);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  return date >= today;
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -58,6 +72,7 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
 
   // Avatar State
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -80,6 +95,18 @@ export default function ProfilePage() {
 
   const regularEventBookings = userBookings.filter((b) => !isDailyBooking(b));
   const dailyEventBookings = userBookings.filter((b) => isDailyBooking(b));
+  const upcomingBookingsCount =
+    userBookings.filter((booking) =>
+      isUpcomingDate(
+        isDailyBooking(booking)
+          ? booking.selectedDate || booking.dailyEvent?.startDate || booking.dailyEvent?.date
+          : booking.event?.startDate || booking.event?.date
+      )
+    ).length +
+    artistBookings.filter((booking) => isUpcomingDate(booking.event?.date)).length +
+    sportsBookings.filter((booking) =>
+      isUpcomingDate(booking.date || booking.bookingDate || booking.startTime)
+    ).length;
 
   useEffect(() => {
     setMounted(true);
@@ -134,7 +161,10 @@ export default function ProfilePage() {
     fetchData();
   }, []);
 
-  const handleSaveProfile = () => setIsEditing(false); // Add your API save logic here
+  const handleSaveProfile = () => {
+    setIsEditing(false);
+    setIsProfileDialogOpen(false);
+  }; // Add your API save logic here
 
   const handleSelectAvatar = () => {
     if (uploadingAvatar) return;
@@ -238,131 +268,107 @@ export default function ProfilePage() {
     );
   }
 
-  const completedBookingsCount =
-    userBookings.filter((b) => b.paymentStatus === "completed" || b.paymentStatus === "paid").length +
-    sportsBookings.filter((b) => b.status === "completed").length;
-
-  const totalSpent =
-    userBookings.reduce((sum, b) => sum + b.total, 0) +
-    sportsBookings.reduce((sum, b) => sum + b.pricing.totalAmount, 0);
-
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Navbar />
 
-      {/* Hero Section */}
-      <div className="bg-white border-b border-slate-200 shadow-sm relative overflow-hidden">
-        {/* Subtle Background Pattern */}
-        <div className="absolute inset-0 bg-grid-slate-100/[0.2] bg-[size:20px_20px]"></div>
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-
-        <div className="container mx-auto px-4 py-12 relative z-10 max-w-5xl">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-            {/* Avatar Profile */}
-            <div className="relative group shrink-0">
-              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} />
-
-              <div className="relative rounded-full p-1 bg-white border border-slate-200 shadow-sm">
-                <Avatar className="w-32 h-32 md:w-40 md:h-40 shadow-inner">
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:py-7">
+          <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <div className="relative shrink-0">
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} />
+                <Avatar className="h-14 w-14 border border-slate-200 sm:h-16 sm:w-16">
                   <AvatarImage src={profileData.profilePic || profileData.avatar || "/images/profile.png"} className="object-cover" />
-                  <AvatarFallback className="text-4xl font-bold bg-slate-100 text-slate-400">
+                  <AvatarFallback className="bg-slate-100 text-base font-bold text-slate-500">
                     {profileData.name?.split(" ").map((n) => n[0]).join("")}
                   </AvatarFallback>
                 </Avatar>
-
                 <Button
+                  type="button"
                   size="icon"
+                  aria-label="Change profile photo"
+                  title="Change profile photo"
                   disabled={uploadingAvatar}
                   onClick={handleSelectAvatar}
-                  className="absolute bottom-2 right-2 h-10 w-10 rounded-full border-2 border-white bg-slate-900 text-white hover:bg-slate-800 shadow-md transition-transform hover:scale-105"
+                  className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full border-2 border-white bg-slate-900 text-white shadow-sm hover:bg-slate-700"
                 >
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-3.5 w-3.5" />
                 </Button>
+                {avatarError && <p className="absolute left-0 top-full mt-2 w-48 text-xs font-medium text-rose-600">{avatarError}</p>}
               </div>
-              {avatarError && <div className="absolute -bottom-6 w-full text-center text-xs text-rose-500 font-medium">{avatarError}</div>}
-            </div>
 
-            {/* Profile Info & Stats */}
-            <div className="flex-1 w-full text-center md:text-left pt-2">
-              <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="min-w-0 truncate text-lg font-bold tracking-tight text-slate-950 sm:text-xl">
                     {profileData.name}
                   </h1>
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm text-slate-500 font-medium">
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-                      <CheckCircle className="h-3.5 w-3.5" /> Verified Account
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Mail className="h-4 w-4" /> {profileData.email}
-                    </span>
-                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <CheckCircle className="h-3 w-3" /> Verified
+                  </span>
                 </div>
-
-                <Button
-                  onClick={() => setIsEditing(!isEditing)}
-                  variant={isEditing ? "destructive" : "outline"}
-                  className="rounded-xl shadow-sm transition-all"
-                >
-                  {isEditing ? "Cancel Editing" : <><Edit className="w-4 h-4 mr-2"/> Edit Profile</>}
-                </Button>
+                <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-500 sm:text-sm">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{profileData.email}</span>
+                </p>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                  <span className="text-slate-500 text-sm font-medium mb-1">Total Bookings</span>
-                  <span className="text-2xl font-bold text-slate-900">{userBookings.length + sportsBookings.length + artistBookings.length}</span>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                  <span className="text-slate-500 text-sm font-medium mb-1">Completed</span>
-                  <span className="text-2xl font-bold text-slate-900">{completedBookingsCount}</span>
-                </div>
-                <div className="col-span-2 md:col-span-1 bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                  <span className="text-slate-500 text-sm font-medium mb-1">Total Spent</span>
-                  <span className="text-2xl font-bold text-slate-900">₹{totalSpent.toLocaleString()}</span>
-                </div>
+              <Button
+                type="button"
+                aria-label="Edit profile"
+                onClick={() => {
+                  setIsEditing(true);
+                  setIsProfileDialogOpen(true);
+                }}
+                variant="outline"
+                className="h-9 shrink-0 rounded-xl border-slate-200 px-2.5 text-slate-700 shadow-none sm:px-3"
+              >
+                <Edit className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Edit profile</span>
+              </Button>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-center sm:px-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Bookings</p>
+                <p className="mt-0.5 text-2xl font-bold leading-none text-slate-950">
+                  {userBookings.length + sportsBookings.length + artistBookings.length}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-rose-100 bg-rose-50/60 px-3 py-3 text-center sm:px-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-600 sm:text-xs">Upcoming</p>
+                <p className="mt-0.5 text-2xl font-bold leading-none text-rose-600">{upcomingBookingsCount}</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Main Content Area */}
-      <div className="container mx-auto px-4 py-10 max-w-5xl">
-        <Tabs defaultValue="bookings" className="w-full">
-
-          {/* Main Navigation Tabs */}
-          <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex w-full max-w-sm mx-auto mb-10">
-            <TabsTrigger value="bookings" className="flex-1 rounded-xl py-2.5 text-sm font-semibold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
-              <Ticket className="h-4 w-4 mr-2" /> Bookings
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="flex-1 rounded-xl py-2.5 text-sm font-semibold data-[state=active]:bg-slate-900 data-[state=active]:text-white transition-all">
-              <User className="h-4 w-4 mr-2" /> Personal Info
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Bookings Tab */}
-          <TabsContent value="bookings" className="space-y-6 outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-7">
+        <div className="space-y-4">
 
             {/* Booking Type Pill Toggle */}
-            <div className="flex gap-2 p-1 bg-slate-200/50 rounded-xl max-w-fit mx-auto md:mx-0 overflow-x-auto">
+            <div aria-label="Booking type" className="scrollbar-hide flex w-full gap-2 overflow-x-auto rounded-2xl border border-slate-200/80 bg-slate-100/80 p-1.5">
               {[
-                { id: "events", label: "Events", count: regularEventBookings.length },
-                { id: "daily-events", label: "Daily Events", count: dailyEventBookings.length },
-                { id: "artist", label: "Artist Bookings", count: artistBookings.length },
+                { id: "events", label: "Events", count: regularEventBookings.length, icon: Ticket },
+                { id: "daily-events", label: "Daily Events", count: dailyEventBookings.length, icon: Calendar },
+                { id: "artist", label: "Artist bookings", count: artistBookings.length, icon: MessageSquare },
                 // { id: "sports", label: "Sports", count: sportsBookings.length }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setBookingType(tab.id as any)}
-                  className={`px-5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+                  aria-pressed={bookingType === tab.id}
+                  className={`inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold whitespace-nowrap transition-colors sm:flex-1 ${
                     bookingType === tab.id
-                    ? "bg-white text-slate-900 shadow border border-slate-200"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                    ? "bg-slate-950 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-white hover:text-slate-950"
                   }`}
                 >
-                  {tab.label} <span className="ml-1.5 opacity-60 text-xs">({tab.count})</span>
+                  <tab.icon className="h-3.5 w-3.5" />
+                  {tab.label}
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] leading-none ${bookingType === tab.id ? "bg-white/15 text-white" : "bg-white text-slate-500"}`}>{tab.count}</span>
                 </button>
               ))}
             </div>
@@ -373,39 +379,75 @@ export default function ProfilePage() {
               {/* --- REGULAR EVENTS --- */}
               {bookingType === "events" && (
                 regularEventBookings.length > 0 ? regularEventBookings.map((booking) => (
-                  <div key={booking._id} className="group bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5">
-                    <div className="w-full sm:w-40 h-32 relative rounded-xl overflow-hidden shrink-0 bg-slate-100">
-                      <Image src={getSafeImageSrc(booking.event?.banner)} alt="Event" fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div key={booking._id} className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-5 lg:grid lg:grid-cols-[7rem_minmax(0,1fr)_11rem] lg:items-center lg:gap-6">
+                    <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-32 sm:w-28">
+                      <Image
+                        src={getSafeImageSrc(booking.event?.banner)}
+                        alt={booking.event?.title || "Event poster"}
+                        fill
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "/placeholder.jpg";
+                        }}
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     </div>
-                    <div className="flex-1 flex flex-col justify-between">
+                    <div className="min-w-0 flex-1 py-0.5">
                       <div>
-                        <h3 className="font-bold text-lg text-slate-900 leading-tight mb-2 line-clamp-2">
-                          {booking.event?.title || booking.dailyEvent?.title || "Event Name Unavailable"}
-                        </h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="min-w-0 line-clamp-2 font-sans text-[15px] font-semibold leading-snug text-slate-900 sm:text-base">
+                            {booking.event?.title || booking.dailyEvent?.title || "Event Name Unavailable"}
+                          </h3>
+                          {booking.paymentStatus === "completed" ? (
+                            <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 lg:hidden" aria-label="Completed" role="img" />
+                          ) : (
+                            <Badge variant="outline" className={`${getStatusColor(booking.paymentStatus)} shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize tracking-normal lg:hidden`}>
+                              {booking.paymentStatus}
+                            </Badge>
+                          )}
+                        </div>
                         {booking.nuscSeasonPassType && (
-                          <p className="mb-2 text-xs font-semibold text-emerald-700">
+                          <p className="mt-2 text-xs font-semibold text-emerald-700">
                             Season pass · Match {booking.nuscSeasonMatchIndex || "—"} of 10
                           </p>
                         )}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
-                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
-                            {new Date(booking.nuscSeasonPassType ? booking.event?.startDate || booking.bookedAt : booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
-                          <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                        <Badge variant="outline" className={`${getStatusColor(booking.paymentStatus)} rounded-md uppercase tracking-wider text-[10px] font-bold px-2 py-1`}>
-                          {booking.paymentStatus}
-                        </Badge>
-                        <div className="flex items-center gap-4">
-                          <span className="font-bold text-lg text-slate-900">₹{booking.total.toLocaleString()}</span>
-                          {(booking.paymentStatus === 'completed' || booking.paymentStatus === 'paid') && (
-                            <Button size="sm" onClick={() => handleViewTicket(booking)} className="rounded-lg bg-slate-900 text-white hover:bg-slate-800">View Ticket</Button>
-                          )}
+                        <div className="mt-3 grid gap-1.5 text-[13px] font-medium leading-5 text-slate-600">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-2"><Calendar className="h-4 w-4 shrink-0 text-slate-400"/>
+                              {new Date(booking.nuscSeasonPassType ? booking.event?.startDate || booking.bookedAt : booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                            <span className="shrink-0 text-sm font-bold text-slate-950 lg:hidden">₹{booking.total.toLocaleString()}</span>
+                          </div>
+                          <span className="flex items-center gap-2"><Ticket className="h-4 w-4 shrink-0 text-slate-400"/> {booking.totalTickets || booking.quantity} {Number(booking.totalTickets || booking.quantity) === 1 ? "ticket" : "tickets"}</span>
                         </div>
                       </div>
                     </div>
+                    <div className="hidden min-w-0 flex-col gap-3 lg:flex">
+                      <div className="flex items-center justify-between gap-3">
+                        {booking.paymentStatus === "completed" ? (
+                          <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600" aria-label="Completed" role="img" />
+                        ) : (
+                          <Badge variant="outline" className={`${getStatusColor(booking.paymentStatus)} shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize tracking-normal`}>
+                            {booking.paymentStatus}
+                          </Badge>
+                        )}
+                        <span className="truncate text-sm font-bold text-slate-950">₹{booking.total.toLocaleString()}</span>
+                      </div>
+                      {(booking.paymentStatus === 'completed' || booking.paymentStatus === 'paid') && (
+                        <Button size="sm" onClick={() => handleViewTicket(booking)} className="h-11 w-full rounded-xl bg-slate-950 text-sm font-semibold text-white hover:bg-slate-800">
+                          <Ticket className="mr-2 h-4 w-4" /> View ticket
+                        </Button>
+                      )}
+                    </div>
+                    </div>
+                    {(booking.paymentStatus === 'completed' || booking.paymentStatus === 'paid') && (
+                      <div className="mt-4 border-t border-slate-100 pt-3 sm:flex sm:justify-end lg:hidden">
+                        <Button size="sm" onClick={() => handleViewTicket(booking)} className="h-11 w-full rounded-xl bg-slate-950 text-sm font-semibold text-white hover:bg-slate-800 sm:w-auto sm:px-5">
+                          <Ticket className="mr-2 h-4 w-4" /> View ticket
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )) : (
                   <EmptyState icon={<Ticket className="w-12 h-12 text-slate-300"/>} title="No event bookings yet" desc="Discover and book exciting upcoming events." link="/events" linkText="Explore Events" />
@@ -415,35 +457,71 @@ export default function ProfilePage() {
               {/* --- DAILY EVENTS --- */}
               {bookingType === "daily-events" && (
                 dailyEventBookings.length > 0 ? dailyEventBookings.map((booking) => (
-                  <div key={booking._id} className="group bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5">
-                    <div className="w-full sm:w-40 h-32 relative rounded-xl overflow-hidden shrink-0 bg-slate-100">
-                      <Image src={getSafeImageSrc(booking.dailyEvent?.banner)} alt="Daily Event" fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div key={booking._id} className="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-5 lg:grid lg:grid-cols-[7rem_minmax(0,1fr)_11rem] lg:items-center lg:gap-6">
+                    <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-32 sm:w-28">
+                      <Image
+                        src={getSafeImageSrc(booking.dailyEvent?.banner)}
+                        alt={booking.dailyEvent?.title || "Daily event poster"}
+                        fill
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "/placeholder.jpg";
+                        }}
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                       <div className="absolute top-2 left-2 bg-white/90 backdrop-blur text-xs font-bold px-2 py-1 rounded-md text-slate-900">Daily</div>
                     </div>
-                    <div className="flex-1 flex flex-col justify-between">
+                    <div className="min-w-0 flex-1 py-0.5">
                       <div>
-                        <h3 className="font-bold text-lg text-slate-900 leading-tight mb-2 line-clamp-2">
-                          {booking.dailyEvent?.title || "Daily Event"}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
-                          <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
-                            {new Date(booking.selectedDate || booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
-                          <span className="flex items-center gap-1.5"><Ticket className="h-4 w-4"/> {booking.totalTickets || booking.quantity} Ticket(s)</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                        <Badge variant="outline" className={`${getStatusColor(booking.paymentStatus)} rounded-md uppercase tracking-wider text-[10px] font-bold px-2 py-1`}>
-                          {booking.paymentStatus}
-                        </Badge>
-                        <div className="flex items-center gap-4">
-                          <span className="font-bold text-lg text-slate-900">₹{booking.total.toLocaleString()}</span>
-                          {booking.paymentStatus === 'completed' && (
-                            <Button size="sm" onClick={() => handleViewTicket(booking)} className="rounded-lg bg-slate-900 text-white hover:bg-slate-800">View Ticket</Button>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="min-w-0 line-clamp-2 font-sans text-[15px] font-semibold leading-snug text-slate-900 sm:text-base">
+                            {booking.dailyEvent?.title || "Daily Event"}
+                          </h3>
+                          {booking.paymentStatus === "completed" ? (
+                            <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 lg:hidden" aria-label="Completed" role="img" />
+                          ) : (
+                            <Badge variant="outline" className={`${getStatusColor(booking.paymentStatus)} shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize tracking-normal lg:hidden`}>
+                              {booking.paymentStatus}
+                            </Badge>
                           )}
+                        </div>
+                        <div className="mt-3 grid gap-1.5 text-[13px] font-medium leading-5 text-slate-600">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-2"><Calendar className="h-4 w-4 shrink-0 text-slate-400"/>
+                              {new Date(booking.selectedDate || booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                            <span className="shrink-0 text-sm font-bold text-slate-950 lg:hidden">₹{booking.total.toLocaleString()}</span>
+                          </div>
+                          <span className="flex items-center gap-2"><Ticket className="h-4 w-4 shrink-0 text-slate-400"/> {booking.totalTickets || booking.quantity} {Number(booking.totalTickets || booking.quantity) === 1 ? "ticket" : "tickets"}</span>
                         </div>
                       </div>
                     </div>
+                    <div className="hidden min-w-0 flex-col gap-3 lg:flex">
+                      <div className="flex items-center justify-between gap-3">
+                        {booking.paymentStatus === "completed" ? (
+                          <CheckCircle className="h-5 w-5 shrink-0 text-emerald-600" aria-label="Completed" role="img" />
+                        ) : (
+                          <Badge variant="outline" className={`${getStatusColor(booking.paymentStatus)} shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize tracking-normal`}>
+                            {booking.paymentStatus}
+                          </Badge>
+                        )}
+                        <span className="truncate text-sm font-bold text-slate-950">₹{booking.total.toLocaleString()}</span>
+                      </div>
+                      {booking.paymentStatus === 'completed' && (
+                        <Button size="sm" onClick={() => handleViewTicket(booking)} className="h-11 w-full rounded-xl bg-slate-950 text-sm font-semibold text-white hover:bg-slate-800">
+                          <Ticket className="mr-2 h-4 w-4" /> View ticket
+                        </Button>
+                      )}
+                    </div>
+                    </div>
+                    {booking.paymentStatus === 'completed' && (
+                      <div className="mt-4 border-t border-slate-100 pt-3 sm:flex sm:justify-end lg:hidden">
+                        <Button size="sm" onClick={() => handleViewTicket(booking)} className="h-11 w-full rounded-xl bg-slate-950 text-sm font-semibold text-white hover:bg-slate-800 sm:w-auto sm:px-5">
+                          <Ticket className="mr-2 h-4 w-4" /> View ticket
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )) : (
                   <EmptyState icon={<Calendar className="w-12 h-12 text-slate-300"/>} title="No daily events booked" desc="Find fun daily activities happening near you." link="/events/daily" linkText="Explore Daily Events" />
@@ -453,20 +531,20 @@ export default function ProfilePage() {
               {/* --- ARTIST BOOKINGS --- */}
               {bookingType === "artist" && (
                 artistBookings.length > 0 ? artistBookings.map((booking) => (
-                  <div key={booking._id} className="group bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row gap-5">
-                    <div className="w-full sm:w-32 h-32 relative rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-violet-50 to-blue-50 border border-slate-100 flex items-center justify-center">
+                  <div key={booking._id} className="group flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md sm:gap-5 sm:p-5">
+                    <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-violet-50 to-blue-50 sm:h-28 sm:w-32">
                       {booking.artist?.profilePic ? (
                         <Image src={getSafeImageSrc(booking.artist.profilePic)} alt={booking.artist?.name || "Artist"} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
                         <MessageSquare className="h-10 w-10 text-slate-300" />
                       )}
                     </div>
-                    <div className="flex-1 flex flex-col justify-between">
+                    <div className="flex min-w-0 flex-1 flex-col justify-between">
                       <div>
-                        <h3 className="font-bold text-lg text-slate-900 leading-tight mb-2 line-clamp-2">
+                        <h3 className="mb-2 line-clamp-2 text-base font-bold leading-tight text-slate-900 sm:text-lg">
                           {booking.event?.name || "Artist Booking"}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 font-medium">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-medium text-slate-500 sm:gap-x-4 sm:text-sm">
                           <span className="flex items-center gap-1.5"><User className="h-4 w-4"/> {booking.artist?.name || "Artist"}</span>
                           <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4"/>
                             {booking.event?.date ? new Date(booking.event.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : "Date TBA"}
@@ -525,18 +603,25 @@ export default function ProfilePage() {
               )}
 
             </div>
-          </TabsContent>
+          </div>
+      </main>
 
-          {/* Personal Info Tab */}
-          <TabsContent value="personal" className="outline-none animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden bg-white">
-              <CardHeader className="bg-slate-50 border-b border-slate-100 pb-6">
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <User className="w-5 h-5 text-slate-500" /> Account Settings
-                </CardTitle>
-                <CardDescription>Manage your personal information and contact details.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 sm:p-8 space-y-8">
+      <Dialog
+        open={isProfileDialogOpen}
+        onOpenChange={(open) => {
+          setIsProfileDialogOpen(open);
+          if (!open) setIsEditing(false);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b border-slate-100 bg-slate-50 p-5 pr-12 text-left sm:p-6">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <User className="h-5 w-5 text-slate-500" /> Account Settings
+            </DialogTitle>
+            <DialogDescription>Manage your personal information and contact details.</DialogDescription>
+          </DialogHeader>
+          <Card className="rounded-none border-0 bg-white shadow-none">
+            <CardContent className="space-y-8 p-5 sm:p-8">
 
                 {/* Grid Layout for Inputs */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
@@ -609,17 +694,22 @@ export default function ProfilePage() {
                     <Button onClick={handleSaveProfile} className="rounded-xl bg-slate-900 text-white hover:bg-slate-800 h-11 px-8">
                       <Save className="h-4 w-4 mr-2" /> Save Changes
                     </Button>
-                    <Button variant="outline" onClick={() => setIsEditing(false)} className="rounded-xl h-11 border-slate-200 text-slate-600">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setIsProfileDialogOpen(false);
+                      }}
+                      className="h-11 rounded-xl border-slate-200 text-slate-600"
+                    >
                       Cancel
                     </Button>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-        </Tabs>
-      </div>
+            </CardContent>
+          </Card>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
