@@ -118,7 +118,7 @@ const DailyEventCard = ({ event, index = 0 }: { event: DailyEvent; index?: numbe
             {event.activeDates?.length || 0} active dates
           </p>
           {(event.bookingType === "rsvp" || event.bookingType === "call_to_book") && (
-            <p className="text-[11px] text-red-600 font-semibold mt-1">RSVP request</p>
+            <p className="text-[11px] text-red-600 font-semibold mt-1">Booking enquiry</p>
           )}
         </div>
       </Card>

@@ -217,7 +217,7 @@ const DailyEventCard = ({ event }: { event: DailyEvent }) => {
           {event.category || "Event"}{event.location?.city ? ` | ${event.location.city}` : ""}
         </p>
         {(event.bookingType === "rsvp" || event.bookingType === "call_to_book") && (
-          <p className="text-[11px] font-semibold text-red-600 mt-1">RSVP request</p>
+          <p className="text-[11px] font-semibold text-red-600 mt-1">Booking enquiry</p>
         )}
         <p className="text-[11px] text-gray-400 mt-1">
           {event.periodStartDate && event.periodEndDate ? (

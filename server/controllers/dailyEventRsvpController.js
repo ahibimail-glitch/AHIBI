@@ -37,7 +37,7 @@ async function createPublicRsvp(req, res) {
       status: 'pending',
     });
 
-    return ApiResponse.success(res, 'RSVP request sent. The organizer will contact you to confirm.', {
+    return ApiResponse.success(res, 'Booking enquiry sent. The organizer may contact you to discuss availability and booking details.', {
       requestId: String(request._id),
       status: request.status,
     }, 201);

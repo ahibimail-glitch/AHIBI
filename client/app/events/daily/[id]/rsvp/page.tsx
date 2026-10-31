@@ -163,9 +163,9 @@ export default function DailyEventRsvpPage({ params }: DailyEventRsvpPageProps) 
         ) : isSubmitted ? (
           <section className="rounded-2xl border border-gray-200 bg-white p-6 text-center shadow-sm sm:p-10">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-            <h1 className="mt-4 text-2xl font-bold text-gray-900">RSVP request sent</h1>
+            <h1 className="mt-4 text-2xl font-bold text-gray-900">Booking enquiry sent</h1>
             <p className="mx-auto mt-3 max-w-xl text-gray-600">
-              Your request for <span className="font-semibold text-gray-900">{event?.title}</span> is not booked yet. The organizer will call you using the phone number you provided and confirm with you.
+              Your enquiry for <span className="font-semibold text-gray-900">{event?.title}</span> has been sent. This is not a confirmed booking. The organizer will review your details and may contact you by phone or email to discuss availability and pricing.
             </p>
             <Link href={`/events/daily/${params.id}`} className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">
               Return to event
@@ -174,12 +174,12 @@ export default function DailyEventRsvpPage({ params }: DailyEventRsvpPageProps) 
         ) : event ? (
           <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 p-6 sm:p-8">
-              <p className="text-sm font-semibold uppercase tracking-wide text-red-600">RSVP request</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-red-600">Booking enquiry (RSVP)</p>
               <h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">Request to book</h1>
               <p className="mt-2 text-gray-600">{event.title}</p>
               {event.location?.city && <p className="mt-1 text-sm text-gray-500">{event.location.city}</p>}
               <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-                This is a request, not a confirmed booking. The organizer will call you to discuss availability and confirm if you both agree.
+                This is a booking enquiry, not a confirmed booking. The organizer may contact you to discuss availability, pricing, and next steps.
               </p>
             </div>
 
@@ -265,7 +265,7 @@ export default function DailyEventRsvpPage({ params }: DailyEventRsvpPageProps) 
               </label>
 
               <p className="text-sm leading-6 text-gray-500">
-                Your details will be shared with this event&apos;s organizer so they can follow up on your request.
+                Your details will be shared with this event&apos;s organizer so they can review your enquiry and contact you to discuss availability and pricing.
               </p>
               {submitError && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{submitError}</p>}
 
@@ -275,7 +275,7 @@ export default function DailyEventRsvpPage({ params }: DailyEventRsvpPageProps) 
                 className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isSubmitting ? "Sending request…" : "Send RSVP request"}
+                {isSubmitting ? "Sending request…" : "Send booking enquiry"}
               </button>
               {dateOptions.length === 0 && <p role="alert" className="text-sm text-red-700">No event dates are currently available for RSVP.</p>}
             </form>

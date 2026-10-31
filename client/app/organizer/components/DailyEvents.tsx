@@ -293,7 +293,7 @@ export default function DailyEvents({ filterStatus, onEdit }: DailyEventsProps) 
                   <ClipboardList className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
                     <div className="font-medium text-gray-900">RSVP requests</div>
-                    <div>Contact guests to confirm before marking booked.</div>
+                    <div>Review each enquiry and contact the guest to discuss availability and booking terms before marking it booked.</div>
                   </div>
                 </div>
               ) : !event.isFreeEvent && (
@@ -362,7 +362,7 @@ export default function DailyEvents({ filterStatus, onEdit }: DailyEventsProps) 
         <DialogContent className="max-h-[88vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>RSVP requests{rsvpEvent ? `: ${rsvpEvent.title}` : ""}</DialogTitle>
-            <DialogDescription>Call each guest to discuss their request. Mark it booked only after you both agree.</DialogDescription>
+            <DialogDescription>Review each guest&apos;s details and contact them to discuss availability and booking terms. Mark it booked once you have agreed.</DialogDescription>
           </DialogHeader>
 
           {rsvpError && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{rsvpError}</p>}

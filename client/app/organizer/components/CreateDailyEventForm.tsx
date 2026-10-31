@@ -902,12 +902,12 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
                       name="bookingType"
                       value="rsvp"
                       checked={eventData.bookingType === "rsvp"}
-                      onChange={() => setEventData(prev => ({ ...prev, bookingType: "rsvp" }))}
+                      onChange={() => setEventData(prev => ({ ...prev, bookingType: "rsvp", isFreeEvent: false }))}
                       className="mt-1 accent-purple-600"
                     />
                     <span>
-                      <span className="block text-sm font-semibold text-gray-900">RSVP request</span>
-                      <span className="mt-1 block text-xs text-gray-600">Guests send their contact details; you call to confirm.</span>
+                      <span className="block text-sm font-semibold text-gray-900">Booking enquiry (RSVP)</span>
+                      <span className="mt-1 block text-xs text-gray-600">Guests submit their details; you review the enquiry and contact them to discuss availability and pricing.</span>
                     </span>
                   </label>
                 </div>
@@ -915,7 +915,7 @@ export default function CreateDailyEventForm({ onSuccess }: CreateDailyEventForm
 
               {eventData.bookingType === "rsvp" ? (
                 <div className="rounded-lg border border-purple-100 bg-purple-50 p-4 text-sm text-purple-900">
-                  Ticket price and capacity fields are not needed for RSVP requests. You will review each request and contact the guest to confirm.
+                  Guests will submit their contact details, preferred date, and group size. Review enquiries in Organizer Admin and contact guests to discuss availability and pricing.
                 </div>
               ) : (
                 <>

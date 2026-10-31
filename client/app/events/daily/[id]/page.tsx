@@ -534,8 +534,8 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
                       <div className="text-sm leading-snug text-red-600 font-semibold text-base">
                         {isRsvpEvent ? (
                           <div className="space-y-1">
-                            <div>RSVP request</div>
-                            <div className="text-sm font-medium text-gray-600">Organizer will contact you to confirm</div>
+                            <div>Booking enquiry</div>
+                            <div className="text-sm font-medium text-gray-600">The organizer will review your details and follow up about availability and pricing</div>
                           </div>
                         ) : getEventPriceRange()}
                       </div>
@@ -547,7 +547,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
                       onClick={handleRsvpRequest}
                       className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
                     >
-                      Request RSVP
+                      Register your interest
                     </button>
                   ) : (
                     <button
@@ -559,7 +559,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
                   )}
 
                   {isRsvpEvent ? (
-                    <div className="mt-4 text-center text-sm text-gray-500">Sending a request does not confirm a booking. The organizer will call you.</div>
+                    <div className="mt-4 text-center text-sm text-gray-500">This sends a booking enquiry, not a confirmed booking. The organizer can contact you to discuss availability and pricing.</div>
                   ) : (
                     <div className="mt-4 text-center">
                       <div className="text-xs text-gray-500">Price from</div>
@@ -589,7 +589,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
             </div>
             {isRsvpEvent ? (
               <button onClick={handleRsvpRequest} className="shrink-0 rounded-xl bg-red-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700">
-                Request RSVP
+                Register your interest
               </button>
             ) : (
               <button
@@ -611,7 +611,7 @@ export default function DailyEventDetailPage({ params }: DailyEventDetailPagePro
         <div className="space-y-2">
           {isRsvpEvent ? (
             <button onClick={handleRsvpRequest} className="w-full rounded-xl bg-red-600 py-3.5 text-center text-sm font-semibold text-white transition-colors hover:bg-red-700">
-              Request RSVP
+              Register your interest
             </button>
           ) : (
             <button
