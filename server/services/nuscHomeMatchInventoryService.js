@@ -71,6 +71,9 @@ const FIXTURE_MATCHES = [
   { date: '2027-03-20', opponent: 'Real Kashmir FC' },
 ];
 const FIXTURE_DATES = FIXTURE_MATCHES.map((match) => match.date);
+const OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE = Object.freeze({
+  '2026-11-14': 3,
+});
 
 const SUITE_SINGLE = 'United Suite — Single pass';
 const SUITE_FULL_BOX = 'United Suite — Full Box';
@@ -200,10 +203,11 @@ function getSuiteAvailability(state, matchDate) {
   const boxes = getBoxState(state, matchDate);
   const singlePassBox = boxes.find((box) => box.boxNumber === SINGLE_PASS_BOX_NUMBER);
   const fullBoxes = boxes.filter((box) => FULL_BOX_NUMBERS.includes(box.boxNumber));
+  const offlineReservedSeats = OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE[matchDate] || 0;
   return {
     fullBoxes: fullBoxes.filter((box) => !box.seasonReserved && !box.fullBoxReserved && box.singlePassCount === 0).length,
     singleSeats: singlePassBox && !singlePassBox.seasonReserved && !singlePassBox.fullBoxReserved
-      ? Math.max(0, SEATS_PER_BOX - singlePassBox.singlePassCount)
+      ? Math.max(0, SEATS_PER_BOX - singlePassBox.singlePassCount - offlineReservedSeats)
       : 0,
   };
 }
@@ -405,8 +409,10 @@ function reserveMatchOrderInState(state, {
     for (const line of linesWithIndex.filter((item) => item.ticketType === SUITE_SINGLE)) {
       for (let i = 0; i < line.quantity; i += 1) {
         const allocations = allocationByBox.get(SINGLE_PASS_BOX_NUMBER) || [];
+        const allocatedSingleSeats = allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length;
+        const offlineReservedSeats = OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE[matchDate] || 0;
         if (seasonBoxes.has(SINGLE_PASS_BOX_NUMBER) || allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX) ||
-            allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length >= SEATS_PER_BOX) {
+            allocatedSingleSeats + offlineReservedSeats >= SEATS_PER_BOX) {
           throw new InventoryConflict('No United Suite seats remain in the single-pass box for this match.', 'SUITE_SEATS_UNAVAILABLE');
         }
         const allocation = { ticketType: SUITE_SINGLE, ticketIndex: line.startIndex + i, boxNumber: SINGLE_PASS_BOX_NUMBER };
@@ -1079,8 +1085,10 @@ async function reserveSeasonBox({ bookingReference, adminId }) {
       .filter((item) => item.status === 'active')
       .map((item) => item.boxNumber));
     const activeOrders = state.orders.filter((order) => order.status === 'confirmed' || (order.status === 'held' && new Date(order.expiresAt) > new Date()));
+    const singlePassBoxHasOfflineReservations = Object.values(OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE).some((seatCount) => seatCount > 0);
     const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
       if (alreadySeasonReserved.has(candidate)) return false;
+      if (candidate === SINGLE_PASS_BOX_NUMBER && singlePassBoxHasOfflineReservations) return false;
       return !FIXTURE_DATES.some((date) => activeOrders.some((order) => (
         order.matchDate === date && (order.suiteAllocations || []).some((allocation) => allocation.boxNumber === candidate)
       )));

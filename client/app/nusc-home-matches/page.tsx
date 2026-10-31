@@ -546,7 +546,7 @@ export default function NuscHomeMatchesPage() {
                   </span>
                   {"actualPrice" in pass && <span className="mt-5 text-lg font-bold text-[#111713]">Ticket price: {pass.actualPrice}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
-                  {passCategory === "single-match" && renderSuitePassAvailability(pass.id)}
+                  {passCategory === "single-match" && selected && renderSuitePassAvailability(pass.id)}
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
                   <span className="space-y-2 text-sm leading-5 text-[#4c554d]">
                     {pass.benefits.map((benefit) => <span key={benefit} className="flex gap-2"><span className="text-[#d41e32]">✓</span><span>{benefit}</span></span>)}
