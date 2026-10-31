@@ -14,6 +14,12 @@ export const metadata: Metadata = {
   description:
     "Mobile-first ticketing and event management ecosystem for seamless event experiences",
   generator: "v0.dev",
+  icons: {
+    icon: [
+      { url: "/favicon-512x512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
+  },
 }
 
 export default function RootLayout({
