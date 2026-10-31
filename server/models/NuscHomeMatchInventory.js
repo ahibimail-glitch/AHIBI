@@ -103,6 +103,7 @@ const NuscHomeMatchInventorySchema = new mongoose.Schema({
   orders: { type: [OrderHoldSchema], default: [] },
   generalZoneSales: { type: [GeneralZoneSaleSchema], default: [] },
   seasonPassOrders: { type: [SeasonPassOrderHoldSchema], default: [] },
+  seasonPassHistoryInitializedAt: { type: Date, default: null },
   partnerSeasonPassReservations: { type: [PartnerSeasonPassReservationSchema], default: [] },
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
 }, { timestamps: true });

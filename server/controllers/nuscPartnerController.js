@@ -191,7 +191,7 @@ async function reserveSeasonPass(req, res) {
     }
     return sendReservationResponse(req, res, 201, reservation);
   } catch (error) {
-    if (error.code && ['TICKETS_UNAVAILABLE', 'ZONE_UNAVAILABLE', 'BUYER_TICKET_LIMIT', 'TICKET_NOT_CONFIGURED', 'INVALID_ZONE', 'ORDER_CONFLICT'].includes(error.code)) {
+    if (error.code && ['TICKETS_UNAVAILABLE', 'SEASON_PASS_LIMIT_REACHED', 'ZONE_UNAVAILABLE', 'BUYER_TICKET_LIMIT', 'TICKET_NOT_CONFIGURED', 'INVALID_ZONE', 'ORDER_CONFLICT'].includes(error.code)) {
       return res.status(409).json({ success: false, code: error.code, message: error.message });
     }
     if (error.code === 'FIXTURES_UNAVAILABLE' || error.code === 'SALES_CLOSED') {

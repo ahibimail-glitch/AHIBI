@@ -1442,6 +1442,7 @@ async function applyRefundToTickets(order, adminId, refund) {
     await event.save();
   }
   if (order.orderType === 'match' || order.orderType === 'multiMatch') await inventory.releaseRefundedMatchOrder(order.inventoryHoldId || order.orderId);
+  if (order.orderType === 'seasonPass') await inventory.releaseRefundedSeasonPassOrder(order.orderId);
 
   const fullyProcessed = refund.status === 'processed';
   const now = new Date();

@@ -14,6 +14,9 @@ export interface TicketType {
   originalPrice?: number;
   quantity: number;
   sold?: number;
+  seasonPassCapacity?: number;
+  seasonPassRemaining?: number;
+  seasonPassSalesOpen?: boolean;
   benefits?: string[];
 }
 

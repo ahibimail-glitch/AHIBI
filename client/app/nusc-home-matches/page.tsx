@@ -155,11 +155,23 @@ export default function NuscHomeMatchesPage() {
     : selectedPass === "premium-season"
       ? "Premium Pass"
       : null;
+  const seasonPassCapacity = seasonTicketType
+    ? NUSC_HOME_MATCHES.map((match) => {
+      const event = matchEvents[getNuscMatchSlug(match.date)];
+      return event?.ticketTypes?.find((item) => item.name === seasonTicketType)?.seasonPassCapacity;
+    }).find((capacity): capacity is number => typeof capacity === "number") ?? 0
+    : 0;
+  const seasonPassSalesOpen = seasonTicketType
+    ? NUSC_HOME_MATCHES.some((match) => {
+      const event = matchEvents[getNuscMatchSlug(match.date)];
+      return event?.ticketTypes?.find((item) => item.name === seasonTicketType)?.seasonPassSalesOpen === true;
+    })
+    : false;
   const seasonPassAvailableQuantity = seasonTicketType
     ? Math.min(...NUSC_HOME_MATCHES.map((match) => {
       const event = matchEvents[getNuscMatchSlug(match.date)];
       const ticket = event?.ticketTypes?.find((item) => item.name === seasonTicketType);
-      return Number(ticket?.quantity || 0);
+      return Math.min(Number(ticket?.quantity || 0), Number(ticket?.seasonPassRemaining || 0));
     }))
     : 0;
   const canBuySeasonPassQuantity = !!seasonTicketType && seasonPassAvailableQuantity > 0 &&
@@ -672,6 +684,7 @@ export default function NuscHomeMatchesPage() {
                   id="season-pass-quantity"
                   value={seasonPassQuantity}
                   onChange={(event) => setSeasonPassQuantity(Number(event.target.value))}
+                  disabled={!seasonPassSalesOpen || seasonPassAvailableQuantity === 0}
                   className="ml-2 min-h-11 rounded-lg border border-[#cfd7cf] bg-white px-3 py-2 sm:ml-3"
                   aria-label="Season pass quantity"
                 >
@@ -679,7 +692,7 @@ export default function NuscHomeMatchesPage() {
                     <option key={quantity} value={quantity}>{quantity}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-sm text-[#69716a]">Each pass covers one seat at all 10 home matches. Maximum 10 tickets per match per account.</p>
+                <p className="mt-2 text-sm text-[#69716a]">Each pass covers one seat at all 10 home matches. {matchAvailabilityState === "ready" && seasonPassSalesOpen ? `Limited to ${seasonPassCapacity} passes total; ${seasonPassAvailableQuantity} remain.` : matchAvailabilityState === "ready" ? "Season pass sales are not available yet." : "Checking season pass availability…"} Maximum 10 tickets per match per account.</p>
                 {selectedPass === "general-season" && (
                   <div className="mt-5 max-w-xl">
                     <label htmlFor="general-season-zone" className="block font-semibold text-[#151b16]">General seating zone <span className="text-[#d51f34]">*</span></label>
@@ -714,7 +727,9 @@ export default function NuscHomeMatchesPage() {
                 <span className="text-sm font-medium text-[#69716a]">
                   {canBuySeasonPassQuantity && selectedPass === "general-season"
                     ? "Choose a zone with enough seats across all 10 matches."
-                    : "Season pass sales are not available yet."}
+                      : seasonPassAvailableQuantity === 0 && seasonPassSalesOpen && matchAvailabilityState === "ready"
+                        ? "This season pass is sold out."
+                        : "Season pass sales are not available yet."}
                 </span>
               )}
             </div>
