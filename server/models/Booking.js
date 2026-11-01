@@ -97,7 +97,7 @@ const BookingSchema = new mongoose.Schema({
   },
   paymentProvider: {
     type: String,
-    enum: ['razorpay', 'nusc-partner'],
+    enum: ['razorpay', 'nusc-partner', 'manual'],
   },
   externalPaymentId: { type: String },
   paymentTicketKey: {
@@ -131,6 +131,18 @@ const BookingSchema = new mongoose.Schema({
     type: Number,
     min: 1,
     max: 10,
+  },
+  manualSeasonPassOrderId: {
+    type: String,
+  },
+  manualSeasonPassMatchIndex: {
+    type: Number,
+    min: 1,
+    max: 10,
+  },
+  manualSeasonPassSettlementType: {
+    type: String,
+    enum: ['paid', 'complimentary'],
   },
   nuscPartnerTicket: {
     partnerId: { type: String, enum: ['nusc'] },
@@ -250,6 +262,10 @@ BookingSchema.index(
 BookingSchema.index(
   { nuscOrderId: 1, nuscTicketIndex: 1 },
   { unique: true, partialFilterExpression: { nuscOrderId: { $type: 'string' } } }
+);
+BookingSchema.index(
+  { manualSeasonPassOrderId: 1, manualSeasonPassMatchIndex: 1 },
+  { unique: true, partialFilterExpression: { manualSeasonPassOrderId: { $type: 'string' } } }
 );
 
 BookingSchema.index(

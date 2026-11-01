@@ -13,8 +13,12 @@ async function createSeasonPassTicketRecords({
   memberReferenceHash = null,
   reservationId = null,
   partnerId = null,
+  manualOrderId = null,
+  pricePerMatch = 0,
+  settlementType = null,
+  modeOfPayment = null,
 }) {
-  if (!Array.isArray(fixtures) || fixtures.length < 1 || fixtures.length > 10 || quantity !== 1 || !paymentId) {
+  if (!Array.isArray(fixtures) || fixtures.length < 1 || fixtures.length > 10 || quantity !== 1 || (!paymentId && !manualOrderId)) {
     throw new Error('Season pass ticket issuance details are incomplete');
   }
   const matchIndices = fixtures.map((fixture) => Number(fixture.matchIndex));
@@ -32,13 +36,16 @@ async function createSeasonPassTicketRecords({
     const event = await Event.findById(fixture.eventId).select('+ticketTypes');
     if (!event || !event.slug?.startsWith('nusc-home-match-')) throw new Error('A season pass match listing no longer exists');
 
-    let booking = partnerId
-      ? await Booking.findOne({
+    const bookingQuery = partnerId
+      ? {
         'nuscPartnerTicket.partnerId': partnerId,
         'nuscPartnerTicket.partnerOrderId': orderId,
         'nuscPartnerTicket.ticketIndex': matchIndex,
-      })
-      : await Booking.findOne({ nuscOrderId: orderId, nuscTicketIndex: matchIndex });
+      }
+      : manualOrderId
+        ? { manualSeasonPassOrderId: manualOrderId, manualSeasonPassMatchIndex: matchIndex }
+        : { nuscOrderId: orderId, nuscTicketIndex: matchIndex };
+    let booking = await Booking.findOne(bookingQuery);
 
     if (!booking) {
       const bookingData = {
@@ -54,12 +61,12 @@ async function createSeasonPassTicketRecords({
         ...(userId && { user: userId }),
         ticketType: fixture.ticketType,
         quantity: 1,
-        price: 0,
-        total: 0,
+        price: partnerId ? 0 : Number(pricePerMatch),
+        total: partnerId ? 0 : Number(pricePerMatch),
         status: 'confirmed',
         paymentStatus: 'completed',
         paymentProvider,
-        externalPaymentId: paymentId,
+        ...(paymentId && { externalPaymentId: paymentId }),
         nuscSeasonPassType: passId,
         nuscSeasonMatchIndex: matchIndex,
         ...(zone && { nuscGeneralZone: zone }),
@@ -71,6 +78,11 @@ async function createSeasonPassTicketRecords({
             partnerOrderId: orderId,
             ticketIndex: matchIndex,
           },
+        } : manualOrderId ? {
+          manualSeasonPassOrderId: manualOrderId,
+          manualSeasonPassMatchIndex: matchIndex,
+          manualSeasonPassSettlementType: settlementType,
+          ...(modeOfPayment && { modeOfPayment }),
         } : {
           paymentId,
           razorpayPaymentId: paymentId,
@@ -86,13 +98,15 @@ async function createSeasonPassTicketRecords({
         await booking.save();
       } catch (error) {
         if (error.code !== 11000) throw error;
-        booking = partnerId
-          ? await Booking.findOne({
+        booking = await Booking.findOne(partnerId
+          ? {
             'nuscPartnerTicket.partnerId': partnerId,
             'nuscPartnerTicket.partnerOrderId': orderId,
             'nuscPartnerTicket.ticketIndex': matchIndex,
-          })
-          : await Booking.findOne({ nuscOrderId: orderId, nuscTicketIndex: matchIndex });
+          }
+          : manualOrderId
+            ? { manualSeasonPassOrderId: manualOrderId, manualSeasonPassMatchIndex: matchIndex }
+            : { nuscOrderId: orderId, nuscTicketIndex: matchIndex });
         if (!booking) throw error;
       }
     }
@@ -112,8 +126,11 @@ async function createSeasonPassTicketRecords({
 
   const parentBookingId = bookings[0]?._id;
   if (parentBookingId && !partnerId) {
+    const parentFilter = manualOrderId
+      ? { manualSeasonPassOrderId: manualOrderId, parentBookingId: null, _id: { $ne: parentBookingId } }
+      : { nuscOrderId: orderId, parentBookingId: null, _id: { $ne: parentBookingId } };
     await Booking.updateMany(
-      { nuscOrderId: orderId, parentBookingId: null, _id: { $ne: parentBookingId } },
+      parentFilter,
       { $set: { parentBookingId } }
     );
   }

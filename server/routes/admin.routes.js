@@ -11,6 +11,7 @@ const paymentTxController = require('../controllers/paymentTransactionController
 const heliTaxiiController = require('../controllers/heliTaxiiController');
 const onSpotBookingController = require('../controllers/onSpotBookingController');
 const adminBookingsController = require('../controllers/adminBookingsController');
+const manualSeasonPassController = require('../controllers/manualSeasonPassController');
 
 // Public admin routes (unprotected)
 router.get('/users', adminController.getUsers);
@@ -22,6 +23,19 @@ router.post('/bookings/on-spot', protect, authorize('admin'), onSpotBookingContr
 // Protect all admin routes
 router.use(protect);
 router.use(authorize('admin'));
+
+// Manual pass operations and AHIBI user search require the Admin auth above.
+router.get('/users/search', adminController.searchUsers);
+router.get('/manual-season-passes/pricing', manualSeasonPassController.getPrices);
+router.get('/manual-season-passes/rise/members/search', manualSeasonPassController.searchRiseMembers);
+router.post('/manual-season-passes/reserve', manualSeasonPassController.reserveAhibiPass);
+router.post('/manual-season-passes/rise/reserve', manualSeasonPassController.reserveRisePass);
+router.post('/manual-season-passes/:orderId/settle', manualSeasonPassController.settleAhibiPass);
+router.post('/manual-season-passes/:orderId/cancel', manualSeasonPassController.cancelAhibiPass);
+router.get('/manual-season-passes/:orderId/status', manualSeasonPassController.getAhibiPassStatus);
+router.post('/manual-season-passes/rise/:orderId/settle', manualSeasonPassController.settleRisePass);
+router.post('/manual-season-passes/rise/:orderId/cancel', manualSeasonPassController.cancelRisePass);
+router.get('/manual-season-passes/rise/:orderId/status', manualSeasonPassController.getRisePassStatus);
 
 // Event management
 router.get('/events', eventController.getEvents);
