@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ManualSeasonPassRecovery from './ManualSeasonPassRecovery';
 
 type Channel = 'ahibi' | 'rise';
 type PassId = 'general-season' | 'premium-season';
@@ -75,6 +76,7 @@ function adminHeaders() {
 }
 
 export default function ManualSeasonPassBooking() {
+  const [operationMode, setOperationMode] = useState<'booking' | 'recovery'>('booking');
   const [channel, setChannel] = useState<Channel>('ahibi');
   const [query, setQuery] = useState('');
   const [ahibiUsers, setAhibiUsers] = useState<AhibiUser[]>([]);
@@ -261,8 +263,27 @@ export default function ManualSeasonPassBooking() {
     }
   }
 
+  if (operationMode === 'recovery') {
+    return (
+      <section className="space-y-5" aria-labelledby="season-pass-operations-heading">
+        <div className="space-y-3">
+          <h2 id="season-pass-operations-heading" className="text-lg font-semibold">Season Pass Operations</h2>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setOperationMode('booking')}>Book Season Pass</Button>
+            <Button type="button" variant="default" aria-pressed="true">Recover / Reissue Tickets</Button>
+          </div>
+        </div>
+        <ManualSeasonPassRecovery />
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-5" aria-labelledby="manual-season-pass-heading">
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="default" aria-pressed="true">Book Season Pass</Button>
+        <Button type="button" variant="outline" onClick={() => setOperationMode('recovery')}>Recover / Reissue Tickets</Button>
+      </div>
       <div>
         <h2 id="manual-season-pass-heading" className="text-lg font-semibold">Season Pass Booking</h2>
         <p className="text-sm text-muted-foreground">Reserve capacity first, then record offline payment or a complimentary issue. Each pass creates one ticket for each of the ten home matches.</p>
