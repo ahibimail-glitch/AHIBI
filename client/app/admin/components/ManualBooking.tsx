@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Ticket, CheckCircle, Download as DownloadIcon, Calendar, Clock, QrCode } from "lucide-react";
 import axios from 'axios';
 import InvoiceGenerator from '@/components/invoice-generator';
+import ManualSeasonPassBooking from './ManualSeasonPassBooking';
 
 interface TicketType {
   _id?: string;
@@ -69,6 +70,7 @@ interface BookingFormData {
 
 const ManualBooking: React.FC = () => {
   const { toast } = useToast();
+  const [bookingMode, setBookingMode] = useState<'single-match' | 'season-pass'>('single-match');
   const [users, setUsers] = useState<User[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
@@ -81,19 +83,14 @@ const ManualBooking: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const userSearchRequest = useRef(0);
 
-  const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
-    const query = searchQuery.toLowerCase().trim();
-    return users.filter(user =>
-      (user.name?.toLowerCase().includes(query) || '') ||
-      (user.phone?.includes(query) || '') ||
-      (user.email?.toLowerCase().includes(query) || '')
-    );
-  }, [users, searchQuery]);
+  const filteredUsers = users;
 
   // Handle user selection
   const handleUserSelect = (userId: string) => {
+    setSelectedUser(users.find(user => user._id === userId) || null);
     setFormData(prev => ({
       ...prev,
       user: userId
@@ -106,6 +103,7 @@ const ManualBooking: React.FC = () => {
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     if (value && formData.user) {
+      setSelectedUser(null);
       setFormData(prev => ({
         ...prev,
         user: ''
@@ -146,7 +144,6 @@ const ManualBooking: React.FC = () => {
 
   useEffect(() => {
     fetchEvents();
-    fetchUsers();
   }, []);
 
   const fetchEvents = async () => {
@@ -196,25 +193,43 @@ const ManualBooking: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const token = localStorage.getItem('admin_token');
-      // Fetch all users without pagination limit
-      const resp = await axios.get(`${apiUrl}/api/admin/users?limit=10000`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = resp.data?.data?.users || resp.data?.users || resp.data?.data || resp.data;
-      if (Array.isArray(data)) setUsers(data);
-      else setUsers([]);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching users', err);
-      toast({ title: 'Error', description: 'Failed to load users', variant: 'destructive' });
-      setLoading(false);
+  useEffect(() => {
+    const query = searchQuery.trim();
+    const requestId = ++userSearchRequest.current;
+    if (query.length < 2) {
+      setUsers([]);
+      setIsSearching(false);
+      return;
     }
-  };
+
+    const timeout = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const token = localStorage.getItem('admin_token');
+        const resp = await axios.get(`${apiUrl}/api/admin/users/search`, {
+          params: { search: query, limit: 20 },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (requestId !== userSearchRequest.current) return;
+        const data = resp.data?.data?.users || resp.data?.users || [];
+        setUsers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (requestId === userSearchRequest.current) {
+          console.error('Error searching users', err);
+          setUsers([]);
+          toast({ title: 'Error', description: 'Failed to search users', variant: 'destructive' });
+        }
+      } finally {
+        if (requestId === userSearchRequest.current) setIsSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timeout);
+      if (requestId === userSearchRequest.current) userSearchRequest.current++;
+    };
+  }, [searchQuery, toast]);
 
   const handleEventChange = (eventId: string) => {
     setFormData({ ...formData, event: eventId });
@@ -296,7 +311,10 @@ const ManualBooking: React.FC = () => {
       };
 
       const resp = await axios.post(`${apiUrl}/api/bookings/admin-manual-booking`, payload, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        }
       });
 
       const data = resp.data;
@@ -305,7 +323,7 @@ const ManualBooking: React.FC = () => {
 
       // Build invoice list from returned bookings array
       const bookings = data?.bookings || [];
-      const userObj = users.find(u => u._id === formData.user);
+      const userObj = selectedUser || users.find(u => u._id === formData.user);
 
       const invoices: any[] = bookings.map((b: any, idx: number) => ({
         bookingId: b.id || b._id || `${b.bookingId || 'bk'}_${idx}`,
@@ -335,6 +353,7 @@ const ManualBooking: React.FC = () => {
   const handleReset = () => {
     setFormData({ event: '', user: '', ticketType: '', quantity: 1, price: 0, total: 0 });
     setSelectedEvent(null);
+    setSelectedUser(null);
     setSuccess(false);
     setBookingResult(null);
     setQrValue('');
@@ -363,7 +382,11 @@ const ManualBooking: React.FC = () => {
         </CardHeader>
 
         <CardContent>
-          {success ? (
+          <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Manual booking type">
+            <Button type="button" role="tab" aria-selected={bookingMode === 'single-match'} variant={bookingMode === 'single-match' ? 'default' : 'outline'} onClick={() => setBookingMode('single-match')}>Single Match</Button>
+            <Button type="button" role="tab" aria-selected={bookingMode === 'season-pass'} variant={bookingMode === 'season-pass' ? 'default' : 'outline'} onClick={() => setBookingMode('season-pass')}>Season Pass</Button>
+          </div>
+          {bookingMode === 'season-pass' ? <ManualSeasonPassBooking /> : success ? (
             <div className="max-w-5xl mx-auto my-6 p-4">
               {invoiceList && invoiceList.length > 0 ? (
                 <div className="space-y-6">
@@ -415,7 +438,7 @@ const ManualBooking: React.FC = () => {
                           className="w-full justify-between"
                         >
                           {formData.user
-                            ? users.find((user) => user._id === formData.user)?.name || "Select user..."
+                            ? selectedUser?.name || "Selected user"
                             : searchQuery || "Search user by name, email or phone..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>

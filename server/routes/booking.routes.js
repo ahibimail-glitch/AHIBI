@@ -987,7 +987,7 @@ router.post("/check-out", async (req, res) => {
 // @route   POST /api/bookings/admin-manual-booking
 // @desc    Create a new booking manually by admin
 // @access  Private (Admin)
-router.post("/admin-manual-booking",  async (req, res) => {
+router.post("/admin-manual-booking", auth.protect, auth.authorize('admin'), async (req, res) => {
   try {
     const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets, country, state, modeOfPayment, visitorType } = req.body;
     console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price, tickets, visitorType });

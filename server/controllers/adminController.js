@@ -935,6 +935,43 @@ exports.getUsers = async (req, res) => {
 };
 
 /**
+ * @desc    Search active AHIBI user accounts for admin booking selectors
+ * @route   GET /api/admin/users/search
+ * @access  Private (Admin only)
+ */
+exports.searchUsers = async (req, res) => {
+  try {
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    const limitValue = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isInteger(limitValue) ? Math.min(Math.max(limitValue, 1), 20) : 20;
+
+    if (search.length < 2) {
+      return ApiResponse.success(res, 'User search completed', { users: [] });
+    }
+
+    const escapedSearch = search.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+    const users = await User.find({
+      role: 'user',
+      status: 'active',
+      $or: [
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { email: { $regex: escapedSearch, $options: 'i' } },
+        { phone: { $regex: escapedSearch, $options: 'i' } },
+      ],
+    })
+      .select('_id name email phone')
+      .sort({ name: 1, _id: 1 })
+      .limit(limit)
+      .lean();
+
+    return ApiResponse.success(res, 'User search completed', { users });
+  } catch (error) {
+    console.error('Admin user search error:', error);
+    return ApiResponse.serverError(res, 'Error searching users', error);
+  }
+};
+
+/**
  * @desc    Update user status (block/unblock)
  * @route   PUT /api/admin/users/:id/status
  * @access  Private (Admin only)

@@ -24,6 +24,7 @@ jobs:
       - run: npm ci
       - run: npm run test:payment-reliability
       - run: npm run test:check-in
+      - run: node --test tests/manualSeasonPass*.test.js
       - run: node --check index.js
 
   client-build:
