@@ -68,13 +68,42 @@ async function postNuscRise(path, payload, requestId = makeRequestId()) {
   try { result = await response.json(); } catch { /* mapped below */ }
   if (!response.ok) {
     const status = response.status >= 400 && response.status < 500 ? response.status : 502;
+    const verifierErrors = {
+      'Invalid signature': {
+        code: 'NUSC_RISE_AUTH_REJECTED',
+        message: 'NUSC RISE rejected the AHIBI signature. Verify AHIBI_PARTNER_SECRET matches the NUSC server setting.',
+      },
+      'Invalid signature length': {
+        code: 'NUSC_RISE_AUTH_REJECTED',
+        message: 'NUSC RISE rejected the AHIBI signature format.',
+      },
+      'Malformed signature': {
+        code: 'NUSC_RISE_AUTH_REJECTED',
+        message: 'NUSC RISE rejected the AHIBI signature format.',
+      },
+      'Missing security headers': {
+        code: 'NUSC_RISE_AUTH_HEADERS_INVALID',
+        message: 'NUSC RISE rejected the request security headers.',
+      },
+      'Request expired': {
+        code: 'NUSC_RISE_REQUEST_EXPIRED',
+        message: 'NUSC RISE rejected an expired request. Check service clock synchronization.',
+      },
+      'Integration is not configured': {
+        code: 'NUSC_RISE_NOT_CONFIGURED',
+        message: 'NUSC RISE integration is not configured on the NUSC server.',
+      },
+    };
+    const verifierError = typeof result.error === 'string' ? verifierErrors[result.error] : null;
     throw new NuscRiseIntegrationError(
       status,
-      String(result.code || 'NUSC_RISE_REQUEST_FAILED'),
-      String(result.message || 'NUSC RISE could not complete the request.'),
+      String(result.code || verifierError?.code || 'NUSC_RISE_REQUEST_FAILED'),
+      String(result.message || verifierError?.message || 'NUSC RISE could not complete the request.'),
     );
   }
-  return result;
+  return result && result.success === true && Object.prototype.hasOwnProperty.call(result, 'data')
+    ? result.data
+    : result;
 }
 
 async function searchRiseMembers(query) {
