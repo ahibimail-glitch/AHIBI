@@ -84,6 +84,22 @@ const PartnerSeasonPassReservationSchema = new mongoose.Schema({
   recoveryStatus: { type: String, enum: ['none', 'issuing', 'issued'], default: 'none' },
   recoveryMatchIndices: { type: [Number], default: [] },
   recoveryBookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
+  adminTicketRecovery: {
+    requestId: { type: String, default: null },
+    status: { type: String, enum: ['processing', 'completed', 'manual_intervention'] },
+    startedAt: { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+    recoveredMatchIndices: { type: [Number], default: [] },
+    relinkedMatchIndices: { type: [Number], default: [] },
+    admin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+  },
+  adminTicketRecoveryAudit: [{
+    requestId: { type: String, required: true },
+    admin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+    action: { type: String, enum: ['recovered', 'manual_intervention'], required: true },
+    at: { type: Date, default: Date.now },
+    details: { type: mongoose.Schema.Types.Mixed, default: {} },
+  }],
   createdAt: { type: Date, default: Date.now },
   issuedAt: { type: Date, default: null },
 }, { _id: false });

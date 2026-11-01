@@ -126,6 +126,16 @@ async function getRiseSeasonPassStatus(payload) {
   return postNuscRise('manual-season-passes/status', payload);
 }
 
+async function searchRiseRecoveryOrders(query) {
+  const response = await postNuscRise('season-pass-recovery/search', { query });
+  return response?.data && typeof response.data === 'object' ? response.data : response;
+}
+
+async function syncRiseRecoveryTickets(payload) {
+  const response = await postNuscRise('season-pass-recovery/sync', payload, payload.requestId);
+  return response?.data && typeof response.data === 'object' ? response.data : response;
+}
+
 module.exports = {
   NuscRiseIntegrationError,
   cancelRiseSeasonPass,
@@ -133,5 +143,7 @@ module.exports = {
   postNuscRise,
   reserveRiseSeasonPass,
   searchRiseMembers,
+  searchRiseRecoveryOrders,
   settleRiseSeasonPass,
+  syncRiseRecoveryTickets,
 };

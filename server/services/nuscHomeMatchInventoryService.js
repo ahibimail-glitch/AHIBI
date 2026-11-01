@@ -203,7 +203,7 @@ async function backfillSeasonPassHistory(session) {
   throw new InventoryConflict('Suite inventory changed during checkout. Please try again.', 'INVENTORY_BUSY');
 }
 
-async function mutateInventory(mutator, session) {
+async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
   let current = await loadInventory(session);
   if (!current) current = await ensureInventory(session);
   await backfillSeasonPassHistory(session);
@@ -215,7 +215,7 @@ async function mutateInventory(mutator, session) {
     state.generalZoneSales ||= [];
     state.seasonPassOrders ||= [];
     state.partnerSeasonPassReservations ||= [];
-    pruneExpiredHolds(state);
+    if (pruneExpired) pruneExpiredHolds(state);
     const result = await mutator(state);
     const update = await Inventory.updateOne(
       { _id: current._id, __v: current.__v || 0 },
@@ -978,6 +978,98 @@ async function getPartnerSeasonPassReservation(reservationId) {
   return (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId) || null;
 }
 
+async function beginPartnerAdminTicketRecovery({ reservationId, requestId, adminId }) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation) throw new InventoryConflict('NUSC season pass reservation was not found.', 'RESERVATION_NOT_FOUND');
+    if (reservation.status !== 'issued' || !reservation.paymentId || reservation.replacesReservationId || reservation.replacedByReservationId) {
+      throw new InventoryConflict('This pass is not eligible for automatic ticket recovery.', 'RECOVERY_REQUIRES_REVIEW');
+    }
+    const current = reservation.adminTicketRecovery || {};
+    if (current.status === 'completed' && current.requestId === requestId) {
+      return { reservation, alreadyCompleted: true };
+    }
+    if (current.status === 'processing' && current.requestId !== requestId &&
+        Date.now() - new Date(current.startedAt || 0).getTime() < 5 * 60 * 1000) {
+      throw new InventoryConflict('Ticket recovery is already in progress for this pass.', 'RECOVERY_IN_PROGRESS');
+    }
+    if (current.status === 'processing' && current.requestId === requestId) {
+      return { reservation, alreadyProcessing: true };
+    }
+    reservation.adminTicketRecovery = {
+      requestId,
+      status: 'processing',
+      startedAt: new Date(),
+      completedAt: null,
+      recoveredMatchIndices: [],
+      relinkedMatchIndices: [],
+      admin: adminId,
+    };
+    return { reservation, alreadyProcessing: false };
+  }, undefined, { pruneExpired: false });
+}
+
+async function completePartnerAdminTicketRecovery({
+  reservationId,
+  requestId,
+  adminId,
+  bookingIds,
+  recoveredMatchIndices = [],
+  relinkedMatchIndices = [],
+  manualIntervention = false,
+}) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation || reservation.status !== 'issued') {
+      throw new InventoryConflict('The issued pass changed during recovery.', 'RECOVERY_STATE_CHANGED');
+    }
+    const recovery = reservation.adminTicketRecovery || {};
+    if (recovery.requestId !== requestId || recovery.status !== 'processing') {
+      throw new InventoryConflict('Ticket recovery changed during processing.', 'RECOVERY_STATE_CHANGED');
+    }
+    if (!manualIntervention && (!Array.isArray(bookingIds) || bookingIds.length !== FIXTURE_DATES.length ||
+        new Set(bookingIds.map(String)).size !== FIXTURE_DATES.length)) {
+      throw new InventoryConflict('The recovered ticket set is incomplete.', 'RECOVERY_TICKET_SET_INCOMPLETE');
+    }
+    if (!manualIntervention) reservation.bookingIds = bookingIds;
+    reservation.adminTicketRecovery = {
+      requestId,
+      status: manualIntervention ? 'manual_intervention' : 'completed',
+      startedAt: recovery.startedAt || new Date(),
+      completedAt: new Date(),
+      recoveredMatchIndices: [...recoveredMatchIndices],
+      relinkedMatchIndices: [...relinkedMatchIndices],
+      admin: adminId,
+    };
+    reservation.adminTicketRecoveryAudit ||= [];
+    reservation.adminTicketRecoveryAudit.push({
+      requestId,
+      admin: adminId,
+      action: manualIntervention ? 'manual_intervention' : 'recovered',
+      at: new Date(),
+      details: {
+        recoveredMatchIndices: [...recoveredMatchIndices],
+        relinkedMatchIndices: [...relinkedMatchIndices],
+      },
+    });
+    return reservation;
+  }, undefined, { pruneExpired: false });
+}
+
+async function recordPartnerAdminTicketRecoveryProgress({ reservationId, requestId, recoveredMatchIndices = [], relinkedMatchIndices = [] }) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    const recovery = reservation?.adminTicketRecovery || {};
+    if (!reservation || recovery.requestId !== requestId || recovery.status !== 'processing') {
+      throw new InventoryConflict('Ticket recovery changed during processing.', 'RECOVERY_STATE_CHANGED');
+    }
+    recovery.recoveredMatchIndices = [...new Set([...(recovery.recoveredMatchIndices || []), ...recoveredMatchIndices])].sort((a, b) => a - b);
+    recovery.relinkedMatchIndices = [...new Set([...(recovery.relinkedMatchIndices || []), ...relinkedMatchIndices])].sort((a, b) => a - b);
+    reservation.adminTicketRecovery = recovery;
+    return reservation;
+  }, undefined, { pruneExpired: false });
+}
+
 async function beginPartnerSeasonPassIssuance(reservationId, paymentId) {
   const result = await mutateInventory((state) => {
     const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
@@ -1320,6 +1412,9 @@ module.exports = {
   reacquirePartnerReplacementInventory,
   beginPartnerMissingTicketRecovery,
   completePartnerMissingTicketRecovery,
+  beginPartnerAdminTicketRecovery,
+  completePartnerAdminTicketRecovery,
+  recordPartnerAdminTicketRecoveryProgress,
   releaseSeasonPassOrder,
   releaseRefundedSeasonPassOrder,
   releaseRefundedMatchOrder,

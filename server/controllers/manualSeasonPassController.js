@@ -1,6 +1,7 @@
 const ApiResponse = require('../utils/apiResponse');
 const manualPasses = require('../services/manualSeasonPassService');
 const nuscRise = require('../services/nuscRiseIntegrationClient');
+const recovery = require('../services/seasonPassRecoveryService');
 const PASS_OPTIONS = require('../config/nuscHomeMatchPricing');
 
 exports.getPrices = async (_req, res) => {
@@ -146,5 +147,96 @@ exports.getRisePassStatus = async (req, res) => {
     return ApiResponse.success(res, 'RISE season pass status retrieved', result, 200);
   } catch (error) {
     return sendError(res, error);
+  }
+};
+
+function sendRecoveryError(res, error) {
+  if (error instanceof recovery.SeasonPassRecoveryError || (error.status && error.code)) {
+    return res.status(error.status).json({ success: false, code: error.code, message: error.message });
+  }
+  console.error('[Admin season pass recovery] Request failed:', error.code || error.name || 'recovery_error');
+  return res.status(502).json({
+    success: false,
+    code: 'SEASON_PASS_RECOVERY_UNAVAILABLE',
+    message: 'Ticket recovery could not be completed. Refresh the pass status before retrying.',
+  });
+}
+
+function adminTicketSummary(ticket) {
+  return {
+    matchIndex: ticket.matchIndex,
+    matchDate: ticket.matchDate,
+    opponent: ticket.opponent,
+    status: ticket.status,
+    ticketType: ticket.ticketType,
+    zone: ticket.zone || null,
+  };
+}
+
+function adminOrderSummary(order) {
+  return { ...order, tickets: (order.tickets || []).map(adminTicketSummary) };
+}
+
+exports.listAhibiRecoveryOrders = async (req, res) => {
+  try {
+    const orders = await recovery.listAhibiSeasonPassOrders(req.query.userId);
+    return ApiResponse.success(res, 'AHIBI season pass orders retrieved', { orders: orders.map(adminOrderSummary) });
+  } catch (error) {
+    return sendRecoveryError(res, error);
+  }
+};
+
+exports.searchRiseRecoveryOrders = async (req, res) => {
+  try {
+    const query = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    if (query.length < 5 || query.length > 32) return ApiResponse.success(res, 'RISE season pass orders retrieved', { members: [], orders: [] });
+    const result = await recovery.searchRiseRecoveryOrders(query);
+    return ApiResponse.success(res, 'RISE season pass orders retrieved', {
+      members: result.members,
+      orders: result.orders.map((entry) => ({
+        memberNumber: entry.memberNumber,
+        memberName: entry.memberName,
+        tier: entry.tier,
+        order: adminOrderSummary(entry.order),
+      })),
+    });
+  } catch (error) {
+    return sendRecoveryError(res, error);
+  }
+};
+
+exports.recoverAhibiPassTickets = async (req, res) => {
+  try {
+    const result = await recovery.recoverAhibiSeasonPass({
+      kind: req.body?.kind,
+      orderId: req.body?.orderId,
+      requestId: req.body?.requestId,
+      adminId: req.user?._id,
+    });
+    return ApiResponse.success(res, 'AHIBI season pass ticket recovery completed', {
+      ...result,
+      order: adminOrderSummary(result.order),
+      result: { ...result.result, tickets: (result.result.tickets || []).map(adminTicketSummary) },
+    });
+  } catch (error) {
+    return sendRecoveryError(res, error);
+  }
+};
+
+exports.recoverRisePassTickets = async (req, res) => {
+  try {
+    const result = await recovery.recoverRiseSeasonPass({
+      orderId: req.body?.orderId,
+      memberNumber: req.body?.memberNumber,
+      requestId: req.body?.requestId,
+      adminId: req.user?._id,
+    });
+    return ApiResponse.success(res, 'RISE season pass ticket recovery completed', {
+      ...result,
+      order: adminOrderSummary(result.order),
+      result: { ...result.result, tickets: (result.result.tickets || []).map(adminTicketSummary) },
+    });
+  } catch (error) {
+    return sendRecoveryError(res, error);
   }
 };

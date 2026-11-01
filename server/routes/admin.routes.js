@@ -36,6 +36,10 @@ router.get('/manual-season-passes/:orderId/status', manualSeasonPassController.g
 router.post('/manual-season-passes/rise/:orderId/settle', manualSeasonPassController.settleRisePass);
 router.post('/manual-season-passes/rise/:orderId/cancel', manualSeasonPassController.cancelRisePass);
 router.get('/manual-season-passes/rise/:orderId/status', manualSeasonPassController.getRisePassStatus);
+router.get('/season-pass-recovery/ahibi/orders', manualSeasonPassController.listAhibiRecoveryOrders);
+router.get('/season-pass-recovery/rise/search', manualSeasonPassController.searchRiseRecoveryOrders);
+router.post('/season-pass-recovery/ahibi/recover', manualSeasonPassController.recoverAhibiPassTickets);
+router.post('/season-pass-recovery/rise/recover', manualSeasonPassController.recoverRisePassTickets);
 
 // Event management
 router.get('/events', eventController.getEvents);

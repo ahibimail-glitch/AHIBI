@@ -1408,7 +1408,10 @@ async function retryPaidOrder(req, res) {
     const result = await settleCapturedPayment(order.orderId, payment, null, { adminRecovery: true });
     await NuscHomeMatchOrder.updateOne(
       { _id: order._id },
-      { $push: { operationsAudit: { action: 'ticket_reissue', admin: req.user._id, details: { bookingCount: result.bookings.length } } } }
+      { $push: { operationsAudit: { action: 'ticket_reissue', admin: req.user._id, details: {
+        bookingCount: result.bookings.length,
+        ...(typeof req.body?.requestId === 'string' ? { requestId: req.body.requestId } : {}),
+      } } } }
     );
     return res.json({ success: true, message: 'Captured payment verified and tickets issued.', bookingCount: result.bookings.length });
   } catch (error) {
