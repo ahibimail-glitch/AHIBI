@@ -23,10 +23,17 @@ test('AHIBI signs RISE member verification and pass settlement calls to NUSC', a
   const requests = [];
   global.fetch = async (url, request) => {
     requests.push({ url: new URL(url), request });
+    const pathname = new URL(url).pathname;
+    const data = pathname.endsWith('/members/search')
+      ? {
+        members: [{ memberNumber: 'NUSC12345678', name: 'Test Member', phoneMasked: '••••1234', tier: 'RISE General', passId: 'general-season' }],
+        passes: { 'general-season': { ticketType: 'General Pass', amountMinor: 389400, amount: 3894 } },
+      }
+      : { path: pathname, orderId: 'nusc-manual-order-1', status: 'reserved' };
     return {
       ok: true,
       status: 200,
-      async json() { return { success: true, path: new URL(url).pathname }; },
+      async json() { return { success: true, data }; },
     };
   };
 
@@ -52,11 +59,13 @@ test('AHIBI signs RISE member verification and pass settlement calls to NUSC', a
   });
 
   assert.deepEqual(memberResult, {
-    success: true,
-    path: '/api/integrations/ahibi/manual-season-passes/members/search',
+    members: [{ memberNumber: 'NUSC12345678', name: 'Test Member', phoneMasked: '••••1234', tier: 'RISE General', passId: 'general-season' }],
+    passes: { 'general-season': { ticketType: 'General Pass', amountMinor: 389400, amount: 3894 } },
   });
   assert.equal(reserveResult.path, '/api/integrations/ahibi/manual-season-passes/reserve');
+  assert.equal(reserveResult.orderId, 'nusc-manual-order-1');
   assert.equal(settlementResult.path, '/api/integrations/ahibi/manual-season-passes/settle');
+  assert.equal(settlementResult.status, 'reserved');
   assert.equal(requests.length, 3);
 
   for (const { url, request } of requests) {
@@ -81,4 +90,19 @@ test('AHIBI signs RISE member verification and pass settlement calls to NUSC', a
     passId: 'general-season',
     zone: 'G-2',
   });
+
+  global.fetch = async () => ({
+    ok: false,
+    status: 401,
+    async json() { return { error: 'Invalid signature' }; },
+  });
+  await assert.rejects(
+    riseClient.searchRiseMembers('NUSC12345678'),
+    (error) => {
+      assert.equal(error.status, 401);
+      assert.equal(error.code, 'NUSC_RISE_AUTH_REJECTED');
+      assert.equal(error.message, 'NUSC RISE rejected the AHIBI signature. Verify AHIBI_PARTNER_SECRET matches the NUSC server setting.');
+      return true;
+    },
+  );
 });
