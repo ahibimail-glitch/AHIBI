@@ -8,6 +8,7 @@ const Scan = require('../models/Scan');
 const inventory = require('./nuscHomeMatchInventoryService');
 const nuscRise = require('./nuscRiseIntegrationClient');
 const { createSeasonPassTicketRecords } = require('./nuscSeasonPassBookingService');
+const replacementRecovery = require('./nuscSeasonPassReplacementService');
 
 const MATCH_COUNT = 10;
 
@@ -145,7 +146,7 @@ async function listAhibiSeasonPassOrders(userId) {
   return results.sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0));
 }
 
-async function partnerTicketDetails(reservation, bookings) {
+async function partnerTicketDetails(reservation, bookings, scannedTicketKeys = new Set()) {
   const byIndex = new Map();
   for (const booking of bookings) {
     const index = Number(booking.nuscSeasonMatchIndex || booking.nuscPartnerTicket?.ticketIndex);
@@ -164,12 +165,13 @@ async function partnerTicketDetails(reservation, bookings) {
       opponent: inventory.FIXTURE_MATCHES[offset]?.opponent || 'Home match',
       eventId: reservation.eventIds?.[offset] ? String(reservation.eventIds[offset]) : null,
       status: active.length > 1 ? 'duplicate_valid' : active.length === 1
-        ? ticketStatus(active[0]) : rows.length ? ticketStatus(rows[0]) : 'missing',
+        ? (scannedTicketKeys.has(`${String(active[0]._id)}:${String(active[0].event)}`) ? 'checked_in' : ticketStatus(active[0]))
+        : rows.length ? ticketStatus(rows[0]) : 'missing',
       bookingId: active.length === 1 ? String(active[0]._id) : null,
       ticketType: reservation.ticketType,
       zone: reservation.zone || null,
       ticketAccessPath: active.length === 1
-        ? `/api/nusc-partner/v1/reservations/${encodeURIComponent(reservation.reservationId)}/tickets/${encodeURIComponent(String(active[0]._id))}`
+        ? `/api/nusc-partner/v1/reservations/${encodeURIComponent(active[0].nuscPartnerTicket?.reservationId || reservation.reservationId)}/tickets/${encodeURIComponent(String(active[0]._id))}`
         : null,
     };
   });
@@ -197,7 +199,13 @@ async function inspectRiseOrder(order) {
       ...(reservation.bookingIds?.length ? [{ _id: { $in: reservation.bookingIds } }] : []),
     ],
   }).select('_id event status paymentStatus paymentProvider externalPaymentId entryVerified ticketType nuscGeneralZone nuscSeasonMatchIndex nuscPartnerTicket').lean();
-  const tickets = await partnerTicketDetails(reservation, bookings);
+  const scans = bookings.length ? await Scan.find({
+    ticket: { $in: bookings.map((booking) => booking._id) },
+    event: { $in: bookings.map((booking) => booking.event) },
+    partnerId: 'nusc',
+  }).select('ticket event').lean() : [];
+  const scannedTicketKeys = new Set(scans.map((scan) => `${String(scan.ticket)}:${String(scan.event)}`));
+  const tickets = await partnerTicketDetails(reservation, bookings, scannedTicketKeys);
   return safeRiseOrder({
     ...order,
     status: reservation.status === 'issued' ? order.status : 'manual_intervention',
@@ -474,6 +482,208 @@ async function riseOrderByMember(orderId, memberNumber) {
   throw new SeasonPassRecoveryError(404, 'RISE_ORDER_NOT_FOUND', 'The RISE pass could not be verified. Refresh the order list and try again.');
 }
 
+function sameValues(left, right) {
+  return Array.isArray(left) && Array.isArray(right) && left.length === right.length &&
+    left.every((value, index) => String(value) === String(right[index]));
+}
+
+async function recordReplacementAdminRecovery({ reservation, requestId, adminId, action, details }) {
+  return inventory.recordPartnerReplacementAdminTicketRecovery({
+    reservationId: reservation.reservationId,
+    requestId,
+    adminId,
+    action,
+    details: { workflow: 'premium_replacement', ...details },
+  });
+}
+
+async function rejectReplacementRecovery({ reservation, requestId, adminId, code, message }) {
+  await recordReplacementAdminRecovery({
+    reservation,
+    requestId,
+    adminId,
+    action: 'manual_intervention',
+    details: { code },
+  });
+  throw new SeasonPassRecoveryError(409, 'REPLACEMENT_MANUAL_REVIEW', message);
+}
+
+async function recoverReplacedRiseSeasonPass({ order, reservation, memberNumber, requestId, adminId }) {
+  const oldReservationId = reservation.replacesReservationId;
+  if (!oldReservationId) {
+    const isOldPass = Boolean(reservation.replacedByReservationId);
+    return rejectReplacementRecovery({
+      reservation,
+      requestId,
+      adminId,
+      code: isOldPass ? 'SELECT_REPLACEMENT_PASS' : 'REPLACEMENT_LINK_MISSING',
+      message: isOldPass
+        ? 'This General pass has already been replaced. Select its active Premium replacement pass to recover tickets.'
+        : 'The replacement link is incomplete. No new pass or payment was created; manual review is required.',
+    });
+  }
+
+  if (reservation.replacedByReservationId || order.kind !== 'paid' || (order.settlementType || 'paid') !== 'paid' ||
+      order.passId !== 'premium-season' || order.ticketType !== 'Premium Pass' ||
+      reservation.passId !== 'premium-season' || reservation.ticketType !== 'Premium Pass') {
+    return rejectReplacementRecovery({
+      reservation,
+      requestId,
+      adminId,
+      code: 'REPLACEMENT_PASS_NOT_ELIGIBLE',
+      message: 'This replaced pass is not a verified paid Premium replacement. No new pass or payment was created; manual review is required.',
+    });
+  }
+  if (order.paymentId && String(order.paymentId) !== String(reservation.paymentId)) {
+    return rejectReplacementRecovery({
+      reservation,
+      requestId,
+      adminId,
+      code: 'PAYMENT_REFERENCE_MISMATCH',
+      message: 'The RISE payment reference does not match the issued Premium reservation. Reconcile the payment record before recovery; no new ticket was created.',
+    });
+  }
+  const paymentState = String(order.paymentStatus || order.status || '').toLowerCase();
+  if (['refunded', 'refund_pending', 'refund-pending', 'cancelled', 'canceled', 'voided', 'chargeback'].includes(paymentState)) {
+    return rejectReplacementRecovery({
+      reservation,
+      requestId,
+      adminId,
+      code: 'REPLACEMENT_PAYMENT_NOT_SETTLED',
+      message: 'RISE marks this Premium payment as refunded, pending refund, cancelled, or voided. Reconcile its settlement before recovery; no ticket was created.',
+    });
+  }
+
+  const oldReservation = await inventory.getPartnerSeasonPassReservation(oldReservationId);
+  const validLineage = oldReservation &&
+    oldReservation.reservationId === oldReservationId &&
+    oldReservation.passId === 'general-season' &&
+    oldReservation.ticketType === 'General Pass' &&
+    oldReservation.status === 'replaced' &&
+    oldReservation.replacedByReservationId === reservation.reservationId &&
+    !oldReservation.replacesReservationId &&
+    Boolean(oldReservation.partnerOrderId) &&
+    Boolean(reservation.memberReferenceHash) &&
+    String(oldReservation.memberReferenceHash) === String(reservation.memberReferenceHash) &&
+    sameValues(oldReservation.eventIds, reservation.eventIds) &&
+    sameValues(oldReservation.matchDates, reservation.matchDates);
+  if (!validLineage) {
+    return rejectReplacementRecovery({
+      reservation,
+      requestId,
+      adminId,
+      code: 'REPLACEMENT_LINEAGE_INVALID',
+      message: 'The original General pass and Premium replacement records do not match. No new pass or payment was created; manual review is required.',
+    });
+  }
+
+  let replacement;
+  try {
+    replacement = await replacementRecovery.recoverMissingGeneralReplacementTickets({
+      premiumReservationId: reservation.reservationId,
+      oldReservationId,
+      paymentId: reservation.paymentId,
+    });
+  } catch (error) {
+    const rawCode = String(error?.code || 'REPLACEMENT_RECOVERY_FAILED');
+    const code = /^[A-Z0-9_]{1,80}$/.test(rawCode) ? rawCode : 'REPLACEMENT_RECOVERY_FAILED';
+    await recordReplacementAdminRecovery({
+      reservation,
+      requestId,
+      adminId,
+      action: 'manual_intervention',
+      details: { code, ...(error?.matchDate && { matchDate: error.matchDate }) },
+    });
+    if (error?.name === 'ReplacementError') {
+      const message = code === 'RECOVERY_NOT_APPLICABLE'
+        ? 'This Premium replacement does not match its recorded match set. No new pass or payment was created; manual review is required.'
+        : code === 'OLD_TICKET_SET_INCOMPLETE'
+          ? 'AHIBI cannot verify the original General pass tickets for every match. Reconcile those ticket references and check-ins before recovery; no new ticket was created.'
+        : code === 'RECOVERY_INVENTORY_RECONCILIATION_REQUIRED'
+          ? `The event sold count does not prove that the missing Premium seat is still reserved for match ${error.matchDate || 'in this pass'}. Reconcile that fixture’s inventory before reissuing; no new ticket was created.`
+        : code === 'PREMIUM_INVENTORY_UNAVAILABLE'
+          ? `The existing Premium allocation cannot be restored safely for match ${error.matchDate || 'in this pass'} because current inventory holds conflict. Reconcile that fixture before retrying; no new ticket was created.`
+        : code === 'USED_TICKET_EVIDENCE_MISMATCH' || code === 'REPLACEMENT_LINEAGE_COUNTS_INVALID'
+          ? 'The original General ticket, check-in evidence, and replacement counts do not agree. Reconcile the original pass records before recovery; no new ticket was created.'
+          : code === 'TARGET_TICKET_STATE_REVIEW_REQUIRED'
+            ? 'An original General ticket expected to be replaced is not confirmed cancelled. Reconcile its status before recovery; no replacement ticket was created.'
+          : code === 'REPLACEMENT_DUPLICATE_ACTIVE_TICKETS'
+            ? 'More than one active ticket exists for a match in this replacement. Resolve the duplicate before recovery; no new ticket was created.'
+          : code === 'PREMIUM_TICKET_SET_INVALID' || code === 'RECOVERY_CONFLICT'
+            ? 'The Premium ticket references or in-progress recovery state do not match the issued reservation. Reconcile the stored references before retrying; no new ticket was created.'
+          : code === 'TARGET_MATCH_ALREADY_CHECKED_IN'
+            ? 'A prior check-in affects a match in this replacement. No new pass or payment was created; manual review is required.'
+            : 'The original and Premium replacement ticket records could not be safely reconciled. No new pass or payment was created; manual review is required.';
+      throw new SeasonPassRecoveryError(409, 'REPLACEMENT_MANUAL_REVIEW', message);
+    }
+    throw error;
+  }
+
+  const current = await inspectRiseOrder(order);
+  const activeTickets = current.tickets || [];
+  const bookingIds = activeTickets.map((ticket) => ticket.bookingId).filter(Boolean);
+  if (activeTickets.length !== MATCH_COUNT || new Set(bookingIds.map(String)).size !== MATCH_COUNT ||
+      activeTickets.some((ticket) => !['valid', 'checked_in'].includes(ticket.status))) {
+    await recordReplacementAdminRecovery({
+      reservation,
+      requestId,
+      adminId,
+      action: 'manual_intervention',
+      details: { code: 'REPLACEMENT_TICKET_SET_INCOMPLETE' },
+    });
+    throw new SeasonPassRecoveryError(409, 'REPLACEMENT_MANUAL_REVIEW', 'The replacement recovery did not produce ten verifiable match tickets. No new pass or payment was created; manual review is required.');
+  }
+
+  let sync;
+  try {
+    sync = await nuscRise.syncRiseRecoveryTickets({
+      orderId: order.orderId,
+      memberNumber,
+      kind: order.kind,
+      reservationId: reservation.reservationId,
+      tickets: ticketsForNuscSync(activeTickets),
+      adminReference: String(adminId),
+      requestId,
+    });
+  } catch (error) {
+    await recordReplacementAdminRecovery({
+      reservation,
+      requestId,
+      adminId,
+      action: 'manual_intervention',
+      details: { code: 'RISE_DASHBOARD_SYNC_PENDING', recoveredMatchIndices: replacement.recoveredMatchIndices || [] },
+    });
+    throw new SeasonPassRecoveryError(502, 'RISE_DASHBOARD_SYNC_PENDING', 'The replacement tickets are verified in AHIBI, but RISE has not confirmed the dashboard update. Retry recovery to synchronize; no new pass or payment will be created.');
+  }
+
+  const recoveredMatchIndices = replacement.recoveredMatchIndices || [];
+  const relinkedMatchIndices = replacement.relinkedMatchIndices || [];
+  await recordReplacementAdminRecovery({
+    reservation,
+    requestId,
+    adminId,
+    action: 'recovered',
+    details: {
+      oldReservationId,
+      recoveredMatchIndices,
+      relinkedMatchIndices,
+      ticketCount: MATCH_COUNT,
+      nuscSync: sync.status || 'synced',
+      alreadyIssued: Boolean(replacement.alreadyIssued),
+    },
+  });
+  return {
+    order: current,
+    result: {
+      status: replacement.alreadyIssued ? 'already_recovered' : 'recovered',
+      recoveredMatchIndices,
+      relinkedMatchIndices,
+      nuscSync: sync.status || 'synced',
+      tickets: activeTickets,
+    },
+  };
+}
+
 async function recoverRiseSeasonPass({ orderId, memberNumber, requestId, adminId }) {
   if (!/^[0-9a-f-]{36}$/i.test(String(requestId || ''))) throw new SeasonPassRecoveryError(400, 'REQUEST_ID_REQUIRED', 'A recovery request ID is required.');
   if (typeof memberNumber !== 'string' || !/^NUSC\d{8}$/i.test(memberNumber)) {
@@ -491,7 +701,7 @@ async function recoverRiseSeasonPass({ orderId, memberNumber, requestId, adminId
     throw new SeasonPassRecoveryError(409, 'RESERVATION_NOT_ISSUED', 'AHIBI could not verify an issued ticket allocation for this RISE order. Manual review is required.');
   }
   if (reservation.replacesReservationId || reservation.replacedByReservationId) {
-    throw new SeasonPassRecoveryError(409, 'REPLACEMENT_REQUIRES_REVIEW', 'This replaced pass must use the existing replacement recovery workflow.');
+    return recoverReplacedRiseSeasonPass({ order, reservation, memberNumber, requestId, adminId });
   }
   const claim = await inventory.beginPartnerAdminTicketRecovery({ reservationId: order.reservationId, requestId, adminId });
   if (claim.alreadyCompleted) {
