@@ -57,7 +57,7 @@ function makeHarness(options = {}) {
     partnerOrderId,
     memberReferenceHash: 'a'.repeat(64),
     status: 'issued',
-    paymentId: 'nusc-payment-authoritative-123',
+    paymentId: 'pay_nuscauthoritative123',
     passId: 'premium-season',
     ticketType: 'Premium Pass',
     zone: null,
@@ -237,6 +237,16 @@ function makeHarness(options = {}) {
       reservation.adminTicketRecoveryAudit.push({ requestId: input.requestId, action, admin: input.adminId, details: input.auditDetails });
       return reservation;
     },
+    async recordPartnerSeasonPassManualPaymentVerification({ reservationId: id, verificationId, paymentId, adminId: actor, auditDetails }) {
+      assert.equal(id, reservation.reservationId);
+      assert.equal(paymentId, reservation.paymentId);
+      reservation.adminTicketRecoveryAudit ||= [];
+      const existing = reservation.adminTicketRecoveryAudit.find((row) => row.requestId === verificationId && row.action === 'payment_verified_manually');
+      if (existing) return existing;
+      const entry = { requestId: verificationId, action: 'payment_verified_manually', admin: actor, at: auditDetails.verifiedAt, details: auditDetails };
+      reservation.adminTicketRecoveryAudit.push(entry);
+      return entry;
+    },
     async updatePartnerSeasonPassReissueSync({ requestId: id, nuscSync }) {
       const entry = reservation.adminTicketRecoveryAudit.find((row) => row.requestId === id && row.action === 'recovered');
       entry.details.nuscSync = nuscSync;
@@ -295,6 +305,14 @@ function makeHarness(options = {}) {
   const input = (overrides = {}) => ({
     channel: 'rise', orderId: signedOrder.orderId, memberNumber, requestId, adminId, ...overrides,
   });
+  const manualPayment = (overrides = {}) => ({
+    paymentId: reservation.paymentId,
+    capturedAmount: '13500.00',
+    currency: 'INR',
+    confirmed: true,
+    auditReason: 'Original paid tickets are missing from AHIBI records.',
+    ...overrides,
+  });
   const evidence = ({ unused = 10, inventory = [] } = {}) => ({
     historicalEvidence: Array.from({ length: unused }, (_, offset) => ({
       matchIndex: offset + 1,
@@ -308,7 +326,7 @@ function makeHarness(options = {}) {
       reference: `inventory-backup-fixture-${String(index).padStart(2, '0')}`,
     })),
   });
-  return { service, input, evidence, reservation, oldReservation, premiumIds, generalIds, eventIds, dates, events, bookings, activeOtherBookings, held, issuerCalls, syncCalls, Booking, Event, Inventory, Scan, inventoryService, signedOrder, setSyncBehavior: (behavior) => { syncBehavior = behavior; } };
+  return { service, input, evidence, manualPayment, reservation, oldReservation, premiumIds, generalIds, eventIds, dates, events, bookings, activeOtherBookings, held, issuerCalls, syncCalls, Booking, Event, Inventory, Scan, inventoryService, signedOrder, setSyncBehavior: (behavior) => { syncBehavior = behavior; } };
 }
 
 test('smoke-test replacement with missing bookings and eight unattributed allocations remains blocked', async () => {
@@ -525,6 +543,186 @@ test('online paid status is insufficient until the matching Razorpay payment is 
   const captured = await service.preview(input);
   assert.equal(captured.paymentVerified, true);
   assert.equal(captured.paymentProof, 'razorpay_captured_and_transaction_completed');
+});
+
+test('manual Razorpay verification is durably audited and linked to the existing RISE reissue', async () => {
+  const h = makeHarness();
+  const verificationId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const manualPaymentVerification = { ...h.manualPayment(), orderId: h.signedOrder.orderId, memberNumber, merchantSource: 'ahibi' };
+  const recorded = await h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: verificationId,
+    manualPaymentVerification,
+  }));
+  assert.equal(recorded.status, 'verified');
+  assert.equal(recorded.merchantSource, 'nusc');
+  const repeated = await h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: verificationId,
+    manualPaymentVerification,
+  }));
+  assert.equal(repeated.status, 'already_verified');
+  assert.equal(h.reservation.adminTicketRecoveryAudit.filter((entry) => entry.requestId === verificationId).length, 1);
+  const verificationAudit = h.reservation.adminTicketRecoveryAudit.find((entry) => entry.requestId === verificationId);
+  assert.equal(verificationAudit.action, 'payment_verified_manually');
+  assert.equal(verificationAudit.details.paymentId, h.reservation.paymentId);
+  assert.equal(verificationAudit.details.merchantSource, 'nusc');
+  assert.equal(verificationAudit.details.capturedAmountMinor, 1350000);
+  assert.equal(verificationAudit.details.currency, 'INR');
+  assert.equal(verificationAudit.details.adminId, adminId);
+  assert.equal(verificationAudit.details.auditReason, manualPaymentVerification.auditReason);
+  assert.ok(verificationAudit.details.verifiedAt instanceof Date);
+
+  const preview = await h.service.preview(h.input({
+    manualPaymentVerificationId: verificationId,
+    evidence: h.evidence(),
+  }));
+  assert.equal(preview.paymentVerified, true);
+  assert.equal(preview.paymentProof, 'razorpay_dashboard_manual');
+  assert.equal(preview.paymentMerchant, 'nusc');
+  assert.equal(preview.safe, true);
+
+  const result = await h.service.reissue(h.input({
+    manualPaymentVerificationId: verificationId,
+    evidence: h.evidence(),
+    approved: true,
+  }));
+  assert.equal(result.status, 'reissued');
+  assert.equal(result.audit.manualPaymentVerification.verificationId, verificationId);
+  assert.equal(result.audit.manualPaymentVerification.adminId, adminId);
+  assert.equal(result.audit.manualPaymentVerification.paymentId, h.reservation.paymentId);
+  assert.equal(result.audit.manualPaymentVerification.auditReason, manualPaymentVerification.auditReason);
+});
+
+test('manual payment confirmation leaves missing-use and unattributed-inventory blockers intact', async () => {
+  const h = makeHarness({ replacement: true, smoke: true, sold: [18, 1, 1, 0, 1, 1, 1, 1, 1, 1] });
+  const verificationId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  await h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: verificationId,
+    manualPaymentVerification: { ...h.manualPayment(), orderId: h.signedOrder.orderId, memberNumber },
+  }));
+  const preview = await h.service.preview(h.input({ manualPaymentVerificationId: verificationId }));
+  assert.equal(preview.paymentVerified, true);
+  assert.equal(preview.lineageVerified, true);
+  assert.equal(preview.safe, false);
+  assert.equal(preview.missingCount, 10);
+  assert.equal(preview.reasons.filter((reason) => reason.code === 'CHECKIN_EVIDENCE_REQUIRED').length, 10);
+  assert.equal(preview.reasons.filter((reason) => reason.code === 'INVENTORY_EVIDENCE_REQUIRED').length, 8);
+  await assert.rejects(h.service.reissue(h.input({ manualPaymentVerificationId: verificationId, approved: true })),
+    (error) => error.code === 'REISSUE_REQUIRES_REVIEW');
+  assert.equal(h.issuerCalls.length, 0);
+});
+
+test('manual verification rejects an amount that conflicts with the signed entitlement', async () => {
+  const h = makeHarness();
+  h.signedOrder.amountMinor = 1350000;
+  await assert.rejects(h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: 'bcbcbcbc-bcbc-4bcb-8bcb-bcbcbcbcbcbc',
+    manualPaymentVerification: { ...h.manualPayment(), orderId: 'different-order', memberNumber },
+  })), (error) => error.code === 'MANUAL_PAYMENT_EVIDENCE_INCOMPLETE');
+  await assert.rejects(h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd',
+    manualPaymentVerification: { ...h.manualPayment({ paymentId: 'pay_otherorder123' }), orderId: h.signedOrder.orderId, memberNumber },
+  })), (error) => error.code === 'MANUAL_PAYMENT_REFERENCE_MISMATCH');
+  await assert.rejects(h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    manualPaymentVerification: { ...h.manualPayment({ capturedAmount: '13500.01' }), orderId: h.signedOrder.orderId, memberNumber },
+  })), (error) => error.code === 'MANUAL_PAYMENT_AMOUNT_CONFLICT');
+  await assert.rejects(h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: 'dededede-dede-4ede-8ede-dededededede',
+    manualPaymentVerification: { ...h.manualPayment({ currency: 'USD' }), orderId: h.signedOrder.orderId, memberNumber },
+  })), (error) => error.code === 'MANUAL_PAYMENT_CURRENCY_CONFLICT');
+  assert.equal(h.reservation.adminTicketRecoveryAudit?.length || 0, 0);
+});
+
+test('expired manual payment verification must be repeated before a new-ticket preview', async () => {
+  const h = makeHarness();
+  const verificationId = 'abababab-abab-4bab-8bab-abababababab';
+  await h.service.recordManualPaymentVerification(h.input({
+    verificationRequestId: verificationId,
+    manualPaymentVerification: { ...h.manualPayment(), orderId: h.signedOrder.orderId, memberNumber },
+  }));
+  const verification = h.reservation.adminTicketRecoveryAudit.find((entry) => entry.requestId === verificationId);
+  verification.details.verifiedAt = new Date(Date.now() - 16 * 60 * 1000);
+  const preview = await h.service.preview(h.input({ manualPaymentVerificationId: verificationId }));
+  assert.equal(preview.paymentVerified, false);
+  assert.ok(preview.reasons.some((reason) => reason.code === 'MANUAL_PAYMENT_VERIFICATION_EXPIRED'));
+});
+
+test('manual verification bypasses Razorpay API fetch only after matching AHIBI order and transaction checks', async () => {
+  const h = makeHarness();
+  const order = {
+    _id: objectId(900), orderId: 'razorpay-season-order-123', orderType: 'seasonPass',
+    status: 'completed', refundStatus: 'not_requested', paymentId: 'pay_onlineauthoritative123',
+    user: objectId(901), amountMinor: 324000, currency: 'INR', bookingIds: [...h.premiumIds], operationsAudit: [],
+    bookingDetails: {
+      passId: 'premium-season', ticketType: 'Premium Pass',
+      fixtures: h.eventIds.map((eventId, index) => ({ eventId, matchDate: h.dates[index], matchIndex: index + 1, ticketType: 'Premium Pass' })),
+    },
+  };
+  const transaction = { orderId: order.orderId, paymentId: order.paymentId, status: 'completed', user: order.user, amountPaise: order.amountMinor, currency: 'INR' };
+  let razorpayCalls = 0;
+  const Model = {
+    findOne: () => query(order),
+    async updateOne(filter, update) {
+      if (filter._id !== order._id || filter.paymentId !== order.paymentId) return { modifiedCount: 0 };
+      order.operationsAudit.push(update.$push.operationsAudit);
+      return { modifiedCount: 1 };
+    },
+  };
+  const service = createAdminNewTicketReissueService({
+    Booking: h.Booking, Event: h.Event, Inventory: h.Inventory, Scan: h.Scan,
+    NuscHomeMatchOrder: Model,
+    PaymentTransaction: { find: () => query([transaction]) },
+    inventory: h.inventoryService,
+    razorpay: () => { razorpayCalls += 1; throw new Error('API unavailable'); },
+    now: () => new Date(),
+  });
+  const verificationId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  const payload = {
+    channel: 'ahibi', kind: 'online', orderId: order.orderId, adminId, verificationRequestId: verificationId,
+    manualPaymentVerification: {
+      orderId: order.orderId, paymentId: order.paymentId, capturedAmount: '3240.00', currency: 'INR',
+      confirmed: true, auditReason: 'Deleted booking records need replacement ticket identities.', merchantSource: 'nusc',
+    },
+  };
+  const recorded = await service.recordManualPaymentVerification(payload);
+  assert.equal(recorded.status, 'verified');
+  assert.equal(recorded.merchantSource, 'ahibi');
+  assert.equal(order.operationsAudit[0].details.merchantSource, 'ahibi');
+  const preview = await service.preview({ ...payload, manualPaymentVerificationId: verificationId });
+  assert.equal(preview.paymentVerified, true);
+  assert.equal(preview.paymentProof, 'razorpay_dashboard_manual');
+  assert.equal(preview.paymentMerchant, 'ahibi');
+  assert.equal(razorpayCalls, 0);
+  assert.equal(order.operationsAudit[0].admin, adminId);
+  assert.equal(order.operationsAudit[0].details.capturedAmountMinor, 324000);
+});
+
+test('a saved manual verification cannot hide AHIBI payment transaction conflicts', async () => {
+  const h = makeHarness();
+  const order = {
+    _id: objectId(910), orderId: 'razorpay-season-order-456', orderType: 'seasonPass',
+    status: 'completed', refundStatus: 'not_requested', paymentId: 'pay_onlineauthoritative456',
+    user: objectId(911), amountMinor: 324000, currency: 'INR', bookingIds: [...h.premiumIds], operationsAudit: [],
+    bookingDetails: {
+      passId: 'premium-season', ticketType: 'Premium Pass',
+      fixtures: h.eventIds.map((eventId, index) => ({ eventId, matchDate: h.dates[index], matchIndex: index + 1, ticketType: 'Premium Pass' })),
+    },
+  };
+  const transaction = { orderId: 'different-order', paymentId: order.paymentId, status: 'completed', user: order.user, amountPaise: order.amountMinor, currency: 'INR' };
+  const service = createAdminNewTicketReissueService({
+    Booking: h.Booking, Event: h.Event, Inventory: h.Inventory, Scan: h.Scan,
+    NuscHomeMatchOrder: { findOne: () => query(order), updateOne: async () => ({ modifiedCount: 1 }) },
+    PaymentTransaction: { find: () => query([transaction]) },
+    inventory: h.inventoryService, now: () => new Date(),
+  });
+  await assert.rejects(service.recordManualPaymentVerification({
+    channel: 'ahibi', kind: 'online', orderId: order.orderId, adminId,
+    verificationRequestId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    manualPaymentVerification: {
+      orderId: order.orderId, paymentId: order.paymentId, capturedAmount: '3240.00', currency: 'INR',
+      confirmed: true, auditReason: 'Verify this exact order before any new ticket issuance.',
+    },
+  }), (error) => error.code === 'PAYMENT_TRANSACTION_CONFLICT');
 });
 
 test('paid NUSC General season passes can reissue only with the saved General seating zone', async () => {

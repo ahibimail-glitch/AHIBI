@@ -96,7 +96,7 @@ const PartnerSeasonPassReservationSchema = new mongoose.Schema({
   adminTicketRecoveryAudit: [{
     requestId: { type: String, required: true },
     admin: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
-    action: { type: String, enum: ['recovered', 'manual_intervention'], required: true },
+    action: { type: String, enum: ['recovered', 'manual_intervention', 'payment_verified_manually'], required: true },
     at: { type: Date, default: Date.now },
     details: { type: mongoose.Schema.Types.Mixed, default: {} },
   }],

@@ -26,6 +26,7 @@ test('all season pass recovery routes are mounted behind authentication and Admi
     '/season-pass-recovery/ahibi/recover',
     '/season-pass-recovery/rise/recover',
     '/season-pass-recovery/:channel/reissue-preview',
+    '/season-pass-recovery/:channel/reissue-payment-verification',
     '/season-pass-recovery/:channel/reissue-new',
   ];
   for (const path of requiredRoutes) {

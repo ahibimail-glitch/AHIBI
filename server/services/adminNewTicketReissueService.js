@@ -17,6 +17,9 @@ const NUSC_ORDER_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4
 const ACTIVE_STATUSES = ['confirmed', 'checked-in'];
 const EVIDENCE_REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/# -]{2,199}$/;
 const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RAZORPAY_PAYMENT_ID_PATTERN = /^pay_[A-Za-z0-9]{6,64}$/;
+const MANUAL_PAYMENT_VERIFICATION_MAX_AGE_MS = 15 * 60 * 1000;
+const MANUAL_PAYMENT_WORKFLOW = 'admin_manual_payment_verification';
 
 class TicketReissueError extends Error {
   constructor(status, code, message, details = null) {
@@ -39,6 +42,35 @@ function sameId(left, right) {
 function safeReference(value) {
   const reference = typeof value === 'string' ? value.trim() : '';
   return EVIDENCE_REFERENCE_PATTERN.test(reference) ? reference : null;
+}
+
+function amountToMinorUnits(value, currency) {
+  if (typeof value !== 'string' || !/^\d{1,12}(?:\.\d{1,4})?$/.test(value.trim())) return null;
+  let fractionDigits;
+  try {
+    fractionDigits = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits;
+  } catch {
+    return null;
+  }
+  const [whole, fraction = ''] = value.trim().split('.');
+  if (fraction.length > fractionDigits) return null;
+  const scale = 10n ** BigInt(fractionDigits);
+  const minor = BigInt(whole) * scale + BigInt((fraction.padEnd(fractionDigits, '0') || '0'));
+  const result = Number(minor);
+  return Number.isSafeInteger(result) && result > 0 ? result : null;
+}
+
+function knownPaymentAmounts(context) {
+  return [context.order?.amountMinor, context.order?.amountPaise,
+    context.reservation?.amountMinor, context.reservation?.amountPaise]
+    .filter((value) => value !== undefined && value !== null && value !== '')
+    .map(Number);
+}
+
+function knownPaymentCurrencies(context) {
+  return [context.order?.currency, context.reservation?.currency]
+    .filter((value) => typeof value === 'string' && value.trim())
+    .map((value) => value.trim().toUpperCase());
 }
 
 function safeIndex(value) {
@@ -213,7 +245,13 @@ function createAdminNewTicketReissueService(overrides = {}) {
     const scans = scanIds.length
       ? await deps.Scan.find({ ticket: { $in: scanIds }, ...(eventIds.length ? { event: { $in: eventIds } } : {}) }).select('ticket event partnerId').lean()
       : [];
-    return { channel: 'ahibi', kind, order, fixtures, bookings, allActiveBookings, scans, inventoryDoc, reservation: null, oldReservation: null, memberNumber: null, riseOrder: null };
+    return {
+      channel: 'ahibi', kind, order, fixtures, bookings, allActiveBookings, scans, inventoryDoc,
+      reservation: null, oldReservation: null, memberNumber: null, riseOrder: null,
+      // Derived from the AHIBI order collection and saved season-pass type,
+      // never from the Admin request body.
+      paymentMerchantSource: kind === 'online' && order.orderType === 'seasonPass' ? 'ahibi' : null,
+    };
   }
 
   async function loadRise(orderId, memberNumber) {
@@ -230,6 +268,8 @@ function createAdminNewTicketReissueService(overrides = {}) {
     if (!reservation) return {
       channel: 'rise', kind: 'rise', order: signedOrder, fixtures: [], bookings: [], scans: [], inventoryDoc,
       reservation: null, oldReservation: null, memberNumber, riseOrder: signedOrder, reservationLinkVerified: false,
+      // The exact order was returned by the authenticated signed NUSC integration.
+      paymentMerchantSource: 'nusc',
     };
     const reservationLinkVerified =
       (!signedOrder.reservationId || sameId(signedOrder.reservationId, reservation.reservationId)) &&
@@ -286,10 +326,184 @@ function createAdminNewTicketReissueService(overrides = {}) {
       generalReference: generalReferences[offset] || null,
       eligible: !oldReservation || eligible.includes(offset + 1),
     }));
-    return { channel: 'rise', kind: 'rise', order, fixtures, bookings, allActiveBookings, scans, inventoryDoc, reservation, oldReservation, memberNumber, riseOrder: order, reservationLinkVerified };
+    return {
+      channel: 'rise', kind: 'rise', order, fixtures, bookings, allActiveBookings, scans, inventoryDoc,
+      reservation, oldReservation, memberNumber, riseOrder: order, reservationLinkVerified,
+      // Source is the signed NUSC order above, not a client-selected account.
+      paymentMerchantSource: 'nusc',
+    };
   }
 
-  async function verifyPayment(context) {
+  function trustedPaymentMerchantSource(context) {
+    if (context.paymentMerchantSource === 'nusc' && context.channel === 'rise' &&
+        context.riseOrder?.orderId === context.order?.orderId) return 'nusc';
+    if (context.paymentMerchantSource === 'ahibi' && context.channel === 'ahibi' &&
+        context.kind === 'online' && context.order?.orderType === 'seasonPass') return 'ahibi';
+    return null;
+  }
+
+  function manualPaymentFailure(code, message, referencePresent = true) {
+    return {
+      verified: false,
+      source: 'manual_razorpay_dashboard_verification_rejected',
+      referencePresent,
+      reasonCode: code,
+      message,
+      evidenceRequired: 'Correct the payment evidence against the selected paid order, then record the verification again.',
+    };
+  }
+
+  function contextPaymentId(context) {
+    return context.order?.paymentId;
+  }
+
+  async function validateManualPayment(context, supplied, adminId) {
+    const paymentId = typeof supplied?.paymentId === 'string' ? supplied.paymentId.trim() : '';
+    const orderId = typeof supplied?.orderId === 'string' ? supplied.orderId.trim() : '';
+    const currency = typeof supplied?.currency === 'string' ? supplied.currency.trim().toUpperCase() : '';
+    const capturedAmount = typeof supplied?.capturedAmount === 'string' ? supplied.capturedAmount.trim() : '';
+    const capturedAmountMinor = amountToMinorUnits(capturedAmount, currency);
+    const auditReason = typeof supplied?.auditReason === 'string' ? supplied.auditReason.trim() : '';
+
+    if (!adminId) return manualPaymentFailure('MANUAL_PAYMENT_ADMIN_REQUIRED', 'An authenticated Admin is required to record manual Razorpay verification.');
+    if (context.channel === 'ahibi' && context.kind !== 'online') {
+      return manualPaymentFailure('MANUAL_PAYMENT_NOT_APPLICABLE', 'Razorpay verification is only available for online AHIBI and NUSC RISE paid orders.');
+    }
+    const merchantSource = trustedPaymentMerchantSource(context);
+    if (!merchantSource) {
+      return manualPaymentFailure('MANUAL_PAYMENT_MERCHANT_UNVERIFIED', 'The correct Razorpay account cannot be established from the selected authoritative paid order.');
+    }
+    if (supplied?.confirmed !== true || !REQUEST_ID_PATTERN.test(String(supplied?.verificationId || '')) ||
+        !orderId || orderId !== asString(context.order?.orderId) ||
+        !RAZORPAY_PAYMENT_ID_PATTERN.test(paymentId) || !capturedAmountMinor || !/^[A-Z]{3}$/.test(currency) ||
+        auditReason.length < 10 || auditReason.length > 500) {
+      return manualPaymentFailure('MANUAL_PAYMENT_EVIDENCE_INCOMPLETE', 'Confirm the captured, unreversed payment and provide its payment ID, exact amount, currency, selected order, and a meaningful audit reason.', Boolean(contextPaymentId(context)));
+    }
+    if (context.channel === 'rise' && String(supplied?.memberNumber || '') !== String(context.memberNumber || '')) {
+      return manualPaymentFailure('MANUAL_PAYMENT_MEMBER_MISMATCH', 'The manual payment verification is not bound to the selected NUSC member.');
+    }
+    const expectedPaymentId = contextPaymentId(context);
+    if (!expectedPaymentId || paymentId !== String(expectedPaymentId) ||
+        (context.channel === 'rise' && (!context.reservation || context.reservation.paymentId !== expectedPaymentId || context.reservationLinkVerified !== true))) {
+      return manualPaymentFailure('MANUAL_PAYMENT_REFERENCE_MISMATCH', 'The Razorpay Payment ID does not match the selected entitlement and linked reservation.', Boolean(expectedPaymentId));
+    }
+    if (context.channel === 'rise') {
+      const order = context.order;
+      const refundStatus = String(order.refundStatus || '').toLowerCase();
+      if (order.kind !== 'paid' || (order.settlementType || 'paid') !== 'paid' ||
+          !['paid', 'completed'].includes(String(order.status || '').toLowerCase()) ||
+          context.reservation.status !== 'issued' || (refundStatus && !['not_requested', 'none'].includes(refundStatus))) {
+        return manualPaymentFailure('MANUAL_PAYMENT_ENTITLEMENT_CONFLICT', 'The signed NUSC paid entitlement or its AHIBI reservation is no longer in a valid paid state.');
+      }
+    } else if (context.order.status !== 'completed' || context.order.refundStatus !== 'not_requested' ||
+        context.order.orderType !== 'seasonPass') {
+      return manualPaymentFailure('MANUAL_PAYMENT_ENTITLEMENT_CONFLICT', 'The AHIBI order is not a completed, non-refunded season pass.');
+    }
+
+    const expectedAmounts = knownPaymentAmounts(context);
+    if (expectedAmounts.some((amount) => !Number.isSafeInteger(amount)) || new Set(expectedAmounts).size > 1 ||
+        (expectedAmounts.length && expectedAmounts[0] !== capturedAmountMinor)) {
+      return manualPaymentFailure('MANUAL_PAYMENT_AMOUNT_CONFLICT', 'The captured amount conflicts with the amount recorded on the paid entitlement.');
+    }
+    const expectedCurrencies = knownPaymentCurrencies(context);
+    if (new Set(expectedCurrencies).size > 1 ||
+        (expectedCurrencies.length && expectedCurrencies[0] !== currency) ||
+        (!expectedCurrencies.length && currency !== 'INR')) {
+      return manualPaymentFailure('MANUAL_PAYMENT_CURRENCY_CONFLICT', 'The captured currency conflicts with the paid entitlement.');
+    }
+
+    if (context.channel === 'ahibi') {
+      let transactions;
+      try {
+        transactions = await deps.PaymentTransaction.find({ paymentId }).lean();
+      } catch {
+        return manualPaymentFailure('PAYMENT_TRANSACTION_UNAVAILABLE', 'AHIBI payment records are unavailable; manual Razorpay confirmation cannot safely be matched to this order yet.');
+      }
+      if ((transactions || []).length > 1) {
+        return manualPaymentFailure('PAYMENT_TRANSACTION_CONFLICT', 'More than one AHIBI payment transaction uses this Razorpay Payment ID. Resolve the duplicate payment records before reissue.');
+      }
+      const transaction = transactions?.[0] || null;
+      if (transaction) {
+        const transactionAmounts = [];
+        if (transaction.amountPaise != null) transactionAmounts.push(Number(transaction.amountPaise));
+        if (transaction.amount != null) transactionAmounts.push(amountToMinorUnits(String(transaction.amount), currency));
+        const transactionStatus = String(transaction.status || '').toLowerCase();
+        if ((transaction.paymentId && String(transaction.paymentId) !== paymentId) ||
+            (transaction.orderId && String(transaction.orderId) !== String(context.order.orderId)) ||
+            (transaction.user && !sameId(transaction.user, context.order.user)) ||
+            !['completed', 'resolved', 'paid_no_booking'].includes(transactionStatus) ||
+            transactionAmounts.some((amount) => amount == null || amount !== capturedAmountMinor) ||
+            (transaction.currency && String(transaction.currency).toUpperCase() !== currency)) {
+          return manualPaymentFailure('PAYMENT_TRANSACTION_CONFLICT', 'The saved AHIBI payment transaction conflicts with the manually verified Razorpay payment.');
+        }
+      }
+    }
+
+    const audit = {
+      workflow: MANUAL_PAYMENT_WORKFLOW,
+      status: 'verified',
+      verificationId: supplied.verificationId,
+      channel: context.channel,
+      orderId: context.order.orderId,
+      ...(context.channel === 'rise' && { memberNumber: context.memberNumber }),
+      paymentId,
+      merchantSource,
+      capturedAmount,
+      capturedAmountMinor,
+      currency,
+      verifiedAt: deps.now(),
+      adminId: asString(adminId),
+      auditReason,
+      source: 'razorpay_dashboard_manual',
+    };
+    return { verified: true, source: audit.source, referencePresent: true, audit };
+  }
+
+  function findManualPaymentAudit(context, verificationId) {
+    if (context.channel === 'rise') {
+      return (context.reservation?.adminTicketRecoveryAudit || []).find((entry) => (
+        entry.requestId === verificationId && entry.action === 'payment_verified_manually' &&
+        entry.details?.workflow === MANUAL_PAYMENT_WORKFLOW && entry.details?.status === 'verified'
+      )) || null;
+    }
+    return (context.order?.operationsAudit || []).find((entry) => (
+      entry.action === 'admin_manual_payment_verified' && entry.details?.verificationId === verificationId &&
+      entry.details?.workflow === MANUAL_PAYMENT_WORKFLOW && entry.details?.status === 'verified'
+    )) || null;
+  }
+
+  async function verifyStoredManualPayment(context, verificationId) {
+    if (!REQUEST_ID_PATTERN.test(String(verificationId || ''))) {
+      return { verified: false, source: 'manual_razorpay_dashboard_verification_missing', referencePresent: Boolean(contextPaymentId(context)), reasonCode: 'MANUAL_PAYMENT_VERIFICATION_REQUIRED', message: 'Record an Admin Razorpay Dashboard verification for this exact paid order before using manual payment verification.', evidenceRequired: 'Complete the manual payment verification step for the selected order.' };
+    }
+    const entry = findManualPaymentAudit(context, verificationId);
+    const details = entry?.details;
+    if (!entry || !details || details.orderId !== context.order.orderId || details.channel !== context.channel ||
+        details.merchantSource !== trustedPaymentMerchantSource(context) ||
+        (context.channel === 'rise' && details.memberNumber !== context.memberNumber)) {
+      return { verified: false, source: 'manual_razorpay_dashboard_verification_missing', referencePresent: Boolean(contextPaymentId(context)), reasonCode: 'MANUAL_PAYMENT_VERIFICATION_NOT_FOUND', message: 'The manual payment verification does not match this selected order, member, or authoritative Razorpay account.', evidenceRequired: 'Record a new payment verification against the selected entitlement.' };
+    }
+    const verifiedAt = new Date(details.verifiedAt || entry.at || 0);
+    const age = deps.now().getTime() - verifiedAt.getTime();
+    if (!Number.isFinite(verifiedAt.getTime()) || age < 0 || age > MANUAL_PAYMENT_VERIFICATION_MAX_AGE_MS) {
+      return { verified: false, source: 'manual_razorpay_dashboard_verification_expired', referencePresent: true, reasonCode: 'MANUAL_PAYMENT_VERIFICATION_EXPIRED', message: 'The manual Razorpay verification has expired and must be confirmed again before reissue.', evidenceRequired: 'Recheck the payment in Razorpay and record a fresh manual verification.' };
+    }
+    const checked = await validateManualPayment(context, {
+      verificationId,
+      orderId: details.orderId,
+      memberNumber: details.memberNumber,
+      paymentId: details.paymentId,
+      capturedAmount: details.capturedAmount,
+      currency: details.currency,
+      auditReason: details.auditReason,
+      confirmed: true,
+    }, details.adminId);
+    if (!checked.verified) return checked;
+    return { ...checked, source: details.source, audit: { ...details, verifiedAt } };
+  }
+
+  async function verifyPayment(context, manualPaymentVerificationId) {
+    if (manualPaymentVerificationId) return verifyStoredManualPayment(context, manualPaymentVerificationId);
     if (context.channel === 'rise') {
       const { order, reservation } = context;
       const valid = Boolean(reservation && order.kind === 'paid' && (order.settlementType || 'paid') === 'paid' &&
@@ -325,6 +539,90 @@ function createAdminNewTicketReissueService(overrides = {}) {
       String(payment.currency || '').toUpperCase() === String(order.currency || 'INR').toUpperCase() &&
       Number(payment.amount_refunded || 0) === 0;
     return { verified, source: verified ? 'razorpay_captured_and_transaction_completed' : 'razorpay_capture_mismatch', referencePresent: true };
+  }
+
+  function sameManualPaymentAudit(existing, candidate) {
+    return Boolean(existing && candidate &&
+      existing.verificationId === candidate.verificationId &&
+      existing.channel === candidate.channel &&
+      existing.orderId === candidate.orderId &&
+      existing.memberNumber === candidate.memberNumber &&
+      existing.paymentId === candidate.paymentId &&
+      existing.merchantSource === candidate.merchantSource &&
+      Number(existing.capturedAmountMinor) === Number(candidate.capturedAmountMinor) &&
+      existing.currency === candidate.currency &&
+      existing.adminId === candidate.adminId &&
+      existing.auditReason === candidate.auditReason);
+  }
+
+  async function recordManualPaymentVerification(input) {
+    if (!input.adminId) throw new TicketReissueError(401, 'ADMIN_REQUIRED', 'Admin authorization is required to record payment verification.');
+    const verificationId = String(input.verificationRequestId || '');
+    if (!REQUEST_ID_PATTERN.test(verificationId)) throw new TicketReissueError(400, 'PAYMENT_VERIFICATION_ID_REQUIRED', 'A valid one-time verification ID is required.');
+    const context = await loadContext(input);
+    const supplied = {
+      ...(input.manualPaymentVerification || {}),
+      verificationId,
+    };
+    const checked = await validateManualPayment(context, supplied, input.adminId);
+    if (!checked.verified) {
+      throw new TicketReissueError(409, checked.reasonCode, checked.message, {
+        paymentVerified: false,
+        reasons: [{ code: checked.reasonCode, message: checked.message, evidenceRequired: checked.evidenceRequired }],
+      });
+    }
+    const details = checked.audit;
+    const existing = findManualPaymentAudit(context, verificationId);
+    if (existing) {
+      if (!sameManualPaymentAudit(existing.details, details)) {
+        throw new TicketReissueError(409, 'MANUAL_PAYMENT_VERIFICATION_ID_CONFLICT', 'This verification ID is already linked to different payment evidence. Start a new verification.');
+      }
+      return { status: 'already_verified', verificationId, verifiedAt: existing.details.verifiedAt || existing.at, source: existing.details.source, merchantSource: existing.details.merchantSource };
+    }
+
+    if (context.channel === 'rise') {
+      if (typeof deps.inventory.recordPartnerSeasonPassManualPaymentVerification !== 'function') {
+        throw new TicketReissueError(503, 'MANUAL_PAYMENT_AUDIT_UNAVAILABLE', 'The NUSC payment verification audit could not be saved. No tickets were issued.');
+      }
+      try {
+        const saved = await deps.inventory.recordPartnerSeasonPassManualPaymentVerification({
+          reservationId: context.reservation.reservationId,
+          verificationId,
+          paymentId: details.paymentId,
+          adminId: input.adminId,
+          auditDetails: details,
+        });
+        if (saved?.details) details.verifiedAt = saved.details.verifiedAt || saved.at || details.verifiedAt;
+      } catch (error) {
+        if (error.code) throw new TicketReissueError(409, error.code, error.message);
+        throw error;
+      }
+    } else {
+      const Model = deps.NuscHomeMatchOrder;
+      const update = await Model.updateOne({
+        _id: context.order._id,
+        orderId: context.order.orderId,
+        orderType: 'seasonPass',
+        status: 'completed',
+        refundStatus: 'not_requested',
+        paymentId: details.paymentId,
+        user: context.order.user,
+        amountMinor: context.order.amountMinor,
+        currency: context.order.currency || 'INR',
+        'operationsAudit.details.verificationId': { $ne: verificationId },
+      }, {
+        $push: { operationsAudit: { action: 'admin_manual_payment_verified', admin: input.adminId, at: details.verifiedAt, details } },
+      });
+      if (update.modifiedCount !== 1) {
+        const latest = await Model.findOne({ _id: context.order._id }).lean();
+        const duplicate = findManualPaymentAudit({ ...context, order: latest }, verificationId);
+        if (!duplicate || !sameManualPaymentAudit(duplicate.details, details)) {
+          throw new TicketReissueError(409, 'MANUAL_PAYMENT_VERIFICATION_SAVE_CONFLICT', 'The paid order changed while its manual payment verification was being recorded. Refresh and review the order.');
+        }
+        return { status: 'already_verified', verificationId, verifiedAt: duplicate.details.verifiedAt || duplicate.at, source: duplicate.details.source, merchantSource: duplicate.details.merchantSource };
+      }
+    }
+    return { status: 'verified', verificationId, verifiedAt: details.verifiedAt, source: details.source, merchantSource: details.merchantSource };
   }
 
   function replacementLineage(context, reasons) {
@@ -403,13 +701,14 @@ function createAdminNewTicketReissueService(overrides = {}) {
     };
   }
 
-  async function buildPreview(context, evidence = {}) {
+  async function buildPreview(context, evidence = {}, manualPaymentVerificationId = null) {
     const reasons = [];
-    const payment = await verifyPayment(context);
-    if (!payment.verified) addReason(reasons, 'PAID_ENTITLEMENT_UNVERIFIED', 'The existing paid entitlement is not backed by matching authoritative payment records.',
-      context.channel === 'rise' ? 'Verify the signed NUSC paid order and payment reference.' : context.kind === 'online'
-        ? 'Verify a completed PaymentTransaction and Razorpay payment with captured=true, matching order, amount, and currency.'
-        : 'Verify the original paid manual settlement record, settlement hash, full amount, and Admin settlement audit.');
+    const payment = await verifyPayment(context, manualPaymentVerificationId);
+    if (!payment.verified) addReason(reasons, payment.reasonCode || 'PAID_ENTITLEMENT_UNVERIFIED',
+      payment.message || 'The existing paid entitlement is not backed by matching authoritative payment records.',
+      payment.evidenceRequired || (context.channel === 'rise' ? 'Verify the signed NUSC paid order and payment reference.' : context.kind === 'online'
+        ? 'Verify a completed PaymentTransaction and Razorpay payment with captured=true, matching order, amount, and currency, or record an Admin Dashboard verification.'
+        : 'Verify the original paid manual settlement record, settlement hash, full amount, and Admin settlement audit.'));
     if (context.channel === 'ahibi') {
       const order = context.order;
       if (context.kind === 'manual' && order.settlementType !== 'paid') addReason(reasons, 'COMPLIMENTARY_ORDER_INELIGIBLE', 'Complimentary season passes cannot be reissued by this paid-entitlement action.', 'Select an existing verified paid entitlement.');
@@ -615,7 +914,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
         },
       });
     }
-    return {
+    const previewResult = {
       status: reasons.length ? 'blocked' : 'ready',
       safe: reasons.length === 0,
       channel: context.channel,
@@ -625,6 +924,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
       paymentProof: payment.source,
       paymentVerified: payment.verified,
       paymentReferencePresent: payment.referencePresent,
+      paymentMerchant: trustedPaymentMerchantSource(context),
       lineageVerified: lineage.verified,
       replacementDecision: context.channel === 'rise' && context.oldReservation ? {
         usedTicketCount: Number(context.reservation.replacementUsedTicketCount),
@@ -645,6 +945,8 @@ function createAdminNewTicketReissueService(overrides = {}) {
         historical: reasons.filter((reason) => ['CHECKIN_EVIDENCE_REQUIRED', 'USED_TICKET_EVIDENCE_MISSING'].includes(reason.code) && reason.matchIndex).map((reason) => reason.matchIndex),
       },
     };
+    Object.defineProperty(previewResult, 'manualPaymentAudit', { value: payment.audit || null, enumerable: false });
+    return previewResult;
   }
 
   async function loadContext(input) {
@@ -655,7 +957,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
 
   async function preview(input) {
     const context = await loadContext(input);
-    return buildPreview(context, input.evidence || {});
+    return buildPreview(context, input.evidence || {}, input.manualPaymentVerificationId || null);
   }
 
   async function claimAhibi(context, requestId, adminId) {
@@ -897,6 +1199,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
       historicalEvidence: [...normalizedHistoricalEvidence(input.evidence?.historicalEvidence).values()].map(({ matchIndex, reference, ticketReference, outcome }) => ({ matchIndex, reference, ticketReference, outcome })),
       inventoryEvidence: [...normalizedInventoryEvidence(input.evidence?.inventoryEvidence).values()].map(({ matchIndex, reference, ticketReference }) => ({ matchIndex, reference, ticketReference })),
       paymentProof: previewResult.paymentProof,
+      ...(previewResult.manualPaymentAudit && { manualPaymentVerification: previewResult.manualPaymentAudit }),
       approvedBy: asString(input.adminId),
       approvedAt: deps.now(),
     };
@@ -924,6 +1227,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
       historicalEvidence: [...normalizedHistoricalEvidence(input.evidence?.historicalEvidence).values()].map(({ matchIndex, reference, ticketReference, outcome }) => ({ matchIndex, reference, ticketReference, outcome })),
       inventoryEvidence: [...normalizedInventoryEvidence(input.evidence?.inventoryEvidence).values()].map(({ matchIndex, reference, ticketReference }) => ({ matchIndex, reference, ticketReference })),
       paymentProof: previewResult.paymentProof,
+      ...(previewResult.manualPaymentAudit && { manualPaymentVerification: previewResult.manualPaymentAudit }),
       approvedBy: asString(input.adminId),
       approvedAt: deps.now(),
       nuscSync: 'pending',
@@ -1042,7 +1346,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
       return { status: existingAudit.details.nuscSync === 'pending' ? 'dashboard_sync_pending' : 'already_completed', requestId: input.requestId, audit: existingAudit.details };
     }
 
-    let previewResult = await buildPreview(context, input.evidence || {});
+    let previewResult = await buildPreview(context, input.evidence || {}, input.manualPaymentVerificationId || null);
     if (!previewResult.safe) throw new TicketReissueError(409, 'REISSUE_REQUIRES_REVIEW', 'New tickets are blocked until the listed payment, check-in, fixture, conflict, and inventory evidence is reconciled.', previewResult);
     if (!context.fixtures.length) throw new TicketReissueError(409, 'FIXTURE_SET_INVALID', 'The paid order has no complete ten-fixture allocation.');
     const partialRequestTicketExists = unfinalizedReissueRows(context).length > 0;
@@ -1056,7 +1360,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
     const held = [];
     try {
       const current = await loadContext(input);
-      previewResult = await buildPreview(current, input.evidence || {});
+      previewResult = await buildPreview(current, input.evidence || {}, input.manualPaymentVerificationId || null);
       if (!previewResult.safe) throw new TicketReissueError(409, 'REISSUE_REQUIRES_REVIEW', 'Safety checks changed while the request was starting. Refresh the preview and review the listed blockers.', previewResult);
       held.push(...await reserveNewAllocations(current, previewResult, input.requestId, input.adminId));
       const result = await issueNewBookings(current, previewResult, input.evidence || {}, input.requestId, input.adminId);
@@ -1085,13 +1389,19 @@ function createAdminNewTicketReissueService(overrides = {}) {
           adminId: input.adminId,
           bookingIds: context.reservation.bookingIds || [],
           manualIntervention: true,
-          auditDetails: { workflow: 'admin_new_ticket_reissue', status: 'manual_intervention', code: safeCode },
+          auditDetails: {
+            workflow: 'admin_new_ticket_reissue', status: 'manual_intervention', code: safeCode,
+            ...(previewResult?.manualPaymentAudit && { manualPaymentVerification: previewResult.manualPaymentAudit }),
+          },
         }).catch(() => null);
       } else {
         const Model = context.kind === 'manual' ? deps.ManualSeasonPassOrder : deps.NuscHomeMatchOrder;
         await Model.updateOne({ _id: context.order._id, 'adminTicketReissue.requestId': input.requestId }, {
           $set: { 'adminTicketReissue.status': 'manual_intervention', 'adminTicketReissue.completedAt': deps.now() },
-          $push: { operationsAudit: { action: 'admin_new_ticket_reissue_blocked', admin: input.adminId, at: deps.now(), details: { requestId: input.requestId, code: safeCode } } },
+          $push: { operationsAudit: { action: 'admin_new_ticket_reissue_blocked', admin: input.adminId, at: deps.now(), details: {
+            requestId: input.requestId, code: safeCode,
+            ...(previewResult?.manualPaymentAudit && { manualPaymentVerification: previewResult.manualPaymentAudit }),
+          } } },
         }).catch(() => null);
       }
       if (!(error instanceof TicketReissueError)) {
@@ -1103,7 +1413,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
     }
   }
 
-  return { preview, reissue };
+  return { preview, reissue, recordManualPaymentVerification };
 }
 
 const service = createAdminNewTicketReissueService();
@@ -1112,4 +1422,5 @@ module.exports = {
   createAdminNewTicketReissueService,
   previewNewTicketReissue: service.preview,
   reissueNewTickets: service.reissue,
+  recordManualPaymentVerification: service.recordManualPaymentVerification,
 };
