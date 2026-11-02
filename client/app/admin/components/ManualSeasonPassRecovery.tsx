@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import NuscPartnerTicketRecoveryPanel from './NuscPartnerTicketRecoveryPanel';
 
 type Channel = 'ahibi' | 'rise';
 type TicketStatus = 'valid' | 'checked_in' | 'missing' | 'invalid' | 'refunded' | 'duplicate_valid' | 'manual_intervention';
@@ -232,6 +233,7 @@ export default function ManualSeasonPassRecovery() {
         <h2 id="season-pass-recovery-heading" className="text-lg font-semibold">Recover / Reissue Tickets</h2>
         <p className="text-sm text-muted-foreground">Inspect the ten match tickets for an existing pass. Valid or checked-in tickets are retained; only missing tickets can be reissued against the existing paid entitlement.</p>
       </div>
+      <NuscPartnerTicketRecoveryPanel />
       {error && <Alert variant="destructive"><AlertTitle>Ticket recovery</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       {notice && <Alert className="border-green-200 bg-green-50 text-green-900"><AlertTitle>Recovery result</AlertTitle><AlertDescription>{notice}</AlertDescription></Alert>}
 

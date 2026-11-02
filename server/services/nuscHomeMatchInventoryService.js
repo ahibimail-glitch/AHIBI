@@ -1150,6 +1150,83 @@ async function recordPartnerReplacementAdminTicketRecovery({ reservationId, requ
   }, undefined, { pruneExpired: false });
 }
 
+async function claimPartnerSeasonPassRecovery({ reservationId, token, adminId }) {
+  if (!reservationId || !token || !adminId) {
+    throw new InventoryConflict('Partner ticket recovery claim details are incomplete.', 'INVALID_RECOVERY_CLAIM');
+  }
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation) return { claimed: false, code: 'RESERVATION_NOT_FOUND' };
+    if (reservation.status !== 'issued' || reservation.passId !== 'premium-season' || !reservation.replacesReservationId) {
+      return { claimed: false, code: 'RESERVATION_NOT_ISSUED' };
+    }
+    if (reservation.recoveryStatus === 'issuing') {
+      return { claimed: false, code: 'RECOVERY_IN_PROGRESS' };
+    }
+
+    const current = reservation.adminTicketRecovery || {};
+    if (current.status === 'processing' && current.requestId !== token) {
+      const startedAt = new Date(current.startedAt || 0).getTime();
+      if (!Number.isFinite(startedAt) || Date.now() - startedAt < 30 * 60 * 1000) {
+        return { claimed: false, code: 'RECOVERY_IN_PROGRESS' };
+      }
+    }
+    if (current.status === 'processing' && current.requestId === token) {
+      return { claimed: true, alreadyClaimed: true };
+    }
+
+    reservation.adminTicketRecovery = {
+      requestId: token,
+      status: 'processing',
+      startedAt: new Date(),
+      completedAt: null,
+      recoveredMatchIndices: [],
+      relinkedMatchIndices: [],
+      admin: adminId,
+    };
+    return { claimed: true };
+  }, undefined, { pruneExpired: false });
+}
+
+async function finishPartnerSeasonPassRecovery({ reservationId, token, bookingIds, adminId, auditDetails = {} }) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    const current = reservation?.adminTicketRecovery || {};
+    if (!reservation || reservation.status !== 'issued' || current.requestId !== token || current.status !== 'processing') {
+      return false;
+    }
+
+    const ids = Array.isArray(bookingIds) ? bookingIds.map(String) : [];
+    const expectedBookingCount = reservation.replacesReservationId && reservation.recoveryStatus !== 'issued'
+      ? (reservation.replacementMatchIndices || []).length
+      : FIXTURE_DATES.length;
+    const hasCompleteBookingSet = ids.length === expectedBookingCount && new Set(ids).size === expectedBookingCount;
+    if (hasCompleteBookingSet) reservation.bookingIds = ids;
+
+    const completed = auditDetails.result === 'completed' && hasCompleteBookingSet;
+    reservation.adminTicketRecovery = {
+      requestId: token,
+      status: completed ? 'completed' : 'manual_intervention',
+      startedAt: current.startedAt || new Date(),
+      completedAt: new Date(),
+      recoveredMatchIndices: [...(auditDetails.recoveredMatchIndices || [])],
+      relinkedMatchIndices: [],
+      admin: adminId,
+    };
+    reservation.adminTicketRecoveryAudit ||= [];
+    const action = completed ? 'recovered' : 'manual_intervention';
+    const existing = reservation.adminTicketRecoveryAudit.find((entry) => entry.requestId === token && entry.action === action);
+    const details = { ...auditDetails, bookingSetComplete: hasCompleteBookingSet };
+    if (existing) {
+      existing.at = new Date();
+      existing.details = { ...(existing.details || {}), ...details };
+    } else {
+      reservation.adminTicketRecoveryAudit.push({ requestId: token, admin: adminId, action, at: new Date(), details });
+    }
+    return true;
+  }, undefined, { pruneExpired: false });
+}
+
 async function beginPartnerSeasonPassIssuance(reservationId, paymentId) {
   const result = await mutateInventory((state) => {
     const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
@@ -1496,6 +1573,8 @@ module.exports = {
   completePartnerAdminTicketRecovery,
   recordPartnerAdminTicketRecoveryProgress,
   recordPartnerReplacementAdminTicketRecovery,
+  claimPartnerSeasonPassRecovery,
+  finishPartnerSeasonPassRecovery,
   releaseSeasonPassOrder,
   releaseRefundedSeasonPassOrder,
   releaseRefundedMatchOrder,

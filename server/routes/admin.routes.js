@@ -12,6 +12,7 @@ const heliTaxiiController = require('../controllers/heliTaxiiController');
 const onSpotBookingController = require('../controllers/onSpotBookingController');
 const adminBookingsController = require('../controllers/adminBookingsController');
 const manualSeasonPassController = require('../controllers/manualSeasonPassController');
+const nuscPartnerRecoveryController = require('../controllers/nuscPartnerRecoveryController');
 
 // Public admin routes (unprotected)
 router.get('/users', adminController.getUsers);
@@ -40,6 +41,8 @@ router.get('/season-pass-recovery/ahibi/orders', manualSeasonPassController.list
 router.get('/season-pass-recovery/rise/search', manualSeasonPassController.searchRiseRecoveryOrders);
 router.post('/season-pass-recovery/ahibi/recover', manualSeasonPassController.recoverAhibiPassTickets);
 router.post('/season-pass-recovery/rise/recover', manualSeasonPassController.recoverRisePassTickets);
+router.get('/nusc-home-matches/partner-season-passes/:orderId/recovery-preview', nuscPartnerRecoveryController.previewPartnerSeasonPassTicketRecovery);
+router.post('/nusc-home-matches/partner-season-passes/:orderId/recover-missing-tickets', nuscPartnerRecoveryController.recoverPartnerSeasonPassTickets);
 
 // Event management
 router.get('/events', eventController.getEvents);

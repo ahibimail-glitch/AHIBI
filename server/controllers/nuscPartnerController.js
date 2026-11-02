@@ -3,7 +3,10 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const inventory = require('../services/nuscHomeMatchInventoryService');
-const { createSeasonPassTicketRecords } = require('../services/nuscSeasonPassBookingService');
+const {
+  createSeasonPassTicketRecords,
+  getPartnerReservationTicketReadback,
+} = require('../services/nuscSeasonPassBookingService');
 const {
   ReplacementError,
   beginPartnerSeasonPassReplacement,
@@ -441,15 +444,19 @@ async function getReservation(req, res) {
     if (reservation.status !== 'issued') {
       return res.json({ success: true, reservation: reservationResponse(reservation), tickets: [] });
     }
-    const bookings = await Booking.find({
-      'nuscPartnerTicket.partnerId': PARTNER_ID,
-      'nuscPartnerTicket.partnerOrderId': reservation.partnerOrderId,
-    }).sort({ 'nuscPartnerTicket.ticketIndex': 1 }).lean();
-    const expectedTicketCount = reservation.replacesReservationId
-      ? (reservation.recoveryStatus === 'issued' ? 10 : (reservation.replacementMatchIndices || []).length)
-      : inventory.FIXTURE_DATES.length;
-    if (bookings.length !== expectedTicketCount) {
-      return res.status(500).json({ success: false, code: 'ISSUANCE_PENDING' });
+    let bookings;
+    if (reservation.replacesReservationId) {
+      const readback = await getPartnerReservationTicketReadback(reservation);
+      if (!readback.complete) return res.status(500).json({ success: false, code: 'ISSUANCE_PENDING' });
+      bookings = readback.bookings;
+    } else {
+      bookings = await Booking.find({
+        'nuscPartnerTicket.partnerId': PARTNER_ID,
+        'nuscPartnerTicket.partnerOrderId': reservation.partnerOrderId,
+      }).sort({ 'nuscPartnerTicket.ticketIndex': 1 }).lean();
+      if (bookings.length !== inventory.FIXTURE_DATES.length) {
+        return res.status(500).json({ success: false, code: 'ISSUANCE_PENDING' });
+      }
     }
     const tickets = shapeTickets(reservation, bookings);
     return res.json({
