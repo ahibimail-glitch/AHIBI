@@ -266,6 +266,9 @@ function newTicketReissueInput(req) {
     orderId: req.body?.orderId,
     memberNumber: req.body?.memberNumber,
     requestId: req.body?.requestId,
+    verificationRequestId: req.body?.verificationRequestId,
+    manualPaymentVerificationId: req.body?.manualPaymentVerificationId,
+    manualPaymentVerification: req.body?.manualPaymentVerification,
     evidence: req.body?.evidence,
     approved: req.body?.approved,
     adminId: req.user?._id,
@@ -279,6 +282,18 @@ exports.previewNewSeasonPassTickets = async (req, res) => {
     }
     const preview = await newTicketReissue.previewNewTicketReissue(newTicketReissueInput(req));
     return ApiResponse.success(res, 'New ticket reissue preview completed', preview);
+  } catch (error) {
+    return sendNewTicketReissueError(res, error);
+  }
+};
+
+exports.recordManualNewTicketPaymentVerification = async (req, res) => {
+  try {
+    if (!['ahibi', 'rise'].includes(req.params?.channel)) {
+      return res.status(400).json({ success: false, code: 'INVALID_CHANNEL', message: 'Select an AHIBI or RISE paid entitlement.' });
+    }
+    const result = await newTicketReissue.recordManualPaymentVerification(newTicketReissueInput(req));
+    return ApiResponse.success(res, 'Manual Razorpay payment verification recorded', result);
   } catch (error) {
     return sendNewTicketReissueError(res, error);
   }

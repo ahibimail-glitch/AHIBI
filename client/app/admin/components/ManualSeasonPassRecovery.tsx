@@ -44,6 +44,7 @@ interface PassOrder {
   status: string;
   ahibiStatus?: string;
   settlementType?: 'paid' | 'complimentary';
+  amountMinor?: number | null;
   tickets: PassTicket[];
   result?: { status: string; recoveredMatchIndices: number[]; relinkedMatchIndices: number[]; nuscSync?: string };
 }
@@ -53,6 +54,7 @@ interface ReissuePreview {
   status: 'ready' | 'blocked';
   paymentVerified: boolean;
   paymentProof: string;
+  paymentMerchant: 'nusc' | 'ahibi' | null;
   lineageVerified: boolean;
   dashboardSyncStatus: string | null;
   missingCount: number;
@@ -74,6 +76,19 @@ interface ReissueDraft {
   historical: Record<number, { outcome: '' | 'unused' | 'used'; reference: string }>;
   inventory: Record<number, string>;
   approved: boolean;
+  manualPayment: { paymentId: string; capturedAmount: string; currency: string; confirmed: boolean; auditReason: string };
+  manualPaymentVerificationRequestId?: string;
+  manualPaymentVerificationId?: string;
+  manualPaymentVerifiedAt?: string;
+}
+
+function emptyReissueDraft(): ReissueDraft {
+  return {
+    historical: {},
+    inventory: {},
+    approved: false,
+    manualPayment: { paymentId: '', capturedAmount: '', currency: 'INR', confirmed: false, auditReason: '' },
+  };
 }
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -143,7 +158,7 @@ export default function ManualSeasonPassRecovery() {
   }
 
   function reissueDraft(order: PassOrder): ReissueDraft {
-    return newReissueDrafts[reissueKey(order)] || { historical: {}, inventory: {}, approved: false };
+    return newReissueDrafts[reissueKey(order)] || emptyReissueDraft();
   }
 
   function reissueEvidence(order: PassOrder, preview?: ReissuePreview) {
@@ -175,11 +190,36 @@ export default function ManualSeasonPassRecovery() {
     const key = reissueKey(order);
     setNewReissueDrafts((previous) => ({
       ...previous,
-      [key]: update(previous[key] || { historical: {}, inventory: {}, approved: false }),
+      [key]: update(previous[key] || emptyReissueDraft()),
     }));
   }
 
-  async function loadNewReissuePreview(order: PassOrder) {
+  function manualPaymentInput(order: PassOrder, draft: ReissueDraft) {
+    return {
+      orderId: order.orderId,
+      ...(channel === 'rise' && { memberNumber: selectedMember?.memberNumber }),
+      ...draft.manualPayment,
+    };
+  }
+
+  function updateManualPayment(order: PassOrder, update: (current: ReissueDraft['manualPayment']) => ReissueDraft['manualPayment']) {
+    const key = reissueKey(order);
+    updateReissueDraft(order, (current) => ({
+      ...current,
+      approved: false,
+      manualPayment: update(current.manualPayment),
+      manualPaymentVerificationRequestId: undefined,
+      manualPaymentVerificationId: undefined,
+      manualPaymentVerifiedAt: undefined,
+    }));
+    setNewReissuePreview((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+  }
+
+  async function loadNewReissuePreview(order: PassOrder, manualVerificationId?: string) {
     const key = reissueKey(order);
     setNewReissueLoadingId(order.orderId);
     setError('');
@@ -189,6 +229,9 @@ export default function ManualSeasonPassRecovery() {
         {
           orderId: order.orderId,
           ...(channel === 'ahibi' ? { kind: order.kind } : { memberNumber: selectedMember?.memberNumber }),
+          ...((manualVerificationId || reissueDraft(order).manualPaymentVerificationId) && {
+            manualPaymentVerificationId: manualVerificationId || reissueDraft(order).manualPaymentVerificationId,
+          }),
           evidence: reissueEvidence(order),
         },
         { headers: { ...adminHeaders(), 'Content-Type': 'application/json' } },
@@ -230,6 +273,7 @@ export default function ManualSeasonPassRecovery() {
       const base = {
         orderId: order.orderId,
         ...(channel === 'ahibi' ? { kind: order.kind } : { memberNumber: selectedMember?.memberNumber }),
+        ...(draft.manualPaymentVerificationId && { manualPaymentVerificationId: draft.manualPaymentVerificationId }),
         evidence: reissueEvidence(order),
       };
       const previewResponse = await axios.post(
@@ -266,6 +310,47 @@ export default function ManualSeasonPassRecovery() {
       setError(requestErrorMessage(requestError));
     } finally {
       setBusy(false);
+      setNewReissueLoadingId('');
+    }
+  }
+
+  async function recordManualPaymentVerification(order: PassOrder) {
+    const key = reissueKey(order);
+    const draft = reissueDraft(order);
+    if (!draft.manualPayment.paymentId.trim() || !draft.manualPayment.capturedAmount.trim() ||
+        !draft.manualPayment.currency.trim() || !draft.manualPayment.confirmed || draft.manualPayment.auditReason.trim().length < 10) {
+      setError('Enter the Razorpay payment ID, captured amount and currency, confirm the payment status, and add an audit reason of at least 10 characters.');
+      return;
+    }
+    const verificationRequestId = draft.manualPaymentVerificationRequestId || crypto.randomUUID();
+    updateReissueDraft(order, (current) => ({ ...current, approved: false, manualPaymentVerificationRequestId: verificationRequestId }));
+    setNewReissueLoadingId(order.orderId);
+    setError('');
+    setNotice('');
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/admin/season-pass-recovery/${channel}/reissue-payment-verification`,
+        {
+          orderId: order.orderId,
+          ...(channel === 'ahibi' ? { kind: order.kind } : { memberNumber: selectedMember?.memberNumber }),
+          verificationRequestId,
+          manualPaymentVerification: manualPaymentInput(order, draft),
+        },
+        { headers: { ...adminHeaders(), 'Content-Type': 'application/json' } },
+      );
+      const result = payloadData(response);
+      updateReissueDraft(order, (current) => ({
+        ...current,
+        manualPayment: { ...current.manualPayment, confirmed: false },
+        manualPaymentVerificationRequestId: undefined,
+        manualPaymentVerificationId: result.verificationId,
+        manualPaymentVerifiedAt: result.verifiedAt,
+      }));
+      setNotice('Manual Razorpay payment verification recorded with the signed-in Admin identity. Other reissue safety checks still apply.');
+      await loadNewReissuePreview(order, result.verificationId);
+    } catch (requestError: any) {
+      setError(requestErrorMessage(requestError));
+    } finally {
       setNewReissueLoadingId('');
     }
   }
@@ -470,6 +555,7 @@ export default function ManualSeasonPassRecovery() {
         const canRecover = !requiresReview && order.tickets.length === 10;
         const newKey = reissueKey(order);
         const preview = newReissuePreview[newKey];
+        const paymentMerchantLabel = preview?.paymentMerchant === 'nusc' ? 'NUSC' : preview?.paymentMerchant === 'ahibi' ? 'AHIBI' : null;
         const draft = reissueDraft(order);
         const hasNewTicketTargets = Boolean(preview?.fixtures.some((fixture) => fixture.eligible && ['missing', 'cancelled'].includes(fixture.status)));
         const hasDashboardSyncRetry = preview?.dashboardSyncStatus === 'pending';
@@ -506,6 +592,39 @@ export default function ManualSeasonPassRecovery() {
                       <h4 className="m-0 font-semibold">New ticket reissue preview</h4>
                       <p className="mb-0 mt-1 text-sm text-muted-foreground">Uses the selected paid order. No new pass or payment is created. Missing ticket use and unmatched sold allocations require independent source references.</p>
                     </div>
+                    {(channel === 'rise' || order.kind === 'online') && (
+                      <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/50 p-3">
+                        <div>
+                          <h5 className="m-0 font-medium">Manual Razorpay payment verification</h5>
+                          <p className="mb-0 mt-1 text-sm text-muted-foreground">Optional when existing payment verification already passes. {paymentMerchantLabel ? `Check this payment in the ${paymentMerchantLabel} Razorpay account shown by the verified order.` : 'The expected Razorpay account is not verified; manual confirmation is disabled.'} Payment confirmation does not bypass entitlement, prior-use, duplicate-ticket, or inventory checks. AHIBI records the signed-in Admin and server time; manual verification expires after 15 minutes.</p>
+                          {order.amountMinor != null && <p className="mb-0 mt-1 text-sm text-muted-foreground">Saved entitlement amount: ₹{(Number(order.amountMinor) / 100).toFixed(2)} INR.</p>}
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Label className="space-y-1">Razorpay Payment ID
+                            <Input value={draft.manualPayment.paymentId} onChange={(event) => updateManualPayment(order, (current) => ({ ...current, paymentId: event.target.value }))} placeholder="pay_..." autoComplete="off" />
+                          </Label>
+                          <Label className="space-y-1">Captured amount
+                            <Input value={draft.manualPayment.capturedAmount} onChange={(event) => updateManualPayment(order, (current) => ({ ...current, capturedAmount: event.target.value }))} placeholder="For example, 12500.00" inputMode="decimal" autoComplete="off" />
+                          </Label>
+                          <Label className="space-y-1">Currency
+                            <Input value={draft.manualPayment.currency} onChange={(event) => updateManualPayment(order, (current) => ({ ...current, currency: event.target.value.toUpperCase() }))} placeholder="INR" maxLength={3} autoComplete="off" />
+                          </Label>
+                          <Label className="space-y-1">Audit reason for reissue
+                            <Input value={draft.manualPayment.auditReason} onChange={(event) => updateManualPayment(order, (current) => ({ ...current, auditReason: event.target.value }))} placeholder="Why new ticket identities are required" maxLength={500} />
+                          </Label>
+                        </div>
+                        <label className="flex items-start gap-2 text-sm">
+                          <input type="checkbox" className="mt-1" checked={draft.manualPayment.confirmed} disabled={busy || newReissueLoadingId === order.orderId || !paymentMerchantLabel} onChange={(event) => updateManualPayment(order, (current) => ({ ...current, confirmed: event.target.checked }))} />
+                          <span>I checked the official {paymentMerchantLabel || 'Razorpay'} Dashboard for this order and confirm this payment is captured, belongs to this exact member and order, matches the entered amount and currency, and has not been refunded or reversed.</span>
+                        </label>
+                        {draft.manualPaymentVerificationId && (
+                          <p role="status" className="m-0 text-sm text-green-800">Manual verification recorded at {draft.manualPaymentVerifiedAt ? new Date(draft.manualPaymentVerifiedAt).toLocaleString() : 'server time'}; its audit is linked to the selected order.</p>
+                        )}
+                        <Button type="button" variant="outline" disabled={busy || newReissueLoadingId === order.orderId || !paymentMerchantLabel || !draft.manualPayment.paymentId.trim() || !draft.manualPayment.capturedAmount.trim() || !draft.manualPayment.confirmed || draft.manualPayment.auditReason.trim().length < 10} onClick={() => void recordManualPaymentVerification(order)}>
+                          {newReissueLoadingId === order.orderId ? 'Recording verification...' : draft.manualPaymentVerificationId ? 'Verify again and record payment' : 'Verify and record payment'}
+                        </Button>
+                      </div>
+                    )}
                     {preview && (
                       <>
                         <div className={`rounded-md border p-3 text-sm ${preview.safe ? 'border-green-300 bg-green-50 text-green-900' : 'border-amber-300 bg-amber-50 text-amber-950'}`}>

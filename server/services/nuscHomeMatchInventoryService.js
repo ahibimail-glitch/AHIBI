@@ -1157,6 +1157,41 @@ async function claimPartnerSeasonPassReissue({ reservationId, requestId, adminId
   }, undefined, { pruneExpired: false });
 }
 
+async function recordPartnerSeasonPassManualPaymentVerification({ reservationId, verificationId, paymentId, adminId, auditDetails = {} }) {
+  if (!reservationId || !verificationId || !paymentId || !adminId ||
+      auditDetails.workflow !== 'admin_manual_payment_verification' || auditDetails.status !== 'verified' ||
+      auditDetails.verificationId !== verificationId || auditDetails.paymentId !== paymentId) {
+    throw new InventoryConflict('Manual partner payment verification audit details are invalid.', 'INVALID_MANUAL_PAYMENT_AUDIT');
+  }
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation || reservation.status !== 'issued' || reservation.paymentId !== paymentId) {
+      throw new InventoryConflict('The paid partner reservation changed before manual payment verification was recorded.', 'MANUAL_PAYMENT_RESERVATION_CHANGED');
+    }
+    reservation.adminTicketRecoveryAudit ||= [];
+    const existing = reservation.adminTicketRecoveryAudit.find((entry) => (
+      entry.requestId === verificationId && entry.action === 'payment_verified_manually'
+    ));
+    if (existing) {
+      const keys = ['workflow', 'status', 'verificationId', 'channel', 'orderId', 'memberNumber', 'paymentId', 'merchantSource',
+        'capturedAmountMinor', 'currency', 'adminId', 'auditReason', 'source'];
+      if (keys.some((key) => String(existing.details?.[key] ?? '') !== String(auditDetails[key] ?? ''))) {
+        throw new InventoryConflict('This manual payment verification ID already names different evidence.', 'MANUAL_PAYMENT_VERIFICATION_ID_CONFLICT');
+      }
+      return existing;
+    }
+    const entry = {
+      requestId: verificationId,
+      admin: adminId,
+      action: 'payment_verified_manually',
+      at: auditDetails.verifiedAt || new Date(),
+      details: auditDetails,
+    };
+    reservation.adminTicketRecoveryAudit.push(entry);
+    return entry;
+  }, undefined, { pruneExpired: false });
+}
+
 async function finishPartnerSeasonPassReissue({ reservationId, requestId, adminId, bookingIds, auditDetails = {}, manualIntervention = false }) {
   return mutateInventory((state) => {
     const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
@@ -1665,6 +1700,7 @@ module.exports = {
   completePartnerAdminTicketRecovery,
   recordPartnerAdminTicketRecoveryProgress,
   claimPartnerSeasonPassReissue,
+  recordPartnerSeasonPassManualPaymentVerification,
   finishPartnerSeasonPassReissue,
   updatePartnerSeasonPassReissueSync,
   recordPartnerReplacementAdminTicketRecovery,
