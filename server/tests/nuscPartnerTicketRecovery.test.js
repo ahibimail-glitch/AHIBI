@@ -3,10 +3,53 @@ const assert = require('node:assert/strict');
 const {
   buildPartnerTicketRecoveryPreview,
   createPartnerTicketRecoveryService,
+  loadRecoveryContext,
 } = require('../services/nuscPartnerTicketRecoveryService');
 const inventory = require('../services/nuscHomeMatchInventoryService');
+const InventoryModel = require('../models/NuscHomeMatchInventory');
+const Event = require('../models/Event');
+const Booking = require('../models/Booking');
 
 const HEX = (value) => String(value).padStart(24, '0');
+
+test('recovery preview resolves a NUSC order UUID to its canonical partner reservation ID', async (t) => {
+  const originalInventoryFindOne = InventoryModel.findOne;
+  const originalEventFind = Event.find;
+  const originalBookingFind = Booking.find;
+  const orderUuid = '6a1fe107-ae10-46cd-8091-8983da1cf182';
+  const partnerOrderId = `nusc-order-${orderUuid}`;
+  const reservation = {
+    reservationId: `nsp_${'a'.repeat(40)}`,
+    partnerOrderId,
+    replacesReservationId: null,
+    memberReferenceHash: 'a'.repeat(64),
+    eventIds: [],
+    bookingIds: [],
+  };
+  const inventoryDoc = { partnerSeasonPassReservations: [reservation] };
+  const bookingFilters = [];
+  const emptyQuery = (value) => ({ lean: async () => value });
+
+  InventoryModel.findOne = () => emptyQuery(inventoryDoc);
+  Event.find = () => ({ select() { return this; }, lean: async () => [] });
+  Booking.find = (filter) => {
+    bookingFilters.push(filter);
+    return emptyQuery([]);
+  };
+  t.after(() => {
+    InventoryModel.findOne = originalInventoryFindOne;
+    Event.find = originalEventFind;
+    Booking.find = originalBookingFind;
+  });
+
+  const context = await loadRecoveryContext(orderUuid);
+
+  assert.equal(context.reservation, reservation);
+  assert.equal(context.orderId, partnerOrderId);
+  assert.equal(context.orderReservations.length, 1);
+  assert.equal(context.signedSyncAvailable, false);
+  assert.equal(bookingFilters[0]['nuscPartnerTicket.partnerOrderId'], partnerOrderId);
+});
 
 function makeContext({ unattributedIndices = [], savedDecision = true, activeMemberConflict = false } = {}) {
   const fixtures = inventory.FIXTURE_MATCHES;
