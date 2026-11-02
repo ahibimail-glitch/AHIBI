@@ -1,5 +1,6 @@
 const Inventory = require('../models/NuscHomeMatchInventory');
 const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
+const Booking = require('../models/Booking');
 
 const BOX_COUNT = 4;
 const SEATS_PER_BOX = 8;
@@ -833,30 +834,49 @@ async function reacquirePartnerReplacementInventory({ orderId, paymentId, matchD
   });
 }
 
-async function beginPartnerMissingTicketRecovery({ orderId, oldReservationId, paymentId, matchIndices, matchDates, matches }) {
+async function beginPartnerMissingTicketRecovery({ orderId, oldReservationId, paymentId, matchIndices, missingMatchIndices = matchIndices, matchDates, matches }) {
   if (!orderId || !oldReservationId || !paymentId || !Array.isArray(matchIndices) ||
+      !Array.isArray(missingMatchIndices) ||
       !Array.isArray(matchDates) || !Array.isArray(matches) || matchDates.length !== matches.length ||
       new Set(matchIndices).size !== matchIndices.length ||
+      new Set(missingMatchIndices).size !== missingMatchIndices.length ||
       matchIndices.some((index) => !Number.isInteger(index) || index < 1 || index > 10) ||
+      missingMatchIndices.some((index) => !matchIndices.includes(index)) ||
+      matchDates.length !== missingMatchIndices.length ||
       matchDates.some((date) => !FIXTURE_DATES.includes(date)) ||
       matches.some((match) => !matchDates.includes(match.matchDate))) {
     throw new InventoryConflict('Premium recovery request is invalid.', 'INVALID_RECOVERY_REQUEST');
   }
 
-  return mutateInventory((state) => {
+  return mutateInventory(async (state) => {
     const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === orderId);
+    const oldReservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === oldReservationId);
     if (!reservation || reservation.passId !== 'premium-season' || reservation.ticketType !== 'Premium Pass') {
       throw new InventoryConflict('Premium reservation was not found.', 'RESERVATION_NOT_FOUND');
     }
-    if (reservation.status !== 'issued' || reservation.replacesReservationId !== oldReservationId ||
-        reservation.paymentId !== paymentId) {
+    if (!oldReservation || oldReservation.status !== 'replaced' || oldReservation.passId !== 'general-season' ||
+        oldReservation.replacedByReservationId !== orderId ||
+        String(oldReservation.memberReferenceHash) !== String(reservation.memberReferenceHash) ||
+        reservation.status !== 'issued' || reservation.replacesReservationId !== oldReservationId ||
+        reservation.paymentId !== paymentId ||
+        oldReservation.eventIds?.length !== 10 || oldReservation.matchDates?.length !== 10 ||
+        reservation.eventIds?.length !== 10 || reservation.matchDates?.length !== 10 ||
+        oldReservation.eventIds?.some((id, index) => String(id) !== String(reservation.eventIds[index])) ||
+        oldReservation.matchDates?.some((date, index) => date !== reservation.matchDates[index])) {
       throw new InventoryConflict('Premium replacement does not match the paid issued reservation.', 'RECOVERY_RESERVATION_MISMATCH');
     }
     if ((state.partnerSeasonPassReservations || []).some((item) => item.reservationId !== orderId && item.paymentId === paymentId)) {
       throw new InventoryConflict('This NUSC payment is already attached to another reservation.', 'PAYMENT_ALREADY_USED');
     }
     const existingIndices = (reservation.recoveryMatchIndices || []).map(Number);
+    if (reservation.recoveryStatus === 'issued' &&
+        (existingIndices.length !== matchIndices.length || existingIndices.some((value, index) => value !== matchIndices[index]))) {
+      throw new InventoryConflict('A different recovery is already recorded for this replacement.', 'RECOVERY_CONFLICT');
+    }
     if (reservation.recoveryStatus === 'issued') {
+      if (missingMatchIndices.length) {
+        throw new InventoryConflict('The completed recovery no longer matches its ticket records.', 'RECOVERY_TICKET_SET_INCOMPLETE');
+      }
       return { alreadyIssued: true, recoveryMatchIndices: existingIndices };
     }
     if (reservation.recoveryStatus === 'issuing' &&
@@ -872,10 +892,31 @@ async function beginPartnerMissingTicketRecovery({ orderId, oldReservationId, pa
     const recoveryHoldId = `nusc-recovery:${orderId}`;
     const existingHold = (state.seasonPassOrders || []).find((item) => item.orderId === recoveryHoldId);
     if (matchDates.length) {
-      for (const match of matches) {
+      for (let index = 0; index < matches.length; index += 1) {
+        const match = matches[index];
+        const matchIndex = missingMatchIndices[index];
+        if (match.matchDate !== reservation.matchDates[matchIndex - 1] ||
+            String(match.eventId || '') !== String(reservation.eventIds?.[matchIndex - 1] || '')) {
+          throw new InventoryConflict('Premium recovery fixture metadata does not match the issued reservation.', 'RECOVERY_FIXTURE_MISMATCH');
+        }
         const ticket = (match.ticketTypes || []).find((item) => item.name === 'Premium Pass');
         if (!ticket) throw new InventoryConflict('Premium Pass is not configured for a recovery match.', 'TICKET_NOT_CONFIGURED');
         const capacity = TICKET_CAPACITIES['Premium Pass'] ?? Number(ticket.quantity || 0);
+        const sold = Number(ticket.sold || 0);
+        const liveSold = await Booking.countDocuments({
+          event: reservation.eventIds[matchIndex - 1],
+          ticketType: 'Premium Pass',
+          bookingSource: { $ne: 'on-spot' },
+          status: { $in: ['confirmed', 'checked-in'] },
+          paymentStatus: 'completed',
+        });
+        // A missing replacement booking may be restored without taking a second
+        // seat only when the event sold counter still includes that exact ticket.
+        if (!Number.isInteger(sold) || sold - liveSold !== 1) {
+          const error = new InventoryConflict('The prior Premium seat allocation cannot be reconciled with current bookings.', 'RECOVERY_INVENTORY_RECONCILIATION_REQUIRED');
+          error.matchDate = match.matchDate;
+          throw error;
+        }
         const activeOrders = activeOrdersForDate(state, match.matchDate);
         const otherSeasonOrders = activeSeasonPassOrdersForDate(state, match.matchDate)
           .filter((item) => item.orderId !== recoveryHoldId);
@@ -885,8 +926,10 @@ async function beginPartnerMissingTicketRecovery({ orderId, oldReservationId, pa
         const seasonHeld = otherSeasonOrders
           .filter((item) => item.ticketType === 'Premium Pass')
           .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        if (capacity - Number(ticket.sold || 0) - matchHeld - seasonHeld < 1) {
-          throw new InventoryConflict(`Premium Pass inventory is unavailable for ${match.matchDate}.`, 'PREMIUM_INVENTORY_UNAVAILABLE');
+        if (capacity - sold - matchHeld - seasonHeld < 0) {
+          const error = new InventoryConflict(`Premium Pass inventory is unavailable for ${match.matchDate}.`, 'PREMIUM_INVENTORY_UNAVAILABLE');
+          error.matchDate = match.matchDate;
+          throw error;
         }
       }
       const hold = existingHold || {
@@ -910,13 +953,20 @@ async function completePartnerMissingTicketRecovery(orderId, oldReservationId, r
   return mutateInventory((state) => {
     const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === orderId);
     const oldReservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === oldReservationId);
-    if (!reservation || !oldReservation || reservation.status !== 'issued' ||
-        reservation.replacesReservationId !== oldReservationId) {
+    if (!reservation || !oldReservation || oldReservation.status !== 'replaced' ||
+        oldReservation.replacedByReservationId !== orderId || reservation.status !== 'issued' ||
+        reservation.replacesReservationId !== oldReservationId || !reservation.paymentId ||
+        String(oldReservation.memberReferenceHash) !== String(reservation.memberReferenceHash) ||
+        oldReservation.eventIds?.length !== 10 || reservation.eventIds?.length !== 10 ||
+        oldReservation.eventIds.some((id, index) => String(id) !== String(reservation.eventIds[index])) ||
+        oldReservation.matchDates?.length !== 10 || reservation.matchDates?.length !== 10 ||
+        oldReservation.matchDates.some((date, index) => date !== reservation.matchDates[index])) {
       throw new InventoryConflict('Premium recovery is not in progress.', 'RECOVERY_NOT_IN_PROGRESS');
     }
     const expected = (reservation.recoveryMatchIndices || []).map(Number);
     if (expected.length !== matchIndices.length || expected.some((index, position) => index !== matchIndices[position]) ||
-        recoveryBookingIds.length !== expected.length) {
+        recoveryBookingIds.length !== expected.length || allBookingIds.length !== 10 ||
+        new Set(allBookingIds.map(String)).size !== 10) {
       throw new InventoryConflict('Premium recovery ticket set is incomplete.', 'RECOVERY_TICKET_SET_INCOMPLETE');
     }
     if (reservation.recoveryStatus === 'issued') return reservation;
@@ -1066,6 +1116,36 @@ async function recordPartnerAdminTicketRecoveryProgress({ reservationId, request
     recovery.recoveredMatchIndices = [...new Set([...(recovery.recoveredMatchIndices || []), ...recoveredMatchIndices])].sort((a, b) => a - b);
     recovery.relinkedMatchIndices = [...new Set([...(recovery.relinkedMatchIndices || []), ...relinkedMatchIndices])].sort((a, b) => a - b);
     reservation.adminTicketRecovery = recovery;
+    return reservation;
+  }, undefined, { pruneExpired: false });
+}
+
+async function recordPartnerReplacementAdminTicketRecovery({ reservationId, requestId, adminId, action, details = {} }) {
+  if (!requestId || !adminId || !['recovered', 'manual_intervention'].includes(action)) {
+    throw new InventoryConflict('Replacement ticket recovery audit details are invalid.', 'INVALID_RECOVERY_AUDIT');
+  }
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation || !['issued', 'replaced'].includes(reservation.status) ||
+        (!reservation.replacesReservationId && !reservation.replacedByReservationId)) {
+      throw new InventoryConflict('The Premium replacement reservation changed during recovery.', 'RECOVERY_STATE_CHANGED');
+    }
+    reservation.adminTicketRecoveryAudit ||= [];
+    const existing = reservation.adminTicketRecoveryAudit.find((entry) => (
+      entry.requestId === requestId && entry.action === action
+    ));
+    if (existing) {
+      existing.at = new Date();
+      existing.details = { ...(existing.details || {}), ...details };
+    } else {
+      reservation.adminTicketRecoveryAudit.push({
+        requestId,
+        admin: adminId,
+        action,
+        at: new Date(),
+        details,
+      });
+    }
     return reservation;
   }, undefined, { pruneExpired: false });
 }
@@ -1415,6 +1495,7 @@ module.exports = {
   beginPartnerAdminTicketRecovery,
   completePartnerAdminTicketRecovery,
   recordPartnerAdminTicketRecoveryProgress,
+  recordPartnerReplacementAdminTicketRecovery,
   releaseSeasonPassOrder,
   releaseRefundedSeasonPassOrder,
   releaseRefundedMatchOrder,

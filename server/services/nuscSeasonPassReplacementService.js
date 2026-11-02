@@ -306,6 +306,8 @@ async function recoverMissingGeneralReplacementTickets({ premiumReservationId, o
   if (oldByIndex.size !== 10 || Array.from({ length: 10 }, (_, index) => index + 1).some((index) => !oldByIndex.has(index)) ||
       oldBookings.some((booking) => (
         booking.ticketType !== oldReservation.ticketType ||
+      booking.paymentStatus !== 'completed' || booking.paymentProvider !== 'nusc-partner' ||
+      (oldReservation.paymentId && String(booking.externalPaymentId) !== String(oldReservation.paymentId)) ||
         booking.nuscPartnerTicket.partnerOrderId !== oldReservation.partnerOrderId ||
         String(booking.nuscPartnerTicket.memberReferenceHash) !== String(oldReservation.memberReferenceHash) ||
         String(booking.event) !== String(oldReservation.eventIds[Number(booking.nuscSeasonMatchIndex) - 1])
@@ -313,87 +315,156 @@ async function recoverMissingGeneralReplacementTickets({ premiumReservationId, o
     throw new ReplacementError('OLD_TICKET_SET_INCOMPLETE', 500);
   }
 
-  const premiumBookings = await Booking.find({
-    'nuscPartnerTicket.partnerId': 'nusc',
-    'nuscPartnerTicket.reservationId': premiumReservationId,
-    'nuscPartnerTicket.partnerOrderId': premiumReservation.partnerOrderId,
-  }).lean();
-  const premiumByIndex = new Map(premiumBookings.map((booking) => [Number(booking.nuscSeasonMatchIndex), booking]));
-  if (premiumByIndex.size !== premiumBookings.length || premiumBookings.some((booking) => (
-    booking.ticketType !== premiumReservation.ticketType ||
-    String(booking.nuscPartnerTicket.memberReferenceHash) !== String(premiumReservation.memberReferenceHash) ||
-    String(booking.event) !== String(premiumReservation.eventIds[Number(booking.nuscSeasonMatchIndex) - 1])
-  ))) throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
-
   const recoveryStatus = premiumReservation.recoveryStatus || 'none';
-  const currentPremiumIndices = [...premiumByIndex.keys()].sort((a, b) => a - b);
-  const issuedReplacementIndices = (premiumReservation.replacementMatchIndices || []).map(Number).sort((a, b) => a - b);
-  const expectedExistingIndices = recoveryStatus === 'issued'
-    ? Array.from({ length: 10 }, (_, index) => index + 1)
-    : [...issuedReplacementIndices, ...(recoveryStatus === 'issuing' ? currentPremiumIndices.filter((index) => index === 1 || index === 2) : [])].sort((a, b) => a - b);
-  if (recoveryStatus === 'none' &&
-      (issuedReplacementIndices.join(',') !== '3,4,5,6,7,8,9,10' || currentPremiumIndices.join(',') !== issuedReplacementIndices.join(','))) {
-    throw new ReplacementError('RECOVERY_NOT_APPLICABLE');
-  }
-  if (recoveryStatus !== 'none' && currentPremiumIndices.join(',') !== expectedExistingIndices.join(',')) {
-    throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
+  if (!['none', 'issuing', 'issued'].includes(recoveryStatus)) throw new ReplacementError('RECOVERY_CONFLICT');
+  const recoveryIndices = (premiumReservation.replacementMatchIndices || []).map(Number).sort((a, b) => a - b);
+  if (!recoveryIndices.length || new Set(recoveryIndices).size !== recoveryIndices.length ||
+      recoveryIndices.some((index) => !Number.isInteger(index) || index < 1 || index > 10) ||
+      premiumReservation.replacementCancelledTicketCount == null || premiumReservation.replacementUsedTicketCount == null ||
+      !Number.isInteger(Number(premiumReservation.replacementCancelledTicketCount)) ||
+      !Number.isInteger(Number(premiumReservation.replacementUsedTicketCount)) ||
+      Number(premiumReservation.replacementCancelledTicketCount) !== recoveryIndices.length ||
+      Number(premiumReservation.replacementUsedTicketCount) !== 10 - recoveryIndices.length) {
+    throw new ReplacementError('REPLACEMENT_LINEAGE_COUNTS_INVALID');
   }
 
-  const recoveryIndices = [1, 2];
-  const missingPremiumIndices = recoveryIndices.filter((index) => !premiumByIndex.has(index));
-  if (recoveryStatus === 'issued') {
-    if (missingPremiumIndices.length || recoveryIndices.some((index) => !premiumByIndex.has(index))) {
-      throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
+  const premiumQueries = [
+    Booking.find({ 'nuscPartnerTicket.partnerId': 'nusc', 'nuscPartnerTicket.reservationId': premiumReservationId }).lean(),
+    Booking.find({ 'nuscPartnerTicket.partnerId': 'nusc', 'nuscPartnerTicket.partnerOrderId': premiumReservation.partnerOrderId }).lean(),
+    ...(premiumReservation.bookingIds?.length ? [Booking.find({ _id: { $in: premiumReservation.bookingIds } }).lean()] : []),
+  ];
+  const premiumQueryResults = await Promise.all(premiumQueries);
+  const premiumBookings = [...new Map(premiumQueryResults.flat().map((booking) => [String(booking._id), booking])).values()];
+  const premiumByIndex = new Map();
+  for (const booking of premiumBookings) {
+    const partner = booking.nuscPartnerTicket || {};
+    if (partner.reservationId === oldReservationId) continue;
+    const index = Number(booking.nuscSeasonMatchIndex || partner.ticketIndex);
+    if (partner.partnerId !== 'nusc' || partner.reservationId !== premiumReservationId ||
+        partner.partnerOrderId !== premiumReservation.partnerOrderId ||
+        String(partner.memberReferenceHash) !== String(premiumReservation.memberReferenceHash) ||
+        !Number.isInteger(index) || !recoveryIndices.includes(index) ||
+        booking.paymentProvider !== 'nusc-partner' || String(booking.externalPaymentId) !== String(paymentId) ||
+        booking.ticketType !== premiumReservation.ticketType ||
+        String(booking.event) !== String(premiumReservation.eventIds[index - 1])) {
+      throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
     }
-    return {
-      reservation: premiumReservation,
-      issuedBookingIds: recoveryIndices.map((index) => premiumByIndex.get(index)._id),
-      retainedUsedTicketCount: Number(premiumReservation.replacementUsedTicketCount || 0),
-      alreadyIssued: true,
-    };
+    const rows = premiumByIndex.get(index) || [];
+    rows.push(booking);
+    premiumByIndex.set(index, rows);
   }
-  if (recoveryStatus !== 'issuing' &&
-      (missingPremiumIndices.length !== 2 || recoveryIndices.some((index) => premiumByIndex.has(index)))) {
-    throw new ReplacementError('RECOVERY_NOT_APPLICABLE');
+  if ([...premiumByIndex.values()].some((rows) => rows.length !== 1)) {
+    throw new ReplacementError('REPLACEMENT_DUPLICATE_ACTIVE_TICKETS');
   }
-  if (!premiumReservation.bookingIds.every((id) => premiumByIndex.has(Number(premiumBookings.find((booking) => String(booking._id) === String(id))?.nuscSeasonMatchIndex))) ||
-      premiumReservation.bookingIds.length !== premiumReservation.replacementMatchIndices.length) {
+
+  const priorRecoveryIndices = (premiumReservation.recoveryMatchIndices || []).map(Number).sort((a, b) => a - b);
+  const currentPremiumIndices = [...premiumByIndex.keys()].sort((a, b) => a - b);
+  if (recoveryStatus === 'issuing' &&
+      (priorRecoveryIndices.length !== recoveryIndices.length || priorRecoveryIndices.some((value, index) => value !== recoveryIndices[index]))) {
+    throw new ReplacementError('RECOVERY_CONFLICT');
+  }
+  if (recoveryStatus === 'issued' &&
+      (currentPremiumIndices.join(',') !== recoveryIndices.join(',') || premiumReservation.bookingIds?.length !== 10)) {
     throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
   }
 
   const scans = await Scan.find({
-    ticket: { $in: oldReservation.bookingIds },
+    ticket: { $in: [...oldReservation.bookingIds, ...(premiumReservation.recoveryBookingIds || [])] },
     event: { $in: oldReservation.eventIds },
     partnerId: 'nusc',
   }).select('ticket event').lean();
   const scanKeys = new Set(scans.map((scan) => `${String(scan.ticket)}:${String(scan.event)}`));
-  const targetHasValidScan = recoveryIndices.some((index) => {
-    const booking = oldByIndex.get(index);
-    return scanKeys.has(`${String(booking._id)}:${String(oldReservation.eventIds[index - 1])}`);
-  });
-  if (targetHasValidScan) throw new ReplacementError('TARGET_MATCH_ALREADY_CHECKED_IN');
-  if (recoveryIndices.some((index) => !['confirmed', 'cancelled'].includes(oldByIndex.get(index).status)) ||
-      (recoveryStatus !== 'issuing' && recoveryIndices.some((index) => oldByIndex.get(index).status !== 'confirmed'))) {
-    throw new ReplacementError('TARGET_TICKET_STATE_REVIEW_REQUIRED');
+  const targetIndices = new Set(recoveryIndices);
+  const activeTicket = (booking) => booking &&
+    !['cancelled', 'voided', 'refunded'].includes(booking.status) &&
+    !['cancelled', 'voided', 'refunded'].includes(booking.paymentStatus) &&
+    booking.paymentStatus === 'completed' && ['confirmed', 'checked-in'].includes(booking.status);
+  for (const [index, rows] of premiumByIndex.entries()) {
+    if (activeTicket(rows[0]) && activeTicket(oldByIndex.get(index))) {
+      throw new ReplacementError('REPLACEMENT_DUPLICATE_ACTIVE_TICKETS');
+    }
   }
-  const retainedUsedTicketCount = oldBookings.filter((booking) => (
-    scanKeys.has(`${String(booking._id)}:${String(booking.event)}`)
-  )).length;
+  const usedIndices = [];
+  for (let index = 1; index <= 10; index += 1) {
+    const oldBooking = oldByIndex.get(index);
+    const scanned = scanKeys.has(`${String(oldBooking._id)}:${String(oldBooking.event)}`);
+    if (targetIndices.has(index)) {
+      if (scanned || oldBooking.entryVerified === true) {
+        throw new ReplacementError('TARGET_MATCH_ALREADY_CHECKED_IN');
+      }
+      if (oldBooking.status !== 'cancelled' || oldBooking.nuscPartnerTicket.replacedByReservationId !== premiumReservationId) {
+        throw new ReplacementError('TARGET_TICKET_STATE_REVIEW_REQUIRED');
+      }
+    } else {
+      if (!scanned || !['confirmed', 'checked-in'].includes(oldBooking.status) ||
+          (oldBooking.entryVerified === true && !scanned)) {
+        throw new ReplacementError('USED_TICKET_EVIDENCE_MISMATCH');
+      }
+      usedIndices.push(index);
+    }
+  }
+  if (usedIndices.length !== Number(premiumReservation.replacementUsedTicketCount || 0)) {
+    throw new ReplacementError('REPLACEMENT_LINEAGE_COUNTS_INVALID');
+  }
 
-  const knownRecoveryIndices = (premiumReservation.recoveryMatchIndices || []).map(Number);
-  if (recoveryStatus === 'issuing' &&
-      (knownRecoveryIndices.length !== 2 || knownRecoveryIndices.some((index, position) => index !== [1, 2][position]))) {
-    throw new ReplacementError('RECOVERY_CONFLICT');
+  for (const [index, rows] of premiumByIndex.entries()) {
+    if (!activeTicket(rows[0])) throw new ReplacementError('TARGET_TICKET_STATE_REVIEW_REQUIRED');
+    if (!targetIndices.has(index) && activeTicket(oldByIndex.get(index))) {
+      throw new ReplacementError('REPLACEMENT_DUPLICATE_ACTIVE_TICKETS');
+    }
   }
-  const datesStillNeedingHold = missingPremiumIndices;
-  const eventDocs = datesStillNeedingHold.length
-    ? await Event.find({ _id: { $in: datesStillNeedingHold.map((index) => premiumReservation.eventIds[index - 1]) } }).select('+ticketTypes')
+
+  const targetIndicesWithTickets = recoveryIndices.filter((index) => premiumByIndex.has(index));
+  const missingPremiumIndices = recoveryIndices.filter((index) => !premiumByIndex.has(index));
+  if (recoveryStatus === 'issued') {
+    const finalByIndex = new Map();
+    for (const index of recoveryIndices) finalByIndex.set(index, premiumByIndex.get(index)?.[0]);
+    for (const index of usedIndices) finalByIndex.set(index, oldByIndex.get(index));
+    const finalRows = Array.from({ length: 10 }, (_, offset) => finalByIndex.get(offset + 1));
+    if (finalRows.some((booking) => !booking || !activeTicket(booking)) ||
+        new Set(finalRows.map((booking) => String(booking._id))).size !== 10 ||
+        premiumReservation.bookingIds.map(String).some((id, index) => id !== String(finalRows[index]._id))) {
+      throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
+    }
+    return {
+      reservation: premiumReservation,
+      issuedBookingIds: recoveryIndices.map((index) => premiumByIndex.get(index)[0]._id),
+      recoveredMatchIndices: [],
+      relinkedMatchIndices: Array.from({ length: 10 }, (_, index) => index + 1),
+      retainedUsedTicketCount: usedIndices.length,
+      alreadyIssued: true,
+    };
+  }
+
+  if (recoveryStatus === 'none') {
+    const linkedIds = (premiumReservation.bookingIds || []).map(String);
+    if (linkedIds.length !== recoveryIndices.length || new Set(linkedIds).size !== linkedIds.length) {
+      throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
+    }
+    const originalBookingIds = new Set(oldReservation.bookingIds.map(String));
+    if (linkedIds.some((id) => originalBookingIds.has(id))) throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
+    recoveryIndices.forEach((index, position) => {
+      const booking = premiumByIndex.get(index)?.[0];
+      if (booking && linkedIds[position] !== String(booking._id)) {
+        throw new ReplacementError('PREMIUM_TICKET_SET_INVALID', 500);
+      }
+    });
+  }
+
+  const missingFixtures = missingPremiumIndices.map((matchIndex) => ({
+    eventId: premiumReservation.eventIds[matchIndex - 1],
+    matchDate: premiumReservation.matchDates[matchIndex - 1],
+    matchIndex,
+    ticketType: premiumReservation.ticketType,
+  }));
+  const eventDocs = missingFixtures.length
+    ? await Event.find({ _id: { $in: missingFixtures.map(({ eventId }) => eventId) } }).select('+ticketTypes')
     : [];
   const eventById = new Map(eventDocs.map((event) => [String(event._id), event]));
-  const matches = datesStillNeedingHold.map((index) => {
-    const event = eventById.get(String(premiumReservation.eventIds[index - 1]));
+  const matches = missingFixtures.map((fixture) => {
+    const event = eventById.get(String(fixture.eventId));
     if (!event) throw new ReplacementError('PREMIUM_INVENTORY_UNAVAILABLE');
-    return { matchDate: premiumReservation.matchDates[index - 1], ticketTypes: event.ticketTypes };
+    return { eventId: fixture.eventId, matchDate: fixture.matchDate, ticketTypes: event.ticketTypes };
   });
   try {
     await homeMatchInventory.beginPartnerMissingTicketRecovery({
@@ -401,61 +472,78 @@ async function recoverMissingGeneralReplacementTickets({ premiumReservationId, o
       oldReservationId,
       paymentId,
       matchIndices: recoveryIndices,
+      missingMatchIndices: missingPremiumIndices,
       matchDates: matches.map((match) => match.matchDate),
       matches,
     });
   } catch (error) {
-    if (error.code) throw new ReplacementError(error.code, error.code === 'RESERVATION_NOT_FOUND' ? 404 : 409);
+    if (error.code) {
+      const replacementError = new ReplacementError(error.code, error.code === 'RESERVATION_NOT_FOUND' ? 404 : 409);
+      if (error.matchDate) replacementError.matchDate = error.matchDate;
+      throw replacementError;
+    }
     throw error;
   }
 
-  const fixtures = recoveryIndices.map((matchIndex) => ({
-    eventId: premiumReservation.eventIds[matchIndex - 1],
-    matchDate: premiumReservation.matchDates[matchIndex - 1],
-    matchIndex,
-    ticketType: premiumReservation.ticketType,
-  }));
-  const issued = await require('./nuscSeasonPassBookingService').createSeasonPassTicketRecords({
-    orderId: premiumReservation.partnerOrderId,
-    fixtures,
-    passId: premiumReservation.passId,
-    quantity: 1,
-    paymentId,
-    paymentProvider: 'nusc-partner',
-    memberReferenceHash: premiumReservation.memberReferenceHash,
-    reservationId: premiumReservationId,
-    partnerId: 'nusc',
-  });
-  if (issued.bookingIds.length !== 2) throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
-
-  const targetOldIds = recoveryIndices.map((index) => oldByIndex.get(index)._id);
-  await Booking.updateMany({ _id: { $in: targetOldIds }, status: 'confirmed' }, {
-    $set: { status: 'cancelled', 'nuscPartnerTicket.replacedByReservationId': premiumReservationId },
-  });
-  const finalOldTargets = await Booking.find({ _id: { $in: targetOldIds } })
-    .select('_id status nuscPartnerTicket.replacedByReservationId').lean();
-  if (finalOldTargets.length !== 2 || finalOldTargets.some((booking) => (
-    booking.status !== 'cancelled' || booking.nuscPartnerTicket?.replacedByReservationId !== premiumReservationId
-  ))) {
-    throw new ReplacementError('OLD_TICKETS_CHANGED_RETRY');
+  let newlyIssuedBookingIds = [];
+  if (missingFixtures.length) {
+    const issued = await require('./nuscSeasonPassBookingService').createSeasonPassTicketRecords({
+      orderId: premiumReservation.partnerOrderId,
+      fixtures: missingFixtures,
+      passId: premiumReservation.passId,
+      quantity: 1,
+      paymentId,
+      paymentProvider: 'nusc-partner',
+      memberReferenceHash: premiumReservation.memberReferenceHash,
+      reservationId: premiumReservationId,
+      partnerId: 'nusc',
+    });
+    if (issued.bookingIds.length !== missingFixtures.length) throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
+    for (const booking of issued.bookings) {
+      const index = Number(booking.nuscSeasonMatchIndex || booking.nuscPartnerTicket?.ticketIndex);
+      const rows = premiumByIndex.get(index) || [];
+      if (rows.length && String(rows[0]._id) !== String(booking._id)) throw new ReplacementError('REPLACEMENT_DUPLICATE_ACTIVE_TICKETS');
+      premiumByIndex.set(index, [booking]);
+    }
+    newlyIssuedBookingIds = issued.bookingIds;
   }
-  const finalOldBookings = await Booking.find({ _id: { $in: oldReservation.bookingIds } }).select('_id status').lean();
-  const cancelledUnusedTicketCount = finalOldBookings.filter((booking) => booking.status === 'cancelled').length;
 
-  const premiumBookingIdsByIndex = new Map(premiumBookings.map((booking) => [Number(booking.nuscSeasonMatchIndex), booking._id]));
-  issued.bookings.forEach((booking) => premiumBookingIdsByIndex.set(Number(booking.nuscSeasonMatchIndex), booking._id));
-  const allBookingIds = [...premiumBookingIdsByIndex.entries()].sort((a, b) => a[0] - b[0]).map(([, id]) => id);
-  if (allBookingIds.length !== 10) throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
+  const allByIndex = new Map();
+  for (const index of recoveryIndices) {
+    const booking = premiumByIndex.get(index)?.[0];
+    if (!booking || !activeTicket(booking)) throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
+    allByIndex.set(index, booking);
+  }
+  for (const index of usedIndices) allByIndex.set(index, oldByIndex.get(index));
+  const allBookingIds = [...allByIndex.entries()].sort((a, b) => a[0] - b[0]).map(([, booking]) => booking._id);
+  const recoveredMatchIndices = [...newlyIssuedBookingIds].map((id) => {
+    const booking = [...premiumByIndex.values()].flat().find((item) => String(item._id) === String(id));
+    return Number(booking?.nuscSeasonMatchIndex || booking?.nuscPartnerTicket?.ticketIndex);
+  }).filter(Number.isInteger).sort((a, b) => a - b);
+  const relinkedMatchIndices = Array.from({ length: 10 }, (_, index) => index + 1)
+    .filter((index) => usedIndices.includes(index) || targetIndicesWithTickets.includes(index));
+  if (allBookingIds.length !== 10 || new Set(allBookingIds.map(String)).size !== 10) {
+    throw new ReplacementError('RECOVERY_TICKET_SET_INCOMPLETE', 500);
+  }
+  const currentTargetBookingIds = recoveryIndices.map((index) => premiumByIndex.get(index)[0]._id);
+  const cancelledUnusedTicketCount = Number(premiumReservation.replacementCancelledTicketCount);
   const completed = await homeMatchInventory.completePartnerMissingTicketRecovery(
     premiumReservationId,
     oldReservationId,
-    issued.bookingIds,
+    currentTargetBookingIds,
     allBookingIds,
     recoveryIndices,
-    retainedUsedTicketCount,
+    usedIndices.length,
     cancelledUnusedTicketCount,
   );
-  return { reservation: completed, issuedBookingIds: issued.bookingIds, retainedUsedTicketCount, alreadyIssued: false };
+  return {
+    reservation: completed,
+    issuedBookingIds: currentTargetBookingIds,
+    recoveredMatchIndices,
+    relinkedMatchIndices,
+    retainedUsedTicketCount: usedIndices.length,
+    alreadyIssued: false,
+  };
 }
 
 module.exports = {

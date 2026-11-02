@@ -8,6 +8,7 @@ const partnerOrderId = 'nusc-order-11111111-1111-4111-8111-111111111111';
 const memberNumber = 'NUSC12345678';
 const requestId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const adminId = '000000000000000000000002';
+const oldReservationId = `nsp_${'c'.repeat(40)}`;
 
 function objectId(number) {
   return Number(number).toString(16).padStart(24, '0');
@@ -39,7 +40,20 @@ function makeRecoveryHarness(options = {}) {
     eventIds,
     matchDates,
     bookingIds: [],
+    ...(options.replacement && { replacesReservationId: oldReservationId }),
   };
+  const oldReservation = options.replacement ? {
+    reservationId: oldReservationId,
+    partnerOrderId: 'nusc-original-general-order',
+    memberReferenceHash: reservation.memberReferenceHash,
+    passId: 'general-season',
+    ticketType: 'General Pass',
+    status: 'replaced',
+    replacedByReservationId: reservationId,
+    eventIds: [...eventIds],
+    matchDates: [...matchDates],
+    bookingIds: Array.from({ length: 10 }, (_, index) => objectId(index + 701)),
+  } : null;
   const makeBooking = (index, overrides = {}) => ({
     _id: objectId(index + 1),
     event: eventIds[index],
@@ -60,13 +74,30 @@ function makeRecoveryHarness(options = {}) {
     },
     ...overrides,
   });
-  const bookings = Array.from({ length: 10 }, (_, index) => makeBooking(index))
-    .filter((_, index) => !options.missingIndices?.includes(index + 1));
+  const replacementOriginalBookings = options.replacement ? [0, 1].map((index) => ({
+    ...makeBooking(index),
+    _id: objectId(index + 701),
+    ticketType: 'General Pass',
+    nuscPartnerTicket: {
+      partnerId: 'nusc',
+      memberReferenceHash: reservation.memberReferenceHash,
+      partnerOrderId: oldReservation.partnerOrderId,
+      reservationId: oldReservationId,
+      ticketIndex: index + 1,
+    },
+  })) : [];
+  const bookings = [
+    ...Array.from({ length: 10 }, (_, index) => makeBooking(index))
+      .filter((_, index) => !options.missingIndices?.includes(index + 1) && !(options.replacement && index < 2)),
+    ...replacementOriginalBookings,
+  ];
   if (options.mismatchedIndex) bookings[options.mismatchedIndex - 1].nuscPartnerTicket.reservationId = 'stale-reservation-reference';
   reservation.bookingIds = bookings.map(booking => booking._id);
   const current = { reservation };
   const issuerCalls = [];
   const syncCalls = [];
+  const replacementCalls = [];
+  const replacementAudits = [];
   let partialFailure = Boolean(options.partialFailure);
 
   const Booking = {
@@ -88,11 +119,18 @@ function makeRecoveryHarness(options = {}) {
       return { modifiedCount: 1 };
     },
   };
-  const Scan = { findOne() { return query(null); } };
+  const Scan = {
+    findOne() { return query(null); },
+    find() { return query(options.replacement ? [0, 1].map((index) => ({
+      ticket: objectId(index + 701), event: eventIds[index], partnerId: 'nusc',
+    })) : []); },
+  };
   const Inventory = {
     FIXTURE_MATCHES: matchDates.map((date, index) => ({ date, opponent: `Opponent ${index + 1}` })),
     FIXTURE_DATES: matchDates,
-    async getPartnerSeasonPassReservation() { return reservation; },
+    async getPartnerSeasonPassReservation(id) {
+      return id === oldReservationId ? oldReservation : reservation;
+    },
     async beginPartnerAdminTicketRecovery(input) {
       const recovery = reservation.adminTicketRecovery || {};
       if (recovery.status === 'completed' && recovery.requestId === input.requestId) return { reservation, alreadyCompleted: true };
@@ -116,6 +154,10 @@ function makeRecoveryHarness(options = {}) {
         relinkedMatchIndices: input.relinkedMatchIndices || [],
       };
       if (!input.manualIntervention) reservation.bookingIds = input.bookingIds;
+      return reservation;
+    },
+    async recordPartnerReplacementAdminTicketRecovery(input) {
+      replacementAudits.push(input);
       return reservation;
     },
   };
@@ -167,6 +209,47 @@ function makeRecoveryHarness(options = {}) {
       return { bookings: newlyCreated, bookingIds: newlyCreated.map(item => item._id) };
     },
   };
+  const replacementService = {
+    ReplacementError: class ReplacementError extends Error {},
+    async recoverMissingGeneralReplacementTickets(input) {
+      replacementCalls.push(input);
+      if (options.replacementError) {
+        const error = new Error(options.replacementError);
+        error.name = 'ReplacementError';
+        error.code = options.replacementError;
+        error.status = 409;
+        throw error;
+      }
+      const recoveredMatchIndices = options.missingIndices || [1, 2];
+      const issuedBookingIds = [];
+      for (const index of recoveredMatchIndices) {
+        let existing = bookings.find((booking) => booking.nuscPartnerTicket.reservationId === reservationId &&
+          booking.nuscPartnerTicket.ticketIndex === index);
+        if (!existing) {
+          existing = makeBooking(index - 1);
+          existing._id = objectId(bookings.length + 500);
+          bookings.push(existing);
+        }
+        issuedBookingIds.push(existing._id);
+      }
+      const alreadyIssued = Boolean(reservation.recoveryStatus === 'issued');
+      reservation.bookingIds = Array.from({ length: 10 }, (_, offset) => {
+        const index = offset + 1;
+        return index < 3
+          ? replacementOriginalBookings[index - 1]._id
+          : bookings.find((booking) => booking.nuscPartnerTicket.reservationId === reservationId &&
+            booking.nuscPartnerTicket.ticketIndex === index)?._id;
+      });
+      reservation.recoveryStatus = 'issued';
+      return {
+        reservation,
+        issuedBookingIds,
+        recoveredMatchIndices: alreadyIssued ? [] : recoveredMatchIndices,
+        relinkedMatchIndices: [1, 2],
+        alreadyIssued,
+      };
+    },
+  };
   const modules = [
     ['models/Booking', Booking],
     ['models/Event', { find() { return query([]); } }],
@@ -177,6 +260,7 @@ function makeRecoveryHarness(options = {}) {
     ['services/nuscHomeMatchInventoryService', Inventory],
     ['services/nuscRiseIntegrationClient', nuscRise],
     ['services/nuscSeasonPassBookingService', issuer],
+    ['services/nuscSeasonPassReplacementService', replacementService],
   ];
   const originals = new Map();
   for (const [relative, exports] of modules) {
@@ -189,7 +273,7 @@ function makeRecoveryHarness(options = {}) {
   delete require.cache[servicePath];
   const service = require(servicePath);
   return {
-    service, reservation, bookings, issuerCalls, syncCalls,
+    service, reservation, oldReservation, riseOrder, bookings, issuerCalls, syncCalls, replacementCalls, replacementAudits,
     async recover(id = requestId) {
       return service.recoverRiseSeasonPass({ orderId: riseOrder.orderId, memberNumber, requestId: id, adminId });
     },
@@ -379,6 +463,83 @@ test('duplicate recovery request is idempotent and does not issue a second ticke
     assert.equal(retry.result.status, 'already_recovered');
     assert.equal(harness.issuerCalls.length, 1);
     assert.equal(harness.syncCalls.length, 2);
+  } finally { harness.restore(); }
+});
+
+test('RISE Premium replacement recovery syncs two used General references and all eight Premium tickets', async () => {
+  const harness = makeRecoveryHarness({ replacement: true, missingIndices: [3, 4, 5, 6, 7, 8, 9, 10] });
+  try {
+    const result = await harness.recover();
+    assert.equal(result.result.status, 'recovered');
+    assert.deepEqual(result.result.recoveredMatchIndices, [3, 4, 5, 6, 7, 8, 9, 10]);
+    assert.deepEqual(result.result.relinkedMatchIndices, [1, 2]);
+    assert.deepEqual(harness.replacementCalls, [{
+      premiumReservationId: reservationId,
+      oldReservationId,
+      paymentId: 'pay_test_reference',
+    }]);
+    assert.equal(harness.issuerCalls.length, 0, 'Admin must not create a second replacement issuance path');
+    assert.equal(harness.bookings.length, 10);
+    assert.equal(harness.syncCalls.length, 1);
+    assert.equal(harness.syncCalls[0].tickets.length, 10);
+    assert.equal(harness.syncCalls[0].tickets[0].status, 'used');
+    assert.ok(harness.syncCalls[0].tickets[0].ticketAccessPath.includes(oldReservationId));
+    assert.equal(harness.syncCalls[0].tickets[2].status, 'confirmed');
+    assert.equal(harness.replacementAudits[0].action, 'recovered');
+    assert.deepEqual(harness.replacementAudits[0].details.recoveredMatchIndices, [3, 4, 5, 6, 7, 8, 9, 10]);
+    assert.deepEqual(harness.replacementAudits[0].details.relinkedMatchIndices, [1, 2]);
+  } finally { harness.restore(); }
+});
+
+test('repeated Admin recovery reuses the idempotent replacement workflow and does not create duplicate tickets', async () => {
+  const harness = makeRecoveryHarness({ replacement: true, missingIndices: [3, 4, 5, 6, 7, 8, 9, 10] });
+  try {
+    await harness.recover();
+    const retry = await harness.recover();
+    assert.equal(retry.result.status, 'already_recovered');
+    assert.equal(harness.replacementCalls.length, 2);
+    assert.equal(harness.bookings.length, 10);
+    assert.equal(harness.issuerCalls.length, 0);
+    assert.equal(harness.syncCalls.length, 2);
+  } finally { harness.restore(); }
+});
+
+test('a mismatched RISE payment reference stays in manual review before recovery starts', async () => {
+  const harness = makeRecoveryHarness({ replacement: true });
+  harness.riseOrder.paymentId = 'different-payment-reference';
+  try {
+    await assert.rejects(harness.recover(), (error) => (
+      error.status === 409 && error.code === 'REPLACEMENT_MANUAL_REVIEW' && /payment reference/.test(error.message)
+    ));
+    assert.equal(harness.replacementCalls.length, 0);
+    assert.equal(harness.issuerCalls.length, 0);
+    assert.equal(harness.syncCalls.length, 0);
+  } finally { harness.restore(); }
+});
+
+test('a refunded Premium order is never synchronized or reissued', async () => {
+  const harness = makeRecoveryHarness({ replacement: true });
+  harness.riseOrder.status = 'refunded';
+  try {
+    await assert.rejects(harness.recover(), (error) => (
+      error.status === 409 && error.code === 'REPLACEMENT_MANUAL_REVIEW' && /payment as refunded/.test(error.message)
+    ));
+    assert.equal(harness.replacementCalls.length, 0);
+    assert.equal(harness.issuerCalls.length, 0);
+    assert.equal(harness.syncCalls.length, 0);
+  } finally { harness.restore(); }
+});
+
+test('inconsistent replacement ticket state returns manual review without using Admin issuance', async () => {
+  const harness = makeRecoveryHarness({ replacement: true, missingIndices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], replacementError: 'RECOVERY_NOT_APPLICABLE' });
+  try {
+    await assert.rejects(harness.recover(), error => (
+      error.status === 409 && error.code === 'REPLACEMENT_MANUAL_REVIEW' && /recorded match set/.test(error.message)
+    ));
+    assert.equal(harness.replacementCalls.length, 1);
+    assert.equal(harness.issuerCalls.length, 0);
+    assert.equal(harness.syncCalls.length, 0);
+    assert.equal(harness.replacementAudits[0].action, 'manual_intervention');
   } finally { harness.restore(); }
 });
 
