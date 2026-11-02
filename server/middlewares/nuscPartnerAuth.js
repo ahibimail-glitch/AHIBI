@@ -21,6 +21,10 @@ function credentials() {
   return keyId && secret ? { keyId, secret } : null;
 }
 
+function hasNuscPartnerCredentials() {
+  return Boolean(credentials());
+}
+
 function safeEqualHex(left, right) {
   if (!/^[a-f0-9]{64}$/i.test(left || '') || !/^[a-f0-9]{64}$/i.test(right || '')) return false;
   return crypto.timingSafeEqual(Buffer.from(left, 'hex'), Buffer.from(right, 'hex'));
@@ -78,4 +82,4 @@ async function authenticateNuscPartnerRequest(req, res, next) {
   return next();
 }
 
-module.exports = { authenticateNuscPartner, signedMessage };
+module.exports = { authenticateNuscPartner, hasNuscPartnerCredentials, signedMessage };

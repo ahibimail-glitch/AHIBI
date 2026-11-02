@@ -3,7 +3,7 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const Scan = require('../models/Scan');
-const { getNuscPartnerCredentials } = require('../middlewares/nuscPartnerAuth');
+const { hasNuscPartnerCredentials } = require('../middlewares/nuscPartnerAuth');
 const inventory = require('./nuscHomeMatchInventoryService');
 const {
   createSeasonPassTicketRecords,
@@ -12,6 +12,8 @@ const {
 
 const PARTNER_ID = 'nusc';
 const INVENTORY_KEY = 'nusc-il-2026-27';
+const NUSC_ORDER_ID_PREFIX = 'nusc-order-';
+const NUSC_ORDER_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACTIVE_BOOKING_STATUSES = ['confirmed', 'checked-in'];
 const RECOVERY_LEASE_MINUTES = 30;
 
@@ -394,7 +396,13 @@ function buildPartnerTicketRecoveryPreview(context, now = new Date()) {
 async function loadRecoveryContext(orderId) {
   const inventoryDoc = await Inventory.findOne({ key: INVENTORY_KEY }).lean();
   const allReservations = inventoryDoc?.partnerSeasonPassReservations || [];
-  const orderReservations = allReservations.filter((item) => item.partnerOrderId === orderId);
+  const suppliedOrderId = String(orderId || '').trim();
+  const partnerOrderId = NUSC_ORDER_UUID_PATTERN.test(suppliedOrderId)
+    ? `${NUSC_ORDER_ID_PREFIX}${suppliedOrderId.toLowerCase()}`
+    : suppliedOrderId;
+  const orderReservations = allReservations.filter((item) => (
+    item.partnerOrderId === partnerOrderId || item.partnerOrderId === suppliedOrderId
+  ));
   const reservation = orderReservations[0];
   if (!reservation) return { orderId, inventoryDoc, orderReservations: [] };
   const oldReservation = allReservations.find((item) => item.reservationId === reservation.replacesReservationId);
@@ -404,7 +412,7 @@ async function loadRecoveryContext(orderId) {
     eventQuery.lean(),
     Booking.find({
       'nuscPartnerTicket.partnerId': PARTNER_ID,
-      'nuscPartnerTicket.partnerOrderId': orderId,
+      'nuscPartnerTicket.partnerOrderId': reservation.partnerOrderId,
     }).lean(),
     Booking.find({ _id: { $in: [...(oldReservation?.bookingIds || []), ...(reservation.bookingIds || [])] } }).lean(),
     Booking.find({
@@ -427,9 +435,9 @@ async function loadRecoveryContext(orderId) {
     ? await Scan.find({ ticket: { $in: [...originalIds, ...premiumIds] } }).select('ticket event').lean()
     : [];
   return {
-    orderId,
+    orderId: reservation.partnerOrderId,
     inventoryDoc,
-    signedSyncAvailable: Boolean(getNuscPartnerCredentials()),
+    signedSyncAvailable: hasNuscPartnerCredentials(),
     orderReservations,
     reservation,
     oldReservation,
