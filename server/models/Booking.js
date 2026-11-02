@@ -257,6 +257,12 @@ const BookingSchema = new mongoose.Schema({
     type: [AdminLifecycleAuditSchema],
     default: undefined,
   },
+  // Preserves the old-to-new link when Admin reissues a ticket under an
+  // existing paid entitlement. This does not alter the original payment or scans.
+  adminTicketReissue: {
+    type: mongoose.Schema.Types.Mixed,
+    default: undefined,
+  },
 });
 
 // Update the updatedAt field before saving

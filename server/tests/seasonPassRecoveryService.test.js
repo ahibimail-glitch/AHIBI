@@ -375,8 +375,24 @@ function makeAhibiRecoveryHarness(kind, missingIndex) {
   const modules = [
     ['models/Booking', Booking],
     ['models/Event', { find: async () => events }],
-    ['models/ManualSeasonPassOrder', { findOne: async () => order }],
-    ['models/NuscHomeMatchOrder', { findOne: async () => order, async updateOne(_filter, update) { Object.assign(order, update.$set || {}); } }],
+    ['models/ManualSeasonPassOrder', {
+      findOne: async () => order,
+      async findOneAndUpdate(_filter, update) { if (order.adminTicketReissue?.status === 'processing') return null; order.adminTicketReissue = update.$set.adminTicketReissue; return order; },
+      async updateOne(_filter, update) { for (const [path, value] of Object.entries(update.$set || {})) { const [root, field, leaf] = path.split('.'); order[root] ||= {}; if (leaf) { order[root][field] ||= {}; order[root][field][leaf] = value; } else order[root][field] = value; } },
+    }],
+    ['models/NuscHomeMatchOrder', {
+      findOne: async () => order,
+      async findOneAndUpdate(_filter, update) { if (order.adminTicketReissue?.status === 'processing') return null; order.adminTicketReissue = update.$set.adminTicketReissue; return order; },
+      async updateOne(_filter, update) {
+        for (const [path, value] of Object.entries(update.$set || {})) {
+          const parts = path.split('.');
+          const last = parts.pop();
+          const parent = parts.reduce((current, key) => (current[key] ||= {}), order);
+          parent[last] = value;
+        }
+        Object.assign(order, Object.fromEntries(Object.entries(update.$set || {}).filter(([path]) => !path.includes('.'))));
+      },
+    }],
     ['models/PaymentTransaction', { async updateOne() { calls.paymentLink += 1; } }],
     ['models/Scan', { findOne() { return query(null); } }],
     ['services/nuscHomeMatchInventoryService', Inventory],

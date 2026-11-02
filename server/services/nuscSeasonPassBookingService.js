@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
+const QRCode = require('qrcode');
 
 async function createSeasonPassTicketRecords({
   orderId,
@@ -18,6 +19,9 @@ async function createSeasonPassTicketRecords({
   settlementType = null,
   modeOfPayment = null,
   preserveUnrelatedTicketAllocations = false,
+  reissueRequestId = null,
+  reissueAdminId = null,
+  reissueOldBookingIds = {},
 }) {
   if (!Array.isArray(fixtures) || fixtures.length < 1 || fixtures.length > 10 || quantity !== 1 || (!paymentId && !manualOrderId)) {
     throw new Error('Season pass ticket issuance details are incomplete');
@@ -102,8 +106,25 @@ async function createSeasonPassTicketRecords({
           ticketIndex: 1,
           totalTickets: 1,
         }),
+        ...(reissueRequestId && {
+          adminTicketReissue: {
+            requestId: reissueRequestId,
+            admin: reissueAdminId || null,
+            status: 'issued',
+            at: new Date(),
+            oldBookingId: reissueOldBookingIds[matchIndex] || null,
+          },
+        }),
       };
       booking = new Booking(bookingData);
+      if (reissueRequestId) {
+        booking.qrCode = await QRCode.toDataURL(JSON.stringify({
+          bookingId: booking._id,
+          eventId: event._id,
+          ticketType: fixture.ticketType,
+          quantity: 1,
+        }), { errorCorrectionLevel: 'H', margin: 2, color: { dark: '#4a154b', light: '#ffffff' } });
+      }
       try {
         await booking.save();
       } catch (error) {

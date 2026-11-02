@@ -854,6 +854,9 @@ async function beginPartnerMissingTicketRecovery({ orderId, oldReservationId, pa
     if (!reservation || reservation.passId !== 'premium-season' || reservation.ticketType !== 'Premium Pass') {
       throw new InventoryConflict('Premium reservation was not found.', 'RESERVATION_NOT_FOUND');
     }
+    if (reservation.adminTicketRecovery?.status === 'processing') {
+      throw new InventoryConflict('Another Admin ticket operation is in progress for this Premium entitlement.', 'RECOVERY_IN_PROGRESS');
+    }
     if (!oldReservation || oldReservation.status !== 'replaced' || oldReservation.passId !== 'general-season' ||
         oldReservation.replacedByReservationId !== orderId ||
         String(oldReservation.memberReferenceHash) !== String(reservation.memberReferenceHash) ||
@@ -1116,6 +1119,95 @@ async function recordPartnerAdminTicketRecoveryProgress({ reservationId, request
     recovery.recoveredMatchIndices = [...new Set([...(recovery.recoveredMatchIndices || []), ...recoveredMatchIndices])].sort((a, b) => a - b);
     recovery.relinkedMatchIndices = [...new Set([...(recovery.relinkedMatchIndices || []), ...relinkedMatchIndices])].sort((a, b) => a - b);
     reservation.adminTicketRecovery = recovery;
+    return reservation;
+  }, undefined, { pruneExpired: false });
+}
+
+async function claimPartnerSeasonPassReissue({ reservationId, requestId, adminId }) {
+  if (!reservationId || !requestId || !adminId) {
+    throw new InventoryConflict('Partner ticket reissue claim details are incomplete.', 'INVALID_REISSUE_CLAIM');
+  }
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    if (!reservation) return { claimed: false, code: 'RESERVATION_NOT_FOUND' };
+    const supportedPass = (reservation.passId === 'premium-season' && reservation.ticketType === 'Premium Pass') ||
+      (reservation.passId === 'general-season' && reservation.ticketType === 'General Pass');
+    if (reservation.status !== 'issued' || !reservation.paymentId || !supportedPass ||
+        reservation.replacedByReservationId) {
+      return { claimed: false, code: 'RESERVATION_NOT_ELIGIBLE' };
+    }
+    if (reservation.recoveryStatus === 'issuing') return { claimed: false, code: 'RECOVERY_IN_PROGRESS' };
+    const current = reservation.adminTicketRecovery || {};
+    if (current.status === 'processing') {
+      const startedAt = new Date(current.startedAt || 0).getTime();
+      if (!Number.isFinite(startedAt) || Date.now() - startedAt < 30 * 60 * 1000) {
+        return { claimed: false, code: 'RECOVERY_IN_PROGRESS' };
+      }
+    }
+    reservation.adminTicketRecovery = {
+      requestId,
+      status: 'processing',
+      startedAt: new Date(),
+      completedAt: null,
+      recoveredMatchIndices: [],
+      relinkedMatchIndices: [],
+      admin: adminId,
+    };
+    return { claimed: true, reservation };
+  }, undefined, { pruneExpired: false });
+}
+
+async function finishPartnerSeasonPassReissue({ reservationId, requestId, adminId, bookingIds, auditDetails = {}, manualIntervention = false }) {
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    const current = reservation?.adminTicketRecovery || {};
+    if (!reservation || reservation.status !== 'issued' || current.requestId !== requestId || current.status !== 'processing') {
+      return false;
+    }
+    const ids = Array.isArray(bookingIds) ? bookingIds.map(String) : [];
+    const complete = ids.length === FIXTURE_DATES.length && new Set(ids).size === FIXTURE_DATES.length;
+    if (!manualIntervention && !complete) {
+      throw new InventoryConflict('The reissued pass does not contain one reference for each fixture.', 'REISSUE_TICKET_SET_INCOMPLETE');
+    }
+    if (!manualIntervention) reservation.bookingIds = bookingIds;
+    reservation.adminTicketRecovery = {
+      requestId,
+      status: manualIntervention ? 'manual_intervention' : 'completed',
+      startedAt: current.startedAt || new Date(),
+      completedAt: new Date(),
+      recoveredMatchIndices: [...(auditDetails.reissuedMatchIndices || [])],
+      relinkedMatchIndices: [],
+      admin: adminId,
+    };
+    reservation.adminTicketRecoveryAudit ||= [];
+    const action = manualIntervention ? 'manual_intervention' : 'recovered';
+    const existing = reservation.adminTicketRecoveryAudit.find((entry) => entry.requestId === requestId && entry.action === action);
+    const details = { ...auditDetails, workflow: 'admin_new_ticket_reissue', bookingSetComplete: complete };
+    if (existing) {
+      existing.at = new Date();
+      existing.details = { ...(existing.details || {}), ...details };
+    } else {
+      reservation.adminTicketRecoveryAudit.push({ requestId, admin: adminId, action, at: new Date(), details });
+    }
+    return reservation;
+  }, undefined, { pruneExpired: false });
+}
+
+async function updatePartnerSeasonPassReissueSync({ reservationId, requestId, adminId, nuscSync }) {
+  if (!reservationId || !requestId || !adminId || !['synced', 'pending'].includes(nuscSync)) {
+    throw new InventoryConflict('Partner ticket reissue sync audit details are invalid.', 'INVALID_REISSUE_SYNC_AUDIT');
+  }
+  return mutateInventory((state) => {
+    const reservation = (state.partnerSeasonPassReservations || []).find((item) => item.reservationId === reservationId);
+    const audit = reservation?.adminTicketRecoveryAudit?.find((entry) => (
+      entry.requestId === requestId && entry.action === 'recovered' &&
+      entry.details?.workflow === 'admin_new_ticket_reissue'
+    ));
+    if (!reservation || !audit || reservation.adminTicketRecovery?.requestId !== requestId ||
+        reservation.adminTicketRecovery?.status !== 'completed') {
+      throw new InventoryConflict('The completed ticket reissue audit could not be matched for dashboard synchronization.', 'REISSUE_SYNC_AUDIT_NOT_FOUND');
+    }
+    audit.details = { ...(audit.details || {}), nuscSync, nuscSyncUpdatedAt: new Date(), nuscSyncAdmin: adminId };
     return reservation;
   }, undefined, { pruneExpired: false });
 }
@@ -1572,6 +1664,9 @@ module.exports = {
   beginPartnerAdminTicketRecovery,
   completePartnerAdminTicketRecovery,
   recordPartnerAdminTicketRecoveryProgress,
+  claimPartnerSeasonPassReissue,
+  finishPartnerSeasonPassReissue,
+  updatePartnerSeasonPassReissueSync,
   recordPartnerReplacementAdminTicketRecovery,
   claimPartnerSeasonPassRecovery,
   finishPartnerSeasonPassRecovery,

@@ -41,6 +41,8 @@ router.get('/season-pass-recovery/ahibi/orders', manualSeasonPassController.list
 router.get('/season-pass-recovery/rise/search', manualSeasonPassController.searchRiseRecoveryOrders);
 router.post('/season-pass-recovery/ahibi/recover', manualSeasonPassController.recoverAhibiPassTickets);
 router.post('/season-pass-recovery/rise/recover', manualSeasonPassController.recoverRisePassTickets);
+router.post('/season-pass-recovery/:channel/reissue-preview', manualSeasonPassController.previewNewSeasonPassTickets);
+router.post('/season-pass-recovery/:channel/reissue-new', manualSeasonPassController.reissueNewSeasonPassTickets);
 router.get('/nusc-home-matches/partner-season-passes/:orderId/recovery-preview', nuscPartnerRecoveryController.previewPartnerSeasonPassTicketRecovery);
 router.post('/nusc-home-matches/partner-season-passes/:orderId/recover-missing-tickets', nuscPartnerRecoveryController.recoverPartnerSeasonPassTickets);
 
