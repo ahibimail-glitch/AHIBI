@@ -45,6 +45,20 @@ test('NUSC partner recovery preview and action routes are registered after Admin
   assert.ok(routes.every((route) => adminRoutes.stack.indexOf(route) > adminGuardIndex));
 });
 
+test('booking cancellation replaces both legacy delete routes and remains behind Admin guards', () => {
+  const adminGuardIndex = Math.max(...adminRoutes.stack
+    .filter((layer) => !layer.route)
+    .slice(0, 2)
+    .map((layer) => adminRoutes.stack.indexOf(layer)));
+  const routes = adminRoutes.stack.filter((layer) => (
+    layer.route?.path === '/bookings/:id' && layer.route.methods.delete
+  ));
+
+  assert.equal(routes.length, 1);
+  assert.equal(adminRoutes.stack.indexOf(routes[0]) > adminGuardIndex, true);
+  assert.equal(routes[0].route.stack.at(-1).handle.name, 'cancelPendingBooking');
+});
+
 test('Admin user search is bounded, escapes input, and projects only selector fields', async (t) => {
   const originalFind = User.find;
   let filter;

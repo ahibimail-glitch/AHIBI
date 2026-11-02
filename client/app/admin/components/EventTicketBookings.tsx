@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, format } from "date-fns";
-import { ChevronDown, ChevronUp, Download, Filter, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -175,16 +175,16 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
     staleTime: 30 * 1000,
   });
 
-  const deleteMutation = useMutation({
+  const cancelMutation = useMutation({
     mutationFn: (bookingId: string) => adminJson<{ message: string }>(`/api/admin/bookings/${bookingId}`, { method: "DELETE" }),
-    onSuccess: (_result, _bookingId) => {
+    onSuccess: (result, _bookingId) => {
       const currentPage = queryClient.getQueryData<BookingPage>(["admin-ticket-bookings", pageQuery]);
       if (page > 1 && currentPage?.bookings.length === 1) setPage((current) => current - 1);
       queryClient.invalidateQueries({ queryKey: ["admin-ticket-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["admin-ticket-booking-stats"] });
-      toast.success("Booking deleted successfully");
+      toast.success(result.message || "Booking cancelled and retained for audit");
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to delete booking"),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to cancel booking"),
   });
 
   const bookings = bookingsQuery.data?.bookings || [];
@@ -226,9 +226,9 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
     setPage(1);
   };
 
-  const deleteBooking = (bookingId: string) => {
-    if (!window.confirm("Are you sure you want to delete this booking? This action cannot be undone.")) return;
-    deleteMutation.mutate(bookingId);
+  const cancelBooking = (bookingId: string) => {
+    if (!window.confirm("Cancel this booking only if it is unpaid and pending? Booking records and audit history are retained.")) return;
+    cancelMutation.mutate(bookingId);
   };
 
   const handleExport = async () => {
@@ -374,8 +374,8 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
                     </TableCell>
                     <TableCell>{booking.bookedAt ? format(new Date(booking.bookedAt), "yyyy-MM-dd HH:mm") : "-"}</TableCell>
                     <TableCell>
-                      <Button variant="destructive" size="sm" aria-label="Delete booking" disabled={deleteMutation.isPending} onClick={() => deleteBooking(booking._id)} className="h-8 w-8 p-0">
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="destructive" size="sm" aria-label="Cancel pending booking" title="Cancel pending booking; paid or issued tickets are retained" disabled={cancelMutation.isPending} onClick={() => cancelBooking(booking._id)} className="h-8 w-8 p-0">
+                        <X className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>

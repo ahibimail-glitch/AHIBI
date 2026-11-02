@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const adminBookingLifecycleService = require('../services/adminBookingLifecycleService');
 
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'refunded', 'checked-in'];
 const PAGE_SIZES = new Set([25, 50, 100]);
@@ -11,7 +12,7 @@ const DETAIL_FIELDS = [
   'nuscSeasonPassType nuscSeasonMatchIndex nuscGeneralZone nuscPartnerTicket',
   'entryVerified entryVerifiedAt entryVerifiedBy ticketIndex totalTickets',
   'customerName customerPhone customerEmail qrCode country state modeOfPayment visitorType',
-  'parentBookingId bookedAt updatedAt onSpotCreatedBy',
+  'parentBookingId bookedAt updatedAt onSpotCreatedBy adminLifecycleAudit',
 ].join(' ');
 
 class QueryValidationError extends Error {
@@ -406,10 +407,35 @@ async function getBookingDetails(req, res) {
   }
 }
 
+async function cancelPendingBooking(req, res) {
+  try {
+    const result = await adminBookingLifecycleService.cancelPendingBooking({
+      bookingId: req.params.id,
+      adminId: req.user?._id,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({
+        success: false,
+        code: error.code || 'BOOKING_ACTION_BLOCKED',
+        message: error.message,
+      });
+    }
+    console.error('[Admin booking lifecycle] Action failed:', error.message);
+    return res.status(500).json({
+      success: false,
+      code: 'BOOKING_ACTION_FAILED',
+      message: 'The booking action could not be confirmed. Refresh the record and review its state before retrying.',
+    });
+  }
+}
+
 module.exports = {
   listBookings,
   getBookingOptions,
   getBookingStats,
   exportBookings,
   getBookingDetails,
+  cancelPendingBooking,
 };
