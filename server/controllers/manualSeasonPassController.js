@@ -2,6 +2,7 @@ const ApiResponse = require('../utils/apiResponse');
 const manualPasses = require('../services/manualSeasonPassService');
 const nuscRise = require('../services/nuscRiseIntegrationClient');
 const recovery = require('../services/seasonPassRecoveryService');
+const newTicketReissue = require('../services/adminNewTicketReissueService');
 const PASS_OPTIONS = require('../config/nuscHomeMatchPricing');
 
 exports.getPrices = async (_req, res) => {
@@ -238,5 +239,59 @@ exports.recoverRisePassTickets = async (req, res) => {
     });
   } catch (error) {
     return sendRecoveryError(res, error);
+  }
+};
+
+function sendNewTicketReissueError(res, error) {
+  if (error instanceof newTicketReissue.TicketReissueError || (error.status && error.code)) {
+    return res.status(error.status).json({
+      success: false,
+      code: error.code,
+      message: error.message,
+      ...(error.details && { details: error.details }),
+    });
+  }
+  console.error('[Admin new ticket reissue] Request failed:', error.code || error.name || 'reissue_error');
+  return res.status(502).json({
+    success: false,
+    code: 'NEW_TICKET_REISSUE_UNAVAILABLE',
+    message: 'New ticket reissue could not be completed. Refresh the entitlement and review its status before retrying.',
+  });
+}
+
+function newTicketReissueInput(req) {
+  return {
+    channel: req.params?.channel,
+    kind: req.body?.kind,
+    orderId: req.body?.orderId,
+    memberNumber: req.body?.memberNumber,
+    requestId: req.body?.requestId,
+    evidence: req.body?.evidence,
+    approved: req.body?.approved,
+    adminId: req.user?._id,
+  };
+}
+
+exports.previewNewSeasonPassTickets = async (req, res) => {
+  try {
+    if (!['ahibi', 'rise'].includes(req.params?.channel)) {
+      return res.status(400).json({ success: false, code: 'INVALID_CHANNEL', message: 'Select an AHIBI or RISE paid entitlement.' });
+    }
+    const preview = await newTicketReissue.previewNewTicketReissue(newTicketReissueInput(req));
+    return ApiResponse.success(res, 'New ticket reissue preview completed', preview);
+  } catch (error) {
+    return sendNewTicketReissueError(res, error);
+  }
+};
+
+exports.reissueNewSeasonPassTickets = async (req, res) => {
+  try {
+    if (!['ahibi', 'rise'].includes(req.params?.channel)) {
+      return res.status(400).json({ success: false, code: 'INVALID_CHANNEL', message: 'Select an AHIBI or RISE paid entitlement.' });
+    }
+    const result = await newTicketReissue.reissueNewTickets(newTicketReissueInput(req));
+    return ApiResponse.success(res, 'New ticket reissue completed', result);
+  } catch (error) {
+    return sendNewTicketReissueError(res, error);
   }
 };

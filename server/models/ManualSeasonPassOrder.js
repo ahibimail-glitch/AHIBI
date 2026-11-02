@@ -33,6 +33,7 @@ const ManualSeasonPassOrderSchema = new mongoose.Schema({
   },
   reservationExpiresAt: { type: Date, default: null },
   bookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
+  adminTicketReissue: { type: mongoose.Schema.Types.Mixed, default: undefined },
   errorCode: { type: String, default: null },
   operationsAudit: { type: [AuditEntrySchema], default: [] },
 }, { timestamps: true });

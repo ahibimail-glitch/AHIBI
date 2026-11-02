@@ -184,6 +184,67 @@ test('partner recovery preserves the saved Booking ID and recalculates only Prem
   }
 });
 
+test('Admin reissue creates a fresh QR identity while retaining the paid order and old Booking link', async () => {
+  const originalInit = Booking.init;
+  const originalFindOne = Booking.findOne;
+  const originalFindById = Booking.findById;
+  const originalCountDocuments = Booking.countDocuments;
+  const originalSave = Booking.prototype.save;
+  const originalEventFindById = Event.findById;
+  const bookings = new Map();
+  const event = {
+    _id: '000000000000000000000889',
+    slug: 'nusc-home-match-20270114',
+    title: 'NUSC home match',
+    location: { address: 'Ground', city: 'City' },
+    ticketTypes: [{ name: 'Premium Pass', sold: 12 }, { name: 'General Pass', sold: 7 }],
+    async save() {},
+  };
+  const query = (value) => ({ select() { return this; }, then(resolve, reject) { return Promise.resolve(value).then(resolve, reject); } });
+  Booking.init = async () => {};
+  Booking.findOne = async () => null;
+  Booking.findById = async (id) => bookings.get(String(id)) || null;
+  Booking.countDocuments = async (filter) => [...bookings.values()].filter((booking) => (
+    String(booking.event) === String(filter.event) && booking.ticketType === filter.ticketType &&
+    filter.status.$in.includes(booking.status) && booking.paymentStatus === filter.paymentStatus
+  )).length;
+  Booking.prototype.save = async function save() { bookings.set(String(this._id), this); };
+  Event.findById = () => query(event);
+  try {
+    const input = {
+      orderId: 'nusc-existing-paid-order',
+      fixtures: [{ eventId: event._id, matchDate: '2027-01-14', matchIndex: 1, ticketType: 'Premium Pass' }],
+      passId: 'premium-season',
+      quantity: 1,
+      paymentId: 'original-paid-capture',
+      paymentProvider: 'nusc-partner',
+      memberReferenceHash: 'e'.repeat(64),
+      reservationId: 'nsp-existing-paid-reservation',
+      partnerId: 'nusc',
+      reissueRequestId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      reissueAdminId: '000000000000000000000002',
+      reissueOldBookingIds: { 1: '000000000000000000000777' },
+      preserveUnrelatedTicketAllocations: true,
+    };
+    const result = await bookingService.createSeasonPassTicketRecords(input);
+    const booking = result.bookings[0];
+    assert.notEqual(String(booking._id), input.reissueOldBookingIds[1]);
+    assert.equal(booking.externalPaymentId, input.paymentId);
+    assert.equal(booking.nuscPartnerTicket.partnerOrderId, input.orderId);
+    assert.equal(booking.adminTicketReissue.oldBookingId, input.reissueOldBookingIds[1]);
+    assert.equal(booking.adminTicketReissue.requestId, input.reissueRequestId);
+    assert.match(booking.qrCode, /^data:image\/png;base64,/);
+    assert.equal(event.ticketTypes.find((ticket) => ticket.name === 'General Pass').sold, 7);
+  } finally {
+    Booking.init = originalInit;
+    Booking.findOne = originalFindOne;
+    Booking.findById = originalFindById;
+    Booking.countDocuments = originalCountDocuments;
+    Booking.prototype.save = originalSave;
+    Event.findById = originalEventFindById;
+  }
+});
+
 test('replacement recovery inventory claim is atomic and completes partial eligible fixture sets', async (t) => {
   const originalFindOne = InventoryModel.findOne;
   const originalUpdateOne = InventoryModel.updateOne;

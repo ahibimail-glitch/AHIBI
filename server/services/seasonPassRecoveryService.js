@@ -378,10 +378,33 @@ async function loadOrder(kind, orderId) {
   throw new SeasonPassRecoveryError(400, 'INVALID_ORDER_KIND', 'Choose a valid season pass order.');
 }
 
+async function claimAhibiTicketOperation(kind, order, requestId, adminId) {
+  const Model = kind === 'manual' ? ManualSeasonPassOrder : NuscHomeMatchOrder;
+  const staleBefore = new Date(Date.now() - 30 * 60 * 1000);
+  const claimed = await Model.findOneAndUpdate({
+    _id: order._id,
+    $or: [
+      { 'adminTicketReissue.status': { $ne: 'processing' } },
+      { 'adminTicketReissue.startedAt': { $lte: staleBefore } },
+    ],
+  }, {
+    $set: { adminTicketReissue: { requestId, admin: adminId, operation: 'recover_missing', status: 'processing', startedAt: new Date() } },
+  }, { new: true });
+  if (!claimed) throw new SeasonPassRecoveryError(409, 'RECOVERY_IN_PROGRESS', 'Another Admin ticket operation is already running for this paid pass. Refresh and retry after it completes.');
+  return Model;
+}
+
+async function finishAhibiTicketOperation(Model, order, requestId, status) {
+  await Model.updateOne({ _id: order._id, 'adminTicketReissue.requestId': requestId, 'adminTicketReissue.operation': 'recover_missing' }, {
+    $set: { 'adminTicketReissue.status': status, 'adminTicketReissue.completedAt': new Date() },
+  });
+}
+
 async function recoverAhibiSeasonPass({ kind, orderId, requestId, adminId }) {
   if (!/^[0-9a-f-]{36}$/i.test(String(requestId || ''))) throw new SeasonPassRecoveryError(400, 'REQUEST_ID_REQUIRED', 'A recovery request ID is required.');
   const order = await loadOrder(kind, String(orderId || ''));
   if (!order) throw new SeasonPassRecoveryError(404, 'ORDER_NOT_FOUND', 'Season pass order was not found.');
+  const operationModel = await claimAhibiTicketOperation(kind, order, requestId, adminId);
   try {
     const isSettledManual = kind === 'manual' && Boolean(order.settlementHash) && ['paid', 'complimentary'].includes(order.settlementType)
       && Number(order.settledAmountMinor) === (order.settlementType === 'paid' ? Number(order.listAmountMinor) : 0);
@@ -462,12 +485,14 @@ async function recoverAhibiSeasonPass({ kind, orderId, requestId, adminId }) {
       }
     }
     const tickets = safeTicketsFromAhibiBookings(order, kind, refreshed);
+    await finishAhibiTicketOperation(operationModel, order, requestId, 'completed');
     return {
       order: safeAhibiOrder(order, kind, tickets),
       result: { status: 'recovered', recoveredMatchIndices: missing.map(({ matchIndex }) => matchIndex), relinkedMatchIndices: [], tickets },
     };
   } catch (error) {
     await auditAhibiRecoveryFailure(kind, order, adminId, requestId, error);
+    await finishAhibiTicketOperation(operationModel, order, requestId, 'manual_intervention').catch(() => null);
     throw error;
   }
 }

@@ -22,6 +22,7 @@ const NuscHomeMatchOrderSchema = new mongoose.Schema({
   },
   settlementLeaseUntil: { type: Date, default: null },
   bookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
+  adminTicketReissue: { type: mongoose.Schema.Types.Mixed, default: undefined },
   errorMessage: { type: String },
   refundStatus: {
     type: String,
