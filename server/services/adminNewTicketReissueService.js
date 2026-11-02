@@ -12,6 +12,8 @@ const nuscRise = require('./nuscRiseIntegrationClient');
 const { createSeasonPassTicketRecords } = require('./nuscSeasonPassBookingService');
 
 const INVENTORY_KEY = 'nusc-il-2026-27';
+const NUSC_ORDER_ID_PREFIX = 'nusc-order-';
+const NUSC_ORDER_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACTIVE_STATUSES = ['confirmed', 'checked-in'];
 const EVIDENCE_REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/# -]{2,199}$/;
 const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -93,6 +95,14 @@ function normalizedInventoryEvidence(input) {
 function reservationRows(inventoryDoc) {
   return Array.isArray(inventoryDoc?.partnerSeasonPassReservations)
     ? inventoryDoc.partnerSeasonPassReservations : [];
+}
+
+function partnerOrderIdCandidates(orderId) {
+  const id = asString(orderId).trim();
+  if (!id) return [];
+  return NUSC_ORDER_UUID_PATTERN.test(id)
+    ? [`${NUSC_ORDER_ID_PREFIX}${id.toLowerCase()}`, id]
+    : [id];
 }
 
 function orderRows(inventoryDoc) {
@@ -211,11 +221,30 @@ function createAdminNewTicketReissueService(overrides = {}) {
       throw new TicketReissueError(400, 'INVALID_MEMBER', 'Select a valid NUSC RISE member.');
     }
     const signed = await deps.nuscRise.searchRiseRecoveryOrders(memberNumber);
-    const order = riseOrderForMember(signed, memberNumber, orderId);
-    if (!order) throw new TicketReissueError(404, 'RISE_ORDER_NOT_FOUND', 'The selected RISE season pass could not be verified. Refresh the order list.');
+    const signedOrder = riseOrderForMember(signed, memberNumber, orderId);
+    if (!signedOrder) throw new TicketReissueError(404, 'RISE_ORDER_NOT_FOUND', 'The selected RISE season pass could not be verified. Refresh the order list.');
     const inventoryDoc = await deps.Inventory.findOne({ key: INVENTORY_KEY }).lean();
-    const reservation = reservationRows(inventoryDoc).find((row) => row.reservationId === order.reservationId);
-    if (!reservation) return { channel: 'rise', kind: 'rise', order, fixtures: [], bookings: [], scans: [], inventoryDoc, reservation: null, oldReservation: null, memberNumber, riseOrder: order };
+    const partnerOrderIds = partnerOrderIdCandidates(signedOrder.orderId);
+    const matchingReservations = reservationRows(inventoryDoc).filter((row) => partnerOrderIds.includes(row.partnerOrderId));
+    const reservation = matchingReservations.length === 1 ? matchingReservations[0] : null;
+    if (!reservation) return {
+      channel: 'rise', kind: 'rise', order: signedOrder, fixtures: [], bookings: [], scans: [], inventoryDoc,
+      reservation: null, oldReservation: null, memberNumber, riseOrder: signedOrder, reservationLinkVerified: false,
+    };
+    const reservationLinkVerified =
+      (!signedOrder.reservationId || sameId(signedOrder.reservationId, reservation.reservationId)) &&
+      (!signedOrder.partnerOrderId || signedOrder.partnerOrderId === reservation.partnerOrderId) &&
+      partnerOrderIds.includes(reservation.partnerOrderId);
+    // The signed NUSC order identifies the paid order; AHIBI's linked reservation
+    // supplies the local pass and fixture fields used by issuance and audit.
+    const order = {
+      ...signedOrder,
+      reservationId: signedOrder.reservationId || reservation.reservationId,
+      partnerOrderId: signedOrder.partnerOrderId || reservation.partnerOrderId,
+      passId: signedOrder.passId || reservation.passId,
+      ticketType: signedOrder.ticketType || reservation.ticketType,
+      zone: signedOrder.zone ?? reservation.zone,
+    };
     const oldReservation = reservation.replacesReservationId
       ? reservationRows(inventoryDoc).find((row) => row.reservationId === reservation.replacesReservationId)
       : null;
@@ -257,7 +286,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
       generalReference: generalReferences[offset] || null,
       eligible: !oldReservation || eligible.includes(offset + 1),
     }));
-    return { channel: 'rise', kind: 'rise', order, fixtures, bookings, allActiveBookings, scans, inventoryDoc, reservation, oldReservation, memberNumber, riseOrder: order };
+    return { channel: 'rise', kind: 'rise', order, fixtures, bookings, allActiveBookings, scans, inventoryDoc, reservation, oldReservation, memberNumber, riseOrder: order, reservationLinkVerified };
   }
 
   async function verifyPayment(context) {
@@ -303,7 +332,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
     const { order, reservation, oldReservation } = context;
     const supportedPaidPass = (order.passId === 'premium-season' && order.ticketType === 'Premium Pass') ||
       (order.passId === 'general-season' && order.ticketType === 'General Pass');
-    if (!reservation || reservation.partnerOrderId !== order.partnerOrderId || reservation.passId !== order.passId ||
+    if (!reservation || context.reservationLinkVerified !== true || reservation.partnerOrderId !== order.partnerOrderId || reservation.passId !== order.passId ||
         reservation.ticketType !== order.ticketType || !supportedPaidPass) {
       addReason(reasons, 'RESERVATION_MISMATCH', 'The signed paid order does not match a supported AHIBI season pass reservation.', 'Verify the signed NUSC order and AHIBI reservation linkage.');
       return { verified: false, eligibleIndices: [] };
