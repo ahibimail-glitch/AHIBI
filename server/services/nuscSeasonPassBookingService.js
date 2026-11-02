@@ -17,6 +17,7 @@ async function createSeasonPassTicketRecords({
   pricePerMatch = 0,
   settlementType = null,
   modeOfPayment = null,
+  preserveUnrelatedTicketAllocations = false,
 }) {
   if (!Array.isArray(fixtures) || fixtures.length < 1 || fixtures.length > 10 || quantity !== 1 || (!paymentId && !manualOrderId)) {
     throw new Error('Season pass ticket issuance details are incomplete');
@@ -48,7 +49,16 @@ async function createSeasonPassTicketRecords({
     let booking = await Booking.findOne(bookingQuery);
 
     if (!booking) {
+      if (fixture.bookingId) {
+        const referenceBooking = await Booking.findById(fixture.bookingId);
+        if (referenceBooking) {
+          const error = new Error('The preserved ticket reference is already assigned to a different booking.');
+          error.code = 'TICKET_REFERENCE_CONFLICT';
+          throw error;
+        }
+      }
       const bookingData = {
+        ...(fixture.bookingId && { _id: fixture.bookingId }),
         event: event._id,
         eventSnapshot: {
           _id: event._id,
@@ -110,9 +120,17 @@ async function createSeasonPassTicketRecords({
         if (!booking) throw error;
       }
     }
+    if (fixture.bookingId && String(booking._id) !== String(fixture.bookingId)) {
+      const error = new Error('The existing ticket index points to a different ticket reference.');
+      error.code = 'TICKET_REFERENCE_CONFLICT';
+      throw error;
+    }
     bookings.push(booking);
 
-    for (const ticket of event.ticketTypes) {
+    const ticketTypesToReconcile = preserveUnrelatedTicketAllocations
+      ? event.ticketTypes.filter((ticket) => ticket.name === fixture.ticketType)
+      : event.ticketTypes;
+    for (const ticket of ticketTypesToReconcile) {
       ticket.sold = await Booking.countDocuments({
         event: event._id,
         ticketType: ticket.name,
@@ -138,4 +156,44 @@ async function createSeasonPassTicketRecords({
   return { bookings, bookingIds: bookings.map((booking) => booking._id) };
 }
 
-module.exports = { createSeasonPassTicketRecords };
+const ACTIVE_BOOKING_STATUSES = ['confirmed', 'checked-in'];
+
+async function getPartnerReservationTicketReadback(reservation) {
+  const bookings = await Booking.find({
+    'nuscPartnerTicket.partnerId': 'nusc',
+    'nuscPartnerTicket.partnerOrderId': reservation.partnerOrderId,
+  }).sort({ 'nuscPartnerTicket.ticketIndex': 1 }).lean();
+  const expectedIndices = reservation.replacesReservationId
+    ? (reservation.recoveryStatus === 'issued'
+      ? Array.from({ length: 10 }, (_, index) => index + 1)
+      : (reservation.replacementMatchIndices || []).map(Number))
+    : Array.from({ length: 10 }, (_, index) => index + 1);
+  const bookingIds = (reservation.bookingIds || []).map(String);
+  const byIndex = new Map();
+  let valid = bookings.length === expectedIndices.length && bookingIds.length === expectedIndices.length;
+  for (const booking of bookings) {
+    const index = Number(booking.nuscPartnerTicket?.ticketIndex);
+    if (byIndex.has(index)) valid = false;
+    byIndex.set(index, booking);
+  }
+  expectedIndices.forEach((index, position) => {
+    const booking = byIndex.get(index);
+    if (!booking || String(booking._id) !== bookingIds[position] ||
+        Number(booking.nuscSeasonMatchIndex) !== index ||
+        booking.nuscPartnerTicket?.partnerId !== 'nusc' ||
+        booking.nuscPartnerTicket?.reservationId !== reservation.reservationId ||
+        booking.nuscPartnerTicket?.partnerOrderId !== reservation.partnerOrderId ||
+        Number(booking.nuscPartnerTicket?.ticketIndex) !== index ||
+        booking.ticketType !== reservation.ticketType ||
+        booking.nuscSeasonPassType !== reservation.passId ||
+        String(booking.nuscPartnerTicket?.memberReferenceHash) !== String(reservation.memberReferenceHash) ||
+        !String(booking.event) ||
+        String(booking.event) !== String(reservation.eventIds?.[index - 1]) ||
+        booking.paymentProvider !== 'nusc-partner' ||
+        booking.externalPaymentId !== reservation.paymentId ||
+        !ACTIVE_BOOKING_STATUSES.includes(booking.status) || booking.paymentStatus !== 'completed') valid = false;
+  });
+  return { complete: valid, bookings, expectedIndices };
+}
+
+module.exports = { createSeasonPassTicketRecords, getPartnerReservationTicketReadback };

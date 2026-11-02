@@ -30,6 +30,21 @@ test('admin user search and manual booking endpoints are behind server-side Admi
   assert.equal(denyWithGuard(manualRoute.route.stack[1].handle, 'user').statusCode, 403);
 });
 
+test('NUSC partner recovery preview and action routes are registered after Admin guards', () => {
+  const adminGuardIndex = Math.max(...adminRoutes.stack
+    .filter((layer) => !layer.route)
+    .slice(0, 2)
+    .map((layer) => adminRoutes.stack.indexOf(layer)));
+  const expectedPaths = [
+    '/nusc-home-matches/partner-season-passes/:orderId/recovery-preview',
+    '/nusc-home-matches/partner-season-passes/:orderId/recover-missing-tickets',
+  ];
+  const routes = expectedPaths.map((path) => adminRoutes.stack.find((layer) => layer.route?.path === path));
+
+  assert.ok(routes.every(Boolean));
+  assert.ok(routes.every((route) => adminRoutes.stack.indexOf(route) > adminGuardIndex));
+});
+
 test('Admin user search is bounded, escapes input, and projects only selector fields', async (t) => {
   const originalFind = User.find;
   let filter;
