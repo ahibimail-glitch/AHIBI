@@ -328,6 +328,32 @@ test('smoke-test replacement with missing bookings and eight unattributed alloca
   assert.equal(h.reservation.adminTicketRecovery, undefined);
 });
 
+test('RISE reissue resolves a signed order UUID through its canonical partner reservation', async () => {
+  const sold = [18, 1, 1, 0, 1, 1, 1, 1, 1, 1];
+  const h = makeHarness({ replacement: true, smoke: true, sold });
+  delete h.signedOrder.reservationId;
+  delete h.signedOrder.partnerOrderId;
+  delete h.signedOrder.passId;
+  delete h.signedOrder.ticketType;
+
+  const preview = await h.service.preview(h.input());
+
+  assert.equal(preview.paymentVerified, true);
+  assert.equal(preview.lineageVerified, true);
+  assert.equal(preview.missingCount, 10);
+  assert.equal(preview.fixtures.length, 10);
+  assert.deepEqual(preview.replacementDecision, {
+    usedTicketCount: 0,
+    cancelledUnusedTicketCount: 10,
+    eligibleMatchIndices: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  });
+  assert.equal(preview.reasons.some((reason) => ['RISE_ORDER_NOT_PAID', 'RESERVATION_MISMATCH', 'FIXTURE_MAPPING_UNVERIFIED'].includes(reason.code)), false);
+  assert.equal(preview.reasons.filter((reason) => reason.code === 'CHECKIN_EVIDENCE_REQUIRED').length, 10);
+  assert.equal(preview.reasons.filter((reason) => reason.code === 'INVENTORY_EVIDENCE_REQUIRED').length, 8);
+  assert.deepEqual(preview.fixtures.filter((fixture) => fixture.inventory.status === 'blocked').map((fixture) => fixture.matchIndex), [2, 3, 5, 6, 7, 8, 9, 10]);
+  assert.equal(preview.safe, false);
+});
+
 test('missing original General Booking and scan history cannot turn a saved used fixture into proof of use', async () => {
   const h = makeHarness({ replacement: true, eligibleIndices: [1, 2, 3, 4, 5, 6, 7, 8] });
   const preview = await h.service.preview(h.input());

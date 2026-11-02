@@ -359,6 +359,13 @@ export default function ManualSeasonPassRecovery() {
     setNotice('');
   }
 
+  function openNewTicketReissueSearch(nextChannel: Channel) {
+    clearSelection();
+    setChannel(nextChannel);
+    setNewReissueOrderKey('');
+    document.getElementById('new-ticket-reissue-order-search')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async function recover(order: PassOrder) {
     setBusy(true);
     setRecoveringOrderId(order.orderId);
@@ -404,11 +411,21 @@ export default function ManualSeasonPassRecovery() {
         <h2 id="season-pass-recovery-heading" className="text-lg font-semibold">Recover / Reissue Tickets</h2>
         <p className="text-sm text-muted-foreground">Inspect the ten match tickets for an existing pass. Valid or checked-in tickets are retained; only missing tickets can be reissued against the existing paid entitlement.</p>
       </div>
+      <aside className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/20 bg-primary/5 p-3" aria-labelledby="new-ticket-reissue-entry-heading">
+        <div className="min-w-0 flex-1">
+          <h3 id="new-ticket-reissue-entry-heading" className="m-0 font-semibold">Need fresh ticket IDs for an existing paid pass?</h3>
+          <p className="mb-0 mt-1 text-sm text-muted-foreground">Search for the paid member order below. After you select a recipient, use “Admin Reissue New Tickets” in that order card. Its evidence and inventory checks still apply.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => openNewTicketReissueSearch('rise')}>Find NUSC RISE order</Button>
+          <Button type="button" variant="outline" onClick={() => openNewTicketReissueSearch('ahibi')}>Find AHIBI order</Button>
+        </div>
+      </aside>
       <NuscPartnerTicketRecoveryPanel />
       {error && <Alert variant="destructive"><AlertTitle>Ticket recovery</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       {notice && <Alert className="border-green-200 bg-green-50 text-green-900"><AlertTitle>Recovery result</AlertTitle><AlertDescription>{notice}</AlertDescription></Alert>}
 
-      <div className="space-y-3">
+      <div id="new-ticket-reissue-order-search" className="space-y-3 scroll-mt-4">
         <Label>Pass recipient</Label>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant={channel === 'ahibi' ? 'default' : 'outline'} onClick={() => { setChannel('ahibi'); clearSelection(); }}>AHIBI user</Button>
