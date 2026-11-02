@@ -9,7 +9,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { addDays, format, startOfDay } from "date-fns";
-import { Download, Eye, Search, Trash2, X } from "lucide-react";
+import { Download, Eye, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,13 @@ interface BookingDetails extends Booking {
   entryVerifiedAt?: string;
   qrCode?: string;
   price?: number;
+  adminLifecycleAudit?: Array<{
+    action: string;
+    adminId: string;
+    at: string;
+    previousStatus?: string;
+    previousPaymentStatus?: string;
+  }>;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -271,18 +278,18 @@ function BookingsContent() {
     staleTime: 60 * 1000,
   });
 
-  const deleteMutation = useMutation({
+  const cancelMutation = useMutation({
     mutationFn: (bookingId: string) =>
       adminJson<{ message: string }>(`/api/admin/bookings/${bookingId}`, { method: "DELETE" }),
-    onSuccess: (_result, bookingId) => {
-      toast.success("Booking deleted successfully");
+    onSuccess: (result, bookingId) => {
+      toast.success(result.message || "Booking cancelled and retained for audit");
       if (selectedBookingId === bookingId) setSelectedBookingId(null);
       const currentPage = queryClient.getQueryData<BookingPage>(["admin-bookings", pageQuery]);
       if (page > 1 && currentPage?.bookings.length === 1) setPage((current) => current - 1);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["admin-booking-stats"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to delete booking"),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to cancel booking"),
   });
 
   const bookings = pageQueryResult.data?.bookings || [];
@@ -324,9 +331,9 @@ function BookingsContent() {
     setPage(1);
   };
 
-  const deleteBooking = (bookingId: string) => {
-    if (!window.confirm("Are you sure you want to delete this booking? This action cannot be undone.")) return;
-    deleteMutation.mutate(bookingId);
+  const cancelBooking = (bookingId: string) => {
+    if (!window.confirm("Cancel this booking only if it is unpaid and pending? Booking records and audit history are retained.")) return;
+    cancelMutation.mutate(bookingId);
   };
 
   const exportBookings = async () => {
@@ -547,8 +554,8 @@ function BookingsContent() {
                         <Button variant="ghost" size="sm" aria-label="View booking details" onClick={() => setSelectedBookingId(booking._id)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="destructive" size="sm" aria-label="Delete booking" disabled={deleteMutation.isPending} onClick={() => deleteBooking(booking._id)} className="h-8 w-8 p-0">
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="destructive" size="sm" aria-label="Cancel pending booking" title="Cancel pending booking; paid or issued tickets are retained" disabled={cancelMutation.isPending} onClick={() => cancelBooking(booking._id)} className="h-8 w-8 p-0">
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -613,6 +620,20 @@ function BookingsContent() {
                 <DetailRow label="Check-in" value={detail.entryVerified ? "Checked in" : "Not checked in"} />
                 {detail.entryVerifiedAt && <DetailRow label="Checked in at" value={new Date(detail.entryVerifiedAt).toLocaleString()} />}
               </dl>
+              {!!detail.adminLifecycleAudit?.length && (
+                <section className="mt-4 rounded-md border p-4" aria-label="Admin booking audit history">
+                  <h3 className="mb-2 text-sm font-semibold">Admin action history</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    {detail.adminLifecycleAudit.map((entry, index) => (
+                      <li key={`${entry.at}-${index}`}>
+                        Cancelled an unpaid pending booking on {new Date(entry.at).toLocaleString()} by Admin {entry.adminId}.
+                        {entry.previousStatus && ` Previous status: ${entry.previousStatus}.`}
+                        {entry.previousPaymentStatus && ` Previous payment status: ${entry.previousPaymentStatus}.`}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               {detail.qrCode && (
                 <div className="mt-4 flex flex-col items-center gap-2 rounded-md border p-4">
                   <span className="text-sm font-medium">Ticket QR code</span>

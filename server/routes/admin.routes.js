@@ -153,30 +153,9 @@ router.get('/bookings/options', adminBookingsController.getBookingOptions);
 router.get('/bookings/stats', adminBookingsController.getBookingStats);
 router.get('/bookings/export', adminBookingsController.exportBookings);
 
-// Delete a booking
-router.delete("/bookings/:id", async (req, res) => {
-  try {
-    const bookingId = req.params.id;
-    
-    // Find and delete the booking
-    const booking = await Booking.findByIdAndDelete(bookingId);
-    
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-    
-    res.status(200).json({ 
-      message: "Booking deleted successfully",
-      deletedBooking: booking
-    });
-  } catch (error) {
-    console.error('Error deleting booking:', error);
-    res.status(500).json({ 
-      message: "Server error while deleting booking", 
-      error: error.message 
-    });
-  }
-});
+// The legacy DELETE API now performs an audited cancellation only for safe,
+// unpaid pending records; issued or linked ticket records are retained.
+router.delete('/bookings/:id', adminBookingsController.cancelPendingBooking);
 
 router.get("/bookings/all",  async (req, res) => {
   try {
@@ -307,28 +286,6 @@ router.get("/bookings/all",  async (req, res) => {
 });
 
 router.get('/bookings/:id', adminBookingsController.getBookingDetails);
-
-// Delete booking
-router.delete("/bookings/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Find and delete the booking
-    const booking = await Booking.findByIdAndDelete(id);
-    
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-    
-    res.json({ 
-      message: "Booking deleted successfully",
-      deletedBooking: booking 
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
 
 // Payments: list and resolve paid but not booked
 router.get('/payments/paid-no-booking', paymentTxController.getPaidNoBooking);

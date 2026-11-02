@@ -1,5 +1,23 @@
 const mongoose = require('mongoose');
 
+const AdminLifecycleAuditSchema = new mongoose.Schema({
+  action: {
+    type: String,
+    enum: ['cancelled_unissued_pending_booking'],
+    required: true,
+  },
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
+  at: {
+    type: Date,
+    required: true,
+  },
+  previousStatus: String,
+  previousPaymentStatus: String,
+}, { _id: false });
+
 const BookingSchema = new mongoose.Schema({
   event: {
     type: mongoose.Schema.Types.ObjectId,
@@ -234,7 +252,11 @@ const BookingSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  adminLifecycleAudit: {
+    type: [AdminLifecycleAuditSchema],
+    default: undefined,
+  },
 });
 
 // Update the updatedAt field before saving
