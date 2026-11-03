@@ -11,6 +11,16 @@ const heroImageSchema = new mongoose.Schema({
     required: false,
     trim: true
   },
+  buttonText: {
+    type: String,
+    required: false,
+    trim: true
+  },
+  buttonUrl: {
+    type: String,
+    required: false,
+    trim: true
+  },
   public_id: {
     type: String,
     required: false

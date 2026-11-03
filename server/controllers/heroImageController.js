@@ -1,6 +1,7 @@
 const HeroImage = require('../models/heroImage');
 const { uploadPhoto, deletePhoto } = require('../utils/cloudinary');
 const { body, validationResult } = require('express-validator');
+const heroImageButtonValidation = require('../utils/heroImageButtonValidation');
 
 // Validation rules
 exports.validate = (method) => {
@@ -9,6 +10,7 @@ exports.validate = (method) => {
       return [
         body('title').optional().trim().escape(),
         body('description').optional().trim().escape(),
+        ...heroImageButtonValidation(),
         body('order').optional().isNumeric().toInt(),
         body('active').optional().isBoolean().toBoolean(),
       ];
@@ -17,6 +19,7 @@ exports.validate = (method) => {
       return [
         body('title').optional().trim().escape(),
         body('description').optional().trim().escape(),
+        ...heroImageButtonValidation(),
         body('order').optional().isNumeric().toInt(),
         body('active').optional().isBoolean().toBoolean(),
       ];
@@ -60,6 +63,8 @@ exports.uploadImage = async (req, res) => {
     const newImageData = {
       title: req.body.title || '',
       description: req.body.description || '',
+      ...(req.body.buttonText !== undefined && { buttonText: req.body.buttonText }),
+      ...(req.body.buttonUrl !== undefined && { buttonUrl: req.body.buttonUrl }),
       order: req.body.order || 0,
       active: req.body.active !== undefined ? req.body.active : true,
       uploadedBy: userId
@@ -171,6 +176,8 @@ exports.updateImage = async (req, res) => {
     const updateData = {
       ...(req.body.title !== undefined && { title: req.body.title }),
       ...(req.body.description !== undefined && { description: req.body.description }),
+      ...(req.body.buttonText !== undefined && { buttonText: req.body.buttonText }),
+      ...(req.body.buttonUrl !== undefined && { buttonUrl: req.body.buttonUrl }),
       ...(req.body.order !== undefined && { order: req.body.order }),
       ...(req.body.active !== undefined && { active: req.body.active }),
     };

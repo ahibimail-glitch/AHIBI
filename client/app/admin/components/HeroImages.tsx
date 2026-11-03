@@ -22,6 +22,8 @@ interface HeroImage {
   _id: string;
   title: string;
   description: string;
+  buttonText?: string;
+  buttonUrl?: string;
   url: string;
   public_id: string;
   mobileUrl?: string;
@@ -41,6 +43,9 @@ export default function HeroImages() {
   const [selectedMobileFile, setSelectedMobileFile] = useState<File | null>(null);
   const [imageTitle, setImageTitle] = useState("");
   const [imageDescription, setImageDescription] = useState("");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
+  const [savingButtonId, setSavingButtonId] = useState<string | null>(null);
 
   const fetchHeroImages = async () => {
     setLoading(true);
@@ -57,7 +62,15 @@ export default function HeroImages() {
       }
 
       const data = await response.json();
-      setImages(data.data);
+      setImages(data.data.map((image: HeroImage) =>
+        image.buttonUrl === undefined && image.title?.toLowerCase().includes("nusc")
+          ? {
+              ...image,
+              buttonText: image.buttonText || "Book tickets",
+              buttonUrl: "/nusc-home-matches#passes",
+            }
+          : image
+      ));
     } catch (err: any) {
       console.error("Error fetching hero images:", err);
       setError(err.message || "Failed to load hero images");
@@ -111,6 +124,8 @@ export default function HeroImages() {
       }
       formData.append("title", imageTitle);
       formData.append("description", imageDescription);
+      formData.append("buttonText", buttonText.trim());
+      formData.append("buttonUrl", buttonUrl.trim());
       
       // Upload image
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images`, {
@@ -131,6 +146,8 @@ export default function HeroImages() {
       setSelectedMobileFile(null);
       setImageTitle("");
       setImageDescription("");
+      setButtonText("");
+      setButtonUrl("");
       
       // Show success message
       setSuccess("Image uploaded successfully!");
@@ -225,6 +242,52 @@ export default function HeroImages() {
     }
   };
 
+  const updateButtonDraft = (id: string, field: "buttonText" | "buttonUrl", value: string) => {
+    setImages((currentImages) => currentImages.map((image) =>
+      image._id === id ? { ...image, [field]: value } : image
+    ));
+  };
+
+  const saveButtonSettings = async (image: HeroImage) => {
+    setSavingButtonId(image._id);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const token = localStorage.getItem("admin_token");
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/hero-images/${image._id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          buttonText: image.buttonText?.trim() || "",
+          buttonUrl: image.buttonUrl?.trim() || "",
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.errors?.[0]?.msg || data.message || "Failed to update hero button");
+      }
+
+      setImages((currentImages) => currentImages.map((currentImage) =>
+        currentImage._id === image._id ? data.data : currentImage
+      ));
+      setSuccess("Hero button settings saved successfully!");
+    } catch (err: any) {
+      console.error("Error updating hero button:", err);
+      setError(err.message || "Failed to update hero button");
+    } finally {
+      setSavingButtonId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -276,6 +339,32 @@ export default function HeroImages() {
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="image-button-text">Button Label (Optional)</Label>
+                <Input
+                  id="image-button-text"
+                  placeholder="Book tickets"
+                  maxLength={40}
+                  value={buttonText}
+                  onChange={(e) => setButtonText(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="image-button-url">Booking Page URL (Optional)</Label>
+                <Input
+                  id="image-button-url"
+                  placeholder="/events/event-id"
+                  maxLength={2048}
+                  value={buttonUrl}
+                  onChange={(e) => setButtonUrl(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="-mt-2 text-xs text-gray-500">
+              The button appears when a booking page URL is set. Leave it blank to show no button; the label defaults to Book tickets.
+            </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -423,6 +512,41 @@ export default function HeroImages() {
                       onCheckedChange={() => toggleActive(image._id, image.active)}
                     />
                   </div>
+                </div>
+
+                <div className="mt-4 space-y-3 border-t border-gray-100 pt-3">
+                  <p className="text-sm font-medium">Optional booking button</p>
+                  <div>
+                    <Label htmlFor={`hero-button-text-${image._id}`}>Button Label</Label>
+                    <Input
+                      id={`hero-button-text-${image._id}`}
+                      placeholder="Book tickets"
+                      maxLength={40}
+                      value={image.buttonText ?? ""}
+                      onChange={(e) => updateButtonDraft(image._id, "buttonText", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`hero-button-url-${image._id}`}>Booking Page URL</Label>
+                    <Input
+                      id={`hero-button-url-${image._id}`}
+                      placeholder="/events/event-id"
+                      maxLength={2048}
+                      value={image.buttonUrl ?? ""}
+                      onChange={(e) => updateButtonDraft(image._id, "buttonUrl", e.target.value)}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Leave the URL blank to remove the button. Use a site path such as /events/event-id.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => saveButtonSettings(image)}
+                    disabled={savingButtonId === image._id}
+                  >
+                    {savingButtonId === image._id ? "Saving..." : "Save button settings"}
+                  </Button>
                 </div>
                 
                 <div className="flex justify-between items-center mt-3">
