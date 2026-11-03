@@ -336,6 +336,7 @@ function LegacyHomePage() {
   }>>([])
   const [loadingHeroImages, setLoadingHeroImages] = useState(true)
   const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const heroMobileTrackRef = useRef<HTMLDivElement | null>(null)
   const heroSlideRefs = useRef<Array<HTMLDivElement | null>>([])
   const [heroMobileHeight, setHeroMobileHeight] = useState<number | null>(null)
@@ -439,6 +440,15 @@ function LegacyHomePage() {
   }, [])
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches)
+
+    updatePreference()
+    mediaQuery.addEventListener("change", updatePreference)
+    return () => mediaQuery.removeEventListener("change", updatePreference)
+  }, [])
+
+  useEffect(() => {
     if (!isMobileViewport) return
 
     const activeSlide = heroSlideRefs.current[currentBgSlide]
@@ -455,13 +465,26 @@ function LegacyHomePage() {
     return () => observer.disconnect()
   }, [backgroundImages, currentBgSlide, isMobileViewport])
 
-  // useEffect(() => {
-  //   if (backgroundImages.length <= 1) return
-  //   const interval = setInterval(() => {
-  //     setCurrentBgSlide((prev) => (prev + 1) % backgroundImages.length)
-  //   }, 5000)
-  //   return () => clearInterval(interval)
-  // }, [backgroundImages.length])
+  useEffect(() => {
+    if (backgroundImages.length <= 1 || prefersReducedMotion) return
+
+    const timeout = window.setTimeout(() => {
+      const nextSlide = (currentBgSlide + 1) % backgroundImages.length
+      setCurrentBgSlide(nextSlide)
+
+      if (isMobileViewport) {
+        const track = heroMobileTrackRef.current
+        if (track) {
+          track.scrollTo({
+            left: nextSlide * track.clientWidth,
+            behavior: "smooth",
+          })
+        }
+      }
+    }, 5000)
+
+    return () => window.clearTimeout(timeout)
+  }, [backgroundImages.length, currentBgSlide, isMobileViewport, prefersReducedMotion])
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -628,7 +651,7 @@ function LegacyHomePage() {
         ) : (
           <div
             ref={heroMobileTrackRef}
-            className="relative flex w-full items-start snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth scrollbar-hide sm:block sm:overflow-visible sm:snap-none"
+            className="relative flex w-full items-start snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth scrollbar-hide sm:block sm:overflow-visible sm:snap-none motion-reduce:scroll-auto"
             style={isMobileViewport && heroMobileHeight ? { height: `${heroMobileHeight}px` } : undefined}
             role="region"
             aria-label="Hero banners"
@@ -649,7 +672,7 @@ function LegacyHomePage() {
                 <div
                   key={index}
                   ref={(element) => { heroSlideRefs.current[index] = element }}
-                  className={`relative w-full shrink-0 snap-start transition-opacity duration-700 ${
+                  className={`relative w-full shrink-0 snap-start transition-opacity duration-700 motion-reduce:transition-none ${
                     isActive
                       ? "sm:relative sm:opacity-100 sm:z-10"
                       : "sm:absolute sm:inset-x-0 sm:top-0 sm:opacity-0 sm:pointer-events-none"
@@ -728,7 +751,10 @@ function LegacyHomePage() {
                       setCurrentBgSlide(index)
                       const track = heroMobileTrackRef.current
                       if (isMobileViewport && track) {
-                        track.scrollTo({ left: index * track.clientWidth, behavior: "smooth" })
+                        track.scrollTo({
+                          left: index * track.clientWidth,
+                          behavior: prefersReducedMotion ? "auto" : "smooth",
+                        })
                       }
                     }}
                     className={`h-1 rounded-full transition-all ${index === currentBgSlide
