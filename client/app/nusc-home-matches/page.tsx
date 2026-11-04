@@ -577,16 +577,7 @@ export default function NuscHomeMatchesPage() {
                   </span>
                   {"actualPrice" in pass && <span className="mt-5 text-lg font-bold text-[#111713]">Ticket price: {pass.actualPrice}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
-                  {pass.id === "suite-single-match" && (
-                    <>
-                      <span className="mt-3 inline-flex w-fit rounded-full bg-[#f3eeee] px-2.5 py-1 text-xs font-bold text-[#8a4b50]">Sold out</span>
-                      <span className="mt-3 space-y-1 text-xs leading-5 text-[#4c554d]">
-                        <span className="flex justify-between gap-2"><span>Sports Development Fund (10%)</span><span>₹7,000</span></span>
-                        <span className="flex justify-between gap-2"><span>Convenience Fee (10%)</span><span>₹7,000</span></span>
-                        <span className="flex justify-between gap-2 border-t border-[#e7ebe6] pt-1 font-bold text-[#111713]"><span>Total payable</span><span>₹84,000</span></span>
-                      </span>
-                    </>
-                  )}
+                  {pass.id === "suite-single-match" && <span className="mt-3 inline-flex w-fit rounded-full bg-[#f3eeee] px-2.5 py-1 text-xs font-bold text-[#8a4b50]">Sold out</span>}
                   {passCategory === "single-match" && selected && renderSuitePassAvailability(pass.id)}
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
                   <span className="space-y-2 text-sm leading-5 text-[#4c554d]">
