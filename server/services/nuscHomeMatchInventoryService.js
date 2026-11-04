@@ -13,6 +13,7 @@ const MATCH_TICKET_PRICES = {
   'general pass': { price: 358.8, basePrice: 299 },
   'premium pass': { price: 1500, basePrice: 1250 },
   'united suite - single pass': { price: 7500, basePrice: 6250 },
+  'united suite - single match': { price: 84000, basePrice: 70000 },
   'united suite - full box': { price: 60000, basePrice: 50000 },
 };
 const SEASON_PASS_OPTIONS = {
@@ -58,6 +59,7 @@ const GENERAL_SEATING_AREAS = [
 const TICKET_CAPACITIES = {
   'General Pass': GENERAL_SEATING_AREAS.reduce((sum, area) => sum + area.capacity, 0),
   'Premium Pass': 275,
+  'United Suite - Single Match': 0,
 };
 const SEASON_PASS_CAPACITIES = Object.freeze({
   'General Pass': 50,
@@ -82,6 +84,7 @@ const OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE = Object.freeze({
 });
 
 const SUITE_SINGLE = 'United Suite — Single pass';
+const SUITE_SINGLE_MATCH = 'United Suite - Single Match';
 const SUITE_FULL_BOX = 'United Suite — Full Box';
 const SUITE_SEASON = 'United Suite — Season';
 const SEASON_PASS_TICKET_TYPES = ['General Pass', 'Premium Pass'];
@@ -456,6 +459,9 @@ function reserveMatchOrderInState(state, {
     }
 
     for (const line of normalizedLines) {
+      if (line.ticketType === SUITE_SINGLE_MATCH) {
+        throw new InventoryConflict('United Suite - Single Match is sold out.', 'TICKETS_UNAVAILABLE');
+      }
       if (line.ticketType === SUITE_SEASON) {
         throw new InventoryConflict('United Suite season bookings are handled by staff.', 'CALL_TO_BOOK');
       }
@@ -1513,10 +1519,44 @@ async function finalizeMatchOrder(orderId) {
   });
 }
 
+function publicSuiteSingleMatchTicket(source) {
+  const ticket = typeof source?.toObject === 'function' ? source.toObject() : (source || {});
+  return {
+    ...ticket,
+    _id: ticket._id || 'nusc-suite-single-match',
+    name: SUITE_SINGLE_MATCH,
+    description: 'One private VIP box for up to 10 people for one match.',
+    ...(getMatchTicketPrice(SUITE_SINGLE_MATCH) || {}),
+    quantity: 0,
+    sold: 0,
+    capacity: 10,
+    benefits: [
+      'Private VIP Box access',
+      'Comfortable seating',
+      'Best stadium viewing experience',
+      'Dedicated VIP entry',
+      'Complimentary food & beverages',
+      'Match-day hospitality service (butler service)',
+      'Dedicated parking access',
+      'Complimentary Merch',
+      'Exclusive discounts at club store',
+    ],
+  };
+}
+
+function includeSuiteSingleMatch(ticketTypes) {
+  return ticketTypes.some((ticket) => normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
+    ? ticketTypes
+    : [...ticketTypes, publicSuiteSingleMatchTicket()];
+}
+
 function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSalesClosed = false } = {}) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
-    return eventTicketTypes.map((source) => {
+    const ticketTypes = eventTicketTypes.map((source) => {
       const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
+      if (normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
+        return publicSuiteSingleMatchTicket(ticket);
+      }
       const seasonPassCapacity = SEASON_PASS_CAPACITIES[ticket.name];
       return {
         ...ticket,
@@ -1533,6 +1573,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
         }),
       };
     });
+    return includeSuiteSingleMatch(ticketTypes);
   }
   const activeOrders = activeOrdersForDate(state, matchDate);
   const activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate);
@@ -1547,8 +1588,11 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
   for (const order of activeSeasonOrders) {
     heldByTicketType.set(order.ticketType, (heldByTicketType.get(order.ticketType) || 0) + Number(order.quantity || 0));
   }
-  return eventTicketTypes.map((source) => {
+  const ticketTypes = eventTicketTypes.map((source) => {
     const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
+    if (normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
+      return publicSuiteSingleMatchTicket(ticket);
+    }
     const seasonPassCapacity = SEASON_PASS_CAPACITIES[ticket.name];
     if (ticket.name === SUITE_SINGLE) {
       return { ...ticket, ...(getMatchTicketPrice(ticket.name) || {}), quantity: suite.singleSeats, sold: 0 };
@@ -1573,6 +1617,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
       }),
     };
   });
+  return includeSuiteSingleMatch(ticketTypes);
 }
 
 async function getMatchAvailability(matchDate, eventTicketTypes = []) {
@@ -1671,6 +1716,7 @@ module.exports = {
   NUSC_TEST_MODE_ENABLED,
   SEASON_PASS_CAPACITIES,
   SUITE_FULL_BOX,
+  SUITE_SINGLE_MATCH,
   SUITE_SEASON,
   SUITE_SINGLE,
   TICKET_CAPACITIES,

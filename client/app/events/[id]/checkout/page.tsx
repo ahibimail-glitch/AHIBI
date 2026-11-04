@@ -112,6 +112,7 @@ const NUSC_PASS_TICKET_TYPE_NAMES: Record<string, string> = {
   "general-single": "General Pass",
   "premium-single": "Premium Pass",
   "suite-single": "United Suite — Single pass",
+  "suite-single-match": "United Suite - Single Match",
   "suite-box-single": "United Suite — Full Box",
 };
 

@@ -13,6 +13,7 @@ const PASS_NAMES: Record<string, string> = {
   "premium-single": "Premium Pass · Single Match",
   "premium-season": "Premium Season Pass",
   "suite-single": "United Suite · Single Person",
+  "suite-single-match": "United Suite - Single Match",
   "suite-box-single": "United Suite · Full Box",
 };
 
