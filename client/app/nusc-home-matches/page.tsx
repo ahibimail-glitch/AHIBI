@@ -127,11 +127,33 @@ const SEASON_PASSES = [
     id: "suite-season",
     name: "United Suite — Season",
     price: "₹4,50,000",
-    detail: "All 10 home matches · call to book",
+    detail: "All 10 home matches · up to 8 guests per match · call to book",
     benefits: [
       "Private VIP Box access for all 10 home matches",
       "Reserved box assigned to the season holder throughout the season",
       "Entry for up to 8 guests per match",
+      "Premium seating with best stadium viewing",
+      "Dedicated VIP entry and fast-track access",
+      "Dedicated VIP parking",
+      "Complimentary premium food and beverages at every home match",
+      "Dedicated butler/hospitality service",
+      "Complimentary club merchandise pack for 8 people",
+      "Exclusive discount at the official club store throughout the season",
+      "Priority access to new merchandise drops",
+      "Invitation to selected club functions, launches or networking events",
+      "Player meet-and-greet experience during the season",
+      "Match-Day Photography: Professionally captured and curated VIP Box moments.",
+      "Customisable VIP Box: Personalise your box with approved décor and branding.",
+    ],
+  },
+  {
+    id: "suite-season-10",
+    name: "United Suite — Season",
+    detail: "All 10 home matches · up to 10 guests per match · call to book",
+    benefits: [
+      "Private VIP Box access for all 10 home matches",
+      "Reserved box assigned to the season holder throughout the season",
+      "Entry for up to 10 guests per match",
       "Premium seating with best stadium viewing",
       "Dedicated VIP entry and fast-track access",
       "Dedicated VIP parking",
@@ -565,10 +587,10 @@ export default function NuscHomeMatchesPage() {
           ) : (
             <p id="pass-card-options" className="mb-3 mt-6 scroll-mt-20 text-sm font-semibold text-[#343b35] sm:mb-4 sm:mt-7">Choose your season pass</p>
           )}
-          <div className={`grid gap-3 sm:gap-4 ${passCategory === "single-match" ? "sm:grid-cols-2 xl:grid-cols-4" : "sm:grid-cols-2 xl:grid-cols-3"}`}>
+          <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {(passCategory === "single-match" ? SINGLE_MATCH_PASSES : SEASON_PASSES).map((pass) => {
               const selected = selectedPass === pass.id;
-              const isCallToBook = pass.id === "suite-season";
+              const isCallToBook = pass.id === "suite-season" || pass.id === "suite-season-10";
               return (
               <button key={pass.id} type="button" aria-pressed={selected} onClick={() => setSelectedPass(pass.id)} className={`group flex h-full min-h-0 flex-col rounded-2xl border p-5 text-left transition sm:min-h-[290px] sm:p-6 ${selected ? "border-[#d41e32] bg-[#fff8f8] shadow-[0_12px_35px_rgba(212,30,50,0.12)] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:-translate-y-1 hover:border-[#b8c3b8] hover:shadow-lg"}`}>
                   <span className="flex w-full items-start justify-between gap-3">
@@ -589,7 +611,7 @@ export default function NuscHomeMatchesPage() {
             })}
           </div>
 
-          {selectedPass?.startsWith("suite-") && selectedPass !== "suite-single-match" && (
+          {selectedPass?.startsWith("suite-") && selectedPass !== "suite-single-match" && selectedPass !== "suite-season-10" && (
             <p className="mt-5 max-w-3xl text-sm leading-6 text-[#69716a]">
               United Suite has 4 boxes with space for up to 8 people each. A full-box booking reserves one box for that match; a single pass uses one seat. A season booking reserves one box across all 10 home matches.
             </p>
@@ -754,7 +776,7 @@ export default function NuscHomeMatchesPage() {
               )}
             </div>
           )}
-          {selectedPass === "suite-season" && (
+          {(selectedPass === "suite-season" || selectedPass === "suite-season-10") && (
             <div className="mt-6 flex flex-col gap-3 rounded-xl border border-[#f0d2d6] bg-[#fff8f8] p-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm leading-6 text-[#4c554d]">United Suite season bookings are by phone. Call either number to ask about availability and booking details.</p>
               <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
