@@ -2,17 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { calculateMatchOrderAmountMinor, normalizeTicketSelection } = require('../controllers/nuscHomeMatchController');
 
-test('calculates a combined order from server-resolved prices and quantities below ₹1,00,000', () => {
-  const firstMatchTickets = normalizeTicketSelection([
-    { ticketType: 'Premium Pass', quantity: 1, price: 1 },
-  ], { ticketTypes: [{ name: 'Premium Pass', price: 358.8, basePrice: 299 }] });
-  const secondMatchTickets = normalizeTicketSelection([
-    { ticketType: 'Special Pass', quantity: 1, price: 1 },
-  ], { ticketTypes: [{ name: 'Special Pass', price: 99640.2, basePrice: 90000 }] });
-  assert.equal(calculateMatchOrderAmountMinor([
-    { ticketLines: firstMatchTickets },
-    { ticketLines: secondMatchTickets },
-  ]), 9999900);
+test('calculates a one-date order with Single Match from server-resolved prices below ₹1,00,000', () => {
+  const tickets = normalizeTicketSelection([
+    { ticketType: 'Premium Pass', quantity: 1, price: 1500 },
+    { ticketType: 'United Suite - Single Match', quantity: 1, price: 84000 },
+  ], { ticketTypes: [{ name: 'Premium Pass', price: 1500, basePrice: 1250 }] });
+  assert.equal(calculateMatchOrderAmountMinor([{ ticketLines: tickets }]), 8550000);
 });
 
 test('rejects a combined order at exactly ₹1,00,000', () => {

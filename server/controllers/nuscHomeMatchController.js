@@ -61,12 +61,8 @@ function normalizeTicketSelection(selection, event) {
     if (ticketType === inventory.SUITE_SEASON) {
       throw new inventory.InventoryConflict('United Suite season bookings are call-to-book.', 'CALL_TO_BOOK');
     }
-    if (ticketType === inventory.SUITE_SINGLE_MATCH) {
-      throw new inventory.InventoryConflict('United Suite - Single Match is sold out.', 'TICKETS_UNAVAILABLE');
-    }
-
-    const eventTicket = event.ticketTypes.find((ticket) => ticket.name === ticketType);
-    if (!eventTicket) {
+    const eventTicket = (event.ticketTypes || []).find((ticket) => ticket.name === ticketType);
+    if (!eventTicket && ticketType !== inventory.SUITE_SINGLE_MATCH) {
       throw new inventory.InventoryConflict(`Ticket type ${ticketType} is not configured for this match.`, 'TICKET_NOT_CONFIGURED');
     }
 
