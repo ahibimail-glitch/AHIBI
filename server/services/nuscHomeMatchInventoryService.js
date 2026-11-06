@@ -7,6 +7,7 @@ const SEATS_PER_BOX = 8;
 const SINGLE_PASS_BOX_NUMBER = 1;
 const FULL_BOX_NUMBERS = [2, 3, 4];
 const BUYER_TICKET_LIMIT = 10;
+const SINGLE_MATCH_CAPACITY = 1;
 const HOLD_MINUTES = 15;
 const GENERAL_TICKET_TYPE = 'General Pass';
 const MATCH_TICKET_PRICES = {
@@ -59,7 +60,7 @@ const GENERAL_SEATING_AREAS = [
 const TICKET_CAPACITIES = {
   'General Pass': GENERAL_SEATING_AREAS.reduce((sum, area) => sum + area.capacity, 0),
   'Premium Pass': 275,
-  'United Suite - Single Match': 0,
+  'United Suite - Single Match': SINGLE_MATCH_CAPACITY,
 };
 const SEASON_PASS_CAPACITIES = Object.freeze({
   'General Pass': 50,
@@ -267,6 +268,17 @@ function activeSeasonPassOrdersForDate(state, matchDate) {
   ));
 }
 
+function getSingleMatchReservedCount(state, now = new Date()) {
+  return (state.orders || []).reduce((reserved, order) => {
+    const active = order.status === 'confirmed' ||
+      (order.status === 'held' && new Date(order.expiresAt) > now);
+    if (!active) return reserved;
+    return reserved + (order.ticketLines || [])
+      .filter((line) => normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
+      .reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+  }, 0);
+}
+
 function getSeasonPassQuotaUsage(state, ticketType, now = new Date()) {
   const orderIds = new Set();
   let used = 0;
@@ -432,6 +444,21 @@ function reserveMatchOrderInState(state, {
       return existing;
     }
 
+    const singleMatchQuantity = normalizedLines
+      .filter((line) => normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
+      .reduce((sum, line) => sum + line.quantity, 0);
+    if (singleMatchQuantity > 0) {
+      if (adminId) {
+        throw new InventoryConflict('United Suite - Single Match is available through online checkout only.', 'TICKETS_UNAVAILABLE');
+      }
+      if (singleMatchQuantity !== SINGLE_MATCH_CAPACITY) {
+        throw new InventoryConflict('United Suite - Single Match is limited to one ticket for one match date.', 'SUITE_SINGLE_MATCH_LIMIT');
+      }
+      if (getSingleMatchReservedCount(state) >= SINGLE_MATCH_CAPACITY) {
+        throw new InventoryConflict('United Suite - Single Match is sold out.', 'TICKETS_UNAVAILABLE');
+      }
+    }
+
     const activeOrders = activeOrdersForDate(state, matchDate);
     const activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate);
     const requestedBuyerUnits = normalizedLines.reduce((sum, line) => sum + buyerTicketUnits(line.ticketType, line.quantity), 0);
@@ -459,9 +486,7 @@ function reserveMatchOrderInState(state, {
     }
 
     for (const line of normalizedLines) {
-      if (line.ticketType === SUITE_SINGLE_MATCH) {
-        throw new InventoryConflict('United Suite - Single Match is sold out.', 'TICKETS_UNAVAILABLE');
-      }
+      if (normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) continue;
       if (line.ticketType === SUITE_SEASON) {
         throw new InventoryConflict('United Suite season bookings are handled by staff.', 'CALL_TO_BOOK');
       }
@@ -616,6 +641,11 @@ async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClos
   }
   if (matches.some((match) => (match.ticketLines || []).some((line) => line.ticketType === SUITE_FULL_BOX))) {
     throw new InventoryConflict('United Suite — Full Box orders must cover one match date. Place a separate order for each date.', 'FULL_BOX_SINGLE_DATE');
+  }
+  if (matches.some((match) => (match.ticketLines || []).some((line) => (
+    normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)
+  )))) {
+    throw new InventoryConflict('United Suite - Single Match orders must cover one match date.', 'SUITE_SINGLE_MATCH_LIMIT');
   }
   return mutateInventory((state) => matches.map((match) => reserveMatchOrderInState(state, {
     orderId: `${orderId}|${match.matchDate}`,
@@ -1500,7 +1530,9 @@ async function markTicketStockApplied(orderId) {
       }
     }
     order.stockApplied = true;
-    order.ticketLines = [];
+    if (!(order.ticketLines || []).some((line) => (
+      normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)
+    ))) order.ticketLines = [];
     return order;
   });
 }
@@ -1509,9 +1541,12 @@ async function finalizeMatchOrder(orderId) {
   return mutateInventory((state) => {
     const order = state.orders.find((item) => item.orderId === orderId);
     if (!order) return null;
-    if (order.suiteAllocations?.length) {
+    const hasSingleMatchTicket = (order.ticketLines || []).some((line) => (
+      normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)
+    ));
+    if (order.suiteAllocations?.length || hasSingleMatchTicket) {
       order.stockApplied = true;
-      order.ticketLines = [];
+      if (!hasSingleMatchTicket) order.ticketLines = [];
       return order;
     }
     state.orders = state.orders.filter((item) => item.orderId !== orderId);
@@ -1519,7 +1554,7 @@ async function finalizeMatchOrder(orderId) {
   });
 }
 
-function publicSuiteSingleMatchTicket(source) {
+function publicSuiteSingleMatchTicket(source, availableQuantity = 0) {
   const ticket = typeof source?.toObject === 'function' ? source.toObject() : (source || {});
   return {
     ...ticket,
@@ -1527,9 +1562,9 @@ function publicSuiteSingleMatchTicket(source) {
     name: SUITE_SINGLE_MATCH,
     description: 'One private VIP box for up to 10 people for one match.',
     ...(getMatchTicketPrice(SUITE_SINGLE_MATCH) || {}),
-    quantity: 0,
+    quantity: Math.max(0, Number(availableQuantity) || 0),
     sold: 0,
-    capacity: 10,
+    capacity: SINGLE_MATCH_CAPACITY,
     benefits: [
       'Private VIP Box access',
       'Comfortable seating',
@@ -1544,10 +1579,10 @@ function publicSuiteSingleMatchTicket(source) {
   };
 }
 
-function includeSuiteSingleMatch(ticketTypes) {
+function includeSuiteSingleMatch(ticketTypes, availableQuantity = 0) {
   return ticketTypes.some((ticket) => normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
     ? ticketTypes
-    : [...ticketTypes, publicSuiteSingleMatchTicket()];
+    : [...ticketTypes, publicSuiteSingleMatchTicket(null, availableQuantity)];
 }
 
 function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSalesClosed = false } = {}) {
@@ -1573,11 +1608,12 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
         }),
       };
     });
-    return includeSuiteSingleMatch(ticketTypes);
+    return includeSuiteSingleMatch(ticketTypes, 0);
   }
   const activeOrders = activeOrdersForDate(state, matchDate);
   const activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate);
   const suite = getSuiteAvailability(state, matchDate);
+  const singleMatchRemaining = Math.max(0, SINGLE_MATCH_CAPACITY - getSingleMatchReservedCount(state));
   const heldByTicketType = new Map();
   for (const order of activeOrders) {
     if (order.stockApplied) continue;
@@ -1591,7 +1627,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
   const ticketTypes = eventTicketTypes.map((source) => {
     const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
     if (normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
-      return publicSuiteSingleMatchTicket(ticket);
+      return publicSuiteSingleMatchTicket(ticket, singleMatchRemaining);
     }
     const seasonPassCapacity = SEASON_PASS_CAPACITIES[ticket.name];
     if (ticket.name === SUITE_SINGLE) {
@@ -1617,7 +1653,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
       }),
     };
   });
-  return includeSuiteSingleMatch(ticketTypes);
+  return includeSuiteSingleMatch(ticketTypes, singleMatchRemaining);
 }
 
 async function getMatchAvailability(matchDate, eventTicketTypes = []) {
@@ -1715,6 +1751,7 @@ module.exports = {
   InventoryConflict,
   NUSC_TEST_MODE_ENABLED,
   SEASON_PASS_CAPACITIES,
+  SINGLE_MATCH_CAPACITY,
   SUITE_FULL_BOX,
   SUITE_SINGLE_MATCH,
   SUITE_SEASON,

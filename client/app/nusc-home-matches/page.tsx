@@ -190,6 +190,13 @@ export default function NuscHomeMatchesPage() {
   const shouldScrollToPassOptions = useRef(false);
   const [completedMatchCount, setCompletedMatchCount] = useState(0);
   const [lastCompletedMatchDate, setLastCompletedMatchDate] = useState<string | null>(null);
+  const toggleMatchDate = (matchDate: string, checked: boolean) => {
+    setSelectedMatchDates((dates) => {
+      if (!checked) return dates.filter((date) => date !== matchDate);
+      if (selectedPass === "suite-single-match") return [matchDate];
+      return dates.includes(matchDate) ? dates : [...dates, matchDate];
+    });
+  };
   const nextMatch = getNextNuscMatch();
   const seasonTicketType = selectedPass === "general-season"
     ? "General Pass"
@@ -281,7 +288,7 @@ export default function NuscHomeMatchesPage() {
     const completedCount = Number.parseInt(params.get("nuscCompletedCount") || "0", 10);
     const completedDate = params.get("nuscCompletedDate");
     if (dates.length > 0) {
-      setSelectedMatchDates(dates);
+      setSelectedMatchDates(passId === "suite-single-match" ? dates.slice(0, 1) : dates);
       if (validPass) shouldScrollToPassOptions.current = true;
     }
     if (Number.isInteger(completedCount) && completedCount > 0) setCompletedMatchCount(completedCount);
@@ -348,13 +355,22 @@ export default function NuscHomeMatchesPage() {
     return remaining === 0 ? "Sold out" : `${remaining}/${capacity}`;
   };
 
+  const singleMatchAvailability = getSuiteAvailability(
+    selectedMatchDates[0] || NUSC_HOME_MATCHES[0].date,
+    NUSC_PASS_TICKET_TYPES["suite-single-match"],
+    1,
+  );
+  const singleMatchAvailable = singleMatchAvailability === "1/1";
+  const singleMatchAvailabilityLabel = singleMatchAvailable ? "1 ticket available" : singleMatchAvailability;
+
   const renderSuitePassAvailability = (passId: string) => {
     const isSingleSeat = passId === "suite-single";
-    if (!isSingleSeat && passId !== "suite-box-single") return null;
+    const isSingleMatchBox = passId === "suite-single-match";
+    if (!isSingleSeat && !isSingleMatchBox && passId !== "suite-box-single") return null;
 
-    const label = isSingleSeat ? "Seats left (of 8)" : "Boxes left (of 3)";
+    const label = isSingleMatchBox ? "One ticket across all 10 matches" : isSingleSeat ? "Seats left (of 8)" : "Boxes left (of 3)";
     const ticketName = NUSC_PASS_TICKET_TYPES[passId];
-    const capacity = isSingleSeat ? 8 : 3;
+    const capacity = isSingleMatchBox ? 1 : isSingleSeat ? 8 : 3;
     const matches = NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date));
     if (matches.length === 0) return null;
 
@@ -372,7 +388,7 @@ export default function NuscHomeMatchesPage() {
               <span
                 key={match.date}
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-4 ${soldOut || unavailable ? "bg-[#f3eeee] text-[#8a4b50]" : "bg-[#eef4ec] text-[#31533c]"}`}
-                aria-label={`${match.label}: ${isSingleSeat ? "seats" : "boxes"} ${soldOut ? "sold out" : availability}`}
+                aria-label={`${match.label}: ${isSingleMatchBox ? "ticket" : isSingleSeat ? "seats" : "boxes"} ${soldOut ? "sold out" : availability}`}
               >
                 <span className="font-medium">{Number(dayNumber)} {month}</span>
                 <span>{soldOut ? "Sold out" : availability}</span>
@@ -522,8 +538,8 @@ export default function NuscHomeMatchesPage() {
 
           {passCategory === "single-match" && (
             <fieldset className="mt-7 w-full min-w-0 max-w-full">
-              <legend className="text-sm font-semibold text-[#343b35]">Step 1 · Choose match dates</legend>
-              <p className="mt-1 text-sm leading-5 text-[#69716a]">Select one or more matches. Next, choose a pass below.</p>
+              <legend className="text-sm font-semibold text-[#343b35]">{selectedPass === "suite-single-match" ? "Step 1 · Choose one match date" : "Step 1 · Choose match dates"}</legend>
+              <p className="mt-1 text-sm leading-5 text-[#69716a]">{selectedPass === "suite-single-match" ? "Select one match date for the single available United Suite box." : "Select one or more matches. Next, choose a pass below."}</p>
               {selectedMatchDates.length > 0 && (
                 <Link
                   href="#pass-card-options"
@@ -545,7 +561,7 @@ export default function NuscHomeMatchesPage() {
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={(event) => setSelectedMatchDates((dates) => event.target.checked ? [...dates, match.date] : dates.filter((date) => date !== match.date))}
+                        onChange={(event) => toggleMatchDate(match.date, event.target.checked)}
                         className="mt-0.5 h-5 w-5 shrink-0 accent-[#c91d31]"
                         aria-label={`${match.label}, ${match.opponent}, ${match.time}`}
                       />
@@ -566,7 +582,7 @@ export default function NuscHomeMatchesPage() {
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={(event) => setSelectedMatchDates((dates) => event.target.checked ? [...dates, match.date] : dates.filter((date) => date !== match.date))}
+                        onChange={(event) => toggleMatchDate(match.date, event.target.checked)}
                         className="mt-0.5 h-5 w-5 shrink-0 accent-[#c91d31]"
                         aria-label={`${match.label}, ${match.opponent}, ${match.time}`}
                       />
@@ -592,14 +608,17 @@ export default function NuscHomeMatchesPage() {
               const selected = selectedPass === pass.id;
               const isCallToBook = pass.id === "suite-season" || pass.id === "suite-season-10";
               return (
-              <button key={pass.id} type="button" aria-pressed={selected} onClick={() => setSelectedPass(pass.id)} className={`group flex h-full min-h-0 flex-col rounded-2xl border p-5 text-left transition sm:min-h-[290px] sm:p-6 ${selected ? "border-[#d41e32] bg-[#fff8f8] shadow-[0_12px_35px_rgba(212,30,50,0.12)] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:-translate-y-1 hover:border-[#b8c3b8] hover:shadow-lg"}`}>
+              <button key={pass.id} type="button" aria-pressed={selected} onClick={() => {
+                setSelectedPass(pass.id);
+                if (pass.id === "suite-single-match") setSelectedMatchDates((dates) => dates.slice(0, 1));
+              }} className={`group flex h-full min-h-0 flex-col rounded-2xl border p-5 text-left transition sm:min-h-[290px] sm:p-6 ${selected ? "border-[#d41e32] bg-[#fff8f8] shadow-[0_12px_35px_rgba(212,30,50,0.12)] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:-translate-y-1 hover:border-[#b8c3b8] hover:shadow-lg"}`}>
                   <span className="flex w-full items-start justify-between gap-3">
                     <span className="text-lg font-bold leading-6 text-[#151b16]">{pass.name}</span>
                     <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selected ? "border-[#d41e32] bg-[#d41e32]" : "border-[#c8d0c8]"}`} aria-hidden="true">{selected && <span className="h-2 w-2 rounded-full bg-white" />}</span>
                   </span>
                   {"actualPrice" in pass && <span className="mt-5 text-lg font-bold text-[#111713]">Ticket price: {pass.actualPrice}</span>}
                   <span className="mt-1 text-sm font-medium text-[#69716a]">{pass.detail}</span>
-                  {pass.id === "suite-single-match" && <span className="mt-3 inline-flex w-fit rounded-full bg-[#f3eeee] px-2.5 py-1 text-xs font-bold text-[#8a4b50]">Sold out</span>}
+                  {pass.id === "suite-single-match" && <span className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-bold ${singleMatchAvailable ? "bg-[#eef4ec] text-[#31533c]" : singleMatchAvailability === "Checking…" ? "bg-[#eef1ec] text-[#5f675f]" : "bg-[#f3eeee] text-[#8a4b50]"}`}>{singleMatchAvailabilityLabel}</span>}
                   {passCategory === "single-match" && selected && renderSuitePassAvailability(pass.id)}
                   <span className="my-5 h-px w-full bg-[#e7ebe6]" />
                   <span className="space-y-2 text-sm leading-5 text-[#4c554d]">
@@ -611,7 +630,9 @@ export default function NuscHomeMatchesPage() {
             })}
           </div>
 
-          {selectedPass?.startsWith("suite-") && selectedPass !== "suite-single-match" && selectedPass !== "suite-season-10" && (
+          {selectedPass === "suite-single-match" ? (
+            <p className="mt-5 max-w-3xl text-sm leading-6 text-[#69716a]">This ticket covers one United Suite box for one match date. Only one ticket is available across all 10 home matches; selecting another date replaces your current date.</p>
+          ) : selectedPass?.startsWith("suite-") && selectedPass !== "suite-season-10" && (
             <p className="mt-5 max-w-3xl text-sm leading-6 text-[#69716a]">
               United Suite has 4 boxes with space for up to 8 people each. A full-box booking reserves one box for that match; a single pass uses one seat. A season booking reserves one box across all 10 home matches.
             </p>
