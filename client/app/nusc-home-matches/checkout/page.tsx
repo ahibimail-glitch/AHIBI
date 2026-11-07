@@ -11,6 +11,7 @@ import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import NuscPriceBreakdown from "@/components/NuscPriceBreakdown";
 import { clearNuscCheckoutRequestId, getNuscCheckoutRequestId, NUSC_HOME_MATCHES } from "@/lib/nuscHomeMatches";
+import { TICKET_CONFIRMATION_SUPPORT_MESSAGE, TICKET_SUCCESS_SUPPORT_MESSAGE } from "@/lib/ticketSupport";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const PASS_OPTIONS = {
@@ -173,7 +174,10 @@ export default function NuscMultiMatchCheckoutPage() {
       const order = await orderResponse.json();
       if (orderResponse.ok && order.alreadyCompleted) {
         clearNuscCheckoutRequestId(requestScope, checkoutRequestId);
-        toast.success("This multi-match booking is already confirmed. Opening My Tickets.");
+        toast.success("This multi-match booking is already confirmed. Opening My Tickets.", {
+          description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+          duration: 10000,
+        });
         router.push("/profile");
         return;
       }
@@ -196,14 +200,17 @@ export default function NuscMultiMatchCheckoutPage() {
               body: JSON.stringify(payment),
             });
             const verification = await verificationResponse.json();
-            if (!verificationResponse.ok || !verification.success) throw new Error(verification.message || "Payment was received but ticket confirmation is pending. Check My Tickets or contact support.");
+            if (!verificationResponse.ok || !verification.success) throw new Error(verification.message || "Payment was received but ticket confirmation is pending. Check My Tickets or contact customer care.");
             clearNuscCheckoutRequestId(requestScope, checkoutRequestId);
-            toast.success(`${verification.totalTickets || matches.length} match tickets confirmed.`);
+            toast.success(`${verification.totalTickets || matches.length} match tickets confirmed.`, {
+              description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+              duration: 10000,
+            });
             router.push("/profile");
           } catch (error) {
             const message = error instanceof Error ? error.message : "Payment confirmation is pending. Check My Tickets before retrying.";
             setErrorMessage(message);
-            toast.error(message);
+            toast.error(message, { description: TICKET_CONFIRMATION_SUPPORT_MESSAGE, duration: 12000 });
           } finally {
             setIsBooking(false);
           }

@@ -3,17 +3,31 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const PendingPaymentSession = require('../models/PendingPaymentSession'); 
+const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
+const nuscHomeMatchController = require('./nuscHomeMatchController');
 const AnnieBooking = require('../models/AnnieBooking'); 
 const AnnieSeat = require('../models/AnnieSeat'); 
 const slugify = require('slugify');
 const mongoose = require('mongoose'); 
 const Razorpay = require('razorpay');
 const eventPaymentSettlement = require('../services/eventPaymentSettlementService');
+const paymentFulfillmentAlertService = require('../services/paymentFulfillmentAlertService');
 
 // Helper to generate slug
 const generateSlug = (title) => {
   return slugify(title, { lower: true, strict: true });
 };
+
+function getNuscOrderExpectedTicketCount(order) {
+  const quantityOf = (tickets = []) => tickets.reduce((sum, ticket) => sum + Math.max(0, Number(ticket.quantity) || 0), 0);
+  if (order.orderType === 'seasonPass') {
+    return Math.max(0, Number(order.bookingDetails?.quantity) || 0) * (order.bookingDetails?.fixtures?.length || 0);
+  }
+  if (order.orderType === 'multiMatch') {
+    return (order.bookingDetails?.fixtures || []).reduce((sum, fixture) => sum + quantityOf(fixture.tickets), 0);
+  }
+  return quantityOf(order.bookingDetails?.tickets);
+}
 
 // List transactions that are paid but no booking exists (excluding Annie Musical)
 exports.getPaidNoBooking = async (req, res) => {
@@ -279,6 +293,60 @@ exports.resolveTransaction = async (req, res) => {
 
     if (tx.status !== 'paid_no_booking') {
       return res.status(400).json({ success: false, message: `Transaction status is '${tx.status}', not resolvable` });
+    }
+
+    const nuscOrder = await NuscHomeMatchOrder.findOne({ orderId: tx.orderId });
+    if (nuscOrder) {
+      if (nuscOrder.paymentId && nuscOrder.paymentId !== tx.paymentId) {
+        return res.status(409).json({ success: false, message: 'The captured payment does not match this NUSC order.' });
+      }
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+      const payment = await razorpay.payments.fetch(tx.paymentId);
+      if (payment?.status !== 'captured' || payment?.captured !== true ||
+          String(payment.order_id) !== String(nuscOrder.orderId) ||
+          Number(payment.amount) !== Number(nuscOrder.amountMinor) || payment.currency !== nuscOrder.currency) {
+        return res.status(409).json({ success: false, message: 'Razorpay could not confirm a matching captured payment for this NUSC order.' });
+      }
+
+      const recovered = await nuscHomeMatchController.recoverCapturedOrder(nuscOrder.orderId, payment);
+      const expectedTicketCount = getNuscOrderExpectedTicketCount(nuscOrder);
+      const issuedBookings = (recovered.bookings || []).filter((booking) => (
+        String(booking.user?._id || booking.user) === String(nuscOrder.user?._id || nuscOrder.user) &&
+        ['confirmed', 'checked-in'].includes(booking.status) &&
+        booking.paymentStatus === 'completed' &&
+        booking.paymentId === tx.paymentId
+      ));
+      if (!expectedTicketCount || issuedBookings.length !== expectedTicketCount) {
+        const message = 'NUSC ticket integrity check found missing or incomplete customer tickets.';
+        await paymentFulfillmentAlertService.alertCapturedPaymentNeedsTickets({
+          orderId: nuscOrder.orderId,
+          paymentId: tx.paymentId,
+          error: message,
+          errorCode: 'NUSC_TICKET_INTEGRITY_MISMATCH',
+          needsAdminIntervention: true,
+        });
+        return res.status(409).json({ success: false, message: 'This NUSC order still needs ticket integrity review.' });
+      }
+      await NuscHomeMatchOrder.updateOne({ _id: nuscOrder._id }, {
+        $push: { operationsAudit: { action: 'ticket_reissue', admin: req.user._id, details: {
+          bookingCount: issuedBookings.length,
+          source: 'paid_no_booking_admin_report',
+        } } },
+      });
+      await PaymentTransaction.updateOne({ _id: tx._id }, {
+        $set: { status: 'completed', bookingIds: issuedBookings.map((booking) => booking._id), errorMessage: null },
+      });
+      await paymentFulfillmentAlertService.resolveOrderAlerts(nuscOrder.orderId).catch((error) => {
+        console.error('[Admin Payments] Could not archive resolved NUSC alerts:', error.message);
+      });
+      return res.json({
+        success: true,
+        message: 'Captured NUSC payment reconciled and tickets confirmed.',
+        data: { bookingIds: issuedBookings.map((booking) => booking._id) },
+      });
     }
 
     const savedSession = await PendingPaymentSession.findOne({ orderId: tx.orderId });

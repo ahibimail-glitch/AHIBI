@@ -21,6 +21,16 @@ const NuscHomeMatchOrderSchema = new mongoose.Schema({
     index: true,
   },
   settlementLeaseUntil: { type: Date, default: null },
+  capturedAt: { type: Date, default: null },
+  reconciliationLeaseId: { type: String, default: null },
+  reconciliationLeaseUntil: { type: Date, default: null },
+  reconciliationAttemptCount: { type: Number, default: 0 },
+  lastReconciliationAt: { type: Date, default: null },
+  nextReconciliationAt: { type: Date, default: Date.now },
+  lastReconciliationErrorCode: { type: String, default: null },
+  lastReconciliationError: { type: String, default: null },
+  needsAdminIntervention: { type: Boolean, default: false },
+  nextIntegrityCheckAt: { type: Date, default: null },
   bookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
   adminTicketReissue: { type: mongoose.Schema.Types.Mixed, default: undefined },
   errorMessage: { type: String },
@@ -45,5 +55,7 @@ NuscHomeMatchOrderSchema.index(
   { user: 1, checkoutRequestId: 1 },
   { unique: true, partialFilterExpression: { checkoutRequestId: { $type: 'string' } } }
 );
+NuscHomeMatchOrderSchema.index({ status: 1, nextReconciliationAt: 1, needsAdminIntervention: 1 });
+NuscHomeMatchOrderSchema.index({ status: 1, nextIntegrityCheckAt: 1, needsAdminIntervention: 1 });
 
 module.exports = mongoose.model('NuscHomeMatchOrder', NuscHomeMatchOrderSchema);

@@ -8,7 +8,7 @@ const SINGLE_PASS_BOX_NUMBER = 1;
 const FULL_BOX_NUMBERS = [2, 3, 4];
 const BUYER_TICKET_LIMIT = 10;
 const SINGLE_MATCH_CAPACITY = 1;
-const HOLD_MINUTES = 15;
+const HOLD_MINUTES = 30;
 const GENERAL_TICKET_TYPE = 'General Pass';
 const MATCH_TICKET_PRICES = {
   'general pass': { price: 358.8, basePrice: 299 },
@@ -630,7 +630,7 @@ async function recordOnSpotMatchSale({ saleId, adminId, matchDate, ticketLines, 
   }, session);
 }
 
-async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClosed = false }) {
+async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClosed = false, skipBuyerLimit = false }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
@@ -655,6 +655,7 @@ async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClos
     eventTicketTypes: match.eventTicketTypes,
     existingUserTicketCount: match.existingUserTicketCount || 0,
     allowSalesClosed: true,
+    skipBuyerLimit,
   })));
 }
 
@@ -697,7 +698,7 @@ async function finalizeMultiMatchOrder(orderId, matchDates) {
   });
 }
 
-async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, zone = '', matches, existingUserTicketCountByDate = {}, allowSalesClosed = false }) {
+async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, zone = '', matches, existingUserTicketCountByDate = {}, allowSalesClosed = false, skipBuyerLimit = false }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
@@ -743,7 +744,7 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, z
       const userSeasonHolds = activeSeasonOrders
         .filter((order) => String(order.userId) === String(userId))
         .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
-      if (Number(existingUserTicketCountByDate[match.matchDate] || 0) + userMatchHolds + userSeasonHolds + normalizedQuantity > BUYER_TICKET_LIMIT) {
+      if (!skipBuyerLimit && Number(existingUserTicketCountByDate[match.matchDate] || 0) + userMatchHolds + userSeasonHolds + normalizedQuantity > BUYER_TICKET_LIMIT) {
         throw new InventoryConflict(`You can buy at most ${BUYER_TICKET_LIMIT} tickets for ${match.matchDate}, including season passes.`, 'BUYER_TICKET_LIMIT');
       }
 

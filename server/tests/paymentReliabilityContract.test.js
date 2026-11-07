@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Booking = require('../models/Booking');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
+const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const AdminNotification = require('../models/AdminNotification');
 const {
   PaymentSettlementError,
@@ -58,6 +59,19 @@ test('database schemas declare unique guards for ticket and alert idempotency', 
     options.partialFilterExpression?.['metadata.dedupeKey']?.$type === 'string'
   )));
   assert.ok(AdminNotification.schema.path('type').enumValues.includes('payment_fulfillment_pending'));
+});
+
+test('NUSC payment orders retain capture and retry state for reconciliation', () => {
+  assert.equal(NuscHomeMatchOrder.schema.path('capturedAt').instance, 'Date');
+  assert.equal(NuscHomeMatchOrder.schema.path('reconciliationLeaseId').instance, 'String');
+  assert.equal(NuscHomeMatchOrder.schema.path('reconciliationAttemptCount').instance, 'Number');
+  assert.equal(NuscHomeMatchOrder.schema.path('needsAdminIntervention').instance, 'Boolean');
+  assert.ok(NuscHomeMatchOrder.schema.indexes().some(([fields]) => (
+    fields.status === 1 && fields.nextReconciliationAt === 1 && fields.needsAdminIntervention === 1
+  )));
+  assert.ok(NuscHomeMatchOrder.schema.indexes().some(([fields]) => (
+    fields.status === 1 && fields.nextIntegrityCheckAt === 1 && fields.needsAdminIntervention === 1
+  )));
 });
 
 test('captured-payment fulfillment alerts open the paid-but-not-booked admin report', async () => {

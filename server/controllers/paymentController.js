@@ -1,6 +1,7 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Booking = require('../models/Booking');
+const PaymentTransaction = require('../models/PaymentTransaction');
 const Event = require('../models/Event');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
 const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
@@ -272,6 +273,56 @@ exports.getPaymentStatus = async (req, res) => {
   }
 };
 
+exports.getMyPendingTicketPayments = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) return res.status(401).json({ success: false, message: 'Authentication is required to view pending ticket payments.' });
+
+    const [sessions, nuscOrders, transactions] = await Promise.all([
+      PendingPaymentSession.find({
+        user: userId,
+        paymentId: { $type: 'string', $ne: '' },
+        status: { $in: ['settling', 'paid_no_booking'] },
+      }).sort({ updatedAt: -1 }).limit(50).populate('event', 'title').populate('dailyEvent', 'title').lean(),
+      NuscHomeMatchOrder.find({
+        user: userId,
+        paymentId: { $type: 'string', $ne: '' },
+        status: { $in: ['created', 'settling', 'paid_no_booking'] },
+      }).sort({ updatedAt: -1 }).limit(50).populate('event', 'title').lean(),
+      PaymentTransaction.find({
+        user: userId,
+        orderId: { $type: 'string', $ne: '' },
+        paymentId: { $type: 'string', $ne: '' },
+        status: 'paid_no_booking',
+      }).sort({ updatedAt: -1 }).limit(50).populate('event', 'title').lean(),
+    ]);
+
+    const itemsByOrder = new Map();
+    const toItem = (item, type) => ({
+      orderId: item.orderId,
+      status: item.status,
+      type,
+      eventName: item.event?.title || item.dailyEvent?.title || item.bookingDetails?.event?.title ||
+        item.bookingDetails?.dailyEvent?.title || (type === 'NUSC' ? 'NUSC Home Match Tickets' : 'Event tickets'),
+      updatedAt: item.updatedAt || item.createdAt,
+    });
+
+    for (const item of sessions) itemsByOrder.set(item.orderId, toItem(item, 'Event'));
+    for (const item of transactions) {
+      if (!itemsByOrder.has(item.orderId)) itemsByOrder.set(item.orderId, toItem(item, 'Event'));
+    }
+    for (const item of nuscOrders) itemsByOrder.set(item.orderId, toItem(item, 'NUSC'));
+
+    const items = [...itemsByOrder.values()]
+      .sort((left, right) => new Date(right.updatedAt || 0) - new Date(left.updatedAt || 0))
+      .slice(0, 50);
+    return res.json({ success: true, data: { items } });
+  } catch (error) {
+    console.error('[Payment status] Pending ticket lookup failed:', error?.code || error?.message || 'Unknown error');
+    return res.status(500).json({ success: false, message: 'Pending ticket status is temporarily unavailable.' });
+  }
+};
+
 exports.razorpayWebhook = async (req, res) => {
   let signatureVerified = false;
   let eventType;
@@ -334,6 +385,32 @@ exports.razorpayWebhook = async (req, res) => {
         pending,
         confirmedByWebhook: true,
       });
+
+      const nuscOrder = await NuscHomeMatchOrder.findOne({ orderId });
+      if (nuscOrder) {
+        const persisted = await NuscHomeMatchOrder.updateOne({
+          _id: nuscOrder._id,
+          status: { $nin: ['refund_pending', 'refunded'] },
+          $or: [{ paymentId: null }, { paymentId: { $exists: false } }, { paymentId }],
+        }, {
+          $set: {
+            paymentId,
+            capturedAt: nuscOrder.capturedAt || new Date(),
+            nextReconciliationAt: new Date(),
+            needsAdminIntervention: false,
+            reconciliationAttemptCount: 0,
+            lastReconciliationErrorCode: null,
+            lastReconciliationError: null,
+          },
+        });
+        if (persisted.matchedCount !== 1) {
+          const current = await NuscHomeMatchOrder.findById(nuscOrder._id).select('paymentId');
+          if (current?.paymentId && current.paymentId !== paymentId) {
+            await paymentFulfillmentAlertService.alertAdditionalCapture({ orderId, paymentId });
+            return res.json({ status: 'additional_capture_review_required' });
+          }
+        }
+      }
     }
 
     const providerPayment = await razorpay.payments.fetch(paymentId);
@@ -353,7 +430,7 @@ exports.razorpayWebhook = async (req, res) => {
           paymentId,
           error: settlementError.message,
           errorCode: settlementError.code,
-          needsAdminIntervention: true,
+          needsAdminIntervention: false,
         });
       }
       return res.json({ status: 'ok' });

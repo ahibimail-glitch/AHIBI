@@ -14,6 +14,7 @@ import {
   getNuscCheckoutRequestId,
   NUSC_HOME_MATCHES,
 } from "@/lib/nuscHomeMatches";
+import { TICKET_CONFIRMATION_SUPPORT_MESSAGE, TICKET_SUCCESS_SUPPORT_MESSAGE } from "@/lib/ticketSupport";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const SEASON_PASSES = {
@@ -293,7 +294,10 @@ export default function NuscSeasonCheckoutPage() {
       const order = await orderResponse.json();
       if (orderResponse.ok && order.alreadyCompleted) {
         clearNuscCheckoutRequestId(checkoutScope, checkoutRequestId);
-        toast.success("This season pass payment is already confirmed. Opening My Tickets.");
+        toast.success("This season pass payment is already confirmed. Opening My Tickets.", {
+          description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+          duration: 10000,
+        });
         router.push("/profile");
         return;
       }
@@ -321,11 +325,14 @@ export default function NuscSeasonCheckoutPage() {
             }
             clearNuscCheckoutRequestId(checkoutScope, checkoutRequestId);
             setSeasonMatches(verification.seasonMatches || []);
-            toast.success("Season pass confirmed for all 10 home matches.");
+            toast.success("Season pass confirmed for all 10 home matches.", {
+              description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+              duration: 10000,
+            });
           } catch (error) {
             const message = error instanceof Error ? error.message : "Payment was received but ticket confirmation failed.";
             setErrorMessage(message);
-            toast.error(message);
+            toast.error(message, { description: TICKET_CONFIRMATION_SUPPORT_MESSAGE, duration: 12000 });
           } finally {
             setIsBooking(false);
           }

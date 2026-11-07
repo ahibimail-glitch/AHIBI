@@ -43,6 +43,7 @@ import {
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { getApiUrl } from "@/config";
+import { CUSTOMER_CARE_NUMBER } from "@/lib/ticketSupport";
 
 interface UserProfile {
   name: string;
@@ -81,6 +82,7 @@ export default function ProfilePage() {
 
   // Bookings State
   const [userBookings, setUserBookings] = useState<any[]>([]);
+  const [pendingTicketPayments, setPendingTicketPayments] = useState<any[]>([]);
   const [sportsBookings, setSportsBookings] = useState<any[]>([]);
   const [artistBookings, setArtistBookings] = useState<any[]>([]);
   const [bookingType, setBookingType] = useState<"events" | "daily-events" | "artist" | "sports">("events");
@@ -127,6 +129,16 @@ export default function ProfilePage() {
           setProfileData(profileData.data.user);
         } else {
           setError(profileData.message || "Failed to fetch profile");
+        }
+
+        try {
+          const pendingPaymentsRes = await fetch(getApiUrl("/payments/my-pending-tickets"), { headers });
+          const pendingPaymentsData = await pendingPaymentsRes.json().catch((): any => null);
+          if (pendingPaymentsRes.ok && pendingPaymentsData?.success) {
+            setPendingTicketPayments(pendingPaymentsData.data?.items || []);
+          }
+        } catch {
+          setPendingTicketPayments([]);
         }
 
         // Fetch Events
@@ -347,6 +359,31 @@ export default function ProfilePage() {
       {/* Main Content Area */}
       <main className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-7">
         <div className="space-y-4">
+
+            {pendingTicketPayments.length > 0 && (
+              <Card role="status" aria-live="polite" className="border-amber-200 bg-amber-50/80 shadow-sm">
+                <CardContent className="flex gap-3 p-4 sm:p-5">
+                  <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden="true" />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold text-amber-950">Payment received — tickets are processing</h2>
+                    <p className="mt-1 text-sm leading-6 text-amber-900">
+                      Please don’t pay again. Your tickets will appear here when they’re ready. If they don’t appear shortly, contact customer care at{' '}
+                      <a className="font-semibold underline underline-offset-2" href={`tel:${CUSTOMER_CARE_NUMBER.replace(/\s/g, "")}`}>
+                        {CUSTOMER_CARE_NUMBER}
+                      </a>.
+                    </p>
+                    <ul className="mt-3 space-y-1 text-sm text-amber-950">
+                      {pendingTicketPayments.map((payment) => (
+                        <li key={`${payment.type}-${payment.orderId}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-amber-200/80 pt-2">
+                          <span className="font-medium">{payment.eventName}</span>
+                          <span className="text-amber-800">{payment.type} · preparing tickets</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Booking Type Pill Toggle */}
             <div aria-label="Booking type" className="scrollbar-hide flex w-full gap-2 overflow-x-auto rounded-2xl border border-slate-200/80 bg-slate-100/80 p-1.5">

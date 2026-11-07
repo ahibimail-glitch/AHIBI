@@ -3,13 +3,23 @@ const Razorpay = require('razorpay');
 const Booking = require('../models/Booking');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const PendingPaymentSession = require('../models/PendingPaymentSession');
+const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
+const nuscHomeMatchController = require('../controllers/nuscHomeMatchController');
 const eventPaymentSettlement = require('./eventPaymentSettlementService');
 const paymentFulfillmentAlertService = require('./paymentFulfillmentAlertService');
+const { createNuscHomeMatchPaymentReconciliationService } = require('./nuscHomeMatchPaymentReconciliationService');
 
 const RECONCILIATION_INTERVAL_MS = 5 * 60 * 1000;
 const RECONCILIATION_LEASE_MS = 4 * 60 * 1000;
 const MAX_RECONCILIATION_ATTEMPTS = 12;
 const RETRY_BACKOFF_MS = [60 * 1000, 2 * 60 * 1000, 5 * 60 * 1000, 10 * 60 * 1000, 20 * 60 * 1000, 30 * 60 * 1000];
+const nuscHomeMatchReconciliation = createNuscHomeMatchPaymentReconciliationService({
+  NuscHomeMatchOrder,
+  PaymentTransaction,
+  Booking,
+  recoverCapturedOrder: nuscHomeMatchController.recoverCapturedOrder,
+  alertService: paymentFulfillmentAlertService,
+});
 let interval;
 let initialRunTimeout;
 let activeRun;
@@ -344,13 +354,29 @@ async function executeReconciliation() {
   try {
     const razorpay = getRazorpay();
     const now = new Date();
-    const legacyTransactions = await PaymentTransaction.find({
-      status: 'paid_no_booking',
-      orderId: { $type: 'string' },
-      paymentId: { $type: 'string' },
-      needsAdminIntervention: { $ne: true },
-    $or: [{ nextReconciliationAt: { $lte: now } }, { nextReconciliationAt: { $exists: false } }],
-    }).sort({ nextReconciliationAt: 1, updatedAt: 1 }).limit(100).select('_id');
+    const legacyTransactions = await PaymentTransaction.aggregate([
+      {
+        $match: {
+          status: 'paid_no_booking',
+          orderId: { $type: 'string' },
+          paymentId: { $type: 'string' },
+          needsAdminIntervention: { $ne: true },
+          $or: [{ nextReconciliationAt: { $lte: now } }, { nextReconciliationAt: { $exists: false } }],
+        },
+      },
+      {
+        $lookup: {
+          from: NuscHomeMatchOrder.collection.name,
+          localField: 'orderId',
+          foreignField: 'orderId',
+          as: 'nuscOrder',
+        },
+      },
+      { $match: { 'nuscOrder.0': { $exists: false } } },
+      { $sort: { nextReconciliationAt: 1, updatedAt: 1 } },
+      { $limit: 100 },
+      { $project: { _id: 1 } },
+    ]);
     for (const candidate of legacyTransactions) {
       const result = await reconcileLegacyTransaction(candidate, razorpay, now);
       if (result === 'settled') counts.legacySettled += 1;
@@ -371,6 +397,14 @@ async function executeReconciliation() {
       if (result === 'needs-review') counts.needsReview += 1;
     }
 
+    const nusc = await nuscHomeMatchReconciliation.run(razorpay, now);
+    counts.nuscSettled = nusc.settled;
+    counts.nuscFailed = nusc.failed;
+    counts.nuscNeedsReview = nusc.needsReview;
+    counts.nuscNoCapture = nusc.noCapture;
+    counts.nuscIntegrityPending = nusc.integrityPending;
+    counts.nuscIntegrityNeedsReview = nusc.integrityNeedsReview;
+
     const completed = await PendingPaymentSession.find({
       settlementVersion: 2,
       status: 'completed',
@@ -383,7 +417,8 @@ async function executeReconciliation() {
       if (result === 'repair-failed') counts.failed += 1;
       if (result === 'needs-review') counts.needsReview += 1;
     }
-    if (counts.legacySettled || counts.settled || counts.repaired || counts.failed || counts.needsReview) {
+    if (counts.legacySettled || counts.settled || counts.repaired || counts.failed || counts.needsReview ||
+        counts.nuscSettled || counts.nuscFailed || counts.nuscNeedsReview || counts.nuscIntegrityPending || counts.nuscIntegrityNeedsReview) {
       console.log('[Payment reconciliation] Run complete:', counts);
     }
   } catch (error) {

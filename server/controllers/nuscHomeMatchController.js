@@ -6,6 +6,7 @@ const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const User = require('../models/User');
 const inventory = require('../services/nuscHomeMatchInventoryService');
+const paymentFulfillmentAlertService = require('../services/paymentFulfillmentAlertService');
 const SEASON_PASS_OPTIONS = inventory.SEASON_PASS_OPTIONS;
 
 let razorpayClient;
@@ -1075,9 +1076,18 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
     );
     order = await NuscHomeMatchOrder.findOneAndUpdate(
       { _id: claimed._id, status: 'settling' },
-      { $set: { status: 'completed', bookingIds, paymentId: payment.id, settlementLeaseUntil: null, errorMessage: null } },
+      { $set: {
+        status: 'completed', bookingIds, paymentId: payment.id, capturedAt: order?.capturedAt || new Date(),
+        settlementLeaseUntil: null, errorMessage: null, nextReconciliationAt: null,
+        nextIntegrityCheckAt: new Date(Date.now() + 5 * 60 * 1000), needsAdminIntervention: false,
+        lastReconciliationErrorCode: null, lastReconciliationError: null,
+      } },
       { new: true }
     );
+
+    await paymentFulfillmentAlertService.resolveOrderAlerts(claimed.orderId).catch((error) => {
+      console.error('[NUSC checkout] Could not archive resolved payment alerts:', error.message);
+    });
 
     try {
       if (claimed.orderType === 'seasonPass') {
@@ -1152,6 +1162,13 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
+      await paymentFulfillmentAlertService.alertCapturedPaymentNeedsTickets({
+        orderId: claimed.orderId,
+        paymentId: payment.id,
+        error: error.message,
+        errorCode: 'HOLD_EXPIRED',
+        attemptCount: claimed.reconciliationAttemptCount,
+      }).catch((alertError) => console.error('[NUSC checkout] Could not create payment recovery alert:', alertError.message));
       throw new inventory.InventoryConflict('Payment was captured after the ticket hold expired. Contact support for a refund or rebooking.', 'PAID_NO_BOOKING');
     }
 
@@ -1180,6 +1197,13 @@ async function settleCapturedPayment(orderId, payment, signature, { adminRecover
     ).catch((recordError) => {
       console.error('[NUSC checkout] Failed to persist captured-payment recovery record:', recordError.message);
     });
+    await paymentFulfillmentAlertService.alertCapturedPaymentNeedsTickets({
+      orderId: claimed.orderId,
+      paymentId: payment.id,
+      error,
+      errorCode: error.code || 'SETTLEMENT_FAILED',
+      attemptCount: claimed.reconciliationAttemptCount,
+    }).catch((alertError) => console.error('[NUSC checkout] Could not create payment recovery alert:', alertError.message));
     throw error;
   }
 }
@@ -1333,6 +1357,93 @@ async function listAdminOrders(req, res) {
   }
 }
 
+async function reserveInventoryForCapturedOrder(order) {
+  if (order.orderType === 'seasonPass') {
+    const fixtures = order.bookingDetails.fixtures || [];
+    const matches = [];
+    for (const fixture of fixtures) {
+      const event = await Event.findById(fixture.eventId).select('+ticketTypes');
+      if (!event || !event.slug?.startsWith('nusc-home-match-') || inventory.matchDateFromSlug(event.slug) !== fixture.matchDate) {
+        throw new inventory.InventoryConflict('A season match listing is unavailable; restore its listing before ticket recovery.', 'RECOVERY_EVENT_MISSING');
+      }
+      matches.push({ matchDate: fixture.matchDate, ticketTypes: event.ticketTypes });
+    }
+    return inventory.reserveSeasonPassOrder({
+      orderId: order.orderId,
+      userId: order.user,
+      ticketType: order.bookingDetails.ticketType,
+      quantity: order.bookingDetails.quantity,
+      zone: order.bookingDetails.zone,
+      matches,
+      allowSalesClosed: true,
+      skipBuyerLimit: true,
+    });
+  }
+
+  if (order.orderType === 'multiMatch') {
+    const matches = [];
+    for (const fixture of order.bookingDetails.fixtures || []) {
+      const event = await Event.findById(fixture.eventId).select('+ticketTypes');
+      if (!event || !event.slug?.startsWith('nusc-home-match-') || inventory.matchDateFromSlug(event.slug) !== fixture.matchDate) {
+        throw new inventory.InventoryConflict(`The match listing for ${fixture.matchDate} is unavailable; restore its listing before ticket recovery.`, 'RECOVERY_EVENT_MISSING');
+      }
+      matches.push({
+        matchDate: fixture.matchDate,
+        ticketLines: fixture.tickets,
+        eventTicketTypes: event.ticketTypes,
+        existingUserTicketCount: 0,
+      });
+    }
+    return inventory.reserveMultiMatchOrder({
+      orderId: order.inventoryHoldId || order.orderId,
+      userId: order.user,
+      matches,
+      allowSalesClosed: true,
+      skipBuyerLimit: true,
+    });
+  }
+
+  const event = await Event.findById(order.event).select('+ticketTypes');
+  const matchDate = inventory.matchDateFromSlug(event?.slug);
+  if (!event || !event.slug?.startsWith('nusc-home-match-') || !matchDate) {
+    throw new inventory.InventoryConflict('The match listing is unavailable; restore it before ticket recovery.', 'RECOVERY_EVENT_MISSING');
+  }
+  return inventory.reserveMatchOrder({
+    orderId: order.inventoryHoldId || order.orderId,
+    userId: order.user,
+    matchDate,
+    ticketLines: order.bookingDetails.tickets,
+    eventTicketTypes: event.ticketTypes,
+    existingUserTicketCount: 0,
+    allowSalesClosed: true,
+    skipBuyerLimit: true,
+  });
+}
+
+async function recoverCapturedOrder(orderId, payment) {
+  const order = await NuscHomeMatchOrder.findOne({ orderId });
+  if (!order) throw new inventory.InventoryConflict('NUSC payment order was not found.', 'ORDER_NOT_FOUND');
+  if (['refund_pending', 'refunded'].includes(order.status)) {
+    throw new inventory.InventoryConflict('This NUSC order is already in refund processing and cannot issue tickets.', 'REFUND_IN_PROGRESS');
+  }
+  if (order.paymentId && order.paymentId !== payment?.id) {
+    throw new inventory.InventoryConflict('A different captured payment is already attached to this NUSC order.', 'PAYMENT_CONFLICT');
+  }
+  if (payment?.status !== 'captured' || payment?.captured !== true || String(payment.order_id) !== String(order.orderId) ||
+      Number(payment.amount) !== Number(order.amountMinor) || payment.currency !== order.currency) {
+    throw new inventory.InventoryConflict('The captured payment does not match this NUSC order.', 'PAYMENT_MISMATCH');
+  }
+
+  if (order.status !== 'completed') {
+    await NuscHomeMatchOrder.updateOne(
+      { _id: order._id, status: { $nin: ['refund_pending', 'refunded'] }, $or: [{ paymentId: null }, { paymentId: payment.id }] },
+      { $set: { paymentId: payment.id, capturedAt: order.capturedAt || new Date(), needsAdminIntervention: false } },
+    );
+    await reserveInventoryForCapturedOrder(order);
+  }
+  return settleCapturedPayment(order.orderId, payment, null, { adminRecovery: true });
+}
+
 async function retryPaidOrder(req, res) {
   try {
     const order = await NuscHomeMatchOrder.findById(req.params.id);
@@ -1351,60 +1462,7 @@ async function retryPaidOrder(req, res) {
       return res.status(409).json({ success: false, message: 'The captured payment does not match this NUSC order.' });
     }
 
-    if (order.orderType === 'seasonPass') {
-      const fixtures = order.bookingDetails.fixtures || [];
-      const matches = [];
-      const existingUserTicketCountByDate = {};
-      for (const fixture of fixtures) {
-        const event = await Event.findById(fixture.eventId).select('+ticketTypes');
-        if (!event || !event.slug?.startsWith('nusc-home-match-')) {
-          return res.status(409).json({ success: false, message: 'A season match listing is unavailable; refund this order or restore its listing.' });
-        }
-        matches.push({ matchDate: fixture.matchDate, ticketTypes: event.ticketTypes });
-        existingUserTicketCountByDate[fixture.matchDate] = await getExistingBuyerTicketUnits(event._id, order.user);
-      }
-      await inventory.reserveSeasonPassOrder({
-        orderId: order.orderId,
-        userId: order.user,
-        ticketType: order.bookingDetails.ticketType,
-        quantity: order.bookingDetails.quantity,
-        zone: order.bookingDetails.zone,
-        matches,
-        existingUserTicketCountByDate,
-        allowSalesClosed: true,
-      });
-    } else if (order.orderType === 'multiMatch') {
-      const matches = [];
-      for (const fixture of order.bookingDetails.fixtures || []) {
-        const event = await Event.findById(fixture.eventId).select('+ticketTypes');
-        if (!event || inventory.matchDateFromSlug(event.slug) !== fixture.matchDate) {
-          return res.status(409).json({ success: false, message: `The match listing for ${fixture.matchDate} is unavailable; restore its listing before ticket recovery.` });
-        }
-        matches.push({
-          matchDate: fixture.matchDate,
-          ticketLines: fixture.tickets,
-          eventTicketTypes: event.ticketTypes,
-          existingUserTicketCount: await getExistingBuyerTicketUnits(event._id, order.user),
-        });
-      }
-      await inventory.reserveMultiMatchOrder({ orderId: order.inventoryHoldId || order.orderId, userId: order.user, matches, allowSalesClosed: true });
-    } else {
-      const event = await Event.findById(order.event).select('+ticketTypes');
-      if (!event || !event.slug?.startsWith('nusc-home-match-')) {
-        return res.status(409).json({ success: false, message: 'The match listing is unavailable; refund this order or restore its listing.' });
-      }
-      await inventory.reserveMatchOrder({
-        orderId: order.inventoryHoldId || order.orderId,
-        userId: order.user,
-        matchDate: inventory.matchDateFromSlug(event.slug),
-        ticketLines: order.bookingDetails.tickets,
-        eventTicketTypes: event.ticketTypes,
-        existingUserTicketCount: await getExistingBuyerTicketUnits(event._id, order.user),
-        allowSalesClosed: true,
-      });
-    }
-
-    const result = await settleCapturedPayment(order.orderId, payment, null, { adminRecovery: true });
+    const result = await recoverCapturedOrder(order.orderId, payment);
     await NuscHomeMatchOrder.updateOne(
       { _id: order._id },
       { $push: { operationsAudit: { action: 'ticket_reissue', admin: req.user._id, details: {
@@ -1689,6 +1747,7 @@ module.exports = {
   refundOrder,
   reserveSeason,
   retryPaidOrder,
+  recoverCapturedOrder,
   seedTestFixtures,
   settleCapturedPayment,
   verifyPayment,
