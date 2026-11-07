@@ -33,6 +33,7 @@ const AdminNotificationSchema = new mongoose.Schema({
       'booking_cancelled',
       'payment_received',
       'payment_failed',
+      'payment_fulfillment_pending',
       'refund_requested',
       'refund_processed',
       'support_ticket_created',

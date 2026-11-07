@@ -133,6 +133,13 @@ export default function AdminDashboard() {
   const lastUnreadCountRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const requestedView = new URLSearchParams(window.location.search).get("view");
+    if (requestedView === "failed-payments") {
+      setActiveView(requestedView);
+    }
+  }, []);
+
+  useEffect(() => {
     let intervalId: number | undefined;
 
     const playNotificationSound = () => {
@@ -201,7 +208,7 @@ export default function AdminDashboard() {
 
     if (typeof window !== "undefined") {
       fetchUnreadCount();
-      intervalId = window.setInterval(fetchUnreadCount, 300000);
+      intervalId = window.setInterval(fetchUnreadCount, 30000);
     }
 
     return () => {
@@ -417,7 +424,7 @@ export default function AdminDashboard() {
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
           <SidebarButton icon={Ticket} label="On spot booking" active={activeView === "on-spot-booking"} onClick={() => { setActiveView("on-spot-booking"); setSidebarOpen(false); }} />
-          <SidebarButton icon={DollarSign} label="Failed Payments" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="Paid but Not Booked" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="NWA Failed Payments" active={activeView === "nwa-failed-payments"} onClick={() => { setActiveView("nwa-failed-payments"); setSidebarOpen(false); }} />
       
       

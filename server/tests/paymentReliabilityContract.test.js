@@ -7,6 +7,7 @@ const {
   PaymentSettlementError,
   expandPaymentTicketUnits,
 } = require('../services/eventPaymentSettlementService');
+const paymentFulfillmentAlertService = require('../services/paymentFulfillmentAlertService');
 const { createGracefulShutdown } = require('../services/gracefulShutdownService');
 
 test('captured payment expands to the exact stable ticket set', () => {
@@ -56,6 +57,34 @@ test('database schemas declare unique guards for ticket and alert idempotency', 
     options.unique === true &&
     options.partialFilterExpression?.['metadata.dedupeKey']?.$type === 'string'
   )));
+  assert.ok(AdminNotification.schema.path('type').enumValues.includes('payment_fulfillment_pending'));
+});
+
+test('captured-payment fulfillment alerts open the paid-but-not-booked admin report', async () => {
+  const originalFindOneAndUpdate = AdminNotification.findOneAndUpdate;
+  let query;
+  let update;
+  let options;
+  AdminNotification.findOneAndUpdate = async (...args) => {
+    [query, update, options] = args;
+    return { _id: 'notification-test' };
+  };
+
+  try {
+    await paymentFulfillmentAlertService.alertCapturedPaymentNeedsTickets({
+      orderId: 'order_test_123',
+      paymentId: 'pay_test_123',
+      error: 'Ticket settlement is pending',
+      needsAdminIntervention: true,
+    });
+    assert.deepEqual(query, { 'metadata.dedupeKey': 'payment-fulfillment:order_test_123' });
+    assert.equal(update.$set.type, 'payment_fulfillment_pending');
+    assert.equal(update.$set.redirectUrl, '/admin?view=failed-payments');
+    assert.equal(update.$set.actionRequired, true);
+    assert.equal(options.upsert, true);
+  } finally {
+    AdminNotification.findOneAndUpdate = originalFindOneAndUpdate;
+  }
 });
 
 test('graceful shutdown marks draining, stops accepting, drains jobs, then closes Mongo', async () => {

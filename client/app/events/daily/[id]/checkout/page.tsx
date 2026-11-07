@@ -34,6 +34,10 @@ import {
   trackPaymentSuccess,
   trackPurchase,
 } from "@/lib/analytics/google-analytics";
+import {
+  PAYMENT_RECEIVED_PENDING_MESSAGE,
+  TICKET_SUCCESS_SUPPORT_MESSAGE,
+} from "@/lib/ticketSupport";
 
 // Types
 interface TicketType {
@@ -672,13 +676,16 @@ export default function DailyEventCheckoutPage() {
         setIsProcessingPayment(false);
         setIsBooking(false);
         localStorage.setItem(pendingTicketOrderStorageKey, razorpayResponse.razorpay_order_id);
-        toast.info("Payment received. Your tickets are still being issued automatically. Please do not pay again.");
+        toast.info(PAYMENT_RECEIVED_PENDING_MESSAGE, { duration: 12000 });
         return;
       }
       localStorage.removeItem(pendingTicketOrderStorageKey);
       setPaymentPending(false);
 
-      toast.success("Payment successful! Booking confirmed.");
+      toast.success("Payment successful! Booking confirmed.", {
+        description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+        duration: 10000,
+      });
       const analyticsPayload = getAnalyticsEventPayload();
       const currency = "INR";
 
@@ -706,7 +713,7 @@ export default function DailyEventCheckoutPage() {
       setPaymentPending(true);
       setIsProcessingPayment(false);
       setIsBooking(false);
-      toast.info("Payment status is still being confirmed. Please do not pay again; ticket issuance will recover automatically if Razorpay captured the payment.");
+      toast.info(PAYMENT_RECEIVED_PENDING_MESSAGE, { duration: 12000 });
     }
   };
 

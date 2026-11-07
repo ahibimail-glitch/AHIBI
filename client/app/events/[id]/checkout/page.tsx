@@ -55,6 +55,11 @@ import {
   getNuscMatchSlug,
   NUSC_HOME_MATCHES,
 } from "@/lib/nuscHomeMatches";
+import {
+  PAYMENT_RECEIVED_PENDING_MESSAGE,
+  TICKET_CONFIRMATION_SUPPORT_MESSAGE,
+  TICKET_SUCCESS_SUPPORT_MESSAGE,
+} from "@/lib/ticketSupport";
 
 // Types
 interface TicketType {
@@ -916,7 +921,10 @@ export default function CheckoutPage() {
         if (nuscCheckoutScope && nuscCheckoutRequestId) {
           clearNuscCheckoutRequestId(nuscCheckoutScope, nuscCheckoutRequestId);
         }
-        toast.success("This NUSC payment is already confirmed. Opening your ticket.");
+        toast.success("This NUSC payment is already confirmed. Opening your ticket.", {
+          description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+          duration: 10000,
+        });
         router.push(`/events/${eventId}/bookings`);
         return;
       }
@@ -992,7 +1000,7 @@ export default function CheckoutPage() {
           if (!isNuscHomeMatchEvent && verificationData.pending) {
             setIsBooking(false);
             localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
-            toast.info("Payment received. Your tickets are still being issued automatically. Please do not pay again.");
+            toast.info(PAYMENT_RECEIVED_PENDING_MESSAGE, { duration: 12000 });
             return;
           }
 
@@ -1004,7 +1012,12 @@ export default function CheckoutPage() {
             if (nuscCheckoutScope && nuscCheckoutRequestId) {
               clearNuscCheckoutRequestId(nuscCheckoutScope, nuscCheckoutRequestId);
             }
-            if (!event.slug?.startsWith("nusc-home-match-")) toast.success("Booking confirmed!");
+            if (!event.slug?.startsWith("nusc-home-match-")) {
+              toast.success("Booking confirmed!", {
+                description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+                duration: 10000,
+              });
+            }
             localStorage.setItem('lastBookingId', verificationData.booking._id);
             const analyticsPayload = getAnalyticsEventPayload();
             const currency = orderData.currency || "INR";
@@ -1043,7 +1056,10 @@ export default function CheckoutPage() {
                 : 1;
 
               if (remainingDates.length > 0 && passId && currentDate) {
-                toast.success("Match booked. Continue with the remaining fixture checkout.");
+                toast.success("Match booked. Continue with the remaining fixture checkout.", {
+                  description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+                  duration: 10000,
+                });
                 const continuation = new URLSearchParams({
                   continueDates: remainingDates.join(","),
                   nuscPass: passId,
@@ -1055,9 +1071,15 @@ export default function CheckoutPage() {
               }
 
               if (selectedDates.length > 1 || previousCompletedCount > 0) {
-                toast.success("All selected NUSC match checkouts are complete.");
+                toast.success("All selected NUSC match checkouts are complete.", {
+                  description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+                  duration: 10000,
+                });
               } else {
-                toast.success("Booking confirmed!");
+                toast.success("Booking confirmed!", {
+                  description: TICKET_SUCCESS_SUPPORT_MESSAGE,
+                  duration: 10000,
+                });
               }
             }
             router.push(`/events/${eventId}/bookings`);
@@ -1065,13 +1087,16 @@ export default function CheckoutPage() {
             if (!isNuscHomeMatchEvent) {
               setPaymentPending(true);
               localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
-              toast.info("Payment status is still being confirmed. Please do not pay again; ticket issuance will recover automatically if Razorpay captured the payment.");
+              toast.info(PAYMENT_RECEIVED_PENDING_MESSAGE, { duration: 12000 });
             } else {
               const analyticsPayload = getAnalyticsEventPayload();
               if (analyticsPayload) {
                 trackPaymentFailed(analyticsPayload);
               }
-              toast.error(verificationData.message || "Payment verification failed");
+              toast.error(verificationData.message || "Payment verification failed", {
+                description: TICKET_CONFIRMATION_SUPPORT_MESSAGE,
+                duration: 12000,
+              });
             }
           }
         } catch (error) {
@@ -1080,7 +1105,7 @@ export default function CheckoutPage() {
             setPaymentPending(true);
             setIsBooking(false);
             localStorage.setItem(pendingTicketOrderStorageKey, response.razorpay_order_id);
-            toast.info("Payment status is still being confirmed. Please do not pay again; ticket issuance will recover automatically if Razorpay captured the payment.");
+            toast.info(PAYMENT_RECEIVED_PENDING_MESSAGE, { duration: 12000 });
           } else {
             const analyticsPayload = getAnalyticsEventPayload();
             if (analyticsPayload) {

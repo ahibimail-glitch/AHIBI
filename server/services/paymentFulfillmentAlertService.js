@@ -7,7 +7,7 @@ function safeMessage(error) {
   return message || 'Unknown settlement error';
 }
 
-async function upsertPaymentAlert({ dedupeKey, title, message, orderId, paymentId, webhookEventId, eventType, attemptCount, errorCode, needsAdminIntervention = false }) {
+async function upsertPaymentAlert({ dedupeKey, title, message, orderId, paymentId, webhookEventId, eventType, attemptCount, errorCode, needsAdminIntervention = false, notificationType = 'payment_failed', redirectUrl = '/admin' }) {
   if (!dedupeKey) return null;
   const priority = needsAdminIntervention ? 'urgent' : 'high';
   const metadata = {
@@ -22,7 +22,7 @@ async function upsertPaymentAlert({ dedupeKey, title, message, orderId, paymentI
     lastError: safeMessage(message),
   };
   const values = {
-    type: 'payment_failed',
+    type: notificationType,
     title,
     message: safeMessage(message),
     priority,
@@ -33,7 +33,7 @@ async function upsertPaymentAlert({ dedupeKey, title, message, orderId, paymentI
     entityType: 'Payment',
     metadata,
     triggeredBy: { userType: 'System', name: 'Payment fulfillment monitor' },
-    redirectUrl: '/admin',
+    redirectUrl,
   };
 
   try {
@@ -53,13 +53,15 @@ async function upsertPaymentAlert({ dedupeKey, title, message, orderId, paymentI
 async function alertCapturedPaymentNeedsTickets({ orderId, paymentId, error, errorCode, attemptCount, needsAdminIntervention = false }) {
   return upsertPaymentAlert({
     dedupeKey: 'payment-fulfillment:' + orderId,
-    title: needsAdminIntervention ? 'Captured payment needs ticket review' : 'Captured payment is awaiting tickets',
+    title: needsAdminIntervention ? 'Paid but Not Booked: Admin Review Needed' : 'Paid but Not Booked: Ticket Issuance Pending',
     message: 'Captured Razorpay payment for order ' + orderId + ' has no confirmed tickets yet. ' + safeMessage(error),
     orderId,
     paymentId,
     attemptCount,
     errorCode,
     needsAdminIntervention,
+    notificationType: 'payment_fulfillment_pending',
+    redirectUrl: '/admin?view=failed-payments',
   });
 }
 
