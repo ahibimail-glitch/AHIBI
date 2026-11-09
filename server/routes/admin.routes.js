@@ -48,6 +48,7 @@ router.post('/season-pass-recovery/:channel/reissue-new', manualSeasonPassContro
 router.get('/nusc-home-matches/partner-season-passes/:orderId/recovery-preview', nuscPartnerRecoveryController.previewPartnerSeasonPassTicketRecovery);
 router.post('/nusc-home-matches/partner-season-passes/:orderId/recover-missing-tickets', nuscPartnerRecoveryController.recoverPartnerSeasonPassTickets);
 router.get('/nusc-home-matches/paid-no-booking', nuscHomeMatchController.listPaidNoBookingOrders);
+router.post('/nusc-home-matches/orders/:id/paid-no-booking-case-status', nuscHomeMatchController.setPaidNoBookingCaseStatus);
 router.post('/nusc-home-matches/orders/:id/retry-fulfillment', nuscHomeMatchController.retryPaidOrder);
 router.post('/nusc-home-matches/orders/:id/repair-dashboard-access', nuscHomeMatchController.repairDashboardAccess);
 

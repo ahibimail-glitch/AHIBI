@@ -1432,6 +1432,10 @@ async function listAdminOrders(req, res) {
 async function listPaidNoBookingOrders(req, res) {
   let stage = 'nusc-order-query';
   try {
+    const caseStatus = String(req.query.caseStatus || 'open');
+    if (!['open', 'resolved'].includes(caseStatus)) {
+      return res.status(400).json({ success: false, message: 'Case status filter is invalid.' });
+    }
     const now = new Date();
     const expiredCheckoutCutoff = new Date(now.getTime() - 15 * 60 * 1000);
     const candidates = await NuscHomeMatchOrder.find({
@@ -1448,8 +1452,9 @@ async function listPaidNoBookingOrders(req, res) {
         { status: 'completed' },
       ],
       refundStatus: { $nin: ['requested', 'pending', 'processed'] },
+      paidNoBookingCaseStatus: caseStatus === 'resolved' ? 'resolved' : { $ne: 'resolved' },
     })
-      .select('_id orderId paymentId orderType status amount amountMinor currency createdAt settlementLeaseUntil refundStatus bookingDetails user event errorMessage')
+      .select('_id orderId paymentId orderType status amount amountMinor currency createdAt settlementLeaseUntil refundStatus bookingDetails user event errorMessage paidNoBookingCaseStatus paidNoBookingCaseResolvedAt')
       .lean();
 
     if (!candidates.length) return res.json({ success: true, orders: [], verificationIssueCount: 0 });
@@ -1496,7 +1501,11 @@ async function listPaidNoBookingOrders(req, res) {
       )).length;
       const expectedTicketCount = expectedCount > 0 ? expectedCount : null;
       const missingTicketCount = expectedTicketCount === null ? null : expectedTicketCount - dashboardTicketCount;
-      if (missingTicketCount !== null && missingTicketCount <= 0) return [];
+      if (
+        order.paidNoBookingCaseStatus !== 'resolved' &&
+        missingTicketCount !== null &&
+        missingTicketCount <= 0
+      ) return [];
       return [{ order, orderBookings, expectedTicketCount, issuedTicketCount, dashboardTicketCount, missingTicketCount }];
     });
 
@@ -1555,6 +1564,8 @@ async function listPaidNoBookingOrders(req, res) {
           event: eventsById.get(String(order.event || '')) || order.bookingDetails?.event || null,
           bookingDetails: order.bookingDetails,
           errorMessage: order.errorMessage || null,
+          caseStatus: order.paidNoBookingCaseStatus || 'open',
+          caseResolvedAt: order.paidNoBookingCaseResolvedAt || null,
           expectedTicketCount: result.item.expectedTicketCount,
           ticketRecordCount: result.item.orderBookings.length,
           issuedTicketCount: result.item.issuedTicketCount,
@@ -1579,6 +1590,54 @@ async function listPaidNoBookingOrders(req, res) {
       errorCode,
     });
     return res.status(500).json({ success: false, message: 'Unable to load paid NUSC orders with missing tickets.' });
+  }
+}
+
+async function setPaidNoBookingCaseStatus(req, res) {
+  const nextStatus = req.body?.status;
+  if (!['open', 'resolved'].includes(nextStatus)) {
+    return res.status(400).json({ success: false, message: 'Choose open or resolved case status.' });
+  }
+  if (!mongoose.isValidObjectId(req.params.id)) {
+    return res.status(400).json({ success: false, message: 'NUSC order ID is invalid.' });
+  }
+  if (!req.user?._id) {
+    return res.status(401).json({ success: false, message: 'Admin authentication is required.' });
+  }
+
+  try {
+    const order = await NuscHomeMatchOrder.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'NUSC order was not found.' });
+
+    const currentStatus = order.paidNoBookingCaseStatus || 'open';
+    if (currentStatus === nextStatus) {
+      return res.json({
+        success: true,
+        caseStatus: currentStatus,
+        message: `This NUSC case is already ${currentStatus}.`,
+      });
+    }
+
+    const changedAt = new Date();
+    order.paidNoBookingCaseStatus = nextStatus;
+    order.paidNoBookingCaseResolvedAt = nextStatus === 'resolved' ? changedAt : null;
+    order.paidNoBookingCaseResolvedBy = nextStatus === 'resolved' ? req.user._id : null;
+    order.operationsAudit.push({
+      action: nextStatus === 'resolved' ? 'paid_no_booking_case_resolved' : 'paid_no_booking_case_reopened',
+      admin: req.user._id,
+      at: changedAt,
+      details: { previousCaseStatus: currentStatus, caseStatus: nextStatus },
+    });
+    await order.save();
+
+    return res.json({
+      success: true,
+      caseStatus: nextStatus,
+      message: nextStatus === 'resolved' ? 'NUSC case marked resolved.' : 'NUSC case reopened.',
+    });
+  } catch (error) {
+    console.error('[NUSC admin] Paid-no-booking case status update failed:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to update the NUSC case status.' });
   }
 }
 
@@ -2046,6 +2105,7 @@ module.exports = {
   createSeasonPassOrder,
   listSeasonReservations,
   listPaidNoBookingOrders,
+  setPaidNoBookingCaseStatus,
   listAdminOrders,
   repairDashboardAccess,
   reconcileRefund,

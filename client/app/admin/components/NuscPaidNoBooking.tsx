@@ -29,6 +29,8 @@ type PaidNoBookingOrder = {
   issuedTicketCount: number;
   dashboardTicketCount: number;
   missingTicketCount: number | null;
+  caseStatus: "open" | "resolved";
+  caseResolvedAt: string | null;
   recoveryAvailable: boolean;
   dashboardAccessRepairAvailable: boolean;
 };
@@ -45,6 +47,7 @@ function formatAmount(amount: number, currency: string) {
 
 export default function NuscPaidNoBooking() {
   const [orders, setOrders] = useState<PaidNoBookingOrder[]>([]);
+  const [caseStatus, setCaseStatus] = useState<"open" | "resolved">("open");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -57,9 +60,12 @@ export default function NuscPaidNoBooking() {
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
+    setOrders([]);
+    setVerificationIssueCount(0);
     setLoadError(null);
     try {
-      const response = await fetch(`${apiUrl}/api/admin/nusc-home-matches/paid-no-booking`, {
+      const params = new URLSearchParams({ caseStatus });
+      const response = await fetch(`${apiUrl}/api/admin/nusc-home-matches/paid-no-booking?${params.toString()}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -82,7 +88,7 @@ export default function NuscPaidNoBooking() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [caseStatus, token]);
 
   useEffect(() => {
     void loadOrders();
@@ -172,6 +178,41 @@ export default function NuscPaidNoBooking() {
     }
   };
 
+  const updateCaseStatus = async (order: PaidNoBookingOrder) => {
+    if (busyId || loading) return;
+    const nextStatus = caseStatus === "open" ? "resolved" : "open";
+    const message = nextStatus === "resolved"
+      ? "Mark this admin case resolved? This only closes the follow-up; it will not issue tickets, restore dashboard access, or change the payment."
+      : "Reopen this admin case? Ticket and payment status will not change.";
+    if (!window.confirm(message)) return;
+
+    setBusyId(order._id);
+    try {
+      const response = await fetch(
+        `${apiUrl}/api/admin/nusc-home-matches/orders/${encodeURIComponent(order._id)}/paid-no-booking-case-status`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: nextStatus }),
+          credentials: "include",
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || "Unable to update NUSC case status.");
+      toast.success(body.message || (nextStatus === "resolved" ? "Case marked resolved." : "Case reopened."));
+      await loadOrders();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update NUSC case status.";
+      toast.error(message);
+      await loadOrders();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <main className="w-full min-w-0 space-y-5 p-4 md:p-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -194,8 +235,22 @@ export default function NuscPaidNoBooking() {
 
       <section className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-slate-500">Open NUSC cases</p>
-          <p className="text-2xl font-bold text-slate-950">{orders.length}</p>
+          <p className="text-sm text-slate-500">{caseStatus === "open" ? "Open NUSC cases" : "Resolved NUSC cases"}</p>
+          <p className="text-2xl font-bold text-slate-950">{loading ? "—" : loadError ? "Unavailable" : orders.length}</p>
+          <div className="mt-2 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="group" aria-label="NUSC case status">
+            {(["open", "resolved"] as const).map((status) => (
+              <button
+                key={status}
+                type="button"
+                aria-pressed={caseStatus === status}
+                onClick={() => setCaseStatus(status)}
+                disabled={loading || caseStatus === status}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-default ${caseStatus === status ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
         <label className="w-full max-w-xl text-sm font-medium text-slate-700">
           Search customers and orders
@@ -218,7 +273,7 @@ export default function NuscPaidNoBooking() {
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-1 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-semibold text-slate-950">Customers with missing NUSC tickets</h2>
+          <h2 className="font-semibold text-slate-950">{caseStatus === "open" ? "Customers with missing NUSC tickets" : "Resolved NUSC cases"}</h2>
           <span className="text-sm text-slate-500">{visibleOrders.length} case(s)</span>
         </div>
         <div className="w-full overflow-x-auto">
@@ -240,7 +295,7 @@ export default function NuscPaidNoBooking() {
                 <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">Checking NUSC orders and Razorpay payments…</td></tr>
               )}
               {!loading && !loadError && visibleOrders.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">{orders.length ? "No customers match your search." : "No captured NUSC payments are missing dashboard tickets."}</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-slate-500">{orders.length ? "No customers match your search." : caseStatus === "resolved" ? "No NUSC cases have been marked resolved." : "No captured NUSC payments are missing dashboard tickets."}</td></tr>
               )}
               {visibleOrders.map((order) => {
                 const buyer = order.user || order.bookingDetails?.user;
@@ -272,11 +327,14 @@ export default function NuscPaidNoBooking() {
                       <p className="mt-1 text-xs text-slate-500">{order.ticketRecordCount} record(s) exist across accounts; {order.issuedTicketCount} are confirmed as issued.</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold capitalize text-amber-800">{order.status.replaceAll("_", " ")}</span>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${order.caseStatus === "resolved" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{order.caseStatus === "resolved" ? "Resolved" : "Open case"}</span>
+                      <p className="mt-1 text-xs capitalize text-slate-500">Order: {order.status.replaceAll("_", " ")}</p>
+                      {order.caseResolvedAt && <p className="mt-1 text-xs text-slate-500">Marked resolved {new Date(order.caseResolvedAt).toLocaleString("en-IN")}</p>}
                       {order.errorMessage && <p className="mt-1 max-w-56 truncate text-xs text-slate-500" title={order.errorMessage}>{order.errorMessage}</p>}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {order.recoveryAvailable ? (
+                      <div className="flex flex-col items-end gap-2">
+                        {order.recoveryAvailable ? (
                         <button
                           type="button"
                           onClick={() => void recoverOrder(order)}
@@ -285,7 +343,7 @@ export default function NuscPaidNoBooking() {
                         >
                           {busy ? "Reconciling…" : "Reconcile ticket delivery"}
                         </button>
-                      ) : order.dashboardAccessRepairAvailable ? (
+                        ) : order.dashboardAccessRepairAvailable ? (
                         <button
                           type="button"
                           onClick={() => void repairDashboardAccess(order)}
@@ -294,9 +352,18 @@ export default function NuscPaidNoBooking() {
                         >
                           {busy ? "Repairing…" : "Restore dashboard access"}
                         </button>
-                      ) : (
-                        <span className="text-xs font-semibold text-amber-800">Manual review required</span>
-                      )}
+                        ) : (
+                          <span className="text-xs font-semibold text-amber-800">Manual review required</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void updateCaseStatus(order)}
+                          disabled={busyId !== null || loading}
+                          className={`whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${caseStatus === "open" ? "border-emerald-300 text-emerald-800 hover:bg-emerald-50" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}
+                        >
+                          {busy ? (caseStatus === "open" ? "Saving…" : "Reopening…") : caseStatus === "open" ? "Mark resolved" : "Reopen case"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

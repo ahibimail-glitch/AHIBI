@@ -34,6 +34,9 @@ const NuscHomeMatchOrderSchema = new mongoose.Schema({
   bookingIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Booking' }],
   adminTicketReissue: { type: mongoose.Schema.Types.Mixed, default: undefined },
   errorMessage: { type: String },
+  paidNoBookingCaseStatus: { type: String, enum: ['open', 'resolved'], default: 'open' },
+  paidNoBookingCaseResolvedAt: { type: Date, default: null },
+  paidNoBookingCaseResolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
   refundStatus: {
     type: String,
     enum: ['not_requested', 'requested', 'pending', 'processed', 'failed_review'],
