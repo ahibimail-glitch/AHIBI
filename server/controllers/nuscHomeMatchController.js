@@ -23,6 +23,77 @@ function getRazorpay() {
   return razorpayClient;
 }
 
+function expectedTicketRecordCount(order) {
+  const details = order.bookingDetails || {};
+  if (order.orderType === 'seasonPass') {
+    const fixtures = Array.isArray(details.fixtures) ? details.fixtures : [];
+    return fixtures.reduce((total, fixture) => {
+      const quantity = Number(fixture.quantity ?? details.quantity);
+      return total + (Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 0);
+    }, 0);
+  }
+
+  const fixtures = Array.isArray(details.fixtures) && details.fixtures.length
+    ? details.fixtures
+    : [{ tickets: details.tickets }];
+  return fixtures.reduce((total, fixture) => (
+    total + (Array.isArray(fixture.tickets) ? fixture.tickets : []).reduce((fixtureTotal, ticket) => {
+      const quantity = Number(ticket.quantity);
+      return fixtureTotal + (Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 0);
+    }, 0)
+  ), 0);
+}
+
+function isCapturedPaymentForOrder(payment, order) {
+  return payment?.status === 'captured' && payment.captured === true &&
+    String(payment.order_id) === String(order.orderId) &&
+    Number(payment.amount) === Number(order.amountMinor) &&
+    payment.currency === order.currency;
+}
+
+async function findCapturedPaymentForOrder(razorpay, order) {
+  let lookupFailed = false;
+  if (order.paymentId) {
+    try {
+      const payment = await razorpay.payments.fetch(order.paymentId);
+      if (isCapturedPaymentForOrder(payment, order)) return { payment, lookupFailed };
+    } catch {
+      lookupFailed = true;
+    }
+  }
+
+  try {
+    const paymentCollection = await razorpay.orders.fetchPayments(order.orderId);
+    const payments = paymentCollection?.items || [];
+    const payment = payments.find((item) => isCapturedPaymentForOrder(item, order));
+    return { payment: payment || null, lookupFailed, hasProviderPayments: payments.length > 0 };
+  } catch {
+    return { payment: null, lookupFailed: true, hasProviderPayments: false };
+  }
+}
+
+function canRecoverPaidOrder(order, now = new Date(), paymentId = order.paymentId) {
+  if (order.refundStatus && order.refundStatus !== 'not_requested') return false;
+  return order.status === 'paid_no_booking' ||
+    (order.status === 'created' && Boolean(paymentId)) ||
+    (order.status === 'settling' && order.settlementLeaseUntil && new Date(order.settlementLeaseUntil) <= now);
+}
+
+function canRepairDashboardAccess(order, bookings, expectedTicketCount, payment) {
+  if (order.status !== 'completed' || (order.refundStatus && order.refundStatus !== 'not_requested')) return false;
+  if (!Number.isSafeInteger(expectedTicketCount) || expectedTicketCount < 1) return false;
+  if (Number(payment?.amount_refunded || 0) > 0 || bookings.length !== expectedTicketCount) return false;
+
+  const indexes = new Set();
+  for (const booking of bookings) {
+    const index = Number(booking.nuscTicketIndex);
+    if (!Number.isSafeInteger(index) || index < 1 || index > expectedTicketCount || indexes.has(index)) return false;
+    if (booking.status !== 'confirmed' || booking.entryVerified || !['completed', 'paid', 'pending'].includes(booking.paymentStatus)) return false;
+    indexes.add(index);
+  }
+  return indexes.size === expectedTicketCount;
+}
+
 function getTicketUnits(ticketType, quantity) {
   if (ticketType === inventory.SUITE_FULL_BOX || ticketType === inventory.SUITE_SEASON) return quantity * 8;
   return quantity;
@@ -1357,6 +1428,202 @@ async function listAdminOrders(req, res) {
   }
 }
 
+async function listPaidNoBookingOrders(req, res) {
+  try {
+    const now = new Date();
+    const expiredCheckoutCutoff = new Date(now.getTime() - 15 * 60 * 1000);
+    const candidates = await NuscHomeMatchOrder.find({
+      $or: [
+        { status: 'paid_no_booking' },
+        {
+          status: 'created',
+          $or: [
+            { paymentId: { $type: 'string', $ne: '' } },
+            { createdAt: { $lte: expiredCheckoutCutoff } },
+          ],
+        },
+        { status: 'settling', $or: [{ settlementLeaseUntil: { $lte: now } }, { settlementLeaseUntil: null }] },
+        { status: 'completed' },
+      ],
+      refundStatus: { $nin: ['requested', 'pending', 'processed'] },
+    })
+      .populate('user', 'name email phone')
+      .populate('event', 'title startDate slug')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!candidates.length) return res.json({ success: true, orders: [], verificationIssueCount: 0 });
+
+    const bookings = await Booking.find({ nuscOrderId: { $in: candidates.map((order) => order.orderId) } })
+      .select('nuscOrderId nuscTicketIndex user status paymentStatus entryVerified')
+      .lean();
+    const bookingsByOrder = new Map();
+    for (const booking of bookings) {
+      if (!bookingsByOrder.has(booking.nuscOrderId)) bookingsByOrder.set(booking.nuscOrderId, []);
+      bookingsByOrder.get(booking.nuscOrderId).push(booking);
+    }
+
+    const missingTicketOrders = candidates.flatMap((order) => {
+      const expectedCount = expectedTicketRecordCount(order);
+      const orderBookings = bookingsByOrder.get(order.orderId) || [];
+      const orderUserId = String(order.user?._id || order.user || '');
+      const issuedTicketCount = orderBookings.filter((booking) => (
+        ['confirmed', 'checked-in'].includes(booking.status) && booking.paymentStatus === 'completed'
+      )).length;
+      // The profile requests bookings by user ID, then displays completed/paid records.
+      const dashboardTicketCount = orderBookings.filter((booking) => (
+        String(booking.user || '') === orderUserId && ['completed', 'paid'].includes(booking.paymentStatus)
+      )).length;
+      const expectedTicketCount = expectedCount > 0 ? expectedCount : null;
+      const missingTicketCount = expectedTicketCount === null ? null : expectedTicketCount - dashboardTicketCount;
+      if (missingTicketCount !== null && missingTicketCount <= 0) return [];
+      return [{ order, orderBookings, expectedTicketCount, issuedTicketCount, dashboardTicketCount, missingTicketCount }];
+    });
+
+    let verificationIssueCount = 0;
+    let razorpay;
+    try {
+      razorpay = getRazorpay();
+    } catch (error) {
+      console.error('[NUSC admin] Paid-order verification is unavailable:', error.message);
+      return res.status(503).json({ success: false, message: 'Razorpay payment verification is unavailable. Refresh and try again.', verificationIssueCount: missingTicketOrders.length });
+    }
+
+    const verifiedOrders = [];
+    for (let index = 0; index < missingTicketOrders.length; index += 5) {
+      const batch = missingTicketOrders.slice(index, index + 5);
+      const results = await Promise.all(batch.map(async (item) => {
+        try {
+          const { payment, lookupFailed, hasProviderPayments } = await findCapturedPaymentForOrder(razorpay, item.order);
+          if (!payment) {
+            const suspectedPaidOrder = item.order.status !== 'created' || Boolean(item.order.paymentId);
+            return { issue: suspectedPaidOrder || lookupFailed || hasProviderPayments };
+          }
+          return { item, payment };
+        } catch (error) {
+          console.error('[NUSC admin] Could not verify a paid-order candidate:', error.message);
+          return { issue: true };
+        }
+      }));
+
+      for (const result of results) {
+        if (result.issue) {
+          verificationIssueCount += 1;
+          continue;
+        }
+        const { order } = result.item;
+        const paymentMatchesStoredId = !order.paymentId || order.paymentId === result.payment.id;
+        const dashboardAccessRepairAvailable = paymentMatchesStoredId && result.item.missingTicketCount > 0 && canRepairDashboardAccess(
+          order,
+          result.item.orderBookings,
+          result.item.expectedTicketCount,
+          result.payment,
+        );
+        verifiedOrders.push({
+          _id: order._id,
+          orderId: order.orderId,
+          paymentId: result.payment.id,
+          orderType: order.orderType,
+          status: order.status,
+          amount: order.amount,
+          currency: order.currency,
+          createdAt: order.createdAt,
+          paymentCreatedAt: result.payment.created_at ? new Date(result.payment.created_at * 1000) : null,
+          user: order.user || order.bookingDetails?.user || null,
+          event: order.event || order.bookingDetails?.event || null,
+          bookingDetails: order.bookingDetails,
+          errorMessage: order.errorMessage || null,
+          expectedTicketCount: result.item.expectedTicketCount,
+          ticketRecordCount: result.item.orderBookings.length,
+          issuedTicketCount: result.item.issuedTicketCount,
+          dashboardTicketCount: result.item.dashboardTicketCount,
+          missingTicketCount: result.item.missingTicketCount,
+          recoveryAvailable: paymentMatchesStoredId && canRecoverPaidOrder(order, now, result.payment.id) &&
+            result.item.expectedTicketCount !== null && Number(result.payment.amount_refunded || 0) === 0,
+          dashboardAccessRepairAvailable,
+        });
+      }
+    }
+
+    return res.json({ success: true, orders: verifiedOrders, verificationIssueCount });
+  } catch (error) {
+    console.error('[NUSC admin] Paid but not booked list failed:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to load paid NUSC orders with missing tickets.' });
+  }
+}
+
+async function repairDashboardAccess(req, res) {
+  try {
+    const order = await NuscHomeMatchOrder.findById(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'NUSC order was not found.' });
+    const payment = (await findCapturedPaymentForOrder(getRazorpay(), order)).payment;
+    if (!payment || (order.paymentId && order.paymentId !== payment.id) || Number(payment.amount_refunded || 0) > 0) {
+      return res.status(409).json({ success: false, message: 'The captured payment could not be verified as fully paid. No dashboard access was changed.' });
+    }
+
+    let repairedTicketCount = 0;
+    const session = await Booking.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const currentOrder = await NuscHomeMatchOrder.findById(order._id).session(session);
+        if (!currentOrder) {
+          const error = new Error('NUSC order was not found.');
+          error.statusCode = 409;
+          throw error;
+        }
+        const expectedTicketCount = expectedTicketRecordCount(currentOrder);
+        const currentBookings = await Booking.find({ nuscOrderId: currentOrder.orderId })
+          .select('nuscTicketIndex user status paymentStatus entryVerified')
+          .session(session)
+          .lean();
+        if (!canRepairDashboardAccess(currentOrder.toObject(), currentBookings, expectedTicketCount, payment)) {
+          const error = new Error('This order does not have a complete, unused ticket set eligible for automatic dashboard repair. No changes were made.');
+          error.statusCode = 409;
+          throw error;
+        }
+
+        const bookingIds = currentBookings.map((booking) => booking._id);
+        const previouslyLinkedAccounts = new Set(currentBookings
+          .map((booking) => String(booking.user || ''))
+          .filter((userId) => userId && userId !== String(currentOrder.user)));
+        const update = await Booking.updateMany(
+          {
+            _id: { $in: bookingIds },
+            nuscOrderId: currentOrder.orderId,
+            status: 'confirmed',
+            entryVerified: { $ne: true },
+            paymentStatus: { $in: ['completed', 'paid', 'pending'] },
+          },
+          { $set: { user: currentOrder.user, paymentStatus: 'completed' } },
+          { session },
+        );
+        if (update.matchedCount !== expectedTicketCount) {
+          const error = new Error('Ticket records changed during repair. Refresh and review the order; no changes were made.');
+          error.statusCode = 409;
+          throw error;
+        }
+
+        await NuscHomeMatchOrder.updateOne(
+          { _id: currentOrder._id },
+          { $push: { operationsAudit: { action: 'dashboard_access_repair', admin: req.user._id, details: { bookingCount: expectedTicketCount, relinkedAccountCount: previouslyLinkedAccounts.size } } } },
+          { session },
+        );
+        repairedTicketCount = expectedTicketCount;
+      });
+    } catch (error) {
+      if (error.statusCode === 409) return res.status(409).json({ success: false, message: error.message });
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+
+    return res.json({ success: true, message: 'Verified NUSC tickets are now linked to the purchasing account for dashboard display.', bookingCount: repairedTicketCount });
+  } catch (error) {
+    console.error('[NUSC admin] Dashboard access repair failed:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to repair NUSC dashboard access.' });
+  }
+}
+
 async function reserveInventoryForCapturedOrder(order) {
   if (order.orderType === 'seasonPass') {
     const fixtures = order.bookingDetails.fixtures || [];
@@ -1448,18 +1715,24 @@ async function retryPaidOrder(req, res) {
   try {
     const order = await NuscHomeMatchOrder.findById(req.params.id);
     if (!order) return res.status(404).json({ success: false, message: 'NUSC order was not found.' });
+    if (order.refundStatus && order.refundStatus !== 'not_requested') {
+      return res.status(409).json({ success: false, message: 'This NUSC order has a refund review or refund in progress and cannot be recovered automatically.' });
+    }
+    const suppliedPaymentId = String(req.body?.paymentId || '');
     const staleSettlement = order.status === 'settling' && order.settlementLeaseUntil && new Date(order.settlementLeaseUntil) <= new Date();
-    const capturedPaymentNeedsRecovery = order.status === 'created' && Boolean(order.paymentId);
+    const capturedPaymentNeedsRecovery = order.status === 'created' && Boolean(order.paymentId || suppliedPaymentId);
     if (order.status !== 'paid_no_booking' && !staleSettlement && !capturedPaymentNeedsRecovery) {
       return res.status(409).json({ success: false, message: 'Only paid orders without tickets or expired settlement attempts can be retried.' });
     }
 
-    const paymentId = order.paymentId;
-    if (!paymentId) return res.status(409).json({ success: false, message: 'No captured payment is attached to this order.' });
-    const payment = await getRazorpay().payments.fetch(paymentId);
-    if (payment.status !== 'captured' || String(payment.order_id) !== String(order.orderId) ||
-        Number(payment.amount) !== Number(order.amountMinor) || payment.currency !== order.currency) {
+    const paymentOrder = order.toObject();
+    paymentOrder.paymentId = order.paymentId || suppliedPaymentId || null;
+    const { payment } = await findCapturedPaymentForOrder(getRazorpay(), paymentOrder);
+    if (!payment) {
       return res.status(409).json({ success: false, message: 'The captured payment does not match this NUSC order.' });
+    }
+    if (Number(payment.amount_refunded || 0) > 0) {
+      return res.status(409).json({ success: false, message: 'Razorpay reports a refund against this payment. Ticket recovery requires manual review.' });
     }
 
     const result = await recoverCapturedOrder(order.orderId, payment);
@@ -1742,7 +2015,9 @@ module.exports = {
   createMultiMatchOrder,
   createSeasonPassOrder,
   listSeasonReservations,
+  listPaidNoBookingOrders,
   listAdminOrders,
+  repairDashboardAccess,
   reconcileRefund,
   refundOrder,
   reserveSeason,

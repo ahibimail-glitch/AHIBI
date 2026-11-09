@@ -13,6 +13,7 @@ const onSpotBookingController = require('../controllers/onSpotBookingController'
 const adminBookingsController = require('../controllers/adminBookingsController');
 const manualSeasonPassController = require('../controllers/manualSeasonPassController');
 const nuscPartnerRecoveryController = require('../controllers/nuscPartnerRecoveryController');
+const nuscHomeMatchController = require('../controllers/nuscHomeMatchController');
 
 // Public admin routes (unprotected)
 router.get('/users', adminController.getUsers);
@@ -46,6 +47,9 @@ router.post('/season-pass-recovery/:channel/reissue-payment-verification', manua
 router.post('/season-pass-recovery/:channel/reissue-new', manualSeasonPassController.reissueNewSeasonPassTickets);
 router.get('/nusc-home-matches/partner-season-passes/:orderId/recovery-preview', nuscPartnerRecoveryController.previewPartnerSeasonPassTicketRecovery);
 router.post('/nusc-home-matches/partner-season-passes/:orderId/recover-missing-tickets', nuscPartnerRecoveryController.recoverPartnerSeasonPassTickets);
+router.get('/nusc-home-matches/paid-no-booking', nuscHomeMatchController.listPaidNoBookingOrders);
+router.post('/nusc-home-matches/orders/:id/retry-fulfillment', nuscHomeMatchController.retryPaidOrder);
+router.post('/nusc-home-matches/orders/:id/repair-dashboard-access', nuscHomeMatchController.repairDashboardAccess);
 
 // Event management
 router.get('/events', eventController.getEvents);
