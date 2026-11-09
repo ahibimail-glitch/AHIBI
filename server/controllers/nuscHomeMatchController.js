@@ -1348,6 +1348,50 @@ async function listSeasonReservations(req, res) {
   }
 }
 
+async function getCapacityControls(req, res) {
+  try {
+    const slugs = inventory.FIXTURE_MATCHES.map((match) => `nusc-home-match-${match.date.replace(/-/g, '')}`);
+    const events = await Event.find({ slug: { $in: slugs } }).select('+ticketTypes');
+    const eventsBySlug = new Map(events.map((event) => [event.slug, event]));
+    const matches = inventory.FIXTURE_MATCHES.map((match) => {
+      const event = eventsBySlug.get(`nusc-home-match-${match.date.replace(/-/g, '')}`);
+      return { matchDate: match.date, opponent: match.opponent, ticketTypes: event?.ticketTypes || [] };
+    });
+    const overview = await inventory.getAdminCapacityOverview({ matches });
+    return res.status(200).json({ success: true, overview });
+  } catch (error) {
+    console.error('[NUSC capacity] Overview load failed:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to load NUSC ticket capacity.' });
+  }
+}
+
+async function updateCapacityControl(req, res) {
+  try {
+    const { ticketType, capacity } = req.body || {};
+    const matchDate = req.body?.matchDate || null;
+    let soldCount = 0;
+    if (matchDate) {
+      const slug = `nusc-home-match-${String(matchDate).replace(/-/g, '')}`;
+      const event = await Event.findOne({ slug }).select('+ticketTypes');
+      const eventTicket = event?.ticketTypes?.find((ticket) => ticket.name === ticketType);
+      soldCount = Number(eventTicket?.sold || 0);
+    }
+    const override = await inventory.setCapacityOverride({
+      matchDate,
+      ticketType,
+      capacity,
+      adminId: req.user?._id,
+      soldCount,
+    });
+    return res.status(200).json({ success: true, override });
+  } catch (error) {
+    const status = error.code === 'CAPACITY_BELOW_COMMITTED' ? 409 :
+      ['INVALID_CAPACITY_TYPE', 'INVALID_CAPACITY', 'INVALID_MATCH_DATE', 'ADMIN_REQUIRED'].includes(error.code) ? 400 : 500;
+    if (status === 500) console.error('[NUSC capacity] Capacity update failed:', error.message);
+    return res.status(status).json({ success: false, message: error.message || 'Unable to update NUSC ticket capacity.', code: error.code });
+  }
+}
+
 async function cancelSeason(req, res) {
   try {
     const reservation = await inventory.cancelSeasonBox(req.params.id, req.user?._id);
@@ -2103,6 +2147,8 @@ module.exports = {
   createOrder,
   createMultiMatchOrder,
   createSeasonPassOrder,
+  getCapacityControls,
+  updateCapacityControl,
   listSeasonReservations,
   listPaidNoBookingOrders,
   setPaidNoBookingCaseStatus,

@@ -8,12 +8,13 @@ process.env.RAZORPAY_KEY_ID = 'rzp_test_acceptance';
 process.env.MONGO_URI = 'mongodb://localhost:27017/ahibi-test';
 
 const InventoryModel = require('../models/NuscHomeMatchInventory');
+const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const inventory = require('../services/nuscHomeMatchInventoryService');
 
 let state;
 InventoryModel.updateOne = async (filter, update, options = {}) => {
   if (!state && options.upsert) {
-    state = { _id: 'test-inventory', __v: 0, key: filter.key, orders: [], generalZoneSales: [], seasonPassOrders: [], seasonReservations: [] };
+    state = { _id: 'test-inventory', __v: 0, key: filter.key, orders: [], generalZoneSales: [], seasonPassOrders: [], seasonReservations: [], capacityOverrides: [] };
     return { modifiedCount: 1, upsertedCount: 1 };
   }
   await new Promise((resolve) => setImmediate(resolve));
@@ -23,8 +24,13 @@ InventoryModel.updateOne = async (filter, update, options = {}) => {
   return { modifiedCount: 1 };
 };
 InventoryModel.findOne = () => ({ lean: async () => state && JSON.parse(JSON.stringify(state)) });
+NuscHomeMatchOrder.find = () => ({
+  select() { return this; },
+  session() { return this; },
+  lean: async () => [],
+});
 
-const matchDate = inventory.FIXTURE_DATES[0];
+const matchDate = inventory.FIXTURE_DATES[1];
 
 test.beforeEach(() => {
   state = null;
@@ -91,6 +97,21 @@ test('single-pass sales do not consume full-box inventory', async () => {
   ]);
   assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_SINGLE).quantity, 0);
   assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_FULL_BOX).quantity, 3);
+});
+
+test('on-spot Suite box sales remain committed in match availability', async () => {
+  await inventory.recordOnSpotMatchSale({
+    saleId: 'on-spot-full-box',
+    adminId: 'admin-1',
+    matchDate,
+    ticketLines: [{ ticketType: inventory.SUITE_FULL_BOX, quantity: 1 }],
+    eventTicketTypes: [],
+  });
+
+  const availability = await inventory.getMatchAvailability(matchDate, [
+    { name: inventory.SUITE_FULL_BOX, quantity: 3, sold: 0 },
+  ]);
+  assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_FULL_BOX).quantity, 2);
 });
 
 test('concurrent orders cannot oversell the final single-pass seat', async () => {

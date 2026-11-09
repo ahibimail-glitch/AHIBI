@@ -352,25 +352,29 @@ export default function NuscHomeMatchesPage() {
     if (!ticket) return "Unavailable";
 
     const remaining = Math.max(0, Number(ticket.quantity || 0) - Number(ticket.sold || 0));
-    return remaining === 0 ? "Sold out" : `${remaining}/${capacity}`;
+    const effectiveCapacity = Math.max(0, Number(ticket.capacity ?? capacity));
+    return remaining === 0 ? "Sold out" : `${remaining}/${effectiveCapacity}`;
   };
 
   const singleMatchAvailability = getSuiteAvailability(
     selectedMatchDates[0] || NUSC_HOME_MATCHES[0].date,
     NUSC_PASS_TICKET_TYPES["suite-single-match"],
-    1,
+    2,
   );
-  const singleMatchAvailable = singleMatchAvailability === "1/1";
-  const singleMatchAvailabilityLabel = singleMatchAvailable ? "1 ticket available" : singleMatchAvailability;
+  const singleMatchRemaining = Number(singleMatchAvailability.split("/")[0]);
+  const singleMatchAvailable = Number.isFinite(singleMatchRemaining) && singleMatchRemaining > 0;
+  const singleMatchAvailabilityLabel = singleMatchAvailable
+    ? `${singleMatchRemaining} ${singleMatchRemaining === 1 ? "ticket" : "tickets"} available`
+    : singleMatchAvailability;
 
   const renderSuitePassAvailability = (passId: string) => {
     const isSingleSeat = passId === "suite-single";
     const isSingleMatchBox = passId === "suite-single-match";
     if (!isSingleSeat && !isSingleMatchBox && passId !== "suite-box-single") return null;
 
-    const label = isSingleMatchBox ? "One ticket across all 10 matches" : isSingleSeat ? "Seats left (of 8)" : "Boxes left (of 3)";
+    const label = isSingleMatchBox ? "Tickets left (across all 10 matches)" : isSingleSeat ? "Seats left" : "Boxes left";
     const ticketName = NUSC_PASS_TICKET_TYPES[passId];
-    const capacity = isSingleMatchBox ? 1 : isSingleSeat ? 8 : 3;
+    const capacity = isSingleMatchBox ? 2 : isSingleSeat ? 8 : 3;
     const matches = NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date));
     if (matches.length === 0) return null;
 
@@ -539,7 +543,7 @@ export default function NuscHomeMatchesPage() {
           {passCategory === "single-match" && (
             <fieldset className="mt-7 w-full min-w-0 max-w-full">
               <legend className="text-sm font-semibold text-[#343b35]">{selectedPass === "suite-single-match" ? "Step 1 · Choose one match date" : "Step 1 · Choose match dates"}</legend>
-              <p className="mt-1 text-sm leading-5 text-[#69716a]">{selectedPass === "suite-single-match" ? "Select one match date for the single available United Suite box." : "Select one or more matches. Next, choose a pass below."}</p>
+              <p className="mt-1 text-sm leading-5 text-[#69716a]">{selectedPass === "suite-single-match" ? "Choose one match date to check availability across all 10 matches." : "Select one or more matches. Next, choose a pass below."}</p>
               {selectedMatchDates.length > 0 && (
                 <Link
                   href="#pass-card-options"
