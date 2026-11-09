@@ -1529,8 +1529,8 @@ async function listPaidNoBookingOrders(req, res) {
       }));
 
       for (const result of results) {
-        if (result.issue) {
-          verificationIssueCount += 1;
+        if (!result?.item || !result?.payment) {
+          if (result?.issue) verificationIssueCount += 1;
           continue;
         }
         const { order } = result.item;
