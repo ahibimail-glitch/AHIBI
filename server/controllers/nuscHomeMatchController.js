@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const Razorpay = require('razorpay');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
@@ -28,7 +29,7 @@ function expectedTicketRecordCount(order) {
   if (order.orderType === 'seasonPass') {
     const fixtures = Array.isArray(details.fixtures) ? details.fixtures : [];
     return fixtures.reduce((total, fixture) => {
-      const quantity = Number(fixture.quantity ?? details.quantity);
+      const quantity = Number(fixture?.quantity ?? details.quantity);
       return total + (Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 0);
     }, 0);
   }
@@ -37,8 +38,8 @@ function expectedTicketRecordCount(order) {
     ? details.fixtures
     : [{ tickets: details.tickets }];
   return fixtures.reduce((total, fixture) => (
-    total + (Array.isArray(fixture.tickets) ? fixture.tickets : []).reduce((fixtureTotal, ticket) => {
-      const quantity = Number(ticket.quantity);
+    total + (Array.isArray(fixture?.tickets) ? fixture.tickets : []).reduce((fixtureTotal, ticket) => {
+      const quantity = Number(ticket?.quantity);
       return fixtureTotal + (Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 0);
     }, 0)
   ), 0);
@@ -1429,6 +1430,7 @@ async function listAdminOrders(req, res) {
 }
 
 async function listPaidNoBookingOrders(req, res) {
+  let stage = 'nusc-order-query';
   try {
     const now = new Date();
     const expiredCheckoutCutoff = new Date(now.getTime() - 15 * 60 * 1000);
@@ -1447,16 +1449,34 @@ async function listPaidNoBookingOrders(req, res) {
       ],
       refundStatus: { $nin: ['requested', 'pending', 'processed'] },
     })
-      .populate('user', 'name email phone')
-      .populate('event', 'title startDate slug')
-      .sort({ createdAt: -1 })
+      .select('_id orderId paymentId orderType status amount amountMinor currency createdAt settlementLeaseUntil refundStatus bookingDetails user event errorMessage')
       .lean();
 
     if (!candidates.length) return res.json({ success: true, orders: [], verificationIssueCount: 0 });
 
+    stage = 'booking-query';
     const bookings = await Booking.find({ nuscOrderId: { $in: candidates.map((order) => order.orderId) } })
       .select('nuscOrderId nuscTicketIndex user status paymentStatus entryVerified')
       .lean();
+
+    const customerIds = [...new Set(candidates
+      .map((order) => String(order.user || ''))
+      .filter((id) => mongoose.Types.ObjectId.isValid(id)))];
+    const eventIds = [...new Set(candidates
+      .map((order) => String(order.event || ''))
+      .filter((id) => mongoose.Types.ObjectId.isValid(id)))];
+    stage = 'customer-query';
+    const customers = customerIds.length
+      ? await User.find({ _id: { $in: customerIds } }).select('name email phone').lean()
+      : [];
+    stage = 'event-query';
+    const events = eventIds.length
+      ? await Event.find({ _id: { $in: eventIds } }).select('title startDate slug').lean()
+      : [];
+    const customersById = new Map(customers.map((customer) => [String(customer._id), customer]));
+    const eventsById = new Map(events.map((event) => [String(event._id), event]));
+
+    stage = 'ticket-visibility-analysis';
     const bookingsByOrder = new Map();
     for (const booking of bookings) {
       if (!bookingsByOrder.has(booking.nuscOrderId)) bookingsByOrder.set(booking.nuscOrderId, []);
@@ -1466,7 +1486,7 @@ async function listPaidNoBookingOrders(req, res) {
     const missingTicketOrders = candidates.flatMap((order) => {
       const expectedCount = expectedTicketRecordCount(order);
       const orderBookings = bookingsByOrder.get(order.orderId) || [];
-      const orderUserId = String(order.user?._id || order.user || '');
+      const orderUserId = String(order.user || '');
       const issuedTicketCount = orderBookings.filter((booking) => (
         ['confirmed', 'checked-in'].includes(booking.status) && booking.paymentStatus === 'completed'
       )).length;
@@ -1482,6 +1502,7 @@ async function listPaidNoBookingOrders(req, res) {
 
     let verificationIssueCount = 0;
     let razorpay;
+    stage = 'payment-provider-configuration';
     try {
       razorpay = getRazorpay();
     } catch (error) {
@@ -1490,6 +1511,7 @@ async function listPaidNoBookingOrders(req, res) {
     }
 
     const verifiedOrders = [];
+    stage = 'payment-provider-verification';
     for (let index = 0; index < missingTicketOrders.length; index += 5) {
       const batch = missingTicketOrders.slice(index, index + 5);
       const results = await Promise.all(batch.map(async (item) => {
@@ -1529,8 +1551,8 @@ async function listPaidNoBookingOrders(req, res) {
           currency: order.currency,
           createdAt: order.createdAt,
           paymentCreatedAt: result.payment.created_at ? new Date(result.payment.created_at * 1000) : null,
-          user: order.user || order.bookingDetails?.user || null,
-          event: order.event || order.bookingDetails?.event || null,
+          user: customersById.get(String(order.user || '')) || order.bookingDetails?.user || null,
+          event: eventsById.get(String(order.event || '')) || order.bookingDetails?.event || null,
           bookingDetails: order.bookingDetails,
           errorMessage: order.errorMessage || null,
           expectedTicketCount: result.item.expectedTicketCount,
@@ -1545,9 +1567,17 @@ async function listPaidNoBookingOrders(req, res) {
       }
     }
 
+    verifiedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return res.json({ success: true, orders: verifiedOrders, verificationIssueCount });
   } catch (error) {
-    console.error('[NUSC admin] Paid but not booked list failed:', error.message);
+    const errorCode = typeof error?.code === 'string' || typeof error?.code === 'number'
+      ? String(error.code)
+      : 'UNKNOWN';
+    console.error('[NUSC admin] Paid but not booked list failed:', {
+      stage,
+      errorName: error?.name || 'Error',
+      errorCode,
+    });
     return res.status(500).json({ success: false, message: 'Unable to load paid NUSC orders with missing tickets.' });
   }
 }
