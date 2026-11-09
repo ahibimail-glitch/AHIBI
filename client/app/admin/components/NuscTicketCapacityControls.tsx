@@ -3,19 +3,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  capacityCount,
+  capacityRowIsEditable,
+  committedCapacityCount,
+  formatCapacityMetric,
+} from "@/lib/nuscTicketCapacityMetrics";
 
 type CapacityRow = {
   matchDate: string | null;
   ticketType: string;
   label: string;
   unit: string;
-  capacity: number;
+  capacity?: number | null;
   defaultCapacity: number;
-  maxCapacity: number;
-  sold: number;
-  held: number;
-  offlineReserved: number;
-  available: number;
+  maxCapacity?: number | null;
+  sold?: number | null;
+  held?: number | null;
+  offlineReserved?: number | null;
+  available?: number | null;
   limitingMatchAvailability?: number;
   updatedAt?: string | null;
 };
@@ -41,7 +47,7 @@ function rowKey(row: CapacityRow) {
 }
 
 function committedCount(row: CapacityRow) {
-  return row.sold + row.held + row.offlineReserved;
+  return committedCapacityCount(row);
 }
 
 export default function NuscTicketCapacityControls() {
@@ -83,9 +89,17 @@ export default function NuscTicketCapacityControls() {
 
   const saveCapacity = async (row: CapacityRow) => {
     const key = rowKey(row);
-    const capacity = Number(drafts[key] ?? row.capacity);
-    if (!Number.isInteger(capacity) || capacity < committedCount(row) || capacity > row.maxCapacity) {
-      toast.error(`Enter a whole number from ${committedCount(row)} to ${row.maxCapacity}.`);
+    const committed = committedCount(row);
+    const currentCapacity = capacityCount(row.capacity);
+    const maxCapacity = capacityCount(row.maxCapacity);
+    if (!capacityRowIsEditable(row) || committed === null || currentCapacity === null || maxCapacity === null) {
+      toast.error("Capacity details are incomplete. Reload the page before changing this row.");
+      return;
+    }
+
+    const capacity = Number(drafts[key] ?? currentCapacity);
+    if (!Number.isInteger(capacity) || capacity < committed || capacity > maxCapacity) {
+      toast.error(`Enter a whole number from ${committed} to ${maxCapacity}.`);
       return;
     }
     setBusyKey(key);
@@ -114,8 +128,12 @@ export default function NuscTicketCapacityControls() {
 
   const renderRow = (row: CapacityRow) => {
     const key = rowKey(row);
-    const draftValue = drafts[key] ?? String(row.capacity);
-    const changed = Number(draftValue) !== row.capacity;
+    const currentCapacity = capacityCount(row.capacity);
+    const maxCapacity = capacityCount(row.maxCapacity);
+    const committed = committedCount(row);
+    const rowEditable = capacityRowIsEditable(row);
+    const draftValue = drafts[key] ?? (currentCapacity === null ? "" : String(currentCapacity));
+    const changed = currentCapacity !== null && Number(draftValue) !== currentCapacity;
     return (
       <div key={key} className="grid grid-cols-2 gap-3 border-t border-slate-100 py-4 sm:grid-cols-[minmax(180px,1.4fr)_100px_repeat(4,minmax(68px,0.7fr))_96px] sm:items-center sm:gap-4">
         <div className="col-span-2 min-w-0 sm:col-span-1">
@@ -128,13 +146,14 @@ export default function NuscTicketCapacityControls() {
             aria-label={`${row.label} capacity${row.matchDate ? ` for ${row.matchDate}` : ""}`}
             className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm text-slate-900 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
             type="number"
-            min={committedCount(row)}
-            max={row.maxCapacity}
+            min={committed ?? undefined}
+            max={maxCapacity ?? undefined}
             step={1}
             value={draftValue}
+            disabled={!rowEditable}
             onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
           />
-          <span>Max {row.maxCapacity}</span>
+          <span>Max {formatCapacityMetric(row.maxCapacity)}</span>
         </label>
         <Metric label="Sold" value={row.sold} />
         <Metric label="Held" value={row.held} />
@@ -143,12 +162,17 @@ export default function NuscTicketCapacityControls() {
         <Button
           type="button"
           size="sm"
-          disabled={!changed || busyKey !== null || loading}
+          disabled={!changed || !rowEditable || busyKey !== null || loading}
           onClick={() => void saveCapacity(row)}
           className="col-span-2 sm:col-span-1"
         >
           {busyKey === key ? "Saving…" : "Save"}
         </Button>
+        {!rowEditable && (
+          <p className="col-span-2 text-xs text-amber-700 sm:col-span-7">
+            Some capacity counts are missing. This row is read-only until all counts load.
+          </p>
+        )}
       </div>
     );
   };
@@ -213,11 +237,11 @@ export default function NuscTicketCapacityControls() {
   );
 }
 
-function Metric({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
+function Metric({ label, value, strong = false }: { label: string; value: number | null | undefined; strong?: boolean }) {
   return (
     <div>
       <p className="text-xs text-slate-500">{label}</p>
-      <p className={`mt-1 text-sm ${strong ? "font-semibold text-slate-900" : "text-slate-700"}`}>{value.toLocaleString("en-IN")}</p>
+      <p className={`mt-1 text-sm ${strong ? "font-semibold text-slate-900" : "text-slate-700"}`}>{formatCapacityMetric(value)}</p>
     </div>
   );
 }
