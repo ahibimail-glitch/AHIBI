@@ -114,6 +114,14 @@ const SeasonReservationSchema = new mongoose.Schema({
   cancelledAt: { type: Date },
 }, { _id: true });
 
+const CapacityOverrideSchema = new mongoose.Schema({
+  matchDate: { type: String, default: null },
+  ticketType: { type: String, required: true },
+  capacity: { type: Number, required: true, min: 0 },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  updatedAt: { type: Date, default: Date.now },
+}, { _id: true });
+
 const NuscHomeMatchInventorySchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, default: 'nusc-il-2026-27' },
   orders: { type: [OrderHoldSchema], default: [] },
@@ -122,6 +130,7 @@ const NuscHomeMatchInventorySchema = new mongoose.Schema({
   seasonPassHistoryInitializedAt: { type: Date, default: null },
   partnerSeasonPassReservations: { type: [PartnerSeasonPassReservationSchema], default: [] },
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
+  capacityOverrides: { type: [CapacityOverrideSchema], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('NuscHomeMatchInventory', NuscHomeMatchInventorySchema);

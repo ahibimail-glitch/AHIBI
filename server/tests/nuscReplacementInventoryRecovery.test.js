@@ -12,7 +12,7 @@ function query(value) {
   };
 }
 
-function makeInventory({ sold = 275, liveSold = 274, otherHold = false } = {}) {
+function makeInventory({ sold = 185, liveSold = 184, otherHold = false } = {}) {
   const premiumId = 'premium-reservation';
   const originalId = 'general-reservation';
   const date = homeMatchInventory.FIXTURE_DATES[2];
@@ -102,7 +102,7 @@ function recoveryInput(data) {
     matches: [{
       eventId: data.eventIds[2],
       matchDate: data.date,
-      ticketTypes: [{ name: 'Premium Pass', quantity: 275, sold: data.sold }],
+      ticketTypes: [{ name: 'Premium Pass', quantity: 185, sold: data.sold }],
     }],
   };
 }

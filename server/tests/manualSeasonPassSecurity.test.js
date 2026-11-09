@@ -30,7 +30,7 @@ test('admin user search and manual booking endpoints are behind server-side Admi
   assert.equal(denyWithGuard(manualRoute.route.stack[1].handle, 'user').statusCode, 403);
 });
 
-test('NUSC partner recovery preview and action routes are registered after Admin guards', () => {
+test('NUSC partner recovery and capacity control routes are registered after Admin guards', () => {
   const adminGuardIndex = Math.max(...adminRoutes.stack
     .filter((layer) => !layer.route)
     .slice(0, 2)
@@ -38,11 +38,15 @@ test('NUSC partner recovery preview and action routes are registered after Admin
   const expectedPaths = [
     '/nusc-home-matches/partner-season-passes/:orderId/recovery-preview',
     '/nusc-home-matches/partner-season-passes/:orderId/recover-missing-tickets',
+    '/nusc-home-matches/availability',
   ];
   const routes = expectedPaths.map((path) => adminRoutes.stack.find((layer) => layer.route?.path === path));
+  const capacityUpdateRoute = adminRoutes.stack.find((layer) => layer.route?.path === '/nusc-home-matches/availability' && layer.route.methods.put);
 
   assert.ok(routes.every(Boolean));
   assert.ok(routes.every((route) => adminRoutes.stack.indexOf(route) > adminGuardIndex));
+  assert.ok(capacityUpdateRoute);
+  assert.equal(adminRoutes.stack.indexOf(capacityUpdateRoute) > adminGuardIndex, true);
 });
 
 test('booking cancellation replaces both legacy delete routes and remains behind Admin guards', () => {
