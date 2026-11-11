@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import NuscPriceBreakdown from "@/components/NuscPriceBreakdown";
-import { clearNuscCheckoutRequestId, getNuscCheckoutRequestId, NUSC_HOME_MATCHES } from "@/lib/nuscHomeMatches";
+import { clearNuscCheckoutRequestId, getNuscCheckoutRequestId, normalizeNuscMatchDates, NUSC_HOME_MATCHES } from "@/lib/nuscHomeMatches";
 import { TICKET_CONFIRMATION_SUPPORT_MESSAGE, TICKET_SUCCESS_SUPPORT_MESSAGE } from "@/lib/ticketSupport";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -77,7 +77,7 @@ export default function NuscMultiMatchCheckoutPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const rawPass = params.get("passId") as PassId | null;
-    const dates = [...new Set((params.get("dates") || "").split(",").filter((date) => NUSC_HOME_MATCHES.some((match) => match.date === date)))];
+    const dates = normalizeNuscMatchDates((params.get("dates") || "").split(","));
     if (rawPass && rawPass in PASS_OPTIONS) setPassId(rawPass);
     if (dates.length >= 2) setMatches(dates.map((date) => ({ date, quantity: 1, zone: "" })));
     else setErrorMessage("Select at least two match dates and a pass to continue.");

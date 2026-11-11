@@ -64,6 +64,29 @@ async function getSingleMatchQuantity(matchDate) {
   return ticket?.quantity;
 }
 
+test('Chanmari moves to December without changing its season-pass index or breaking legacy dates', async () => {
+  const chanmariIndex = inventory.FIXTURE_MATCHES.findIndex((fixture) => fixture.opponent === 'Chanmari FC');
+  assert.equal(chanmariIndex, 7);
+  assert.equal(inventory.FIXTURE_DATES[chanmariIndex], '2026-12-07');
+  assert.equal(inventory.normalizeMatchDate('2027-02-06'), '2026-12-07');
+  assert.equal(inventory.getLegacyMatchDate('2026-12-07'), '2027-02-06');
+
+  const tickets = [{ name: 'General Pass', quantity: 100, sold: 0 }];
+  assert.deepEqual(
+    await inventory.getMatchAvailability('2027-02-06', tickets),
+    await inventory.getMatchAvailability('2026-12-07', tickets),
+  );
+
+  const hold = await inventory.reserveMatchOrder({
+    orderId: 'legacy-chanmari-date-order',
+    userId: 'buyer-legacy-date',
+    matchDate: '2027-02-06',
+    ticketLines: singleMatchLine,
+    eventTicketTypes: [],
+  });
+  assert.equal(hold.matchDate, '2026-12-07');
+});
+
 test('two tickets are available across all ten dates until they are purchased', async () => {
   assert.equal(inventory.SINGLE_MATCH_CAPACITY, 2);
   assert.equal(inventory.getMatchTicketPrice(inventory.SUITE_SINGLE_MATCH).price, 84000);

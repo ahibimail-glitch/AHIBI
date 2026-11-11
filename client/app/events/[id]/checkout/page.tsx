@@ -53,7 +53,7 @@ import {
   getNuscMatchDateFromSlug,
   getNuscMatchPassSelectionUrl,
   getNuscMatchSlug,
-  NUSC_HOME_MATCHES,
+  normalizeNuscMatchDates,
 } from "@/lib/nuscHomeMatches";
 import {
   PAYMENT_RECEIVED_PENDING_MESSAGE,
@@ -1044,10 +1044,8 @@ export default function CheckoutPage() {
             setIsProcessingPayment(false);
             if (event.slug?.startsWith("nusc-home-match-")) {
               const params = new URLSearchParams(window.location.search);
-              const selectedDates = (params.get("nuscDates") || "")
-                .split(",")
-                .filter((date) => NUSC_HOME_MATCHES.some((match) => match.date === date));
-              const currentDate = NUSC_HOME_MATCHES.find((match) => getNuscMatchSlug(match.date) === event.slug)?.date;
+              const selectedDates = normalizeNuscMatchDates((params.get("nuscDates") || "").split(","));
+              const currentDate = getNuscMatchDateFromSlug(event.slug);
               const remainingDates = selectedDates.filter((date) => date !== currentDate);
               const passId = params.get("nuscPass");
               const previousCompletedCount = Number.parseInt(params.get("nuscCompletedCount") || "0", 10);
@@ -1191,9 +1189,7 @@ export default function CheckoutPage() {
       const matchDate = getNuscMatchDateFromSlug(event.slug);
       if (matchDate) {
         const checkoutParams = new URLSearchParams(window.location.search);
-        const selectedDates = (checkoutParams.get("nuscDates") || matchDate)
-          .split(",")
-          .filter((date) => NUSC_HOME_MATCHES.some((match) => match.date === date));
+        const selectedDates = normalizeNuscMatchDates((checkoutParams.get("nuscDates") || matchDate).split(","));
         const requestedPass = checkoutParams.get("nuscPass");
         const passId = requestedPass && Object.prototype.hasOwnProperty.call(NUSC_PASS_TICKET_TYPE_NAMES, requestedPass)
           ? requestedPass

@@ -6,20 +6,48 @@ export const NUSC_HOME_MATCHES = [
   { date: "2027-01-04", label: "4 January 2027", day: "Monday", time: "6:30 PM", opponent: "Rajasthan United FC" },
   { date: "2027-01-09", label: "9 January 2027", day: "Saturday", time: "6:30 PM", opponent: "FC Bengaluru United" },
   { date: "2027-01-16", label: "16 January 2027", day: "Saturday", time: "6:30 PM", opponent: "Shillong Lajong FC" },
-  { date: "2027-02-06", label: "6 February 2027", day: "Saturday", time: "6:30 PM", opponent: "Chanmari FC" },
+  { date: "2026-12-07", label: "7 December 2026", day: "Monday", time: "6:30 PM", opponent: "Chanmari FC" },
   { date: "2027-03-13", label: "13 March 2027", day: "Saturday", time: "6:30 PM", opponent: "Samaleswari SC" },
   { date: "2027-03-20", label: "20 March 2027", day: "Saturday", time: "6:30 PM", opponent: "Real Kashmir FC" },
 ] as const;
 
+const NUSC_MATCH_DATE_ALIASES: Readonly<Record<string, string>> = Object.freeze({
+  // Keep existing checkout return URLs valid after the Chanmari reschedule.
+  "2027-02-06": "2026-12-07",
+});
+
+export function normalizeNuscMatchDate(date: string) {
+  return NUSC_MATCH_DATE_ALIASES[date] || date;
+}
+
+export function isNuscMatchDate(date: string) {
+  const normalizedDate = normalizeNuscMatchDate(date);
+  return NUSC_HOME_MATCHES.some((match) => match.date === normalizedDate);
+}
+
+export function filterNuscMatchDates(dates: string[]) {
+  return dates.filter(isNuscMatchDate);
+}
+
+export function normalizeNuscMatchDates(dates: string[]) {
+  return [...new Set(filterNuscMatchDates(dates).map(normalizeNuscMatchDate))];
+}
+
+// Preserve the original fixture order for stable season-pass ticket indexes.
+export const NUSC_HOME_MATCHES_CHRONOLOGICAL = [...NUSC_HOME_MATCHES].sort(
+  (first, second) => first.date.localeCompare(second.date),
+);
+
 export const NUSC_MATCH_EVENT_SLUG_PREFIX = "nusc-home-match-";
 
 export function getNuscMatchSlug(date: string) {
-  return `${NUSC_MATCH_EVENT_SLUG_PREFIX}${date.replace(/-/g, "")}`;
+  return `${NUSC_MATCH_EVENT_SLUG_PREFIX}${normalizeNuscMatchDate(date).replace(/-/g, "")}`;
 }
 
 export function getNuscMatchDateFromSlug(slug?: string) {
   const match = /^nusc-home-match-(\d{4})(\d{2})(\d{2})$/.exec(slug || "");
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+  const date = match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+  return date ? normalizeNuscMatchDate(date) : null;
 }
 
 export function getNuscMatchPassSelectionUrl(
@@ -28,11 +56,13 @@ export function getNuscMatchPassSelectionUrl(
   progress?: { completedCount?: string | null; completedDate?: string | null }
 ) {
   const params = new URLSearchParams({
-    continueDates: typeof matchDates === "string" ? matchDates : matchDates.join(","),
+    continueDates: normalizeNuscMatchDates(
+      typeof matchDates === "string" ? matchDates.split(",") : [...matchDates],
+    ).join(","),
     nuscPass: passId,
   });
   if (progress?.completedCount) params.set("nuscCompletedCount", progress.completedCount);
-  if (progress?.completedDate) params.set("nuscCompletedDate", progress.completedDate);
+  if (progress?.completedDate) params.set("nuscCompletedDate", normalizeNuscMatchDate(progress.completedDate));
   return `/nusc-home-matches?${params.toString()}#passes`;
 }
 
@@ -79,8 +109,8 @@ export function getNextNuscMatchDate(now = Date.now()) {
 
 export function getNextNuscMatch(now = Date.now()) {
   return (
-    NUSC_HOME_MATCHES.find(
+    NUSC_HOME_MATCHES_CHRONOLOGICAL.find(
       (match) => new Date(`${match.date}T23:59:59+05:30`).getTime() >= now
-    ) || NUSC_HOME_MATCHES[NUSC_HOME_MATCHES.length - 1]
+    ) || NUSC_HOME_MATCHES_CHRONOLOGICAL[NUSC_HOME_MATCHES_CHRONOLOGICAL.length - 1]
   );
 }
