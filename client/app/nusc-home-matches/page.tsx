@@ -7,7 +7,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, CalendarDays, Clock3, MapPin, Phone, 
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import type { Event, EventsResponse } from "@/types/event";
-import { getNextNuscMatch, getNuscMatchSlug, NUSC_HOME_MATCHES, NUSC_MATCH_EVENT_SLUG_PREFIX } from "@/lib/nuscHomeMatches";
+import { getNextNuscMatch, getNuscMatchSlug, normalizeNuscMatchDate, normalizeNuscMatchDates, NUSC_HOME_MATCHES, NUSC_HOME_MATCHES_CHRONOLOGICAL, NUSC_MATCH_EVENT_SLUG_PREFIX } from "@/lib/nuscHomeMatches";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 type PassCategory = "single-match" | "season";
@@ -280,13 +280,11 @@ export default function NuscHomeMatchesPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const dates = (params.get("continueDates") || "")
-      .split(",")
-      .filter((date) => NUSC_HOME_MATCHES.some((match) => match.date === date));
+    const dates = normalizeNuscMatchDates((params.get("continueDates") || "").split(","));
     const passId = params.get("nuscPass");
     const validPass = SINGLE_MATCH_PASSES.some((pass) => pass.id === passId);
     const completedCount = Number.parseInt(params.get("nuscCompletedCount") || "0", 10);
-    const completedDate = params.get("nuscCompletedDate");
+    const completedDate = normalizeNuscMatchDate(params.get("nuscCompletedDate") || "");
     if (dates.length > 0) {
       setSelectedMatchDates(passId === "suite-single-match" ? dates.slice(0, 1) : dates);
       if (validPass) shouldScrollToPassOptions.current = true;
@@ -482,7 +480,7 @@ export default function NuscHomeMatchesPage() {
             <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#eaf0e9] p-4 text-sm text-[#273c2d] sm:mt-8"><Trophy className="h-5 w-5 shrink-0 text-[#d41e32]" /><span>Ten chances to make the home ground loud.</span></div>
           </div>
           <div className="divide-y divide-[#dce1db] border-y border-[#dce1db]">
-            {NUSC_HOME_MATCHES.map((match) => {
+            {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
               const [year, monthNumber, dayNumber] = match.date.split("-");
               const month = new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(year), Number(monthNumber) - 1, 1)));
               const event = matchEvents[getNuscMatchSlug(match.date)];
@@ -558,7 +556,7 @@ export default function NuscHomeMatchesPage() {
                 aria-label="Swipe horizontally to browse match dates"
                 className="box-border mt-3 flex w-full min-w-0 max-w-full snap-x snap-mandatory scroll-smooth gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
               >
-                {NUSC_HOME_MATCHES.map((match) => {
+                {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
                   return (
                     <label key={match.date} className={`flex w-[76%] max-w-[290px] shrink-0 snap-start cursor-pointer items-start gap-2 rounded-xl border p-3 transition ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white"}`}>
@@ -579,7 +577,7 @@ export default function NuscHomeMatchesPage() {
                 })}
               </div>
               <div className="mt-3 hidden grid-cols-2 gap-2 sm:mt-4 sm:grid sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                {NUSC_HOME_MATCHES.map((match) => {
+                {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
                   return (
                     <label key={match.date} className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition sm:gap-3 sm:p-4 ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:border-[#b8c3b8]"}`}>
@@ -686,7 +684,7 @@ export default function NuscHomeMatchesPage() {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {selectedPass === "suite-box-single" && selectedMatchDates.length > 1 ? (
-                  NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
+                  NUSC_HOME_MATCHES_CHRONOLOGICAL.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
                     const event = matchEvents[getNuscMatchSlug(match.date)];
                     const checkoutParams = new URLSearchParams({ nuscPass: selectedPass, nuscDates: match.date });
                     const ticket = event?.ticketTypes?.find((item) => item.name === NUSC_PASS_TICKET_TYPES[selectedPass]);
@@ -705,7 +703,7 @@ export default function NuscHomeMatchesPage() {
                       <span className="min-w-0 leading-5">Review {selectedMatchDates.length} matches and pay once</span><ArrowRight className="h-4 w-4 shrink-0" />
                     </Link>
                   ) : <p role="status" className="text-sm text-[#a4172a]">At least one selected match is unavailable for this pass. Remove it to continue with one payment.</p>
-                ) : NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
+                ) : NUSC_HOME_MATCHES_CHRONOLOGICAL.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
                   const event = matchEvents[getNuscMatchSlug(match.date)];
                   const selectedTicketName = selectedPass ? NUSC_PASS_TICKET_TYPES[selectedPass] : undefined;
                   const selectedTicket = selectedTicketName

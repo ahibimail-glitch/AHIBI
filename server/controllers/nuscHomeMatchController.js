@@ -252,6 +252,7 @@ async function createOrder(req, res) {
   let checkoutRequestId = null;
   let checkoutRequestHash = null;
   let legacyCheckoutRequestHash = null;
+  let compatibleCheckoutRequestHashes = [];
   try {
     const bookingDetails = req.body?.bookingDetails;
     const eventId = bookingDetails?.event?._id;
@@ -283,32 +284,40 @@ async function createOrder(req, res) {
     const totalAmount = amountMinor / 100;
 
     checkoutRequestId = getCheckoutRequestId(req);
-    checkoutRequestHash = hashCheckoutRequest({
+    const sortedTickets = [...tickets].sort((left, right) => (
+      left.ticketType.localeCompare(right.ticketType) || String(left.zone || '').localeCompare(String(right.zone || ''))
+    ));
+    const checkoutDetails = {
       orderType: 'match',
       userId: String(user._id),
       eventId: String(event._id),
-      matchDate,
-      tickets: [...tickets].sort((left, right) => (
-        left.ticketType.localeCompare(right.ticketType) || String(left.zone || '').localeCompare(String(right.zone || ''))
-      )),
-    });
+      tickets: sortedTickets,
+    };
+    checkoutRequestHash = hashCheckoutRequest({ ...checkoutDetails, matchDate });
     // Orders created before basePrice was added to the server's ticket snapshot
     // used the same buyer selection but a different request hash.
+    const ticketsWithoutBasePrice = sortedTickets.map(({ ticketType, quantity, price, zone }) => ({
+      ticketType, quantity, price, ...(zone && { zone }),
+    }));
     legacyCheckoutRequestHash = hashCheckoutRequest({
-      orderType: 'match',
-      userId: String(user._id),
-      eventId: String(event._id),
+      ...checkoutDetails,
       matchDate,
-      tickets: [...tickets].sort((left, right) => (
-        left.ticketType.localeCompare(right.ticketType) || String(left.zone || '').localeCompare(String(right.zone || ''))
-      )).map(({ ticketType, quantity, price, zone }) => ({ ticketType, quantity, price, ...(zone && { zone }) })),
+      tickets: ticketsWithoutBasePrice,
     });
+    compatibleCheckoutRequestHashes = [legacyCheckoutRequestHash];
+    const previousScheduleDate = inventory.getLegacyMatchDate(matchDate);
+    if (previousScheduleDate !== matchDate) {
+      compatibleCheckoutRequestHashes.push(
+        hashCheckoutRequest({ ...checkoutDetails, matchDate: previousScheduleDate }),
+        hashCheckoutRequest({ ...checkoutDetails, matchDate: previousScheduleDate, tickets: ticketsWithoutBasePrice }),
+      );
+    }
     const existingCheckout = await findExistingCheckoutOrder({
       userId: user._id,
       requestId: checkoutRequestId,
       requestHash: checkoutRequestHash,
       amountMinor,
-      compatibleRequestHashes: [legacyCheckoutRequestHash],
+      compatibleRequestHashes: compatibleCheckoutRequestHashes,
     });
     if (existingCheckout?.alreadyCompleted) {
       return res.status(200).json({ success: true, alreadyCompleted: true });
@@ -384,7 +393,7 @@ async function createOrder(req, res) {
     if (error?.code === 11000 && checkoutRequestId && req.user?._id) {
       try {
         const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
-        if (existing && [checkoutRequestHash, legacyCheckoutRequestHash].includes(existing.checkoutRequestHash) && existing.status === 'created' && !existing.paymentId) {
+        if (existing && [checkoutRequestHash, ...compatibleCheckoutRequestHashes].includes(existing.checkoutRequestHash) && existing.status === 'created' && !existing.paymentId) {
           if (inventoryHoldId && inventoryHoldId !== (existing.inventoryHoldId || existing.orderId)) {
             try { await inventory.releaseMatchOrder(inventoryHoldId); } catch (releaseError) {
               console.error('[NUSC checkout] Failed to release a duplicate request hold:', releaseError.message);
@@ -398,7 +407,7 @@ async function createOrder(req, res) {
           const providerOrder = await getRazorpay().orders.fetch(existing.orderId);
           return res.status(200).json(providerOrder);
         }
-        if (existing && [checkoutRequestHash, legacyCheckoutRequestHash].includes(existing.checkoutRequestHash) && existing.status === 'completed') {
+        if (existing && [checkoutRequestHash, ...compatibleCheckoutRequestHashes].includes(existing.checkoutRequestHash) && existing.status === 'completed') {
           return res.status(200).json({ success: true, alreadyCompleted: true });
         }
       } catch (recoveryError) {
@@ -441,15 +450,20 @@ async function createMultiMatchOrder(req, res) {
   let inventoryHoldId = null;
   let checkoutRequestId = null;
   let checkoutRequestHash = null;
+  let compatibleCheckoutRequestHashes = [];
   try {
     if (!req.user?._id) return res.status(401).json({ success: false, message: 'Please sign in to buy match tickets.' });
     if (!inventory.TICKET_SALES_ENABLED) {
       return res.status(409).json({ success: false, message: 'Tickets for NUSC home matches are not on sale yet.', code: 'SALES_NOT_OPEN' });
     }
-    const selections = req.body?.matches;
-    if (!Array.isArray(selections) || selections.length < 2 || selections.length > inventory.FIXTURE_DATES.length) {
+    const selectionInputs = req.body?.matches;
+    if (!Array.isArray(selectionInputs) || selectionInputs.length < 2 || selectionInputs.length > inventory.FIXTURE_DATES.length) {
       return res.status(400).json({ success: false, message: 'Select at least two match dates.' });
     }
+    const selections = selectionInputs.map((item) => ({
+      ...item,
+      matchDate: inventory.normalizeMatchDate(item.matchDate),
+    }));
     const normalizedDates = selections.map((item) => String(item.matchDate || ''));
     if (new Set(normalizedDates).size !== normalizedDates.length || normalizedDates.some((date) => !inventory.FIXTURE_DATES.includes(date))) {
       return res.status(400).json({ success: false, message: 'The selected match dates are invalid.' });
@@ -491,7 +505,7 @@ async function createMultiMatchOrder(req, res) {
     const amountMinor = calculateMatchOrderAmountMinor(fixtures);
     const totalAmount = amountMinor / 100;
     checkoutRequestId = getCheckoutRequestId(req);
-    checkoutRequestHash = hashCheckoutRequest({
+    const checkoutRequestDetails = {
       orderType: 'multiMatch',
       userId: String(user._id),
       fixtures: fixtures.map((fixture) => ({
@@ -499,8 +513,27 @@ async function createMultiMatchOrder(req, res) {
         eventId: String(fixture.eventId),
         tickets: fixture.ticketLines.map(({ ticketType, quantity, zone, price }) => ({ ticketType, quantity, zone: zone || '', price })),
       })),
+    };
+    checkoutRequestHash = hashCheckoutRequest(checkoutRequestDetails);
+    const previousScheduleFixtures = fixtures.map((fixture) => ({
+      matchDate: inventory.getLegacyMatchDate(fixture.matchDate),
+      eventId: String(fixture.eventId),
+      tickets: fixture.ticketLines.map(({ ticketType, quantity, zone, price }) => ({ ticketType, quantity, zone: zone || '', price })),
+    })).sort((first, second) => first.matchDate.localeCompare(second.matchDate));
+    const previousScheduleCheckoutRequestHash = hashCheckoutRequest({
+      ...checkoutRequestDetails,
+      fixtures: previousScheduleFixtures,
     });
-    const existingCheckout = await findExistingCheckoutOrder({ userId: user._id, requestId: checkoutRequestId, requestHash: checkoutRequestHash, amountMinor });
+    if (previousScheduleCheckoutRequestHash !== checkoutRequestHash) {
+      compatibleCheckoutRequestHashes = [previousScheduleCheckoutRequestHash];
+    }
+    const existingCheckout = await findExistingCheckoutOrder({
+      userId: user._id,
+      requestId: checkoutRequestId,
+      requestHash: checkoutRequestHash,
+      amountMinor,
+      compatibleRequestHashes: compatibleCheckoutRequestHashes,
+    });
     if (existingCheckout?.alreadyCompleted) return res.status(200).json({ success: true, alreadyCompleted: true });
 
     const holdMatches = fixtures.map((fixture) => ({
@@ -557,12 +590,12 @@ async function createMultiMatchOrder(req, res) {
     if (error?.code === 11000 && checkoutRequestId && req.user?._id) {
       try {
         const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
-        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'created' && !existing.paymentId) {
+        if (existing && [checkoutRequestHash, ...compatibleCheckoutRequestHashes].includes(existing.checkoutRequestHash) && existing.status === 'created' && !existing.paymentId) {
           if (inventoryHoldId && inventoryHoldId !== (existing.inventoryHoldId || existing.orderId)) await inventory.releaseMultiMatchOrder(inventoryHoldId);
           if (createdOrderId && createdOrderId !== existing.orderId) await inventory.releaseMultiMatchOrder(createdOrderId);
           return res.status(200).json(await getRazorpay().orders.fetch(existing.orderId));
         }
-        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'completed') {
+        if (existing && [checkoutRequestHash, ...compatibleCheckoutRequestHashes].includes(existing.checkoutRequestHash) && existing.status === 'completed') {
           return res.status(200).json({ success: true, alreadyCompleted: true });
         }
       } catch (recoveryError) {
@@ -596,6 +629,7 @@ async function createSeasonPassOrder(req, res) {
   let createdOrderId = null;
   let checkoutRequestId = null;
   let checkoutRequestHash = null;
+  let compatibleCheckoutRequestHashes = [];
   try {
     if (!req.user?._id) return res.status(401).json({ message: 'Please sign in to buy a season pass.' });
     if (!inventory.TICKET_SALES_ENABLED) {
@@ -659,11 +693,25 @@ async function createSeasonPassOrder(req, res) {
       matchDates: inventory.FIXTURE_DATES,
       amountMinor,
     });
+    const previousScheduleCheckoutRequestHash = hashCheckoutRequest({
+      orderType: 'seasonPass',
+      userId: String(user._id),
+      passId,
+      ticketType: pass.ticketType,
+      quantity,
+      ...(zone && { zone }),
+      matchDates: inventory.FIXTURE_DATES.map(inventory.getLegacyMatchDate),
+      amountMinor,
+    });
+    if (previousScheduleCheckoutRequestHash !== checkoutRequestHash) {
+      compatibleCheckoutRequestHashes = [previousScheduleCheckoutRequestHash];
+    }
     const existingCheckout = await findExistingCheckoutOrder({
       userId: user._id,
       requestId: checkoutRequestId,
       requestHash: checkoutRequestHash,
       amountMinor,
+      compatibleRequestHashes: compatibleCheckoutRequestHashes,
     });
     if (existingCheckout?.alreadyCompleted) {
       return res.status(200).json({ success: true, alreadyCompleted: true });
@@ -748,7 +796,7 @@ async function createSeasonPassOrder(req, res) {
     if (error?.code === 11000 && checkoutRequestId && req.user?._id) {
       try {
         const existing = await NuscHomeMatchOrder.findOne({ user: req.user._id, checkoutRequestId });
-        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'created' && !existing.paymentId) {
+        if (existing && [checkoutRequestHash, ...compatibleCheckoutRequestHashes].includes(existing.checkoutRequestHash) && existing.status === 'created' && !existing.paymentId) {
           if (createdOrderId && createdOrderId !== existing.orderId) {
             try { await inventory.releaseSeasonPassOrder(createdOrderId); } catch (releaseError) {
               console.error('[NUSC season checkout] Failed to release a duplicate request hold:', releaseError.message);
@@ -757,7 +805,7 @@ async function createSeasonPassOrder(req, res) {
           const providerOrder = await getRazorpay().orders.fetch(existing.orderId);
           return res.status(200).json(providerOrder);
         }
-        if (existing && existing.checkoutRequestHash === checkoutRequestHash && existing.status === 'completed') {
+        if (existing && [checkoutRequestHash, ...compatibleCheckoutRequestHashes].includes(existing.checkoutRequestHash) && existing.status === 'completed') {
           return res.status(200).json({ success: true, alreadyCompleted: true });
         }
       } catch (recoveryError) {
@@ -1368,7 +1416,7 @@ async function getCapacityControls(req, res) {
 async function updateCapacityControl(req, res) {
   try {
     const { ticketType, capacity } = req.body || {};
-    const matchDate = req.body?.matchDate || null;
+    const matchDate = req.body?.matchDate ? inventory.normalizeMatchDate(req.body.matchDate) : null;
     let soldCount = 0;
     if (matchDate) {
       const slug = `nusc-home-match-${String(matchDate).replace(/-/g, '')}`;

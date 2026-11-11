@@ -13,6 +13,7 @@ import {
   clearNuscCheckoutRequestId,
   getNuscCheckoutRequestId,
   NUSC_HOME_MATCHES,
+  NUSC_HOME_MATCHES_CHRONOLOGICAL,
 } from "@/lib/nuscHomeMatches";
 import { TICKET_CONFIRMATION_SUPPORT_MESSAGE, TICKET_SUCCESS_SUPPORT_MESSAGE } from "@/lib/ticketSupport";
 
@@ -379,11 +380,12 @@ export default function NuscSeasonCheckoutPage() {
                 {ticketDownloadError && <p role="alert" className="mt-3 text-sm text-[#9c1b2b]">{ticketDownloadError}</p>}
               </div>
               <div className="mt-7 grid gap-3 sm:grid-cols-2">
-                {seasonMatches.map((fixture, index) => {
+                {[...seasonMatches].sort((first, second) => first.matchDate.localeCompare(second.matchDate)).map((fixture, index) => {
                   const match = NUSC_HOME_MATCHES.find((item) => item.date === fixture.matchDate);
+                  const originalIndex = NUSC_HOME_MATCHES.findIndex((item) => item.date === fixture.matchDate);
                   return (
                     <Link key={fixture.matchDate} href={`/events/${fixture.eventId}/bookings`} className="rounded-xl border border-[#e2e6e1] p-4 transition hover:border-[#d51f34] hover:bg-[#fff8f8]">
-                      <span className="text-xs font-bold uppercase tracking-[.12em] text-[#737b73]">Match {index + 1}</span>
+                      <span className="text-xs font-bold uppercase tracking-[.12em] text-[#737b73]">Match {originalIndex >= 0 ? originalIndex + 1 : index + 1}</span>
                       <span className="mt-1 block font-bold">{match?.label || fixture.matchDate} · {match?.opponent || fixture.eventTitle}</span>
                       <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#b7192d]">View ticket <span aria-hidden="true">→</span></span>
                     </Link>
@@ -410,9 +412,9 @@ export default function NuscSeasonCheckoutPage() {
                 <p className="mt-2 leading-6 text-[#69716a]">One pass gives one attendee access to every fixture below. Each match ticket will appear in your AHIBI bookings.</p>
 
                 <div className="mt-7 divide-y divide-[#e7ebe6] rounded-2xl border border-[#e7ebe6]">
-                  {NUSC_HOME_MATCHES.map((match, index) => (
+                  {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => (
                     <div key={match.date} className="flex items-center justify-between gap-4 px-4 py-3.5">
-                      <div><p className="text-xs font-bold uppercase tracking-[.1em] text-[#737b73]">Match {index + 1} · {match.day}</p><p className="mt-1 font-semibold">{match.label} · {match.opponent}</p></div>
+                      <div><p className="text-xs font-bold uppercase tracking-[.1em] text-[#737b73]">Match {NUSC_HOME_MATCHES.findIndex((item) => item.date === match.date) + 1} · {match.day}</p><p className="mt-1 font-semibold">{match.label} · {match.opponent}</p></div>
                       <span className="shrink-0 text-sm text-[#69716a]">6:30 PM</span>
                     </div>
                   ))}

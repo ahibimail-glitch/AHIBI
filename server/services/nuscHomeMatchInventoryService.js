@@ -67,6 +67,10 @@ const SEASON_PASS_CAPACITIES = Object.freeze({
   'Premium Pass': 25,
 });
 const INVENTORY_KEY = 'nusc-il-2026-27';
+const LEGACY_MATCH_DATE_ALIASES = Object.freeze({
+  // Existing payment returns may still submit the originally scheduled date.
+  '2027-02-06': '2026-12-07',
+});
 const FIXTURE_MATCHES = [
   { date: '2026-11-14', opponent: 'Gokulam Kerala FC' },
   { date: '2026-11-30', opponent: 'Dempo SC' },
@@ -75,11 +79,19 @@ const FIXTURE_MATCHES = [
   { date: '2027-01-04', opponent: 'Rajasthan United FC' },
   { date: '2027-01-09', opponent: 'FC Bengaluru United' },
   { date: '2027-01-16', opponent: 'Shillong Lajong FC' },
-  { date: '2027-02-06', opponent: 'Chanmari FC' },
+  { date: '2026-12-07', opponent: 'Chanmari FC' },
   { date: '2027-03-13', opponent: 'Samaleswari SC' },
   { date: '2027-03-20', opponent: 'Real Kashmir FC' },
 ];
 const FIXTURE_DATES = FIXTURE_MATCHES.map((match) => match.date);
+function normalizeMatchDate(matchDate) {
+  const value = String(matchDate || '');
+  return LEGACY_MATCH_DATE_ALIASES[value] || value;
+}
+function getLegacyMatchDate(matchDate) {
+  const normalizedDate = normalizeMatchDate(matchDate);
+  return Object.entries(LEGACY_MATCH_DATE_ALIASES).find(([, targetDate]) => targetDate === normalizedDate)?.[0] || normalizedDate;
+}
 const OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE = Object.freeze({
   '2026-11-14': 3,
 });
@@ -647,11 +659,15 @@ function reserveMatchOrderInState(state, {
 }
 
 async function reserveMatchOrder(args) {
-  return mutateInventory((state) => reserveMatchOrderInState(state, args));
+  return mutateInventory((state) => reserveMatchOrderInState(state, {
+    ...args,
+    matchDate: normalizeMatchDate(args.matchDate),
+  }));
 }
 
 async function recordOnSpotMatchSale({ saleId, adminId, matchDate, ticketLines, eventTicketTypes }, session) {
   if (!saleId || !adminId) throw new InventoryConflict('On-spot inventory sale details are invalid.', 'INVALID_ON_SPOT_SALE');
+  matchDate = normalizeMatchDate(matchDate);
 
   const normalizedLines = normalizeTicketLines(ticketLines);
   return mutateInventory((state) => {
@@ -702,20 +718,23 @@ async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClos
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
-  if (!Array.isArray(matches) || matches.length < 2 || matches.length > FIXTURE_DATES.length ||
-      new Set(matches.map((match) => match.matchDate)).size !== matches.length ||
-      matches.some((match) => !FIXTURE_DATES.includes(match.matchDate))) {
+  const normalizedMatches = Array.isArray(matches)
+    ? matches.map((match) => ({ ...match, matchDate: normalizeMatchDate(match.matchDate) }))
+    : matches;
+  if (!Array.isArray(normalizedMatches) || normalizedMatches.length < 2 || normalizedMatches.length > FIXTURE_DATES.length ||
+      new Set(normalizedMatches.map((match) => match.matchDate)).size !== normalizedMatches.length ||
+      normalizedMatches.some((match) => !FIXTURE_DATES.includes(match.matchDate))) {
     throw new InventoryConflict('Select at least two valid NUSC match dates.', 'INVALID_MATCH_DATE');
   }
-  if (matches.some((match) => (match.ticketLines || []).some((line) => line.ticketType === SUITE_FULL_BOX))) {
+  if (normalizedMatches.some((match) => (match.ticketLines || []).some((line) => line.ticketType === SUITE_FULL_BOX))) {
     throw new InventoryConflict('United Suite — Full Box orders must cover one match date. Place a separate order for each date.', 'FULL_BOX_SINGLE_DATE');
   }
-  if (matches.some((match) => (match.ticketLines || []).some((line) => (
+  if (normalizedMatches.some((match) => (match.ticketLines || []).some((line) => (
     normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)
   )))) {
     throw new InventoryConflict('United Suite - Single Match orders must cover one match date.', 'SUITE_SINGLE_MATCH_LIMIT');
   }
-  return mutateInventory((state) => matches.map((match) => reserveMatchOrderInState(state, {
+  return mutateInventory((state) => normalizedMatches.map((match) => reserveMatchOrderInState(state, {
     orderId: `${orderId}|${match.matchDate}`,
     userId,
     matchDate: match.matchDate,
@@ -1848,7 +1867,7 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
       return { ...capacity, ...usage };
     });
     return { matchDate: fixture.date, opponent: suppliedMatch.opponent || fixture.opponent, capacities: rows };
-  });
+  }).sort((first, second) => first.matchDate.localeCompare(second.matchDate));
 
   const globalTicketDefinition = getCapacityDefinition(SUITE_SINGLE_MATCH);
   const globalTicket = getCapacityRowBase(globalTicketDefinition, null, state);
@@ -1895,7 +1914,7 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
 async function setCapacityOverride({ matchDate = null, ticketType, capacity, adminId, soldCount = 0 }) {
   const definition = getCapacityDefinition(ticketType);
   if (!definition) throw new InventoryConflict('Choose a supported NUSC ticket capacity.', 'INVALID_CAPACITY_TYPE');
-  const scopedMatchDate = definition.scope === 'match' ? matchDate : null;
+  const scopedMatchDate = definition.scope === 'match' ? normalizeMatchDate(matchDate) : null;
   if (definition.scope === 'match' && !FIXTURE_DATES.includes(scopedMatchDate)) {
     throw new InventoryConflict('Choose a valid NUSC match date for this capacity.', 'INVALID_MATCH_DATE');
   }
@@ -1948,12 +1967,14 @@ async function setCapacityOverride({ matchDate = null, ticketType, capacity, adm
 }
 
 async function getMatchAvailability(matchDate, eventTicketTypes = []) {
-  if (!FIXTURE_DATES.includes(matchDate)) return null;
-  return mutateInventory((state) => getPublicTicketTypes(state, matchDate, eventTicketTypes));
+  const normalizedMatchDate = normalizeMatchDate(matchDate);
+  if (!FIXTURE_DATES.includes(normalizedMatchDate)) return null;
+  return mutateInventory((state) => getPublicTicketTypes(state, normalizedMatchDate, eventTicketTypes));
 }
 
 async function getMatchAvailabilities(matches = [], { allowSalesClosed = false } = {}) {
-  const validMatches = matches.filter((match) => FIXTURE_DATES.includes(match.matchDate));
+  const normalizedMatches = matches.map((match) => ({ ...match, matchDate: normalizeMatchDate(match.matchDate) }));
+  const validMatches = normalizedMatches.filter((match) => FIXTURE_DATES.includes(match.matchDate));
   if (validMatches.length === 0) return {};
   return mutateInventory((state) => Object.fromEntries(validMatches.map((match) => [
     match.key,
@@ -2043,6 +2064,8 @@ module.exports = {
   SEASON_PASS_OPTIONS,
   HOLD_MINUTES,
   FIXTURE_MATCHES,
+  normalizeMatchDate,
+  getLegacyMatchDate,
   InventoryConflict,
   NUSC_TEST_MODE_ENABLED,
   SEASON_PASS_CAPACITIES,
