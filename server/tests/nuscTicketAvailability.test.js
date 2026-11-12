@@ -38,14 +38,14 @@ test.beforeEach(() => {
   state = null;
 });
 
-test('General Pass zone capacities match the requested 2,800 seats', () => {
+test('General Pass zone capacities match the requested 2,800 seats across five zones', () => {
   assert.deepEqual(inventory.GENERAL_SEATING_AREAS.map(({ name, capacity }) => [name, capacity]), [
-    ['G-1', 550], ['G-2', 550], ['G-3', 450], ['G-4', 650], ['G-5', 600], ['G-6', 0],
+    ['G-1', 550], ['G-2', 550], ['G-3', 450], ['G-4', 650], ['G-5', 600],
   ]);
   assert.equal(inventory.TICKET_CAPACITIES['General Pass'], 2800);
 });
 
-test('admin overview includes each General Pass zone and keeps unconfigured G-6 closed', async () => {
+test('admin overview includes only the five configured General Pass zones', async () => {
   const overview = await inventory.getAdminCapacityOverview({ matches: [{
     matchDate: firstDate,
     ticketTypes: [{ name: 'General Pass', quantity: 2800, sold: 0 }],
@@ -59,7 +59,6 @@ test('admin overview includes each General Pass zone and keeps unconfigured G-6 
     ['G-3', 450, 450],
     ['G-4', 650, 650],
     ['G-5', 600, 600],
-    ['G-6', 0, 0],
   ]);
 
   await assert.rejects(() => inventory.setAvailabilityOverride({
@@ -68,7 +67,7 @@ test('admin overview includes each General Pass zone and keeps unconfigured G-6 
     zone: 'G-6',
     availability: 1,
     adminId,
-  }), { code: 'INVALID_AVAILABILITY' });
+  }), { code: 'INVALID_ZONE' });
 });
 
 test('admin sale availability remains separate from total capacity and limits checkout', async () => {
