@@ -33,15 +33,15 @@ type FixtureCapacity = {
   matchDate: string;
   opponent: string;
   capacities: CapacityRow[];
-  generalZones: CapacityRow[];
+  generalZones?: CapacityRow[];
 };
 
 type CapacityOverview = {
   salesEnabled: boolean;
-  suiteMappingConfirmed: boolean;
-  fixtures: FixtureCapacity[];
-  seasonPasses: CapacityRow[];
-  seasonBoxes: CapacityRow;
+  suiteMappingConfirmed?: boolean;
+  fixtures?: FixtureCapacity[];
+  seasonPasses?: CapacityRow[];
+  seasonBoxes?: CapacityRow;
 };
 
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
@@ -278,7 +278,7 @@ export default function NuscTicketCapacityControls() {
         </div>
       </header>
 
-      {!overview.suiteMappingConfirmed && (
+      {overview.suiteMappingConfirmed === false && (
         <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           United Suite checkout stays closed until all ten physical box numbers are configured.
         </div>
@@ -287,7 +287,10 @@ export default function NuscTicketCapacityControls() {
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h2 className="text-lg font-semibold text-slate-900">Season pass and season box limits</h2>
         <p className="mb-3 text-sm text-slate-500">Season pass availability also follows the lowest remaining per-match inventory.</p>
-        {[...overview.seasonPasses, overview.seasonBoxes].map(renderRow)}
+        {[
+          ...(overview.seasonPasses || []),
+          ...(overview.seasonBoxes ? [overview.seasonBoxes] : []),
+        ].map(renderRow)}
       </section>
 
       <section className="space-y-4">
@@ -295,12 +298,12 @@ export default function NuscTicketCapacityControls() {
           <h2 className="text-lg font-semibold text-slate-900">Per-match seats and boxes</h2>
           <p className="mt-1 text-sm text-slate-500">Single Match and Full Box availability is tracked separately for each fixture.</p>
         </div>
-        {overview.fixtures.map((fixture) => (
+        {(overview.fixtures || []).map((fixture) => (
           <article key={fixture.matchDate} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold text-slate-900">{fixture.matchDate} · NUSC vs {fixture.opponent}</h3>
-            <div className="mt-2">{fixture.capacities.map(renderRow)}</div>
+            <div className="mt-2">{(fixture.capacities || []).map(renderRow)}</div>
             <h4 className="mt-5 text-sm font-semibold text-slate-800">General seating zones</h4>
-            <div>{fixture.generalZones.map(renderRow)}</div>
+            <div>{(fixture.generalZones || []).map(renderRow)}</div>
           </article>
         ))}
       </section>
