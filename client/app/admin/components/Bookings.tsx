@@ -258,6 +258,17 @@ function BookingsContent() {
     enabled: isBrowser,
     staleTime: 5 * 60 * 1000,
   });
+  const ticketTypesQuery = useQuery({
+    queryKey: ["admin-booking-ticket-types", eventFilter],
+    queryFn: async () => {
+      const options = await adminJson<Pick<BookingOptions, "ticketTypes">>(
+        `/api/admin/bookings/options?ticketTypeEventId=${encodeURIComponent(eventFilter)}`,
+      );
+      return options.ticketTypes || [];
+    },
+    enabled: isBrowser && eventFilter !== "all",
+    staleTime: 5 * 60 * 1000,
+  });
   const pageQueryResult = useQuery({
     queryKey: ["admin-bookings", pageQuery],
     queryFn: () => adminJson<BookingPage>(`/api/admin/bookings?${pageQuery}`),
@@ -300,7 +311,7 @@ function BookingsContent() {
   const visibleEvents = (options?.events || []).filter(
     (event) => categoryFilter === "all" || event.category === categoryFilter,
   );
-  const ticketTypes = options?.ticketTypes || [];
+  const ticketTypes = eventFilter === "all" ? options?.ticketTypes || [] : ticketTypesQuery.data || [];
   const statuses = options?.statuses || Object.keys(STATUS_LABELS);
   const stats = statsQuery.data;
   const firstRow = total ? (page - 1) * pageSize + 1 : 0;
@@ -498,7 +509,7 @@ function BookingsContent() {
             </div>
           </div>
 
-          {optionsQuery.isError && <p className="mb-4 text-sm text-amber-700">Some filter options could not be loaded.</p>}
+          {(optionsQuery.isError || ticketTypesQuery.isError) && <p className="mb-4 text-sm text-amber-700">Some filter options could not be loaded.</p>}
           {activeFilters && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-500">Active filters:</span>

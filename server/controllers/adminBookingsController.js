@@ -265,10 +265,14 @@ async function listBookings(req, res) {
 async function getBookingOptions(req, res) {
   try {
     const scope = await buildBookingFilters({ eventIds: req.query.eventIds });
+    const ticketTypeEventId = boundedText(req.query.ticketTypeEventId, 24);
+    const ticketTypeScope = ticketTypeEventId
+      ? await buildBookingFilters({ eventId: ticketTypeEventId, eventIds: req.query.eventIds })
+      : scope;
     const [eventIds, snapshotEventIds, ticketTypes, countries, states, visitorTypes] = await Promise.all([
       Booking.distinct('event', scope.match),
       Booking.distinct('eventSnapshot._id', scope.match),
-      Booking.distinct('ticketType', scope.match),
+      Booking.distinct('ticketType', ticketTypeScope.match),
       Booking.distinct('country', scope.match),
       Booking.distinct('state', scope.match),
       Booking.distinct('visitorType', scope.match),
@@ -291,7 +295,7 @@ async function getBookingOptions(req, res) {
     });
   } catch (error) {
     console.error('Error loading admin booking filter options:', error);
-    return res.status(500).json({ message: 'Server error while loading booking filters' });
+    return res.status(error.status || 500).json({ message: error.status ? error.message : 'Server error while loading booking filters' });
   }
 }
 
