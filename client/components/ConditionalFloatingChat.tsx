@@ -9,8 +9,9 @@ export default function ConditionalFloatingChat() {
   // Hide floating chat on admin pages
   const isAdminPage = pathname?.startsWith('/admin');
   const isChatPage = pathname?.startsWith('/support/chat');
+  const isScannerPage = pathname === '/scanner' || pathname?.startsWith('/scanner/');
   
-  if (isAdminPage||isChatPage) {
+  if (isAdminPage || isChatPage || isScannerPage) {
     return null;
   }
   
