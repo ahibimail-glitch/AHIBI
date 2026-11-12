@@ -220,6 +220,7 @@ function rowProjection({ includeTicketFields = false } = {}) {
       country: 1,
       state: 1,
       visitorType: 1,
+      nuscGeneralZone: 1,
     });
   }
   return projection;
@@ -350,7 +351,7 @@ async function exportBookings(req, res) {
     res.setHeader('Cache-Control', 'private, no-store');
     res.write('\uFEFF');
 
-    const headers = ['Booking ID', 'Event', 'Customer', 'Email', 'Phone', 'Booked Date', 'Ticket Type', 'Source', 'Payment Source', 'Payment Status', 'Payment Reference', 'Payment Method', 'Quantity', 'Total Amount', 'Status', 'Country', 'State', 'Visitor Type'];
+    const headers = ['Booking ID', 'Event', 'Customer', 'Email', 'Phone', 'Booked Date', 'Ticket Type', 'Zone', 'Source', 'Payment Source', 'Payment Status', 'Payment Reference', 'Payment Method', 'Quantity', 'Total Amount', 'Status', 'Country', 'State', 'Visitor Type'];
     res.write(`${headers.map(csvCell).join(',')}\r\n`);
 
     for await (const booking of cursor) {
@@ -362,6 +363,7 @@ async function exportBookings(req, res) {
         booking.user?.phone,
         booking.bookedAt,
         booking.ticketType,
+        booking.nuscGeneralZone,
         booking.bookingSource === 'on-spot' ? 'On spot' : 'Online',
         booking.paymentId ? 'Online' : 'Manual',
         booking.paymentStatus === 'completed' ? 'Paid' : booking.paymentStatus,
