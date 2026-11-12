@@ -116,6 +116,7 @@ exports.listEvents = async (req, res) => {
     const nuscTicketTypesByEventId = await nuscInventory.getMatchAvailabilities(
       nuscMatches.map(({ event, matchDate }) => ({
         key: String(event._id),
+        eventId: event._id,
         matchDate,
         ticketTypes: event.ticketTypes,
       })),

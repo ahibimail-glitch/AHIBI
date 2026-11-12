@@ -87,7 +87,7 @@ test('Chanmari moves to December without changing its season-pass index or break
   assert.equal(hold.matchDate, '2026-12-07');
 });
 
-test('two tickets are available across all ten dates until they are purchased', async () => {
+test('two Single Match boxes are available per fixture and sales affect only that fixture', async () => {
   assert.equal(inventory.SINGLE_MATCH_CAPACITY, 2);
   assert.equal(inventory.getMatchTicketPrice(inventory.SUITE_SINGLE_MATCH).price, 84000);
   const beforePurchase = await Promise.all(inventory.FIXTURE_DATES.map(getSingleMatchQuantity));
@@ -100,7 +100,9 @@ test('two tickets are available across all ten dates until they are purchased', 
     ticketLines: singleMatchLine,
     eventTicketTypes: [],
   });
-  assert.deepEqual(await Promise.all(inventory.FIXTURE_DATES.map(getSingleMatchQuantity)), Array(10).fill(1));
+  const afterFirst = Array(10).fill(2);
+  afterFirst[9] = 1;
+  assert.deepEqual(await Promise.all(inventory.FIXTURE_DATES.map(getSingleMatchQuantity)), afterFirst);
   await inventory.confirmMatchOrder('single-match-order');
   await inventory.markTicketStockApplied('single-match-order');
   await inventory.finalizeMatchOrder('single-match-order');
@@ -112,11 +114,22 @@ test('two tickets are available across all ten dates until they are purchased', 
     ticketLines: singleMatchLine,
     eventTicketTypes: [],
   });
-  assert.deepEqual(await Promise.all(inventory.FIXTURE_DATES.map(getSingleMatchQuantity)), Array(10).fill(0));
-  await assert.rejects(() => inventory.reserveMatchOrder({
+  const afterSecond = Array(10).fill(2);
+  afterSecond[0] = 1;
+  afterSecond[9] = 1;
+  assert.deepEqual(await Promise.all(inventory.FIXTURE_DATES.map(getSingleMatchQuantity)), afterSecond);
+  await inventory.reserveMatchOrder({
     orderId: 'third-single-match-order',
     userId: 'buyer-3',
-    matchDate: secondDate,
+    matchDate: firstDate,
+    ticketLines: singleMatchLine,
+    eventTicketTypes: [],
+  });
+  assert.equal(await getSingleMatchQuantity(firstDate), 0);
+  await assert.rejects(() => inventory.reserveMatchOrder({
+    orderId: 'fourth-single-match-order',
+    userId: 'buyer-4',
+    matchDate: firstDate,
     ticketLines: singleMatchLine,
     eventTicketTypes: [],
   }), { code: 'TICKETS_UNAVAILABLE' });
@@ -143,7 +156,7 @@ test('a single-match order rejects quantity above one and a multi-date selection
   assert.equal(state?.orders?.length || 0, 0);
 });
 
-test('concurrent reservations on different dates share the same two-ticket limit', async () => {
+test('concurrent reservations on different dates use independent per-fixture limits', async () => {
   const results = await Promise.allSettled([firstDate, secondDate, inventory.FIXTURE_DATES[2]].map((matchDate, index) => inventory.reserveMatchOrder({
     orderId: `single-match-race-${index}`,
     userId: `buyer-${index}`,
@@ -152,8 +165,8 @@ test('concurrent reservations on different dates share the same two-ticket limit
     eventTicketTypes: [],
   })));
 
-  assert.equal(results.filter((result) => result.status === 'fulfilled').length, 2);
-  assert.equal(state.orders.filter((order) => order.ticketLines.some((line) => line.ticketType === inventory.SUITE_SINGLE_MATCH)).length, 2);
+  assert.equal(results.filter((result) => result.status === 'fulfilled').length, 3);
+  assert.equal(state.orders.filter((order) => order.ticketLines.some((line) => line.ticketType === inventory.SUITE_SINGLE_MATCH)).length, 3);
 });
 
 test('refunding the confirmed order releases the global ticket', async () => {
@@ -166,7 +179,7 @@ test('refunding the confirmed order releases the global ticket', async () => {
   });
   await inventory.confirmMatchOrder('refundable-single-match');
   await inventory.releaseRefundedMatchOrder('refundable-single-match');
-  assert.deepEqual(await Promise.all(inventory.FIXTURE_DATES.map(getSingleMatchQuantity)), Array(10).fill(2));
+  assert.equal(await getSingleMatchQuantity(firstDate), 2);
 });
 
 test('regular Premium Pass reservations still use the existing per-match inventory', async () => {
@@ -204,9 +217,11 @@ test('Admin capacity overview subtracts sold Premium seats and committed suite r
   assert.equal(premium.available, 150);
   assert.equal(suiteSeats.offlineReserved, 3);
   assert.equal(suiteSeats.available, 5);
-  assert.equal(suiteBoxes.capacity, 3);
-  assert.equal(suiteBoxes.available, 3);
-  assert.equal(overview.singleMatchTicket.capacity, 2);
+  assert.equal(suiteBoxes.capacity, 4);
+  assert.equal(suiteBoxes.available, 4);
+  const singleMatch = fixture.capacities.find((item) => item.ticketType === inventory.SUITE_SINGLE_MATCH);
+  assert.equal(singleMatch.capacity, 2);
+  assert.equal(singleMatch.available, 2);
 });
 
 test('Admin capacity changes are persisted and cannot go below committed tickets', async () => {
@@ -242,7 +257,7 @@ test('season box reservation consumes Full Box and season box availability', asy
     generalZoneSales: [],
     seasonPassOrders: [],
     partnerSeasonPassReservations: [],
-    seasonReservations: [{ boxNumber: 2, status: 'active', bookingReference: 'SEASON-BOX-1' }],
+    seasonReservations: [{ boxNumber: 7, status: 'active', bookingReference: 'SEASON-BOX-1' }],
     capacityOverrides: [],
     seasonPassHistoryInitializedAt: new Date().toISOString(),
   };
@@ -250,7 +265,8 @@ test('season box reservation consumes Full Box and season box availability', asy
   const fixture = overview.fixtures.find((item) => item.matchDate === firstDate);
   const fullBoxes = fixture.capacities.find((item) => item.ticketType === inventory.SUITE_FULL_BOX);
   assert.equal(fullBoxes.offlineReserved, 1);
-  assert.equal(fullBoxes.available, 2);
+  assert.equal(fullBoxes.capacity, 4);
+  assert.equal(fullBoxes.available, 3);
   assert.equal(overview.seasonBoxes.available, 2);
   await assert.rejects(() => inventory.setCapacityOverride({
     matchDate: firstDate,

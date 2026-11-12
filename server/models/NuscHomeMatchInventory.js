@@ -17,7 +17,10 @@ const GeneralZoneSaleSchema = new mongoose.Schema({
 const SuiteAllocationSchema = new mongoose.Schema({
   ticketType: { type: String, required: true },
   ticketIndex: { type: Number, required: true, min: 1 },
-  boxNumber: { type: Number, required: true, min: 1, max: 4 },
+  boxNumber: { type: Number, required: true, min: 1, max: 10 },
+  boxId: { type: String, default: null },
+  physicalNumber: { type: Number, min: 1, max: 10, default: null },
+  guestCapacity: { type: Number, enum: [8, 10], default: null },
 }, { _id: false });
 
 const OrderHoldSchema = new mongoose.Schema({
@@ -106,7 +109,7 @@ const PartnerSeasonPassReservationSchema = new mongoose.Schema({
 
 const SeasonReservationSchema = new mongoose.Schema({
   bookingReference: { type: String, required: true, trim: true },
-  boxNumber: { type: Number, required: true, min: 1, max: 4 },
+  boxNumber: { type: Number, required: true, min: 1, max: 10 },
   status: { type: String, enum: ['active', 'cancelled'], default: 'active' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
   cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
@@ -122,6 +125,15 @@ const CapacityOverrideSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { _id: true });
 
+const TicketAvailabilityOverrideSchema = new mongoose.Schema({
+  matchDate: { type: String, default: null },
+  ticketType: { type: String, required: true },
+  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'], default: null },
+  availability: { type: Number, required: true, min: 0 },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  updatedAt: { type: Date, default: Date.now },
+}, { _id: true });
+
 const NuscHomeMatchInventorySchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, default: 'nusc-il-2026-27' },
   orders: { type: [OrderHoldSchema], default: [] },
@@ -131,6 +143,7 @@ const NuscHomeMatchInventorySchema = new mongoose.Schema({
   partnerSeasonPassReservations: { type: [PartnerSeasonPassReservationSchema], default: [] },
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
   capacityOverrides: { type: [CapacityOverrideSchema], default: [] },
+  availabilityOverrides: { type: [TicketAvailabilityOverrideSchema], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('NuscHomeMatchInventory', NuscHomeMatchInventorySchema);

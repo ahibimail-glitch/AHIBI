@@ -122,7 +122,8 @@ const NUSC_PASS_TICKET_TYPE_NAMES: Record<string, string> = {
 };
 
 const getNuscBuyerTicketUnits = (ticketName: string, quantity: number) =>
-  ticketName === NUSC_PASS_TICKET_TYPE_NAMES["suite-box-single"] ? quantity * 8 : quantity;
+  ticketName === NUSC_PASS_TICKET_TYPE_NAMES["suite-box-single"] ? quantity * 10 :
+    ticketName === NUSC_PASS_TICKET_TYPE_NAMES["suite-single-match"] ? quantity * 8 : quantity;
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -1539,7 +1540,7 @@ export default function CheckoutPage() {
                         ? item.ticket.name
                         : `${item.ticket.name} · Single Match`
                       : item.ticket.name;
-                    const nuscQuantityLabel = nuscPassId === "suite-box-single"
+                    const nuscQuantityLabel = nuscPassId === "suite-box-single" || nuscPassId === "suite-single-match"
                       ? `${item.quantity} ${item.quantity === 1 ? "box" : "boxes"}`
                       : nuscPassId === "suite-single"
                         ? `${item.quantity} ${item.quantity === 1 ? "person" : "people"}`

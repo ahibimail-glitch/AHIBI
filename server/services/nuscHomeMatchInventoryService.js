@@ -1,11 +1,16 @@
 const Inventory = require('../models/NuscHomeMatchInventory');
 const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const Booking = require('../models/Booking');
+const { UNITED_SUITE_BOXES, UNITED_SUITE_MAPPING_CONFIRMED } = require('../config/unitedSuiteBoxes');
 
-const BOX_COUNT = 4;
+const BOX_COUNT = UNITED_SUITE_BOXES.length;
 const SEATS_PER_BOX = 8;
+const FULL_BOX_SEATS = 10;
 const SINGLE_PASS_BOX_NUMBER = 1;
-const FULL_BOX_NUMBERS = [2, 3, 4];
+const SINGLE_MATCH_BOX_NUMBERS = UNITED_SUITE_BOXES.filter((box) => box.guestCapacity === 8 && box.boxNumber !== SINGLE_PASS_BOX_NUMBER).map((box) => box.boxNumber);
+const FULL_BOX_NUMBERS = UNITED_SUITE_BOXES.filter((box) => box.guestCapacity === FULL_BOX_SEATS).map((box) => box.boxNumber);
+const SEASON_BOX_COUNT = 3;
+const SEASON_BOX_NUMBERS = FULL_BOX_NUMBERS;
 const BUYER_TICKET_LIMIT = 10;
 const SINGLE_MATCH_CAPACITY = 2;
 const HOLD_MINUTES = 30;
@@ -51,10 +56,10 @@ const TICKET_SALES_ENABLED = (
   NUSC_TEST_MODE_ENABLED || NUSC_LIVE_SALES_ENABLED
 ) && process.env.NUSC_HOME_MATCH_TICKET_SALES_ENABLED === 'true';
 const GENERAL_SEATING_AREAS = [
-  { name: 'G-1', capacity: 600 },
-  { name: 'G-2', capacity: 600 },
+  { name: 'G-1', capacity: 550 },
+  { name: 'G-2', capacity: 550 },
   { name: 'G-3', capacity: 450 },
-  { name: 'G-4', capacity: 550 },
+  { name: 'G-4', capacity: 650 },
   { name: 'G-5', capacity: 600 },
 ];
 const TICKET_CAPACITIES = {
@@ -107,15 +112,62 @@ const CAPACITY_CONTROL_DEFINITIONS = [
   { ticketType: 'Premium Pass', label: 'Premium Pass', group: 'Match tickets', unit: 'seats', scope: 'match', defaultCapacity: TICKET_CAPACITIES['Premium Pass'], maxCapacity: 275 },
   { ticketType: SUITE_SINGLE, label: 'United Suite — Single pass', group: 'Match tickets', unit: 'seats', scope: 'match', defaultCapacity: SEATS_PER_BOX, maxCapacity: SEATS_PER_BOX },
   { ticketType: SUITE_FULL_BOX, label: 'United Suite — Full Box', group: 'Match tickets', unit: 'boxes', scope: 'match', defaultCapacity: FULL_BOX_NUMBERS.length, maxCapacity: FULL_BOX_NUMBERS.length },
-  { ticketType: SUITE_SINGLE_MATCH, label: 'United Suite — Single Match', group: 'Global tickets', unit: 'tickets', scope: 'global', defaultCapacity: SINGLE_MATCH_CAPACITY, maxCapacity: FULL_BOX_NUMBERS.length },
+  { ticketType: SUITE_SINGLE_MATCH, label: 'United Suite — Single Match', group: 'Match tickets', unit: 'boxes', scope: 'match', defaultCapacity: SINGLE_MATCH_CAPACITY, maxCapacity: SINGLE_MATCH_CAPACITY },
   { ticketType: 'General Season Pass', label: 'General Season Pass', group: 'Season passes', unit: 'passes', scope: 'global', defaultCapacity: SEASON_PASS_CAPACITIES['General Pass'], maxCapacity: TICKET_CAPACITIES['General Pass'] },
   { ticketType: 'Premium Season Pass', label: 'Premium Season Pass', group: 'Season passes', unit: 'passes', scope: 'global', defaultCapacity: SEASON_PASS_CAPACITIES['Premium Pass'], maxCapacity: TICKET_CAPACITIES['Premium Pass'] },
-  { ticketType: SEASON_BOX_CAPACITY_KEY, label: 'United Suite Season Box', group: 'Season passes', unit: 'boxes', scope: 'global', defaultCapacity: FULL_BOX_NUMBERS.length, maxCapacity: FULL_BOX_NUMBERS.length },
+  { ticketType: SEASON_BOX_CAPACITY_KEY, label: 'United Suite Season Box', group: 'Season passes', unit: 'boxes', scope: 'global', defaultCapacity: SEASON_BOX_COUNT, maxCapacity: SEASON_BOX_COUNT },
 ];
 
 function getCapacityDefinition(ticketType) {
   const normalized = normalizeTicketTypeName(ticketType);
   return CAPACITY_CONTROL_DEFINITIONS.find((item) => normalizeTicketTypeName(item.ticketType) === normalized) || null;
+}
+
+function getConfiguredBox(boxNumber) {
+  return UNITED_SUITE_BOXES.find((box) => box.boxNumber === Number(boxNumber)) || null;
+}
+
+function getConfiguredBoxForAllocation(allocation) {
+  if (allocation && typeof allocation === 'object' && allocation.boxId) {
+    return UNITED_SUITE_BOXES.find((box) => box.boxId === allocation.boxId) || null;
+  }
+  return getConfiguredBox(typeof allocation === 'object' ? allocation?.boxNumber : allocation);
+}
+
+function getAllocationBoxNumber(allocation) {
+  return getConfiguredBoxForAllocation(allocation)?.boxNumber || Number(allocation?.boxNumber ?? allocation);
+}
+
+function getPhysicalBoxNumber(boxNumber) {
+  const box = getConfiguredBoxForAllocation(boxNumber);
+  if (boxNumber && typeof boxNumber === 'object' && Number.isInteger(Number(boxNumber.physicalNumber)) && Number(boxNumber.physicalNumber) > 0) return Number(boxNumber.physicalNumber);
+  return UNITED_SUITE_MAPPING_CONFIRMED ? box?.physicalNumber || null : null;
+}
+
+function getBoxDisplayNumber(boxNumber) {
+  return getPhysicalBoxNumber(boxNumber) || Number(typeof boxNumber === 'object' ? boxNumber.boxNumber : boxNumber);
+}
+
+function getBoxGuestCapacity(boxNumber) {
+  if (boxNumber && typeof boxNumber === 'object' && Number.isInteger(Number(boxNumber.guestCapacity)) && Number(boxNumber.guestCapacity) > 0) return Number(boxNumber.guestCapacity);
+  return getConfiguredBoxForAllocation(boxNumber)?.guestCapacity || SEATS_PER_BOX;
+}
+
+function createSuiteAllocation(ticketType, ticketIndex, boxNumber) {
+  const box = getConfiguredBox(boxNumber);
+  return {
+    ticketType,
+    ticketIndex,
+    boxNumber,
+    ...(box && { boxId: box.boxId, guestCapacity: box.guestCapacity }),
+    ...(box?.physicalNumber && { physicalNumber: box.physicalNumber }),
+  };
+}
+
+function assertUnitedSuiteMappingForProduction() {
+  if (process.env.NODE_ENV === 'production' && !UNITED_SUITE_MAPPING_CONFIRMED) {
+    throw new InventoryConflict('United Suite physical box numbers must be configured before Suite sales can open.', 'BOX_MAPPING_UNCONFIRMED');
+  }
 }
 
 function getCapacityOverride(state, matchDate, ticketType) {
@@ -133,6 +185,22 @@ function getInventoryCapacity(state, matchDate, ticketType) {
   if (!definition) return null;
   const override = getCapacityOverride(state, matchDate, definition.ticketType);
   return override ? Number(override.capacity) : definition.defaultCapacity;
+}
+
+function getInventoryAvailabilityLimit(state, matchDate, ticketType, zone = null) {
+  const definition = getCapacityDefinition(ticketType);
+  if (!definition) return 0;
+  const scopedMatchDate = definition.scope === 'match' ? matchDate : null;
+  const zoneCapacity = zone
+    ? GENERAL_SEATING_AREAS.find((area) => area.name === zone)?.capacity
+    : null;
+  const capacity = zoneCapacity ?? getInventoryCapacity(state, scopedMatchDate, definition.ticketType);
+  const override = (state?.availabilityOverrides || []).find((item) => (
+    normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(definition.ticketType) &&
+    (item.matchDate || null) === scopedMatchDate &&
+    (item.zone || null) === (zone || null)
+  ));
+  return Math.max(0, Math.min(capacity, override ? Number(override.availability) : capacity));
 }
 
 function getSeasonPassCapacity(state, ticketType) {
@@ -163,7 +231,7 @@ async function loadInventory(session, projection) {
 async function ensureInventory(session, projection) {
   await Inventory.updateOne(
     { key: INVENTORY_KEY },
-    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [], capacityOverrides: [], seasonPassHistoryInitializedAt: null } },
+    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [], capacityOverrides: [], availabilityOverrides: [], seasonPassHistoryInitializedAt: null } },
     { upsert: true, ...(session ? { session } : {}) }
   );
   return loadInventory(session, projection);
@@ -271,6 +339,7 @@ async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
     state.seasonPassOrders ||= [];
     state.partnerSeasonPassReservations ||= [];
     state.capacityOverrides ||= [];
+    state.availabilityOverrides ||= [];
     if (pruneExpired) pruneExpiredHolds(state);
     const result = await mutator(state);
     const update = await Inventory.updateOne(
@@ -283,6 +352,7 @@ async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
           partnerSeasonPassReservations: state.partnerSeasonPassReservations,
           seasonReservations: state.seasonReservations,
           capacityOverrides: state.capacityOverrides,
+          availabilityOverrides: state.availabilityOverrides,
           updatedAt: new Date(),
         },
         $inc: { __v: 1 },
@@ -300,7 +370,9 @@ function isSuiteType(ticketType) {
 }
 
 function buyerTicketUnits(ticketType, quantity) {
-  return ticketType === SUITE_FULL_BOX ? quantity * SEATS_PER_BOX : quantity;
+  if (ticketType === SUITE_FULL_BOX) return quantity * FULL_BOX_SEATS;
+  if (ticketType === SUITE_SINGLE_MATCH) return quantity * SEATS_PER_BOX;
+  return quantity;
 }
 
 function activeOrdersForDate(state, matchDate) {
@@ -319,8 +391,9 @@ function activeSeasonPassOrdersForDate(state, matchDate) {
   ));
 }
 
-function getSingleMatchReservedCount(state, now = new Date()) {
+function getSingleMatchReservedCount(state, matchDate = null, now = new Date()) {
   return (state.orders || []).reduce((reserved, order) => {
+    if (matchDate && order.matchDate !== matchDate) return reserved;
     const active = order.status === 'confirmed' ||
       (order.status === 'held' && new Date(order.expiresAt) > now);
     if (!active) return reserved;
@@ -361,17 +434,36 @@ function getBoxState(state, matchDate) {
   );
   const orders = activeOrdersForDate(state, matchDate);
 
-  return Array.from({ length: BOX_COUNT }, (_, index) => {
-    const boxNumber = index + 1;
+  const boxes = UNITED_SUITE_BOXES.map((configuredBox) => {
+    const boxNumber = configuredBox.boxNumber;
     const allocations = orders.flatMap((order) => order.suiteAllocations || [])
-      .filter((allocation) => allocation.boxNumber === boxNumber);
+      .filter((allocation) => getAllocationBoxNumber(allocation) === boxNumber);
     return {
       boxNumber,
+      guestCapacity: configuredBox.guestCapacity,
       seasonReserved: activeSeasonBoxes.has(boxNumber),
       fullBoxReserved: allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX),
+      singleMatchReserved: allocations.some((allocation) => allocation.ticketType === SUITE_SINGLE_MATCH),
       singlePassCount: allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length,
     };
   });
+  const boxByNumber = new Map(boxes.map((box) => [box.boxNumber, box]));
+  for (const order of orders) {
+    const ticketCount = (order.ticketLines || [])
+      .filter((line) => normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
+      .reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+    const allocatedCount = (order.suiteAllocations || [])
+      .filter((allocation) => normalizeTicketTypeName(allocation.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)).length;
+    let unassigned = Math.max(0, ticketCount - allocatedCount);
+    for (const boxNumber of SINGLE_MATCH_BOX_NUMBERS) {
+      if (unassigned < 1) break;
+      const box = boxByNumber.get(boxNumber);
+      if (!box || box.seasonReserved || box.fullBoxReserved || box.singleMatchReserved || box.singlePassCount > 0) continue;
+      box.singleMatchReserved = true;
+      unassigned -= 1;
+    }
+  }
+  return boxes;
 }
 
 function getSuiteAvailability(state, matchDate) {
@@ -384,13 +476,27 @@ function getSuiteAvailability(state, matchDate) {
   const fullBoxCapacity = getInventoryCapacity(state, matchDate, SUITE_FULL_BOX);
   const singlePassUsed = (singlePassBox?.singlePassCount || 0) + offlineReservedSeats;
   const singlePassCapacity = getInventoryCapacity(state, matchDate, SUITE_SINGLE);
+  const singlePassAvailability = getInventoryAvailabilityLimit(state, matchDate, SUITE_SINGLE);
+  const singleMatchUsed = getSingleMatchReservedCount(state, matchDate);
+  const availableSingleMatchBoxes = boxes.filter((box) => (
+    SINGLE_MATCH_BOX_NUMBERS.includes(box.boxNumber) &&
+    !box.seasonReserved && !box.fullBoxReserved && !box.singleMatchReserved && box.singlePassCount === 0
+  )).length;
+  const singleMatchCapacity = getInventoryCapacity(state, matchDate, SUITE_SINGLE_MATCH);
   return {
-    fullBoxes: Math.min(availablePhysicalBoxes, Math.max(0, fullBoxCapacity - occupiedBoxes)),
+    fullBoxes: Math.min(availablePhysicalBoxes, Math.max(0, fullBoxCapacity - occupiedBoxes), getInventoryAvailabilityLimit(state, matchDate, SUITE_FULL_BOX)),
     fullBoxCapacity,
+    singleMatchBoxes: Math.min(
+      availableSingleMatchBoxes,
+      Math.max(0, singleMatchCapacity - singleMatchUsed),
+      Math.max(0, getInventoryAvailabilityLimit(state, matchDate, SUITE_SINGLE_MATCH) - singleMatchUsed)
+    ),
+    singleMatchCapacity,
     singleSeats: singlePassBox && !singlePassBox.seasonReserved && !singlePassBox.fullBoxReserved
       ? Math.min(
         Math.max(0, SEATS_PER_BOX - singlePassUsed),
-        Math.max(0, singlePassCapacity - singlePassUsed)
+        Math.max(0, singlePassCapacity - singlePassUsed),
+        singlePassAvailability
       )
       : 0,
     singlePassCapacity,
@@ -418,68 +524,119 @@ function normalizeTicketLines(lines) {
   });
 }
 
+async function getGeneralZoneSalesByEventIds(eventIds = []) {
+  const ids = (eventIds || []).filter(Boolean);
+  if (!ids.length || typeof Booking.aggregate !== 'function') return {};
+  const zones = GENERAL_SEATING_AREAS.map((area) => area.name);
+  const rows = await Booking.aggregate([
+    { $match: { event: { $in: ids }, nuscGeneralZone: { $in: zones }, status: { $in: ['confirmed', 'checked-in'] } } },
+    { $group: { _id: { event: '$event', zone: '$nuscGeneralZone' }, count: { $sum: { $ifNull: ['$quantity', 1] } } } },
+  ]);
+  const result = {};
+  for (const row of rows || []) {
+    const eventId = String(row._id?.event || '');
+    const zone = String(row._id?.zone || '');
+    if (!eventId || !zones.includes(zone)) continue;
+    result[eventId] ||= {};
+    result[eventId][zone] = Number(row.count || 0);
+  }
+  return result;
+}
+
+function getGeneralZoneUsage(
+  state,
+  matchDate,
+  ticketSold = 0,
+  activeOrders = activeOrdersForDate(state, matchDate),
+  activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate),
+  zoneSoldCounts = {}
+) {
+  const salesByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [area.name, 0]));
+  for (const sale of state.generalZoneSales || []) {
+    if (sale.matchDate === matchDate && salesByZone.has(sale.zone)) {
+      salesByZone.set(sale.zone, salesByZone.get(sale.zone) + Number(sale.quantity || 0));
+    }
+  }
+  for (const area of GENERAL_SEATING_AREAS) {
+    salesByZone.set(area.name, Math.max(salesByZone.get(area.name), Math.max(0, Number(zoneSoldCounts?.[area.name]) || 0)));
+  }
+
+  const heldByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [area.name, 0]));
+  const pendingConfirmedByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [area.name, 0]));
+  let unassignedHeld = 0;
+  let unassignedConfirmed = 0;
+  for (const order of activeOrders) {
+    if (order.stockApplied) continue;
+    for (const line of order.ticketLines || []) {
+      if (line.ticketType !== GENERAL_TICKET_TYPE) continue;
+      if (order.status === 'held' && heldByZone.has(line.zone)) {
+        heldByZone.set(line.zone, heldByZone.get(line.zone) + Number(line.quantity || 0));
+      } else if (order.status === 'confirmed' && pendingConfirmedByZone.has(line.zone)) {
+        pendingConfirmedByZone.set(line.zone, pendingConfirmedByZone.get(line.zone) + Number(line.quantity || 0));
+      } else if (order.status === 'held') {
+        unassignedHeld += Number(line.quantity || 0);
+      } else if (order.status === 'confirmed') {
+        unassignedConfirmed += Number(line.quantity || 0);
+      }
+    }
+  }
+  for (const order of activeSeasonOrders.filter((item) => item.ticketType === GENERAL_TICKET_TYPE)) {
+    if (order.status === 'held' && heldByZone.has(order.zone)) {
+      heldByZone.set(order.zone, heldByZone.get(order.zone) + Number(order.quantity || 0));
+    } else if (order.status === 'confirmed' && pendingConfirmedByZone.has(order.zone)) {
+      pendingConfirmedByZone.set(order.zone, pendingConfirmedByZone.get(order.zone) + Number(order.quantity || 0));
+    } else if (order.status === 'held') {
+      unassignedHeld += Number(order.quantity || 0);
+    } else if (order.status === 'confirmed') {
+      unassignedConfirmed += Number(order.quantity || 0);
+    }
+  }
+
+  const knownSoldByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [
+    area.name,
+    Math.max(salesByZone.get(area.name), pendingConfirmedByZone.get(area.name)),
+  ]));
+  const recordedZoneSales = [...knownSoldByZone.values()].reduce((sum, quantity) => sum + quantity, 0);
+  const unknownSold = Math.max(0, Number(ticketSold || 0) - recordedZoneSales - unassignedConfirmed);
+  let unassignedSoldRemaining = unknownSold + unassignedConfirmed;
+  let unassignedHeldRemaining = unassignedHeld;
+  return GENERAL_SEATING_AREAS.map((area) => {
+    const knownSold = knownSoldByZone.get(area.name);
+    const knownHeld = heldByZone.get(area.name);
+    const unassignedSoldHere = Math.min(unassignedSoldRemaining, Math.max(0, area.capacity - knownSold - knownHeld));
+    unassignedSoldRemaining -= unassignedSoldHere;
+    const unassignedHeldHere = Math.min(unassignedHeldRemaining, Math.max(0, area.capacity - knownSold - knownHeld - unassignedSoldHere));
+    unassignedHeldRemaining -= unassignedHeldHere;
+    const sold = knownSold + unassignedSoldHere;
+    const held = knownHeld + unassignedHeldHere;
+    return {
+      name: area.name,
+      capacity: area.capacity,
+      sold,
+      held,
+      committed: sold + held,
+    };
+  });
+}
+
 function getGeneralZoneAvailability(
   state,
   matchDate,
   ticketSold = 0,
   activeOrders = activeOrdersForDate(state, matchDate),
-  activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate)
+  activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate),
+  zoneSoldCounts = {}
 ) {
-  const salesByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [area.name, 0]));
-  let onSpotZoneSales = 0;
-  for (const sale of state.generalZoneSales || []) {
-    if (sale.matchDate === matchDate && salesByZone.has(sale.zone)) {
-      if (String(sale.orderId || '').startsWith('on-spot-')) {
-        onSpotZoneSales += Number(sale.quantity || 0);
-        continue;
-      }
-      salesByZone.set(sale.zone, salesByZone.get(sale.zone) + Number(sale.quantity || 0));
-    }
-  }
-
-  const heldByZone = new Map(GENERAL_SEATING_AREAS.map((area) => [area.name, 0]));
-  let pendingConfirmedZoneSales = 0;
-  let unassignedHeld = 0;
-  for (const order of activeOrders) {
-    if (order.stockApplied) continue;
-    for (const line of order.ticketLines || []) {
-      if (line.ticketType !== GENERAL_TICKET_TYPE) continue;
-      if (heldByZone.has(line.zone)) {
-        heldByZone.set(line.zone, heldByZone.get(line.zone) + Number(line.quantity || 0));
-        if (order.status === 'confirmed') pendingConfirmedZoneSales += Number(line.quantity || 0);
-      } else if (order.status === 'held') {
-        unassignedHeld += Number(line.quantity || 0);
-      }
-    }
-  }
-  for (const order of activeSeasonOrders.filter((item) => item.ticketType === GENERAL_TICKET_TYPE)) {
-    if (heldByZone.has(order.zone)) {
-      heldByZone.set(order.zone, heldByZone.get(order.zone) + Number(order.quantity || 0));
-      if (order.status === 'confirmed') pendingConfirmedZoneSales += Number(order.quantity || 0);
-    } else if (order.status === 'held') {
-      unassignedHeld += Number(order.quantity || 0);
-    }
-  }
-
-  const recordedZoneSales = [...salesByZone.values()].reduce((sum, quantity) => sum + quantity, 0);
-  const onlineTicketSold = Math.max(0, Number(ticketSold || 0) - onSpotZoneSales);
-  const unknownSold = Math.max(0, onlineTicketSold - recordedZoneSales - pendingConfirmedZoneSales);
-  let unassignedRemaining = unknownSold + unassignedHeld;
-  const zones = GENERAL_SEATING_AREAS.map((area) => {
-    const knownUsed = salesByZone.get(area.name) + heldByZone.get(area.name);
-    const unassignedHere = Math.min(unassignedRemaining, Math.max(0, area.capacity - knownUsed));
-    unassignedRemaining -= unassignedHere;
-    return {
-      name: area.name,
-      capacity: area.capacity,
-      available: Math.max(0, area.capacity - knownUsed - unassignedHere),
-    };
-  });
+  const zones = getGeneralZoneUsage(state, matchDate, ticketSold, activeOrders, activeSeasonOrders, zoneSoldCounts).map((area) => ({
+    ...area,
+    available: Math.max(0, Math.min(area.capacity, getInventoryAvailabilityLimit(state, matchDate, GENERAL_TICKET_TYPE, area.name)) - area.committed),
+  }));
   const physicalAvailable = zones.reduce((sum, area) => sum + area.available, 0);
-  const physicalUsed = GENERAL_SEATING_AREAS.reduce((sum, area) => sum + area.capacity, 0) - physicalAvailable;
+  const committedTotal = zones.reduce((sum, area) => sum + area.committed, 0);
   let capacityRemaining = Math.min(
     physicalAvailable,
-    Math.max(0, getInventoryCapacity(state, matchDate, GENERAL_TICKET_TYPE) - physicalUsed)
+    Math.max(0, getInventoryCapacity(state, matchDate, GENERAL_TICKET_TYPE) - committedTotal),
+    Math.max(0, getInventoryAvailabilityLimit(state, matchDate, GENERAL_TICKET_TYPE) - committedTotal)
   );
   return zones.map((area) => {
     const available = Math.min(area.available, capacityRemaining);
@@ -495,6 +652,7 @@ function reserveMatchOrderInState(state, {
   matchDate,
   ticketLines,
   eventTicketTypes,
+  zoneSoldCounts = {},
   existingUserTicketCount = 0,
   allowSalesClosed = false,
   skipBuyerLimit = false,
@@ -519,6 +677,12 @@ function reserveMatchOrderInState(state, {
     const singleMatchQuantity = normalizedLines
       .filter((line) => normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
       .reduce((sum, line) => sum + line.quantity, 0);
+    const fullBoxQuantity = normalizedLines
+      .filter((line) => normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_FULL_BOX))
+      .reduce((sum, line) => sum + line.quantity, 0);
+    if (singleMatchQuantity > 0 || fullBoxQuantity > 0) {
+      assertUnitedSuiteMappingForProduction();
+    }
     if (singleMatchQuantity > 0) {
       if (adminId) {
         throw new InventoryConflict('United Suite - Single Match is available through online checkout only.', 'TICKETS_UNAVAILABLE');
@@ -526,7 +690,7 @@ function reserveMatchOrderInState(state, {
       if (singleMatchQuantity > 1) {
         throw new InventoryConflict('United Suite - Single Match is limited to one ticket for one match date.', 'SUITE_SINGLE_MATCH_LIMIT');
       }
-      if (getSingleMatchReservedCount(state) >= getInventoryCapacity(state, null, SUITE_SINGLE_MATCH)) {
+      if (getSingleMatchReservedCount(state, matchDate) + singleMatchQuantity > getInventoryAvailabilityLimit(state, matchDate, SUITE_SINGLE_MATCH)) {
         throw new InventoryConflict('United Suite - Single Match is sold out.', 'TICKETS_UNAVAILABLE');
       }
     }
@@ -566,7 +730,8 @@ function reserveMatchOrderInState(state, {
       const ticket = stockByName.get(line.ticketType);
       if (!ticket) throw new InventoryConflict(`Ticket type ${line.ticketType} is not configured for this match.`, 'TICKET_NOT_CONFIGURED');
       const capacity = getInventoryCapacity(state, matchDate, line.ticketType) ?? Number(ticket.quantity || 0);
-      const available = Math.max(0, capacity - Number(ticket.sold || 0) - (heldByTicketType.get(line.ticketType) || 0));
+      const availabilityLimit = getInventoryAvailabilityLimit(state, matchDate, line.ticketType);
+      const available = Math.max(0, Math.min(capacity, availabilityLimit) - Number(ticket.sold || 0) - (heldByTicketType.get(line.ticketType) || 0));
       if (line.quantity > available) {
         throw new InventoryConflict(`Only ${available} ${line.ticketType} ticket(s) remain for this match.`, 'TICKETS_UNAVAILABLE');
       }
@@ -578,7 +743,8 @@ function reserveMatchOrderInState(state, {
       matchDate,
       generalTicket?.sold || 0,
       activeOrders,
-      activeSeasonOrders
+      activeSeasonOrders,
+      zoneSoldCounts
     ).map((area) => [area.name, area.available]));
     for (const line of normalizedLines.filter((item) => item.ticketType === GENERAL_TICKET_TYPE)) {
       const available = zoneAvailability.get(line.zone) || 0;
@@ -620,7 +786,23 @@ function reserveMatchOrderInState(state, {
           return !seasonBoxes.has(candidate) && allocations.length === 0;
         });
         if (!boxNumber) throw new InventoryConflict('No full United Suite boxes remain for this match.', 'SUITE_BOXES_UNAVAILABLE');
-        const allocation = { ticketType: SUITE_FULL_BOX, ticketIndex: line.startIndex + i, boxNumber };
+        const allocation = createSuiteAllocation(SUITE_FULL_BOX, line.startIndex + i, boxNumber);
+        suiteAllocations.push(allocation);
+        allocationByBox.get(boxNumber).push(allocation);
+      }
+    }
+
+    for (const line of linesWithIndex.filter((item) => normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))) {
+      if (line.quantity > suiteAvailability.singleMatchBoxes) {
+        throw new InventoryConflict(`Only ${suiteAvailability.singleMatchBoxes} United Suite Single Match box(es) remain for this match.`, 'SUITE_BOXES_UNAVAILABLE');
+      }
+      for (let i = 0; i < line.quantity; i += 1) {
+        const boxNumber = SINGLE_MATCH_BOX_NUMBERS.find((candidate) => {
+          const allocations = allocationByBox.get(candidate) || [];
+          return !seasonBoxes.has(candidate) && allocations.length === 0;
+        });
+        if (!boxNumber) throw new InventoryConflict('No United Suite Single Match boxes remain for this match.', 'SUITE_BOXES_UNAVAILABLE');
+        const allocation = createSuiteAllocation(SUITE_SINGLE_MATCH, line.startIndex + i, boxNumber);
         suiteAllocations.push(allocation);
         allocationByBox.get(boxNumber).push(allocation);
       }
@@ -635,7 +817,7 @@ function reserveMatchOrderInState(state, {
             allocatedSingleSeats + offlineReservedSeats >= suiteAvailability.singlePassCapacity) {
           throw new InventoryConflict('No United Suite seats remain in the single-pass box for this match.', 'SUITE_SEATS_UNAVAILABLE');
         }
-        const allocation = { ticketType: SUITE_SINGLE, ticketIndex: line.startIndex + i, boxNumber: SINGLE_PASS_BOX_NUMBER };
+        const allocation = createSuiteAllocation(SUITE_SINGLE, line.startIndex + i, SINGLE_PASS_BOX_NUMBER);
         suiteAllocations.push(allocation);
         allocationByBox.get(SINGLE_PASS_BOX_NUMBER).push(allocation);
       }
@@ -740,6 +922,7 @@ async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClos
     matchDate: match.matchDate,
     ticketLines: match.ticketLines,
     eventTicketTypes: match.eventTicketTypes,
+    zoneSoldCounts: match.zoneSoldCounts || {},
     existingUserTicketCount: match.existingUserTicketCount || 0,
     allowSalesClosed: true,
     skipBuyerLimit,
@@ -817,7 +1000,8 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, z
     }
 
     const quota = getSeasonPassQuotaUsage(state, ticketType);
-    const seasonPassAvailable = Math.max(0, getSeasonPassCapacity(state, ticketType) - quota.used);
+    const seasonPassAvailability = getInventoryAvailabilityLimit(state, null, `${ticketType === GENERAL_TICKET_TYPE ? 'General' : 'Premium'} Season Pass`);
+    const seasonPassAvailable = Math.max(0, Math.min(getSeasonPassCapacity(state, ticketType), seasonPassAvailability) - quota.used);
     if (normalizedQuantity > seasonPassAvailable) {
       throw new InventoryConflict(`Only ${seasonPassAvailable} ${ticketType} season pass(es) remain for the season.`, 'SEASON_PASS_LIMIT_REACHED');
     }
@@ -844,12 +1028,12 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, z
       const seasonHeld = activeSeasonOrders
         .filter((order) => order.ticketType === ticketType)
         .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
-      const available = Math.max(0, capacity - Number(ticket.sold || 0) - matchHeld - seasonHeld);
+      const available = Math.max(0, Math.min(capacity, getInventoryAvailabilityLimit(state, match.matchDate, ticketType)) - Number(ticket.sold || 0) - matchHeld - seasonHeld);
       if (normalizedQuantity > available) {
         throw new InventoryConflict(`Only ${available} ${ticketType} season pass(es) remain across all fixtures.`, 'TICKETS_UNAVAILABLE');
       }
       if (ticketType === GENERAL_TICKET_TYPE) {
-        const zoneAvailability = getGeneralZoneAvailability(state, match.matchDate, ticket.sold || 0, activeOrders, activeSeasonOrders)
+        const zoneAvailability = getGeneralZoneAvailability(state, match.matchDate, ticket.sold || 0, activeOrders, activeSeasonOrders, match.zoneSoldCounts || {})
           .find((area) => area.name === normalizedZone)?.available || 0;
         if (normalizedQuantity > zoneAvailability) {
           throw new InventoryConflict(`Only ${zoneAvailability} seat(s) remain in ${normalizedZone} across all home matches.`, 'GENERAL_ZONE_UNAVAILABLE');
@@ -1642,13 +1826,13 @@ async function finalizeMatchOrder(orderId) {
   });
 }
 
-function publicSuiteSingleMatchTicket(source, availableQuantity = 0, capacity = SINGLE_MATCH_CAPACITY) {
+function publicSuiteSingleMatchTicket(source, availableQuantity = 0, capacity = SEATS_PER_BOX) {
   const ticket = typeof source?.toObject === 'function' ? source.toObject() : (source || {});
   return {
     ...ticket,
     _id: ticket._id || 'nusc-suite-single-match',
     name: SUITE_SINGLE_MATCH,
-    description: 'One private VIP box for up to 10 people for one match.',
+    description: 'One private VIP box for up to 8 people for one match.',
     ...(getMatchTicketPrice(SUITE_SINGLE_MATCH) || {}),
     quantity: Math.max(0, Number(availableQuantity) || 0),
     sold: 0,
@@ -1667,18 +1851,21 @@ function publicSuiteSingleMatchTicket(source, availableQuantity = 0, capacity = 
   };
 }
 
-function includeSuiteSingleMatch(ticketTypes, availableQuantity = 0, capacity = SINGLE_MATCH_CAPACITY) {
+function includeSuiteSingleMatch(ticketTypes, availableQuantity = 0, capacity = SEATS_PER_BOX) {
   return ticketTypes.some((ticket) => normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
     ? ticketTypes
     : [...ticketTypes, publicSuiteSingleMatchTicket(null, availableQuantity, capacity)];
 }
 
-function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSalesClosed = false } = {}) {
+function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSalesClosed = false, zoneSoldCounts = {} } = {}) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     const ticketTypes = eventTicketTypes.map((source) => {
       const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
       if (normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
-        return publicSuiteSingleMatchTicket(ticket, 0, getInventoryCapacity(state, null, SUITE_SINGLE_MATCH));
+        return publicSuiteSingleMatchTicket(ticket, 0, SEATS_PER_BOX);
+      }
+      if (ticket.name === SUITE_FULL_BOX) {
+        return { ...ticket, ...(getMatchTicketPrice(ticket.name) || {}), quantity: 0, sold: 0, capacity: FULL_BOX_SEATS };
       }
       const seasonPassCapacity = SEASON_PASS_CAPACITIES[ticket.name]
         ? getSeasonPassCapacity(state, ticket.name)
@@ -1698,13 +1885,14 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
         }),
       };
     });
-    return includeSuiteSingleMatch(ticketTypes, 0, getInventoryCapacity(state, null, SUITE_SINGLE_MATCH));
+    return includeSuiteSingleMatch(ticketTypes, 0, SEATS_PER_BOX);
   }
   const activeOrders = activeOrdersForDate(state, matchDate);
   const activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate);
   const suite = getSuiteAvailability(state, matchDate);
-  const singleMatchCapacity = getInventoryCapacity(state, null, SUITE_SINGLE_MATCH);
-  const singleMatchRemaining = Math.max(0, singleMatchCapacity - getSingleMatchReservedCount(state));
+  const singleMatchRemaining = process.env.NODE_ENV === 'production' && !UNITED_SUITE_MAPPING_CONFIRMED
+    ? 0
+    : suite.singleMatchBoxes;
   const heldByTicketType = new Map();
   for (const order of activeOrders) {
     if (order.stockApplied) continue;
@@ -1718,7 +1906,7 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
   const ticketTypes = eventTicketTypes.map((source) => {
     const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
     if (normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
-      return publicSuiteSingleMatchTicket(ticket, singleMatchRemaining, singleMatchCapacity);
+      return publicSuiteSingleMatchTicket(ticket, singleMatchRemaining, SEATS_PER_BOX);
     }
     const seasonPassCapacity = SEASON_PASS_CAPACITIES[ticket.name]
       ? getSeasonPassCapacity(state, ticket.name)
@@ -1727,12 +1915,19 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
       return { ...ticket, ...(getMatchTicketPrice(ticket.name) || {}), quantity: suite.singleSeats, sold: 0, capacity: suite.singlePassCapacity };
     }
     if (ticket.name === SUITE_FULL_BOX) {
-      return { ...ticket, ...(getMatchTicketPrice(ticket.name) || {}), quantity: suite.fullBoxes, sold: 0, capacity: suite.fullBoxCapacity };
+      return {
+        ...ticket,
+        ...(getMatchTicketPrice(ticket.name) || {}),
+        quantity: process.env.NODE_ENV === 'production' && !UNITED_SUITE_MAPPING_CONFIRMED ? 0 : suite.fullBoxes,
+        sold: 0,
+        capacity: FULL_BOX_SEATS,
+      };
     }
     const capacity = getInventoryCapacity(state, matchDate, ticket.name) ?? Number(ticket.quantity || 0);
-    const available = Math.max(0, capacity - Number(ticket.sold || 0) - (heldByTicketType.get(ticket.name) || 0));
+    const availabilityLimit = getInventoryAvailabilityLimit(state, matchDate, ticket.name);
+    const available = Math.max(0, Math.min(capacity, availabilityLimit) - Number(ticket.sold || 0) - (heldByTicketType.get(ticket.name) || 0));
     const zones = ticket.name === GENERAL_TICKET_TYPE
-      ? getGeneralZoneAvailability(state, matchDate, ticket.sold || 0, activeOrders, activeSeasonOrders)
+      ? getGeneralZoneAvailability(state, matchDate, ticket.sold || 0, activeOrders, activeSeasonOrders, zoneSoldCounts)
       : null;
     return {
       ...ticket,
@@ -1743,24 +1938,35 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
       ...(zones && { zones }),
       ...(seasonPassCapacity && {
         seasonPassCapacity,
-        seasonPassRemaining: Math.max(0, getSeasonPassCapacity(state, ticket.name) - getSeasonPassQuotaUsage(state, ticket.name).used),
+        seasonPassRemaining: Math.max(0, Math.min(
+          getSeasonPassCapacity(state, ticket.name),
+          getInventoryAvailabilityLimit(state, null, `${ticket.name === 'General Pass' ? 'General' : 'Premium'} Season Pass`)
+        ) - getSeasonPassQuotaUsage(state, ticket.name).used),
         seasonPassSalesOpen: TICKET_SALES_ENABLED,
       }),
     };
   });
-  return includeSuiteSingleMatch(ticketTypes, singleMatchRemaining, singleMatchCapacity);
+  return includeSuiteSingleMatch(ticketTypes, singleMatchRemaining, SEATS_PER_BOX);
 }
 
-function getCapacityRowBase(definition, matchDate, state) {
+function getCapacityRowBase(definition, matchDate, state, zone = null) {
   const override = getCapacityOverride(state, matchDate, definition.ticketType);
+  const zoneCapacity = zone ? GENERAL_SEATING_AREAS.find((area) => area.name === zone)?.capacity : null;
   return {
     matchDate: definition.scope === 'match' ? matchDate : null,
     ticketType: definition.ticketType,
-    label: definition.label,
+    ...(zone && { zone }),
+    label: zone ? `${definition.label} · ${zone}` : definition.label,
     unit: definition.unit,
-    capacity: override ? Number(override.capacity) : definition.defaultCapacity,
-    defaultCapacity: definition.defaultCapacity,
-    maxCapacity: definition.maxCapacity,
+    capacity: zoneCapacity ?? (override ? Number(override.capacity) : definition.defaultCapacity),
+    defaultCapacity: zoneCapacity ?? definition.defaultCapacity,
+    maxCapacity: zoneCapacity ?? definition.maxCapacity,
+    availabilityLimit: getInventoryAvailabilityLimit(state, matchDate, definition.ticketType, zone),
+    availabilityOverride: (state.availabilityOverrides || []).some((item) => (
+      normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(definition.ticketType) &&
+      (item.matchDate || null) === (definition.scope === 'match' ? matchDate : null) &&
+      (item.zone || null) === (zone || null)
+    )),
     updatedAt: override?.updatedAt || null,
   };
 }
@@ -1790,17 +1996,32 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
       .reduce((sum, order) => sum + (order.suiteAllocations || []).filter((allocation) => allocation.boxNumber === SINGLE_PASS_BOX_NUMBER && normalizeTicketTypeName(allocation.ticketType) === normalizedType).length, 0);
     const held = ordersForBox.filter((order) => order.status === 'held')
       .reduce((sum, order) => sum + (order.suiteAllocations || []).filter((allocation) => allocation.boxNumber === SINGLE_PASS_BOX_NUMBER && normalizeTicketTypeName(allocation.ticketType) === normalizedType).length, 0);
-    const available = getSuiteAvailability(state, matchDate).singleSeats;
-    return { sold, held, offlineReserved, available, committed: sold + held + offlineReserved, blocked: Boolean(box?.seasonReserved || box?.fullBoxReserved) };
+    const available = Math.min(getSuiteAvailability(state, matchDate).singleSeats, getInventoryAvailabilityLimit(state, matchDate, ticketType));
+    return { sold, held, offlineReserved, available: Math.max(0, available), committed: sold + held + offlineReserved, blocked: Boolean(box?.seasonReserved || box?.fullBoxReserved) };
+  }
+
+  if (normalizedType === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
+    const sold = activeOrders.filter((order) => order.status === 'confirmed')
+      .reduce((sum, order) => sum + sumOrderTickets([order], SUITE_SINGLE_MATCH, { includeStockApplied: true }), 0);
+    const held = activeOrders.filter((order) => order.status === 'held')
+      .reduce((sum, order) => sum + sumOrderTickets([order], SUITE_SINGLE_MATCH), 0);
+    const committed = sold + held;
+    return { sold, held, offlineReserved: 0, available: getSuiteAvailability(state, matchDate).singleMatchBoxes, committed };
   }
 
   if (normalizedType === normalizeTicketTypeName(SUITE_FULL_BOX)) {
     const fullBoxes = getBoxState(state, matchDate).filter((box) => FULL_BOX_NUMBERS.includes(box.boxNumber));
     const offlineReserved = fullBoxes.filter((box) => box.seasonReserved).length;
-    const sold = fullBoxes.filter((box) => !box.seasonReserved && box.fullBoxReserved).length;
-    const held = fullBoxes.filter((box) => !box.seasonReserved && !box.fullBoxReserved && box.singlePassCount > 0).length;
-    const available = getSuiteAvailability(state, matchDate).fullBoxes;
-    const committed = fullBoxes.filter((box) => box.seasonReserved || box.fullBoxReserved || box.singlePassCount > 0).length;
+    const sold = activeOrders.filter((order) => order.status === 'confirmed')
+      .reduce((sum, order) => sum + (order.suiteAllocations || []).filter((allocation) => (
+        normalizeTicketTypeName(allocation.ticketType) === normalizedType && FULL_BOX_NUMBERS.includes(allocation.boxNumber)
+      )).length, 0);
+    const held = activeOrders.filter((order) => order.status === 'held')
+      .reduce((sum, order) => sum + (order.suiteAllocations || []).filter((allocation) => (
+        normalizeTicketTypeName(allocation.ticketType) === normalizedType && FULL_BOX_NUMBERS.includes(allocation.boxNumber)
+      )).length, 0);
+    const available = Math.min(getSuiteAvailability(state, matchDate).fullBoxes, getInventoryAvailabilityLimit(state, matchDate, ticketType));
+    const committed = sold + held + offlineReserved;
     return { sold, held, offlineReserved, available, committed };
   }
 
@@ -1813,7 +2034,7 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
     sold,
     held,
     offlineReserved: 0,
-    available: Math.max(0, capacity - sold - held),
+    available: Math.max(0, Math.min(capacity, getInventoryAvailabilityLimit(state, matchDate, ticketType)) - sold - held),
     committed: sold + held,
   };
 }
@@ -1866,17 +2087,29 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
       const usage = getMatchCapacityUsage(state, fixture.date, definition.ticketType, ticketTypes);
       return { ...capacity, ...usage };
     });
-    return { matchDate: fixture.date, opponent: suppliedMatch.opponent || fixture.opponent, capacities: rows };
+    const generalDefinition = getCapacityDefinition(GENERAL_TICKET_TYPE);
+    const generalTicket = ticketTypes.find((ticket) => normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(GENERAL_TICKET_TYPE));
+    const activeOrders = activeOrdersForDate(state, fixture.date);
+    const activeSeasonOrders = activeSeasonPassOrdersForDate(state, fixture.date);
+    const zoneSoldCounts = suppliedMatch.zoneSoldCounts || {};
+    const zoneUsage = getGeneralZoneUsage(state, fixture.date, generalTicket?.sold || 0, activeOrders, activeSeasonOrders, zoneSoldCounts);
+    const availableZones = getGeneralZoneAvailability(state, fixture.date, generalTicket?.sold || 0, activeOrders, activeSeasonOrders, zoneSoldCounts);
+    const generalRow = rows.find((row) => normalizeTicketTypeName(row.ticketType) === normalizeTicketTypeName(GENERAL_TICKET_TYPE));
+    if (generalRow) generalRow.available = availableZones.reduce((sum, area) => sum + area.available, 0);
+    const generalZones = GENERAL_SEATING_AREAS.map((area) => {
+      const capacity = getCapacityRowBase(generalDefinition, fixture.date, state, area.name);
+      const available = availableZones.find((item) => item.name === area.name)?.available || 0;
+      const committed = zoneUsage.find((item) => item.name === area.name)?.committed || 0;
+      return {
+        ...capacity,
+        sold: zoneUsage.find((item) => item.name === area.name)?.sold || 0,
+        held: zoneUsage.find((item) => item.name === area.name)?.held || 0,
+        offlineReserved: 0,
+        available,
+      };
+    });
+    return { matchDate: fixture.date, opponent: suppliedMatch.opponent || fixture.opponent, capacities: rows, generalZones };
   }).sort((first, second) => first.matchDate.localeCompare(second.matchDate));
-
-  const globalTicketDefinition = getCapacityDefinition(SUITE_SINGLE_MATCH);
-  const globalTicket = getCapacityRowBase(globalTicketDefinition, null, state);
-  const globalUsage = getGlobalSingleMatchUsage(state);
-  const singleMatchTicket = {
-    ...globalTicket,
-    ...globalUsage,
-    available: Math.max(0, globalTicket.capacity - globalUsage.committed),
-  };
 
   const seasonPasses = ['General Pass', 'Premium Pass'].map((ticketType) => {
     const definition = getCapacityDefinition(`${ticketType === 'General Pass' ? 'General' : 'Premium'} Season Pass`);
@@ -1890,6 +2123,7 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
       ...usage,
       available: Math.min(
         Math.max(0, quotaCapacity.capacity - usage.used),
+        Math.max(0, quotaCapacity.availabilityLimit - usage.used),
         typeAvailability.length ? Math.min(...typeAvailability) : 0
       ),
       limitingMatchAvailability: typeAvailability.length ? Math.min(...typeAvailability) : 0,
@@ -1905,10 +2139,10 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
     held: 0,
     offlineReserved: seasonBoxCount,
     committed: seasonBoxCount,
-    available: Math.max(0, seasonBoxCapacity.capacity - seasonBoxCount),
+    available: Math.max(0, Math.min(seasonBoxCapacity.capacity, seasonBoxCapacity.availabilityLimit) - seasonBoxCount),
   };
 
-  return { salesEnabled: TICKET_SALES_ENABLED, fixtures, singleMatchTicket, seasonPasses, seasonBoxes };
+  return { salesEnabled: TICKET_SALES_ENABLED, suiteMappingConfirmed: UNITED_SUITE_MAPPING_CONFIRMED, fixtures, seasonPasses, seasonBoxes };
 }
 
 async function setCapacityOverride({ matchDate = null, ticketType, capacity, adminId, soldCount = 0 }) {
@@ -1925,7 +2159,7 @@ async function setCapacityOverride({ matchDate = null, ticketType, capacity, adm
   if (!adminId) throw new InventoryConflict('An admin account is required to change capacity.', 'ADMIN_REQUIRED');
 
   return mutateInventory((state) => {
-    const usage = definition.ticketType === SUITE_SINGLE_MATCH
+    const usage = definition.scope === 'global' && definition.ticketType === SUITE_SINGLE_MATCH
       ? getGlobalSingleMatchUsage(state)
       : definition.ticketType === SEASON_BOX_CAPACITY_KEY
         ? (() => {
@@ -1966,19 +2200,114 @@ async function setCapacityOverride({ matchDate = null, ticketType, capacity, adm
   });
 }
 
-async function getMatchAvailability(matchDate, eventTicketTypes = []) {
+async function setAvailabilityOverride({ matchDate = null, ticketType, zone = null, availability, adminId, soldCount = 0, zoneSoldCounts = {} }) {
+  const definition = getCapacityDefinition(ticketType);
+  if (!definition) throw new InventoryConflict('Choose a supported NUSC ticket availability.', 'INVALID_AVAILABILITY_TYPE');
+  const scopedMatchDate = definition.scope === 'match' ? normalizeMatchDate(matchDate) : null;
+  if (definition.scope === 'match' && !FIXTURE_DATES.includes(scopedMatchDate)) {
+    throw new InventoryConflict('Choose a valid NUSC match date for this availability.', 'INVALID_MATCH_DATE');
+  }
+  const normalizedZone = zone == null || zone === '' ? null : String(zone).trim().toUpperCase();
+  if (normalizedZone && (definition.ticketType !== GENERAL_TICKET_TYPE || !GENERAL_SEATING_AREAS.some((area) => area.name === normalizedZone))) {
+    throw new InventoryConflict('Choose a valid General seating zone.', 'INVALID_ZONE');
+  }
+  const reset = availability === null || availability === '';
+  const maxAvailability = normalizedZone
+    ? GENERAL_SEATING_AREAS.find((area) => area.name === normalizedZone).capacity
+    : definition.maxCapacity;
+  const nextAvailability = reset ? null : Number(availability);
+  if (!reset && (!Number.isSafeInteger(nextAvailability) || nextAvailability < 0 || nextAvailability > maxAvailability)) {
+    throw new InventoryConflict(`Availability must be a whole number from 0 to ${maxAvailability}.`, 'INVALID_AVAILABILITY');
+  }
+  if (!adminId) throw new InventoryConflict('An admin account is required to change availability.', 'ADMIN_REQUIRED');
+
+  return mutateInventory((state) => {
+    state.availabilityOverrides ||= [];
+    const configuredCapacity = normalizedZone
+      ? maxAvailability
+      : Math.min(definition.maxCapacity, getInventoryCapacity(state, scopedMatchDate, definition.ticketType));
+    if (!reset && nextAvailability > configuredCapacity) {
+      throw new InventoryConflict(`Availability cannot exceed the configured capacity of ${configuredCapacity}.`, 'INVALID_AVAILABILITY');
+    }
+    const activeOrders = scopedMatchDate ? activeOrdersForDate(state, scopedMatchDate) : [];
+    const activeSeasonOrders = scopedMatchDate ? activeSeasonPassOrdersForDate(state, scopedMatchDate) : [];
+    let committed = 0;
+    if (normalizedZone) {
+      const zoneUsage = getGeneralZoneUsage(state, scopedMatchDate, Math.max(0, Number(soldCount) || 0), activeOrders, activeSeasonOrders, zoneSoldCounts);
+      committed = Number(zoneUsage.find((area) => area.name === normalizedZone)?.committed || 0);
+    } else if (definition.scope === 'global' && definition.ticketType === SUITE_SINGLE_MATCH) {
+      committed = getGlobalSingleMatchUsage(state).committed;
+    } else if (definition.scope === 'global' && definition.ticketType === 'General Season Pass') {
+      committed = getSeasonQuotaUsage(state, GENERAL_TICKET_TYPE).used;
+    } else if (definition.scope === 'global' && definition.ticketType === 'Premium Season Pass') {
+      committed = getSeasonQuotaUsage(state, 'Premium Pass').used;
+    } else if (definition.scope === 'global' && definition.ticketType === SEASON_BOX_CAPACITY_KEY) {
+      committed = state.seasonReservations.filter((reservation) => reservation.status === 'active').length;
+    } else if (scopedMatchDate) {
+      const usage = getMatchCapacityUsage(state, scopedMatchDate, definition.ticketType, [{
+        name: definition.ticketType,
+        sold: Math.max(0, Number(soldCount) || 0),
+      }]);
+      committed = Number(usage.committed ?? (Number(usage.sold || 0) + Number(usage.held || 0) + Number(usage.offlineReserved || 0)));
+    }
+    if (!reset && nextAvailability < committed) {
+      const error = new InventoryConflict(`Availability cannot be lower than the ${committed} already sold, held, or reserved ${definition.unit}.`, 'AVAILABILITY_BELOW_COMMITTED');
+      error.committed = committed;
+      error.availability = nextAvailability;
+      throw error;
+    }
+
+    const existingIndex = state.availabilityOverrides.findIndex((item) => (
+      normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(definition.ticketType) &&
+      (item.matchDate || null) === scopedMatchDate &&
+      (item.zone || null) === normalizedZone
+    ));
+    const existing = existingIndex >= 0 ? state.availabilityOverrides[existingIndex] : null;
+    if (reset) {
+      if (existingIndex >= 0) state.availabilityOverrides.splice(existingIndex, 1);
+      return {
+        matchDate: scopedMatchDate,
+        ticketType: definition.ticketType,
+        zone: normalizedZone,
+        availability: null,
+        availabilityLimit: getInventoryAvailabilityLimit(state, scopedMatchDate, definition.ticketType, normalizedZone),
+        availabilityOverride: false,
+      };
+    }
+
+    const updated = {
+      ...(existing || {}),
+      matchDate: scopedMatchDate,
+      ticketType: definition.ticketType,
+      zone: normalizedZone,
+      availability: nextAvailability,
+      updatedBy: adminId,
+      updatedAt: new Date(),
+    };
+    if (existing) Object.assign(existing, updated);
+    else state.availabilityOverrides.push(updated);
+    return { ...updated, availabilityLimit: getInventoryAvailabilityLimit(state, scopedMatchDate, definition.ticketType, normalizedZone), availabilityOverride: true };
+  });
+}
+
+async function getMatchAvailability(matchDate, eventTicketTypes = [], { eventId = null, zoneSoldCounts = null } = {}) {
   const normalizedMatchDate = normalizeMatchDate(matchDate);
   if (!FIXTURE_DATES.includes(normalizedMatchDate)) return null;
-  return mutateInventory((state) => getPublicTicketTypes(state, normalizedMatchDate, eventTicketTypes));
+  const resolvedZoneSoldCounts = zoneSoldCounts || (eventId ? (await getGeneralZoneSalesByEventIds([eventId]))[String(eventId)] || {} : {});
+  return mutateInventory((state) => getPublicTicketTypes(state, normalizedMatchDate, eventTicketTypes, { zoneSoldCounts: resolvedZoneSoldCounts }));
 }
 
 async function getMatchAvailabilities(matches = [], { allowSalesClosed = false } = {}) {
   const normalizedMatches = matches.map((match) => ({ ...match, matchDate: normalizeMatchDate(match.matchDate) }));
   const validMatches = normalizedMatches.filter((match) => FIXTURE_DATES.includes(match.matchDate));
   if (validMatches.length === 0) return {};
+  const salesByEvent = await getGeneralZoneSalesByEventIds(validMatches.map((match) => match.eventId));
   return mutateInventory((state) => Object.fromEntries(validMatches.map((match) => [
     match.key,
-    getPublicTicketTypes(state, match.matchDate, match.ticketTypes, { allowSalesClosed }),
+    getPublicTicketTypes(state, match.matchDate, match.ticketTypes, {
+      allowSalesClosed,
+      zoneSoldCounts: match.zoneSoldCounts || salesByEvent[String(match.eventId)] || {},
+    }),
   ])));
 }
 
@@ -1995,13 +2324,16 @@ async function reserveSeasonBox({ bookingReference, adminId }) {
     const alreadySeasonReserved = new Set(state.seasonReservations
       .filter((item) => item.status === 'active')
       .map((item) => item.boxNumber));
-    const seasonCapacity = getInventoryCapacity(state, null, SEASON_BOX_CAPACITY_KEY);
+    const seasonCapacity = Math.min(
+      getInventoryCapacity(state, null, SEASON_BOX_CAPACITY_KEY),
+      getInventoryAvailabilityLimit(state, null, SEASON_BOX_CAPACITY_KEY)
+    );
     if (alreadySeasonReserved.size >= seasonCapacity || FIXTURE_DATES.some((date) => getSuiteAvailability(state, date).fullBoxes < 1)) {
       throw new InventoryConflict('No single box is free across every match for a season booking.', 'NO_SEASON_BOX');
     }
     const activeOrders = state.orders.filter((order) => order.status === 'confirmed' || (order.status === 'held' && new Date(order.expiresAt) > new Date()));
     const singlePassBoxHasOfflineReservations = Object.values(OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE).some((seatCount) => seatCount > 0);
-    const boxNumber = Array.from({ length: BOX_COUNT }, (_, index) => index + 1).find((candidate) => {
+    const boxNumber = SEASON_BOX_NUMBERS.find((candidate) => {
       if (alreadySeasonReserved.has(candidate)) return false;
       if (candidate === SINGLE_PASS_BOX_NUMBER && singlePassBoxHasOfflineReservations) return false;
       return !FIXTURE_DATES.some((date) => activeOrders.some((order) => (
@@ -2055,6 +2387,7 @@ function matchDateFromSlug(slug) {
 
 module.exports = {
   BOX_COUNT,
+  FULL_BOX_COUNT: FULL_BOX_NUMBERS.length,
   BUYER_TICKET_LIMIT,
   FIXTURE_DATES,
   GENERAL_TICKET_TYPE,
@@ -2070,6 +2403,7 @@ module.exports = {
   NUSC_TEST_MODE_ENABLED,
   SEASON_PASS_CAPACITIES,
   SINGLE_MATCH_CAPACITY,
+  SINGLE_PASS_SEAT_CAPACITY: SEATS_PER_BOX,
   SUITE_FULL_BOX,
   SUITE_SINGLE_MATCH,
   SUITE_SEASON,
@@ -2083,8 +2417,13 @@ module.exports = {
   finalizeSeasonPassOrder,
   getMatchAvailability,
   getMatchAvailabilities,
+  getGeneralZoneSalesByEventIds,
   getAdminCapacityOverview,
+  getBoxDisplayNumber,
+  getBoxGuestCapacity,
+  isUnitedSuiteMappingConfirmed: () => UNITED_SUITE_MAPPING_CONFIRMED,
   setCapacityOverride,
+  setAvailabilityOverride,
   listSeasonBoxes,
   markTicketStockApplied,
   markSeasonPassStockApplied,

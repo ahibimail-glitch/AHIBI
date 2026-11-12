@@ -423,6 +423,7 @@ const getPublicEvents = async (req, res) => {
     if (nuscEvents.length > 0) {
       const availabilityByEvent = await nuscHomeMatchInventory.getMatchAvailabilities(nuscEvents.map((event) => ({
         key: String(event._id),
+        eventId: event._id,
         matchDate: nuscHomeMatchInventory.matchDateFromSlug(event.slug),
         ticketTypes: event.ticketTypes || [],
       })));
@@ -626,7 +627,7 @@ const getPublicEventById = async (req, res) => {
     console.log('Event retrieved successfully:', event._id);
     if (event.slug?.startsWith('nusc-home-match-')) {
       const matchDate = nuscHomeMatchInventory.matchDateFromSlug(event.slug);
-      const availableTicketTypes = await nuscHomeMatchInventory.getMatchAvailability(matchDate, event.ticketTypes || []);
+      const availableTicketTypes = await nuscHomeMatchInventory.getMatchAvailability(matchDate, event.ticketTypes || [], { eventId: event._id });
       if (availableTicketTypes) {
         const publicEvent = event.toObject();
         publicEvent.ticketTypes = availableTicketTypes;

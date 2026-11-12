@@ -58,8 +58,8 @@ test('United Suite Single uses only box 1 and stops at eight seats per match', a
   assert.deepEqual(state.orders.flatMap((order) => order.suiteAllocations).map((allocation) => allocation.boxNumber), Array(8).fill(1));
 });
 
-test('United Suite Full Box uses only boxes 2 through 4 and allows three bookings per match', async () => {
-  for (let index = 0; index < 3; index += 1) {
+test('United Suite Full Box uses four ten-guest boxes per match', async () => {
+  for (let index = 0; index < 4; index += 1) {
     await inventory.reserveMatchOrder({
       orderId: `full-box-${index}`,
       userId: `buyer-${index}`,
@@ -77,7 +77,7 @@ test('United Suite Full Box uses only boxes 2 through 4 and allows three booking
     eventTicketTypes: [],
   }), { code: 'SUITE_BOXES_UNAVAILABLE' });
 
-  assert.deepEqual(state.orders.flatMap((order) => order.suiteAllocations).map((allocation) => allocation.boxNumber), [2, 3, 4]);
+  assert.deepEqual(state.orders.flatMap((order) => order.suiteAllocations).map((allocation) => allocation.boxNumber), [7, 8, 9, 10]);
 });
 
 test('single-pass sales do not consume full-box inventory', async () => {
@@ -93,10 +93,10 @@ test('single-pass sales do not consume full-box inventory', async () => {
 
   const availability = await inventory.getMatchAvailability(matchDate, [
     { name: inventory.SUITE_SINGLE, quantity: 8, sold: 0 },
-    { name: inventory.SUITE_FULL_BOX, quantity: 3, sold: 0 },
+    { name: inventory.SUITE_FULL_BOX, quantity: 4, sold: 0 },
   ]);
   assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_SINGLE).quantity, 0);
-  assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_FULL_BOX).quantity, 3);
+  assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_FULL_BOX).quantity, 4);
 });
 
 test('on-spot Suite box sales remain committed in match availability', async () => {
@@ -109,9 +109,9 @@ test('on-spot Suite box sales remain committed in match availability', async () 
   });
 
   const availability = await inventory.getMatchAvailability(matchDate, [
-    { name: inventory.SUITE_FULL_BOX, quantity: 3, sold: 0 },
+    { name: inventory.SUITE_FULL_BOX, quantity: 4, sold: 0 },
   ]);
-  assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_FULL_BOX).quantity, 2);
+  assert.equal(availability.find((ticket) => ticket.name === inventory.SUITE_FULL_BOX).quantity, 3);
 });
 
 test('concurrent orders cannot oversell the final single-pass seat', async () => {

@@ -96,7 +96,8 @@ function canRepairDashboardAccess(order, bookings, expectedTicketCount, payment)
 }
 
 function getTicketUnits(ticketType, quantity) {
-  if (ticketType === inventory.SUITE_FULL_BOX || ticketType === inventory.SUITE_SEASON) return quantity * 8;
+  if (ticketType === inventory.SUITE_FULL_BOX) return quantity * 10;
+  if (ticketType === inventory.SUITE_SINGLE_MATCH || ticketType === inventory.SUITE_SEASON) return quantity * 8;
   return quantity;
 }
 
@@ -324,6 +325,7 @@ async function createOrder(req, res) {
     }
 
     const existingUserTicketCount = await getExistingBuyerTicketUnits(event._id, user._id);
+    const zoneSoldCounts = (await inventory.getGeneralZoneSalesByEventIds([event._id]))[String(event._id)] || {};
     if (existingCheckout) {
       await inventory.reserveMatchOrder({
         orderId: existingCheckout.existing.inventoryHoldId || existingCheckout.existing.orderId,
@@ -331,6 +333,7 @@ async function createOrder(req, res) {
         matchDate,
         ticketLines: tickets,
         eventTicketTypes: event.ticketTypes,
+        zoneSoldCounts,
         existingUserTicketCount,
       });
       return res.status(200).json(existingCheckout.providerOrder);
@@ -343,6 +346,7 @@ async function createOrder(req, res) {
       matchDate,
       ticketLines: tickets,
       eventTicketTypes: event.ticketTypes,
+      zoneSoldCounts,
       existingUserTicketCount,
     });
 
@@ -536,10 +540,12 @@ async function createMultiMatchOrder(req, res) {
     });
     if (existingCheckout?.alreadyCompleted) return res.status(200).json({ success: true, alreadyCompleted: true });
 
+    const zoneSalesByEvent = await inventory.getGeneralZoneSalesByEventIds(fixtures.map((fixture) => fixture.eventId));
     const holdMatches = fixtures.map((fixture) => ({
       matchDate: fixture.matchDate,
       ticketLines: fixture.ticketLines,
       eventTicketTypes: fixture.event.ticketTypes,
+      zoneSoldCounts: zoneSalesByEvent[String(fixture.eventId)] || {},
       existingUserTicketCount: fixture.existingUserTicketCount,
     }));
     if (existingCheckout) {
@@ -717,6 +723,13 @@ async function createSeasonPassOrder(req, res) {
       return res.status(200).json({ success: true, alreadyCompleted: true });
     }
 
+    const zoneSalesByEvent = await inventory.getGeneralZoneSalesByEventIds(fixtures.map(({ event }) => event._id));
+    const seasonMatches = fixtures.map(({ matchDate, event }) => ({
+      matchDate,
+      ticketTypes: event.ticketTypes,
+      zoneSoldCounts: zoneSalesByEvent[String(event._id)] || {},
+    }));
+
     if (existingCheckout) {
       await inventory.reserveSeasonPassOrder({
         orderId: existingCheckout.existing.orderId,
@@ -724,7 +737,7 @@ async function createSeasonPassOrder(req, res) {
         ticketType: pass.ticketType,
         quantity,
         zone,
-        matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
+        matches: seasonMatches,
         existingUserTicketCountByDate,
       });
       return res.status(200).json(existingCheckout.providerOrder);
@@ -751,7 +764,7 @@ async function createSeasonPassOrder(req, res) {
       ticketType: pass.ticketType,
       quantity,
       zone,
-      matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
+      matches: seasonMatches,
       existingUserTicketCountByDate,
     });
 
@@ -840,7 +853,10 @@ async function createBookingsForOrder(order, payment) {
   if (!event) throw new Error('Match event no longer exists');
   const { user, tickets } = order.bookingDetails;
   const hold = await inventory.confirmMatchOrder(order.inventoryHoldId || order.orderId);
-  const allocationByTicketIndex = new Map((hold.suiteAllocations || []).map((allocation) => [allocation.ticketIndex, allocation.boxNumber]));
+  const allocationByTicketIndex = new Map((hold.suiteAllocations || []).map((allocation) => [allocation.ticketIndex, {
+    boxNumber: inventory.getBoxDisplayNumber(allocation),
+    guestCapacity: inventory.getBoxGuestCapacity(allocation),
+  }]));
   const totalTickets = tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
   const createdBookings = [];
   const bookingIds = [];
@@ -872,7 +888,10 @@ async function createBookingsForOrder(order, payment) {
           razorpayOrderId: order.orderId,
           nuscOrderId: order.orderId,
           nuscTicketIndex: ticketIndex,
-          ...(allocationByTicketIndex.has(ticketIndex) && { nuscSuiteBoxNumber: allocationByTicketIndex.get(ticketIndex) }),
+          ...(allocationByTicketIndex.has(ticketIndex) && {
+            nuscSuiteBoxNumber: allocationByTicketIndex.get(ticketIndex).boxNumber,
+            nuscSuiteGuestCapacity: allocationByTicketIndex.get(ticketIndex).guestCapacity,
+          }),
           ...(item.ticketType === inventory.GENERAL_TICKET_TYPE && { nuscGeneralZone: item.zone }),
           ticketIndex,
           totalTickets,
@@ -944,7 +963,10 @@ async function createMultiMatchBookingsForOrder(order, payment) {
   let orderTicketIndex = 1;
   for (const { fixture, event } of events) {
     const hold = holdByDate.get(fixture.matchDate);
-    const allocationByTicketIndex = new Map((hold?.suiteAllocations || []).map((allocation) => [allocation.ticketIndex, allocation.boxNumber]));
+    const allocationByTicketIndex = new Map((hold?.suiteAllocations || []).map((allocation) => [allocation.ticketIndex, {
+      boxNumber: inventory.getBoxDisplayNumber(allocation),
+      guestCapacity: inventory.getBoxGuestCapacity(allocation),
+    }]));
     let matchTicketIndex = 1;
     for (const item of fixture.tickets) {
       for (let itemIndex = 0; itemIndex < item.quantity; itemIndex += 1) {
@@ -972,7 +994,10 @@ async function createMultiMatchBookingsForOrder(order, payment) {
             razorpayOrderId: order.orderId,
             nuscOrderId: order.orderId,
             nuscTicketIndex: orderTicketIndex,
-            ...(allocationByTicketIndex.has(matchTicketIndex) && { nuscSuiteBoxNumber: allocationByTicketIndex.get(matchTicketIndex) }),
+            ...(allocationByTicketIndex.has(matchTicketIndex) && {
+              nuscSuiteBoxNumber: allocationByTicketIndex.get(matchTicketIndex).boxNumber,
+              nuscSuiteGuestCapacity: allocationByTicketIndex.get(matchTicketIndex).guestCapacity,
+            }),
             ...(item.ticketType === inventory.GENERAL_TICKET_TYPE && { nuscGeneralZone: item.zone }),
             ticketIndex: orderTicketIndex,
             totalTickets,
@@ -1401,9 +1426,15 @@ async function getCapacityControls(req, res) {
     const slugs = inventory.FIXTURE_MATCHES.map((match) => `nusc-home-match-${match.date.replace(/-/g, '')}`);
     const events = await Event.find({ slug: { $in: slugs } }).select('+ticketTypes');
     const eventsBySlug = new Map(events.map((event) => [event.slug, event]));
+    const zoneSalesByEvent = await inventory.getGeneralZoneSalesByEventIds(events.map((event) => event._id));
     const matches = inventory.FIXTURE_MATCHES.map((match) => {
       const event = eventsBySlug.get(`nusc-home-match-${match.date.replace(/-/g, '')}`);
-      return { matchDate: match.date, opponent: match.opponent, ticketTypes: event?.ticketTypes || [] };
+      return {
+        matchDate: match.date,
+        opponent: match.opponent,
+        ticketTypes: event?.ticketTypes || [],
+        zoneSoldCounts: event ? zoneSalesByEvent[String(event._id)] || {} : {},
+      };
     });
     const overview = await inventory.getAdminCapacityOverview({ matches });
     return res.status(200).json({ success: true, overview });
@@ -1415,26 +1446,37 @@ async function getCapacityControls(req, res) {
 
 async function updateCapacityControl(req, res) {
   try {
-    const { ticketType, capacity } = req.body || {};
+    const { ticketType, capacity, availability, zone = null } = req.body || {};
     const matchDate = req.body?.matchDate ? inventory.normalizeMatchDate(req.body.matchDate) : null;
     let soldCount = 0;
+    let event = null;
     if (matchDate) {
       const slug = `nusc-home-match-${String(matchDate).replace(/-/g, '')}`;
-      const event = await Event.findOne({ slug }).select('+ticketTypes');
+      event = await Event.findOne({ slug }).select('+ticketTypes');
       const eventTicket = event?.ticketTypes?.find((ticket) => ticket.name === ticketType);
       soldCount = Number(eventTicket?.sold || 0);
     }
-    const override = await inventory.setCapacityOverride({
-      matchDate,
-      ticketType,
-      capacity,
-      adminId: req.user?._id,
-      soldCount,
-    });
+    const zoneSoldCounts = matchDate && event
+      ? (await inventory.getGeneralZoneSalesByEventIds([event._id]))[String(event._id)] || {}
+      : {};
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'availability')) {
+      const override = await inventory.setAvailabilityOverride({
+        matchDate,
+        ticketType,
+        zone,
+        availability,
+        adminId: req.user?._id,
+        soldCount,
+        zoneSoldCounts,
+      });
+      return res.status(200).json({ success: true, override });
+    }
+    const override = await inventory.setCapacityOverride({ matchDate, ticketType, capacity, adminId: req.user?._id, soldCount });
     return res.status(200).json({ success: true, override });
   } catch (error) {
     const status = error.code === 'CAPACITY_BELOW_COMMITTED' ? 409 :
-      ['INVALID_CAPACITY_TYPE', 'INVALID_CAPACITY', 'INVALID_MATCH_DATE', 'ADMIN_REQUIRED'].includes(error.code) ? 400 : 500;
+      error.code === 'AVAILABILITY_BELOW_COMMITTED' ? 409 :
+        ['INVALID_CAPACITY_TYPE', 'INVALID_CAPACITY', 'INVALID_AVAILABILITY_TYPE', 'INVALID_AVAILABILITY', 'INVALID_ZONE', 'INVALID_MATCH_DATE', 'ADMIN_REQUIRED'].includes(error.code) ? 400 : 500;
     if (status === 500) console.error('[NUSC capacity] Capacity update failed:', error.message);
     return res.status(status).json({ success: false, message: error.message || 'Unable to update NUSC ticket capacity.', code: error.code });
   }
@@ -1814,15 +1856,19 @@ async function reserveInventoryForCapturedOrder(order) {
       if (!event || !event.slug?.startsWith('nusc-home-match-') || inventory.matchDateFromSlug(event.slug) !== fixture.matchDate) {
         throw new inventory.InventoryConflict('A season match listing is unavailable; restore its listing before ticket recovery.', 'RECOVERY_EVENT_MISSING');
       }
-      matches.push({ matchDate: fixture.matchDate, ticketTypes: event.ticketTypes });
+      matches.push({ matchDate: fixture.matchDate, ticketTypes: event.ticketTypes, eventId: event._id });
     }
+    const zoneSalesByEvent = await inventory.getGeneralZoneSalesByEventIds(matches.map((match) => match.eventId));
     return inventory.reserveSeasonPassOrder({
       orderId: order.orderId,
       userId: order.user,
       ticketType: order.bookingDetails.ticketType,
       quantity: order.bookingDetails.quantity,
       zone: order.bookingDetails.zone,
-      matches,
+      matches: matches.map((match) => ({
+        ...match,
+        zoneSoldCounts: zoneSalesByEvent[String(match.eventId)] || {},
+      })),
       allowSalesClosed: true,
       skipBuyerLimit: true,
     });
@@ -1839,13 +1885,18 @@ async function reserveInventoryForCapturedOrder(order) {
         matchDate: fixture.matchDate,
         ticketLines: fixture.tickets,
         eventTicketTypes: event.ticketTypes,
+        eventId: event._id,
         existingUserTicketCount: 0,
       });
     }
+    const zoneSalesByEvent = await inventory.getGeneralZoneSalesByEventIds(matches.map((match) => match.eventId));
     return inventory.reserveMultiMatchOrder({
       orderId: order.inventoryHoldId || order.orderId,
       userId: order.user,
-      matches,
+      matches: matches.map((match) => ({
+        ...match,
+        zoneSoldCounts: zoneSalesByEvent[String(match.eventId)] || {},
+      })),
       allowSalesClosed: true,
       skipBuyerLimit: true,
     });
@@ -1862,6 +1913,7 @@ async function reserveInventoryForCapturedOrder(order) {
     matchDate,
     ticketLines: order.bookingDetails.tickets,
     eventTicketTypes: event.ticketTypes,
+    zoneSoldCounts: (await inventory.getGeneralZoneSalesByEventIds([event._id]))[String(event._id)] || {},
     existingUserTicketCount: 0,
     allowSalesClosed: true,
     skipBuyerLimit: true,
@@ -2113,16 +2165,16 @@ async function seedTestFixtures(req, res) {
         name: inventory.SUITE_SINGLE,
         description: 'One person, one match, one seat in a United Suite box.',
         ...inventory.getMatchTicketPrice(inventory.SUITE_SINGLE),
-        quantity: inventory.BOX_COUNT * 8,
+        quantity: inventory.SINGLE_PASS_SEAT_CAPACITY,
         capacity: 1,
         benefits: ['Private VIP Box access', 'Comfortable premium seating', 'Best stadium viewing experience', 'Dedicated VIP entry', 'Complimentary food & beverages', 'Dedicated parking access for the matchday'],
       },
       {
         name: inventory.SUITE_FULL_BOX,
-        description: 'One private United Suite box for up to eight people for one match.',
+        description: 'One private United Suite box for up to ten people for one match.',
         ...inventory.getMatchTicketPrice(inventory.SUITE_FULL_BOX),
-        quantity: inventory.BOX_COUNT,
-        capacity: 8,
+        quantity: inventory.FULL_BOX_COUNT,
+        capacity: 10,
         benefits: ['Private VIP Box access', 'Comfortable seating', 'Best stadium viewing experience', 'Dedicated VIP entry', 'Complimentary food & beverages', 'Match-day hospitality service (butler service)', 'Dedicated parking access', 'Complimentary club merchandise', 'Exclusive discounts at club store'],
       },
     ];

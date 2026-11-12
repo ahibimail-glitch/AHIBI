@@ -13,11 +13,14 @@ import {
 type CapacityRow = {
   matchDate: string | null;
   ticketType: string;
+  zone?: string | null;
   label: string;
   unit: string;
   capacity?: number | null;
   defaultCapacity: number;
   maxCapacity?: number | null;
+  availabilityLimit?: number | null;
+  capacityEditable?: boolean;
   sold?: number | null;
   held?: number | null;
   offlineReserved?: number | null;
@@ -30,12 +33,13 @@ type FixtureCapacity = {
   matchDate: string;
   opponent: string;
   capacities: CapacityRow[];
+  generalZones: CapacityRow[];
 };
 
 type CapacityOverview = {
   salesEnabled: boolean;
+  suiteMappingConfirmed: boolean;
   fixtures: FixtureCapacity[];
-  singleMatchTicket: CapacityRow;
   seasonPasses: CapacityRow[];
   seasonBoxes: CapacityRow;
 };
@@ -43,7 +47,7 @@ type CapacityOverview = {
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
 
 function rowKey(row: CapacityRow) {
-  return `${row.matchDate || "global"}:${row.ticketType}`;
+  return `${row.matchDate || "global"}:${row.ticketType}:${row.zone || ""}`;
 }
 
 function committedCount(row: CapacityRow) {
@@ -97,7 +101,7 @@ export default function NuscTicketCapacityControls() {
       return;
     }
 
-    const capacity = Number(drafts[key] ?? currentCapacity);
+    const capacity = Number(drafts[`${key}:capacity`] ?? currentCapacity);
     if (!Number.isInteger(capacity) || capacity < committed || capacity > maxCapacity) {
       toast.error(`Enter a whole number from ${committed} to ${maxCapacity}.`);
       return;
@@ -126,16 +130,58 @@ export default function NuscTicketCapacityControls() {
     }
   };
 
+  const saveAvailability = async (row: CapacityRow) => {
+    const key = rowKey(row);
+    const committed = committedCount(row);
+    const currentAvailability = capacityCount(row.availabilityLimit ?? row.capacity);
+    const maxAvailability = capacityCount(row.capacity);
+    if (committed === null || currentAvailability === null || maxAvailability === null) {
+      toast.error("Availability details are incomplete. Reload the page before changing this row.");
+      return;
+    }
+    const availability = Number(drafts[`${key}:availability`] ?? currentAvailability);
+    if (!Number.isInteger(availability) || availability < committed || availability > maxAvailability) {
+      toast.error(`Enter a whole number from ${committed} to ${maxAvailability}.`);
+      return;
+    }
+    setBusyKey(`${key}:availability`);
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/nusc-home-matches/availability`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ matchDate: row.matchDate, ticketType: row.ticketType, zone: row.zone || null, availability }),
+        credentials: "include",
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || "Unable to update ticket availability.");
+      toast.success(`${row.label} availability updated.`);
+      await loadOverview();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update ticket availability.";
+      toast.error(message);
+      await loadOverview();
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
   const renderRow = (row: CapacityRow) => {
     const key = rowKey(row);
     const currentCapacity = capacityCount(row.capacity);
     const maxCapacity = capacityCount(row.maxCapacity);
     const committed = committedCount(row);
     const rowEditable = capacityRowIsEditable(row);
-    const draftValue = drafts[key] ?? (currentCapacity === null ? "" : String(currentCapacity));
+    const capacityEditable = row.capacityEditable !== false && !row.zone && rowEditable;
+    const draftValue = drafts[`${key}:capacity`] ?? (currentCapacity === null ? "" : String(currentCapacity));
     const changed = currentCapacity !== null && Number(draftValue) !== currentCapacity;
+    const currentAvailability = capacityCount(row.availabilityLimit ?? row.capacity);
+    const availabilityDraft = drafts[`${key}:availability`] ?? (currentAvailability === null ? "" : String(currentAvailability));
+    const availabilityChanged = currentAvailability !== null && Number(availabilityDraft) !== currentAvailability;
     return (
-      <div key={key} className="grid grid-cols-2 gap-3 border-t border-slate-100 py-4 sm:grid-cols-[minmax(180px,1.4fr)_100px_repeat(4,minmax(68px,0.7fr))_96px] sm:items-center sm:gap-4">
+      <div key={key} className="grid grid-cols-2 gap-3 border-t border-slate-100 py-4 sm:grid-cols-[minmax(150px,1.3fr)_90px_90px_repeat(4,minmax(60px,0.7fr))_92px_92px] sm:items-center sm:gap-3">
         <div className="col-span-2 min-w-0 sm:col-span-1">
           <p className="font-medium text-slate-900">{row.label}</p>
           <p className="text-xs text-slate-500">{row.unit}{row.matchDate ? ` · ${row.matchDate}` : " · all matches"}</p>
@@ -150,10 +196,25 @@ export default function NuscTicketCapacityControls() {
             max={maxCapacity ?? undefined}
             step={1}
             value={draftValue}
-            disabled={!rowEditable}
-            onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
+            disabled={!capacityEditable}
+            onChange={(event) => setDrafts((current) => ({ ...current, [`${key}:capacity`]: event.target.value }))}
           />
-          <span>Max {formatCapacityMetric(row.maxCapacity)}</span>
+          {row.zone ? <span>Fixed capacity</span> : <span>Max {formatCapacityMetric(row.maxCapacity)}</span>}
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-slate-500">
+          <span>For sale</span>
+          <input
+            aria-label={`${row.label} availability${row.matchDate ? ` for ${row.matchDate}` : ""}`}
+            className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm text-slate-900 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
+            type="number"
+            min={committed ?? undefined}
+            max={currentCapacity ?? undefined}
+            step={1}
+            value={availabilityDraft}
+            disabled={committed === null || currentAvailability === null}
+            onChange={(event) => setDrafts((current) => ({ ...current, [`${key}:availability`]: event.target.value }))}
+          />
+          <span>Max {formatCapacityMetric(row.capacity)}</span>
         </label>
         <Metric label="Sold" value={row.sold} />
         <Metric label="Held" value={row.held} />
@@ -162,11 +223,20 @@ export default function NuscTicketCapacityControls() {
         <Button
           type="button"
           size="sm"
-          disabled={!changed || !rowEditable || busyKey !== null || loading}
+          disabled={!changed || !capacityEditable || busyKey !== null || loading}
           onClick={() => void saveCapacity(row)}
-          className="col-span-2 sm:col-span-1"
+          className="col-span-1 sm:col-span-1"
         >
-          {busyKey === key ? "Saving…" : "Save"}
+          {busyKey === key ? "Saving…" : "Save capacity"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={!availabilityChanged || committed === null || busyKey !== null || loading}
+          onClick={() => void saveAvailability(row)}
+          className="col-span-1 sm:col-span-1"
+        >
+          {busyKey === `${key}:availability` ? "Saving…" : "Save sale"}
         </Button>
         {!rowEditable && (
           <p className="col-span-2 text-xs text-amber-700 sm:col-span-7">
@@ -200,7 +270,7 @@ export default function NuscTicketCapacityControls() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-950">NUSC ticket availability</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
-            Set the total capacity for each ticket type. Sold tickets, checkout holds, offline reservations, and season box reservations remain committed.
+            Adjust total capacity and the amount released for sale separately. Sold tickets, checkout holds, offline reservations, and season box reservations remain committed.
           </p>
         </div>
         <div className={`rounded-full px-3 py-1 text-xs font-semibold ${overview.salesEnabled ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
@@ -208,11 +278,11 @@ export default function NuscTicketCapacityControls() {
         </div>
       </header>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Single Match ticket</h2>
-        <p className="mb-3 text-sm text-slate-500">Global availability shared across all 10 fixtures.</p>
-        {renderRow(overview.singleMatchTicket)}
-      </section>
+      {!overview.suiteMappingConfirmed && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          United Suite checkout stays closed until all ten physical box numbers are configured.
+        </div>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h2 className="text-lg font-semibold text-slate-900">Season pass and season box limits</h2>
@@ -223,12 +293,14 @@ export default function NuscTicketCapacityControls() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Per-match seats and boxes</h2>
-          <p className="mt-1 text-sm text-slate-500">Season box reservations reduce the Full Box availability on every fixture.</p>
+          <p className="mt-1 text-sm text-slate-500">Single Match and Full Box availability is tracked separately for each fixture.</p>
         </div>
         {overview.fixtures.map((fixture) => (
           <article key={fixture.matchDate} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold text-slate-900">{fixture.matchDate} · NUSC vs {fixture.opponent}</h3>
             <div className="mt-2">{fixture.capacities.map(renderRow)}</div>
+            <h4 className="mt-5 text-sm font-semibold text-slate-800">General seating zones</h4>
+            <div>{fixture.generalZones.map(renderRow)}</div>
           </article>
         ))}
       </section>

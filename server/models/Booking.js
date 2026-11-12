@@ -130,12 +130,16 @@ const BookingSchema = new mongoose.Schema({
   nuscSuiteBoxNumber: {
     type: Number,
     min: 1,
-    max: 4,
+    max: 10,
+  },
+  nuscSuiteGuestCapacity: {
+    type: Number,
+    enum: [8, 10],
   },
   nuscSuiteBoxNumbers: [{
     type: Number,
     min: 1,
-    max: 4,
+    max: 10,
   }],
   nuscGeneralZone: {
     type: String,
