@@ -62,6 +62,7 @@ interface Booking {
   status: string;
   paymentStatus?: string;
   ticketType?: string;
+  nuscSeasonPassType?: "general-season" | "premium-season";
   bookingSource?: "online" | "on-spot";
   modeOfPayment?: "Cash" | "UPI" | "Card";
 }
@@ -71,7 +72,7 @@ interface BookingFilters {
   eventId?: string;
   source?: string;
   status?: string;
-  ticketType?: string;
+  ticketCategory?: string;
   name?: string;
   phone?: string;
   startDate?: string;
@@ -92,6 +93,7 @@ interface BookingOptions {
   events: Array<{ _id: string; title: string; category: string }>;
   categories: string[];
   ticketTypes: string[];
+  ticketCategories?: Array<{ value: string; label: string }>;
   statuses: string[];
 }
 
@@ -138,6 +140,14 @@ const STATUS_LABELS: Record<string, string> = {
   refunded: "Refunded",
   "checked-in": "Checked in",
 };
+const SEASON_PASS_LABELS: Record<string, string> = {
+  "general-season": "General Season Pass",
+  "premium-season": "Premium Season Pass",
+};
+
+function ticketCategoryLabel(booking: Pick<Booking, "ticketType" | "nuscSeasonPassType">) {
+  return (booking.nuscSeasonPassType && SEASON_PASS_LABELS[booking.nuscSeasonPassType]) || booking.ticketType || "NA";
+}
 
 async function adminJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem("admin_token");
@@ -218,7 +228,7 @@ function BookingsContent() {
   const [phoneFilter, setPhoneFilter] = useState("");
   const [debouncedName, setDebouncedName] = useState("");
   const [debouncedPhone, setDebouncedPhone] = useState("");
-  const [ticketTypeFilter, setTicketTypeFilter] = useState("all");
+  const [ticketCategoryFilter, setTicketCategoryFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
@@ -237,13 +247,13 @@ function BookingsContent() {
       eventId: eventFilter === "all" ? undefined : eventFilter,
       source: sourceFilter === "all" ? undefined : sourceFilter,
       status: statusFilter === "all" ? undefined : statusFilter,
-      ticketType: ticketTypeFilter === "all" ? undefined : ticketTypeFilter,
+      ticketCategory: ticketCategoryFilter === "all" ? undefined : ticketCategoryFilter,
       name: debouncedName || undefined,
       phone: debouncedPhone || undefined,
       startDate: dateFilter ? startOfDay(dateFilter).toISOString() : undefined,
       endDate: dateFilter ? startOfDay(addDays(dateFilter, 1)).toISOString() : undefined,
     }),
-    [categoryFilter, eventFilter, sourceFilter, statusFilter, ticketTypeFilter, debouncedName, debouncedPhone, dateFilter],
+    [categoryFilter, eventFilter, sourceFilter, statusFilter, ticketCategoryFilter, debouncedName, debouncedPhone, dateFilter],
   );
 
   const filterQuery = useMemo(() => makeQueryString(filters), [filters]);
@@ -258,13 +268,13 @@ function BookingsContent() {
     enabled: isBrowser,
     staleTime: 5 * 60 * 1000,
   });
-  const ticketTypesQuery = useQuery({
+  const ticketCategoriesQuery = useQuery({
     queryKey: ["admin-booking-ticket-types", eventFilter],
     queryFn: async () => {
-      const options = await adminJson<Pick<BookingOptions, "ticketTypes">>(
+      const options = await adminJson<Pick<BookingOptions, "ticketCategories">>(
         `/api/admin/bookings/options?ticketTypeEventId=${encodeURIComponent(eventFilter)}`,
       );
-      return options.ticketTypes || [];
+      return options.ticketCategories || [];
     },
     enabled: isBrowser && eventFilter !== "all",
     staleTime: 5 * 60 * 1000,
@@ -311,7 +321,7 @@ function BookingsContent() {
   const visibleEvents = (options?.events || []).filter(
     (event) => categoryFilter === "all" || event.category === categoryFilter,
   );
-  const ticketTypes = eventFilter === "all" ? options?.ticketTypes || [] : ticketTypesQuery.data || [];
+  const ticketCategories = eventFilter === "all" ? options?.ticketCategories || [] : ticketCategoriesQuery.data || [];
   const statuses = options?.statuses || Object.keys(STATUS_LABELS);
   const stats = statsQuery.data;
   const firstRow = total ? (page - 1) * pageSize + 1 : 0;
@@ -320,13 +330,13 @@ function BookingsContent() {
   const changeCategory = (value: string) => {
     setCategoryFilter(value);
     setEventFilter("all");
-    setTicketTypeFilter("all");
+    setTicketCategoryFilter("all");
     setPage(1);
   };
 
   const changeEvent = (value: string) => {
     setEventFilter(value);
-    setTicketTypeFilter("all");
+    setTicketCategoryFilter("all");
     setPage(1);
   };
 
@@ -337,7 +347,7 @@ function BookingsContent() {
     setStatusFilter("all");
     setNameFilter("");
     setPhoneFilter("");
-    setTicketTypeFilter("all");
+    setTicketCategoryFilter("all");
     setDateFilter(undefined);
     setPage(1);
   };
@@ -379,7 +389,7 @@ function BookingsContent() {
 
   const activeFilters =
     categoryFilter !== "all" || sourceFilter !== "all" || eventFilter !== "all" || statusFilter !== "all" ||
-    nameFilter || phoneFilter || ticketTypeFilter !== "all" || dateFilter;
+    nameFilter || phoneFilter || ticketCategoryFilter !== "all" || dateFilter;
   const selectedEventTitle = options?.events.find((event) => event._id === eventFilter)?.title;
   const detail = detailsQuery.data?.booking;
 
@@ -485,11 +495,11 @@ function BookingsContent() {
 
             <div>
               <Label htmlFor="ticket-type-filter">Ticket Type</Label>
-              <Select value={ticketTypeFilter} onValueChange={(value) => { setTicketTypeFilter(value); setPage(1); }}>
+              <Select value={ticketCategoryFilter} onValueChange={(value) => { setTicketCategoryFilter(value); setPage(1); }}>
                 <SelectTrigger id="ticket-type-filter"><SelectValue placeholder="All types" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
-                  {ticketTypes.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                  {ticketCategories.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -509,7 +519,7 @@ function BookingsContent() {
             </div>
           </div>
 
-          {(optionsQuery.isError || ticketTypesQuery.isError) && <p className="mb-4 text-sm text-amber-700">Some filter options could not be loaded.</p>}
+          {(optionsQuery.isError || ticketCategoriesQuery.isError) && <p className="mb-4 text-sm text-amber-700">Some filter options could not be loaded.</p>}
           {activeFilters && (
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-500">Active filters:</span>
@@ -519,7 +529,7 @@ function BookingsContent() {
               {statusFilter !== "all" && <ActiveFilterBadge label="status" onRemove={() => { setStatusFilter("all"); setPage(1); }}>Status: {STATUS_LABELS[statusFilter] || statusFilter}</ActiveFilterBadge>}
               {nameFilter && <ActiveFilterBadge label="name" onRemove={() => setNameFilter("")}>Name: {nameFilter}</ActiveFilterBadge>}
               {phoneFilter && <ActiveFilterBadge label="phone" onRemove={() => setPhoneFilter("")}>Phone: {phoneFilter}</ActiveFilterBadge>}
-              {ticketTypeFilter !== "all" && <ActiveFilterBadge label="ticket type" onRemove={() => { setTicketTypeFilter("all"); setPage(1); }}>Ticket type: {ticketTypeFilter}</ActiveFilterBadge>}
+              {ticketCategoryFilter !== "all" && <ActiveFilterBadge label="ticket type" onRemove={() => { setTicketCategoryFilter("all"); setPage(1); }}>Ticket type: {ticketCategories.find((option) => option.value === ticketCategoryFilter)?.label || ticketCategoryFilter}</ActiveFilterBadge>}
               {dateFilter && <ActiveFilterBadge label="date" onRemove={() => { setDateFilter(undefined); setPage(1); }}>Date: {format(dateFilter, "PP")}</ActiveFilterBadge>}
               <Button variant="ghost" size="sm" onClick={resetFilters} className="h-6 px-2">Clear all</Button>
             </div>
@@ -556,7 +566,7 @@ function BookingsContent() {
                     </TableCell>
                     <TableCell>{booking.user?.phone || "NA"}</TableCell>
                     <TableCell>{booking.bookedAt ? new Date(booking.bookedAt).toLocaleDateString() : "NA"}</TableCell>
-                    <TableCell>{booking.ticketType || "NA"}</TableCell>
+                    <TableCell>{ticketCategoryLabel(booking)}</TableCell>
                     <TableCell><Badge variant="outline">{STATUS_LABELS[booking.status] || booking.status || "Unknown"}</Badge></TableCell>
                     <TableCell>{booking.quantity}</TableCell>
                     <TableCell>₹{booking.total}</TableCell>
@@ -619,7 +629,7 @@ function BookingsContent() {
                 <DetailRow label="Email" value={detail.user?.email || detail.customerEmail || "—"} />
                 <DetailRow label="Phone" value={detail.user?.phone || detail.customerPhone || "—"} />
                 <DetailRow label="Booked on" value={detail.bookedAt ? new Date(detail.bookedAt).toLocaleString() : "—"} />
-                <DetailRow label="Ticket type" value={detail.ticketType || "—"} />
+                <DetailRow label="Ticket type" value={ticketCategoryLabel(detail)} />
                 <DetailRow label="Quantity" value={detail.quantity} />
                 <DetailRow label="Unit price" value={detail.price == null ? "—" : `₹${detail.price}`} />
                 <DetailRow label="Total" value={detail.total == null ? "—" : `₹${detail.total}`} />

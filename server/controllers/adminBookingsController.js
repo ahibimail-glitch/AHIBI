@@ -6,6 +6,19 @@ const adminBookingLifecycleService = require('../services/adminBookingLifecycleS
 
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'refunded', 'checked-in'];
 const PAGE_SIZES = new Set([25, 50, 100]);
+const SEASON_PASS_LABELS = Object.freeze({
+  'general-season': 'General Season Pass',
+  'premium-season': 'Premium Season Pass',
+});
+const TICKET_CATEGORY_ORDER = [
+  'General Pass',
+  'Premium Pass',
+  'United Suite — Single pass',
+  'United Suite — Full Box',
+  'United Suite - Single Match',
+  'General Season Pass',
+  'Premium Season Pass',
+];
 const DETAIL_FIELDS = [
   'event eventSnapshot user bookingSource ticketType ticketTypeId quantity price total status paymentStatus',
   'paymentId paymentProvider externalPaymentId nuscOrderId nuscTicketIndex nuscSuiteBoxNumber',
@@ -58,6 +71,7 @@ async function buildBookingFilters(query) {
   const paymentSource = boundedText(query.paymentSource, 20);
   const status = boundedText(query.status, 30);
   const ticketType = boundedText(query.ticketType, 120);
+  const ticketCategory = boundedText(query.ticketCategory, 160);
   const country = boundedText(query.country, 100);
   const state = boundedText(query.state, 100);
   const visitorType = boundedText(query.visitorType, 60);
@@ -103,7 +117,27 @@ async function buildBookingFilters(query) {
     throw new QueryValidationError('The selected payment source is invalid.');
   }
 
-  if (ticketType && ticketType !== 'all') clauses.push({ ticketType });
+  if (ticketCategory && ticketCategory !== 'all') {
+    if (ticketCategory.startsWith('season:')) {
+      const passType = ticketCategory.slice('season:'.length);
+      if (!Object.hasOwn(SEASON_PASS_LABELS, passType)) {
+        throw new QueryValidationError('The selected ticket category is invalid.');
+      }
+      clauses.push({ nuscSeasonPassType: passType });
+    } else if (ticketCategory.startsWith('ticket:')) {
+      const selectedTicketType = boundedText(ticketCategory.slice('ticket:'.length), 120);
+      if (!selectedTicketType) throw new QueryValidationError('The selected ticket category is invalid.');
+      clauses.push({
+        ticketType: selectedTicketType,
+        $or: [{ nuscSeasonPassType: { $exists: false } }, { nuscSeasonPassType: null }],
+      });
+    } else {
+      throw new QueryValidationError('The selected ticket category is invalid.');
+    }
+  } else if (ticketType && ticketType !== 'all') {
+    // Keep compatibility with older Admin clients that still send ticketType.
+    clauses.push({ ticketType });
+  }
   if (country && country !== 'all') clauses.push({ country });
   if (state && state !== 'all') clauses.push({ state });
   if (visitorType && visitorType !== 'all') clauses.push({ visitorType });
@@ -200,6 +234,7 @@ function rowProjection({ includeTicketFields = false } = {}) {
     },
     bookedAt: 1,
     ticketType: 1,
+    nuscSeasonPassType: 1,
     quantity: 1,
     total: 1,
     status: 1,
@@ -269,10 +304,14 @@ async function getBookingOptions(req, res) {
     const ticketTypeScope = ticketTypeEventId
       ? await buildBookingFilters({ eventId: ticketTypeEventId, eventIds: req.query.eventIds })
       : scope;
-    const [eventIds, snapshotEventIds, ticketTypes, countries, states, visitorTypes] = await Promise.all([
+    const [eventIds, snapshotEventIds, ticketTypes, ticketCategoryGroups, countries, states, visitorTypes] = await Promise.all([
       Booking.distinct('event', scope.match),
       Booking.distinct('eventSnapshot._id', scope.match),
       Booking.distinct('ticketType', ticketTypeScope.match),
+      Booking.aggregate([
+        { $match: ticketTypeScope.match },
+        { $group: { _id: { ticketType: '$ticketType', seasonPassType: { $ifNull: ['$nuscSeasonPassType', null] } } } },
+      ]).allowDiskUse(true).exec(),
       Booking.distinct('country', scope.match),
       Booking.distinct('state', scope.match),
       Booking.distinct('visitorType', scope.match),
@@ -283,11 +322,32 @@ async function getBookingOptions(req, res) {
       .sort({ title: 1 })
       .lean();
     const categories = [...new Set(events.map((event) => event.category).filter(Boolean))].sort();
+    const ticketCategories = ticketCategoryGroups
+      .flatMap(({ _id: group = {} }) => {
+        const seasonPassType = group.seasonPassType;
+        if (SEASON_PASS_LABELS[seasonPassType]) {
+          return [{ value: `season:${seasonPassType}`, label: SEASON_PASS_LABELS[seasonPassType] }];
+        }
+        const ticketType = boundedText(group.ticketType, 120);
+        return ticketType ? [{ value: `ticket:${ticketType}`, label: ticketType }] : [];
+      })
+      .filter((option, index, all) => all.findIndex((item) => item.value === option.value) === index)
+      .sort((left, right) => {
+        const leftOrder = TICKET_CATEGORY_ORDER.indexOf(left.label);
+        const rightOrder = TICKET_CATEGORY_ORDER.indexOf(right.label);
+        if (leftOrder >= 0 || rightOrder >= 0) {
+          if (leftOrder < 0) return 1;
+          if (rightOrder < 0) return -1;
+          return leftOrder - rightOrder;
+        }
+        return left.label.localeCompare(right.label);
+      });
 
     return res.json({
       events: events.map((event) => ({ _id: event._id, title: event.title, category: event.category || '' })),
       categories,
       ticketTypes: ticketTypes.filter(Boolean).sort(),
+      ticketCategories,
       statuses: BOOKING_STATUSES,
       countries: countries.filter(Boolean).sort(),
       states: states.filter(Boolean).sort(),
@@ -366,7 +426,7 @@ async function exportBookings(req, res) {
         booking.user?.email,
         booking.user?.phone,
         booking.bookedAt,
-        booking.ticketType,
+        SEASON_PASS_LABELS[booking.nuscSeasonPassType] || booking.ticketType,
         booking.nuscGeneralZone,
         booking.bookingSource === 'on-spot' ? 'On spot' : 'Online',
         booking.paymentId ? 'Online' : 'Manual',
