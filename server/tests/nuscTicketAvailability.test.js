@@ -112,6 +112,17 @@ test('season pass sale availability is enforced separately from its quota', asyn
   }), { code: 'SEASON_PASS_LIMIT_REACHED' });
 });
 
+test('admin season pass rows include zero offline reservations so capacity controls stay editable', async () => {
+  const overview = await inventory.getAdminCapacityOverview();
+
+  assert.deepEqual(overview.seasonPasses.map(({ ticketType, sold, held, offlineReserved }) => (
+    [ticketType, sold, held, offlineReserved]
+  )), [
+    ['General Season Pass', 0, 0, 0],
+    ['Premium Season Pass', 0, 0, 0],
+  ]);
+});
+
 test('General zone sale limits are enforced independently at checkout', async () => {
   const ticketTypes = [{ name: 'General Pass', quantity: 2800, sold: 10 }];
   await inventory.setAvailabilityOverride({

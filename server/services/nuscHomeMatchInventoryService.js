@@ -2064,7 +2064,7 @@ function getSeasonQuotaUsage(state, ticketType) {
     (reservation.status === 'issuing' || reservation.status === 'held' && new Date(reservation.expiresAt) > new Date())
   )).length;
   const held = localHeld + partnerHeld;
-  return { sold: Math.max(0, quota.used - held), held, used: quota.used };
+  return { sold: Math.max(0, quota.used - held), held, offlineReserved: 0, used: quota.used };
 }
 
 async function getAdminCapacityOverview({ matches = [] } = {}) {
