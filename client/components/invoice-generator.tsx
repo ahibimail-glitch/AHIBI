@@ -20,6 +20,7 @@ interface InvoiceData {
   customerPhone: string;
   bookingDate: string;
   ticketType?: string;
+  nuscGeneralZone?: string;
   benefits?: string[];
 }
 
@@ -124,6 +125,7 @@ const InvoiceCard: React.FC<{ data: InvoiceData; onDownload?: () => void }> = ({
       phone: data.customerPhone,
       event: data.eventTitle,
       ticketType: data.ticketType,
+      ...(data.nuscGeneralZone && { seatingZone: data.nuscGeneralZone }),
       seats: data.seats.length,
       pricePerTicket: formatCurrency(data.seats[0]?.price || 0),
       total: formatCurrency(data.totalAmount),
@@ -161,6 +163,9 @@ const InvoiceCard: React.FC<{ data: InvoiceData; onDownload?: () => void }> = ({
               <h2 className="text-3xl font-extrabold text-indigo-700 tracking-tight">
                 {data.ticketType || data.seats[0]?.category || 'GENERAL'}
               </h2>
+              {data.nuscGeneralZone && (
+                <p className="text-sm font-semibold text-indigo-700">Seating Zone: {data.nuscGeneralZone}</p>
+              )}
               {data.benefits && data.benefits.length > 0 && (
                 <p className='text-sm text-[#00CED1] font-medium'>
                   {data.benefits.slice(0, 2).join(' || ')}

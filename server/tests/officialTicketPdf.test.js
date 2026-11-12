@@ -57,6 +57,13 @@ test('NUSC ticket price label replaces the individual ticket price', () => {
   assert.equal(getTicketPriceText(booking, 'Included with NUSC season pass'), 'Included with NUSC season pass');
 });
 
+test('manual NUSC General Pass zone is preserved in the ticket display data and QR payload', () => {
+  const zonedBooking = { ...booking, ticketType: 'General Pass', nuscGeneralZone: 'G-5' };
+
+  assert.equal(ticketDisplayData(zonedBooking).seatingZone, 'G-5');
+  assert.equal(createMemberTicketQrPayload(zonedBooking, event).seatingZone, 'G-5');
+});
+
 test('attendee override is rendered without changing the member ticket QR payload source', () => {
   const attendee = { name: 'Member Name', email: 'member@example.test', phone: '+91 98765 43210' };
   assert.deepEqual(attendeeDetails(booking, attendee), attendee);

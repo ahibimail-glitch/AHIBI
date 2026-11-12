@@ -29,6 +29,7 @@ interface TicketType {
 
 interface EventItem {
   _id: string;
+  slug?: string;
   title: string;
   ticketTypes: TicketType[];
   startDate: string;
@@ -50,7 +51,10 @@ interface TicketItem {
   ticketType: string;
   quantity: number;
   price: number;
+  zone?: string;
 }
+
+const NUSC_GENERAL_ZONES = ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'];
 
 interface BookingFormData {
   event: string;
@@ -72,6 +76,7 @@ const ManualBooking: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const isNuscHomeMatchEvent = selectedEvent?.slug?.startsWith('nusc-home-match-') === true;
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -242,10 +247,13 @@ const ManualBooking: React.FC = () => {
       items[index].ticketType = value;
       const t = ticketTypes.find(tt => tt.name === value);
       items[index].price = t?.price || 0;
+      items[index].zone = isNuscHomeMatchEvent && value === 'General Pass' ? '' : undefined;
     } else if (field === 'quantity') {
       items[index].quantity = Number(value) || 1;
     } else if (field === 'price') {
       items[index].price = Number(value) || 0;
+    } else if (field === 'zone') {
+      items[index].zone = value;
     }
     setTicketItems(items);
   };
@@ -271,6 +279,9 @@ const ManualBooking: React.FC = () => {
     if (!formData.visitorType) {
       return toast({ title: 'Visitor Type required', description: 'Please select a visitor type (Local/Domestic/International).', variant: 'destructive' });
     }
+    if (isNuscHomeMatchEvent && ticketItems.some((item) => item.ticketType === 'General Pass' && !item.zone)) {
+      return toast({ title: 'Seating Zone required', description: 'Choose a zone for each NUSC General Pass ticket item.', variant: 'destructive' });
+    }
     if (isHMFSelected) {
       // Country and state are now optional for HMF events
     }
@@ -279,7 +290,12 @@ const ManualBooking: React.FC = () => {
       setLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-      const ticketsPayload = ticketItems.map(it => ({ ticketType: it.ticketType, quantity: it.quantity, price: it.price }));
+      const ticketsPayload = ticketItems.map(it => ({
+        ticketType: it.ticketType,
+        quantity: it.quantity,
+        price: it.price,
+        ...(it.zone ? { zone: it.zone } : {}),
+      }));
 
       const payload: any = {
         event: formData.event,
@@ -296,7 +312,10 @@ const ManualBooking: React.FC = () => {
       };
 
       const resp = await axios.post(`${apiUrl}/api/bookings/admin-manual-booking`, payload, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('admin_token')}`,
+        }
       });
 
       const data = resp.data;
@@ -320,7 +339,8 @@ const ManualBooking: React.FC = () => {
         customerEmail: userObj?.email,
         customerPhone: formData.customerPhone || userObj?.phone,
         bookingDate: new Date().toISOString(),
-        ticketType: b.ticketType || ticketItems[idx]?.ticketType
+        ticketType: b.ticketType || ticketItems[idx]?.ticketType,
+        nuscGeneralZone: b.nuscGeneralZone || undefined,
       }));
 
       setInvoiceList(invoices);
@@ -524,6 +544,20 @@ const ManualBooking: React.FC = () => {
                           </div>
                           <div className="col-span-2 text-sm">₹{item.price}</div>
                           <div className="col-span-1">{ticketItems.length > 1 && (<button type="button" onClick={() => removeTicketItem(idx)} className="text-red-500">Remove</button>)}</div>
+                          {isNuscHomeMatchEvent && item.ticketType === 'General Pass' && (
+                            <div className="col-span-12 space-y-1">
+                              <Label htmlFor={`manual-ticket-zone-${idx}`}>General seating zone</Label>
+                              <select
+                                id={`manual-ticket-zone-${idx}`}
+                                value={item.zone || ''}
+                                onChange={(event) => handleTicketItemChange(idx, 'zone', event.target.value)}
+                                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                              >
+                                <option value="">Choose a zone</option>
+                                {NUSC_GENERAL_ZONES.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       ))}
 

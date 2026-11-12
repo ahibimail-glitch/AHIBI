@@ -14,6 +14,7 @@ const { CheckInError, checkInBooking } = require("../services/bookingCheckInServ
 const workshopRsvpController = require("../controllers/workshopRsvpController");
 const eventPaymentSettlement = require("../services/eventPaymentSettlementService");
 const paymentController = require("../controllers/paymentController");
+const { getManualBookingZoneError, normalizeManualBookingZone } = require("../services/manualBookingZones");
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -989,7 +990,7 @@ router.post("/check-out", async (req, res) => {
 // @access  Private (Admin)
 router.post("/admin-manual-booking", auth.protect, auth.authorize('admin'), async (req, res) => {
   try {
-    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets, country, state, modeOfPayment, visitorType } = req.body;
+    const { event, user, ticketType, quantity, price, customerName, customerPhone, tickets, country, state, modeOfPayment, visitorType, zone } = req.body;
     console.log('[Admin Booking] Manual booking request received:', { event, user, ticketType, quantity, price, tickets, visitorType });
 
     // Basic validation
@@ -1012,11 +1013,30 @@ router.post("/admin-manual-booking", auth.protect, auth.authorize('admin'), asyn
     // Normalize tickets input: prefer tickets array, fallback to single ticket payload
     let ticketItems = [];
     if (Array.isArray(tickets) && tickets.length > 0) {
-      ticketItems = tickets.map(t => ({ ticketType: t.ticketType, quantity: Number(t.quantity) || 1, price: Number(t.price) || 0 }));
+      ticketItems = tickets.map(t => {
+        const normalizedZone = normalizeManualBookingZone(t.zone);
+        return {
+          ticketType: t.ticketType,
+          quantity: Number(t.quantity) || 1,
+          price: Number(t.price) || 0,
+          ...(normalizedZone !== undefined && normalizedZone !== null && normalizedZone !== '' ? { zone: normalizedZone } : {}),
+        };
+      });
     } else if (ticketType && quantity && price !== undefined) {
-      ticketItems = [{ ticketType, quantity: Number(quantity) || 1, price: Number(price) || 0 }];
+      const normalizedZone = normalizeManualBookingZone(zone);
+      ticketItems = [{
+        ticketType,
+        quantity: Number(quantity) || 1,
+        price: Number(price) || 0,
+        ...(normalizedZone !== undefined && normalizedZone !== null && normalizedZone !== '' ? { zone: normalizedZone } : {}),
+      }];
     } else {
       return res.status(400).json({ message: 'Please provide ticket details (tickets array or ticketType/quantity/price)' });
+    }
+
+    const zoneError = getManualBookingZoneError(eventDoc.slug, ticketItems);
+    if (zoneError) {
+      return res.status(400).json({ message: zoneError });
     }
 
     // Enforce per-user ticket cap for specific event
@@ -1069,6 +1089,7 @@ router.post("/admin-manual-booking", auth.protect, auth.authorize('admin'), asyn
           customerName: customerName || undefined,
           customerPhone: customerPhone || undefined,
           ticketType: item.ticketType,
+          ...(item.zone && { nuscGeneralZone: item.zone }),
           quantity: 1,
           price: item.price,
           total: item.price,
@@ -1190,7 +1211,7 @@ router.post("/admin-manual-booking", auth.protect, auth.authorize('admin'), asyn
 
       res.status(201).json({
         message: 'Manual booking(s) created successfully',
-        bookings: createdBookings.map(b => ({ id: b._id, ticketType: b.ticketType, price: b.price })),
+        bookings: createdBookings.map(b => ({ id: b._id, ticketType: b.ticketType, price: b.price, nuscGeneralZone: b.nuscGeneralZone })),
         bookingIds,
         totalTickets,
       });
@@ -1199,7 +1220,7 @@ router.post("/admin-manual-booking", auth.protect, auth.authorize('admin'), asyn
       console.error('[Admin Booking] Error sending booking notifications:', notificationError);
       res.status(201).json({
         message: 'Manual booking(s) created successfully (notification failed)',
-        bookings: createdBookings.map(b => ({ id: b._id, ticketType: b.ticketType, price: b.price })),
+        bookings: createdBookings.map(b => ({ id: b._id, ticketType: b.ticketType, price: b.price, nuscGeneralZone: b.nuscGeneralZone })),
         bookingIds,
         totalTickets,
       });
@@ -1295,6 +1316,9 @@ router.get("/:bookingId/ticket", auth.protect, async (req, res) => {
     doc.fontSize(14).font('Helvetica-Bold').text('Ticket Details');
     doc.fontSize(12).font('Helvetica');
     doc.text(`Ticket Type: ${booking.ticketType}`);
+    if (booking.nuscGeneralZone) {
+      doc.text(`Seating Zone: ${booking.nuscGeneralZone}`);
+    }
     doc.text(`Quantity: ${booking.quantity}`);
     doc.text(`Total: ₹${booking.total.toFixed(2)}`);
     doc.moveDown(0.5);

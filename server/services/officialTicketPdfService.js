@@ -52,6 +52,7 @@ function ticketDisplayData(booking, { includedWith, attendee } = {}) {
   return {
     attendee: attendeeDetails(booking, attendee),
     priceText: getTicketPriceText(booking, includedWith),
+    ...(booking.nuscGeneralZone && { seatingZone: booking.nuscGeneralZone }),
   };
 }
 
@@ -92,6 +93,7 @@ function createMemberTicketQrPayload(booking, event) {
     ticketType: booking.ticketType,
     ticketIndex,
     totalTickets: booking.totalTickets || 1,
+    ...(booking.nuscGeneralZone && { seatingZone: booking.nuscGeneralZone }),
     ...(showSerial && { ticketSerialNumber: booking.ticketSerialNumber }),
     pricePerTicket: formatPriceLabel(booking.price),
     total: formatPriceLabel(booking.total),
@@ -217,10 +219,11 @@ function drawMemberTicketPdf(doc, booking, event, qrCodeDataUrl, { includedWith,
     .text(booking.ticketType || 'Ticket', typeX + 12, typeY + 26, { width: typeWidth - 24, height: 26, align: 'center', ellipsis: true });
   if (ticketBenefits.length) {
     doc.font('Helvetica-Bold').fontSize(8.2).fillColor('#0d9488', 1)
-      .text(ticketBenefits.slice(0, 2).join(' | '), typeX + 12, typeY + 54, { width: typeWidth - 24, align: 'center', ellipsis: true });
-  } else if (booking.nuscGeneralZone) {
+      .text(ticketBenefits.slice(0, 2).join(' | '), typeX + 12, typeY + 54, { width: typeWidth - 24, height: 10, align: 'center', lineBreak: false, ellipsis: true });
+  }
+  if (displayData.seatingZone) {
     doc.font('Helvetica-Bold').fontSize(8.2).fillColor('#4338ca', 1)
-      .text(`Zone ${booking.nuscGeneralZone}`, typeX + 12, typeY + 54, { width: typeWidth - 24, align: 'center' });
+      .text(`Seating Zone: ${displayData.seatingZone}`, typeX + 12, typeY + (ticketBenefits.length ? 65 : 56), { width: typeWidth - 24, height: 10, align: 'center', lineBreak: false });
   }
 
   doc.font('Helvetica-Bold').fontSize(7.5).fillColor(MEMBER_TICKET_COLORS.faint, 1)
@@ -299,6 +302,7 @@ async function createTicketQrDataUrl(booking, event) {
     eventId: String(eventId),
     ticketType: booking.ticketType,
     quantity: booking.quantity,
+    ...(booking.nuscGeneralZone && { seatingZone: booking.nuscGeneralZone }),
     ...(booking.selectedDate && { selectedDate: booking.selectedDate }),
   };
   return QRCode.toDataURL(JSON.stringify(payload), {
