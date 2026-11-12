@@ -270,7 +270,7 @@ export default function NuscTicketCapacityControls() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-950">NUSC ticket availability</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
-            Adjust total capacity and the amount released for sale separately. Sold tickets, checkout holds, offline reservations, and season box reservations remain committed.
+            Adjust capacity and the amount released for sale separately. General Pass sale limits are managed by zone. Sold tickets, checkout holds, offline reservations, and season box reservations remain committed.
           </p>
         </div>
         <div className={`rounded-full px-3 py-1 text-xs font-semibold ${overview.salesEnabled ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
@@ -296,13 +296,17 @@ export default function NuscTicketCapacityControls() {
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Per-match seats and boxes</h2>
-          <p className="mt-1 text-sm text-slate-500">Single Match and Full Box availability is tracked separately for each fixture.</p>
+          <p className="mt-1 text-sm text-slate-500">General Pass availability is managed by seating zone. Single Match and Full Box availability is tracked separately for each fixture.</p>
         </div>
         {(overview.fixtures || []).map((fixture) => (
           <article key={fixture.matchDate} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <h3 className="font-semibold text-slate-900">{fixture.matchDate} · NUSC vs {fixture.opponent}</h3>
-            <div className="mt-2">{(fixture.capacities || []).map(renderRow)}</div>
-            <h4 className="mt-5 text-sm font-semibold text-slate-800">General seating zones</h4>
+            <div className="mt-2">
+              {(fixture.capacities || [])
+                .filter((row) => row.ticketType !== "General Pass")
+                .map(renderRow)}
+            </div>
+            <h4 className="mt-5 text-sm font-semibold text-slate-800">General Pass by seating zone</h4>
             <div>{(fixture.generalZones || []).map(renderRow)}</div>
           </article>
         ))}

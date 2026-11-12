@@ -61,6 +61,7 @@ const GENERAL_SEATING_AREAS = [
   { name: 'G-3', capacity: 450 },
   { name: 'G-4', capacity: 650 },
   { name: 'G-5', capacity: 600 },
+  { name: 'G-6', capacity: 0 },
 ];
 const TICKET_CAPACITIES = {
   'General Pass': GENERAL_SEATING_AREAS.reduce((sum, area) => sum + area.capacity, 0),
