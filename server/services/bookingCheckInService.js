@@ -24,7 +24,7 @@ function eventTicketCapacity(event, ticketType) {
   return Math.max(1, Number(ticket?.capacity) || 1);
 }
 
-async function checkInBooking({ bookingId, eventId, staffId, requestId }, { afterScan = async () => {} } = {}) {
+async function checkInBooking({ bookingId, eventId, staffId, scannerStaffId, requestId }, { afterScan = async () => {} } = {}) {
   if (!mongoose.isValidObjectId(bookingId) || !mongoose.isValidObjectId(eventId)) {
     throw new CheckInError('Booking ID and event ID must be valid.', 'INVALID_CHECK_IN_ID', 400);
   }
@@ -41,6 +41,9 @@ async function checkInBooking({ bookingId, eventId, staffId, requestId }, { afte
       if (!booking) throw new CheckInError('Booking not found.', 'BOOKING_NOT_FOUND', 404);
       if (!sameId(booking.event, eventId)) {
         throw new CheckInError('This booking is not for the selected event.', 'EVENT_MISMATCH', 409);
+      }
+      if (!['confirmed', 'checked-in'].includes(booking.status)) {
+        throw new CheckInError('This ticket is not active for entry.', 'BOOKING_NOT_ACTIVE', 409);
       }
 
       const event = await Event.findById(eventId).session(session);
@@ -111,6 +114,7 @@ async function checkInBooking({ bookingId, eventId, staffId, requestId }, { afte
         ticket: booking._id,
         event: eventId,
         requestId,
+        ...(scannerStaffId && mongoose.isValidObjectId(scannerStaffId) ? { scannerStaff: scannerStaffId } : {}),
         ...(partnerTicket ? { partnerId: 'nusc' } : { user: booking.user }),
       }], { session }))[0];
       await afterScan({ booking, scan, session });

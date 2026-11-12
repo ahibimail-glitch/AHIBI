@@ -41,6 +41,12 @@ exports.protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       console.log('Token decoded successfully. User ID:', decoded.id, 'Role:', decoded.role);
 
+      // Scanner identities are accepted only by the dedicated scanner router.
+      // Never let a scanner JWT fall through to a User/Organizer model lookup.
+      if (decoded.role === 'scanner') {
+        return res.status(403).json({ success: false, message: 'Scanner accounts can only use scanner operations.' });
+      }
+
       // Determine which model to use based on the token role primarily, not just the route
       // Keep a central list of admin-only route prefixes
       const isAdminRoute =
@@ -218,6 +224,9 @@ exports.optionalAuth = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Do not attach scanner sessions as regular users on optional-auth routes.
+      if (decoded.role === 'scanner') return next();
 
       // Keep a central list of admin-only route prefixes
       const isAdminRoute =

@@ -134,7 +134,7 @@ function mergeEventWithSnapshot(eventDoc, eventSnapshot) {
 // @route   POST /api/bookings/verify-ticket
 // @desc    Verify a ticket for an event
 // @access  Private (Admin)
-router.post("/verify-ticket", async (req, res) => {
+router.post("/verify-ticket", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
     const { bookingId, eventId } = req.body;
     console.log(req.body);
@@ -650,7 +650,7 @@ router.get("/organizer-daily-bookings", auth.protect, async (req, res) => {
 // @route   POST /api/bookings/verify-qr
 // @desc    Verify a booking QR code
 // @access  Private (Admin only)
-router.post("/verify-qr", async (req, res) => {
+router.post("/verify-qr", auth.protect, auth.authorize('admin'), async (req, res) => {
   console.log("Helloo")
   console.log(req.body)
   try {
@@ -929,7 +929,7 @@ router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), asy
 // @route   POST /api/bookings/check-out
 // @desc    Mark a checked-in ticket as valid again (allow reuse)
 // @access  Private (Admin)
-router.post("/check-out", async (req, res) => {
+router.post("/check-out", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
     const { bookingId } = req.body;
 

@@ -14,7 +14,9 @@ const ids = {
   partnerBooking: new mongoose.Types.ObjectId(),
   partnerFailureBooking: new mongoose.Types.ObjectId(),
   ordinaryBooking: new mongoose.Types.ObjectId(),
+  cancelledBooking: new mongoose.Types.ObjectId(),
   ordinaryUser: new mongoose.Types.ObjectId(),
+  scannerStaff: new mongoose.Types.ObjectId(),
   staff: new mongoose.Types.ObjectId(),
 };
 
@@ -49,6 +51,11 @@ function setupModels(t) {
     [String(ids.ordinaryBooking), {
       _id: ids.ordinaryBooking, event: ids.event, user: ids.ordinaryUser, ticketType: 'General Pass', status: 'confirmed',
       paymentStatus: 'completed',
+      async save() { bookings.set(String(this._id), this); },
+    }],
+    [String(ids.cancelledBooking), {
+      _id: ids.cancelledBooking, event: ids.event, user: ids.ordinaryUser, ticketType: 'General Pass', status: 'cancelled',
+      paymentStatus: 'refunded',
       async save() { bookings.set(String(this._id), this); },
     }],
   ]);
@@ -140,6 +147,27 @@ test('ordinary AHIBI booking retains its user-linked check-in', async (t) => {
   assert.equal(db.bookings.get(String(ids.ordinaryBooking)).status, 'checked-in');
   assert.equal(String(db.scans[0].user), String(ids.ordinaryUser));
   assert.equal(db.scans[0].partnerId, undefined);
+});
+
+test('scanner check-ins are attributed to the scanner account on the scan record', async (t) => {
+  const db = setupModels(t);
+  const result = await checkInBooking({
+    bookingId: String(ids.ordinaryBooking), eventId: String(ids.event), requestId: 'scanner-checkin-0001',
+    scannerStaffId: String(ids.scannerStaff),
+  });
+  assert.equal(result.status, 'CHECKED_IN');
+  assert.equal(String(db.scans[0].scannerStaff), String(ids.scannerStaff));
+});
+
+test('cancelled bookings cannot be checked in', async (t) => {
+  const db = setupModels(t);
+  await assert.rejects(
+    checkInBooking({
+      bookingId: String(ids.cancelledBooking), eventId: String(ids.event), requestId: 'cancelled-checkin-0001',
+    }),
+    (error) => error.code === 'BOOKING_NOT_ACTIVE',
+  );
+  assert.equal(db.scans.length, 0);
 });
 
 test('wrong-event scans are rejected without a scan write', async (t) => {

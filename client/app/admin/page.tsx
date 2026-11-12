@@ -69,6 +69,7 @@ import VenueManagement from "./components/VenueManagement";
 import OnSpotBooking from "./components/OnSpotBooking";
 import NuscPaidNoBooking from "./components/NuscPaidNoBooking";
 import NuscTicketCapacityControls from "./components/NuscTicketCapacityControls";
+import ScannerStaffManagement from "./components/ScannerStaffManagement";
 
 import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
@@ -277,6 +278,8 @@ export default function AdminDashboard() {
         return <NuscPaidNoBooking />;
       case "nusc-ticket-capacity":
         return <NuscTicketCapacityControls />;
+      case "scanner-staff":
+        return <ScannerStaffManagement />;
       case "on-spot-booking":
         return <OnSpotBooking />;
       case "system":
@@ -427,6 +430,7 @@ export default function AdminDashboard() {
           <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
           <SidebarButton icon={HeadphonesIcon} label="Support Chat" active={activeView === "support-chat"} onClick={() => { setActiveView("support-chat"); setSidebarOpen(false); }} />
           <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
+          <SidebarButton icon={QrCode} label="Scanning Team Access" active={activeView === "scanner-staff"} onClick={() => { setActiveView("scanner-staff"); setSidebarOpen(false); }} />
 
           <SidebarButton icon={Ticket} label="Manual Booking" active={activeView === "manual-booking"} onClick={() => { router.push("/admin/booking"); setSidebarOpen(false); }} />
           <SidebarButton icon={Ticket} label="On spot booking" active={activeView === "on-spot-booking"} onClick={() => { setActiveView("on-spot-booking"); setSidebarOpen(false); }} />

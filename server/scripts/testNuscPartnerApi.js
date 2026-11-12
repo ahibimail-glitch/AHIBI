@@ -9,7 +9,9 @@ const Booking = require('../models/Booking');
 const Scan = require('../models/Scan');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const NuscPartnerRequest = require('../models/NuscPartnerRequest');
+const ScannerStaff = require('../models/ScannerStaff');
 const { createSeasonPassTicketRecords } = require('../services/nuscSeasonPassBookingService');
+const bcrypt = require('bcryptjs');
 const usedRequestIds = [];
 
 function fail(message) {
@@ -347,18 +349,39 @@ async function run() {
 
     const scannerOrigin = new URL(base).origin;
     const oldUnusedTicket = upgradeOldBookings[1];
-    const oldQrResponse = await fetch(`${scannerOrigin}/api/bookings/verify-qr`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ bookingId: String(oldUnusedTicket._id) }),
+    const scannerUsername = `scan-${testRun.replaceAll('-', '').slice(0, 32)}`;
+    const scannerPassword = crypto.randomBytes(32).toString('hex');
+    const scannerStaff = await ScannerStaff.create({
+      username: scannerUsername,
+      password: await bcrypt.hash(scannerPassword, 12),
+      createdBy: new mongoose.Types.ObjectId(),
     });
-    const oldQrResult = await oldQrResponse.json();
-    assert(
-      oldQrResponse.status === 200 &&
-      oldQrResult.status === 'INVALID' &&
-      String(oldQrResult.message).includes('cancelled'),
-      'The scanner must reject an unused General QR after its reservation has been replaced.',
-    );
+    try {
+      const loginResponse = await fetch(`${scannerOrigin}/api/scanner/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: scannerUsername, password: scannerPassword }),
+      });
+      const loginResult = await loginResponse.json();
+      assert(loginResponse.status === 200 && loginResult.data?.token, 'A temporary scanner account must sign in through the scanner-only login.');
+      const oldQrResponse = await fetch(`${scannerOrigin}/api/scanner/verify-ticket`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${loginResult.data.token}`,
+        },
+        body: JSON.stringify({ bookingId: String(oldUnusedTicket._id), eventId: String(oldUnusedTicket.event) }),
+      });
+      const oldQrResult = await oldQrResponse.json();
+      assert(
+        oldQrResponse.status === 200 &&
+        oldQrResult.status === 'INVALID' &&
+        String(oldQrResult.message).includes('not active'),
+        'The scanner must reject an unused General QR after its reservation has been replaced.',
+      );
+    } finally {
+      await ScannerStaff.deleteOne({ _id: scannerStaff._id });
+    }
 
     const replacementStatus = await callApi(`/reservations/${encodeURIComponent(premiumReservationId)}`);
     assert(

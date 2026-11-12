@@ -9,6 +9,7 @@ require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
+const scannerRoutes = require('./routes/scanner.routes');
 const adminRoutes = require('./routes/admin.routes');
 const adminAuthRoutes = require('./routes/adminAuth.routes');
 const artistRoutes = require('./routes/artist.routes');
@@ -189,6 +190,7 @@ app.use((req, res, next) => {
 
 // Define API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/scanner', scannerRoutes);
 
 // Admin routes - auth first, then analytics (before catch-all admin router), then other admin routes
 app.use('/api/admin', adminAuthRoutes);  // This will handle /api/admin/login

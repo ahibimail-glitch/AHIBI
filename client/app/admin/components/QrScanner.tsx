@@ -35,7 +35,13 @@ interface BookingVerification {
   remainingEntries?: number;
 }
 
-const QrScanner = () => {
+interface QrScannerProps {
+  scannerMode?: boolean;
+  scannerToken?: string;
+  onSessionExpired?: () => void;
+}
+
+const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }: QrScannerProps) => {
   const [activeTab, setActiveTab] = useState<string>("scan");
   const [manualCode, setManualCode] = useState<string>("");
   const [fileUpload, setFileUpload] = useState<File | null>(null);
@@ -244,10 +250,16 @@ const QrScanner = () => {
         throw new Error("Please select an event before scanning.");
       }
 
-      const response = await fetch(`${apiUrl}/api/bookings/verify-ticket`, {
+      const token = scannerMode ? scannerToken : localStorage.getItem('admin_token') || '';
+      if (!token) {
+        if (scannerMode) onSessionExpired?.();
+        throw new Error('Your scanner session has expired. Please sign in again.');
+      }
+      const response = await fetch(`${apiUrl}${scannerMode ? '/api/scanner/verify-ticket' : '/api/bookings/verify-ticket'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           bookingId: bookingData.bookingId,
@@ -258,6 +270,7 @@ const QrScanner = () => {
       const result = await response.json();
 
       if (!response.ok) {
+        if (scannerMode && (response.status === 401 || response.status === 403)) onSessionExpired?.();
         throw new Error(result.message || 'Verification failed');
       }
 
@@ -358,15 +371,18 @@ const QrScanner = () => {
     if (!verification || !verification.bookingId) return;
 
     try {
-      const adminToken = localStorage.getItem('admin_token');
-      if (!adminToken) throw new Error('Admin session expired. Please log in again.');
+      const token = scannerMode ? scannerToken : localStorage.getItem('admin_token') || '';
+      if (!token) {
+        if (scannerMode) onSessionExpired?.();
+        throw new Error('Your session has expired. Please sign in again.');
+      }
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${apiUrl}/api/bookings/check-in`, {
+      const response = await axios.post(`${apiUrl}${scannerMode ? '/api/scanner/check-in' : '/api/bookings/check-in'}`, {
         bookingId: verification.bookingId,
         eventId: verification.eventId,
         requestId: verification.checkInRequestId,
       }, {
-        headers: { Authorization: `Bearer ${adminToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const result = response.data;
@@ -390,6 +406,7 @@ const QrScanner = () => {
         throw new Error(result.message || 'Failed to check-in');
       }
     } catch (err: any) {
+      if (scannerMode && (err.response?.status === 401 || err.response?.status === 403)) onSessionExpired?.();
       console.error("Error allowing entry:", err);
       setError(err.response?.data?.message || "Failed to record entry. Please try again.");
     }
@@ -401,13 +418,16 @@ const QrScanner = () => {
   };
 
   const handleCheckout = async () => {
+    if (scannerMode) return;
     if (!verification || !verification.bookingId) return;
 
     try {
+      const adminToken = localStorage.getItem('admin_token');
+      if (!adminToken) throw new Error('Admin session expired. Please log in again.');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const response = await axios.post(`${apiUrl}/api/bookings/check-out`, {
         bookingId: verification.bookingId,
-      });
+      }, { headers: { Authorization: `Bearer ${adminToken}` } });
 
       const result = response.data;
 
@@ -594,7 +614,7 @@ const QrScanner = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="font-mono text-sm bg-gray-100 p-2 rounded">Booking ID: {verification.bookingId}</div>
-                <p><span className="font-semibold">User ID:</span> {verification.userId}</p>
+                {!scannerMode && <p><span className="font-semibold">User ID:</span> {verification.userId}</p>}
                 <p><span className="font-semibold">Ticket:</span> {verification.ticketType}</p>
                 {verification.capacity && verification.capacity > 1 && (
                   <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
@@ -624,7 +644,7 @@ const QrScanner = () => {
                     <CheckCircle className="mr-2 h-4 w-4" /> Allow Entry
                   </Button>
                 )}
-                {verification.status === 'ALREADY_USED' && (
+                {!scannerMode && verification.status === 'ALREADY_USED' && (
                   <Button onClick={handleCheckout} className="bg-blue-600 hover:bg-blue-700">
                     <CheckCircle className="mr-2 h-4 w-4" /> Check Out
                   </Button>

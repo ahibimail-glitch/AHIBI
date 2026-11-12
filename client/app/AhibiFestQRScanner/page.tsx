@@ -1,13 +1,5 @@
-"use client";
+import { redirect } from 'next/navigation';
 
-import React from 'react';
-import QrScanner from '../admin/components/QrScanner';
-
-
-
-export default function ScanPage() {
-    return (
-        <QrScanner />
-
-    );
+export default function LegacyScannerPage() {
+  redirect('/scanner');
 }

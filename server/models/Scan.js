@@ -25,6 +25,10 @@ const scanSchema = new mongoose.Schema({
     trim: true,
     maxlength: 128,
   },
+  scannerStaff: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ScannerStaff',
+  },
   timestamp: {
     type: Date,
     default: Date.now,

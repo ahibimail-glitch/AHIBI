@@ -13,18 +13,24 @@ const onSpotBookingController = require('../controllers/onSpotBookingController'
 const adminBookingsController = require('../controllers/adminBookingsController');
 const manualSeasonPassController = require('../controllers/manualSeasonPassController');
 const nuscPartnerRecoveryController = require('../controllers/nuscPartnerRecoveryController');
+const scannerStaffController = require('../controllers/scannerStaffController');
 const nuscHomeMatchController = require('../controllers/nuscHomeMatchController');
 
-// Public admin routes (unprotected)
+// All admin endpoints, including account and on-spot booking operations, require a full admin.
+router.use(protect);
+router.use(authorize('admin'));
+
 router.get('/users', adminController.getUsers);
 
 // On-spot sales are admin-only; declare their authorization alongside each route.
 router.get('/bookings/on-spot/events', protect, authorize('admin'), onSpotBookingController.listEvents);
 router.post('/bookings/on-spot', protect, authorize('admin'), onSpotBookingController.createBooking);
 
-// Protect all admin routes
-router.use(protect);
-router.use(authorize('admin'));
+// Scanner accounts can only be created and managed by full administrators.
+router.get('/scanner-staff', scannerStaffController.list);
+router.post('/scanner-staff', scannerStaffController.create);
+router.patch('/scanner-staff/:id/active', scannerStaffController.setActive);
+router.patch('/scanner-staff/:id/password', scannerStaffController.resetPassword);
 
 // Manual pass operations and AHIBI user search require the Admin auth above.
 router.get('/users/search', adminController.searchUsers);

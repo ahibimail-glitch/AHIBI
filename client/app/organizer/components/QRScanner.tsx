@@ -254,10 +254,13 @@ const QrScanner = () => {
         throw new Error("Please select an event before scanning.");
       }
 
+      const staffToken = localStorage.getItem('organizer_token') || localStorage.getItem('admin_token');
+      if (!staffToken) throw new Error('Staff session expired. Please sign in again.');
       const response = await fetch(`${apiUrl}/api/bookings/verify-ticket`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${staffToken}`,
         },
         body: JSON.stringify({
           bookingId: bookingData.bookingId,
@@ -415,9 +418,11 @@ const QrScanner = () => {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const staffToken = localStorage.getItem('organizer_token') || localStorage.getItem('admin_token');
+      if (!staffToken) throw new Error('Staff session expired. Please sign in again.');
       const response = await axios.post(`${apiUrl}/api/bookings/check-out`, {
         bookingId: verification.bookingId,
-      });
+      }, { headers: { Authorization: `Bearer ${staffToken}` } });
 
       const result = response.data;
 
