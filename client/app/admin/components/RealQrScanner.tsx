@@ -1,143 +1,150 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
 
 interface RealQrScannerProps {
   onScan: (data: string) => void;
-  onError: (error: any) => void;
+  onError: (error: Error) => void;
   isActive: boolean;
 }
 
 const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [hasPermission, setHasPermission] = useState<boolean>(false);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [qrDetected, setQrDetected] = useState<boolean>(false);
-  const requestRef = useRef<number>();
-  
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onScanRef = useRef(onScan);
+  const onErrorRef = useRef(onError);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [qrDetected, setQrDetected] = useState(false);
+
+  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
   useEffect(() => {
-    // Reset detection state when scanner becomes inactive
     if (!isActive) {
+      setCameraReady(false);
+      setIsScanning(false);
       setQrDetected(false);
+      return;
     }
 
+    let cancelled = false;
     let stream: MediaStream | null = null;
 
     const startCamera = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setHasPermission(true);
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera access is not available in this browser. Open this page in a current browser over HTTPS.');
         }
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        onError(err);
-        setHasPermission(false);
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        const video = videoRef.current;
+        if (!video) throw new Error('Could not start the camera preview. Please try again.');
+        video.srcObject = stream;
+        await video.play();
+        if (cancelled) return;
+
+        setCameraReady(true);
+        setIsScanning(true);
+      } catch (error) {
+        if (cancelled) return;
+        const cameraError = error instanceof Error ? error : new Error('Unable to open the camera.');
+        const errorName = (error as { name?: string } | null)?.name;
+        const message = !window.isSecureContext
+          ? 'Camera access requires a secure HTTPS connection. Open the scanner using its https:// address.'
+          : errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError'
+            ? 'Camera permission is blocked. Allow camera access for this site in your browser settings, then try again.'
+            : errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError'
+              ? 'No camera was found on this device.'
+              : errorName === 'NotReadableError' || errorName === 'TrackStartError'
+                ? 'The camera is busy in another app. Close that app and try again.'
+                : cameraError.message;
+        onErrorRef.current(new Error(message));
       }
     };
 
-    const stopCamera = () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-      }
-      setIsScanning(false);
-    };
-
-    if (isActive) {
-      startCamera();
-      setIsScanning(true);
-    } else {
-      stopCamera();
-    }
+    setCameraReady(false);
+    setQrDetected(false);
+    void startCamera();
 
     return () => {
-      stopCamera();
+      cancelled = true;
+      stream?.getTracks().forEach((track) => track.stop());
+      const video = videoRef.current;
+      if (video) video.srcObject = null;
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
     };
-  }, [isActive, onError]);
+  }, [isActive]);
 
   useEffect(() => {
-    let animationFrameId: number;
+    if (!isActive || !cameraReady || !isScanning || qrDetected) return;
+    let cancelled = false;
 
-    const scanQRCode = () => {
-      if (!videoRef.current || !canvasRef.current || !isScanning || qrDetected) return;
-
+    const scanFrame = () => {
+      if (cancelled) return;
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
+      const context = canvas?.getContext('2d', { willReadFrequently: true });
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA && context) {
-        canvas.height = video.videoHeight;
-        canvas.width = video.videoWidth;
+      if (video && canvas && context && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+        const scale = Math.min(1, 960 / video.videoWidth);
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert",
-        });
 
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
         if (code) {
           setQrDetected(true);
-          onScan(code.data);
-          setIsScanning(false); // Stop scanning after detection
-        } else {
-          animationFrameId = requestAnimationFrame(scanQRCode);
+          setIsScanning(false);
+          onScanRef.current(code.data);
+          return;
         }
-      } else {
-        animationFrameId = requestAnimationFrame(scanQRCode);
       }
+
+      scanTimerRef.current = setTimeout(scanFrame, 110);
     };
 
-    if (isActive && isScanning && !qrDetected) {
-      // Reset qrDetected flag if scanner is restarted
-      if(qrDetected) setQrDetected(false);
-      scanQRCode();
-    }
-
+    scanFrame();
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
+      cancelled = true;
+      if (scanTimerRef.current) {
+        clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = null;
       }
     };
-  }, [isActive, isScanning, onScan, qrDetected]);
+  }, [cameraReady, isActive, isScanning, qrDetected]);
 
   return (
-    <div className="relative">
-      <video 
+    <div className="relative h-full w-full overflow-hidden bg-black">
+      <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className="w-full h-full object-cover rounded-lg"
+        aria-label="Live rear camera preview for scanning a ticket QR code"
+        className="absolute inset-0 h-full w-full object-cover"
         style={{ display: isActive ? 'block' : 'none' }}
       />
-      <canvas 
-        ref={canvasRef} 
-        className="absolute top-0 left-0 w-full h-full"
-        style={{ display: 'none' }} // Hidden canvas for processing
-      />
-      {isActive && !hasPermission && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
-          <p className="text-red-500">Camera permission denied</p>
-        </div>
-      )}
-      
-      {/* Scanner overlay */}
-      {isActive && hasPermission && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 border-2 border-white/50"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 border-2 border-white animate-pulse"></div>
-          <div className="absolute top-1/2 left-0 w-full border-t-2 border-white/50"></div>
-          <div className="absolute left-1/2 top-0 h-full border-l-2 border-white/50"></div>
-        </div>
-      )}
+      <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
     </div>
   );
 };
