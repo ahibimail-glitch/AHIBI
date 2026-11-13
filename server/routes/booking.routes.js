@@ -11,6 +11,7 @@ const smsService = require('../services/smsService');
 const whatsappService = require('../services/whatsappService');
 const Scan = require("../models/Scan");
 const { CheckInError, checkInBooking } = require("../services/bookingCheckInService");
+const { CheckOutError, checkOutBooking } = require("../services/bookingCheckOutService");
 const workshopRsvpController = require("../controllers/workshopRsvpController");
 const eventPaymentSettlement = require("../services/eventPaymentSettlementService");
 const paymentController = require("../controllers/paymentController");
@@ -931,57 +932,24 @@ router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), asy
 // @access  Private (Admin)
 router.post("/check-out", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
-    const { bookingId } = req.body;
+    const { bookingId, eventId } = req.body || {};
 
     if (!bookingId) {
       return res.status(400).json({ message: 'Booking ID is required' });
     }
 
-    const booking = await Booking.findById(bookingId);
-
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    // Find the most recent scan for this booking
-    const scans = await Scan.find({ ticket: bookingId }).sort({ createdAt: -1 }).limit(1);
-    
-    if (scans.length === 0) {
-      return res.status(400).json({ message: 'No scan records found for this ticket.' });
-    }
-
-    // Delete the most recent scan to free up one entry
-    await Scan.findByIdAndDelete(scans[0]._id);
-
-    // Get updated scan count
-    const remainingScans = await Scan.countDocuments({ ticket: bookingId });
-    
-    // If no more scans exist, reset the booking status
-    if (remainingScans === 0) {
-      booking.status = 'confirmed';
-      await booking.save();
-    }
-
-    booking.checkedOutAt = new Date();
-    await booking.save();
-
-    // Get the event to check ticket capacity
-    const event = await Event.findById(booking.event);
-    const ticketTypeInfo = event?.ticketTypes.find(t => t.name === booking.ticketType);
-    const capacity = ticketTypeInfo?.capacity || 1;
-
-    res.status(200).json({
+    const result = await checkOutBooking({ bookingId, eventId });
+    return res.status(200).json({
       message: 'Check-out successful. One entry has been freed up.',
-      status: 'VALID',
-      checkedOutAt: booking.checkedOutAt,
-      capacity: capacity,
-      usedEntries: remainingScans,
-      remainingEntries: capacity - remainingScans
+      ...result,
     });
 
   } catch (error) {
+    if (error instanceof CheckOutError) {
+      return res.status(error.status).json({ message: error.message, code: error.code });
+    }
     console.error('Error during check-out:', error);
-    res.status(500).json({ message: 'Server error during check-out' });
+    return res.status(500).json({ message: 'Server error during check-out' });
   }
 });
 

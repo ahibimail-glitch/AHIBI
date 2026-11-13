@@ -4,6 +4,7 @@ const Event = require('../models/Event');
 const Scan = require('../models/Scan');
 const scannerAuth = require('../middlewares/scannerAuth');
 const { CheckInError, checkInBooking } = require('../services/bookingCheckInService');
+const { CheckOutError, checkOutBooking } = require('../services/bookingCheckOutService');
 
 const router = express.Router();
 
@@ -45,6 +46,10 @@ router.post('/verify-ticket', async (req, res) => {
       return res.json({
         message: `This ticket has reached its maximum capacity (${capacity}). No more entries allowed.`,
         status: 'ALREADY_USED',
+        bookingId: String(booking._id),
+        userId: booking.user ? String(booking.user) : 'Unknown',
+        ticketType: booking.ticketType,
+        eventDate: booking.createdAt,
         checkedInAt: booking.checkedInAt,
         capacity,
         usedEntries,
@@ -56,6 +61,7 @@ router.post('/verify-ticket', async (req, res) => {
       message: 'Ticket verified successfully.',
       status: 'VALID',
       bookingId: String(booking._id),
+      userId: booking.user ? String(booking.user) : 'Unknown',
       ticketType: booking.ticketType,
       eventDate: booking.createdAt,
       capacity,
@@ -95,6 +101,27 @@ router.post('/check-in', async (req, res) => {
     }
     console.error('Scanner check-in failed:', error);
     return res.status(500).json({ message: 'Unable to check in this ticket.' });
+  }
+});
+
+router.post('/check-out', async (req, res) => {
+  try {
+    const { bookingId, eventId } = req.body || {};
+    if (!bookingId || !eventId) {
+      return res.status(400).json({ message: 'Booking ID and event ID are required.', code: 'CHECK_OUT_IDENTITY_REQUIRED' });
+    }
+
+    const result = await checkOutBooking({ bookingId, eventId });
+    return res.status(200).json({
+      message: 'Check-out successful. One entry has been freed up.',
+      ...result,
+    });
+  } catch (error) {
+    if (error instanceof CheckOutError) {
+      return res.status(error.status).json({ message: error.message, code: error.code });
+    }
+    console.error('Scanner check-out failed:', error);
+    return res.status(500).json({ message: 'Unable to check out this ticket.' });
   }
 });
 

@@ -4,6 +4,9 @@ const jwt = require('jsonwebtoken');
 
 process.env.JWT_SECRET = 'scanner-access-test-secret';
 
+const Booking = require('../models/Booking');
+const Event = require('../models/Event');
+const Scan = require('../models/Scan');
 const ScannerStaff = require('../models/ScannerStaff');
 const User = require('../models/User');
 const auth = require('../middlewares/auth');
@@ -55,6 +58,44 @@ test('scanner authentication requires an active scanner account and current toke
   assert.equal(revokedRes.statusCode, 401);
 });
 
+test('scanner verification returns the same booking identity fields for valid and used tickets', async (t) => {
+  const originalBookingFindById = Booking.findById;
+  const originalEventFindById = Event.findById;
+  const originalScanCountDocuments = Scan.countDocuments;
+  const bookingId = '507f1f77bcf86cd799439011';
+  const eventId = '507f1f77bcf86cd799439012';
+  const userId = '507f1f77bcf86cd799439013';
+  const booking = {
+    _id: bookingId,
+    user: userId,
+    event: eventId,
+    status: 'confirmed',
+    ticketType: 'General Pass',
+    createdAt: new Date('2026-11-13T00:00:00.000Z'),
+  };
+  let usedEntries = 0;
+  Booking.findById = async () => booking;
+  Event.findById = async () => ({ ticketTypes: [{ name: 'General Pass', capacity: 1 }] });
+  Scan.countDocuments = async () => usedEntries;
+  t.after(() => {
+    Booking.findById = originalBookingFindById;
+    Event.findById = originalEventFindById;
+    Scan.countDocuments = originalScanCountDocuments;
+  });
+
+  const verifyTicket = getRoute(scannerRoutes, 'post', '/verify-ticket')[0];
+  for (const [entryCount, expectedStatus] of [[0, 'VALID'], [1, 'ALREADY_USED']]) {
+    usedEntries = entryCount;
+    const res = responseRecorder();
+    await verifyTicket({ body: { bookingId, eventId } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.status, expectedStatus);
+    assert.equal(res.body.bookingId, bookingId);
+    assert.equal(res.body.userId, userId);
+    assert.equal(res.body.ticketType, booking.ticketType);
+  }
+});
+
 test('scanner identities cannot use generic authenticated routes or be attached as optional users', async () => {
   let userLookups = 0;
   const originalUserFindById = User.findById;
@@ -80,7 +121,7 @@ test('scanner identities cannot use generic authenticated routes or be attached 
   }
 });
 
-test('legacy booking mutation and identity routes stay outside scanner-only access', () => {
+test('scanner credentials cannot use generic booking routes and only use scanner-scoped mutations', () => {
   for (const path of ['/verify-ticket', '/verify-qr', '/check-out']) {
     const handlers = getRoute(bookingRoutes, 'post', path);
     assert.equal(handlers[0], auth.protect, `${path} must authenticate before its handler`);
@@ -91,8 +132,13 @@ test('legacy booking mutation and identity routes stay outside scanner-only acce
 
   const scannerCheckIn = getRoute(scannerRoutes, 'post', '/check-in');
   assert.equal(scannerCheckIn.length, 1, 'scanner check-in must run after the router-level scannerAuth guard');
-  assert.ok(scannerRoutes.stack.some((layer) => layer.handle === scannerAuth), 'scanner operations must be behind scannerAuth');
-  assert.equal(scannerRoutes.stack.some((layer) => layer.route?.path === '/check-out'), false, 'scanner staff must not receive the check-out correction operation');
+  const scannerCheckOut = getRoute(scannerRoutes, 'post', '/check-out');
+  assert.equal(scannerCheckOut.length, 1, 'scanner check-out must run after the router-level scannerAuth guard');
+  const scannerGuardIndex = scannerRoutes.stack.findIndex((layer) => layer.handle === scannerAuth);
+  const scannerCheckInIndex = scannerRoutes.stack.findIndex((layer) => layer.route?.path === '/check-in');
+  const scannerCheckOutIndex = scannerRoutes.stack.findIndex((layer) => layer.route?.path === '/check-out');
+  assert.ok(scannerGuardIndex >= 0 && scannerGuardIndex < scannerCheckInIndex, 'scanner check-in must follow scannerAuth');
+  assert.ok(scannerGuardIndex < scannerCheckOutIndex, 'scanner check-out must follow scannerAuth');
 
   assert.ok(adminRoutes.stack.some((layer) => layer.handle === auth.protect), 'scanner account management must be behind admin authentication');
   const adminGuardIndex = adminRoutes.stack.findIndex((layer) => layer.handle === auth.protect);
