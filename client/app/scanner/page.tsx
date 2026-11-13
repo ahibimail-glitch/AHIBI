@@ -12,6 +12,8 @@ export default function ScannerPortalPage() {
   const [token, setToken] = useState('');
   const [username, setUsername] = useState('');
   const [checking, setChecking] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [sessionRetry, setSessionRetry] = useState(0);
 
   const signOut = useCallback(() => {
     localStorage.removeItem('scanner_token');
@@ -22,6 +24,8 @@ export default function ScannerPortalPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     const storedToken = localStorage.getItem('scanner_token') || '';
     const storedUsername = localStorage.getItem('scanner_username') || '';
 
@@ -32,29 +36,75 @@ export default function ScannerPortalPage() {
 
     setToken(storedToken);
     setUsername(storedUsername);
+    setChecking(true);
+    setSessionError(null);
 
-    fetch(`${apiUrl}/api/scanner/session`, { headers: { Authorization: `Bearer ${storedToken}` } })
-      .then((response) => {
-        if (!response.ok) throw new Error('Scanner session expired.');
-        return response.json();
-      })
-      .then((result) => {
+    const verifySession = async () => {
+      timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const response = await fetch(`${apiUrl}/api/scanner/session`, {
+          signal: controller.signal,
+          headers: { Authorization: `Bearer ${storedToken}` },
+        });
+        if (response.status === 401 || response.status === 403) {
+          if (!cancelled) signOut();
+          return;
+        }
+        if (!response.ok) throw new Error('Scanner service is temporarily unavailable.');
+        const result = await response.json();
         if (!cancelled) setUsername(result.data.username);
-      })
-      .catch(() => {
-        if (!cancelled) signOut();
-      })
-      .finally(() => {
+      } catch {
+        if (!cancelled) {
+          setSessionError(controller.signal.aborted
+            ? 'Scanner access check timed out. Check your connection and retry.'
+            : 'Could not reach the scanner service. Check your connection and retry.');
+        }
+      } finally {
+        if (timeout) clearTimeout(timeout);
         if (!cancelled) setChecking(false);
-      });
+      }
+    };
 
-    return () => { cancelled = true; };
-  }, [router, signOut]);
+    void verifySession();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [router, signOut, sessionRetry]);
 
   if (checking || !token) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-950 px-5 text-sm text-slate-300" style={{ minHeight: '100svh' }}>
         Checking scanner access…
+      </main>
+    );
+  }
+
+  if (sessionError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-5 text-slate-100" style={{ minHeight: '100svh' }}>
+        <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900 p-6 text-center">
+          <p className="text-base font-semibold">Scanner connection unavailable</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300" role="alert">{sessionError}</p>
+          <div className="mt-5 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSessionRetry((retry) => retry + 1)}
+              className="min-h-11 rounded-xl bg-white px-4 text-sm font-semibold text-slate-950"
+            >
+              Retry
+            </button>
+            <button
+              type="button"
+              onClick={signOut}
+              className="min-h-11 rounded-xl border border-white/15 px-4 text-sm font-semibold"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       </main>
     );
   }

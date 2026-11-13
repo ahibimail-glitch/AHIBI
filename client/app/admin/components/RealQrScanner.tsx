@@ -7,17 +7,16 @@ interface RealQrScannerProps {
   onScan: (data: string) => void;
   onError: (error: Error) => void;
   isActive: boolean;
+  isScanning?: boolean;
 }
 
-const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive }) => {
+const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive, isScanning = isActive }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onScanRef = useRef(onScan);
   const onErrorRef = useRef(onError);
   const [cameraReady, setCameraReady] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [qrDetected, setQrDetected] = useState(false);
 
   useEffect(() => { onScanRef.current = onScan; }, [onScan]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
@@ -25,8 +24,6 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
   useEffect(() => {
     if (!isActive) {
       setCameraReady(false);
-      setIsScanning(false);
-      setQrDetected(false);
       return;
     }
 
@@ -60,7 +57,6 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
         if (cancelled) return;
 
         setCameraReady(true);
-        setIsScanning(true);
       } catch (error) {
         if (cancelled) return;
         const cameraError = error instanceof Error ? error : new Error('Unable to open the camera.');
@@ -79,7 +75,6 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
     };
 
     setCameraReady(false);
-    setQrDetected(false);
     void startCamera();
 
     return () => {
@@ -95,7 +90,7 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
   }, [isActive]);
 
   useEffect(() => {
-    if (!isActive || !cameraReady || !isScanning || qrDetected) return;
+    if (!isActive || !cameraReady || !isScanning) return;
     let cancelled = false;
 
     const scanFrame = () => {
@@ -113,8 +108,6 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
         if (code) {
-          setQrDetected(true);
-          setIsScanning(false);
           onScanRef.current(code.data);
           return;
         }
@@ -131,7 +124,7 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
         scanTimerRef.current = null;
       }
     };
-  }, [cameraReady, isActive, isScanning, qrDetected]);
+  }, [cameraReady, isActive, isScanning]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black">

@@ -18,6 +18,23 @@ const AdminLifecycleAuditSchema = new mongoose.Schema({
   previousPaymentStatus: String,
 }, { _id: false });
 
+const ScannerCheckInRequestSchema = new mongoose.Schema({
+  event: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Event',
+    required: true,
+  },
+  requestId: {
+    type: String,
+    required: true,
+    maxlength: 128,
+  },
+  checkedInAt: {
+    type: Date,
+    required: true,
+  },
+}, { _id: false });
+
 const BookingSchema = new mongoose.Schema({
   event: {
     type: mongoose.Schema.Types.ObjectId,
@@ -185,6 +202,12 @@ const BookingSchema = new mongoose.Schema({
   entryVerifiedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  // Retained so a delayed retry cannot re-admit a scan after checkout deletes its Scan row.
+  scannerCheckInRequests: {
+    type: [ScannerCheckInRequestSchema],
+    default: undefined,
+    select: false,
   },
   // Ticket-specific fields for multiple ticket bookings
   ticketIndex: {

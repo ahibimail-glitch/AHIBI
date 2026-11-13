@@ -178,13 +178,18 @@ router.post("/verify-ticket", auth.protect, auth.authorize('admin', 'organizer')
 
     // Check if all entries are used
     if (scanCount >= capacity) {
+      const checkOutScan = await Scan.findOne({ ticket: bookingId, event: eventId })
+        .sort({ timestamp: -1, _id: -1 })
+        .select('_id')
+        .lean();
       return res.status(200).json({
         message: `This ticket has reached its maximum capacity (${capacity}). No more entries allowed.`,
         status: 'ALREADY_USED',
         checkedInAt: booking.checkedInAt,
         capacity: capacity,
         usedEntries: scanCount,
-        remainingEntries: 0
+        remainingEntries: 0,
+        checkOutScanId: checkOutScan ? String(checkOutScan._id) : undefined,
       });
     }
 
@@ -932,15 +937,17 @@ router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), asy
 // @access  Private (Admin)
 router.post("/check-out", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
-    const { bookingId, eventId } = req.body || {};
+    const { bookingId, eventId, scanId } = req.body || {};
 
     if (!bookingId) {
       return res.status(400).json({ message: 'Booking ID is required' });
     }
 
-    const result = await checkOutBooking({ bookingId, eventId });
+    const result = await checkOutBooking({ bookingId, eventId, scanId });
     return res.status(200).json({
-      message: 'Check-out successful. One entry has been freed up.',
+      message: result.idempotentReplay
+        ? 'This check-out was already processed or the entry is no longer active.'
+        : 'Check-out successful. One entry has been freed up.',
       ...result,
     });
 

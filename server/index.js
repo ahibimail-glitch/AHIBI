@@ -70,6 +70,7 @@ const { logRouterRoutes } = require('./utils/logRouterRoutes');
 const User = require('./models/User');
 const Booking = require('./models/Booking');
 const Event = require('./models/Event');
+const Scan = require('./models/Scan');
 const PendingPaymentSession = require('./models/PendingPaymentSession');
 const PaymentTransaction = require('./models/PaymentTransaction');
 const AdminNotification = require('./models/AdminNotification');
@@ -112,6 +113,7 @@ const corsOptions = {
     return callback(null, true);
   },
   credentials: true,
+  exposedHeaders: ['Server-Timing'],
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
@@ -325,6 +327,7 @@ const connectDB = async () => {
     await Promise.all([
       Booking.createIndexes(),
       Event.createIndexes(),
+      Scan.createIndexes(),
       PendingPaymentSession.createIndexes(),
       PaymentTransaction.createIndexes(),
       AdminNotification.createIndexes(),

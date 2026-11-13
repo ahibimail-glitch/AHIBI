@@ -7,6 +7,15 @@ const Scan = require('../models/Scan');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const { checkInBooking } = require('../services/bookingCheckInService');
 
+test('scan request IDs have a unique partial index scoped to ticket and event', () => {
+  const requestIndex = Scan.schema.indexes().find(([keys]) =>
+    keys.ticket === 1 && keys.event === 1 && keys.requestId === 1
+  );
+  assert.ok(requestIndex, 'check-in idempotency requires the compound Scan index');
+  assert.equal(requestIndex[1].unique, true);
+  assert.deepEqual(requestIndex[1].partialFilterExpression, { requestId: { $type: 'string' } });
+});
+
 const ids = {
   event: new mongoose.Types.ObjectId(),
   otherEvent: new mongoose.Types.ObjectId(),
@@ -14,8 +23,10 @@ const ids = {
   partnerBooking: new mongoose.Types.ObjectId(),
   partnerFailureBooking: new mongoose.Types.ObjectId(),
   ordinaryBooking: new mongoose.Types.ObjectId(),
+  seasonBooking: new mongoose.Types.ObjectId(),
   cancelledBooking: new mongoose.Types.ObjectId(),
   ordinaryUser: new mongoose.Types.ObjectId(),
+  seasonUser: new mongoose.Types.ObjectId(),
   scannerStaff: new mongoose.Types.ObjectId(),
   staff: new mongoose.Types.ObjectId(),
 };
@@ -29,12 +40,20 @@ function clone(value) {
 }
 
 function query(value) {
-  return { session() { return this; }, lean() { return Promise.resolve(clone(value)); }, then(resolve, reject) { return Promise.resolve(value).then(resolve, reject); } };
+  return {
+    session() { return this; },
+    select() { return this; },
+    lean() { return Promise.resolve(clone(value)); },
+    then(resolve, reject) { return Promise.resolve(value).then(resolve, reject); },
+  };
 }
 
 function setupModels(t) {
   const event = { _id: ids.event, ticketTypes: [{ name: 'General Pass', capacity: 600 }] };
-  const otherEvent = { _id: ids.otherEvent, ticketTypes: [{ name: 'General Pass', capacity: 600 }] };
+  const otherEvent = { _id: ids.otherEvent, ticketTypes: [
+    { name: 'General Pass', capacity: 600 },
+    { name: 'General Season Pass', capacity: 5 },
+  ] };
   const bookings = new Map([
     [String(ids.partnerBooking), {
       _id: ids.partnerBooking, event: ids.event, user: undefined, ticketType: 'General Pass', status: 'confirmed',
@@ -53,6 +72,11 @@ function setupModels(t) {
       paymentStatus: 'completed',
       async save() { bookings.set(String(this._id), this); },
     }],
+    [String(ids.seasonBooking), {
+      _id: ids.seasonBooking, event: ids.event, user: ids.seasonUser, ticketType: 'General Season Pass', status: 'confirmed',
+      paymentStatus: 'completed',
+      async save() { bookings.set(String(this._id), this); },
+    }],
     [String(ids.cancelledBooking), {
       _id: ids.cancelledBooking, event: ids.event, user: ids.ordinaryUser, ticketType: 'General Pass', status: 'cancelled',
       paymentStatus: 'refunded',
@@ -60,6 +84,7 @@ function setupModels(t) {
     }],
   ]);
   const scans = [];
+  let transactionQueue = Promise.resolve();
   const reservation = {
     reservationId: ids.reservation, status: 'issued', ticketType: 'General Pass', zone: 'G-1', memberReferenceHash: 'hash',
     bookingIds: [ids.partnerBooking, ids.partnerFailureBooking], eventIds: [ids.event],
@@ -77,14 +102,21 @@ function setupModels(t) {
   };
   mongoose.startSession = async () => ({
     async withTransaction(callback) {
+      let releaseTransaction;
+      const previousTransaction = transactionQueue;
+      transactionQueue = new Promise((resolve) => { releaseTransaction = resolve; });
+      await previousTransaction;
       const snapshotBookings = new Map([...bookings].map(([id, value]) => [id, clone(value)]));
       const snapshotScans = clone(scans);
-      try { await callback(); }
-      catch (error) {
+      try {
+        await callback();
+      } catch (error) {
         bookings.clear();
         for (const [id, value] of snapshotBookings) bookings.set(id, value);
         scans.splice(0, scans.length, ...snapshotScans);
         throw error;
+      } finally {
+        releaseTransaction();
       }
     },
     async endSession() {},
@@ -93,6 +125,7 @@ function setupModels(t) {
     const source = bookings.get(String(id));
     if (!source) return query(null);
     const document = clone(source);
+    document.increment = () => { document.__v = (document.__v || 0) + 1; };
     document.save = async () => bookings.set(String(document._id), document);
     return query(document);
   };
@@ -147,6 +180,19 @@ test('ordinary AHIBI booking retains its user-linked check-in', async (t) => {
   assert.equal(db.bookings.get(String(ids.ordinaryBooking)).status, 'checked-in');
   assert.equal(String(db.scans[0].user), String(ids.ordinaryUser));
   assert.equal(db.scans[0].partnerId, undefined);
+  assert.equal(db.bookings.get(String(ids.ordinaryBooking)).scannerCheckInRequests[0].requestId, 'ordinary-checkin-0001');
+});
+
+test('season-pass booking checks in against a selected event different from its booking event', async (t) => {
+  const db = setupModels(t);
+  const result = await checkInBooking({
+    bookingId: String(ids.seasonBooking), eventId: String(ids.otherEvent), requestId: 'season-checkin-0001',
+  });
+  assert.equal(result.status, 'CHECKED_IN');
+  assert.equal(String(db.scans[0].ticket), String(ids.seasonBooking));
+  assert.equal(String(db.scans[0].event), String(ids.otherEvent));
+  assert.equal(String(db.bookings.get(String(ids.seasonBooking)).scannerCheckInRequests[0].event), String(ids.otherEvent));
+  assert.equal(db.scans.length, 1);
 });
 
 test('scanner check-ins are attributed to the scanner account on the scan record', async (t) => {
@@ -191,6 +237,50 @@ test('retries with the same request ID return the original scan and partner tick
     checkInBooking({ ...input, requestId: 'repeat-checkin-0002' }),
     (error) => error.code === 'TICKET_ALREADY_USED',
   );
+  assert.equal(db.scans.length, 1);
+});
+
+test('a same-ID retry after checkout cannot recreate the deleted attendance scan', async (t) => {
+  const db = setupModels(t);
+  const input = {
+    bookingId: String(ids.ordinaryBooking),
+    eventId: String(ids.event),
+    requestId: 'retry-after-checkout-0001',
+  };
+  await checkInBooking(input);
+  db.scans.splice(0, db.scans.length);
+
+  await assert.rejects(
+    checkInBooking(input),
+    (error) => error.code === 'CHECK_IN_REQUEST_NO_LONGER_ACTIVE',
+  );
+  assert.equal(db.scans.length, 0);
+});
+
+test('parallel attempts with the same request ID create only one scan', async (t) => {
+  const db = setupModels(t);
+  const input = { bookingId: String(ids.ordinaryBooking), eventId: String(ids.event), requestId: 'parallel-checkin-0001' };
+  const results = await Promise.all([checkInBooking(input), checkInBooking(input)]);
+
+  assert.equal(db.scans.length, 1);
+  assert.deepEqual(results.map((result) => result.status), ['CHECKED_IN', 'CHECKED_IN']);
+  assert.equal(results.filter((result) => result.idempotentReplay).length, 1);
+});
+
+test('concurrent distinct request IDs cannot exceed a single-entry ticket capacity', async (t) => {
+  const db = setupModels(t);
+  db.event.ticketTypes[0].capacity = 1;
+  const attempts = await Promise.allSettled([
+    checkInBooking({
+      bookingId: String(ids.ordinaryBooking), eventId: String(ids.event), requestId: 'capacity-checkin-0001',
+    }),
+    checkInBooking({
+      bookingId: String(ids.ordinaryBooking), eventId: String(ids.event), requestId: 'capacity-checkin-0002',
+    }),
+  ]);
+
+  assert.equal(attempts.filter((attempt) => attempt.status === 'fulfilled').length, 1);
+  assert.equal(attempts.filter((attempt) => attempt.status === 'rejected' && attempt.reason.code === 'TICKET_EXHAUSTED').length, 1);
   assert.equal(db.scans.length, 1);
 });
 

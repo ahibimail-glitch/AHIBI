@@ -56,16 +56,22 @@ test('scanner authentication requires an active scanner account and current toke
   const revokedRes = responseRecorder();
   await scannerAuth({ headers: { authorization: `Bearer ${signedToken({ role: 'scanner', tokenVersion: 3 })}` } }, revokedRes, () => {});
   assert.equal(revokedRes.statusCode, 401);
+
+  const expiredRes = responseRecorder();
+  await scannerAuth({ headers: { authorization: `Bearer ${signedToken({ role: 'scanner', tokenVersion: 4 }, { expiresIn: -1 })}` } }, expiredRes, () => {});
+  assert.equal(expiredRes.statusCode, 401, 'expired scanner authentication must be rejected');
 });
 
 test('scanner verification returns the same booking identity fields for valid and used tickets', async (t) => {
   const originalBookingFindById = Booking.findById;
   const originalEventFindById = Event.findById;
   const originalScanCountDocuments = Scan.countDocuments;
+  const originalScanFindOne = Scan.findOne;
   const bookingId = '507f1f77bcf86cd799439011';
   const eventId = '507f1f77bcf86cd799439012';
+  const otherEventId = '507f1f77bcf86cd799439014';
   const userId = '507f1f77bcf86cd799439013';
-  const booking = {
+  let booking = {
     _id: bookingId,
     user: userId,
     event: eventId,
@@ -74,13 +80,23 @@ test('scanner verification returns the same booking identity fields for valid an
     createdAt: new Date('2026-11-13T00:00:00.000Z'),
   };
   let usedEntries = 0;
-  Booking.findById = async () => booking;
-  Event.findById = async () => ({ ticketTypes: [{ name: 'General Pass', capacity: 1 }] });
+  Booking.findById = () => ({ select: async () => booking });
+  Event.findById = () => ({ select: async () => ({ ticketTypes: [{ name: booking.ticketType, capacity: 1 }] }) });
   Scan.countDocuments = async () => usedEntries;
+  Scan.findOne = (filter) => ({
+    sort() { return this; },
+    select() { return this; },
+    async lean() {
+      assert.equal(String(filter.ticket), bookingId);
+      assert.equal(String(filter.event), eventId);
+      return { _id: 'scan-used-1' };
+    },
+  });
   t.after(() => {
     Booking.findById = originalBookingFindById;
     Event.findById = originalEventFindById;
     Scan.countDocuments = originalScanCountDocuments;
+    Scan.findOne = originalScanFindOne;
   });
 
   const verifyTicket = getRoute(scannerRoutes, 'post', '/verify-ticket')[0];
@@ -93,7 +109,54 @@ test('scanner verification returns the same booking identity fields for valid an
     assert.equal(res.body.bookingId, bookingId);
     assert.equal(res.body.userId, userId);
     assert.equal(res.body.ticketType, booking.ticketType);
+    if (expectedStatus === 'ALREADY_USED') assert.equal(res.body.checkOutScanId, 'scan-used-1');
   }
+
+  booking = { ...booking, event: otherEventId, ticketType: 'General Season Pass' };
+  usedEntries = 0;
+  const seasonPassRes = responseRecorder();
+  await verifyTicket({ body: { bookingId, eventId } }, seasonPassRes);
+  assert.equal(seasonPassRes.statusCode, 200);
+  assert.equal(seasonPassRes.body.status, 'VALID', 'season passes remain valid for a selected event different from booking.event');
+
+  booking = { ...booking, ticketType: 'General Pass' };
+  const wrongEventRes = responseRecorder();
+  await verifyTicket({ body: { bookingId, eventId } }, wrongEventRes);
+  assert.equal(wrongEventRes.statusCode, 400);
+  assert.equal(wrongEventRes.body.status, 'INVALID', 'ordinary tickets remain bound to their booking event');
+});
+
+test('scanner event list returns only the lightweight scanner fields behind scanner authentication', async (t) => {
+  const originalEventFind = Event.find;
+  let selectedFields = '';
+  let queryFilter;
+  Event.find = (filter) => {
+    queryFilter = filter;
+    const query = {
+      select(fields) { selectedFields = fields; return this; },
+      sort() { return this; },
+      async lean() {
+        return [{ _id: 'event-1', title: 'Upcoming match' }, { _id: 'event-2', title: 'Other match' }];
+      },
+    };
+    return query;
+  };
+  t.after(() => { Event.find = originalEventFind; });
+
+  const handler = getRoute(scannerRoutes, 'get', '/events')[0];
+  const res = responseRecorder();
+  await handler({ scannerTiming: { recordDatabase() {} } }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(selectedFields, '_id title');
+  assert.equal(queryFilter.status, 'approved');
+  assert.deepEqual(res.body.data.events, [
+    { _id: 'event-1', title: 'Upcoming match' },
+    { _id: 'event-2', title: 'Other match' },
+  ]);
+  const guardIndex = scannerRoutes.stack.findIndex((layer) => layer.handle === scannerAuth);
+  const eventsIndex = scannerRoutes.stack.findIndex((layer) => layer.route?.path === '/events');
+  assert.ok(guardIndex >= 0 && guardIndex < eventsIndex, 'scanner event list must follow scannerAuth');
 });
 
 test('scanner identities cannot use generic authenticated routes or be attached as optional users', async () => {

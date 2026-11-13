@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { performance } = require('node:perf_hooks');
 const ScannerStaff = require('../models/ScannerStaff');
 
 module.exports = async function scannerAuth(req, res, next) {
@@ -14,7 +15,19 @@ module.exports = async function scannerAuth(req, res, next) {
       return res.status(403).json({ success: false, message: 'Scanner access required.' });
     }
 
-    const staff = await ScannerStaff.findById(decoded.id);
+    const lookupStartedAt = performance.now();
+    let staff;
+    try {
+      staff = await ScannerStaff.findById(decoded.id);
+    } finally {
+      const lookupEndedAt = performance.now();
+      req.scannerTiming?.recordDatabase(
+        'scanner-auth-db',
+        lookupEndedAt - lookupStartedAt,
+        lookupStartedAt,
+        lookupEndedAt,
+      );
+    }
     if (!staff || !staff.isActive || staff.tokenVersion !== decoded.tokenVersion) {
       return res.status(401).json({ success: false, message: 'Scanner session is no longer active.' });
     }
