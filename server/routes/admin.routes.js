@@ -169,9 +169,8 @@ router.get('/bookings/options', adminBookingsController.getBookingOptions);
 router.get('/bookings/stats', adminBookingsController.getBookingStats);
 router.get('/bookings/export', adminBookingsController.exportBookings);
 
-// The legacy DELETE API now performs an audited cancellation only for safe,
-// unpaid pending records; issued or linked ticket records are retained.
-router.delete('/bookings/:id', adminBookingsController.cancelPendingBooking);
+// Permanently remove only an Admin-confirmed unpaid booking and release its slot.
+router.delete('/bookings/:id', adminBookingsController.deleteBooking);
 
 router.get("/bookings/all",  async (req, res) => {
   try {

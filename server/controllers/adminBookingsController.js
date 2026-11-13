@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const adminBookingLifecycleService = require('../services/adminBookingLifecycleService');
+const bookingDeletionService = require('../services/adminBookingDeletionService');
 
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'refunded', 'checked-in'];
 const PAGE_SIZES = new Set([25, 50, 100]);
@@ -497,6 +498,32 @@ async function cancelPendingBooking(req, res) {
   }
 }
 
+async function deleteBooking(req, res) {
+  try {
+    const result = await bookingDeletionService.deleteUnpaidBooking({
+      bookingId: req.params.id,
+      adminId: req.user?._id,
+      confirmNoPayment: req.body?.confirmNoPayment,
+      reason: req.body?.reason,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({
+        success: false,
+        code: error.code || 'BOOKING_DELETE_BLOCKED',
+        message: error.message,
+      });
+    }
+    console.error('[Admin booking deletion] Failed:', error.message);
+    return res.status(500).json({
+      success: false,
+      code: 'BOOKING_DELETE_FAILED',
+      message: 'The booking could not be deleted. Refresh the record and review its payment, check-in, and inventory state.',
+    });
+  }
+}
+
 module.exports = {
   listBookings,
   getBookingOptions,
@@ -504,4 +531,5 @@ module.exports = {
   exportBookings,
   getBookingDetails,
   cancelPendingBooking,
+  deleteBooking,
 };

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Inventory = require('../models/NuscHomeMatchInventory');
 const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const Booking = require('../models/Booking');
@@ -203,6 +204,14 @@ function getInventoryAvailabilityLimit(state, matchDate, ticketType, zone = null
   return Math.max(0, Math.min(capacity, override ? Number(override.availability) : capacity));
 }
 
+function getOfflineReservedSinglePassSeats(state, matchDate) {
+  const configured = Number(OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE[matchDate] || 0);
+  const released = (state.offlineSinglePassReleases || [])
+    .filter((item) => item.matchDate === matchDate)
+    .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  return Math.max(0, configured - released);
+}
+
 function getSeasonPassCapacity(state, ticketType) {
   const seasonTicketType = `${ticketType === GENERAL_TICKET_TYPE ? 'General' : 'Premium'} Season Pass`;
   return getInventoryCapacity(state, null, seasonTicketType);
@@ -231,7 +240,7 @@ async function loadInventory(session, projection) {
 async function ensureInventory(session, projection) {
   await Inventory.updateOne(
     { key: INVENTORY_KEY },
-    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [], capacityOverrides: [], availabilityOverrides: [], seasonPassHistoryInitializedAt: null } },
+    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [], capacityOverrides: [], availabilityOverrides: [], offlineSinglePassReleases: [], seasonPassHistoryInitializedAt: null } },
     { upsert: true, ...(session ? { session } : {}) }
   );
   return loadInventory(session, projection);
@@ -340,6 +349,7 @@ async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
     state.partnerSeasonPassReservations ||= [];
     state.capacityOverrides ||= [];
     state.availabilityOverrides ||= [];
+    state.offlineSinglePassReleases ||= [];
     if (pruneExpired) pruneExpiredHolds(state);
     const result = await mutator(state);
     const update = await Inventory.updateOne(
@@ -353,6 +363,7 @@ async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
           seasonReservations: state.seasonReservations,
           capacityOverrides: state.capacityOverrides,
           availabilityOverrides: state.availabilityOverrides,
+          offlineSinglePassReleases: state.offlineSinglePassReleases,
           updatedAt: new Date(),
         },
         $inc: { __v: 1 },
@@ -470,7 +481,7 @@ function getSuiteAvailability(state, matchDate) {
   const boxes = getBoxState(state, matchDate);
   const singlePassBox = boxes.find((box) => box.boxNumber === SINGLE_PASS_BOX_NUMBER);
   const fullBoxes = boxes.filter((box) => FULL_BOX_NUMBERS.includes(box.boxNumber));
-  const offlineReservedSeats = OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE[matchDate] || 0;
+  const offlineReservedSeats = getOfflineReservedSinglePassSeats(state, matchDate);
   const availablePhysicalBoxes = fullBoxes.filter((box) => !box.seasonReserved && !box.fullBoxReserved && box.singlePassCount === 0).length;
   const occupiedBoxes = fullBoxes.length - availablePhysicalBoxes;
   const fullBoxCapacity = getInventoryCapacity(state, matchDate, SUITE_FULL_BOX);
@@ -812,7 +823,7 @@ function reserveMatchOrderInState(state, {
       for (let i = 0; i < line.quantity; i += 1) {
         const allocations = allocationByBox.get(SINGLE_PASS_BOX_NUMBER) || [];
         const allocatedSingleSeats = allocations.filter((allocation) => allocation.ticketType === SUITE_SINGLE).length;
-        const offlineReservedSeats = OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE[matchDate] || 0;
+        const offlineReservedSeats = getOfflineReservedSinglePassSeats(state, matchDate);
         if (seasonBoxes.has(SINGLE_PASS_BOX_NUMBER) || allocations.some((allocation) => allocation.ticketType === SUITE_FULL_BOX) ||
             allocatedSingleSeats + offlineReservedSeats >= suiteAvailability.singlePassCapacity) {
           throw new InventoryConflict('No United Suite seats remain in the single-pass box for this match.', 'SUITE_SEATS_UNAVAILABLE');
@@ -1781,6 +1792,54 @@ async function releaseMatchOrder(orderId) {
   });
 }
 
+async function releaseUnpaidMatchOrderForAdmin(orderId, { session } = {}) {
+  return mutateInventory((state) => {
+    const orders = state.orders.filter((item) => item.orderId === orderId);
+    if (orders.some((order) => order.status !== 'held')) {
+      throw new InventoryConflict(
+        'This match inventory is already confirmed or has changed. Refresh the booking before deleting it.',
+        'MATCH_INVENTORY_NOT_UNPAID',
+      );
+    }
+    state.orders = state.orders.filter((item) => item.orderId !== orderId);
+    return {
+      released: orders.length > 0,
+      ticketCount: orders.reduce((sum, order) => sum + (order.ticketLines || []).reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0), 0),
+      suiteAllocationCount: orders.reduce((sum, order) => sum + (order.suiteAllocations || []).length, 0),
+    };
+  }, session);
+}
+
+async function releaseOfflineSinglePassReservationForAdmin({ bookingId, matchDate, quantity, adminId }, { session } = {}) {
+  if (!mongoose.isValidObjectId(bookingId) || !mongoose.isValidObjectId(adminId)) {
+    throw new InventoryConflict('The booking or Admin identity is invalid.', 'INVALID_OFFLINE_RELEASE');
+  }
+  if (!FIXTURE_DATES.includes(matchDate) || !Number.isSafeInteger(quantity) || quantity < 1) {
+    throw new InventoryConflict('The offline Suite reservation could not be matched to this booking.', 'INVALID_OFFLINE_RELEASE');
+  }
+
+  return mutateInventory((state) => {
+    const existing = state.offlineSinglePassReleases.find((item) => String(item.bookingId) === String(bookingId));
+    if (existing) {
+      if (existing.matchDate !== matchDate || Number(existing.quantity) !== quantity) {
+        throw new InventoryConflict('A different offline Suite release is already recorded for this booking.', 'OFFLINE_RELEASE_CONFLICT');
+      }
+      return { released: false, idempotent: true, quantity };
+    }
+    if (getOfflineReservedSinglePassSeats(state, matchDate) < quantity) {
+      throw new InventoryConflict('No matching offline Suite reservation remains to release for this match.', 'OFFLINE_RESERVATION_NOT_FOUND');
+    }
+    state.offlineSinglePassReleases.push({
+      bookingId: new mongoose.Types.ObjectId(bookingId),
+      matchDate,
+      quantity,
+      releasedBy: new mongoose.Types.ObjectId(adminId),
+      releasedAt: new Date(),
+    });
+    return { released: true, idempotent: false, quantity };
+  }, session);
+}
+
 async function markTicketStockApplied(orderId) {
   return mutateInventory((state) => {
     const order = state.orders.find((item) => item.orderId === orderId);
@@ -1988,7 +2047,7 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
 
   if (normalizedType === normalizeTicketTypeName(SUITE_SINGLE)) {
     const box = getBoxState(state, matchDate).find((item) => item.boxNumber === SINGLE_PASS_BOX_NUMBER);
-    const offlineReserved = OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE[matchDate] || 0;
+    const offlineReserved = getOfflineReservedSinglePassSeats(state, matchDate);
     const ordersForBox = activeOrders.filter((order) => (order.suiteAllocations || []).some((allocation) => (
       allocation.boxNumber === SINGLE_PASS_BOX_NUMBER && normalizeTicketTypeName(allocation.ticketType) === normalizedType
     )));
@@ -2332,7 +2391,8 @@ async function reserveSeasonBox({ bookingReference, adminId }) {
       throw new InventoryConflict('No single box is free across every match for a season booking.', 'NO_SEASON_BOX');
     }
     const activeOrders = state.orders.filter((order) => order.status === 'confirmed' || (order.status === 'held' && new Date(order.expiresAt) > new Date()));
-    const singlePassBoxHasOfflineReservations = Object.values(OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE).some((seatCount) => seatCount > 0);
+    const singlePassBoxHasOfflineReservations = Object.keys(OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE)
+      .some((date) => getOfflineReservedSinglePassSeats(state, date) > 0);
     const boxNumber = SEASON_BOX_NUMBERS.find((candidate) => {
       if (alreadySeasonReserved.has(candidate)) return false;
       if (candidate === SINGLE_PASS_BOX_NUMBER && singlePassBoxHasOfflineReservations) return false;
@@ -2429,6 +2489,8 @@ module.exports = {
   markSeasonPassStockApplied,
   matchDateFromSlug,
   releaseMatchOrder,
+  releaseUnpaidMatchOrderForAdmin,
+  releaseOfflineSinglePassReservationForAdmin,
   reserveMatchOrder,
   reserveMultiMatchOrder,
   confirmMultiMatchOrder,

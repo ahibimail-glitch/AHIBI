@@ -9,7 +9,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { addDays, format, startOfDay } from "date-fns";
-import { Download, Eye, Search, X } from "lucide-react";
+import { Download, Eye, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -299,18 +299,24 @@ function BookingsContent() {
     staleTime: 60 * 1000,
   });
 
-  const cancelMutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: (bookingId: string) =>
-      adminJson<{ message: string }>(`/api/admin/bookings/${bookingId}`, { method: "DELETE" }),
+      adminJson<{ message: string }>(`/api/admin/bookings/${bookingId}`, {
+        method: "DELETE",
+        body: JSON.stringify({
+          confirmNoPayment: true,
+          reason: "Admin confirmed no online or offline payment was received.",
+        }),
+      }),
     onSuccess: (result, bookingId) => {
-      toast.success(result.message || "Booking cancelled and retained for audit");
+      toast.success(result.message || "Booking deleted and inventory released");
       if (selectedBookingId === bookingId) setSelectedBookingId(null);
       const currentPage = queryClient.getQueryData<BookingPage>(["admin-bookings", pageQuery]);
       if (page > 1 && currentPage?.bookings.length === 1) setPage((current) => current - 1);
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["admin-booking-stats"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to cancel booking"),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to delete booking"),
   });
 
   const bookings = pageQueryResult.data?.bookings || [];
@@ -352,9 +358,9 @@ function BookingsContent() {
     setPage(1);
   };
 
-  const cancelBooking = (bookingId: string) => {
-    if (!window.confirm("Cancel this booking only if it is unpaid and pending? Booking records and audit history are retained.")) return;
-    cancelMutation.mutate(bookingId);
+  const deleteBooking = (bookingId: string) => {
+    if (!window.confirm("Permanently delete this booking and release its ticket slot? Confirm only if no payment was received online or offline. Any issued QR will stop working.")) return;
+    deleteMutation.mutate(bookingId);
   };
 
   const exportBookings = async () => {
@@ -575,8 +581,8 @@ function BookingsContent() {
                         <Button variant="ghost" size="sm" aria-label="View booking details" onClick={() => setSelectedBookingId(booking._id)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="destructive" size="sm" aria-label="Cancel pending booking" title="Cancel pending booking; paid or issued tickets are retained" disabled={cancelMutation.isPending} onClick={() => cancelBooking(booking._id)} className="h-8 w-8 p-0">
-                          <X className="h-4 w-4" />
+                        <Button variant="destructive" size="sm" aria-label="Delete unpaid booking" title="Delete an unpaid booking and release its ticket slot" disabled={deleteMutation.isPending} onClick={() => deleteBooking(booking._id)} className="h-8 w-8 p-0">
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

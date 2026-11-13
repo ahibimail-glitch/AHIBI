@@ -134,6 +134,14 @@ const TicketAvailabilityOverrideSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { _id: true });
 
+const OfflineSinglePassReleaseSchema = new mongoose.Schema({
+  bookingId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  matchDate: { type: String, required: true },
+  quantity: { type: Number, required: true, min: 1 },
+  releasedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  releasedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
 const NuscHomeMatchInventorySchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, default: 'nusc-il-2026-27' },
   orders: { type: [OrderHoldSchema], default: [] },
@@ -144,6 +152,7 @@ const NuscHomeMatchInventorySchema = new mongoose.Schema({
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
   capacityOverrides: { type: [CapacityOverrideSchema], default: [] },
   availabilityOverrides: { type: [TicketAvailabilityOverrideSchema], default: [] },
+  offlineSinglePassReleases: { type: [OfflineSinglePassReleaseSchema], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('NuscHomeMatchInventory', NuscHomeMatchInventorySchema);
