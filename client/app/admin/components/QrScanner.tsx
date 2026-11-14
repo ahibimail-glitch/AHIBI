@@ -948,12 +948,12 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
                 )}
               </div>
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className={`grid w-full ${scannerMode ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                  <TabsTrigger value="scan" disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Camera Scan</TabsTrigger>
-                  <TabsTrigger value="upload" disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Upload Image</TabsTrigger>
-                  <TabsTrigger value="manual" disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Manual Entry</TabsTrigger>
-                  {scannerMode && <TabsTrigger value="history" disabled={!selectedEvent || eventsLoading || isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>
-                    <History className="mr-2 h-4 w-4" /> History
+                <TabsList className={`grid w-full ${scannerMode ? 'h-auto grid-cols-2 gap-1 p-1' : 'grid-cols-3'}`}>
+                  <TabsTrigger value="scan" className={scannerMode ? 'min-w-0 px-2 text-xs sm:text-sm' : undefined} disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Camera Scan</TabsTrigger>
+                  <TabsTrigger value="upload" className={scannerMode ? 'min-w-0 px-2 text-xs sm:text-sm' : undefined} disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Upload Image</TabsTrigger>
+                  <TabsTrigger value="manual" className={scannerMode ? 'min-w-0 px-2 text-xs sm:text-sm' : undefined} disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Manual Entry</TabsTrigger>
+                  {scannerMode && <TabsTrigger value="history" className="min-w-0 px-2 text-xs sm:text-sm" disabled={!selectedEvent || eventsLoading || isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>
+                    <History className="mr-2 h-4 w-4 shrink-0" /> History
                   </TabsTrigger>}
                 </TabsList>
 
