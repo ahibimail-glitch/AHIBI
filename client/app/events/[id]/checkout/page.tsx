@@ -53,6 +53,7 @@ import {
   getNuscMatchDateFromSlug,
   getNuscMatchPassSelectionUrl,
   getNuscMatchSlug,
+  isNuscVenueOnlyMatch,
   isNuscVenueOnlyMatchday,
   normalizeNuscMatchDates,
 } from "@/lib/nuscHomeMatches";
@@ -134,6 +135,7 @@ export default function CheckoutPage() {
   const pendingTicketOrderStorageKey = `ahibiPendingTicketOrder:${eventId}`;
 
   const [event, setEvent] = useState<Event | null>(null);
+  const isVenueOnlyNuscMatch = isNuscVenueOnlyMatch(getNuscMatchDateFromSlug(event?.slug) ?? "");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTickets, setSelectedTickets] = useState<Map<string, { ticket: TicketType; quantity: number }>>(new Map());
@@ -699,6 +701,12 @@ export default function CheckoutPage() {
   };
 
   const handleProceed = () => {
+    if (isVenueOnlyNuscMatch) {
+      toast.error(isNuscVenueOnlyMatchday()
+        ? "Online ticket sales are closed for this match. Tickets will be available at the venue today."
+        : "Online ticket sales for this match have closed.");
+      return;
+    }
     if (selectedTickets.size === 0) {
       toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket");
       return;
@@ -722,6 +730,14 @@ export default function CheckoutPage() {
   };
 
   const handleBooking = async () => {
+    if (isVenueOnlyNuscMatch) {
+      const message = isNuscVenueOnlyMatchday()
+        ? "Online ticket sales are closed for this match. Tickets will be available at the venue today."
+        : "Online ticket sales for this match have closed.";
+      setBookingError(message);
+      toast.error(message);
+      return;
+    }
     setBookingError(null);
     if (isBookingClosed) {
       const msg = "Bookings are closed for this event.";
@@ -1239,7 +1255,7 @@ export default function CheckoutPage() {
                 hour12: true
               })}</p>
             </div>
-            {event.ticketTypes.some((ticket) => ticket.venueSalesOnly) && (
+            {(isVenueOnlyNuscMatch || event.ticketTypes.some((ticket) => ticket.venueSalesOnly)) && (
               <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-[#e8a8af] bg-[#fff1f2] p-4 text-[#70212a]">
                 <p className="font-bold">Online ticket sales for this match are closed.</p>
                 <p className="mt-1 text-sm leading-5">{isNuscVenueOnlyMatchday() ? "Tickets will be available at the venue today." : "Online sales for this match have closed."}</p>
@@ -1335,7 +1351,7 @@ export default function CheckoutPage() {
                 <div className="space-y-4">
                   {event.ticketTypes && event.ticketTypes.length > 0 ? (
                     event.ticketTypes.map((ticket) => {
-                      const isSoldOut = ticket.venueSalesOnly || ticket.quantity <= ticket.sold;
+                      const isSoldOut = isVenueOnlyNuscMatch || ticket.venueSalesOnly || ticket.quantity <= ticket.sold;
                       const selectedItem = selectedTickets.get(ticket._id);
                       const quantity = selectedItem?.quantity || 0;
                       const isExpanded = expandedTickets.has(ticket._id);
@@ -1480,7 +1496,7 @@ export default function CheckoutPage() {
                                   disabled={isSoldOut || (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) || (!isFreeEvent && totalTicketsSelected >= 10)}
                                   className="px-6 py-2 text-sm font-medium text-red-600 border border-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {ticket.venueSalesOnly ? 'Tickets at venue' : isSoldOut ? 'Sold Out' : (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) ? 'RSVP Confirmed' : (isFreeEvent && ticket.price === 0) ? 'RSVP Now' : 'Add'}
+                                  {isVenueOnlyNuscMatch || ticket.venueSalesOnly ? 'Tickets at venue' : isSoldOut ? 'Sold Out' : (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) ? 'RSVP Confirmed' : (isFreeEvent && ticket.price === 0) ? 'RSVP Now' : 'Add'}
                                 </button>
                               </div>
                             </div>
@@ -1499,7 +1515,7 @@ export default function CheckoutPage() {
               {/* Proceed Button */}
               <button
                 onClick={handleProceed}
-                disabled={selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
+                disabled={isVenueOnlyNuscMatch || selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
                 className={`${isNuscHomeMatchEvent ? "hidden lg:block" : ""}
     w-full
     py-3 sm:py-4
@@ -1719,7 +1735,7 @@ export default function CheckoutPage() {
 
                 <button
                   onClick={handleBooking}
-                  disabled={isBooking || paymentPending || !acceptedTerms}
+                  disabled={isVenueOnlyNuscMatch || isBooking || paymentPending || !acceptedTerms}
                   className="
            w-full
     py-3 sm:py-4
@@ -1768,7 +1784,7 @@ export default function CheckoutPage() {
           <button
             type="button"
             onClick={handleProceed}
-            disabled={selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
+            disabled={isVenueOnlyNuscMatch || selectedTickets.size === 0 || (isNuscHomeMatchEvent && !hasRequiredGeneralZones)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-base font-semibold text-white shadow-md transition-colors hover:bg-red-700 active:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             {isFreeEvent ? "Continue to RSVP review" : "Continue to review"}

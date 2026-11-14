@@ -39,7 +39,7 @@ import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import WorkshopRsvp from "@/components/WorkshopRsvp";
 import { trackBookingStarted, trackEventView } from "@/lib/analytics/google-analytics";
-import { getNuscMatchDateFromSlug, getNuscMatchPassSelectionUrl, isNuscVenueOnlyMatchday } from "@/lib/nuscHomeMatches";
+import { getNuscMatchDateFromSlug, getNuscMatchPassSelectionUrl, isNuscVenueOnlyMatch, isNuscVenueOnlyMatchday } from "@/lib/nuscHomeMatches";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -243,7 +243,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   })();
 
   const isBookingClosed = bookingCutoff ? new Date() > bookingCutoff : false;
-  const isVenueOnlyNuscMatch = Boolean(event?.ticketTypes?.some((ticket) => ticket.venueSalesOnly));
+  const isVenueOnlyNuscMatch = Boolean(
+    event?.ticketTypes?.some((ticket) => ticket.venueSalesOnly) ||
+    isNuscVenueOnlyMatch(getNuscMatchDateFromSlug(event?.slug) ?? "")
+  );
   const isVenueOnlyMatchday = isNuscVenueOnlyMatchday();
 
   // ─── Handlers ────────────────────────────────────────────────────────────────
