@@ -7,7 +7,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, CalendarDays, Clock3, MapPin, Phone, 
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import type { Event, EventsResponse } from "@/types/event";
-import { getNextNuscMatch, getNuscMatchSlug, normalizeNuscMatchDate, normalizeNuscMatchDates, NUSC_HOME_MATCHES, NUSC_HOME_MATCHES_CHRONOLOGICAL, NUSC_MATCH_EVENT_SLUG_PREFIX } from "@/lib/nuscHomeMatches";
+import { getNextNuscMatch, getNuscMatchSlug, isNuscVenueOnlyMatch, isNuscVenueOnlyMatchday, normalizeNuscMatchDate, normalizeNuscMatchDates, NUSC_HOME_MATCHES, NUSC_HOME_MATCHES_CHRONOLOGICAL, NUSC_MATCH_EVENT_SLUG_PREFIX } from "@/lib/nuscHomeMatches";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 type PassCategory = "single-match" | "season";
@@ -180,6 +180,7 @@ const NUSC_PASS_TICKET_TYPES: Record<string, string> = {
 
 export default function NuscHomeMatchesPage() {
   const [matchEvents, setMatchEvents] = useState<Record<string, Event>>({});
+  const venueOnlyMatchday = isNuscVenueOnlyMatchday();
   const [matchAvailabilityState, setMatchAvailabilityState] = useState<"loading" | "ready" | "error">("loading");
   const [passCategory, setPassCategory] = useState<PassCategory>("single-match");
   const [selectedPass, setSelectedPass] = useState<string | null>(null);
@@ -193,6 +194,7 @@ export default function NuscHomeMatchesPage() {
   const toggleMatchDate = (matchDate: string, checked: boolean) => {
     setSelectedMatchDates((dates) => {
       if (!checked) return dates.filter((date) => date !== matchDate);
+      if (isNuscVenueOnlyMatch(matchDate)) return dates;
       if (selectedPass === "suite-single-match") return [matchDate];
       return dates.includes(matchDate) ? dates : [...dates, matchDate];
     });
@@ -210,7 +212,7 @@ export default function NuscHomeMatchesPage() {
     }).find((capacity): capacity is number => typeof capacity === "number") ?? 0
     : 0;
   const seasonPassSalesOpen = seasonTicketType
-    ? NUSC_HOME_MATCHES.some((match) => {
+    ? NUSC_HOME_MATCHES.every((match) => {
       const event = matchEvents[getNuscMatchSlug(match.date)];
       return event?.ticketTypes?.find((item) => item.name === seasonTicketType)?.seasonPassSalesOpen === true;
     })
@@ -241,8 +243,9 @@ export default function NuscHomeMatchesPage() {
     const event = matchEvents[getNuscMatchSlug(date)];
     const ticketName = NUSC_PASS_TICKET_TYPES[selectedPass];
     const ticket = ticketName ? event?.ticketTypes?.find((item) => item.name === ticketName) : undefined;
-    return !!event && !!ticket && ticket.quantity > (ticket.sold || 0);
+    return !!event && !!ticket && !ticket.venueSalesOnly && ticket.quantity > (ticket.sold || 0);
   });
+  const hasVenueOnlyMatchSelected = selectedMatchDates.some(isNuscVenueOnlyMatch);
   const firstSelectedEvent = selectedMatchDates[0] ? matchEvents[getNuscMatchSlug(selectedMatchDates[0])] : undefined;
   const multiMatchCheckoutHref = selectedMatchDates.length > 1 && selectedPass
     ? `/nusc-home-matches/checkout?${new URLSearchParams({ dates: selectedMatchDates.join(","), passId: selectedPass }).toString()}`
@@ -348,6 +351,7 @@ export default function NuscHomeMatchesPage() {
     const event = matchEvents[getNuscMatchSlug(matchDate)];
     const ticket = event?.ticketTypes?.find((item) => item.name === passName);
     if (!ticket) return "Unavailable";
+    if (ticket.venueSalesOnly) return venueOnlyMatchday ? "Tickets at venue" : "Online sales closed";
 
     const remaining = Math.max(0, Number(ticket.quantity || 0) - Number(ticket.sold || 0));
     const effectiveCapacity = Math.max(0, Number(ticket.capacity ?? capacity));
@@ -384,16 +388,17 @@ export default function NuscHomeMatchesPage() {
             const [year, monthNumber, dayNumber] = match.date.split("-");
             const month = new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(year), Number(monthNumber) - 1, 1)));
             const availability = getSuiteAvailability(match.date, ticketName, capacity);
+            const venueOnly = isNuscVenueOnlyMatch(match.date);
             const soldOut = availability === "Sold out";
             const unavailable = availability === "Unavailable";
             return (
               <span
                 key={match.date}
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-4 ${soldOut || unavailable ? "bg-[#f3eeee] text-[#8a4b50]" : "bg-[#eef4ec] text-[#31533c]"}`}
-                aria-label={`${match.label}: ${isSingleSeat ? "seats" : "boxes"} ${soldOut ? "sold out" : availability}`}
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] leading-4 ${soldOut || unavailable || venueOnly ? "bg-[#f3eeee] text-[#8a4b50]" : "bg-[#eef4ec] text-[#31533c]"}`}
+                aria-label={`${match.label}: ${isSingleSeat ? "seats" : "boxes"} ${venueOnly ? "tickets available at the venue" : soldOut ? "sold out" : availability}`}
               >
                 <span className="font-medium">{Number(dayNumber)} {month}</span>
-                <span>{soldOut ? "Sold out" : availability}</span>
+                <span>{venueOnly ? (venueOnlyMatchday ? "At venue" : "Sales closed") : soldOut ? "Sold out" : availability}</span>
               </span>
             );
           })}
@@ -463,6 +468,19 @@ export default function NuscHomeMatchesPage() {
         </div>
       </section>
 
+      {venueOnlyMatchday && (
+        <section className="border-b border-[#f0c2c7] bg-[#fff1f2] px-5 py-4 sm:px-8 sm:py-5" aria-label="Ticket sales notice">
+          <div role="status" aria-live="polite" className="mx-auto flex max-w-7xl items-start gap-3 rounded-xl border border-[#e8a8af] bg-white px-4 py-4 shadow-sm sm:items-center sm:px-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#d51f34] text-white"><Ticket className="h-5 w-5" /></span>
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[.16em] text-[#b7192d]">Today · Saturday, 14 November · NUSC vs Gokulam Kerala FC · 6:30 PM</p>
+              <p className="mt-1 text-base font-bold text-[#151b16] sm:text-lg">Online ticket sales are closed for today.</p>
+              <p className="mt-1 text-sm leading-5 text-[#4c554d]">Tickets will be available at the venue. See you at the match!</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="hidden border-b border-[#dfe3dc] bg-white md:block">
         <div className="mx-auto grid max-w-7xl gap-0 px-5 sm:px-8 md:grid-cols-3 lg:px-12">
           <div className="flex items-center gap-4 border-b border-[#e7e9e4] py-6 md:border-b-0 md:border-r md:pr-8"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#eef4ec] text-[#23573a]"><CalendarDays className="h-5 w-5" /></span><div><p className="text-xs uppercase tracking-[.14em] text-[#737b73]">The season</p><p className="mt-1 font-semibold">November 2026 — March 2027</p></div></div>
@@ -484,17 +502,19 @@ export default function NuscHomeMatchesPage() {
               const [year, monthNumber, dayNumber] = match.date.split("-");
               const month = new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(year), Number(monthNumber) - 1, 1)));
               const event = matchEvents[getNuscMatchSlug(match.date)];
+              const venueOnly = isNuscVenueOnlyMatch(match.date);
+              const canBookOnline = !!event && !venueOnly;
               const row = (
                 <>
                   <span className="text-center"><span className="block text-[10px] font-bold uppercase tracking-[.14em] text-[#737b73]">{month}</span><span className="mt-0.5 block text-2xl font-black tracking-tight">{dayNumber}</span></span>
                   <span><span className="block font-semibold">NUSC vs {match.opponent}</span><span className="mt-1 block text-sm text-[#707970]">{match.label} · {match.day} · {match.time}</span></span>
                   <span className="col-span-2 flex items-center justify-between gap-2 text-sm font-semibold text-[#c91d31] sm:col-span-1 sm:justify-self-auto">
-                    {event ? "Book tickets" : "Tickets soon"}
-                    {event && <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d9dfd8] text-[#535e55] transition group-hover:border-[#d41e32] group-hover:bg-[#d41e32] group-hover:text-white"><ArrowRight className="h-4 w-4" /></span>}
+                    {venueOnly ? (venueOnlyMatchday ? "Tickets at venue" : "Online sales closed") : event ? "Book tickets" : "Tickets soon"}
+                    {canBookOnline && <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d9dfd8] text-[#535e55] transition group-hover:border-[#d41e32] group-hover:bg-[#d41e32] group-hover:text-white"><ArrowRight className="h-4 w-4" /></span>}
                   </span>
                 </>
               );
-              return event ? (
+              return canBookOnline ? (
                 <Link
                   key={match.date}
                   href="#passes"
@@ -525,7 +545,7 @@ export default function NuscHomeMatchesPage() {
             </div>
             <div className="rounded-xl border border-[#f0c6ca] bg-[#fff7f7] px-5 py-4 sm:max-w-sm">
               <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#b7192d]">Ticket sales</p>
-              <p className="mt-1 font-semibold text-[#2d302d]">Tickets are live on AHIBI</p>
+              <p className="mt-1 font-semibold text-[#2d302d]">{venueOnlyMatchday ? "Today’s tickets are available at the venue." : "Tickets are live on AHIBI"}</p>
             </div>
           </div>
 
@@ -558,18 +578,21 @@ export default function NuscHomeMatchesPage() {
               >
                 {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
+                  const venueOnly = isNuscVenueOnlyMatch(match.date);
                   return (
-                    <label key={match.date} className={`flex w-[76%] max-w-[290px] shrink-0 snap-start cursor-pointer items-start gap-2 rounded-xl border p-3 transition ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white"}`}>
+                    <label key={match.date} className={`flex w-[76%] max-w-[290px] shrink-0 snap-start items-start gap-2 rounded-xl border p-3 transition ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white"}`}>
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={(event) => toggleMatchDate(match.date, event.target.checked)}
+                        disabled={venueOnly && !checked}
                         className="mt-0.5 h-5 w-5 shrink-0 accent-[#c91d31]"
                         aria-label={`${match.label}, ${match.opponent}, ${match.time}`}
                       />
                       <span className="min-w-0">
                         <span className="block text-[13px] font-semibold leading-5 text-[#151b16]">{match.label}</span>
                         <span className="mt-1 block text-[13px] leading-5 text-[#4c554d]">vs {match.opponent}</span>
+                        {venueOnly && <span className="mt-1 block text-xs font-bold text-[#b7192d]">{venueOnlyMatchday ? "Tickets at the venue" : "Online sales closed"}</span>}
                         <span className="mt-1 block text-xs text-[#737b73]">{match.day} Â· {match.time}</span>
                       </span>
                     </label>
@@ -579,18 +602,21 @@ export default function NuscHomeMatchesPage() {
               <div className="mt-3 hidden grid-cols-2 gap-2 sm:mt-4 sm:grid sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
                 {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
+                  const venueOnly = isNuscVenueOnlyMatch(match.date);
                   return (
-                    <label key={match.date} className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 transition sm:gap-3 sm:p-4 ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white hover:border-[#b8c3b8]"}`}>
+                    <label key={match.date} className={`flex items-start gap-2 rounded-xl border p-3 transition sm:gap-3 sm:p-4 ${checked ? "border-[#d41e32] bg-[#fff8f8] ring-1 ring-[#d41e32]" : "border-[#dfe4de] bg-white"}`}>
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={(event) => toggleMatchDate(match.date, event.target.checked)}
+                        disabled={venueOnly && !checked}
                         className="mt-0.5 h-5 w-5 shrink-0 accent-[#c91d31]"
                         aria-label={`${match.label}, ${match.opponent}, ${match.time}`}
                       />
                       <span className="min-w-0">
                         <span className="block text-[13px] font-semibold leading-5 text-[#151b16] sm:text-sm">{match.label}</span>
                         <span className="mt-1 block text-[13px] leading-5 text-[#4c554d] sm:text-sm">vs {match.opponent}</span>
+                        {venueOnly && <span className="mt-1 block text-xs font-bold text-[#b7192d]">{venueOnlyMatchday ? "Tickets at the venue" : "Online sales closed"}</span>}
                         <span className="mt-1 block text-xs text-[#737b73]">{match.day} · {match.time}</span>
                       </span>
                     </label>
@@ -648,6 +674,12 @@ export default function NuscHomeMatchesPage() {
                   ? `${selectedMatchDates.length} ${selectedMatchDates.length === 1 ? "match checkout" : "match checkouts"} remaining`
                   : `${selectedMatchDates.length} ${selectedMatchDates.length === 1 ? "match date" : "match dates"} selected`}
               </p>
+              {hasVenueOnlyMatchSelected && (
+                <div role="status" aria-live="polite" className="mt-4 rounded-lg border border-[#e8a8af] bg-[#fff1f2] p-4 text-[#70212a]">
+                  <p className="font-bold">Online sales for NUSC vs Gokulam Kerala FC are closed.</p>
+                  <p className="mt-1 text-sm leading-5">Tickets will be available at the venue{venueOnlyMatchday ? " today" : ""}. Remove this match to continue with other dates online.</p>
+                </div>
+              )}
               {completedMatchCount > 0 && (
                 <div role="status" aria-live="polite" className="mt-4 rounded-lg border border-[#b8d8bf] bg-[#edf7ef] p-4 text-[#173e24]">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
@@ -688,13 +720,13 @@ export default function NuscHomeMatchesPage() {
                     const event = matchEvents[getNuscMatchSlug(match.date)];
                     const checkoutParams = new URLSearchParams({ nuscPass: selectedPass, nuscDates: match.date });
                     const ticket = event?.ticketTypes?.find((item) => item.name === NUSC_PASS_TICKET_TYPES[selectedPass]);
-                    const available = !!ticket && ticket.quantity > (ticket.sold || 0);
+                    const available = !!ticket && !ticket.venueSalesOnly && ticket.quantity > (ticket.sold || 0);
                     return event && available ? (
                       <Link key={match.date} href={`/events/${event._id}/checkout?${checkoutParams.toString()}`} data-nusc-checkout-action="match" aria-label={`Checkout United Suite Full Box for NUSC vs ${match.opponent}, ${match.label}`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
                         <span className="min-w-0 leading-5">Full Box · {match.label}</span><ArrowRight className="h-4 w-4 shrink-0" />
                       </Link>
                     ) : (
-                      <span key={match.date} className="inline-flex min-h-10 items-center rounded-full bg-[#ecefea] px-4 text-sm font-medium text-[#6d756e]">NUSC vs {match.opponent} · Tickets soon</span>
+                      <span key={match.date} className="inline-flex min-h-10 items-center rounded-full bg-[#ecefea] px-4 text-sm font-medium text-[#6d756e]">NUSC vs {match.opponent} · {isNuscVenueOnlyMatch(match.date) ? (venueOnlyMatchday ? "Tickets at venue" : "Online sales closed") : "Tickets soon"}</span>
                     );
                   })
                 ) : selectedPass && selectedMatchDates.length > 1 ? (
@@ -702,14 +734,14 @@ export default function NuscHomeMatchesPage() {
                     <Link href={multiMatchCheckoutHref} data-nusc-checkout-action="match" aria-label={`Review and checkout ${selectedMatchDates.length} NUSC home matches`} className="inline-flex min-h-12 w-full max-w-full items-center justify-between gap-3 rounded-xl bg-[#d51f34] px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-[#b91629] sm:w-auto sm:rounded-full sm:py-2">
                       <span className="min-w-0 leading-5">Review {selectedMatchDates.length} matches and pay once</span><ArrowRight className="h-4 w-4 shrink-0" />
                     </Link>
-                  ) : <p role="status" className="text-sm text-[#a4172a]">At least one selected match is unavailable for this pass. Remove it to continue with one payment.</p>
+                  ) : <p role="status" className="text-sm text-[#a4172a]">{hasVenueOnlyMatchSelected ? "The Nov 14 match is available at the venue. Remove it to continue online with other matches." : "At least one selected match is unavailable for this pass. Remove it to continue with one payment."}</p>
                 ) : NUSC_HOME_MATCHES_CHRONOLOGICAL.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
                   const event = matchEvents[getNuscMatchSlug(match.date)];
                   const selectedTicketName = selectedPass ? NUSC_PASS_TICKET_TYPES[selectedPass] : undefined;
                   const selectedTicket = selectedTicketName
                     ? event?.ticketTypes?.find((ticket) => ticket.name === selectedTicketName)
                     : undefined;
-                  const hasSelectedTicket = !!selectedTicket && selectedTicket.quantity > (selectedTicket.sold || 0);
+                  const hasSelectedTicket = !!selectedTicket && !selectedTicket.venueSalesOnly && selectedTicket.quantity > (selectedTicket.sold || 0);
                   const checkoutParams = new URLSearchParams({
                     nuscPass: selectedPass || "",
                     nuscDates: selectedMatchDates.join(","),
@@ -730,7 +762,7 @@ export default function NuscHomeMatchesPage() {
                     </span>
                   ) : event && selectedPass && !hasSelectedTicket ? (
                     <span key={match.date} className="inline-flex min-h-10 items-center rounded-full bg-[#ecefea] px-4 text-sm font-medium text-[#6d756e]">
-                      NUSC vs {match.opponent} · {selectedPass === "suite-single-match" || selectedTicket?.quantity !== 0 || selectedTicket?.sold !== 0 ? "Sold out" : "Tickets soon"}
+                      NUSC vs {match.opponent} · {isNuscVenueOnlyMatch(match.date) ? (venueOnlyMatchday ? "Tickets at venue" : "Online sales closed") : selectedPass === "suite-single-match" || selectedTicket?.quantity !== 0 || selectedTicket?.sold !== 0 ? "Sold out" : "Tickets soon"}
                     </span>
                   ) : (
                     <span key={match.date} className="inline-flex min-h-10 items-center rounded-full bg-[#ecefea] px-4 text-sm font-medium text-[#6d756e]">
@@ -757,7 +789,7 @@ export default function NuscHomeMatchesPage() {
                     <option key={quantity} value={quantity}>{quantity}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-sm text-[#69716a]">Each pass covers one seat at all 10 home matches. {matchAvailabilityState === "ready" && seasonPassSalesOpen ? `Limited to ${seasonPassCapacity} passes total; ${seasonPassAvailableQuantity} remain.` : matchAvailabilityState === "ready" ? "Season pass sales are not available yet." : "Checking season pass availability…"} Maximum 10 tickets per match per account.</p>
+                <p className="mt-2 text-sm text-[#69716a]">Each pass covers one seat at all 10 home matches. {matchAvailabilityState === "ready" && seasonPassSalesOpen ? `Limited to ${seasonPassCapacity} passes total; ${seasonPassAvailableQuantity} remain.` : matchAvailabilityState === "ready" && venueOnlyMatchday ? "Season passes include today’s match and are closed online. Tickets will be available at the venue." : matchAvailabilityState === "ready" && NUSC_HOME_MATCHES.some((match) => isNuscVenueOnlyMatch(match.date)) ? "Season pass sales are closed because they include a match with online sales closed." : matchAvailabilityState === "ready" ? "Season pass sales are not available yet." : "Checking season pass availability…"} Maximum 10 tickets per match per account.</p>
                 {selectedPass === "general-season" && (
                   <div className="mt-5 max-w-xl">
                     <label htmlFor="general-season-zone" className="block font-semibold text-[#151b16]">General seating zone <span className="text-[#d51f34]">*</span></label>

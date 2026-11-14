@@ -18,6 +18,7 @@ export interface TicketType {
   seasonPassCapacity?: number;
   seasonPassRemaining?: number;
   seasonPassSalesOpen?: boolean;
+  venueSalesOnly?: boolean;
   benefits?: string[];
 }
 

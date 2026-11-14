@@ -53,6 +53,7 @@ import {
   getNuscMatchDateFromSlug,
   getNuscMatchPassSelectionUrl,
   getNuscMatchSlug,
+  isNuscVenueOnlyMatchday,
   normalizeNuscMatchDates,
 } from "@/lib/nuscHomeMatches";
 import {
@@ -72,6 +73,7 @@ interface TicketType {
   description: string;
   benefits?: string[];
   capacity: number;
+  venueSalesOnly?: boolean;
   zones?: Array<{ name: string; capacity: number; available: number }>;
 }
 
@@ -1237,6 +1239,12 @@ export default function CheckoutPage() {
                 hour12: true
               })}</p>
             </div>
+            {event.ticketTypes.some((ticket) => ticket.venueSalesOnly) && (
+              <div role="status" aria-live="polite" className="mt-4 rounded-xl border border-[#e8a8af] bg-[#fff1f2] p-4 text-[#70212a]">
+                <p className="font-bold">Online ticket sales for this match are closed.</p>
+                <p className="mt-1 text-sm leading-5">{isNuscVenueOnlyMatchday() ? "Tickets will be available at the venue today." : "Online sales for this match have closed."}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1327,7 +1335,7 @@ export default function CheckoutPage() {
                 <div className="space-y-4">
                   {event.ticketTypes && event.ticketTypes.length > 0 ? (
                     event.ticketTypes.map((ticket) => {
-                      const isSoldOut = ticket.quantity <= ticket.sold;
+                      const isSoldOut = ticket.venueSalesOnly || ticket.quantity <= ticket.sold;
                       const selectedItem = selectedTickets.get(ticket._id);
                       const quantity = selectedItem?.quantity || 0;
                       const isExpanded = expandedTickets.has(ticket._id);
@@ -1472,7 +1480,7 @@ export default function CheckoutPage() {
                                   disabled={isSoldOut || (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) || (!isFreeEvent && totalTicketsSelected >= 10)}
                                   className="px-6 py-2 text-sm font-medium text-red-600 border border-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {isSoldOut ? 'Sold Out' : (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) ? 'RSVP Confirmed' : (isFreeEvent && ticket.price === 0) ? 'RSVP Now' : 'Add'}
+                                  {ticket.venueSalesOnly ? 'Tickets at venue' : isSoldOut ? 'Sold Out' : (isFreeEvent && ticket.price === 0 && selectedTickets.has(ticket._id)) ? 'RSVP Confirmed' : (isFreeEvent && ticket.price === 0) ? 'RSVP Now' : 'Add'}
                                 </button>
                               </div>
                             </div>

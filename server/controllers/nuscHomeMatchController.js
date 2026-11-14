@@ -722,6 +722,14 @@ async function createSeasonPassOrder(req, res) {
     if (existingCheckout?.alreadyCompleted) {
       return res.status(200).json({ success: true, alreadyCompleted: true });
     }
+    const venueOnlyMatchDate = inventory.FIXTURE_DATES.find(inventory.isVenueOnlyMatchDate);
+    if (!existingCheckout && venueOnlyMatchDate) {
+      return res.status(409).json({
+        success: false,
+        message: inventory.getVenueOnlyMatchSalesMessage(venueOnlyMatchDate),
+        code: 'MATCH_ONLINE_SALES_CLOSED',
+      });
+    }
 
     const zoneSalesByEvent = await inventory.getGeneralZoneSalesByEventIds(fixtures.map(({ event }) => event._id));
     const seasonMatches = fixtures.map(({ matchDate, event }) => ({
@@ -1870,6 +1878,7 @@ async function reserveInventoryForCapturedOrder(order) {
         zoneSoldCounts: zoneSalesByEvent[String(match.eventId)] || {},
       })),
       allowSalesClosed: true,
+      allowMatchSalesClosed: true,
       skipBuyerLimit: true,
     });
   }
@@ -1898,6 +1907,7 @@ async function reserveInventoryForCapturedOrder(order) {
         zoneSoldCounts: zoneSalesByEvent[String(match.eventId)] || {},
       })),
       allowSalesClosed: true,
+      allowMatchSalesClosed: true,
       skipBuyerLimit: true,
     });
   }
@@ -1916,6 +1926,7 @@ async function reserveInventoryForCapturedOrder(order) {
     zoneSoldCounts: (await inventory.getGeneralZoneSalesByEventIds([event._id]))[String(event._id)] || {},
     existingUserTicketCount: 0,
     allowSalesClosed: true,
+    allowMatchSalesClosed: true,
     skipBuyerLimit: true,
   });
 }

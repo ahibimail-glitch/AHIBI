@@ -1048,6 +1048,7 @@ function createAdminNewTicketReissueService(overrides = {}) {
           eventTicketTypes: fixture.event.ticketTypes,
           existingUserTicketCount: 0,
           allowSalesClosed: true,
+          allowMatchSalesClosed: true,
           skipBuyerLimit: true,
         });
       } catch (error) {

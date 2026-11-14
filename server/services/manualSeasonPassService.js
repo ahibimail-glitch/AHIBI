@@ -306,6 +306,7 @@ async function confirmManualSeasonPassInventory(order, adminId) {
     matches: fixtures.map(({ matchDate, event }) => ({ matchDate, ticketTypes: event.ticketTypes })),
     existingUserTicketCountByDate,
     allowSalesClosed: true,
+    allowMatchSalesClosed: true,
   });
   order.reservationExpiresAt = hold.expiresAt;
   order.operationsAudit.push({ action: 'inventory_reservation_recovered', admin: adminId, details: { expiresAt: hold.expiresAt } });

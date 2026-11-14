@@ -39,7 +39,7 @@ import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import WorkshopRsvp from "@/components/WorkshopRsvp";
 import { trackBookingStarted, trackEventView } from "@/lib/analytics/google-analytics";
-import { getNuscMatchDateFromSlug, getNuscMatchPassSelectionUrl } from "@/lib/nuscHomeMatches";
+import { getNuscMatchDateFromSlug, getNuscMatchPassSelectionUrl, isNuscVenueOnlyMatchday } from "@/lib/nuscHomeMatches";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +55,7 @@ interface TicketType {
   description: string;
   benefits?: string[];
   capacity: number;
+  venueSalesOnly?: boolean;
 }
 
 interface EventOrganizer {
@@ -242,10 +243,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   })();
 
   const isBookingClosed = bookingCutoff ? new Date() > bookingCutoff : false;
+  const isVenueOnlyNuscMatch = Boolean(event?.ticketTypes?.some((ticket) => ticket.venueSalesOnly));
+  const isVenueOnlyMatchday = isNuscVenueOnlyMatchday();
 
   // ─── Handlers ────────────────────────────────────────────────────────────────
 
   const handleBuyNow = () => {
+    if (isVenueOnlyNuscMatch) {
+      router.push("/nusc-home-matches");
+      return;
+    }
     if (event) {
       trackBookingStarted({
         event_id: event._id,
@@ -551,12 +558,19 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                     ))}
                   </div>
 
-                  <button
-                    onClick={handleBuyNow}
-                    className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
-                  >
-                    Book Tickets
-                  </button>
+                  {isVenueOnlyNuscMatch ? (
+                    <div role="status" aria-live="polite" className="mt-5 rounded-xl border border-[#e8a8af] bg-[#fff1f2] p-4 text-[#70212a]">
+                      <p className="font-bold">Online ticket sales are closed for this match.</p>
+                      <p className="mt-1 text-sm leading-5">{isVenueOnlyMatchday ? "Tickets will be available at the venue today." : "Online sales for this match have closed."}</p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleBuyNow}
+                      className="mt-5 w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors min-h-[44px]"
+                    >
+                      Book Tickets
+                    </button>
+                  )}
 
                   {isLivestreamEvent && (
                     <button
@@ -579,7 +593,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                         : "text-gray-500"
                         }`}
                     >
-                      {event.availabilityLabel ?? "Available"}
+                      {isVenueOnlyNuscMatch ? (isVenueOnlyMatchday ? "Tickets at the venue today" : "Online sales closed") : (event.availabilityLabel ?? "Available")}
                     </div>
                   </div>
                 </div>
@@ -887,12 +901,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <p className="text-sm text-gray-500 mt-0.5">{startDT.date} · {startDT.time}</p>
               <p className="text-sm text-gray-400 mt-0.5">{event.location.city}</p>
             </div>
-            <button
-              onClick={handleBuyNow}
-              className="shrink-0 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
-            >
-              Book Now · <span className="font-bold">{priceRange}</span>
-            </button>
+            {isVenueOnlyNuscMatch ? (
+              <p role="status" className="shrink-0 rounded-xl border border-[#e8a8af] bg-[#fff1f2] px-4 py-3 text-sm font-bold text-[#70212a]">
+                {isVenueOnlyMatchday ? "Tickets at the venue today" : "Online sales closed"}
+              </p>
+            ) : (
+              <button
+                onClick={handleBuyNow}
+                className="shrink-0 bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm"
+              >
+                Book Now · <span className="font-bold">{priceRange}</span>
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -931,12 +951,18 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
       ══════════════════════════════════════════════════════════════════════════ */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3 md:hidden z-50 safe-area-inset-bottom">
         <div className="space-y-2">
-          <button
-            onClick={handleBuyNow}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
-          >
-            Book Now · <span className="font-bold">{priceRange}</span>
-          </button>
+          {isVenueOnlyNuscMatch ? (
+            <p role="status" className="rounded-xl border border-[#e8a8af] bg-[#fff1f2] px-4 py-3 text-center text-sm font-bold text-[#70212a]">
+              {isVenueOnlyMatchday ? "Tickets at the venue today" : "Online sales closed"}
+            </p>
+          ) : (
+            <button
+              onClick={handleBuyNow}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
+            >
+              Book Now · <span className="font-bold">{priceRange}</span>
+            </button>
+          )}
           
           {isLivestreamEvent && (
             <button

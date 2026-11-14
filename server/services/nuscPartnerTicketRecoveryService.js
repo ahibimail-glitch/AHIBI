@@ -563,6 +563,7 @@ function createPartnerTicketRecoveryService(overrides = {}) {
           userId: String(reservation.memberReferenceHash).slice(0, 24),
           matches,
           allowSalesClosed: true,
+          allowMatchSalesClosed: true,
         });
         temporaryHoldCreated = true;
       }

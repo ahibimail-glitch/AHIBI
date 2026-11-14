@@ -11,6 +11,16 @@ export const NUSC_HOME_MATCHES = [
   { date: "2027-03-20", label: "20 March 2027", day: "Saturday", time: "6:30 PM", opponent: "Real Kashmir FC" },
 ] as const;
 
+export const NUSC_VENUE_ONLY_MATCH_DATE = "2026-11-14";
+
+export function isNuscVenueOnlyMatch(date: string) {
+  return date === NUSC_VENUE_ONLY_MATCH_DATE;
+}
+
+export function isNuscVenueOnlyMatchday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date()) === NUSC_VENUE_ONLY_MATCH_DATE;
+}
+
 const NUSC_MATCH_DATE_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   // Keep existing checkout return URLs valid after the Chanmari reschedule.
   "2027-02-06": "2026-12-07",

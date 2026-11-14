@@ -77,6 +77,9 @@ const LEGACY_MATCH_DATE_ALIASES = Object.freeze({
   // Existing payment returns may still submit the originally scheduled date.
   '2027-02-06': '2026-12-07',
 });
+const VENUE_ONLY_MATCHES = Object.freeze({
+  '2026-11-14': 'NUSC vs Gokulam Kerala FC',
+});
 const FIXTURE_MATCHES = [
   { date: '2026-11-14', opponent: 'Gokulam Kerala FC' },
   { date: '2026-11-30', opponent: 'Dempo SC' },
@@ -97,6 +100,24 @@ function normalizeMatchDate(matchDate) {
 function getLegacyMatchDate(matchDate) {
   const normalizedDate = normalizeMatchDate(matchDate);
   return Object.entries(LEGACY_MATCH_DATE_ALIASES).find(([, targetDate]) => targetDate === normalizedDate)?.[0] || normalizedDate;
+}
+function isVenueOnlyMatchDate(matchDate) {
+  return Boolean(VENUE_ONLY_MATCHES[normalizeMatchDate(matchDate)]);
+}
+function getVenueOnlyMatchSalesMessage(matchDate) {
+  const normalizedDate = normalizeMatchDate(matchDate);
+  const opponent = VENUE_ONLY_MATCHES[normalizedDate];
+  if (!opponent) return null;
+  const todayInIndia = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  return todayInIndia === normalizedDate
+    ? `Online ticket sales for ${opponent} have closed. Tickets will be available at the venue today.`
+    : `Online ticket sales for ${opponent} have closed.`;
+}
+function assertMatchOnlineSalesOpen(matchDate, allowMatchSalesClosed = false) {
+  const message = getVenueOnlyMatchSalesMessage(matchDate);
+  if (message && !allowMatchSalesClosed) {
+    throw new InventoryConflict(message, 'MATCH_ONLINE_SALES_CLOSED');
+  }
 }
 const OFFLINE_RESERVED_SINGLE_PASS_SEATS_BY_DATE = Object.freeze({
   '2026-11-14': 3,
@@ -666,6 +687,7 @@ function reserveMatchOrderInState(state, {
   zoneSoldCounts = {},
   existingUserTicketCount = 0,
   allowSalesClosed = false,
+  allowMatchSalesClosed = false,
   skipBuyerLimit = false,
 }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
@@ -684,6 +706,8 @@ function reserveMatchOrderInState(state, {
       }
       return existing;
     }
+
+    assertMatchOnlineSalesOpen(matchDate, allowMatchSalesClosed);
 
     const singleMatchQuantity = normalizedLines
       .filter((line) => normalizeTicketTypeName(line.ticketType) === normalizeTicketTypeName(SUITE_SINGLE_MATCH))
@@ -872,6 +896,7 @@ async function recordOnSpotMatchSale({ saleId, adminId, matchDate, ticketLines, 
       eventTicketTypes,
       existingUserTicketCount: 0,
       allowSalesClosed: true,
+      allowMatchSalesClosed: true,
       skipBuyerLimit: true,
     });
 
@@ -907,7 +932,7 @@ async function recordOnSpotMatchSale({ saleId, adminId, matchDate, ticketLines, 
   }, session);
 }
 
-async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClosed = false, skipBuyerLimit = false }) {
+async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClosed = false, allowMatchSalesClosed = false, skipBuyerLimit = false }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
@@ -936,6 +961,7 @@ async function reserveMultiMatchOrder({ orderId, userId, matches, allowSalesClos
     zoneSoldCounts: match.zoneSoldCounts || {},
     existingUserTicketCount: match.existingUserTicketCount || 0,
     allowSalesClosed: true,
+    allowMatchSalesClosed,
     skipBuyerLimit,
   })));
 }
@@ -979,7 +1005,7 @@ async function finalizeMultiMatchOrder(orderId, matchDates) {
   });
 }
 
-async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, zone = '', matches, existingUserTicketCountByDate = {}, allowSalesClosed = false, skipBuyerLimit = false }) {
+async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, zone = '', matches, existingUserTicketCountByDate = {}, allowSalesClosed = false, allowMatchSalesClosed = false, skipBuyerLimit = false }) {
   if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
     throw new InventoryConflict('Tickets for NUSC home matches are not on sale yet.', 'SALES_NOT_OPEN');
   }
@@ -1009,6 +1035,9 @@ async function reserveSeasonPassOrder({ orderId, userId, ticketType, quantity, z
       }
       return existing;
     }
+
+    const venueOnlyMatch = matches.find((match) => isVenueOnlyMatchDate(match.matchDate));
+    if (venueOnlyMatch) assertMatchOnlineSalesOpen(venueOnlyMatch.matchDate, allowMatchSalesClosed);
 
     const quota = getSeasonPassQuotaUsage(state, ticketType);
     const seasonPassAvailability = getInventoryAvailabilityLimit(state, null, `${ticketType === GENERAL_TICKET_TYPE ? 'General' : 'Premium'} Season Pass`);
@@ -1917,7 +1946,8 @@ function includeSuiteSingleMatch(ticketTypes, availableQuantity = 0, capacity = 
 }
 
 function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSalesClosed = false, zoneSoldCounts = {} } = {}) {
-  if (!TICKET_SALES_ENABLED && !allowSalesClosed) {
+  const venueSalesOnly = isVenueOnlyMatchDate(matchDate);
+  if ((!TICKET_SALES_ENABLED || venueSalesOnly) && !allowSalesClosed) {
     const ticketTypes = eventTicketTypes.map((source) => {
       const ticket = typeof source?.toObject === 'function' ? source.toObject() : source;
       if (normalizeTicketTypeName(ticket.name) === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
@@ -1944,7 +1974,8 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
         }),
       };
     });
-    return includeSuiteSingleMatch(ticketTypes, 0, SEATS_PER_BOX);
+    return includeSuiteSingleMatch(ticketTypes, 0, SEATS_PER_BOX)
+      .map((ticket) => ({ ...ticket, venueSalesOnly }));
   }
   const activeOrders = activeOrdersForDate(state, matchDate);
   const activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate);
@@ -2005,7 +2036,8 @@ function getPublicTicketTypes(state, matchDate, eventTicketTypes = [], { allowSa
       }),
     };
   });
-  return includeSuiteSingleMatch(ticketTypes, singleMatchRemaining, SEATS_PER_BOX);
+  return includeSuiteSingleMatch(ticketTypes, singleMatchRemaining, SEATS_PER_BOX)
+    .map((ticket) => ({ ...ticket, venueSalesOnly }));
 }
 
 function getCapacityRowBase(definition, matchDate, state, zone = null) {
@@ -2458,6 +2490,8 @@ module.exports = {
   HOLD_MINUTES,
   FIXTURE_MATCHES,
   normalizeMatchDate,
+  isVenueOnlyMatchDate,
+  getVenueOnlyMatchSalesMessage,
   getLegacyMatchDate,
   InventoryConflict,
   NUSC_TEST_MODE_ENABLED,
