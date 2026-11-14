@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { QrCode, Upload, Search, CheckCircle, XCircle, AlertCircle, Clock, Camera, Smartphone, Loader2 } from "lucide-react";
+import { QrCode, Upload, Search, CheckCircle, XCircle, AlertCircle, Clock, Camera, Smartphone, Loader2, History, RefreshCw } from "lucide-react";
 import axios from 'axios';
 import RealQrScanner from './RealQrScanner';
 import jsQR from 'jsqr';
@@ -34,6 +34,21 @@ interface BookingVerification {
   capacity?: number;
   usedEntries?: number;
   remainingEntries?: number;
+}
+
+interface CheckInHistoryItem {
+  scanId: string;
+  bookingId: string;
+  timestamp: string;
+  attendeeName: string;
+  ticketType: string;
+  ticketIndex?: number;
+  totalTickets?: number;
+}
+
+interface CheckInHistoryCursor {
+  beforeTimestamp: string;
+  beforeScanId: string;
 }
 
 interface QrScannerProps {
@@ -98,12 +113,24 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
   const [uncertainCheckOut, setUncertainCheckOut] = useState<boolean>(false);
   const [checkInRejected, setCheckInRejected] = useState<boolean>(false);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const selectedEventRef = useRef<string | null>(selectedEvent);
   const [showAlreadyUsedAnimation, setShowAlreadyUsedAnimation] = useState<boolean>(false);
+  const [checkInHistory, setCheckInHistory] = useState<CheckInHistoryItem[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<CheckInHistoryCursor | null>(null);
+  const [historyHasMore, setHistoryHasMore] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const verifyInFlightRef = useRef(false);
   const checkInInFlightRef = useRef(false);
   const checkOutInFlightRef = useRef(false);
   const pendingRenderMeasureRef = useRef<{ name: string; startedAt: number } | null>(null);
+
+  useEffect(() => {
+    selectedEventRef.current = selectedEvent;
+  }, [selectedEvent]);
 
   const showError = (message: string, kind: ScannerErrorKind = 'error') => {
     setError(message);
@@ -198,6 +225,62 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
       if (timeout) clearTimeout(timeout);
     };
   }, [onSessionExpired, eventsRetry, scannerMode, scannerToken, measureNextRender]);
+
+  useEffect(() => {
+    if (!scannerMode || activeTab !== 'history' || !selectedEvent) return;
+
+    let cancelled = false;
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const fetchHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      setCheckInHistory([]);
+      setHistoryCursor(null);
+      setHistoryHasMore(false);
+
+      const startedAt = performance.now();
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const params = new URLSearchParams({ eventId: selectedEvent, limit: '50' });
+        timeout = setTimeout(() => controller.abort(), SCANNER_REQUEST_TIMEOUT_MS);
+        const response = await fetch(`${apiUrl}/api/scanner/check-in-history?${params.toString()}`, {
+          signal: controller.signal,
+          headers: { Authorization: `Bearer ${scannerToken}` },
+        });
+        recordScannerPerformance('check-in-history-rtt', startedAt, response.headers.get('Server-Timing'));
+        if (response.status === 401 || response.status === 403) {
+          onSessionExpired?.();
+          return;
+        }
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Could not load check-in history.');
+        if (cancelled) return;
+
+        const data = result.data || {};
+        setCheckInHistory(Array.isArray(data.items) ? data.items : []);
+        setHistoryCursor(data.nextCursor || null);
+        setHistoryHasMore(Boolean(data.hasMore));
+      } catch (error: any) {
+        if (!cancelled) {
+          setHistoryError(isTimeoutError(error)
+            ? 'Loading check-in history timed out. Check the connection and retry.'
+            : error.message || 'Could not load check-in history.');
+        }
+      } finally {
+        if (timeout) clearTimeout(timeout);
+        if (!cancelled) setHistoryLoading(false);
+      }
+    };
+
+    void fetchHistory();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [activeTab, historyRefreshKey, onSessionExpired, scannerMode, scannerToken, selectedEvent]);
 
   useEffect(() => {
     const pending = pendingRenderMeasureRef.current;
@@ -756,6 +839,55 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
     }
   };
 
+  const loadMoreCheckInHistory = async () => {
+    if (!selectedEvent || !historyCursor || historyLoadingMore) return;
+
+    const requestedEventId = selectedEvent;
+    const startedAt = performance.now();
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    setHistoryLoadingMore(true);
+    setHistoryError(null);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const params = new URLSearchParams({
+        eventId: selectedEvent,
+        limit: '50',
+        beforeTimestamp: historyCursor.beforeTimestamp,
+        beforeScanId: historyCursor.beforeScanId,
+      });
+      timeout = setTimeout(() => controller.abort(), SCANNER_REQUEST_TIMEOUT_MS);
+      const response = await fetch(`${apiUrl}/api/scanner/check-in-history?${params.toString()}`, {
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${scannerToken}` },
+      });
+      recordScannerPerformance('check-in-history-more-rtt', startedAt, response.headers.get('Server-Timing'));
+      if (response.status === 401 || response.status === 403) {
+        onSessionExpired?.();
+        return;
+      }
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Could not load older check-ins.');
+      if (selectedEventRef.current !== requestedEventId) return;
+
+      const data = result.data || {};
+      const items = Array.isArray(data.items) ? data.items : [];
+      setCheckInHistory((current) => [...current, ...items]);
+      setHistoryCursor(data.nextCursor || null);
+      setHistoryHasMore(Boolean(data.hasMore));
+    } catch (error: any) {
+      if (selectedEventRef.current === requestedEventId) {
+        setHistoryError(isTimeoutError(error)
+          ? 'Loading older check-ins timed out. Check the connection and retry.'
+          : error.message || 'Could not load older check-ins.');
+      }
+    } finally {
+      if (timeout) clearTimeout(timeout);
+      setHistoryLoadingMore(false);
+    }
+  };
+
   return (
     <div className="container mx-auto">
       {/* Animation Overlay for Already Used Tickets */}
@@ -768,7 +900,7 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${activeTab === 'history' ? '' : 'md:grid-cols-3'}`}>
         {/* Scanner Section */}
         <div className="md:col-span-1">
           <Card>
@@ -816,10 +948,13 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
                 )}
               </div>
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className={`grid w-full ${scannerMode ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <TabsTrigger value="scan" disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Camera Scan</TabsTrigger>
                   <TabsTrigger value="upload" disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Upload Image</TabsTrigger>
                   <TabsTrigger value="manual" disabled={isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>Manual Entry</TabsTrigger>
+                  {scannerMode && <TabsTrigger value="history" disabled={!selectedEvent || eventsLoading || isVerifying || isCheckingIn || isCheckingOut || uncertainCheckIn || uncertainCheckOut}>
+                    <History className="mr-2 h-4 w-4" /> History
+                  </TabsTrigger>}
                 </TabsList>
 
                 <TabsContent value="scan" forceMount className="space-y-4">
@@ -911,9 +1046,64 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
                     </div>
                   </form>
                 </TabsContent>
+                {scannerMode && (
+                  <TabsContent value="history" className="space-y-4">
+                    <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold">Checked-in tickets</h2>
+                        <p className="text-sm text-gray-500">Successful check-ins for the selected event, newest first.</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setHistoryRefreshKey((value) => value + 1)}
+                        disabled={!selectedEvent || historyLoading || historyLoadingMore}
+                      >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} /> Refresh
+                      </Button>
+                    </div>
+
+                    {historyError && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{historyError}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    {historyLoading ? (
+                      <p className="py-8 text-center text-sm text-gray-500">Loading check-in history…</p>
+                    ) : checkInHistory.length === 0 ? (
+                      <p className="py-8 text-center text-sm text-gray-500">No checked-in tickets recorded for this event yet.</p>
+                    ) : (
+                      <div className="divide-y rounded-md border">
+                        {checkInHistory.map((item) => (
+                          <div key={item.scanId} className="grid gap-2 p-3 sm:grid-cols-[1fr_auto] sm:items-center sm:p-4">
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-gray-900">{item.attendeeName}</p>
+                              <p className="text-sm text-gray-600">{item.ticketType}{item.ticketIndex && item.totalTickets && item.totalTickets > 1 ? ` · Ticket ${item.ticketIndex} of ${item.totalTickets}` : ''}</p>
+                              <p className="truncate font-mono text-xs text-gray-500">Booking {item.bookingId}</p>
+                            </div>
+                            <time className="text-sm text-gray-500 sm:text-right" dateTime={item.timestamp}>
+                              {new Date(item.timestamp).toLocaleString()}
+                            </time>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {historyHasMore && (
+                      <div className="flex justify-center pt-2">
+                        <Button type="button" variant="outline" onClick={loadMoreCheckInHistory} disabled={historyLoadingMore}>
+                          {historyLoadingMore ? 'Loading…' : 'Load older check-ins'}
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
               </Tabs>
 
-              {error && (
+              {error && activeTab !== 'history' && (
                 <Alert variant="destructive" className="mt-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>
@@ -961,7 +1151,7 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
         </div>
 
           {/* Verification Result Section */}
-        <div className="md:col-span-2">
+        {activeTab !== 'history' && <div className="md:col-span-2">
           {verification && (
             <Card className={`border-2 ${verification.status === 'VALID' ? 'border-green-500' : verification.status === 'CHECKED_IN' ? 'border-blue-500' : verification.status === 'PENDING' ? 'border-amber-500' : 'border-red-500'}`}>
               <CardHeader>
@@ -1021,7 +1211,7 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
               </CardFooter>
             </Card>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

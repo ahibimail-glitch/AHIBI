@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const { performance } = require('node:perf_hooks');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
@@ -46,6 +47,93 @@ router.get('/session', (req, res) => res.json({
   success: true,
   data: { id: String(req.scannerStaff._id), username: req.scannerStaff.username, role: 'scanner' },
 }));
+
+router.get('/check-in-history', async (req, res) => {
+  const eventId = typeof req.query.eventId === 'string' ? req.query.eventId.trim() : '';
+  if (!mongoose.isValidObjectId(eventId)) {
+    return res.status(400).json({ success: false, message: 'A valid event ID is required.' });
+  }
+
+  try {
+    const now = new Date();
+    const event = await timedDatabase(req, 'scanner-history-event-db', () => Event.findOne({
+      _id: eventId,
+      status: 'approved',
+      $or: [
+        { endDate: { $gte: now } },
+        { endDate: null, startDate: { $gte: now } },
+        { endDate: { $exists: false }, startDate: { $gte: now } },
+      ],
+    }).select('_id').lean());
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found or no longer available to scan.' });
+    }
+
+    const parsedLimit = Number.parseInt(typeof req.query.limit === 'string' ? req.query.limit : '', 10);
+    const limit = Number.isInteger(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 50;
+    const scanFilter = { event: eventId };
+    const beforeTimestamp = req.query.beforeTimestamp;
+    const beforeScanId = req.query.beforeScanId;
+    if (beforeTimestamp !== undefined || beforeScanId !== undefined) {
+      const parsedTimestamp = typeof beforeTimestamp === 'string' ? new Date(beforeTimestamp) : null;
+      if (
+        !parsedTimestamp || Number.isNaN(parsedTimestamp.getTime()) ||
+        typeof beforeScanId !== 'string' || !mongoose.isValidObjectId(beforeScanId)
+      ) {
+        return res.status(400).json({ success: false, message: 'The history cursor is invalid.' });
+      }
+      scanFilter.$or = [
+        { timestamp: { $lt: parsedTimestamp } },
+        { timestamp: parsedTimestamp, _id: { $lt: new mongoose.Types.ObjectId(beforeScanId) } },
+      ];
+    }
+
+    const scannedRows = await timedDatabase(req, 'scanner-history-scans-db', () => Scan.find(scanFilter)
+      .sort({ timestamp: -1, _id: -1 })
+      .limit(limit + 1)
+      .select('ticket timestamp')
+      .lean());
+    const hasMore = scannedRows.length > limit;
+    const scans = hasMore ? scannedRows.slice(0, limit) : scannedRows;
+    const bookingIds = [...new Set(scans.map((scan) => String(scan.ticket)).filter(mongoose.isValidObjectId))];
+    const bookings = bookingIds.length
+      ? await timedDatabase(req, 'scanner-history-bookings-db', () => Booking.find({ _id: { $in: bookingIds } })
+        .select('_id ticketType ticketIndex totalTickets customerName user')
+        .populate({ path: 'user', select: 'name' })
+        .lean())
+      : [];
+    const bookingsById = new Map(bookings.map((booking) => [String(booking._id), booking]));
+    const items = scans.map((scan) => {
+      const booking = bookingsById.get(String(scan.ticket));
+      const attendeeName = [booking?.customerName, booking?.user?.name]
+        .find((name) => typeof name === 'string' && name.trim())?.trim() || 'Guest';
+      return {
+        scanId: String(scan._id),
+        bookingId: String(scan.ticket),
+        timestamp: scan.timestamp,
+        attendeeName,
+        ticketType: booking?.ticketType || 'Ticket',
+        ticketIndex: booking?.ticketIndex,
+        totalTickets: booking?.totalTickets,
+      };
+    });
+    const lastItem = items[items.length - 1];
+
+    return res.json({
+      success: true,
+      data: {
+        items,
+        hasMore,
+        nextCursor: hasMore && lastItem
+          ? { beforeTimestamp: new Date(lastItem.timestamp).toISOString(), beforeScanId: lastItem.scanId }
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error('Scanner check-in history failed:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load check-in history.' });
+  }
+});
 
 router.post('/verify-ticket', async (req, res) => {
   try {
