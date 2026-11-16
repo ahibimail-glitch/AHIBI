@@ -161,7 +161,7 @@ const NUSC_HOME_MATCH_SERIES: Event = {
   _id: NUSC_HOME_MATCH_SERIES_ID,
   title: "Indian Football League: NUSC Home Matches",
   description: "Follow NUSC's home fixtures at Chümoukedima Football Stadium.",
-  banner: "/images/match-1.jpeg",
+  banner: "/images/nusc-home-match-series.svg",
   category: "Sports",
   startDate: `${getNextNuscMatchDate()}T18:30:00+05:30`,
   endDate: `${getNextNuscMatchDate()}T18:30:00+05:30`,

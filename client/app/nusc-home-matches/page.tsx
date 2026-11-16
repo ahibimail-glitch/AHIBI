@@ -9,6 +9,10 @@ import Footer from "@/app/Footer";
 import type { Event, EventsResponse } from "@/types/event";
 import { getNextNuscMatch, getNuscMatchSlug, isNuscVenueOnlyMatch, isNuscVenueOnlyMatchday, normalizeNuscMatchDate, normalizeNuscMatchDates, NUSC_HOME_MATCHES, NUSC_HOME_MATCHES_CHRONOLOGICAL, NUSC_MATCH_EVENT_SLUG_PREFIX } from "@/lib/nuscHomeMatches";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const HIDDEN_COMPLETED_NUSC_MATCH_DATES = new Set(["2026-11-14"]);
+const SELECTABLE_NUSC_MATCHES = NUSC_HOME_MATCHES_CHRONOLOGICAL.filter(
+  (match) => !HIDDEN_COMPLETED_NUSC_MATCH_DATES.has(match.date),
+);
 
 type PassCategory = "single-match" | "season";
 const GENERAL_ZONES = ["G-1", "G-2", "G-3", "G-4", "G-5"] as const;
@@ -194,6 +198,7 @@ export default function NuscHomeMatchesPage() {
   const toggleMatchDate = (matchDate: string, checked: boolean) => {
     setSelectedMatchDates((dates) => {
       if (!checked) return dates.filter((date) => date !== matchDate);
+      if (HIDDEN_COMPLETED_NUSC_MATCH_DATES.has(matchDate)) return dates;
       if (isNuscVenueOnlyMatch(matchDate)) return dates;
       if (selectedPass === "suite-single-match") return [matchDate];
       return dates.includes(matchDate) ? dates : [...dates, matchDate];
@@ -283,7 +288,8 @@ export default function NuscHomeMatchesPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const dates = normalizeNuscMatchDates((params.get("continueDates") || "").split(","));
+    const dates = normalizeNuscMatchDates((params.get("continueDates") || "").split(","))
+      .filter((date) => !HIDDEN_COMPLETED_NUSC_MATCH_DATES.has(date));
     const passId = params.get("nuscPass");
     const validPass = SINGLE_MATCH_PASSES.some((pass) => pass.id === passId);
     const completedCount = Number.parseInt(params.get("nuscCompletedCount") || "0", 10);
@@ -377,7 +383,7 @@ export default function NuscHomeMatchesPage() {
     const label = isSingleSeat ? "Seats left" : "Boxes left";
     const ticketName = NUSC_PASS_TICKET_TYPES[passId];
     const capacity = isSingleMatchBox ? 2 : isSingleSeat ? 8 : 4;
-    const matches = NUSC_HOME_MATCHES.filter((match) => selectedMatchDates.includes(match.date));
+    const matches = SELECTABLE_NUSC_MATCHES.filter((match) => selectedMatchDates.includes(match.date));
     if (matches.length === 0) return null;
 
     return (
@@ -427,7 +433,7 @@ export default function NuscHomeMatchesPage() {
               NUSC <span className="text-[#ff3347]">at home.</span>
             </h1>
             <p className="mt-4 hidden max-w-lg text-[15px] leading-6 text-white/75 sm:mt-6 sm:block sm:text-lg sm:leading-7">
-              Ten home dates. One stadium. Come stand behind NUSC through the Indian Football League season.
+              Follow NUSC's remaining home fixtures at Chümoukedima Football Stadium through the Indian Football League season.
             </p>
             <div className="mt-7 grid grid-cols-2 gap-3 text-[13px] sm:mt-9 sm:flex sm:flex-wrap sm:text-sm">
               <a href="#passes" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#ed2035] px-3 font-semibold text-white transition hover:bg-[#c9172a] sm:hidden">
@@ -445,7 +451,7 @@ export default function NuscHomeMatchesPage() {
             </div>
             <div className="relative mx-auto mt-8 w-full max-w-[370px] sm:max-w-[440px] lg:hidden">
               <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
-                <Image src="/images/match-2.jpeg" alt="NUSC vs Gokulam Kerala FC, 14 November 2026 at 6:30 PM" fill priority sizes="(max-width: 640px) calc(100vw - 40px), 440px" className="object-cover" />
+                <Image src="/images/nusc-home-match-series.svg" alt="NUSC home fixtures" fill priority sizes="(max-width: 640px) calc(100vw - 40px), 440px" className="object-cover" />
               </div>
             </div>
             <div className="mt-8 hidden max-w-xl grid-cols-2 gap-x-5 gap-y-5 border-t border-white/20 pt-5 sm:mt-12 sm:grid sm:grid-cols-3 sm:gap-x-8 sm:pt-6">
@@ -458,7 +464,7 @@ export default function NuscHomeMatchesPage() {
           <div className="relative mx-auto hidden w-full max-w-[370px] lg:block">
             <div className="absolute -inset-5 rounded-[2rem] border border-white/10" />
             <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/20 shadow-2xl shadow-black/50">
-              <Image src="/images/match-1.jpeg" alt="NUSC vs Gokulam Kerala FC, 14 November 2026 at 6:30 PM" fill priority sizes="370px" className="object-cover" />
+              <Image src="/images/nusc-home-match-series.svg" alt="NUSC home fixtures" fill priority sizes="370px" className="object-cover" />
             </div>
             <div className="absolute -bottom-5 -left-8 rounded-xl border border-white/10 bg-[#101e16]/95 px-5 py-4 shadow-xl backdrop-blur">
               <p className="text-[10px] font-bold uppercase tracking-[.2em] text-white/50">Next home match</p>
@@ -495,10 +501,10 @@ export default function NuscHomeMatchesPage() {
             <p className="text-xs font-bold uppercase tracking-[.24em] text-[#d41e32]">Mark the dates</p>
             <h2 className="mt-3 text-4xl font-black tracking-[-.04em] sm:mt-4 sm:text-5xl">The home run.</h2>
             <p className="mt-4 text-[15px] leading-6 text-[#626a63] sm:mt-5 sm:leading-7">Choose a fixture below to select its date and jump to pass options. All listed matches kick off at 6:30 PM at Chümoukedima Football Stadium.</p>
-            <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#eaf0e9] p-4 text-sm text-[#273c2d] sm:mt-8"><Trophy className="h-5 w-5 shrink-0 text-[#d41e32]" /><span>Ten chances to make the home ground loud.</span></div>
+            <div className="mt-5 flex items-center gap-3 rounded-xl bg-[#eaf0e9] p-4 text-sm text-[#273c2d] sm:mt-8"><Trophy className="h-5 w-5 shrink-0 text-[#d41e32]" /><span>Back NUSC through the run-in at home.</span></div>
           </div>
           <div className="divide-y divide-[#dce1db] border-y border-[#dce1db]">
-            {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
+            {SELECTABLE_NUSC_MATCHES.map((match) => {
               const [year, monthNumber, dayNumber] = match.date.split("-");
               const month = new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(year), Number(monthNumber) - 1, 1)));
               const event = matchEvents[getNuscMatchSlug(match.date)];
@@ -576,7 +582,7 @@ export default function NuscHomeMatchesPage() {
                 aria-label="Swipe horizontally to browse match dates"
                 className="box-border mt-3 flex w-full min-w-0 max-w-full snap-x snap-mandatory scroll-smooth gap-2 overflow-x-auto overscroll-x-contain touch-pan-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
               >
-                {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
+                {SELECTABLE_NUSC_MATCHES.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
                   const venueOnly = isNuscVenueOnlyMatch(match.date);
                   return (
@@ -600,7 +606,7 @@ export default function NuscHomeMatchesPage() {
                 })}
               </div>
               <div className="mt-3 hidden grid-cols-2 gap-2 sm:mt-4 sm:grid sm:gap-3 lg:grid-cols-3 xl:grid-cols-5">
-                {NUSC_HOME_MATCHES_CHRONOLOGICAL.map((match) => {
+                {SELECTABLE_NUSC_MATCHES.map((match) => {
                   const checked = selectedMatchDates.includes(match.date);
                   const venueOnly = isNuscVenueOnlyMatch(match.date);
                   return (
@@ -716,7 +722,7 @@ export default function NuscHomeMatchesPage() {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {selectedPass === "suite-box-single" && selectedMatchDates.length > 1 ? (
-                  NUSC_HOME_MATCHES_CHRONOLOGICAL.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
+                  SELECTABLE_NUSC_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
                     const event = matchEvents[getNuscMatchSlug(match.date)];
                     const checkoutParams = new URLSearchParams({ nuscPass: selectedPass, nuscDates: match.date });
                     const ticket = event?.ticketTypes?.find((item) => item.name === NUSC_PASS_TICKET_TYPES[selectedPass]);
@@ -735,7 +741,7 @@ export default function NuscHomeMatchesPage() {
                       <span className="min-w-0 leading-5">Review {selectedMatchDates.length} matches and pay once</span><ArrowRight className="h-4 w-4 shrink-0" />
                     </Link>
                   ) : <p role="status" className="text-sm text-[#a4172a]">{hasVenueOnlyMatchSelected ? "The Nov 14 match is available at the venue. Remove it to continue online with other matches." : "At least one selected match is unavailable for this pass. Remove it to continue with one payment."}</p>
-                ) : NUSC_HOME_MATCHES_CHRONOLOGICAL.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
+                ) : SELECTABLE_NUSC_MATCHES.filter((match) => selectedMatchDates.includes(match.date)).map((match) => {
                   const event = matchEvents[getNuscMatchSlug(match.date)];
                   const selectedTicketName = selectedPass ? NUSC_PASS_TICKET_TYPES[selectedPass] : undefined;
                   const selectedTicket = selectedTicketName

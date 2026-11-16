@@ -37,13 +37,13 @@
   <text x="105" y="590" fill="#F5F7F1" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="800" letter-spacing="-5">HOME</text>
   <text x="105" y="740" fill="#F5F7F1" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="800" letter-spacing="-5">MATCHES</text>
   <rect x="120" y="815" width="160" height="9" rx="4.5" fill="#E21B32"/>
-  <text x="120" y="895" fill="#D8E2D8" font-family="Arial, Helvetica, sans-serif" font-size="31" letter-spacing="5">THE SEASON STARTS AT HOME</text>
+  <text x="120" y="895" fill="#D8E2D8" font-family="Arial, Helvetica, sans-serif" font-size="31" letter-spacing="5">BACK YOUR CLUB AT HOME</text>
   <path d="M120 1015h960" stroke="#E8F1E8" stroke-opacity=".32" stroke-width="2"/>
-  <text x="120" y="1102" fill="#E8F1E8" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" letter-spacing="6">NEXT KICKOFF</text>
-  <text x="120" y="1195" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" letter-spacing="1">14 NOV 2026</text>
+  <text x="120" y="1102" fill="#E8F1E8" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" letter-spacing="6">HOME FIXTURES</text>
+  <text x="120" y="1195" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" letter-spacing="1">NOV 2026 - MAR 2027</text>
   <text x="120" y="1264" fill="#C4D0C5" font-family="Arial, Helvetica, sans-serif" font-size="27" letter-spacing="2">6:30 PM  ·  CHÜMOUKEDIMA FOOTBALL STADIUM</text>
   <rect x="120" y="1500" width="960" height="2" fill="#E8F1E8" fill-opacity=".26"/>
-  <text x="120" y="1580" fill="#E8F1E8" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="7">TEN HOME DATES  ·  ONE CLUB</text>
+  <text x="120" y="1580" fill="#E8F1E8" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="7">ONE HOME  ·  ONE CLUB</text>
   <text x="120" y="1660" fill="#B9C7BB" font-family="Arial, Helvetica, sans-serif" font-size="22" letter-spacing="4">COME BE PART OF THE NOISE</text>
   <rect x="788" y="1514" width="292" height="132" rx="66" fill="url(#red)"/>
   <text x="934" y="1597" fill="#FFFFFF" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="3">NUSC</text>
