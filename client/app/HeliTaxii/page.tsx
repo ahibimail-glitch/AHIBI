@@ -35,7 +35,7 @@ const packages: Package[] = [
         priceDetails: 'per seat (One-Way)',
         duration: '15 mins',
         features: [
-            '01st - 10th Dec',
+            '01st - 10th Dec 2026',
             '06:30 AM – 07:00 AM',
             'Priority boarding',
             'Fastest connectivity'
@@ -55,7 +55,7 @@ const packages: Package[] = [
         priceDetails: 'per seat',
         duration: '6-7 mins',
         features: [
-            '27th Nov - 10th Dec',
+            '27th Nov - 10th Dec 2026',
             'Kohima ↔ Kisama',
             '09:00 AM – 12:00 PM',
             'Kisama Heritage View'
@@ -75,7 +75,7 @@ const packages: Package[] = [
         priceDetails: 'per seat',
         duration: '6-7 mins',
         features: [
-            '27th Nov - 10th Dec',
+            '27th Nov - 10th Dec 2026',
             'Kohima ↔ Kisama',
             '12:00 PM – 04:00 PM',
             'Kisama Heritage View'
@@ -95,7 +95,7 @@ const packages: Package[] = [
         priceDetails: 'per seat',
         duration: '15-17 mins',
         features: [
-            '01st - 10th Dec',
+            '01st - 10th Dec 2026',
             'Kohima ↔ Dzükōu',
             '09:00 AM – 12:00 PM',
             'Valley View (No land)'
@@ -115,7 +115,7 @@ const packages: Package[] = [
         priceDetails: 'per seat',
         duration: '15-17 mins',
         features: [
-            '01st - 10th Dec',
+            '01st - 10th Dec 2026',
             'Kohima ↔ Dzükōu',
             '12:00 PM – 04:00 PM',
             'Valley View (No land)'
@@ -135,7 +135,7 @@ const packages: Package[] = [
         priceDetails: 'per seat (Round Trip)',
         duration: '8-10 mins',
         features: [
-            '01st - 10th Dec',
+            '01st - 10th Dec 2026',
             'Kohima ↔ Kigwema',
             'Morning & Noon Slots',
             'Fast connectivity'
@@ -244,7 +244,7 @@ const HelicopterBookingPage = () => {
                         </h2>
                         <div className="flex flex-col items-center gap-2">
                             <p className="text-muted-foreground">
-                                Exclusive flights for Hornbill Festival 2025
+                                Exclusive flights for Hornbill Festival 2026
                             </p>
                             <Badge variant="outline" className="border-green-600 text-green-700 bg-green-50 px-3 py-1 text-sm font-medium">
                                 🎉 20% Festival Discount Applied
@@ -456,7 +456,7 @@ const HelicopterBookingPage = () => {
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                     <div>
                         <h3 className="font-bold text-lg">Helitaxii</h3>
-                        <p className="opacity-80 text-xs mt-1">Hornbill Festival Helicopter Services</p>
+                        <p className="opacity-80 text-xs mt-1">Hornbill Festival 2026 Helicopter Services</p>
                     </div>
 
                     <div className="flex gap-6">
@@ -470,7 +470,7 @@ const HelicopterBookingPage = () => {
                     </div>
 
                     <div className="opacity-60 text-xs">
-                        &copy; 2025 Thumby Aviation Pvt. Ltd
+                        &copy; 2026 Thumby Aviation Pvt. Ltd
                     </div>
                 </div>
             </footer>

@@ -676,7 +676,7 @@ export default function HomePage() {
                     </span>
                   </h2>
                   <p className="text-xl text-gray-300 leading-relaxed">
-                    Experience Hornbill from the sky. Scenic joyrides, Dzükōu Valley aerial tours, and premium Kohima–Dimapur shuttles.
+                    Experience Hornbill Festival 2026 from the sky. Scenic joyrides, Dzükōu Valley aerial tours, and premium Kohima-Dimapur shuttles.
                   </p>
                 </div>
 

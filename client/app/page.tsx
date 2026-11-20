@@ -12,6 +12,7 @@ import Footer from "./Footer"
 import EventsPreviewPage from "./events-preview/page"
 import type { EventsResponse, Event } from "@/types/event"
 import StickyHeroCards from "@/components/StickyHeroCards"
+import HeliTaxiiHomePromo from "@/components/HeliTaxiiHomePromo"
 import { format } from "date-fns"
 import { getNextNuscMatchDate } from "@/lib/nuscHomeMatches"
 
@@ -915,6 +916,7 @@ function LegacyHomePage() {
           </section>
         </div>
       </section>
+      <HeliTaxiiHomePromo />
       <section className="py-4 sm:py-6 md:py-8 bg-white">
         <div className="container mx-auto px-3 sm:px-4">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
