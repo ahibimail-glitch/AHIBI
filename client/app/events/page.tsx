@@ -27,6 +27,7 @@ import Link from "next/link";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { Event, EventsResponse } from "@/types/event";
+import HeliTaxiiHomePromo from "@/components/HeliTaxiiHomePromo";
 import {
   EVENTS_HERO_IMAGE_WIDTH,
   EVENTS_HERO_IMAGE_HEIGHT,
@@ -458,6 +459,8 @@ export default function EventsPage() {
             </AnimatePresence>
           )}
         </section>
+
+        <HeliTaxiiHomePromo />
 
         {/* ── Mobile quick-search bar ──────────────────────────────────────── */}
         <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
