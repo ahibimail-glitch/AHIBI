@@ -10,6 +10,7 @@ const PendingPaymentSession = require('../models/PendingPaymentSession');
 const QRCode = require('qrcode');
 const { computeCouponDiscount } = require('../utils/couponDiscount');
 const paymentFulfillmentAlertService = require('./paymentFulfillmentAlertService');
+const whatsappService = require('./whatsappService');
 
 const SETTLEMENT_LEASE_MS = 2 * 60 * 1000;
 const MAX_SETTLEMENT_ATTEMPTS = 12;
@@ -1023,6 +1024,43 @@ async function settleCapturedPayment({ razorpay, orderId, paymentId, orderIntent
       await paymentFulfillmentAlertService.resolveOrderAlerts(orderId);
     } catch (alertError) {
       console.error('[Payment fulfillment] Could not archive resolved administrator alerts:', alertError.message);
+    }
+
+    // Send the ticket message only after the booking transaction commits.
+    // WhatsApp delivery is best-effort and must not affect ticket issuance.
+    try {
+      const firstBooking = bookings?.[0];
+      if (firstBooking) {
+        const user = await User.findById(firstBooking.user).select('name phone');
+        const eventSnapshot = firstBooking.eventSnapshot || {};
+        const eventId = firstBooking.dailyEvent || firstBooking.event || eventSnapshot._id;
+        const isDailyEvent = Boolean(firstBooking.isDailyEvent || firstBooking.dailyEvent);
+        const eventDate = firstBooking.selectedDate || eventSnapshot.startDate;
+        const formattedDate = eventDate
+          ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+          : 'Date TBA';
+        const frontendUrl = (process.env.FRONTEND_URL || 'https://www.ahibi.in').replace(/\/$/, '');
+        const ticketLink = eventId
+          ? `${frontendUrl}/events/${isDailyEvent ? 'daily/' : ''}${eventId}/bookings?bookingId=${firstBooking._id}`
+          : undefined;
+
+        if (user?.phone) {
+          const result = await whatsappService.sendTicketReadyTemplate({
+            phone: user.phone,
+            eventName: eventSnapshot.title || 'Your event',
+            eventDate: formattedDate,
+            venue: eventSnapshot.location?.address || eventSnapshot.location?.city || 'Venue TBA',
+            bookingId: firstBooking._id,
+            eventId,
+            ticketLink,
+          });
+          if (result?.success === false) {
+            console.error('[Booking] WhatsApp ticket template failed:', result.message || result.error);
+          }
+        }
+      }
+    } catch (whatsappError) {
+      console.error('[Booking] WhatsApp ticket notification failed:', whatsappError?.message || whatsappError);
     }
   } catch (error) {
     await recordSettlementFailure({ orderId, paymentId, payment, pending: lease, signature, error, terminal: Boolean(error.terminal) });

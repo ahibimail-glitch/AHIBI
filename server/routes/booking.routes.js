@@ -1462,6 +1462,33 @@ router.post("/free", auth.protect, async (req, res) => {
       }
     }
 
+    // Free RSVP bookings share the same ticket-ready WhatsApp template as
+    // paid bookings. Notify once for each RSVP after every booking is saved.
+    if (req.user?.phone) {
+      for (const booking of createdBookings) {
+        const eventId = booking.dailyEvent || booking.event;
+        const isDailyEvent = Boolean(booking.isDailyEvent || booking.dailyEvent);
+        const frontendUrl = (process.env.FRONTEND_URL || 'https://www.ahibi.in').replace(/\/$/, '');
+        const ticketLink = `${frontendUrl}/events/${isDailyEvent ? 'daily/' : ''}${eventId}/bookings?bookingId=${booking._id}`;
+        const eventDate = booking.selectedDate || booking.eventSnapshot?.startDate;
+        const formattedDate = eventDate
+          ? new Date(eventDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+          : 'Date TBA';
+
+        whatsappService.sendTicketReadyTemplate({
+          phone: req.user.phone,
+          eventName: booking.eventSnapshot?.title || 'Your event',
+          eventDate: formattedDate,
+          venue: booking.eventSnapshot?.location?.address || booking.eventSnapshot?.location?.city || 'Venue TBA',
+          bookingId: booking._id,
+          eventId,
+          ticketLink,
+        }).catch((whatsappError) => {
+          console.error('[Booking] WhatsApp RSVP notification failed:', whatsappError?.message || whatsappError);
+        });
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: "RSVP confirmed successfully",
