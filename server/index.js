@@ -34,6 +34,7 @@ const { userRouter: supportChatRoutes, adminRouter: adminSupportChatRoutes } = r
 const qrRoutes = require('./routes/qr.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const merchRoutes = require('./routes/merch.routes');
+const tourismCheckoutRoutes = require('./routes/tourismCheckout.routes');
 const heroImageRoutes = require('./routes/heroImageRoutes');
 const annieMusicalRoutes = require('./routes/annieMusicalRoutes');
 const nisRegistrationRoutes = require('./routes/nisRegistration.routes');
@@ -71,6 +72,8 @@ const User = require('./models/User');
 const Booking = require('./models/Booking');
 const Event = require('./models/Event');
 const Scan = require('./models/Scan');
+const WristbandBatch = require('./models/WristbandBatch');
+const WristbandAssignment = require('./models/WristbandAssignment');
 const PendingPaymentSession = require('./models/PendingPaymentSession');
 const PaymentTransaction = require('./models/PaymentTransaction');
 const AdminNotification = require('./models/AdminNotification');
@@ -155,6 +158,11 @@ app.post('/api/merch/payments/webhook/razorpay', express.raw({ type: '*/*' }), (
   merchController.razorpayWebhook(req, res);
 });
 
+app.post('/api/tourism-checkout/webhook/razorpay', express.raw({ type: '*/*' }), (req, res) => {
+  const tourismCheckoutController = require('./controllers/tourismCheckoutController');
+  tourismCheckoutController.razorpayWebhook(req, res);
+});
+
 app.post('/api/dance-league/webhook', express.raw({ type: '*/*' }), (req, res, next) => {
   req.rawBody = req.body;
   next();
@@ -176,6 +184,9 @@ app.use(
   nuscSeasonPassReservationTiming,
   express.raw({ type: 'application/json', limit: '64kb' })
 );
+
+// Tourism partner requests are signed over their exact raw JSON bytes.
+app.use('/api/tourism-checkout/v1', express.raw({ type: 'application/json', limit: '128kb' }), tourismCheckoutRoutes);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -328,6 +339,8 @@ const connectDB = async () => {
       Booking.createIndexes(),
       Event.createIndexes(),
       Scan.createIndexes(),
+      WristbandBatch.createIndexes(),
+      WristbandAssignment.createIndexes(),
       PendingPaymentSession.createIndexes(),
       PaymentTransaction.createIndexes(),
       AdminNotification.createIndexes(),

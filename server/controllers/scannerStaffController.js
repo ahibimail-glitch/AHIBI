@@ -9,6 +9,7 @@ function safeStaff(staff) {
     id: String(staff._id),
     username: staff.username,
     isActive: staff.isActive,
+    eventAssignments: staff.eventAssignments || null,
     createdAt: staff.createdAt,
     updatedAt: staff.updatedAt,
   };
@@ -21,6 +22,30 @@ exports.list = async (_req, res) => {
   } catch (error) {
     console.error('Unable to list scanner staff:', error);
     return res.status(500).json({ success: false, message: 'Unable to load scanner accounts.' });
+  }
+};
+
+exports.setAssignments = async (req, res) => {
+  const { id } = req.params;
+  const assignments = req.body?.eventAssignments;
+  if (!mongoose.isValidObjectId(id) || !Array.isArray(assignments)) {
+    return res.status(400).json({ success: false, message: 'A valid account and event assignment list are required.' });
+  }
+  const seen = new Set();
+  for (const item of assignments) {
+    if (!mongoose.isValidObjectId(item?.event) || seen.has(String(item.event)) ||
+      ['canScan', 'canIssueWristbands', 'canSellOnsite', 'canViewCounts'].some((key) => typeof item[key] !== 'boolean')) {
+      return res.status(400).json({ success: false, message: 'Each event must be unique and include all four permission flags.' });
+    }
+    seen.add(String(item.event));
+  }
+  try {
+    const staff = await ScannerStaff.findByIdAndUpdate(id, { $set: { eventAssignments: assignments } }, { new: true, runValidators: true });
+    if (!staff) return res.status(404).json({ success: false, message: 'Scanner account not found.' });
+    return res.json({ success: true, data: safeStaff(staff) });
+  } catch (error) {
+    console.error('Unable to assign scanner events:', error);
+    return res.status(500).json({ success: false, message: 'Unable to update scanner event assignments.' });
   }
 };
 
@@ -39,6 +64,7 @@ exports.create = async (req, res) => {
     const staff = await ScannerStaff.create({
       username,
       password: passwordHash,
+      eventAssignments: [],
       createdBy: req.user._id,
     });
     return res.status(201).json({ success: true, data: safeStaff(staff) });

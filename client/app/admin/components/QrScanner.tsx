@@ -34,6 +34,7 @@ interface BookingVerification {
   capacity?: number;
   usedEntries?: number;
   remainingEntries?: number;
+  wristbands?: Array<{ bandCode: string; color: string; ticketType: string; ticketUnitIndex: number }>;
 }
 
 interface CheckInHistoryItem {
@@ -705,6 +706,7 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
           ...verification,
           status: 'CHECKED_IN',
           checkedInAt: result.checkedInAt,
+          wristbands: Array.isArray(result.wristbands) ? result.wristbands : [],
           verificationMessage: 'Check-in successful.',
         };
         measureNextRender('checkin-result-render');
@@ -1182,6 +1184,14 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
                 )}
                 {verification.checkedInAt && (
                   <p><span className="font-semibold">Checked In:</span> {new Date(verification.checkedInAt).toLocaleString()}</p>
+                )}
+                {verification.status === 'CHECKED_IN' && (verification.wristbands?.length || 0) > 0 && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="font-semibold text-emerald-900">Wristbands issued — hand these to the attendee</p>
+                    <ul className="mt-2 space-y-1 text-sm text-emerald-900">
+                      {verification.wristbands?.map((band) => <li key={band.bandCode}><span className="font-bold">{band.bandCode}</span> · {band.color} · {band.ticketType} · attendee {band.ticketUnitIndex}</li>)}
+                    </ul>
+                  </div>
                 )}
                 {verification.checkedOutAt && (
                   <p><span className="font-semibold">Last Checked Out:</span> {new Date(verification.checkedOutAt).toLocaleString()}</p>

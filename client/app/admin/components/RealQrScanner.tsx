@@ -39,8 +39,8 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 960 },
+            height: { ideal: 540 },
           },
           audio: false,
         });
@@ -92,31 +92,48 @@ const RealQrScanner: React.FC<RealQrScannerProps> = ({ onScan, onError, isActive
   useEffect(() => {
     if (!isActive || !cameraReady || !isScanning) return;
     let cancelled = false;
+    let frameInFlight = false;
+    let nativeDetector: any = null;
+    try {
+      if ('BarcodeDetector' in window) nativeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+    } catch {
+      nativeDetector = null;
+    }
 
-    const scanFrame = () => {
+    const scanFrame = async () => {
       if (cancelled) return;
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas?.getContext('2d', { willReadFrequently: true });
 
-      if (video && canvas && context && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
-        const scale = Math.min(1, 960 / video.videoWidth);
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-        if (code) {
-          onScanRef.current(code.data);
-          return;
+      if (!frameInFlight && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+        frameInFlight = true;
+        try {
+          if (nativeDetector) {
+            const codes = await nativeDetector.detect(video);
+            if (cancelled) return;
+            if (codes?.[0]?.rawValue) { onScanRef.current(codes[0].rawValue); return; }
+          } else if (canvas && context) {
+            const scale = Math.min(1, 800 / video.videoWidth);
+            canvas.width = Math.round(video.videoWidth * scale);
+            canvas.height = Math.round(video.videoHeight * scale);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+            if (code) { onScanRef.current(code.data); return; }
+          }
+        } catch {
+          // Fall back to the bundled decoder if the native detector fails.
+          nativeDetector = null;
+        } finally {
+          frameInFlight = false;
         }
       }
 
-      scanTimerRef.current = setTimeout(scanFrame, 110);
+      scanTimerRef.current = setTimeout(() => { void scanFrame(); }, 90);
     };
 
-    scanFrame();
+    void scanFrame();
     return () => {
       cancelled = true;
       if (scanTimerRef.current) {
