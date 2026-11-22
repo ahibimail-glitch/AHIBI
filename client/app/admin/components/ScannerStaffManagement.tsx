@@ -8,7 +8,9 @@ type ScannerStaff = {
   username: string;
   isActive: boolean;
   createdAt: string;
+  eventAssignments: null | Array<{ event: string; canScan: boolean; canIssueWristbands: boolean; canSellOnsite: boolean; canViewCounts: boolean }>;
 };
+type EventOption = { _id: string; title: string };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -22,6 +24,7 @@ export default function ScannerStaffManagement() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [events, setEvents] = useState<EventOption[]>([]);
 
   const headers = useCallback(() => {
     const token = localStorage.getItem('admin_token');
@@ -43,9 +46,51 @@ export default function ScannerStaffManagement() {
     setStaff(result.data || []);
   }, [headers, router]);
 
+  const loadEvents = useCallback(async () => {
+    const response = await fetch(`${apiUrl}/api/admin/events?status=approved`, { headers: headers() });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Unable to load events.');
+    setEvents(result.data?.events || []);
+  }, [headers]);
+
   useEffect(() => {
     void loadStaff().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load scanner accounts.'));
-  }, [loadStaff]);
+    void loadEvents().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load events.'));
+  }, [loadStaff, loadEvents]);
+
+  const saveAssignment = async (account: ScannerStaff, eventId: string, enabled: boolean) => {
+    const current = account.eventAssignments || events.map((event) => ({ event: event._id, canScan: true, canIssueWristbands: false, canSellOnsite: false, canViewCounts: false }));
+    const assignment = current.find((row) => String(row.event) === eventId);
+    const next = current.filter((row) => String(row.event) !== eventId);
+    if (enabled) next.push(assignment || { event: eventId, canScan: true, canIssueWristbands: true, canSellOnsite: false, canViewCounts: false });
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/scanner-staff/${account.id}/assignments`, {
+        method: 'PUT', headers: headers(), body: JSON.stringify({ eventAssignments: next }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to save event assignment.');
+      setNotice(`Event access updated for ${account.username}.`);
+      await loadStaff();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save event assignment.');
+    } finally { setBusy(false); }
+  };
+
+  const setPermission = async (account: ScannerStaff, eventId: string, permission: 'canScan' | 'canIssueWristbands' | 'canSellOnsite' | 'canViewCounts', value: boolean) => {
+    const current = account.eventAssignments || events.map((event) => ({ event: event._id, canScan: true, canIssueWristbands: false, canSellOnsite: false, canViewCounts: false }));
+    const found = current.find((row) => String(row.event) === eventId);
+    const next = current.filter((row) => String(row.event) !== eventId);
+    next.push({ ...(found || { event: eventId, canScan: false, canIssueWristbands: false, canSellOnsite: false, canViewCounts: false }), [permission]: value });
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/scanner-staff/${account.id}/assignments`, { method: 'PUT', headers: headers(), body: JSON.stringify({ eventAssignments: next }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to save permission.');
+      setNotice(`Permissions updated for ${account.username}.`); await loadStaff();
+    } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Unable to save permission.'); }
+    finally { setBusy(false); }
+  };
 
   const createStaff = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -119,7 +164,7 @@ export default function ScannerStaffManagement() {
       <header>
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-700">Access management</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-950">Scanning team accounts</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">These accounts can verify tickets and record entry in the separate scanner portal. They cannot open the admin dashboard or manage bookings.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">These accounts cannot open the admin dashboard. Assign each person only the events and actions they need: scanning, wristband issuance, box-office sales, or count viewing. Box-office sellers also need wristband issuance permission for tracked events.</p>
       </header>
 
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
@@ -146,6 +191,17 @@ export default function ScannerStaffManagement() {
               <li key={account.id} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="font-semibold text-slate-900">{account.username}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {events.map((event) => {
+                      const checked = account.eventAssignments == null || account.eventAssignments.some((item) => String(item.event) === event._id);
+                      const assignment = account.eventAssignments?.find((item) => String(item.event) === event._id);
+                      return <div key={event._id} className="rounded-md border px-2 py-2 text-xs text-slate-700">
+                        <label className="flex items-center gap-1.5 font-medium"><input type="checkbox" checked={checked} disabled={busy} onChange={(e) => void saveAssignment(account, event._id, e.target.checked)} />{event.title}</label>
+                        {checked && <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-5 text-slate-600">{([['canScan', 'Scan'], ['canIssueWristbands', 'Issue bands'], ['canSellOnsite', 'Box office'], ['canViewCounts', 'View counts']] as const).map(([key, title]) => <label key={key} className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={account.eventAssignments == null ? key === 'canScan' : Boolean(assignment?.[key])} onChange={(e) => void setPermission(account, event._id, key, e.target.checked)} />{title}</label>)}</div>}
+                      </div>;
+                    })}
+                  </div>
+                  {account.eventAssignments == null && <p className="mt-1 text-xs text-amber-700">Legacy access: this account can scan all events until you change its assignments.</p>}
                   <p className="mt-1 text-xs text-slate-500">Created {new Date(account.createdAt).toLocaleDateString()} · {account.isActive ? 'Active' : 'Disabled'}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, QrCode } from 'lucide-react';
 import QrScanner from '../admin/components/QrScanner';
+import ScannerBoxOffice from './ScannerBoxOffice';
+import ScannerWristbandCounts from './ScannerWristbandCounts';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -14,6 +16,8 @@ export default function ScannerPortalPage() {
   const [checking, setChecking] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [sessionRetry, setSessionRetry] = useState(0);
+  const [eventAssignments, setEventAssignments] = useState<Array<{ event: string; eventTitle: string; canScan: boolean; canSellOnsite: boolean; canViewCounts: boolean }> | null>(null);
+  const [workMode, setWorkMode] = useState<'scan' | 'box-office'>('scan');
 
   const signOut = useCallback(() => {
     localStorage.removeItem('scanner_token');
@@ -52,7 +56,11 @@ export default function ScannerPortalPage() {
         }
         if (!response.ok) throw new Error('Scanner service is temporarily unavailable.');
         const result = await response.json();
-        if (!cancelled) setUsername(result.data.username);
+        if (!cancelled) {
+          setUsername(result.data.username);
+          setEventAssignments(Array.isArray(result.data.eventAssignments) ? result.data.eventAssignments : null);
+          if (Array.isArray(result.data.eventAssignments) && !result.data.eventAssignments.some((item: { canScan: boolean }) => item.canScan) && result.data.eventAssignments.some((item: { canSellOnsite: boolean }) => item.canSellOnsite)) setWorkMode('box-office');
+        }
       } catch {
         if (!cancelled) {
           setSessionError(controller.signal.aborted
@@ -109,6 +117,9 @@ export default function ScannerPortalPage() {
     );
   }
 
+  const canScan = eventAssignments == null || eventAssignments.some((item) => item.canScan);
+  const canSellOnsite = eventAssignments?.some((item) => item.canSellOnsite) || false;
+
   return (
     <main className="flex min-h-screen flex-col bg-slate-950 text-white" style={{ minHeight: '100svh' }}>
       <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur sm:px-6">
@@ -135,13 +146,15 @@ export default function ScannerPortalPage() {
             </button>
           </div>
         </div>
+        {(canScan && canSellOnsite) && <div className="mx-auto mt-3 flex max-w-xl gap-2">{([['scan', 'Ticket scanning'], ['box-office', 'Box office']] as const).map(([mode, label]) => <button key={mode} onClick={() => setWorkMode(mode)} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${workMode === mode ? 'bg-white text-slate-950' : 'border border-white/15 text-slate-300'}`}>{label}</button>)}</div>}
       </header>
 
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pt-5">
-        <QrScanner scannerMode scannerToken={token} onSessionExpired={signOut} />
-        <p className="mt-3 text-center text-xs leading-5 text-slate-500 sm:mt-4">
-          Scan the ticket QR, check the ticket result, then confirm entry.
-        </p>
+        {workMode === 'box-office' && canSellOnsite ? <ScannerBoxOffice token={token} /> : canScan ? <>
+          <QrScanner scannerMode scannerToken={token} onSessionExpired={signOut} />
+          <p className="mt-3 text-center text-xs leading-5 text-slate-500 sm:mt-4">Scan the ticket QR, check the ticket result, then confirm entry.</p>
+        </> : eventAssignments?.some((item) => item.canViewCounts) ? <p className="rounded-xl border border-white/10 bg-slate-900 p-5 text-center text-sm text-slate-300">This account can view the wristband counts shown below.</p> : <p className="rounded-xl border border-white/10 bg-slate-900 p-5 text-center text-sm text-slate-300">No scanning or box-office access has been assigned to this account. Contact an administrator.</p>}
+        {eventAssignments && <ScannerWristbandCounts token={token} assignments={eventAssignments} />}
       </div>
     </main>
   );

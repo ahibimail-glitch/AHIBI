@@ -71,6 +71,8 @@ const User = require('./models/User');
 const Booking = require('./models/Booking');
 const Event = require('./models/Event');
 const Scan = require('./models/Scan');
+const WristbandBatch = require('./models/WristbandBatch');
+const WristbandAssignment = require('./models/WristbandAssignment');
 const PendingPaymentSession = require('./models/PendingPaymentSession');
 const PaymentTransaction = require('./models/PaymentTransaction');
 const AdminNotification = require('./models/AdminNotification');
@@ -328,6 +330,8 @@ const connectDB = async () => {
       Booking.createIndexes(),
       Event.createIndexes(),
       Scan.createIndexes(),
+      WristbandBatch.createIndexes(),
+      WristbandAssignment.createIndexes(),
       PendingPaymentSession.createIndexes(),
       PaymentTransaction.createIndexes(),
       AdminNotification.createIndexes(),

@@ -14,6 +14,7 @@ const adminBookingsController = require('../controllers/adminBookingsController'
 const manualSeasonPassController = require('../controllers/manualSeasonPassController');
 const nuscPartnerRecoveryController = require('../controllers/nuscPartnerRecoveryController');
 const scannerStaffController = require('../controllers/scannerStaffController');
+const wristbandController = require('../controllers/wristbandController');
 const nuscHomeMatchController = require('../controllers/nuscHomeMatchController');
 
 // All admin endpoints, including account and on-spot booking operations, require a full admin.
@@ -31,6 +32,10 @@ router.get('/scanner-staff', scannerStaffController.list);
 router.post('/scanner-staff', scannerStaffController.create);
 router.patch('/scanner-staff/:id/active', scannerStaffController.setActive);
 router.patch('/scanner-staff/:id/password', scannerStaffController.resetPassword);
+router.put('/scanner-staff/:id/assignments', scannerStaffController.setAssignments);
+router.get('/wristbands/:eventId', wristbandController.listBatches);
+router.post('/wristbands/:eventId/batches', wristbandController.createBatch);
+router.get('/wristbands/:eventId/report', wristbandController.getReport);
 
 // Manual pass operations and AHIBI user search require the Admin auth above.
 router.get('/users/search', adminController.searchUsers);

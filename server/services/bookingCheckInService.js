@@ -4,6 +4,8 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const Scan = require('../models/Scan');
 const Inventory = require('../models/NuscHomeMatchInventory');
+const WristbandAssignment = require('../models/WristbandAssignment');
+const { WristbandError, issueWristbands } = require('./wristbandService');
 
 const INVENTORY_KEY = 'nusc-il-2026-27';
 
@@ -44,7 +46,7 @@ function createDatabaseTimer(onDatabaseTiming) {
 }
 
 async function checkInBooking(
-  { bookingId, eventId, staffId, scannerStaffId, requestId },
+  { bookingId, eventId, staffId, scannerStaffId, adminId, canIssueWristbands = false, requestId },
   { afterScan = async () => {}, onDatabaseTiming, onTransactionTiming } = {},
 ) {
   if (!mongoose.isValidObjectId(bookingId) || !mongoose.isValidObjectId(eventId)) {
@@ -77,7 +79,7 @@ async function checkInBooking(
       if (!event) throw new CheckInError('Event not found.', 'EVENT_NOT_FOUND', 404);
 
       const partnerTicket = booking.nuscPartnerTicket?.partnerId === 'nusc' || booking.paymentProvider === 'nusc-partner';
-      if (!booking.user && !partnerTicket) {
+      if (!booking.user && !partnerTicket && booking.bookingSource !== 'on-spot') {
         throw new CheckInError('Booking has no user account and is not an eligible partner ticket.', 'ACCOUNTLESS_BOOKING_NOT_ALLOWED', 409);
       }
 
@@ -119,6 +121,9 @@ async function checkInBooking(
       );
       if (priorRequest) {
         const usedEntries = await timeDatabase('checkin-count-db', () => Scan.countDocuments(ticketFilter).session(session));
+        const wristbands = event.wristbandTrackingEnabled
+          ? await WristbandAssignment.find({ event: eventId, booking: booking._id, status: 'issued' }).session(session).sort({ ticketUnitIndex: 1 }).lean()
+          : [];
         result = {
           status: 'CHECKED_IN',
           bookingId: String(booking._id),
@@ -127,6 +132,7 @@ async function checkInBooking(
           usedEntries,
           remainingEntries: Math.max(0, (partnerTicket ? 1 : eventTicketCapacity(event, booking.ticketType)) - usedEntries),
           idempotentReplay: true,
+          wristbands,
         };
         return;
       }
@@ -158,6 +164,13 @@ async function checkInBooking(
         ...(scannerStaffId && mongoose.isValidObjectId(scannerStaffId) ? { scannerStaff: scannerStaffId } : {}),
         ...(partnerTicket ? { partnerId: 'nusc' } : { user: booking.user }),
       }], { session })))[0];
+      let wristbands;
+      try {
+        wristbands = await issueWristbands({ booking, event, staffId: scannerStaffId, adminId, canIssueWristbands, session });
+      } catch (error) {
+        if (error instanceof WristbandError) throw new CheckInError(error.message, error.code, error.status);
+        throw error;
+      }
       await afterScan({ booking, scan, session });
       booking.scannerCheckInRequests = booking.scannerCheckInRequests || [];
       booking.scannerCheckInRequests.push({ event: eventId, requestId, checkedInAt: scan.timestamp });
@@ -181,6 +194,7 @@ async function checkInBooking(
         usedEntries: scanCount + 1,
         remainingEntries: capacity - scanCount - 1,
         idempotentReplay: false,
+        wristbands,
       };
         });
       } finally {
@@ -204,6 +218,7 @@ async function checkInBooking(
         () => Booking.findById(bookingId).select('ticketType nuscPartnerTicket'),
       );
       const eventAfterCommit = await timeDatabase('checkin-replay-event-db', () => Event.findById(eventId));
+      const wristbandsAfterCommit = await timeDatabase('checkin-replay-wristbands-db', () => WristbandAssignment.find({ event: eventId, booking: bookingId, status: 'issued' }).sort({ ticketUnitIndex: 1 }).lean());
       const partnerAfterCommit = bookingAfterCommit?.nuscPartnerTicket?.partnerId === 'nusc';
       const capacity = partnerAfterCommit ? 1 : eventTicketCapacity(eventAfterCommit || {}, bookingAfterCommit?.ticketType);
       result = {
@@ -214,6 +229,7 @@ async function checkInBooking(
         usedEntries,
         remainingEntries: Math.max(0, capacity - usedEntries),
         idempotentReplay: true,
+        wristbands: wristbandsAfterCommit,
       };
     }
     return result;

@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const nuscInventory = require('../services/nuscHomeMatchInventoryService');
+const WristbandAssignment = require('../models/WristbandAssignment');
+const { WristbandError, issueWristbands } = require('../services/wristbandService');
 
 const PAYMENT_METHODS = new Set(['Cash', 'UPI', 'Card']);
 
@@ -91,6 +93,7 @@ function serializeEvent(event, now, nuscTicketTypes = null, matchDate = null, se
   return {
     _id: String(event._id),
     title: event.title,
+    wristbandTrackingEnabled: Boolean(event.wristbandTrackingEnabled),
     startDate: event.startDate,
     endDate: event.endDate,
     location: event.location,
@@ -102,10 +105,22 @@ function serializeEvent(event, now, nuscTicketTypes = null, matchDate = null, se
 
 exports.listEvents = async (req, res) => {
   try {
-    const events = await Event.find({
-      status: 'approved',
-    })
-      .select('title slug startDate endDate bookingEndTime location ticketTypes isPublic')
+    const query = { status: 'approved' };
+    if (req.scannerStaff) {
+      const assignments = req.scannerStaff.eventAssignments || [];
+      const sellIds = assignments.filter((item) => item.canSellOnsite).map((item) => item.event);
+      const sellAndIssueIds = assignments
+        .filter((item) => item.canSellOnsite && item.canIssueWristbands)
+        .map((item) => item.event);
+      // Ordinary events need box-office permission. Events that track bands
+      // also require issuance permission because the sale reserves bands.
+      query.$or = [
+        { _id: { $in: sellIds }, wristbandTrackingEnabled: { $ne: true } },
+        { _id: { $in: sellAndIssueIds }, wristbandTrackingEnabled: true },
+      ];
+    }
+    const events = await Event.find(query)
+      .select('title slug startDate endDate bookingEndTime location ticketTypes isPublic wristbandTrackingEnabled')
       .sort({ startDate: 1 })
       .lean();
 
@@ -211,6 +226,7 @@ exports.createBooking = async (req, res) => {
   let nuscSuiteBoxNumbers = [];
   let recordedZone = '';
   let idempotentReplay = false;
+  let issuedWristbands = [];
 
   try {
     session = await mongoose.startSession();
@@ -237,6 +253,8 @@ exports.createBooking = async (req, res) => {
         }
 
         createdBookings = [priorBooking];
+        issuedWristbands = await WristbandAssignment.find({ event: priorBooking.event, booking: priorBooking._id, status: 'issued' })
+          .session(session).sort({ ticketUnitIndex: 1 }).lean();
         eventTitle = priorBooking.eventSnapshot?.title || '';
         unitPrice = Number(priorBooking.price) || 0;
         ticketTypeName = priorBooking.ticketType;
@@ -378,7 +396,9 @@ exports.createBooking = async (req, res) => {
         modeOfPayment,
         bookingSource: 'on-spot',
         onSpotRequestId: requestId,
-        onSpotCreatedBy: req.user._id,
+        ...(req.scannerStaff
+          ? { onSpotCreatedByScannerStaff: req.scannerStaff._id }
+          : { onSpotCreatedBy: req.user._id }),
         ...(seasonPassType ? { nuscSeasonPassType: seasonPassType } : {}),
         ...(recordedZone ? { nuscGeneralZone: recordedZone } : {}),
         ...(nuscSuiteBoxNumbers.length ? {
@@ -391,6 +411,20 @@ exports.createBooking = async (req, res) => {
       });
 
       await booking.save({ session });
+      try {
+        issuedWristbands = await issueWristbands({
+          booking,
+          event,
+          ...(req.scannerStaff ? {
+            staffId: req.scannerStaff._id,
+            canIssueWristbands: Boolean(req.scannerStaff.eventAssignments?.find((item) => String(item.event) === String(event._id))?.canIssueWristbands),
+          } : { adminId: req.user._id }),
+          session,
+        });
+      } catch (error) {
+        if (error instanceof WristbandError) throw new OnSpotBookingError(error.message, error.status, error.code);
+        throw error;
+      }
       createdBookings = [booking];
       eventTitle = event.title;
       ticketTypeName = booking.ticketType;
@@ -403,6 +437,7 @@ exports.createBooking = async (req, res) => {
       modeOfPayment,
       total: unitPrice * quantity,
       idempotentReplay,
+      wristbands: issuedWristbands,
       booking: {
         _id: String(createdBookings[0]._id),
         ticketType: ticketTypeName,
