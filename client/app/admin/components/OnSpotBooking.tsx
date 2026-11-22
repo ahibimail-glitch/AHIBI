@@ -51,6 +51,7 @@ interface BookingResult {
   modeOfPayment: string;
   total: number;
   booking: RecordedBooking;
+  wristbands?: { bandCode: string; color: string; ticketType: string; ticketUnitIndex: number }[];
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -204,11 +205,13 @@ export default function OnSpotBooking() {
           </CardContent>
         </Card>
 
+        {!!bookingResult.wristbands?.length && <Card className="border-emerald-200 bg-emerald-50 shadow-sm"><CardContent className="p-5"><p className="font-semibold text-emerald-900">Wristbands assigned — hand these to the attendee</p><ul className="mt-2 space-y-1 text-sm text-emerald-900">{bookingResult.wristbands.map((band) => <li key={band.bandCode}><strong>{band.bandCode}</strong> · {band.color} · attendee {band.ticketUnitIndex}</li>)}</ul></CardContent></Card>}
+
         <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-slate-500">Collected by {bookingResult.modeOfPayment}</p>
             <p className="text-lg font-semibold text-slate-950">Total {formatCurrency(bookingResult.total)}</p>
-            <p className="mt-1 text-sm text-slate-600">Hand over {bookingResult.booking.quantity} physical ticket(s) from the event stock.</p>
+            <p className="mt-1 text-sm text-slate-600">{bookingResult.wristbands?.length ? `Hand over ${bookingResult.booking.quantity} physical ticket(s) and the assigned wristband(s).` : `Hand over ${bookingResult.booking.quantity} physical ticket(s) from the event stock.`}</p>
           </div>
           <Button type="button" onClick={startAnotherBooking}>Record another sale</Button>
         </div>

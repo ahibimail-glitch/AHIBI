@@ -913,6 +913,8 @@ router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), asy
       eventId,
       requestId: idempotencyKey,
       staffId: req.user?._id,
+      adminId: req.user?._id,
+      canIssueWristbands: true,
     });
     const remainingEntries = result.remainingEntries;
     return res.status(200).json({

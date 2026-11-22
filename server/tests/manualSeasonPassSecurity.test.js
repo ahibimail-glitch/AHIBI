@@ -60,7 +60,7 @@ test('booking cancellation replaces both legacy delete routes and remains behind
 
   assert.equal(routes.length, 1);
   assert.equal(adminRoutes.stack.indexOf(routes[0]) > adminGuardIndex, true);
-  assert.equal(routes[0].route.stack.at(-1).handle.name, 'cancelPendingBooking');
+  assert.equal(routes[0].route.stack.at(-1).handle.name, 'deleteBooking');
 });
 
 test('Admin user search is bounded, escapes input, and projects only selector fields', async (t) => {

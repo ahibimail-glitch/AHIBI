@@ -97,6 +97,10 @@ const BookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin',
   },
+  onSpotCreatedByScannerStaff: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ScannerStaff',
+  },
   ticketType: {
     type: String,
     required: true

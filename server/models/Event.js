@@ -36,6 +36,10 @@ const TicketTypeSchema = new mongoose.Schema({
 });
 
 const EventSchema = new mongoose.Schema({
+  wristbandTrackingEnabled: {
+    type: Boolean,
+    default: false,
+  },
   title: {
     type: String,
     required: [true, 'Event title is required'],
