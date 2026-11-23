@@ -9,7 +9,7 @@ type Wristband = { bandCode: string; color: string; ticketType: string; ticketUn
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-export default function ScannerBoxOffice({ token }: { token: string }) {
+export default function ScannerBoxOffice({ token, initialEventId = '' }: { token: string; initialEventId?: string }) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventId, setEventId] = useState('');
   const [ticketTypeId, setTicketTypeId] = useState('');
@@ -37,14 +37,17 @@ export default function ScannerBoxOffice({ token }: { token: string }) {
       .then((loadedEvents) => {
         if (cancelled) return;
         setEvents(loadedEvents);
-        setEventId(loadedEvents[0]?._id || '');
-        setTicketTypeId(loadedEvents[0]?.ticketTypes?.[0]?._id || '');
+        const initialEvent = initialEventId ? loadedEvents.find((item: EventItem) => item._id === initialEventId) : null;
+        const chosenEvent = initialEventId ? initialEvent : loadedEvents[0];
+        setEventId(chosenEvent?._id || '');
+        setTicketTypeId(chosenEvent?.ticketTypes?.[0]?._id || '');
+        if (initialEventId && !initialEvent) setError('This event is not assigned to your box-office account. Ask an administrator to update your access.');
       })
       .catch((loadError) => {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Could not load events.');
       });
     return () => { cancelled = true; };
-  }, [token]);
+  }, [token, initialEventId]);
 
   const sell = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

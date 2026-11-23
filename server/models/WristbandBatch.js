@@ -9,6 +9,7 @@ const WristbandBatchSchema = new mongoose.Schema({
   startNumber: { type: Number, required: true, min: 1 },
   endNumber: { type: Number, required: true, min: 1 },
   nextNumber: { type: Number, required: true, min: 1 },
+  assignedScannerStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'ScannerStaff' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
   active: { type: Boolean, default: true },
 }, { timestamps: true });

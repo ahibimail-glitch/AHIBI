@@ -10,7 +10,13 @@ type ScannerStaff = {
   createdAt: string;
   eventAssignments: null | Array<{ event: string; canScan: boolean; canIssueWristbands: boolean; canSellOnsite: boolean; canViewCounts: boolean }>;
 };
-type EventOption = { _id: string; title: string };
+type EventOption = { _id: string; title: string; wristbandTrackingEnabled?: boolean };
+type ActivityReport = {
+  summary: { total: number; errors: number; averageDurationMs: number };
+  byStaff: Array<{ username: string; total: number; errors: number }>;
+  byEvent: Array<{ title: string; total: number; errors: number }>;
+  recent: Array<{ id: string; username: string; eventTitle: string; action: string; outcome: 'success' | 'error'; statusCode: number; errorCode: string; durationMs: number; createdAt: string }>;
+};
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -25,6 +31,7 @@ export default function ScannerStaffManagement() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [events, setEvents] = useState<EventOption[]>([]);
+  const [activity, setActivity] = useState<ActivityReport | null>(null);
 
   const headers = useCallback(() => {
     const token = localStorage.getItem('admin_token');
@@ -53,10 +60,18 @@ export default function ScannerStaffManagement() {
     setEvents(result.data?.events || []);
   }, [headers]);
 
+  const loadActivity = useCallback(async () => {
+    const response = await fetch(`${apiUrl}/api/admin/scanner-staff/activity`, { headers: headers() });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || 'Unable to load scanner activity.');
+    setActivity(result.data);
+  }, [headers]);
+
   useEffect(() => {
     void loadStaff().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load scanner accounts.'));
     void loadEvents().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load events.'));
-  }, [loadStaff, loadEvents]);
+    void loadActivity().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load scanner activity.'));
+  }, [loadStaff, loadEvents, loadActivity]);
 
   const saveAssignment = async (account: ScannerStaff, eventId: string, enabled: boolean) => {
     const current = account.eventAssignments || events.map((event) => ({ event: event._id, canScan: true, canIssueWristbands: false, canSellOnsite: false, canViewCounts: false }));
@@ -90,6 +105,20 @@ export default function ScannerStaffManagement() {
       setNotice(`Permissions updated for ${account.username}.`); await loadStaff();
     } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Unable to save permission.'); }
     finally { setBusy(false); }
+  };
+
+  const copyStaffLink = async (account: ScannerStaff, event: EventOption, mode: 'scan' | 'box-office') => {
+    const link = new URL('/scanner/login', window.location.origin);
+    link.searchParams.set('username', account.username);
+    link.searchParams.set('event', event._id);
+    link.searchParams.set('mode', mode);
+    try {
+      await navigator.clipboard.writeText(link.toString());
+      setError('');
+      setNotice(`${mode === 'scan' ? 'Scanner' : 'Box-office'} link for ${event.title} copied. Share the password separately.`);
+    } catch {
+      setError('Could not copy the link. Check browser clipboard permission and try again.');
+    }
   };
 
   const createStaff = async (event: FormEvent<HTMLFormElement>) => {
@@ -164,8 +193,23 @@ export default function ScannerStaffManagement() {
       <header>
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-700">Access management</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-950">Scanning team accounts</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">These accounts cannot open the admin dashboard. Assign each person only the events and actions they need: scanning, wristband issuance, box-office sales, or count viewing. Box-office sellers also need wristband issuance permission for tracked events.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">These accounts cannot open the admin dashboard. Assign each person only the events and actions they need, then copy an event-specific sign-in link. Share the password separately. Box-office sellers also need wristband issuance permission for tracked events.</p>
       </header>
+
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-semibold text-slate-900">Scanner operations · last 7 days</h2><p className="mt-1 text-sm text-slate-500">Check-ins, box-office activity, access errors, and response times.</p></div>
+          <button type="button" onClick={() => void loadActivity().catch((e) => setError(e instanceof Error ? e.message : 'Unable to refresh activity.'))} className="rounded-md border px-3 py-2 text-sm font-medium text-slate-700">Refresh activity</button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[["Operations", activity?.summary.total ?? '—'], ['Errors', activity?.summary.errors ?? '—'], ['Average response', activity ? `${activity.summary.averageDurationMs} ms` : '—']].map(([label, value]) => <div key={String(label)} className="rounded-lg bg-slate-50 p-4"><p className="text-sm text-slate-500">{label}</p><p className="mt-1 text-2xl font-semibold text-slate-950">{value}</p></div>)}
+        </div>
+        {activity && <div className="grid gap-4 md:grid-cols-2">
+          <div><h3 className="text-sm font-semibold text-slate-800">By staff member</h3>{activity.byStaff.length ? <ul className="mt-2 divide-y rounded-lg border">{activity.byStaff.map((item) => <li key={item.username} className="flex justify-between gap-3 px-3 py-2 text-sm"><span>{item.username}</span><span className="text-slate-500">{item.total} actions · {item.errors} errors</span></li>)}</ul> : <p className="mt-2 text-sm text-slate-500">No activity recorded yet.</p>}</div>
+          <div><h3 className="text-sm font-semibold text-slate-800">By event</h3>{activity.byEvent.length ? <ul className="mt-2 divide-y rounded-lg border">{activity.byEvent.map((item) => <li key={item.title} className="flex justify-between gap-3 px-3 py-2 text-sm"><span className="truncate">{item.title}</span><span className="shrink-0 text-slate-500">{item.total} actions · {item.errors} errors</span></li>)}</ul> : <p className="mt-2 text-sm text-slate-500">No event activity recorded yet.</p>}</div>
+        </div>}
+        {activity && <div className="overflow-x-auto"><h3 className="mb-2 text-sm font-semibold text-slate-800">Recent activity and errors</h3>{activity.recent.length ? <table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-slate-600"><tr>{['Time', 'Staff', 'Event', 'Action', 'Result', 'Error / status', 'Time'].map((item) => <th key={item} className="px-3 py-2 font-medium">{item}</th>)}</tr></thead><tbody className="divide-y">{activity.recent.map((item) => <tr key={item.id}><td className="px-3 py-2">{new Date(item.createdAt).toLocaleString()}</td><td className="px-3 py-2">{item.username}</td><td className="px-3 py-2">{item.eventTitle}</td><td className="px-3 py-2 font-mono">{item.action}</td><td className={`px-3 py-2 font-semibold ${item.outcome === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{item.outcome}</td><td className="px-3 py-2">{item.errorCode || item.statusCode}</td><td className="px-3 py-2">{item.durationMs} ms</td></tr>)}</tbody></table> : <p className="rounded-lg border p-4 text-sm text-slate-500">No scanner activity yet. New staff actions and API errors will appear here.</p>}</div>}
+      </section>
 
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
       {notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</p>}
@@ -198,6 +242,12 @@ export default function ScannerStaffManagement() {
                       return <div key={event._id} className="rounded-md border px-2 py-2 text-xs text-slate-700">
                         <label className="flex items-center gap-1.5 font-medium"><input type="checkbox" checked={checked} disabled={busy} onChange={(e) => void saveAssignment(account, event._id, e.target.checked)} />{event.title}</label>
                         {checked && <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 pl-5 text-slate-600">{([['canScan', 'Scan'], ['canIssueWristbands', 'Issue bands'], ['canSellOnsite', 'Box office'], ['canViewCounts', 'View counts']] as const).map(([key, title]) => <label key={key} className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={account.eventAssignments == null ? key === 'canScan' : Boolean(assignment?.[key])} onChange={(e) => void setPermission(account, event._id, key, e.target.checked)} />{title}</label>)}</div>}
+                        {checked && <div className="mt-2 flex flex-wrap gap-2 pl-5">
+                          {(account.eventAssignments == null
+                            ? !event.wristbandTrackingEnabled
+                            : Boolean(assignment?.canScan && (!event.wristbandTrackingEnabled || assignment.canIssueWristbands))) && <button type="button" disabled={busy} onClick={() => void copyStaffLink(account, event, 'scan')} className="rounded border px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Copy scanner link</button>}
+                          {Boolean(assignment?.canSellOnsite && (!event.wristbandTrackingEnabled || assignment.canIssueWristbands)) && <button type="button" disabled={busy} onClick={() => void copyStaffLink(account, event, 'box-office')} className="rounded border px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Copy box-office link</button>}
+                        </div>}
                       </div>;
                     })}
                   </div>
@@ -217,7 +267,7 @@ export default function ScannerStaffManagement() {
           </ul>
         )}
       </div>
-      <p className="text-sm text-slate-500">Scanner sign-in: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">/scanner/login</code></p>
+      <p className="text-sm text-slate-500">Staff sign in at <code className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">/scanner/login</code>. Event links prefill the account and event; passwords are never included in links.</p>
     </section>
   );
 }

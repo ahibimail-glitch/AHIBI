@@ -37,16 +37,32 @@ async function issueWristbands({ booking, event, staffId, adminId, canIssueWrist
   const assigned = [...existing];
   for (let ticketUnitIndex = 1; ticketUnitIndex <= quantity; ticketUnitIndex += 1) {
     if (existingByUnit.has(ticketUnitIndex)) continue;
-    const batch = await WristbandBatch.findOneAndUpdate({
+    const availableFilter = {
       event: event._id,
       ticketTypeId,
       active: true,
       $expr: { $lte: ['$nextNumber', '$endNumber'] },
-    }, { $inc: { nextNumber: 1 } }, {
-      new: false,
-      sort: { createdAt: 1, _id: 1 },
-      session,
-    });
+    };
+    const allocationOptions = { new: false, sort: { createdAt: 1, _id: 1 }, session };
+    let batch = null;
+    if (staffId && mongoose.isValidObjectId(staffId)) {
+      batch = await WristbandBatch.findOneAndUpdate(
+        { ...availableFilter, assignedScannerStaff: staffId },
+        { $inc: { nextNumber: 1 } },
+        allocationOptions,
+      );
+    }
+    if (!batch) {
+      batch = await WristbandBatch.findOneAndUpdate({
+        ...availableFilter,
+        ...(staffId && mongoose.isValidObjectId(staffId) ? {
+          $or: [
+            { assignedScannerStaff: { $exists: false } },
+            { assignedScannerStaff: null },
+          ],
+        } : {}),
+      }, { $inc: { nextNumber: 1 } }, allocationOptions);
+    }
     if (!batch) {
       throw new WristbandError(`No wristbands remain for ${booking.ticketType}. Ask a supervisor to add stock.`, 'WRISTBAND_STOCK_EXHAUSTED');
     }

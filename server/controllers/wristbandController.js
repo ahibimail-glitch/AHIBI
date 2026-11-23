@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const WristbandBatch = require('../models/WristbandBatch');
 const WristbandAssignment = require('../models/WristbandAssignment');
+const ScannerStaff = require('../models/ScannerStaff');
 
 exports.listBatches = async (req, res) => {
   const { eventId } = req.params;
@@ -10,7 +11,7 @@ exports.listBatches = async (req, res) => {
   try {
     const [event, batches] = await Promise.all([
       Event.findById(eventId).select('_id title ticketTypes wristbandTrackingEnabled').lean(),
-      WristbandBatch.find({ event: eventId }).sort({ createdAt: 1 }).lean(),
+      WristbandBatch.find({ event: eventId }).populate({ path: 'assignedScannerStaff', select: 'username' }).sort({ createdAt: 1 }).lean(),
     ]);
     if (!event) return res.status(404).json({ success: false, message: 'Event not found.' });
     return res.json({ success: true, data: { event, batches } });
@@ -22,7 +23,7 @@ exports.listBatches = async (req, res) => {
 
 exports.createBatch = async (req, res) => {
   const { eventId } = req.params;
-  const { ticketTypeId, color, prefix = '', startNumber, endNumber } = req.body || {};
+  const { ticketTypeId, color, prefix = '', startNumber, endNumber, assignedScannerStaff } = req.body || {};
   if (!mongoose.isValidObjectId(eventId) || !mongoose.isValidObjectId(ticketTypeId)) {
     return res.status(400).json({ success: false, message: 'Valid event and ticket type IDs are required.' });
   }
@@ -33,6 +34,9 @@ exports.createBatch = async (req, res) => {
   if (typeof color !== 'string' || !color.trim() || color.trim().length > 40 || typeof prefix !== 'string' || prefix.length > 24) {
     return res.status(400).json({ success: false, message: 'A band color and a prefix of up to 24 characters are required.' });
   }
+  if (assignedScannerStaff && !mongoose.isValidObjectId(assignedScannerStaff)) {
+    return res.status(400).json({ success: false, message: 'Select a valid scanner staff account for this range.' });
+  }
   try {
     const session = await mongoose.startSession();
     let batch;
@@ -42,6 +46,13 @@ exports.createBatch = async (req, res) => {
         if (!event) throw Object.assign(new Error('Event not found.'), { status: 404 });
         const ticketType = (event.ticketTypes || []).find((item) => String(item._id) === String(ticketTypeId));
         if (!ticketType) throw Object.assign(new Error('Ticket type does not belong to this event.'), { status: 400 });
+        if (assignedScannerStaff) {
+          const staff = await ScannerStaff.findOne({ _id: assignedScannerStaff, isActive: true }).session(session);
+          const assignment = staff?.eventAssignments?.find((item) => String(item.event) === String(event._id));
+          if (!staff || !assignment?.canIssueWristbands) {
+            throw Object.assign(new Error('The selected staff member must be active and assigned wristband issuance for this event.'), { status: 409 });
+          }
+        }
         const normalizedColor = color.trim().toUpperCase();
         const normalizedPrefix = prefix.trim();
         const existingBatches = await WristbandBatch.find({ event: event._id }).select('color prefix startNumber endNumber').session(session).lean();
@@ -54,6 +65,7 @@ exports.createBatch = async (req, res) => {
           event: event._id, ticketTypeId: ticketType._id, ticketTypeName: ticketType.name,
           color: normalizedColor, prefix: normalizedPrefix, startNumber: start, endNumber: end,
           nextNumber: start, createdBy: req.user._id,
+          ...(assignedScannerStaff ? { assignedScannerStaff } : {}),
         }], { session });
         event.wristbandTrackingEnabled = true;
         await event.save({ session });

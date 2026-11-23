@@ -6,6 +6,7 @@ const Event = require('../models/Event');
 const Scan = require('../models/Scan');
 const scannerAuth = require('../middlewares/scannerAuth');
 const scannerRequestTiming = require('../middlewares/scannerRequestTiming');
+const scannerActivityAudit = require('../middlewares/scannerActivityAudit');
 const { CheckInError, checkInBooking } = require('../services/bookingCheckInService');
 const { CheckOutError, checkOutBooking } = require('../services/bookingCheckOutService');
 const onSpotBookingController = require('../controllers/onSpotBookingController');
@@ -20,8 +21,9 @@ function permissionFor(req, eventId, permission = 'canScan') {
 
 const router = express.Router();
 
-router.post('/login', require('../controllers/scannerAuthController').login);
+router.post('/login', scannerRequestTiming, scannerActivityAudit, require('../controllers/scannerAuthController').login);
 router.use(scannerRequestTiming);
+router.use(scannerActivityAudit);
 router.use(scannerAuth);
 
 async function timedDatabase(req, name, operation) {
