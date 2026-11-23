@@ -1254,8 +1254,12 @@ export default function CheckoutPage() {
 
             <h1 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h1>
             <div className="text-sm text-gray-600">
-              <p>{event.location.address}: {event.location.city}</p>
-              <p>{new Date(event.startDate).toLocaleDateString('en-US', {
+              <p>{isHornbillDayFestival || isHornbillMusicFestival ? "The Naga Heritage Village, Kohima" : `${event.location.address}: ${event.location.city}`}</p>
+              <p>{isHornbillDayFestival
+                ? "December 1–10, 2026"
+                : isHornbillMusicFestival
+                  ? "December 2–10, 2026"
+                  : new Date(event.startDate).toLocaleDateString('en-US', {
                 weekday: 'short',
                 day: '2-digit',
                 month: 'short',

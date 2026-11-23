@@ -29,6 +29,8 @@ const festivals = {
     ticketFee: 100,
     fund: 50,
     total: 150,
+    dateLabel: "December 1–10, 2026",
+    venue: "The Naga Heritage Village, Kohima",
     color: "#8c2419",
   },
   music: {
@@ -41,15 +43,11 @@ const festivals = {
     ticketFee: 200,
     fund: 50,
     total: 250,
+    dateLabel: "December 2–10, 2026",
+    venue: "The Naga Heritage Village, Kohima",
     color: "#9a1031",
   },
 } as const;
-
-function formatFestivalDate(event?: FestivalEvent) {
-  if (!event?.startDate) return "Dates to be announced";
-  const date = new Date(event.startDate);
-  return Number.isNaN(date.getTime()) ? "Dates to be announced" : date.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-}
 
 export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" }) {
   const festival = festivals[kind];
@@ -65,7 +63,8 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
         const match = events.find((item) => {
           const label = `${item.title || ""} ${item.slug || ""}`.toLowerCase();
           const is2026Event = label.includes("2026") || String(item.startDate || "").startsWith("2026-");
-          return is2026Event && label.includes("hornbill") && (kind === "music"
+          const isLegacyShowcase = String(item._id) === "6ab402a990e6bc7f24d420a2" || label.includes("ticket-to-hornbill-showcase") || label.includes("showcase day1");
+          return !isLegacyShowcase && is2026Event && label.includes("hornbill") && (kind === "music"
             ? label.includes("music")
             : label.includes("festival") && !label.includes("music"));
         });
@@ -95,7 +94,7 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
             {event ? (
               <Link className="hornbill-primary-action" href={`/events/${event._id}/checkout`}><Ticket size={18} /> Book your pass <ArrowRight size={17} /></Link>
             ) : (
-              <span className="hornbill-primary-action" aria-live="polite">{loading ? "Checking ticket availability…" : "Tickets opening soon"}</span>
+              <Link className="hornbill-primary-action" href="/events" aria-live="polite"><Ticket size={18} /> {loading ? "Find tickets" : "Browse available tickets"} <ArrowRight size={17} /></Link>
             )}
             <a className="hornbill-secondary-action" href="#festival-ticket">See ticket details <ArrowRight size={15} /></a>
           </div>
@@ -118,11 +117,11 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
           </div>
           <div className="hornbill-ticket-total"><span>Total per person</span><strong>₹{festival.total}</strong></div>
           <p className="hornbill-fund-note"><ShieldCheck size={15} /> The Festival Sustainability Fund is shown separately in your ticket price.</p>
-          {event && <Link href={`/events/${event._id}`} className="hornbill-details-link">Event details <ArrowRight size={16} /></Link>}
+          {event && <Link href={`/events/${event._id}/checkout`} className="hornbill-details-link">Book this festival <ArrowRight size={16} /></Link>}
         </div>
         <div className="hornbill-date-strip">
-          <div><CalendarDays size={18} /><span>{formatFestivalDate(event)}</span></div>
-          <div><MapPin size={18} /><span>{event?.location?.city || "Kisama Heritage Village, Nagaland"}</span></div>
+          <div><CalendarDays size={18} /><span>{festival.dateLabel}</span></div>
+          <div><MapPin size={18} /><span>{festival.venue}</span></div>
         </div>
       </section>
 

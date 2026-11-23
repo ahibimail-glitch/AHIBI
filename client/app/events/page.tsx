@@ -77,7 +77,7 @@ const getEventHref = (event: Event): string => {
     String((event as any).slug || "") === "ticket-to-hornbill-showcase-day1" ||
     String((event as any).externalBookingUrl || "").includes("/ticket-to-hornbill")
   ) {
-    return "/ticket-to-hornbill";
+    return "/hornbill-festival-2026";
   }
   return `/events/${event._id}`;
 };

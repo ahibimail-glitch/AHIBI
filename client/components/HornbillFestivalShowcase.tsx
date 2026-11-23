@@ -59,7 +59,7 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
                   <span className="hornbill-showcase-price">₹{festival.amount}<small> / person</small></span>
                   <span className="hornbill-showcase-fee">₹{festival.ticketFee} ticket fee <i>+</i> ₹50 Festival Sustainability Fund</span>
                 </span>
-                <span className="hornbill-showcase-cta">Explore event <ArrowUpRight size={18} /></span>
+                <span className="hornbill-showcase-cta">Book now <ArrowUpRight size={18} /></span>
               </span>
             </Link>
           );
