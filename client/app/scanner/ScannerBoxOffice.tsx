@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
 
-type TicketType = { _id: string; name: string; price: number };
+type TicketType = { _id: string; name: string; price: number; zones?: { name: string; onlineAvailable?: number; onlineSoldOut?: boolean }[] };
 type EventItem = { _id: string; title: string; wristbandTrackingEnabled?: boolean; ticketTypes: TicketType[] };
 type SoldBooking = { _id: string; ticketType: string; quantity: number; total: number };
 type Wristband = { bandCode: string; color: string; ticketType: string; ticketUnitIndex: number };
@@ -13,6 +13,7 @@ export default function ScannerBoxOffice({ token, initialEventId = '' }: { token
   const [events, setEvents] = useState<EventItem[]>([]);
   const [eventId, setEventId] = useState('');
   const [ticketTypeId, setTicketTypeId] = useState('');
+  const [zone, setZone] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -25,6 +26,7 @@ export default function ScannerBoxOffice({ token, initialEventId = '' }: { token
   const saleRequestId = useRef('');
   const selectedEvent = events.find((item) => item._id === eventId);
   const selectedTicket = selectedEvent?.ticketTypes.find((item) => item._id === ticketTypeId);
+  const requiresZone = (selectedTicket?.zones?.length || 0) > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +43,7 @@ export default function ScannerBoxOffice({ token, initialEventId = '' }: { token
         const chosenEvent = initialEventId ? initialEvent : loadedEvents[0];
         setEventId(chosenEvent?._id || '');
         setTicketTypeId(chosenEvent?.ticketTypes?.[0]?._id || '');
+        setZone('');
         if (initialEventId && !initialEvent) setError('This event is not assigned to your box-office account. Ask an administrator to update your access.');
       })
       .catch((loadError) => {
@@ -66,7 +69,7 @@ export default function ScannerBoxOffice({ token, initialEventId = '' }: { token
         },
         body: JSON.stringify({
           eventId, ticketTypeId, customerName: name, customerPhone: phone,
-          quantity, modeOfPayment: payment,
+          quantity, modeOfPayment: payment, ...(zone ? { zone } : {}),
         }),
       });
       responseReceived = true;
@@ -115,15 +118,22 @@ export default function ScannerBoxOffice({ token, initialEventId = '' }: { token
               const nextEvent = events.find((item) => item._id === e.target.value);
               setEventId(e.target.value);
               setTicketTypeId(nextEvent?.ticketTypes?.[0]?._id || '');
+              setZone('');
             }} className="mt-1 min-h-11 w-full rounded-lg border border-white/15 bg-slate-950 px-3">
               {events.map((item) => <option key={item._id} value={item._id}>{item.title}</option>)}
             </select>
           </label>
           <label className="block text-sm">Ticket type
-            <select required disabled={busy || saleOutcomeUnknown} value={ticketTypeId} onChange={(e) => setTicketTypeId(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-white/15 bg-slate-950 px-3">
+            <select required disabled={busy || saleOutcomeUnknown} value={ticketTypeId} onChange={(e) => { setTicketTypeId(e.target.value); setZone(''); }} className="mt-1 min-h-11 w-full rounded-lg border border-white/15 bg-slate-950 px-3">
               {(selectedEvent?.ticketTypes || []).map((item) => <option key={item._id} value={item._id}>{item.name} - INR {item.price}</option>)}
             </select>
           </label>
+          {requiresZone && <label className="block text-sm">General seating zone
+            <select required disabled={busy || saleOutcomeUnknown} value={zone} onChange={(e) => setZone(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-white/15 bg-slate-950 px-3">
+              <option value="">Choose a zone</option>
+              {selectedTicket?.zones?.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
+            </select>
+          </label>}
           <label className="block text-sm">Attendee name
             <input required disabled={busy || saleOutcomeUnknown} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-white/15 bg-slate-950 px-3" />
           </label>
@@ -141,7 +151,7 @@ export default function ScannerBoxOffice({ token, initialEventId = '' }: { token
             </label>
           </div>
           <p className="text-sm text-slate-300">Total: INR {(selectedTicket?.price || 0) * quantity}</p>
-          <button disabled={busy || !eventId || !ticketTypeId} className="min-h-12 w-full rounded-xl bg-white font-semibold text-slate-950 disabled:opacity-50">
+          <button disabled={busy || !eventId || !ticketTypeId || (requiresZone && !zone)} className="min-h-12 w-full rounded-xl bg-white font-semibold text-slate-950 disabled:opacity-50">
             {busy ? 'Recording sale...' : saleOutcomeUnknown ? 'Retry same sale' : 'Record box-office sale'}
           </button>
         </form>
