@@ -212,6 +212,15 @@ export default function CheckoutPage() {
 
   const isHMFEvent = HMF_id.includes(eventId);
   const isHFEvent = HF_id.includes(eventId);
+  const eventTitleForPricing = String(event?.title || "").toLowerCase();
+  const is2026HornbillEvent = eventTitleForPricing.includes("2026") || String(event?.startDate || "").startsWith("2026-");
+  const isHornbillMusicFestival = is2026HornbillEvent && eventTitleForPricing.includes("hornbill") && eventTitleForPricing.includes("music");
+  const isHornbillDayFestival = is2026HornbillEvent && eventTitleForPricing.includes("hornbill") && eventTitleForPricing.includes("festival") && !isHornbillMusicFestival;
+  const hornbillFeeSplit = isHornbillMusicFestival
+    ? { ticketFee: 200, sustainability: 50, total: 250 }
+    : isHornbillDayFestival
+      ? { ticketFee: 100, sustainability: 50, total: 150 }
+      : null;
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
   const isAdmitEvent = eventId === "6ab29573107ecaa252c1d3be";
   const CHEESE_EVENT_ID = "6a28ecaba70d7b412aa9efb4";
@@ -1671,7 +1680,27 @@ export default function CheckoutPage() {
                   )}
 
                   {!isFreeEvent && subtotalAmount > 0 && (
-                    isNuscHomeMatchEvent ? (
+                    hornbillFeeSplit ? (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{isHornbillMusicFestival ? "Hornbill Music Festival" : "Hornbill Festival"}</p>
+                            <p className="text-xs text-gray-600">Transparent price breakdown · {totalTicketQuantity} {totalTicketQuantity === 1 ? "ticket" : "tickets"}</p>
+                          </div>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">Festival pass</span>
+                        </div>
+                        {Array.from(selectedTickets.values()).map(({ ticket, quantity }) => (
+                          <div key={ticket._id} className="border-t border-amber-200 pt-2.5">
+                            <p className="mb-1.5 truncate text-xs font-medium text-gray-700">{ticket.name}</p>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <div className="flex justify-between"><span>Ticket fee ({quantity} × ₹{hornbillFeeSplit.ticketFee})</span><span>₹{(quantity * hornbillFeeSplit.ticketFee).toLocaleString("en-IN")}</span></div>
+                              <div className="flex justify-between"><span>Festival Sustainability Fund ({quantity} × ₹50)</span><span>₹{(quantity * hornbillFeeSplit.sustainability).toLocaleString("en-IN")}</span></div>
+                              <div className="flex justify-between border-t border-dashed border-amber-200 pt-1.5 font-semibold text-gray-900"><span>Festival ticket total</span><span>₹{(quantity * hornbillFeeSplit.total).toLocaleString("en-IN")}</span></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : isNuscHomeMatchEvent ? (
                       <NuscPriceBreakdown
                         compact
                         items={Array.from(selectedTickets.values()).map(({ ticket, quantity }) => ({

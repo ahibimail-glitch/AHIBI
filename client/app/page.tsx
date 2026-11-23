@@ -14,6 +14,7 @@ import type { EventsResponse, Event } from "@/types/event"
 import StickyHeroCards from "@/components/StickyHeroCards"
 import { format } from "date-fns"
 import { getNextNuscMatchDate } from "@/lib/nuscHomeMatches"
+import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase"
 
 type PublicArtist = {
   _id: string
@@ -773,6 +774,8 @@ function LegacyHomePage() {
 
     
 
+
+      <HornbillFestivalShowcase />
 
       <section className=" bg-white">
         <div className="container mx-auto px-3 sm:px-4">

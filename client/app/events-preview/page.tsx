@@ -4,6 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { ArrowRight, CalendarDays, ChevronRight, Heart, MapPin, Search, SlidersHorizontal } from "lucide-react"
+import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase"
 import type { Event, EventsResponse } from "@/types/event"
 import "./events-preview.css"
 
@@ -219,6 +220,8 @@ export default function EventsPreviewPage() {
           </div>
         </div>
       </section>
+
+      <HornbillFestivalShowcase compact />
 
       <section className="mx-auto max-w-[1280px] px-5 pb-10 lg:px-8">
         <div className="mb-6 flex items-end justify-between"><div><p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-[#f04438]">Everything happening around you</p><h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">What are you looking for?</h2></div><span className="hidden text-sm text-black/45 sm:block">One platform, every experience</span></div>
