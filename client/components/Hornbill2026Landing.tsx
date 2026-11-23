@@ -71,7 +71,7 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
         });
         if (active) setEvent(match || null);
       })
-      .catch(() => undefined)
+      .catch((_error: unknown): null => null)
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [kind]);
