@@ -16,8 +16,9 @@ export default function ScannerPortalPage() {
   const [checking, setChecking] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [sessionRetry, setSessionRetry] = useState(0);
-  const [eventAssignments, setEventAssignments] = useState<Array<{ event: string; eventTitle: string; canScan: boolean; canSellOnsite: boolean; canViewCounts: boolean }> | null>(null);
+  const [eventAssignments, setEventAssignments] = useState<Array<{ event: string; eventTitle: string; canScan: boolean; canIssueWristbands: boolean; canSellOnsite: boolean; canViewCounts: boolean }> | null>(null);
   const [workMode, setWorkMode] = useState<'scan' | 'box-office'>('scan');
+  const [launchTarget, setLaunchTarget] = useState<{ eventId: string; mode: 'scan' | 'box-office'; autoStart: boolean }>({ eventId: '', mode: 'scan', autoStart: false });
 
   const signOut = useCallback(() => {
     localStorage.removeItem('scanner_token');
@@ -32,6 +33,15 @@ export default function ScannerPortalPage() {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const storedToken = localStorage.getItem('scanner_token') || '';
     const storedUsername = localStorage.getItem('scanner_username') || '';
+    const routeParams = new URLSearchParams(window.location.search);
+    const requestedEvent = routeParams.get('event') || '';
+    const requestedMode = routeParams.get('mode') === 'box-office' ? 'box-office' : 'scan';
+    const requestedAutoStart = routeParams.get('autostart') === '1' && requestedMode === 'scan';
+    setLaunchTarget({
+      eventId: /^[a-f\d]{24}$/i.test(requestedEvent) ? requestedEvent : '',
+      mode: requestedMode,
+      autoStart: requestedAutoStart,
+    });
 
     if (!storedToken) {
       router.replace('/scanner/login');
@@ -58,8 +68,14 @@ export default function ScannerPortalPage() {
         const result = await response.json();
         if (!cancelled) {
           setUsername(result.data.username);
-          setEventAssignments(Array.isArray(result.data.eventAssignments) ? result.data.eventAssignments : null);
-          if (Array.isArray(result.data.eventAssignments) && !result.data.eventAssignments.some((item: { canScan: boolean }) => item.canScan) && result.data.eventAssignments.some((item: { canSellOnsite: boolean }) => item.canSellOnsite)) setWorkMode('box-office');
+          const assignments = Array.isArray(result.data.eventAssignments) ? result.data.eventAssignments : null;
+          setEventAssignments(assignments);
+          const requestedAssignment = assignments?.find((item: { event: string }) => item.event === requestedEvent);
+          const requestedPermission = requestedMode === 'scan'
+            ? assignments == null || Boolean(requestedAssignment?.canScan)
+            : Boolean(requestedAssignment?.canSellOnsite);
+          if (requestedEvent && requestedPermission) setWorkMode(requestedMode);
+          else if (assignments && !assignments.some((item: { canScan: boolean }) => item.canScan) && assignments.some((item: { canSellOnsite: boolean }) => item.canSellOnsite)) setWorkMode('box-office');
         }
       } catch {
         if (!cancelled) {
@@ -150,8 +166,8 @@ export default function ScannerPortalPage() {
       </header>
 
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pt-5">
-        {workMode === 'box-office' && canSellOnsite ? <ScannerBoxOffice token={token} /> : canScan ? <>
-          <QrScanner scannerMode scannerToken={token} onSessionExpired={signOut} />
+        {workMode === 'box-office' && canSellOnsite ? <ScannerBoxOffice token={token} initialEventId={launchTarget.eventId} /> : canScan ? <>
+          <QrScanner scannerMode scannerToken={token} onSessionExpired={signOut} initialEventId={launchTarget.eventId} autoStart={launchTarget.autoStart} />
           <p className="mt-3 text-center text-xs leading-5 text-slate-500 sm:mt-4">Scan the ticket QR, check the ticket result, then confirm entry.</p>
         </> : eventAssignments?.some((item) => item.canViewCounts) ? <p className="rounded-xl border border-white/10 bg-slate-900 p-5 text-center text-sm text-slate-300">This account can view the wristband counts shown below.</p> : <p className="rounded-xl border border-white/10 bg-slate-900 p-5 text-center text-sm text-slate-300">No scanning or box-office access has been assigned to this account. Contact an administrator.</p>}
         {eventAssignments && <ScannerWristbandCounts token={token} assignments={eventAssignments} />}

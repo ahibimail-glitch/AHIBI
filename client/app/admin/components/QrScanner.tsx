@@ -56,6 +56,8 @@ interface QrScannerProps {
   scannerMode?: boolean;
   scannerToken?: string;
   onSessionExpired?: () => void;
+  initialEventId?: string;
+  autoStart?: boolean;
 }
 
 const SCANNER_REQUEST_TIMEOUT_MS = 15000;
@@ -94,7 +96,7 @@ function isTimeoutError(error: any) {
     /timeout/i.test(error?.message || '');
 }
 
-const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }: QrScannerProps) => {
+const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired, initialEventId = '', autoStart = false }: QrScannerProps) => {
   const [activeTab, setActiveTab] = useState<string>("scan");
   const [manualCode, setManualCode] = useState<string>("");
   const [cameraActive, setCameraActive] = useState<boolean>(false);
@@ -128,6 +130,7 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
   const checkInInFlightRef = useRef(false);
   const checkOutInFlightRef = useRef(false);
   const pendingRenderMeasureRef = useRef<{ name: string; startedAt: number } | null>(null);
+  const autoStartAttemptedRef = useRef(false);
 
   useEffect(() => {
     selectedEventRef.current = selectedEvent;
@@ -205,7 +208,17 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
         if (cancelled) return;
         measureNextRender('event-list-render');
         setEvents(loadedEvents);
-        if (loadedEvents.length === 1) setSelectedEvent((current) => current || loadedEvents[0]._id);
+        if (initialEventId) {
+          const requestedEvent = loadedEvents.find((event) => event._id === initialEventId);
+          if (requestedEvent) {
+            setSelectedEvent(requestedEvent._id);
+          } else {
+            setSelectedEvent(null);
+            setEventsLoadError('This event is not assigned to your account or is no longer available. Ask an administrator to update your access.');
+          }
+        } else if (loadedEvents.length === 1) {
+          setSelectedEvent((current) => current || loadedEvents[0]._id);
+        }
       } catch (err: any) {
         if (cancelled) return;
         const message = isTimeoutError(err)
@@ -225,7 +238,7 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
       controller.abort();
       if (timeout) clearTimeout(timeout);
     };
-  }, [onSessionExpired, eventsRetry, scannerMode, scannerToken, measureNextRender]);
+  }, [onSessionExpired, eventsRetry, scannerMode, scannerToken, measureNextRender, initialEventId]);
 
   useEffect(() => {
     if (!scannerMode || activeTab !== 'history' || !selectedEvent) return;
@@ -382,6 +395,12 @@ const QrScanner = ({ scannerMode = false, scannerToken = '', onSessionExpired }:
     setUncertainCheckOut(false);
     clearError();
   };
+
+  useEffect(() => {
+    if (!scannerMode || !autoStart || eventsLoading || !selectedEvent || autoStartAttemptedRef.current) return;
+    autoStartAttemptedRef.current = true;
+    startRealScan();
+  }, [scannerMode, autoStart, eventsLoading, selectedEvent, startRealScan]);
 
   // Handle QR scanner errors
   const handleScannerError = (err: any) => {

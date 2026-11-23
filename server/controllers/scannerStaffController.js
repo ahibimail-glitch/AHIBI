@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const ScannerStaff = require('../models/ScannerStaff');
+const ScannerActivity = require('../models/ScannerActivity');
+const Event = require('../models/Event');
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{3,40}$/;
 
@@ -22,6 +24,65 @@ exports.list = async (_req, res) => {
   } catch (error) {
     console.error('Unable to list scanner staff:', error);
     return res.status(500).json({ success: false, message: 'Unable to load scanner accounts.' });
+  }
+};
+
+exports.activity = async (_req, res) => {
+  try {
+    const periodStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const match = { createdAt: { $gte: periodStart } };
+    const [summaryRows, byStaff, byEvent, recent] = await Promise.all([
+      ScannerActivity.aggregate([
+        { $match: match },
+        { $group: {
+          _id: null,
+          total: { $sum: 1 },
+          errors: { $sum: { $cond: [{ $eq: ['$outcome', 'error'] }, 1, 0] } },
+          averageDurationMs: { $avg: '$durationMs' },
+        } },
+      ]),
+      ScannerActivity.aggregate([
+        { $match: { ...match, scannerStaff: { $exists: true } } },
+        { $group: { _id: '$scannerStaff', total: { $sum: 1 }, errors: { $sum: { $cond: [{ $eq: ['$outcome', 'error'] }, 1, 0] } } } },
+        { $sort: { total: -1 } }, { $limit: 20 },
+        { $lookup: { from: ScannerStaff.collection.name, localField: '_id', foreignField: '_id', as: 'staff' } },
+        { $unwind: { path: '$staff', preserveNullAndEmptyArrays: true } },
+        { $project: { _id: 0, staffId: '$_id', username: { $ifNull: ['$staff.username', 'Disabled or deleted account'] }, total: 1, errors: 1 } },
+      ]),
+      ScannerActivity.aggregate([
+        { $match: { ...match, event: { $exists: true } } },
+        { $group: { _id: '$event', total: { $sum: 1 }, errors: { $sum: { $cond: [{ $eq: ['$outcome', 'error'] }, 1, 0] } } } },
+        { $sort: { total: -1 } }, { $limit: 20 },
+        { $lookup: { from: Event.collection.name, localField: '_id', foreignField: '_id', as: 'event' } },
+        { $unwind: { path: '$event', preserveNullAndEmptyArrays: true } },
+        { $project: { _id: 0, eventId: '$_id', title: { $ifNull: ['$event.title', 'Deleted event'] }, total: 1, errors: 1 } },
+      ]),
+      ScannerActivity.find(match).sort({ createdAt: -1 }).limit(100)
+        .populate({ path: 'scannerStaff', select: 'username' })
+        .populate({ path: 'event', select: 'title' })
+        .lean(),
+    ]);
+    const summary = summaryRows[0] || { total: 0, errors: 0, averageDurationMs: 0 };
+    return res.json({ success: true, data: {
+      periodStart,
+      summary: { total: summary.total, errors: summary.errors, averageDurationMs: Math.round(summary.averageDurationMs || 0) },
+      byStaff,
+      byEvent,
+      recent: recent.map((item) => ({
+        id: String(item._id),
+        username: item.scannerStaff?.username || 'Unverified account',
+        eventTitle: item.event?.title || 'No event recorded',
+        action: item.action,
+        outcome: item.outcome,
+        statusCode: item.statusCode,
+        errorCode: item.errorCode || '',
+        durationMs: Math.round(item.durationMs || 0),
+        createdAt: item.createdAt,
+      })),
+    } });
+  } catch (error) {
+    console.error('Unable to load scanner activity:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load scanner activity.' });
   }
 };
 

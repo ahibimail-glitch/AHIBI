@@ -15,7 +15,18 @@ export default function ScannerLoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('scanner_token')) router.replace('/scanner');
+    const params = new URLSearchParams(window.location.search);
+    const invitedUsername = params.get('username');
+    if (invitedUsername) setUsername(invitedUsername.slice(0, 40));
+    if (localStorage.getItem('scanner_token')) {
+      const eventId = params.get('event') || '';
+      const mode = params.get('mode') === 'box-office' ? 'box-office' : 'scan';
+      const destination = new URLSearchParams();
+      if (/^[a-f\d]{24}$/i.test(eventId)) destination.set('event', eventId);
+      destination.set('mode', mode);
+      if (mode === 'scan') destination.set('autostart', '1');
+      router.replace(`/scanner?${destination.toString()}`);
+    }
   }, [router]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -34,7 +45,14 @@ export default function ScannerLoginPage() {
 
       localStorage.setItem('scanner_token', result.data.token);
       localStorage.setItem('scanner_username', result.data.user.username);
-      router.replace('/scanner');
+      const params = new URLSearchParams(window.location.search);
+      const eventId = params.get('event') || '';
+      const mode = params.get('mode') === 'box-office' ? 'box-office' : 'scan';
+      const destination = new URLSearchParams();
+      if (/^[a-f\d]{24}$/i.test(eventId)) destination.set('event', eventId);
+      destination.set('mode', mode);
+      if (mode === 'scan') destination.set('autostart', '1');
+      router.replace(`/scanner?${destination.toString()}`);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'Unable to sign in.');
     } finally {
