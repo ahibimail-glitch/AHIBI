@@ -22,6 +22,12 @@ import {
 import { Save, RefreshCw, Bell, Shield, Globe } from "lucide-react";
 
 export default function Settings() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [generalSettings, setGeneralSettings] = useState({
     siteName: "Ahibi Events",
     siteDescription: "Your one-stop platform for event discovery and booking",
@@ -51,6 +57,48 @@ export default function Settings() {
       notificationSettings,
     });
     alert("Settings saved successfully!");
+  };
+
+  const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordMessage("");
+    setPasswordError("");
+    if (newPassword !== confirmPassword) {
+      setPasswordError("The new passwords do not match.");
+      return;
+    }
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      setPasswordError("Your admin session is missing. Sign in again and retry.");
+      return;
+    }
+
+    setPasswordBusy(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/api/admin/password`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Unable to change password.");
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMessage("Password changed. All admin sessions are being signed out; sign in with your new password.");
+      window.setTimeout(() => {
+        localStorage.removeItem("admin_token");
+        localStorage.removeItem("admin_id");
+        localStorage.removeItem("admin_username");
+        window.location.assign("/admin/login");
+      }, 1800);
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "Unable to change password.");
+    } finally {
+      setPasswordBusy(false);
+    }
   };
 
   return (
@@ -219,6 +267,30 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <form onSubmit={handleChangePassword} className="max-w-xl space-y-4 rounded-lg border border-gray-200 p-4">
+                <div>
+                  <h3 className="font-semibold">Change admin password</h3>
+                  <p className="mt-1 text-sm text-gray-500">Use a private password with at least 12 characters. Changing it signs out all admin sessions.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="adminCurrentPassword">Current password</Label>
+                  <Input id="adminCurrentPassword" type="password" autoComplete="current-password" required value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="adminNewPassword">New password</Label>
+                  <Input id="adminNewPassword" type="password" autoComplete="new-password" minLength={12} maxLength={72} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="adminConfirmPassword">Confirm new password</Label>
+                  <Input id="adminConfirmPassword" type="password" autoComplete="new-password" minLength={12} maxLength={72} required value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+                </div>
+                {passwordError && <p role="alert" className="text-sm text-red-600">{passwordError}</p>}
+                {passwordMessage && <p role="status" className="text-sm text-green-700">{passwordMessage}</p>}
+                <Button type="submit" disabled={passwordBusy || newPassword.length < 12 || !currentPassword || !confirmPassword}>
+                  {passwordBusy ? "Changing password…" : "Change password"}
+                </Button>
+              </form>
+
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="twoFactorAuth">Two-Factor Authentication</Label>
