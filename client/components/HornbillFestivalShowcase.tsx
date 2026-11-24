@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Sparkles } from "lucide-react";
 
@@ -28,11 +27,10 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
     <section className={`hornbill-showcase ${compact ? "hornbill-showcase-compact" : ""}`} aria-labelledby="hornbill-showcase-title">
       <div className="hornbill-showcase-heading">
         <div>
-          <span className="hornbill-kicker"><Sparkles size={14} /> NAGALAND, IN FULL COLOUR</span>
+          <span className="hornbill-kicker"><Sparkles size={14} aria-hidden="true" /><span>NAGALAND, IN FULL COLOUR</span></span>
           <h2 id="hornbill-showcase-title">Two festivals. Two ways to feel it.</h2>
           <p>Choose your festival and get your pass. Each ticket price is shown clearly before checkout.</p>
         </div>
-        <Image src="/images/Logo.png" alt="AHIBI" width={116} height={40} className="hornbill-ahibi-logo" />
       </div>
 
       <div className="hornbill-showcase-grid">
@@ -58,10 +56,11 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
         .hornbill-showcase-compact{padding-top:34px;padding-bottom:34px}
         .hornbill-showcase-heading{max-width:1440px;margin:0 auto 25px;display:flex;justify-content:space-between;align-items:flex-end;gap:18px}
         .hornbill-kicker{display:inline-flex;align-items:center;gap:7px;color:#b21c1c;font-size:10px;font-weight:800;letter-spacing:.16em}
+        .hornbill-kicker svg{color:#df2344;flex:none}
+        .hornbill-kicker span{background:linear-gradient(100deg,#c91835 0%,#f28c28 27%,#269b62 54%,#2767bd 77%,#7c3aed 100%);background-clip:text;-webkit-background-clip:text;color:transparent}
         .hornbill-showcase-heading h2{font-size:clamp(25px,4vw,42px);letter-spacing:-.045em;line-height:1.04;margin:12px 0 7px}
         .hornbill-showcase-heading p{margin:0;color:#686868;font-size:14px;line-height:1.5}
-        .hornbill-ahibi-logo{width:clamp(76px,9vw,116px);height:auto;object-fit:contain;flex:none}
-        .hornbill-showcase-grid{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+                .hornbill-showcase-grid{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:18px}
         .hornbill-showcase-card{position:relative;overflow:hidden;display:flex;flex-direction:column;border-radius:22px;background:#fff;color:#171717;isolation:isolate;box-shadow:0 12px 32px #33100f18;transform:translateZ(0);transition:transform .25s,box-shadow .25s}
         .hornbill-showcase-card:hover{transform:translateY(-4px);box-shadow:0 20px 45px #33100f25}
         .hornbill-showcase-art{position:relative;display:block;width:100%;aspect-ratio:2/1;overflow:hidden;background:#3f1714}
@@ -74,7 +73,7 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
         .hornbill-showcase-cta{display:inline-flex;align-items:center;gap:9px;margin-top:15px;padding:10px 14px;border-radius:999px;background:#ed1c24;color:white;font-size:11px;font-weight:800;transition:gap .2s,background .2s}
         .hornbill-showcase-card:hover .hornbill-showcase-cta{gap:14px;background:#ff3037}
         @keyframes hornbill-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @media(max-width:700px){.hornbill-showcase-heading{align-items:flex-start}.hornbill-ahibi-logo{display:none}.hornbill-showcase-grid{grid-template-columns:1fr;gap:13px}.hornbill-showcase-card{border-radius:17px}.hornbill-showcase-art{aspect-ratio:2/3}.hornbill-showcase-copy{padding:16px 18px 18px}.hornbill-showcase-copy strong{font-size:clamp(26px,8vw,35px)}}
+        @media(max-width:700px){.hornbill-showcase-heading{align-items:flex-start}.hornbill-showcase-grid{grid-template-columns:1fr;gap:13px}.hornbill-showcase-card{border-radius:17px}.hornbill-showcase-art{aspect-ratio:2/3}.hornbill-showcase-copy{padding:16px 18px 18px}.hornbill-showcase-copy strong{font-size:clamp(26px,8vw,35px)}}
         @media(prefers-reduced-motion:reduce){.hornbill-showcase-card,.hornbill-showcase-art img,.hornbill-showcase-copy,.hornbill-showcase-cta{animation:none!important;transition:none!important}}
       `}</style>
     </section>
