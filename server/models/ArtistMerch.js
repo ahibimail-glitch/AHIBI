@@ -77,6 +77,25 @@ const MerchOrderSchema = new mongoose.Schema(
       index: true
     },
     source: { type: String, default: 'hornbill-merch' },
+    shippingStatus: {
+      type: String,
+      enum: ['confirmed', 'processing', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned', 'cancelled'],
+      default: 'confirmed',
+      index: true
+    },
+    courierName: { type: String, default: '' },
+    awbNumber: { type: String, default: '', index: true },
+    trackingUrl: { type: String, default: '' },
+    shippingRemarks: { type: String, default: '' },
+    shippedAt: { type: Date },
+    deliveredAt: { type: Date },
+    statusHistory: [
+      {
+        status: { type: String },
+        remarks: { type: String },
+        updatedAt: { type: Date, default: Date.now }
+      }
+    ],
     metadata: { type: mongoose.Schema.Types.Mixed },
     cartSnapshot: { type: mongoose.Schema.Types.Mixed },
     payment: { type: PaymentSnapshotSchema }
