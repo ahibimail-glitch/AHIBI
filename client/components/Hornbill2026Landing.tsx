@@ -7,23 +7,9 @@ import { ArrowRight, CalendarDays, MapPin, ShieldCheck, Ticket } from "lucide-re
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 
-type FestivalEvent = {
-  _id: string;
-  title: string;
-  slug?: string;
-  banner?: string;
-  startDate?: string;
-  endDate?: string;
-  location?: { address?: string; city?: string; state?: string };
-  ticketTypes?: Array<{ price?: number }>;
-};
-
 const festivals = {
   day: {
     title: "Hornbill Festival",
-    subtitle: "A celebration of Nagaland's living cultures",
-    eyebrow: "THE DAYTIME FESTIVAL · KISAMA, NAGALAND",
-    copy: "Meet the makers, flavours, performances and traditions that bring Nagaland together. Come curious and take home a little of the hills.",
     image: "/images/hornbill-2026/hornbill-day-desktop.jpg",
     mobileImage: "/images/hornbill-2026/hornbill-day-mobile.jpg",
     ticketFee: 100,
@@ -35,9 +21,6 @@ const festivals = {
   },
   music: {
     title: "Hornbill Music Festival",
-    subtitle: "A night for the sound of Nagaland",
-    eyebrow: "THE NIGHTTIME LIVE EXPERIENCE · KISAMA, NAGALAND",
-    copy: "From the first note to the last encore, come together for a night filled with live music, new voices and the unmistakable energy of the Hornbill stage.",
     image: "/images/hornbill-2026/hornbill-music-desktop.jpg",
     mobileImage: "/images/hornbill-2026/hornbill-music-mobile.jpg",
     ticketFee: 200,
@@ -51,29 +34,12 @@ const festivals = {
 
 export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" }) {
   const festival = festivals[kind];
-  const [event, setEvent] = useState<FestivalEvent | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [bookingUnavailable, setBookingUnavailable] = useState(false);
+  const bookingHref = `/api/hornbill-booking/${kind}`;
 
   useEffect(() => {
-    let active = true;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/api/events?limit=1000&includePast=true`)
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload) => {
-        const events = Array.isArray(payload?.data?.events) ? payload.data.events as FestivalEvent[] : [];
-        const match = events.find((item) => {
-          const label = `${item.title || ""} ${item.slug || ""}`.toLowerCase();
-          const is2026Event = label.includes("2026") || String(item.startDate || "").startsWith("2026-");
-          const isLegacyShowcase = String(item._id) === "6ab402a990e6bc7f24d420a2" || label.includes("ticket-to-hornbill-showcase") || label.includes("showcase day1");
-          return !isLegacyShowcase && is2026Event && label.includes("hornbill") && (kind === "music"
-            ? label.includes("music")
-            : label.includes("festival") && !label.includes("music"));
-        });
-        if (active) setEvent(match || null);
-      })
-      .catch((_error: unknown): null => null)
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [kind]);
+    setBookingUnavailable(new URLSearchParams(window.location.search).get("booking") === "unavailable");
+  }, []);
 
   return (
     <main className="hornbill-landing" style={{ "--festival-color": festival.color } as CSSProperties}>
@@ -84,32 +50,23 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
           <img src={festival.image} alt={`${festival.title} 2026 official event banner`} fetchPriority="high" />
         </picture>
         <div className="hornbill-landing-overlay" />
-        <div className="hornbill-landing-tag"><span /> 2026 · NAGALAND</div>
         <div className="hornbill-landing-intro">
-          <p>{festival.eyebrow}</p>
           <h1 id="festival-title">{festival.title}</h1>
-          <h2>{festival.subtitle}</h2>
-          <p className="hornbill-landing-copy">{festival.copy}</p>
+          {bookingUnavailable && <p className="hornbill-booking-unavailable" role="status">Online booking is being set up. Please check back shortly.</p>}
           <div className="hornbill-landing-actions">
-            {event ? (
-              <Link className="hornbill-primary-action" href={`/events/${event._id}/checkout`}><Ticket size={18} /> Book your pass <ArrowRight size={17} /></Link>
-            ) : (
-              <Link className="hornbill-primary-action" href="/events" aria-live="polite"><Ticket size={18} /> {loading ? "Find tickets" : "Browse available tickets"} <ArrowRight size={17} /></Link>
-            )}
-            <a className="hornbill-secondary-action" href="#festival-ticket">See ticket details <ArrowRight size={15} /></a>
+            <Link className="hornbill-primary-action" href={bookingHref}><Ticket size={18} /> Book now <ArrowRight size={17} /></Link>
           </div>
         </div>
-        <div className="hornbill-float-mark" aria-hidden="true">{kind === "music" ? "♫" : "✳"}</div>
       </section>
 
       <section className="hornbill-ticket-section" id="festival-ticket">
         <div className="hornbill-ticket-heading">
           <span>ONE PRICE FOR EVERYONE</span>
-          <h2>Your festival pass</h2>
-          <p>Local, domestic and international visitors pay the same ticket price.</p>
+          <h2>Choose your festival ticket</h2>
+          <p>Local, domestic and international visitors pay the same price. Choose ticket quantity at checkout.</p>
         </div>
         <div className="hornbill-ticket-card">
-          <div className="hornbill-ticket-card-top"><span><Ticket size={17} /> {kind === "music" ? "Music festival entry" : "Festival entry"}</span><span>Per person</span></div>
+          <div className="hornbill-ticket-card-top"><span><Ticket size={17} /> General admission</span><span>1 person</span></div>
           <div className="hornbill-ticket-amount">₹{festival.total}</div>
           <div className="hornbill-ticket-lines">
             <div><span>Ticket fee</span><strong>₹{festival.ticketFee}</strong></div>
@@ -117,7 +74,7 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
           </div>
           <div className="hornbill-ticket-total"><span>Total per person</span><strong>₹{festival.total}</strong></div>
           <p className="hornbill-fund-note"><ShieldCheck size={15} /> The Festival Sustainability Fund is shown separately in your ticket price.</p>
-          {event && <Link href={`/events/${event._id}/checkout`} className="hornbill-details-link">Book this festival <ArrowRight size={16} /></Link>}
+          <Link href={bookingHref} className="hornbill-details-link">Book now — ₹{festival.total} per person <ArrowRight size={16} /></Link>
         </div>
         <div className="hornbill-date-strip">
           <div><CalendarDays size={18} /><span>{festival.dateLabel}</span></div>
@@ -139,15 +96,13 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
         .hornbill-landing-tag{position:absolute;top:35px;left:clamp(22px,7vw,100px);display:flex;align-items:center;gap:9px;color:#fff;font-size:10px;font-weight:800;letter-spacing:.17em}
         .hornbill-landing-tag span{width:8px;height:8px;border-radius:50%;background:#ffd66e;box-shadow:0 0 15px #ffd66e;animation:glow 2s ease-in-out infinite}
         .hornbill-landing-intro{position:relative;max-width:780px;padding:145px clamp(22px,7vw,100px) 80px;color:white;animation:festival-rise .8s .15s both}
-        .hornbill-landing-intro>p:first-child{font-size:10px;font-weight:800;letter-spacing:.18em;color:#ffd27d}
         .hornbill-landing-intro h1{margin:15px 0 8px;font-size:clamp(48px,8.2vw,112px);line-height:.91;letter-spacing:-.075em;text-wrap:balance}
-        .hornbill-landing-intro h2{margin:0;font-size:clamp(19px,2.3vw,27px);font-weight:500;letter-spacing:-.025em;color:#fffde9}
-        .hornbill-landing-copy{max-width:550px;margin:19px 0 0;color:#ffffffdf;font-size:15px;line-height:1.65}
         .hornbill-landing-actions{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:27px}
         .hornbill-primary-action{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:999px;padding:15px 19px;background:#ed1c24;color:white;font-size:13px;font-weight:800;text-decoration:none;box-shadow:0 10px 35px #ed1c2444;transition:transform .2s,box-shadow .2s}
         a.hornbill-primary-action:hover{transform:translateY(-3px);box-shadow:0 14px 40px #ed1c2466}
-        .hornbill-secondary-action{display:inline-flex;align-items:center;gap:8px;color:white;font-size:12px;font-weight:700;text-decoration:none;border-bottom:1px solid #ffffff70;padding:8px 0}
-        .hornbill-float-mark{position:absolute;right:8%;top:21%;display:grid;place-items:center;width:90px;height:90px;border:1px solid #ffffff66;border-radius:50%;color:#fff;font-size:40px;animation:festival-float 4s ease-in-out infinite;box-shadow:0 0 0 16px #ffffff12,0 0 0 32px #ffffff09}
+
+        .hornbill-booking-unavailable{display:inline-flex;align-items:center;min-height:48px;border-radius:999px;padding:12px 18px;background:#2c1715d9;color:#fff;font-size:13px;font-weight:700}
+
         .hornbill-ticket-section{max-width:1100px;margin:auto;padding:clamp(62px,9vw,112px) 22px}
         .hornbill-ticket-heading{text-align:center;margin-bottom:32px}
         .hornbill-ticket-heading>span{color:var(--festival-color);font-size:10px;font-weight:850;letter-spacing:.18em}
@@ -171,11 +126,9 @@ export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" })
         .hornbill-separate-note img{width:82px;height:auto;object-fit:contain;flex:none}
         .hornbill-separate-note p{max-width:520px;line-height:1.5}
         @keyframes festival-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes festival-float{50%{transform:translateY(-11px) rotate(5deg)}}
         @keyframes festival-reveal{from{opacity:.6;transform:scale(1.035)}to{opacity:1;transform:scale(1)}}
-        @keyframes glow{50%{box-shadow:0 0 25px #ffd66e}}
-        @media(max-width:640px){.hornbill-landing-hero{min-height:100svh;max-height:900px}.hornbill-landing-overlay{background:linear-gradient(0deg,#100706df 4%,#1508066b 52%,#17090610 100%)}.hornbill-landing-intro{padding:160px 22px 58px}.hornbill-landing-tag{top:22px;left:22px}.hornbill-float-mark{width:54px;height:54px;right:23px;top:15%;font-size:25px;box-shadow:0 0 0 10px #ffffff12,0 0 0 20px #ffffff09}.hornbill-landing-copy{font-size:14px}.hornbill-ticket-section{padding-top:58px}.hornbill-separate-note{align-items:flex-start;justify-content:flex-start}}
-        @media(prefers-reduced-motion:reduce){.hornbill-landing-banner img,.hornbill-landing-intro,.hornbill-float-mark,.hornbill-ticket-card,.hornbill-landing-tag span{animation:none!important;transition:none!important}}
+        @media(max-width:640px){.hornbill-landing-hero{min-height:100svh;max-height:900px}.hornbill-landing-overlay{background:linear-gradient(0deg,#100706df 4%,#1508066b 52%,#17090610 100%)}.hornbill-landing-intro{padding:160px 22px 58px}.hornbill-ticket-section{padding-top:58px}.hornbill-separate-note{align-items:flex-start;justify-content:flex-start}}
+        @media(prefers-reduced-motion:reduce){.hornbill-landing-banner img,.hornbill-landing-intro,.hornbill-ticket-card{animation:none!important;transition:none!important}}
       `}</style>
       <Footer />
     </main>

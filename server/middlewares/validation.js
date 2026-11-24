@@ -52,10 +52,12 @@ const validateEvent = [
     }
     return true;
   }),
-  check('ticketTypes.*.quantity', 'Ticket quantity is required and must be a number').custom((value, { req }) => {
+    check('ticketTypes.*.quantity', 'Ticket quantity is required and must be a number').custom((value, { req, path }) => {
     if (req.body.isFreeEvent) return true;
-    if (!Number.isInteger(value) || value < 1) {
-      throw new Error('Ticket quantity must be a positive integer');
+      const ticketIndex = Number(String(path).match(/ticketTypes(?:\.|\[)(\d+)/)?.[1]);
+      const unlimited = Number.isInteger(ticketIndex) && req.body.ticketTypes?.[ticketIndex]?.unlimited === true;
+      if (!Number.isInteger(value) || value < (unlimited ? 0 : 1)) {
+        throw new Error(unlimited ? 'Unlimited ticket quantity must be zero' : 'Ticket quantity must be a positive integer');
     }
     return true;
   }),

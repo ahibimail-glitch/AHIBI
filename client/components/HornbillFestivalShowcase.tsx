@@ -8,10 +8,6 @@ const FESTIVALS = [
   {
     key: "day",
     title: "Hornbill Festival",
-    eyebrow: "THE DAYTIME CELEBRATION",
-    description: "A day among the cultures, craft, flavours and living traditions of Nagaland.",
-    amount: 150,
-    ticketFee: 100,
     image: "/images/hornbill-2026/hornbill-day-desktop.jpg",
     mobileImage: "/images/hornbill-2026/hornbill-day-mobile.jpg",
     href: "/hornbill-festival-2026",
@@ -20,10 +16,6 @@ const FESTIVALS = [
   {
     key: "music",
     title: "Hornbill Music Festival",
-    eyebrow: "THE NIGHTTIME LIVE EXPERIENCE",
-    description: "The stage lights rise, the sound carries across the hills, and the crowd moves as one.",
-    amount: 250,
-    ticketFee: 200,
     image: "/images/hornbill-2026/hornbill-music-desktop.jpg",
     mobileImage: "/images/hornbill-2026/hornbill-music-mobile.jpg",
     href: "/hornbill-music-festival-2026",
@@ -46,22 +38,18 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
       <div className="hornbill-showcase-grid">
         {FESTIVALS.map((festival) => {
           return (
-            <Link href={festival.href} className={`hornbill-showcase-card ${festival.className}`} key={festival.key}>
+            <article className={`hornbill-showcase-card ${festival.className}`} key={festival.key}>
               <picture className="hornbill-showcase-art">
                 <source media="(max-width: 640px)" srcSet={festival.mobileImage} />
                 <img src={festival.image} alt="" />
               </picture>
               <span className="hornbill-showcase-copy">
-                <span className="hornbill-showcase-eyebrow">{festival.eyebrow}</span>
-                <strong>{festival.title}</strong>
-                <span className="hornbill-showcase-description">{festival.description}</span>
-                <span className="hornbill-showcase-pricing">
-                  <span className="hornbill-showcase-price">₹{festival.amount}<small> / person</small></span>
-                  <span className="hornbill-showcase-fee">₹{festival.ticketFee} ticket fee <i>+</i> ₹50 Festival Sustainability Fund</span>
-                </span>
-                <span className="hornbill-showcase-cta">Book now <ArrowUpRight size={18} /></span>
+                <Link className="hornbill-showcase-title-link" href={festival.href}><strong>{festival.title}</strong></Link>
+                <Link className="hornbill-showcase-cta" href={`/api/hornbill-booking/${festival.key}`} aria-label={`Book ${festival.title} tickets`}>
+                  Book now <ArrowUpRight size={18} />
+                </Link>
               </span>
-            </Link>
+            </article>
           );
         })}
       </div>
@@ -80,18 +68,13 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
         .hornbill-showcase-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;transition:transform .8s cubic-bezier(.2,.7,.2,1)}
         .hornbill-showcase-card:hover .hornbill-showcase-art img{transform:scale(1.045)}
         .hornbill-showcase-copy{display:flex;flex-direction:column;align-items:flex-start;padding:21px 23px 23px;animation:hornbill-rise .7s both}
-        .hornbill-showcase-eyebrow{font-size:9px;font-weight:850;letter-spacing:.14em;color:#a3201b}
+        .hornbill-showcase-title-link{color:inherit;text-decoration:none}
         .hornbill-showcase-copy strong{font-size:clamp(23px,3.2vw,34px);letter-spacing:-.055em;line-height:1.03;margin-top:7px;text-wrap:balance}
-        .hornbill-showcase-description{max-width:470px;margin-top:8px;font-size:12px;line-height:1.5;color:#626262}
-        .hornbill-showcase-pricing{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
-        .hornbill-showcase-price{font-size:25px;font-weight:900;line-height:1;color:#171717}
-        .hornbill-showcase-price small{font-size:11px;font-weight:500;letter-spacing:0;color:#6a6a6a}
-        .hornbill-showcase-fee{font-size:10px;color:#686868}
-        .hornbill-showcase-fee i{font-style:normal;color:#a3201b;font-weight:900;padding:0 3px}
+        .hornbill-showcase-copy strong{display:block}
         .hornbill-showcase-cta{display:inline-flex;align-items:center;gap:9px;margin-top:15px;padding:10px 14px;border-radius:999px;background:#ed1c24;color:white;font-size:11px;font-weight:800;transition:gap .2s,background .2s}
         .hornbill-showcase-card:hover .hornbill-showcase-cta{gap:14px;background:#ff3037}
         @keyframes hornbill-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        @media(max-width:700px){.hornbill-showcase-heading{align-items:flex-start}.hornbill-ahibi-logo{display:none}.hornbill-showcase-grid{grid-template-columns:1fr;gap:13px}.hornbill-showcase-card{border-radius:17px}.hornbill-showcase-art{aspect-ratio:2/3}.hornbill-showcase-copy{padding:16px 18px 18px}.hornbill-showcase-copy strong{font-size:clamp(26px,8vw,35px)}.hornbill-showcase-description{max-width:340px;font-size:12px}.hornbill-showcase-pricing{gap:8px}}
+        @media(max-width:700px){.hornbill-showcase-heading{align-items:flex-start}.hornbill-ahibi-logo{display:none}.hornbill-showcase-grid{grid-template-columns:1fr;gap:13px}.hornbill-showcase-card{border-radius:17px}.hornbill-showcase-art{aspect-ratio:2/3}.hornbill-showcase-copy{padding:16px 18px 18px}.hornbill-showcase-copy strong{font-size:clamp(26px,8vw,35px)}}
         @media(prefers-reduced-motion:reduce){.hornbill-showcase-card,.hornbill-showcase-art img,.hornbill-showcase-copy,.hornbill-showcase-cta{animation:none!important;transition:none!important}}
       `}</style>
     </section>
