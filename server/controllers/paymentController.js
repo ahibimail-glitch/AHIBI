@@ -362,6 +362,27 @@ exports.razorpayWebhook = async (req, res) => {
     orderId = payment?.order_id || order?.id;
     paymentId = payment?.id;
 
+    if (eventType === 'payment.failed') {
+      if (!paymentId || !orderId) return res.json({ status: 'failed_payment_without_order_ignored' });
+      const pending = await eventPaymentSettlement.findSession(orderId, payment?.notes?.orderIntentId);
+      if (!pending) return res.json({ status: 'failed_payment_session_not_found' });
+      await PendingPaymentSession.updateOne(
+        { _id: pending._id, 'paymentFailures.paymentId': { $ne: paymentId } },
+        { $push: { paymentFailures: {
+          $each: [{
+            paymentId,
+            code: payment?.error_code || payment?.error_reason || null,
+            description: payment?.error_description || payment?.error_reason || 'Payment attempt failed.',
+            method: payment?.method || null,
+            amount: Number.isFinite(Number(payment?.amount)) ? Number(payment.amount) / 100 : null,
+            occurredAt: payment?.created_at ? new Date(Number(payment.created_at) * 1000) : new Date(),
+          }],
+          $slice: -20,
+        } } },
+      );
+      return res.json({ status: 'failed_payment_recorded' });
+    }
+
     if (eventType !== 'payment.captured' && eventType !== 'order.paid') {
       return res.json({ status: 'ok' });
     }

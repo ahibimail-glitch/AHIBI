@@ -76,6 +76,7 @@ import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
 import HmfTickets from "./components/HmfTickets";
 import HFTickets from "./components/HFTickets";
+import HornbillPaymentIssues from "./components/HornbillPaymentIssues";
 import ScheduleEvent from "./components/ScheduleEvent";
 import KakiMarketingSettings from "./components/KakiMarketingSettings";
 import DanceLeagueRegistrations from "./components/DanceLeagueRegistrations";
@@ -323,6 +324,10 @@ export default function AdminDashboard() {
         return <HmfTickets />;
       case "hf-tickets":
         return <HFTickets />;
+      case "hf-payment-issues":
+        return <HornbillPaymentIssues kind="day" />;
+      case "hmf-payment-issues":
+        return <HornbillPaymentIssues kind="music" />;
       case "merch-orders":
         return <MerchOrders />;
       case "helitaxii-leads":
@@ -510,7 +515,9 @@ export default function AdminDashboard() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Special Events</h3>
           </div>
           <SidebarButton icon={Ticket} label="Hornbill Festival Bookings" active={activeView === "hf-tickets"} onClick={() => { setActiveView("hf-tickets"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="Hornbill Festival Payment Issues" active={activeView === "hf-payment-issues"} onClick={() => { setActiveView("hf-payment-issues"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Hornbill Music Bookings" active={activeView === "hmf-tickets"} onClick={() => { setActiveView("hmf-tickets"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="Music Festival Payment Issues" active={activeView === "hmf-payment-issues"} onClick={() => { setActiveView("hmf-payment-issues"); setSidebarOpen(false); }} />
           <SidebarButton icon={Video} label="NWA Wrestling" active={activeView === "nwa-wrestling-bookings"} onClick={() => { setActiveView("nwa-wrestling-bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Workshop RSVP" active={activeView === "workshop-rsvp"} onClick={() => { setActiveView("workshop-rsvp"); setSidebarOpen(false); }} />
