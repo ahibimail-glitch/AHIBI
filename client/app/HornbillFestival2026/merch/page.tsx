@@ -67,10 +67,11 @@ const formatCurrency = (value: number, currency = "INR") =>
 const MerchCheckoutInner = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session");
+  const querySessionId = searchParams.get("session");
+  const [sessionId, setSessionId] = useState<string | null>(querySessionId);
 
   const { user, isAuthenticated, loading: authLoading } = useAuth({
-    redirectPath: ""
+    redirectPath: null
   });
 
   const [cart, setCart] = useState<CartResponse | null>(null);
@@ -80,6 +81,28 @@ const MerchCheckoutInner = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [addressTouched, setAddressTouched] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Sync session with sessionStorage so it is never lost during login redirects
+  useEffect(() => {
+    if (querySessionId) {
+      setSessionId(querySessionId);
+      try {
+        sessionStorage.setItem("hornbill_merch_session", querySessionId);
+      } catch {
+        // ignore
+      }
+    } else if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("hornbill_merch_session");
+        if (stored) {
+          setSessionId(stored);
+          router.replace(`/HornbillFestival2026/merch?session=${encodeURIComponent(stored)}`);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [querySessionId, router]);
 
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
     fullName: "",
@@ -106,6 +129,11 @@ const MerchCheckoutInner = () => {
 
   useEffect(() => {
     if (!sessionId) {
+      const stored = typeof window !== "undefined" ? sessionStorage.getItem("hornbill_merch_session") : null;
+      if (stored) {
+        setSessionId(stored);
+        return;
+      }
       setCartError("Missing session information. Please return from Hornbill merch store.");
       setCartLoading(false);
       return;
@@ -252,7 +280,7 @@ const MerchCheckoutInner = () => {
     if (!isAuthenticated) {
       toast.error("Please log in to continue checkout.");
       router.push(
-        createAuthRedirectUrl(`/HornbillFestival2026/merch?session=${sessionId}`)
+        createAuthRedirectUrl(`/HornbillFestival2026/merch?session=${encodeURIComponent(sessionId)}`)
       );
       return;
     }
@@ -470,13 +498,16 @@ const MerchCheckoutInner = () => {
                     You must be logged in to complete checkout.
                   </p>
                   <Button
-                    onClick={() =>
+                    onClick={() => {
+                      const activeSession = sessionId || querySessionId || "";
                       router.push(
                         createAuthRedirectUrl(
-                          `/HornbillFestival2026/merch?session=${sessionId ?? ""}`
+                          activeSession
+                            ? `/HornbillFestival2026/merch?session=${encodeURIComponent(activeSession)}`
+                            : "/HornbillFestival2026/merch"
                         )
-                      )
-                    }
+                      );
+                    }}
                   >
                     Login to Continue
                   </Button>
