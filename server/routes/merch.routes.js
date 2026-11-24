@@ -5,6 +5,8 @@ const { protect, optionalAuth } = require('../middlewares/auth');
 
 // Cart and Order routes
 router.get('/cart/session/:sessionId', merchController.getCartBySession);
+router.get('/orders', merchController.getAllOrders);
+router.get('/orders/stats', merchController.getOrderStats);
 router.post('/orders', protect, merchController.createOrder);
 router.post('/orders/checkout', protect, merchController.createCheckoutOrder);
 router.post('/orders/verify-payment', protect, merchController.verifyCheckoutPayment);
