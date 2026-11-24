@@ -9,17 +9,17 @@
  */
 export const isValidRedirectUrl = (redirectUrl: string | null): boolean => {
   if (!redirectUrl) return false;
-  
+
   try {
     // If it's a relative path, it's safe
     if (redirectUrl.startsWith('/') && !redirectUrl.startsWith('//')) {
       return true;
     }
-    
+
     // If it's an absolute URL, check if it's from our domain
     const url = new URL(redirectUrl);
     const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    
+
     // Allow localhost for development and our production domain
     const allowedDomains = [
       'localhost',
@@ -29,7 +29,7 @@ export const isValidRedirectUrl = (redirectUrl: string | null): boolean => {
       // 'yourdomain.com',
       // 'www.yourdomain.com'
     ];
-    
+
     return allowedDomains.includes(url.hostname);
   } catch (error) {
     // If URL parsing fails, it's not a valid URL
@@ -56,7 +56,7 @@ export const getSafeRedirectUrl = (redirectUrl: string | null, defaultUrl: strin
  * @returns string - The auth URL with redirect parameter
  */
 export const createAuthRedirectUrl = (currentPath?: string): string => {
-  const path = currentPath || (typeof window !== 'undefined' ? window.location.pathname : '/');
+  const path = currentPath || (typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/');
   return `/auth?redirect=${encodeURIComponent(path)}`;
 };
 
@@ -77,7 +77,7 @@ export const redirectToAuth = (currentPath?: string): void => {
  * @returns string - The role-specific auth URL with redirect parameter
  */
 export const createRoleAuthRedirectUrl = (role: 'artist' | 'organizer' | 'venue', currentPath?: string): string => {
-  const path = currentPath || (typeof window !== 'undefined' ? window.location.pathname : '/');
+  const path = currentPath || (typeof window !== 'undefined' ? `${window.location.pathname}${window.location.search}` : '/');
   return `/${role}/auth/login?redirect=${encodeURIComponent(path)}`;
 };
 
