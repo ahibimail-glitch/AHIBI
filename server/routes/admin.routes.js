@@ -313,6 +313,7 @@ router.get('/bookings/:id', adminBookingsController.getBookingDetails);
 
 // Payments: list and resolve paid but not booked
 router.get('/payments/paid-no-booking', paymentTxController.getPaidNoBooking);
+router.get('/payments/event-failures', paymentTxController.getEventPaymentFailures);
 router.get('/payments/annie-failed-bookings', paymentTxController.getAnnieFailedBookings);
 router.post('/payments/resolve/:id', paymentTxController.resolveTransaction);
 
