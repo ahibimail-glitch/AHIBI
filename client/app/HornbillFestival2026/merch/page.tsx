@@ -292,11 +292,16 @@ const MerchCheckoutInner = () => {
       });
 
       if (!response.ok) {
-        const errorPayload = await response.json().catch(() => null);
-        throw new Error(
-          errorPayload?.message ||
-            "Unable to create order. Please try again or contact support."
-        );
+        let errorMessage = "Unable to create order. Please try again or contact support.";
+        try {
+          const errorPayload: any = await response.json();
+          if (errorPayload?.message) {
+            errorMessage = errorPayload.message;
+          }
+        } catch {
+          // Ignore JSON parse error and use default message
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
