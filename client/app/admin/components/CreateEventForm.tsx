@@ -330,6 +330,18 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     return finalPrice;
   };
 
+  const getApiErrorMessage = (data: any, fallback: string) => {
+    if (typeof data?.message === 'string' && data.message.trim()) return data.message;
+    const validationErrors = data?.errors || data?.data?.errors;
+    if (Array.isArray(validationErrors) && validationErrors.length) {
+      return validationErrors
+        .map((item: any) => item?.msg || item?.message)
+        .filter((message: unknown): message is string => typeof message === 'string' && Boolean(message.trim()))
+        .join('. ') || fallback;
+    }
+    return fallback;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -487,12 +499,15 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         window.location.href = "/admin/login";
         return;
       } else {
-        const errorMessage = response.data?.message || "Failed to create event";
+        const errorMessage = getApiErrorMessage(response.data, `Event creation failed (HTTP ${response.status}).`);
         setError(errorMessage);
       }
     } catch (err: any) {
       console.error("Failed to create event:", err);
-      const errorMessage = err.response?.data?.message || "An unexpected error occurred.";
+      const errorMessage = getApiErrorMessage(
+        err.response?.data,
+        err.response?.status ? `Event creation failed (HTTP ${err.response.status}).` : "Could not reach the event service. Check the API connection and try again."
+      );
       setError(errorMessage);
     } finally {
       setIsLoading(false);

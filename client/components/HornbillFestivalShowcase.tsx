@@ -45,7 +45,7 @@ export default function HornbillFestivalShowcase({ compact = false }: { compact?
               </picture>
               <span className="hornbill-showcase-copy">
                 <Link className="hornbill-showcase-title-link" href={festival.href}><strong>{festival.title}</strong></Link>
-                <Link className="hornbill-showcase-cta" href={`/api/hornbill-booking/${festival.key}`} aria-label={`Book ${festival.title} tickets`}>
+                <Link className="hornbill-showcase-cta" href={`/book-hornbill/${festival.key}`} aria-label={`Book ${festival.title} tickets`}>
                   Book now <ArrowUpRight size={18} />
                 </Link>
               </span>

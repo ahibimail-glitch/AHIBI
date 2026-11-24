@@ -35,7 +35,7 @@ const festivals = {
 export default function Hornbill2026Landing({ kind }: { kind: "day" | "music" }) {
   const festival = festivals[kind];
   const [bookingUnavailable, setBookingUnavailable] = useState(false);
-  const bookingHref = `/api/hornbill-booking/${kind}`;
+  const bookingHref = `/book-hornbill/${kind}`;
 
   useEffect(() => {
     setBookingUnavailable(new URLSearchParams(window.location.search).get("booking") === "unavailable");
