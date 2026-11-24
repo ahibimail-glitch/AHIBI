@@ -302,7 +302,7 @@ exports.createOrder = async (req, res) => {
       reminder_enable: true,
       callback_url:
         process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL ||
-        `${frontendBaseUrl}/HornbillFestival2025/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
+        `${frontendBaseUrl}/HornbillFestival2026/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
       callback_method: 'get'
     });
 
