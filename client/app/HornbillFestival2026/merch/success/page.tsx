@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Package, ShoppingBag, ArrowLeft, Loader2 } from "lucide-react";
+import { CheckCircle2, Package, ShoppingBag, ArrowLeft, Loader2, Truck, Copy, Check, ExternalLink, Share2 } from "lucide-react";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import { Button } from "@/components/ui/button";
@@ -181,6 +181,32 @@ function MerchOrderSuccessInner() {
   const isPending = status === "pending" || status === "created";
   const isFailed = status === "failed" || status === "cancelled";
 
+  const [copied, setCopied] = useState(false);
+
+  const trackingOrderId = order?._id || order?.id || orderId;
+  const trackingUrl = `https://hornbillmusicfestival.com/track/${trackingOrderId}`;
+
+  const copyTrackingLink = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(trackingUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const shareOnWhatsApp = () => {
+    const customerPhone = order?.shippingAddress?.phone?.replace(/[^0-9]/g, "");
+    const msg = encodeURIComponent(
+      `Hello! Here is the order tracking link for Hornbill Festival Merchandise:\n\nOrder ID: ${trackingOrderId}\nLive Tracking: ${trackingUrl}\n\nPlease save this link to check shipping and AWB updates anytime without logging in.`
+    );
+    if (customerPhone && customerPhone.length >= 10) {
+      const formatted = customerPhone.length === 10 ? `91${customerPhone}` : customerPhone;
+      window.open(`https://wa.me/${formatted}?text=${msg}`, "_blank");
+    } else {
+      window.open(`https://api.whatsapp.com/send?text=${msg}`, "_blank");
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -195,8 +221,8 @@ function MerchOrderSuccessInner() {
               {isPaid
                 ? "Order Confirmed!"
                 : isFailed
-                ? "Payment Failed"
-                : "Payment Processing"}
+                  ? "Payment Failed"
+                  : "Payment Processing"}
             </h1>
             <p className="text-muted-foreground text-lg">
               {isPaid && "Thank you for your purchase. We've received your order."}
@@ -212,10 +238,55 @@ function MerchOrderSuccessInner() {
             )}
           </div>
 
+          {/* Shareable Live Order Tracking Card */}
+          <div className="mb-8 rounded-2xl border border-orange-500/30 bg-orange-500/10 dark:bg-orange-950/20 p-6 shadow-md">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+              <div className="space-y-1.5 flex-1">
+                <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                  <Truck className="h-4 w-4" />
+                  Live Order Tracking Link
+                </div>
+                <h3 className="text-xl font-bold text-foreground">Save this link for shipping & delivery updates</h3>
+
+                <div className="pt-1.5">
+                  <span className="font-mono text-xs bg-background/90 text-foreground px-3 py-1.5 rounded-lg border inline-block select-all">
+                    {trackingUrl}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
+                <Button
+                  onClick={copyTrackingLink}
+                  variant="outline"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 h-11 px-4"
+                >
+                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  <span>{copied ? "Copied Link!" : "Copy Link"}</span>
+                </Button>
+                <Button
+                  onClick={() => window.open(trackingUrl, "_blank")}
+                  className="flex-1 md:flex-none bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center gap-2 h-11 px-5 shadow-sm"
+                >
+                  <span>Track Order</span>
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={shareOnWhatsApp}
+                  variant="outline"
+                  className="w-full md:w-auto text-green-600 border-green-600/30 hover:bg-green-50 dark:hover:bg-green-950/30 flex items-center justify-center gap-2 h-11 px-4"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Share via WhatsApp</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-6 md:grid-cols-2">
             {/* Order Details */}
             <Card>
-              <CardHeader> 
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
                   Order Details

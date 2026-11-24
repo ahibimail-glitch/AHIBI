@@ -97,7 +97,9 @@ const allowedOrigins = [
   'http://www.ahibi.in',
   'http://localhost:3000',
   'https://ahibi.vercel.app',
-  'https://ahibi-lac.vercel.app/'
+  'https://ahibi-lac.vercel.app/',
+  'https://hornbillmusicfestival.com',
+  'https://www.hornbillmusicfestival.com'
 ];
 
 if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {

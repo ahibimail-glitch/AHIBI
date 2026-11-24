@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Download, Search, X, Package } from "lucide-react";
+import { Eye, Download, Search, X, Package, Truck, Copy, Check, Share2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,6 +85,22 @@ export default function MerchOrders() {
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<MerchOrder | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const sendWhatsAppTracking = (order: MerchOrder) => {
+    const rawPhone = order.shippingAddress?.phone || order.user?.phone || "";
+    const phone = rawPhone.replace(/[^0-9]/g, "");
+    if (!phone) {
+      alert("Customer phone number is missing for this order.");
+      return;
+    }
+    const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+    const trackingUrl = `https://hornbillmusicfestival.com/track/${order._id}`;
+    const message = encodeURIComponent(
+      `Hello ${order.shippingAddress?.fullName || "Customer"}! 🚚\n\nHere is your live order tracking link for Hornbill Festival 2026 Merchandise:\n\nOrder ID: ${order._id}\nLive Tracking: ${trackingUrl}\n\nPlease save this link to check your package delivery status and courier updates anytime.\n\nThank you!`
+    );
+    window.open(`https://wa.me/${formattedPhone}?text=${message}`, "_blank");
+  };
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -448,16 +464,28 @@ export default function MerchOrders() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setIsDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="View Order Details"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Send Tracking via WhatsApp"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/30"
+                              onClick={() => sendWhatsAppTracking(order)}
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -503,6 +531,53 @@ export default function MerchOrders() {
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4">
+              {/* Live Tracking & WhatsApp Action Card */}
+              <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 dark:bg-orange-950/20 p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
+                      <Truck className="h-4 w-4" /> Live Tracking Link for Customer
+                    </p>
+                    <p className="font-mono text-xs bg-background/90 px-3 py-1.5 rounded-lg border inline-block select-all">
+                      {`https://hornbillmusicfestival.com/track/${selectedOrder._id}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5"
+                      onClick={() => {
+                        const url = `https://hornbillmusicfestival.com/track/${selectedOrder._id}`;
+                        navigator.clipboard?.writeText(url);
+                        setCopiedId(selectedOrder._id);
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }}
+                    >
+                      {copiedId === selectedOrder._id ? (
+                        <>
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          <span>Copy Link</span>
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5 shadow-sm"
+                      onClick={() => sendWhatsAppTracking(selectedOrder)}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span>Send via WhatsApp</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h4 className="font-semibold mb-2">Order Information</h4>

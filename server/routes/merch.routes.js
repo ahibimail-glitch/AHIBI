@@ -7,6 +7,8 @@ const { protect, optionalAuth } = require('../middlewares/auth');
 router.get('/cart/session/:sessionId', merchController.getCartBySession);
 router.get('/orders', merchController.getAllOrders);
 router.get('/orders/stats', merchController.getOrderStats);
+router.get('/track/:orderId', merchController.getPublicOrderTracking);
+router.put('/orders/:orderId/tracking', merchController.updateHornbillOrderTracking);
 router.post('/orders', protect, merchController.createOrder);
 router.post('/orders/checkout', protect, merchController.createCheckoutOrder);
 router.post('/orders/verify-payment', protect, merchController.verifyCheckoutPayment);
