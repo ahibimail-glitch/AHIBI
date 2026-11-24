@@ -33,6 +33,7 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 const PAGE_SIZE = PAGE_SIZE_OPTIONS[0];
 
 export default function FailedPayments({ eventIds, title = "Paid but Not Booked" }: { eventIds?: string[]; title?: string } = {}) {
+  const isEventScoped = Boolean(eventIds?.length);
   const [items, setItems] = useState<TxItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -140,7 +141,11 @@ export default function FailedPayments({ eventIds, title = "Paid but Not Booked"
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">{title}</h2>
-              <p className="text-sm text-gray-600" aria-live="polite">{rangeSummary}</p>
+              <p className="text-sm text-gray-600" aria-live="polite">
+                {isEventScoped
+                  ? "Captured-payment cases for this event. Verify with Razorpay and issue or restore tickets to the customer’s account."
+                  : rangeSummary}
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <label htmlFor="failed-payments-page-size" className="text-sm text-gray-600">Rows per page</label>
@@ -224,7 +229,9 @@ export default function FailedPayments({ eventIds, title = "Paid but Not Booked"
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" onClick={() => handleResolve(item._id)} disabled={resolvingId === item._id}>
-                          {resolvingId === item._id ? "Confirming..." : "Confirm Booking"}
+                          {resolvingId === item._id
+                            ? (isEventScoped ? "Verifying & issuing..." : "Confirming...")
+                            : (isEventScoped ? "Verify payment & issue tickets" : "Confirm Booking")}
                         </Button>
                       </TableCell>
                     </TableRow>
