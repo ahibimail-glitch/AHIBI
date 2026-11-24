@@ -209,21 +209,21 @@ function MerchOrderSuccessInner() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-8 sm:py-12 px-3.5 sm:px-6 overflow-x-hidden">
+        <div className="max-w-4xl mx-auto w-full">
           {/* Success / Status Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+          <div className="text-center mb-6 sm:mb-8 px-2">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-100 dark:bg-green-900/20 mb-3 sm:mb-4">
+              <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10 text-green-600 dark:text-green-400" />
             </div>
-            <h1 className="text-4xl font-bold mb-2">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2 tracking-tight">
               {isPaid
                 ? "Order Confirmed!"
                 : isFailed
                   ? "Payment Failed"
                   : "Payment Processing"}
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-sm sm:text-lg max-w-lg mx-auto">
               {isPaid && "Thank you for your purchase. We've received your order."}
               {isPending && !isPaid &&
                 "Your payment is being processed. If this stays pending for a while, we'll notify you once it is confirmed."}
@@ -231,41 +231,43 @@ function MerchOrderSuccessInner() {
                 "We could not confirm your payment. If money was deducted, please contact at 8794696995 with your payment details."}
             </p>
             {isPolling && (
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
                 Waiting for payment confirmation from the bank...
               </p>
             )}
           </div>
 
           {/* Shareable Live Order Tracking Card */}
-          <div className="mb-8 rounded-2xl border border-orange-500/30 bg-orange-500/10 dark:bg-orange-950/20 p-6 shadow-md">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-              <div className="space-y-1.5 flex-1">
+          <div className="mb-6 sm:mb-8 rounded-2xl border border-orange-500/30 bg-orange-500/10 dark:bg-orange-950/20 p-4 sm:p-6 shadow-md overflow-hidden">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-5">
+              <div className="space-y-1.5 w-full min-w-0 flex-1">
                 <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
-                  <Truck className="h-4 w-4" />
-                  Live Order Tracking Link
+                  <Truck className="h-4 w-4 shrink-0" />
+                  <span>Live Order Tracking Link</span>
                 </div>
-                <h3 className="text-xl font-bold text-foreground">Save this link for shipping & delivery updates</h3>
+                <h3 className="text-base sm:text-xl font-bold text-foreground break-words">
+                  Save this link for shipping & delivery updates
+                </h3>
 
-                <div className="pt-1.5">
-                  <span className="font-mono text-xs bg-background/90 text-foreground px-3 py-1.5 rounded-lg border inline-block select-all">
+                <div className="pt-1.5 w-full overflow-hidden">
+                  <span className="font-mono text-xs bg-background/90 text-foreground px-2.5 py-1.5 rounded-lg border block sm:inline-block break-all select-all">
                     {trackingUrl}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full md:w-auto shrink-0">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:w-auto shrink-0">
                 <Button
                   onClick={copyTrackingLink}
                   variant="outline"
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 h-11 px-4"
+                  className="w-full flex items-center justify-center gap-2 h-10 px-3 text-xs sm:text-sm"
                 >
                   {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                   <span>{copied ? "Copied Link!" : "Copy Link"}</span>
                 </Button>
                 <Button
                   onClick={() => window.open(trackingUrl, "_blank")}
-                  className="flex-1 md:flex-none bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center gap-2 h-11 px-5 shadow-sm"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center gap-2 h-10 px-3 text-xs sm:text-sm shadow-sm"
                 >
                   <span>Track Order</span>
                   <ExternalLink className="h-4 w-4" />
@@ -273,7 +275,7 @@ function MerchOrderSuccessInner() {
                 <Button
                   onClick={shareOnWhatsApp}
                   variant="outline"
-                  className="w-full md:w-auto text-green-600 border-green-600/30 hover:bg-green-50 dark:hover:bg-green-950/30 flex items-center justify-center gap-2 h-11 px-4"
+                  className="w-full text-green-600 border-green-600/30 hover:bg-green-50 dark:hover:bg-green-950/30 flex items-center justify-center gap-2 h-10 px-3 text-xs sm:text-sm"
                 >
                   <Share2 className="h-4 w-4" />
                   <span>Share via WhatsApp</span>
@@ -286,19 +288,19 @@ function MerchOrderSuccessInner() {
             {/* Order Details */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Package className="h-5 w-5 text-primary" />
                   Order Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3.5 text-sm">
                 <div>
-                  <p className="text-sm text-muted-foreground">Order ID</p>
-                  <p className="font-mono font-semibold">{order._id || order.id}</p>
+                  <p className="text-xs text-muted-foreground">Order ID</p>
+                  <p className="font-mono font-semibold text-xs sm:text-sm break-all">{order._id || order.id}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Order Date</p>
-                  <p>
+                  <p className="text-xs text-muted-foreground">Order Date</p>
+                  <p className="text-xs sm:text-sm">
                     {new Date(order.createdAt || order.created_at).toLocaleDateString("en-IN", {
                       weekday: "long",
                       year: "numeric",
@@ -308,7 +310,7 @@ function MerchOrderSuccessInner() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className="text-xs text-muted-foreground">Status</p>
                   <Badge
                     variant={
                       isPaid ? "default" : isPending ? "secondary" : "destructive"
@@ -324,9 +326,9 @@ function MerchOrderSuccessInner() {
             {/* Order Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Order Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>{formatCurrency(order.subtotal || 0)}</span>
@@ -337,16 +339,10 @@ function MerchOrderSuccessInner() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>
-                    {(order.shipping || 0) === 0 ? (
-                      <span className="text-green-600 font-semibold">Depends on location.</span>
-                    ) : (
-                      formatCurrency(order.shipping)
-                    )}
-                  </span>
+                  <span>{formatCurrency(order.shipping || 0)}</span>
                 </div>
                 <div className="border-t pt-3 mt-3">
-                  <div className="flex justify-between text-lg font-bold">
+                  <div className="flex justify-between text-base sm:text-lg font-bold">
                     <span>Total</span>
                     <span className="text-primary">{formatCurrency(order.total || 0)}</span>
                   </div>
@@ -357,39 +353,47 @@ function MerchOrderSuccessInner() {
             {/* Items */}
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingBag className="h-5 w-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
                   Items Ordered
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {order.items?.map((item: any, index: number) => (
                     <div
                       key={index}
-                      className="flex items-center gap-4 p-4 border rounded-lg"
+                      className="flex items-start sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-xl bg-card/60"
                     >
                       {item.image && (
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-20 h-20 object-cover rounded"
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg shrink-0 border"
                         />
                       )}
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{item.name}</h4>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm sm:text-base leading-snug break-words">{item.name}</h4>
                         {item.variant && (
-                          <p className="text-sm text-muted-foreground">Variant: {item.variant}</p>
+                          <p className="text-xs text-muted-foreground truncate">Variant: {item.variant}</p>
                         )}
                         {item.sku && (
-                          <p className="text-sm text-muted-foreground">SKU: {item.sku}</p>
+                          <p className="text-xs text-muted-foreground truncate">SKU: {item.sku}</p>
                         )}
+                        <div className="mt-1 sm:hidden">
+                          <p className="font-semibold text-sm">
+                            {formatCurrency((item.price || 0) * (item.quantity || 1))}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Qty: {item.quantity} × {formatCurrency(item.price || 0)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right hidden sm:block shrink-0">
                         <p className="font-semibold">
                           {formatCurrency((item.price || 0) * (item.quantity || 1))}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Qty: {item.quantity} × {formatCurrency(item.price || 0)}
                         </p>
                       </div>
@@ -403,11 +407,11 @@ function MerchOrderSuccessInner() {
             {order.shippingAddress && (
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>Shipping Address</CardTitle>
+                  <CardTitle className="text-base sm:text-lg">Shipping Address</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-1">
-                    <p className="font-semibold">{order.shippingAddress.fullName}</p>
+                  <div className="space-y-1 text-xs sm:text-sm leading-relaxed">
+                    <p className="font-semibold text-foreground text-sm sm:text-base">{order.shippingAddress.fullName}</p>
                     <p>{order.shippingAddress.addressLine1}</p>
                     {order.shippingAddress.addressLine2 && (
                       <p>{order.shippingAddress.addressLine2}</p>
@@ -417,7 +421,7 @@ function MerchOrderSuccessInner() {
                       {order.shippingAddress.postalCode}
                     </p>
                     <p>{order.shippingAddress.country}</p>
-                    <p className="mt-2">Phone: {order.shippingAddress.phone}</p>
+                    <p className="mt-2 text-muted-foreground font-medium">Phone: {order.shippingAddress.phone}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -426,29 +430,29 @@ function MerchOrderSuccessInner() {
 
           {/* CTA Section */}
           <div className="mt-8 text-center space-y-4">
-            <div className="bg-primary/10 dark:bg-primary/20 rounded-lg p-6">
-              <p className="text-lg font-semibold mb-2">Shop more at Hornbill Merch Store</p>
-              <p className="text-muted-foreground mb-4">
+            <div className="bg-primary/10 dark:bg-primary/20 rounded-2xl p-5 sm:p-6 border">
+              <p className="text-base sm:text-lg font-semibold mb-1 sm:mb-2">Shop more at Hornbill Merch Store</p>
+              <p className="text-muted-foreground text-xs sm:text-sm mb-4 max-w-md mx-auto">
                 Discover more amazing merchandise from the Hornbill Music Festival
               </p>
-              <div className="flex gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-2.5 justify-center items-stretch sm:items-center max-w-sm sm:max-w-none mx-auto">
                 <Button
                   onClick={() => window.open("https://hornbillmusicfestival.com/merch", "_blank")}
-                  size="lg"
+                  className="w-full sm:w-auto h-11 px-6 font-medium"
                 >
                   Continue Shopping
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => router.push("/")}
-                  size="lg"
+                  className="w-full sm:w-auto h-11 px-6 font-medium"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Home
                 </Button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               We'll send you tracking information once your order ships.
             </p>
           </div>

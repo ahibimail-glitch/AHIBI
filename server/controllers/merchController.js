@@ -1128,6 +1128,7 @@ exports.getPublicOrderTracking = async (req, res) => {
 
     // Build sanitized tracking response safe for public sharing
     const trackingData = {
+      _id: order._id,
       orderId: order._id,
       sessionId: order.sessionId,
       createdAt: order.createdAt,
