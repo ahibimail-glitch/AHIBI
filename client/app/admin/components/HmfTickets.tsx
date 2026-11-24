@@ -1,6 +1,6 @@
 "use client";
 
-import EventTicketBookings from "./EventTicketBookings";
+import Hornbill2026Bookings from "./Hornbill2026Bookings";
 
 const HMF_EVENT_IDS = [
   "691b1066a9a25d4fec36f96c",
@@ -15,5 +15,5 @@ const HMF_EVENT_IDS = [
 ];
 
 export default function HmfTickets() {
-  return <EventTicketBookings title="HMF Tickets" eventIds={HMF_EVENT_IDS} />;
+  return <Hornbill2026Bookings kind="music" legacyIds={HMF_EVENT_IDS} />;
 }

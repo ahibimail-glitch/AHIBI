@@ -1,6 +1,6 @@
 "use client";
 
-import EventTicketBookings from "./EventTicketBookings";
+import Hornbill2026Bookings from "./Hornbill2026Bookings";
 
 const HF_EVENT_IDS = [
   "6927f5532cd1c48b94f5bd94",
@@ -18,5 +18,5 @@ const HF_EVENT_IDS = [
 ];
 
 export default function HFTickets() {
-  return <EventTicketBookings title="HF Tickets" eventIds={HF_EVENT_IDS} />;
+  return <Hornbill2026Bookings kind="day" legacyIds={HF_EVENT_IDS} />;
 }

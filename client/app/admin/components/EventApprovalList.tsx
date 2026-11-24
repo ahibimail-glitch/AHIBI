@@ -32,6 +32,7 @@ interface Event {
     name: string;
     price: number;
     quantity: number;
+    unlimited?: boolean;
   }>;
   maxAttendees?: number;
   images?: string[];
@@ -331,7 +332,7 @@ export default function EventApprovalList() {
                         {event.ticketTypes.map((ticket, index) => (
                           <div key={index} className="flex justify-between items-center bg-white p-2 rounded border">
                             <span>{ticket.name}</span>
-                            <span>₹{ticket.price} ({ticket.quantity} available)</span>
+                            <span>₹{ticket.price} ({ticket.unlimited ? "unlimited" : `${ticket.quantity} available`})</span>
                           </div>
                         ))}
                       </div>

@@ -31,6 +31,7 @@ import {
   EVENTS_HERO_IMAGE_WIDTH,
   EVENTS_HERO_IMAGE_HEIGHT,
 } from "@/lib/eventsHero";
+import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ const getEventHref = (event: Event): string => {
     String((event as any).slug || "") === "ticket-to-hornbill-showcase-day1" ||
     String((event as any).externalBookingUrl || "").includes("/ticket-to-hornbill")
   ) {
-    return "/ticket-to-hornbill";
+    return "/hornbill-festival-2026";
   }
   return `/events/${event._id}`;
 };
@@ -413,7 +414,6 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f8f8fa]">
       <Navbar />
-
       <main className="flex-1">
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative w-full overflow-hidden bg-gray-900">
@@ -460,6 +460,8 @@ export default function EventsPage() {
         </section>
 
         {/* ── Mobile quick-search bar ──────────────────────────────────────── */}
+        <HornbillFestivalShowcase compact />
+
         <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
           <div className="flex gap-2 max-w-2xl mx-auto">
             <div className="relative flex-1">

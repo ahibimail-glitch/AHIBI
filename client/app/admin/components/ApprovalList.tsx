@@ -35,6 +35,7 @@ interface Event {
     description?: string;
     price: number;
     quantity: number;
+    unlimited?: boolean;
     sold: number;
     capacity: number;
     benefits?: string[];
@@ -383,7 +384,7 @@ export default function ApprovalList({ type }: ApprovalListProps) {
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-medium text-gray-800">₹{ticket.price}</p>
-                                <p className="text-xs text-gray-600">Quantity :{ticket.quantity} </p>
+                                <p className="text-xs text-gray-600">Quantity: {ticket.unlimited ? "Unlimited" : ticket.quantity}</p>
                               </div>
                             </div>
                             {ticket.benefits && ticket.benefits.length > 0 && (

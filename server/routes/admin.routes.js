@@ -16,10 +16,13 @@ const nuscPartnerRecoveryController = require('../controllers/nuscPartnerRecover
 const scannerStaffController = require('../controllers/scannerStaffController');
 const wristbandController = require('../controllers/wristbandController');
 const nuscHomeMatchController = require('../controllers/nuscHomeMatchController');
+const adminAuthController = require('../controllers/adminAuthController');
 
 // All admin endpoints, including account and on-spot booking operations, require a full admin.
 router.use(protect);
 router.use(authorize('admin'));
+
+router.patch('/password', adminAuthController.changePassword);
 
 router.get('/users', adminController.getUsers);
 
