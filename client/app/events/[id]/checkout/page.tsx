@@ -661,6 +661,7 @@ export default function CheckoutPage() {
 
       const tickets = Array.from(selectedTickets.values()).map(item => ({
         ticketType: item.ticket.name,
+        ticketTypeId: item.ticket._id,
         quantity: item.quantity,
         price: item.ticket.price,
       }));
@@ -930,6 +931,7 @@ export default function CheckoutPage() {
               user: user,
               tickets: Array.from(selectedTickets.values()).map(item => ({
                 ticketType: item.ticket.name,
+                ticketTypeId: item.ticket._id,
                 quantity: item.quantity,
                 price: item.ticket.price,
                 ...(item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && {
@@ -946,7 +948,15 @@ export default function CheckoutPage() {
         }
       );
 
-      const orderData = await orderResponse.json();
+      const orderResponseText = await orderResponse.text();
+      let orderData: any;
+      try {
+        orderData = orderResponseText ? JSON.parse(orderResponseText) : {};
+      } catch {
+        throw new Error(orderResponse.ok
+          ? "The payment service returned an invalid response. Please try again."
+          : (orderResponseText || "Failed to create payment order"));
+      }
       if (orderResponse.ok && isNuscHomeMatchEvent && orderData.alreadyCompleted) {
         if (nuscCheckoutScope && nuscCheckoutRequestId) {
           clearNuscCheckoutRequestId(nuscCheckoutScope, nuscCheckoutRequestId);
@@ -987,6 +997,7 @@ export default function CheckoutPage() {
                   user: user,
                   tickets: Array.from(selectedTickets.values()).map(item => ({
                     ticketType: item.ticket.name,
+                    ticketTypeId: item.ticket._id,
                     quantity: item.quantity,
                     price: item.ticket.price,
                     ...(item.ticket.name === NUSC_PASS_TICKET_TYPE_NAMES["general-single"] && {
