@@ -305,7 +305,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
   useEffect(() => {
     if (String(params.id) === HORNBILL_SHOWCASE_EVENT_ID) {
-      router.replace("/ticket-to-hornbill");
+      router.replace("/hornbill-festival-2026");
     }
   }, [params.id, router]);
 
@@ -328,7 +328,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           data?.slug === "ticket-to-hornbill-showcase-day1" ||
           String(data?.externalBookingUrl || "").includes("/ticket-to-hornbill")
         ) {
-          router.replace("/ticket-to-hornbill");
+          router.replace("/hornbill-festival-2026");
           return;
         }
         if (isMounted) setEvent(data);

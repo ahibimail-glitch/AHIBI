@@ -97,6 +97,9 @@ exports.protect = async (req, res, next) => {
           }
           return res.status(404).json({ success: false, message: 'Admin not found' });
         }
+        if (Number(decoded.tokenVersion || 0) !== Number(user.tokenVersion || 0)) {
+          return res.status(401).json({ success: false, message: 'Admin session expired. Please sign in again.' });
+        }
         console.log('Admin found:', user.username);
         user.role = 'admin';
       } else if (decoded.role === 'organizer' || (isOrganizerRoute && !isSharedArtistBookingRoute)) {

@@ -76,6 +76,7 @@ import MerchOrders from "./components/MerchOrders";
 import HeliTaxiiLeads from "./components/HeliTaxiiLeads";
 import HmfTickets from "./components/HmfTickets";
 import HFTickets from "./components/HFTickets";
+import HornbillPaymentIssues from "./components/HornbillPaymentIssues";
 import ScheduleEvent from "./components/ScheduleEvent";
 import KakiMarketingSettings from "./components/KakiMarketingSettings";
 import DanceLeagueRegistrations from "./components/DanceLeagueRegistrations";
@@ -323,6 +324,10 @@ export default function AdminDashboard() {
         return <HmfTickets />;
       case "hf-tickets":
         return <HFTickets />;
+      case "hf-payment-issues":
+        return <HornbillPaymentIssues kind="day" />;
+      case "hmf-payment-issues":
+        return <HornbillPaymentIssues kind="music" />;
       case "merch-orders":
         return <MerchOrders />;
       case "helitaxii-leads":
@@ -334,7 +339,7 @@ export default function AdminDashboard() {
       case "dance-league":
         return <DanceLeagueRegistrations />;
       case "live-streaming":
-        return <AdminLivestreamPage/>;
+        return <AdminLivestreamPage />;
       case "livestream-users":
         return <LivestreamUserManagement />;
       case "donations":
@@ -389,7 +394,7 @@ export default function AdminDashboard() {
     <div className="flex min-h-screen bg-gray-50">
       {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -399,9 +404,8 @@ export default function AdminDashboard() {
       <aside
         id="admin-sidebar"
         aria-label="Admin navigation"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition-transform duration-300 ease-in-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } ${sidebarCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } ${sidebarCollapsed ? 'lg:-translate-x-full' : 'lg:translate-x-0'}`}
       >
         <div className="flex items-center justify-between mb-6 px-2">
           <div className="flex items-center space-x-3">
@@ -413,9 +417,9 @@ export default function AdminDashboard() {
               <p className="text-xs text-gray-600">Control Center</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="lg:hidden"
             aria-label="Close navigation sidebar"
             aria-expanded={sidebarOpen}
@@ -442,8 +446,8 @@ export default function AdminDashboard() {
           <SidebarButton icon={DollarSign} label="NUSC Paid but Not Booked" active={activeView === "nusc-paid-no-booking"} onClick={() => { setActiveView("nusc-paid-no-booking"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="Paid but Not Booked" active={activeView === "failed-payments"} onClick={() => { setActiveView("failed-payments"); setSidebarOpen(false); }} />
           <SidebarButton icon={DollarSign} label="NWA Failed Payments" active={activeView === "nwa-failed-payments"} onClick={() => { setActiveView("nwa-failed-payments"); setSidebarOpen(false); }} />
-      
-      
+
+
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Approvals</h3>
           </div>
@@ -485,14 +489,14 @@ export default function AdminDashboard() {
           <SidebarButton icon={Calendar} label="Schedule Event" active={activeView === "schedule-event"} onClick={() => { setActiveView("schedule-event"); setSidebarOpen(false); }} />
           <SidebarButton icon={PlusCircle} label="New Event" active={activeView === "create-event"} onClick={() => { setActiveView("create-event"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Pending Events" active={activeView === "event-approvals"} onClick={() => { setActiveView("event-approvals"); setSidebarOpen(false); }} />
-          
-          <SidebarButton 
-            icon={CalendarCheck2} 
-            label="Daily Events" 
-            active={activeView === "daily-events"} 
-            onClick={() => { setActiveView("daily-events"); setSidebarOpen(false); }} 
+
+          <SidebarButton
+            icon={CalendarCheck2}
+            label="Daily Events"
+            active={activeView === "daily-events"}
+            onClick={() => { setActiveView("daily-events"); setSidebarOpen(false); }}
           />
-          
+
           <SidebarButton
             icon={CalendarCheck2}
             label="Approved Events"
@@ -509,13 +513,17 @@ export default function AdminDashboard() {
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">Special Events</h3>
           </div>
+          <SidebarButton icon={Ticket} label="Hornbill Festival Bookings" active={activeView === "hf-tickets"} onClick={() => { setActiveView("hf-tickets"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="Hornbill Festival Payment Issues" active={activeView === "hf-payment-issues"} onClick={() => { setActiveView("hf-payment-issues"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Music} label="Hornbill Music Bookings" active={activeView === "hmf-tickets"} onClick={() => { setActiveView("hmf-tickets"); setSidebarOpen(false); }} />
+          <SidebarButton icon={DollarSign} label="Music Festival Payment Issues" active={activeView === "hmf-payment-issues"} onClick={() => { setActiveView("hmf-payment-issues"); setSidebarOpen(false); }} />
           <SidebarButton icon={Package} label="Hornbill Merch Orders" active={activeView === "merch-orders"} onClick={() => { setActiveView("merch-orders"); setSidebarOpen(false); }} />
           <SidebarButton icon={Video} label="NWA Wrestling" active={activeView === "nwa-wrestling-bookings"} onClick={() => { setActiveView("nwa-wrestling-bookings"); setSidebarOpen(false); }} />
           <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
           <SidebarButton icon={CalendarCheck2} label="Workshop RSVP" active={activeView === "workshop-rsvp"} onClick={() => { setActiveView("workshop-rsvp"); setSidebarOpen(false); }} />
           <SidebarButton icon={Ticket} label="GEL Blaster" active={activeView === "ge-blaster"} onClick={() => { setActiveView("ge-blaster"); setSidebarOpen(false); }} />
           <SidebarButton icon={Heart} label="Donations" active={activeView === "donations"} onClick={() => { setActiveView("donations"); setSidebarOpen(false); }} />
-       
+
           <div className="pt-4 pb-2 px-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase">System</h3>
           </div>
@@ -535,17 +543,17 @@ export default function AdminDashboard() {
             <CardContent className="pt-4 pb-4">
               <h4 className="font-bold text-blue-800 text-sm">Need Help?</h4>
               <p className="text-xs text-blue-700 mt-1">Check our documentation or contact support.</p>
-            <Button
-              size="sm"
-              className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-xs flex items-center justify-center gap-1"
-              onClick={() => {
-                router.push("/admin/support");
-                setSidebarOpen(false);
-              }}
-            >
-              <HeadphonesIcon className="h-3 w-3" />
-              Get Support
-            </Button>
+              <Button
+                size="sm"
+                className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-xs flex items-center justify-center gap-1"
+                onClick={() => {
+                  router.push("/admin/support");
+                  setSidebarOpen(false);
+                }}
+              >
+                <HeadphonesIcon className="h-3 w-3" />
+                Get Support
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -557,9 +565,9 @@ export default function AdminDashboard() {
           <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="lg:hidden h-8 w-8 sm:h-10 sm:w-10"
                   aria-label="Open navigation sidebar"
                   aria-expanded={sidebarOpen}

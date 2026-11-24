@@ -21,6 +21,10 @@ const TicketTypeSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Ticket quantity is required']
   },
+  unlimited: {
+    type: Boolean,
+    default: false
+  },
   sold: {
     type: Number,
     default: 0

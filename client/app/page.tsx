@@ -14,6 +14,7 @@ import type { EventsResponse, Event } from "@/types/event"
 import StickyHeroCards from "@/components/StickyHeroCards"
 import { format } from "date-fns"
 import { getNextNuscMatchDate } from "@/lib/nuscHomeMatches"
+import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase"
 
 type PublicArtist = {
   _id: string
@@ -180,7 +181,7 @@ const getEventHref = (event: { _id: string; slug?: string; externalBookingUrl?: 
     String(event.slug || "") === "ticket-to-hornbill-showcase-day1" ||
     String(event.externalBookingUrl || "").includes("/ticket-to-hornbill")
   ) {
-    return "/ticket-to-hornbill";
+    return "/hornbill-festival-2026";
   }
   return `/events/${event._id}`;
 };
@@ -773,6 +774,8 @@ function LegacyHomePage() {
 
     
 
+
+      <HornbillFestivalShowcase />
 
       <section className=" bg-white">
         <div className="container mx-auto px-3 sm:px-4">

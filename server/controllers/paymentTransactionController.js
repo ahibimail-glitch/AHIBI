@@ -147,6 +147,14 @@ exports.getPaidNoBooking = async (req, res) => {
 
     if (amount !== null) pipeline.push({ $match: { amount } });
 
+    if (req.query.eventIds) {
+      const eventIds = String(req.query.eventIds).split(',').map((id) => id.trim()).filter(Boolean);
+      if (!eventIds.length || eventIds.length > 20 || eventIds.some((id) => !mongoose.isValidObjectId(id))) {
+        return res.status(400).json({ success: false, message: 'Invalid event filter.' });
+      }
+      pipeline.push({ $match: { event: { $in: eventIds.map((id) => new mongoose.Types.ObjectId(id)) } } });
+    }
+
     pipeline.push({
       $facet: {
         items: [
@@ -207,6 +215,43 @@ exports.getPaidNoBooking = async (req, res) => {
   } catch (error) {
     console.error('[Admin Payments] Error listing paid-no-booking:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// Razorpay payment.failed webhook attempts for selected events. A failed attempt
+// is shown for support follow-up; only Razorpay can confirm whether a payment
+// was captured, and the customer must initiate any new payment attempt.
+exports.getEventPaymentFailures = async (req, res) => {
+  try {
+    const eventIds = String(req.query.eventIds || '').split(',').map((id) => id.trim()).filter(Boolean);
+    if (!eventIds.length || eventIds.length > 20 || eventIds.some((id) => !mongoose.isValidObjectId(id))) {
+      return res.status(400).json({ success: false, message: 'Valid eventIds are required.' });
+    }
+    const sessions = await PendingPaymentSession.find({
+      event: { $in: eventIds.map((id) => new mongoose.Types.ObjectId(id)) },
+      'paymentFailures.0': { $exists: true },
+    })
+      .select('orderId event user amount currency status paymentFailures createdAt updatedAt bookingDetails')
+      .populate('event', 'title startDate')
+      .populate('user', 'name email phone')
+      .sort({ updatedAt: -1 })
+      .limit(250)
+      .lean();
+
+    return res.json({ success: true, data: { items: sessions.map((session) => ({
+      _id: session._id,
+      orderId: session.orderId,
+      amount: session.amount,
+      currency: session.currency || 'INR',
+      status: session.status,
+      user: session.user || session.bookingDetails?.user || null,
+      event: session.event || session.bookingDetails?.event || null,
+      createdAt: session.createdAt,
+      paymentFailures: (session.paymentFailures || []).slice(-10).reverse(),
+    })) } });
+  } catch (error) {
+    console.error('[Admin Payments] Error listing event payment failures:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load event payment attempts.' });
   }
 };
 

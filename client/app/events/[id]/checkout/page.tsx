@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import HMFTermsContent from "@/components/HMFTermsContent";
+import HornbillFestivalTerms2026 from "@/components/HornbillFestivalTerms2026";
 import Navbar from "@/app/Navbar";
 import Footer from "@/app/Footer";
 import CheckoutDetailedBreakdown from "@/components/CheckoutDetailedBreakdown";
@@ -71,6 +72,7 @@ interface TicketType {
   basePrice?: number;
   quantity: number;
   sold: number;
+  unlimited?: boolean;
   description: string;
   benefits?: string[];
   capacity: number;
@@ -210,8 +212,17 @@ export default function CheckoutPage() {
   const HF_id = ["6927db2d2cd1c48b94f5b9e5",
     + "6927f5532cd1c48b94f5bd94", "6927f5f02cd1c48b94f5be37", "6927f61d2cd1c48b94f5be3d", "6927f66e2cd1c48b94f5be88", "6927f69c2cd1c48b94f5be8c", "6927f6cf2cd1c48b94f5be91", "6927f7102cd1c48b94f5bedb", "6927f73c2cd1c48b94f5bee0", "6927f7a32cd1c48b94f5bf36", "6927f7dd2cd1c48b94f5bf3b"];
 
-  const isHMFEvent = HMF_id.includes(eventId);
-  const isHFEvent = HF_id.includes(eventId);
+  const eventTitleForPricing = String(event?.title || "").toLowerCase();
+  const is2026HornbillEvent = eventTitleForPricing.includes("2026") || String(event?.startDate || "").startsWith("2026-");
+  const isHornbillMusicFestival = is2026HornbillEvent && eventTitleForPricing.includes("hornbill") && eventTitleForPricing.includes("music");
+  const isHornbillDayFestival = is2026HornbillEvent && eventTitleForPricing.includes("hornbill") && eventTitleForPricing.includes("festival") && !isHornbillMusicFestival;
+  const isHMFEvent = HMF_id.includes(eventId) || isHornbillMusicFestival;
+  const isHFEvent = HF_id.includes(eventId) || isHornbillDayFestival;
+  const hornbillFeeSplit = isHornbillMusicFestival
+    ? { ticketFee: 200, sustainability: 50, total: 250 }
+    : isHornbillDayFestival
+      ? { ticketFee: 100, sustainability: 50, total: 150 }
+      : null;
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
   const isAdmitEvent = eventId === "6ab29573107ecaa252c1d3be";
   const CHEESE_EVENT_ID = "6a28ecaba70d7b412aa9efb4";
@@ -332,7 +343,7 @@ export default function CheckoutPage() {
       ? event.ticketTypes.find((item) => item.name === ticketName)
       : undefined;
 
-    if (!ticket || ticket.quantity <= ticket.sold) {
+    if (!ticket || (!ticket.unlimited && ticket.quantity <= ticket.sold)) {
       toast.error("That NUSC pass is not available for this match.");
       return;
     }
@@ -573,7 +584,7 @@ export default function CheckoutPage() {
     const newQuantity = currentQuantity + 1;
 
     // Check availability
-    if (newQuantity > ticket.quantity - ticket.sold) {
+    if (!ticket.unlimited && newQuantity > ticket.quantity - ticket.sold) {
       toast.error("No more tickets available");
       return;
     }
@@ -1245,8 +1256,12 @@ export default function CheckoutPage() {
 
             <h1 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h1>
             <div className="text-sm text-gray-600">
-              <p>{event.location.address}: {event.location.city}</p>
-              <p>{new Date(event.startDate).toLocaleDateString('en-US', {
+              <p>{isHornbillDayFestival || isHornbillMusicFestival ? "The Naga Heritage Village, Kohima" : `${event.location.address}: ${event.location.city}`}</p>
+              <p>{isHornbillDayFestival
+                ? "December 1–10, 2026"
+                : isHornbillMusicFestival
+                  ? "December 2–10, 2026"
+                  : new Date(event.startDate).toLocaleDateString('en-US', {
                 weekday: 'short',
                 day: '2-digit',
                 month: 'short',
@@ -1351,11 +1366,11 @@ export default function CheckoutPage() {
                 <div className="space-y-4">
                   {event.ticketTypes && event.ticketTypes.length > 0 ? (
                     event.ticketTypes.map((ticket) => {
-                      const isSoldOut = isVenueOnlyNuscMatch || ticket.venueSalesOnly || ticket.quantity <= ticket.sold;
+                      const isSoldOut = isVenueOnlyNuscMatch || ticket.venueSalesOnly || (!ticket.unlimited && ticket.quantity <= ticket.sold);
                       const selectedItem = selectedTickets.get(ticket._id);
                       const quantity = selectedItem?.quantity || 0;
                       const isExpanded = expandedTickets.has(ticket._id);
-                      const availabilityPercentage = Math.max(0, Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100));
+                      const availabilityPercentage = ticket.unlimited ? 100 : Math.max(0, Math.min(100, ((ticket.quantity - ticket.sold) / ticket.quantity) * 100));
                       const isFastFilling = availabilityPercentage <= 30 && !isSoldOut;
 
                       return (
@@ -1385,7 +1400,9 @@ export default function CheckoutPage() {
                                 <p className="mt-2 text-s text-gray-600">
                                   {isAdmitEvent ? "Admit" : "Capacity"}: {ticket.capacity} {ticket.capacity === 1 ? "person" : "people"}
                                 </p>
-                                {isAdmitEvent && (
+                                {ticket.unlimited ? (
+                                  <p className="mt-1 text-xs font-medium text-emerald-700">Unlimited availability</p>
+                                ) : isAdmitEvent && (
                                   <p className="mt-1 text-xs font-medium text-gray-500">
                                     {Math.max(0, ticket.quantity - ticket.sold)} ticket{Math.max(0, ticket.quantity - ticket.sold) === 1 ? "" : "s"} remaining
                                   </p>
@@ -1671,7 +1688,27 @@ export default function CheckoutPage() {
                   )}
 
                   {!isFreeEvent && subtotalAmount > 0 && (
-                    isNuscHomeMatchEvent ? (
+                    hornbillFeeSplit ? (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{isHornbillMusicFestival ? "Hornbill Music Festival" : "Hornbill Festival"}</p>
+                            <p className="text-xs text-gray-600">Transparent price breakdown · {totalTicketQuantity} {totalTicketQuantity === 1 ? "ticket" : "tickets"}</p>
+                          </div>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">Festival pass</span>
+                        </div>
+                        {Array.from(selectedTickets.values()).map(({ ticket, quantity }) => (
+                          <div key={ticket._id} className="border-t border-amber-200 pt-2.5">
+                            <p className="mb-1.5 truncate text-xs font-medium text-gray-700">{ticket.name}</p>
+                            <div className="space-y-1 text-xs text-gray-600">
+                              <div className="flex justify-between"><span>Ticket fee ({quantity} × ₹{hornbillFeeSplit.ticketFee})</span><span>₹{(quantity * hornbillFeeSplit.ticketFee).toLocaleString("en-IN")}</span></div>
+                              <div className="flex justify-between"><span>Festival Sustainability Fund ({quantity} × ₹50)</span><span>₹{(quantity * hornbillFeeSplit.sustainability).toLocaleString("en-IN")}</span></div>
+                              <div className="flex justify-between border-t border-dashed border-amber-200 pt-1.5 font-semibold text-gray-900"><span>Festival ticket total</span><span>₹{(quantity * hornbillFeeSplit.total).toLocaleString("en-IN")}</span></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : isNuscHomeMatchEvent ? (
                       <NuscPriceBreakdown
                         compact
                         items={Array.from(selectedTickets.values()).map(({ ticket, quantity }) => ({
@@ -1813,11 +1850,11 @@ export default function CheckoutPage() {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto mx-4">
           <DialogHeader>
             <DialogTitle>Terms & Conditions</DialogTitle>
-            {isHMFEvent && <DialogDescription>Hornbill Music Festival 2025</DialogDescription>}
+            {isHMFEvent && <DialogDescription>Hornbill Music Festival 2026</DialogDescription>}
           </DialogHeader>
           <div className="prose max-w-none">
             {isHFEvent ? (
-              <p className="text-gray-700">Hornbill Festival Terms and Conditions...</p>
+              <HornbillFestivalTerms2026 />
             ) : (
               <HMFTermsContent />
             )}

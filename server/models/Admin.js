@@ -15,6 +15,10 @@ const adminSchema = new mongoose.Schema({
     default: 'admin',
     enum: ['admin'],
   },
+  tokenVersion: {
+    type: Number,
+    default: 0,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Admin', adminSchema);

@@ -146,6 +146,12 @@ export default function Dashboard({ stats, setActiveView }: DashboardProps) {
             <Button onClick={() => setActiveView("bookings")}>
               <ListOrdered className="mr-2 h-4 w-4" /> View Bookings
             </Button>
+            <Button variant="outline" onClick={() => setActiveView("hf-tickets")}>
+              <ListOrdered className="mr-2 h-4 w-4" /> Hornbill Festival bookings
+            </Button>
+            <Button variant="outline" onClick={() => setActiveView("hmf-tickets")}>
+              <Music className="mr-2 h-4 w-4" /> Music Festival bookings
+            </Button>
             <Button
               variant="outline"
               onClick={() => setActiveView("organizer-approvals")}

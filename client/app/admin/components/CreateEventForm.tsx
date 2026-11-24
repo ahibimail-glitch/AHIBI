@@ -30,6 +30,7 @@ interface TicketType {
   description: string;
   price: string;
   quantity: string;
+  unlimited: boolean;
   capacity: string;
   benefits: string[];
 }
@@ -69,6 +70,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       description: "",
       price: "",
       quantity: "",
+      unlimited: false,
       capacity: "1", // Default capacity is 1 entry per ticket
       benefits: ["Entry to the event"]
     }
@@ -240,7 +242,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     setEventData((prev) => ({ ...prev, category: value }));
   };
 
-  const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string) => {
+  const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string | boolean) => {
     setTicketTypes(prev => 
       prev.map((ticket, i) => 
         i === index 
@@ -296,6 +298,7 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         description: "",
         price: "",
         quantity: "",
+        unlimited: false,
         capacity: "1", // Default capacity is 1 entry per ticket
         benefits: ["Entry to the event"]
       }
@@ -327,6 +330,18 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     return finalPrice;
   };
 
+  const getApiErrorMessage = (data: any, fallback: string) => {
+    if (typeof data?.message === 'string' && data.message.trim()) return data.message;
+    const validationErrors = data?.errors || data?.data?.errors;
+    if (Array.isArray(validationErrors) && validationErrors.length) {
+      return validationErrors
+        .map((item: any) => item?.msg || item?.message)
+        .filter((message: unknown): message is string => typeof message === 'string' && Boolean(message.trim()))
+        .join('. ') || fallback;
+    }
+    return fallback;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -338,8 +353,8 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
     
     // Validate ticket types (only for paid events)
     if (!eventData.isFreeEvent) {
-      const hasValidTickets = ticketTypes.every(ticket => 
-        ticket.name && ticket.price && ticket.quantity
+      const hasValidTickets = ticketTypes.every(ticket =>
+        ticket.name && ticket.price && (ticket.unlimited || ticket.quantity)
       );
       
       if (!hasValidTickets) {
@@ -420,7 +435,9 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         name: ticket.name,
         description: ticket.description || "",
         price: parseFloat(ticket.price) || 0,
-        quantity: parseInt(ticket.quantity, 10) || 0,
+        basePrice: parseFloat(ticket.price) || 0,
+        quantity: ticket.unlimited ? 0 : parseInt(ticket.quantity, 10) || 0,
+        unlimited: ticket.unlimited,
         benefits: ticket.benefits.filter(benefit => benefit.trim() !== ""),
         sold: 0,
         capacity: parseInt(ticket.capacity, 10) || 1,
@@ -482,12 +499,15 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         window.location.href = "/admin/login";
         return;
       } else {
-        const errorMessage = response.data?.message || "Failed to create event";
+        const errorMessage = getApiErrorMessage(response.data, `Event creation failed (HTTP ${response.status}).`);
         setError(errorMessage);
       }
     } catch (err: any) {
       console.error("Failed to create event:", err);
-      const errorMessage = err.response?.data?.message || "An unexpected error occurred.";
+      const errorMessage = getApiErrorMessage(
+        err.response?.data,
+        err.response?.status ? `Event creation failed (HTTP ${err.response.status}).` : "Could not reach the event service. Check the API connection and try again."
+      );
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -904,8 +924,16 @@ export default function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                           value={ticket.quantity}
                           onChange={(e) => handleTicketTypeChange(ticketIndex, 'quantity', e.target.value)}
                           placeholder="e.g., 100"
-                          required
+                          required={!ticket.unlimited}
+                          disabled={ticket.unlimited}
                         />
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Checkbox
+                            checked={ticket.unlimited}
+                            onCheckedChange={(checked) => handleTicketTypeChange(ticketIndex, 'unlimited', checked === true)}
+                          />
+                          Unlimited tickets (no inventory cap)
+                        </label>
                       </div>
                     </div>
 
