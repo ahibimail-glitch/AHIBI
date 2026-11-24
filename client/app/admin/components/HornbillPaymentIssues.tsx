@@ -99,7 +99,7 @@ export default function HornbillPaymentIssues({ kind }: { kind: "day" | "music" 
       </header>
 
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        Captured payments with missing tickets can be safely reconciled from the section below. The action verifies the payment with Razorpay before confirming tickets. A new payment attempt must be initiated by the customer.
+        For a captured payment with missing tickets, use <strong>Verify payment &amp; issue tickets</strong> below. AHIBI checks the payment with Razorpay, then creates or restores the booking records so the tickets appear in the customer’s dashboard. Failed or unverified payments cannot be issued this way; the customer must retry payment.
       </section>
 
       {eventsLoaded && eventIds.length > 0 ? (
