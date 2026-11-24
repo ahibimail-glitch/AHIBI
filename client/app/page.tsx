@@ -131,6 +131,17 @@ const getVenueImage = (venue: PublicVenue, idx?: number) => {
 
 const getEventImage = (event?: Event) => resolveImageUrl(event?.banner, "event")
 
+const getRecommendedEventBanner = (event: Event) => {
+  if (event.banner) return event.banner
+  const label = `${event.title || ""} ${event.slug || ""}`.toLowerCase()
+  if (label.includes("hornbill") && label.includes("festival")) {
+    return label.includes("music")
+      ? "/images/hornbill-2026/hornbill-music-mobile.jpg"
+      : "/images/hornbill-2026/hornbill-day-mobile.jpg"
+  }
+  return "/placeholder.svg"
+}
+
 const formatDayDate = (dateString?: string | Date) => {
   if (!dateString) return ""
   const date = new Date(dateString)
@@ -173,9 +184,13 @@ const NUSC_HOME_MATCH_SERIES: Event = {
   slug: "nusc-home-matches",
 };
 
-const getEventHref = (event: { _id: string; slug?: string; externalBookingUrl?: string }) => {
+const getEventHref = (event: { _id: string; title?: string; slug?: string; externalBookingUrl?: string }) => {
   if (String(event._id) === NUSC_HOME_MATCH_SERIES_ID) return "/nusc-home-matches";
   if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
+  const label = `${event.title || ""} ${event.slug || ""}`.toLowerCase();
+  if (label.includes("hornbill") && label.includes("festival") && !label.includes("showcase")) {
+    return label.includes("music") ? "/hornbill-music-festival-2026" : "/hornbill-festival-2026";
+  }
   if (
     String(event._id) === HORNBILL_SHOWCASE_EVENT_ID ||
     String(event.slug || "") === "ticket-to-hornbill-showcase-day1" ||
@@ -491,11 +506,18 @@ function LegacyHomePage() {
     const fetchFeatured = async () => {
       setIsLoading(true)
       setError(null)
+      const festivalEvents = events.filter((event) => {
+        const label = `${event.title || ""} ${event.slug || ""}`.toLowerCase()
+        const isFestival = label.includes("hornbill") && label.includes("festival")
+        const is2026 = label.includes("2026") || String(event.startDate || "").startsWith("2026-")
+        const isLegacy = label.includes("showcase") || String(event._id) === HORNBILL_SHOWCASE_EVENT_ID
+        return isFestival && is2026 && !isLegacy
+      })
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=100`)
         if (!response.ok) {
-          setFeaturedEvents([NUSC_HOME_MATCH_SERIES])
+          setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES])
           return
         }
         const data: EventsResponse = await response.json()
@@ -511,19 +533,18 @@ function LegacyHomePage() {
             (a, b) =>
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
           )
-        setFeaturedEvents(
-          [...normalized, NUSC_HOME_MATCH_SERIES].sort(
-            (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-          )
-        )
+        const uniqueRecommendedEvents = [...new Map(
+          [...festivalEvents, ...normalized, NUSC_HOME_MATCH_SERIES].map((event) => [String(event._id), event])
+        ).values()]
+        setFeaturedEvents(uniqueRecommendedEvents)
       } catch {
-        setFeaturedEvents([NUSC_HOME_MATCH_SERIES])
+        setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES])
       } finally {
         setIsLoading(false)
       }
     }
     fetchFeatured()
-  }, [])
+  }, [events])
 
   useEffect(() => {
     const update = () => {
@@ -849,7 +870,7 @@ function LegacyHomePage() {
                           <Card className="h-full overflow-hidden rounded-xl border border-gray-200 bg-white">
                             <div className="relative aspect-[2/3] w-full overflow-hidden">
                               <Image
-                                src={event.banner || "/placeholder.svg"}
+                                src={getRecommendedEventBanner(event)}
                                 alt={event.title}
                                 fill
                                 sizes="(max-width: 639px) 43vw, 20vw"
@@ -884,7 +905,7 @@ function LegacyHomePage() {
                           {/* POSTER */}
                           <div className="relative aspect-[2/3] w-full overflow-hidden">
                             <Image
-                              src={event.banner || "/placeholder.svg"}
+                              src={getRecommendedEventBanner(event)}
                               alt={event.title}
                               fill
                               sizes="20vw"
