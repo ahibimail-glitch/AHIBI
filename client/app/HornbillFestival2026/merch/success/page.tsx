@@ -21,6 +21,7 @@ function MerchOrderSuccessInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -180,8 +181,6 @@ function MerchOrderSuccessInner() {
   const isPaid = status === "paid";
   const isPending = status === "pending" || status === "created";
   const isFailed = status === "failed" || status === "cancelled";
-
-  const [copied, setCopied] = useState(false);
 
   const trackingOrderId = order?._id || order?.id || orderId;
   const trackingUrl = `https://hornbillmusicfestival.com/track/${trackingOrderId}`;
