@@ -113,7 +113,14 @@ exports.createOrder = async (req, res) => {
     return res.status(200).json(order);
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
-    res.status(500).send(error.message);
+    const statusCode = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600
+      ? error.statusCode
+      : 500;
+    return res.status(statusCode).json({
+      success: false,
+      code: error?.code || 'PAYMENT_ORDER_CREATION_FAILED',
+      message: error?.message || 'Unable to start payment. Please try again.',
+    });
   }
 };
 
