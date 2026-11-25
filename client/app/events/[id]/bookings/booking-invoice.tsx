@@ -125,7 +125,10 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
     const formatPriceLabel = (amount: number) => (Number(amount) === 0 ? 'RSVP' : formatCurrency(amount));
 
     const getEndTime = (booking: any) => {
-        const end = booking.event?.endDate || booking.event?.endTime || booking.endTime;
+        const multiDayEvent = booking.event?.startDate && booking.event?.endDate &&
+            new Date(booking.event.startDate).toISOString().slice(0, 10) !== new Date(booking.event.endDate).toISOString().slice(0, 10);
+        if (booking.selectedDate && multiDayEvent && !booking.event?.startTime && !booking.event?.endTime && !booking.startTime && !booking.endTime) return 'Time TBA';
+        const end = booking.event?.endTime || booking.endTime || (multiDayEvent ? null : booking.event?.endDate);
         if (end) return formatTime(end);
         const start = new Date(booking.event?.startDate || booking.event?.startTime || booking.startTime);
         start.setHours(start.getHours() + 2);
@@ -207,7 +210,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
     if (!booking) return null;
 
     const showEventSerial = shouldShowEventSerial(booking);
-    const startDate = booking.event?.startDate || booking.event?.startTime || booking.startTime;
+    const startDate = booking.selectedDate || booking.event?.startDate || booking.event?.startTime || booking.startTime;
     const displayName = booking.user?.name || user?.name || '—';
     const displayEmail = booking.user?.email || user?.email || '—';
     const displayPhone = booking.user?.phone || user?.phone || '—';
