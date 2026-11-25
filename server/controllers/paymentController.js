@@ -33,6 +33,40 @@ function verifyPaymentSignature(orderId, paymentId, signature) {
   return received.length === expected.length && crypto.timingSafeEqual(received, expected);
 }
 
+function sendHornbillTicketReadyMessage(bookingDetails, bookings) {
+  const eventSnapshot = bookingDetails?.event || {};
+  const eventTitle = String(eventSnapshot.title || '').toLowerCase();
+  const selectedDate = bookingDetails?.selectedDate || bookings?.[0]?.selectedDate;
+  const phone = bookingDetails?.user?.phone;
+  const bookingId = bookings?.[0]?._id;
+  const eventId = eventSnapshot._id || bookingDetails?.event;
+  if (!phone || !bookingId || !eventId || !eventTitle.includes('hornbill') || !selectedDate) return;
+
+  const displayEventDate = new Date(selectedDate).toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  whatsappService.sendTicketReadyTemplate({
+    phone,
+    eventName: eventSnapshot.title,
+    eventDate: displayEventDate,
+    venue: eventSnapshot.location?.address || eventSnapshot.location?.city || 'The Naga Heritage Village, Kohima',
+    bookingId,
+    eventId,
+  }).then((result) => {
+    if (result?.success === false) {
+      console.error('[Hornbill booking] WhatsApp ticket message failed:', result.message || result.error);
+      return;
+    }
+    console.log('[Hornbill booking] WhatsApp ticket message sent');
+  }).catch((error) => {
+    console.error('[Hornbill booking] WhatsApp ticket message failed:', error?.message || error);
+  });
+}
+
 // Debug environment variables
 
 // Initialize Razorpay with error handling
@@ -196,38 +230,7 @@ exports.verifyPayment = async (req, res) => {
     }
 
     if (!settled.alreadyCompleted) {
-      const bookingDetails = savedCheckout.bookingDetails || {};
-      const eventSnapshot = bookingDetails.event || {};
-      const eventTitle = String(eventSnapshot.title || '').toLowerCase();
-      const selectedDate = bookingDetails.selectedDate || settled.bookings?.[0]?.selectedDate;
-      const phone = bookingDetails.user?.phone;
-      const bookingId = settled.bookings?.[0]?._id;
-      const eventId = eventSnapshot._id || savedCheckout.event;
-      if (phone && bookingId && eventId && eventTitle.includes('hornbill') && selectedDate) {
-        const displayEventDate = new Date(selectedDate).toLocaleDateString('en-IN', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-          timeZone: 'UTC',
-        });
-        whatsappService.sendTicketReadyTemplate({
-          phone,
-          eventName: eventSnapshot.title,
-          eventDate: displayEventDate,
-          venue: eventSnapshot.location?.address || eventSnapshot.location?.city || 'The Naga Heritage Village, Kohima',
-          bookingId,
-          eventId,
-        }).then((result) => {
-          if (result?.success === false) {
-            console.error('[Hornbill booking] WhatsApp ticket message failed:', result.message || result.error);
-            return;
-          }
-          console.log('[Hornbill booking] WhatsApp ticket message sent');
-        }).catch((error) => {
-          console.error('[Hornbill booking] WhatsApp ticket message failed:', error?.message || error);
-        });
-      }
+      sendHornbillTicketReadyMessage(savedCheckout.bookingDetails, settled.bookings);
     }
 
     return res.status(201).json({
@@ -534,6 +537,9 @@ exports.razorpayWebhook = async (req, res) => {
         orderIntentId: payment?.notes?.orderIntentId,
         signature,
       });
+      if (!settled.alreadyCompleted) {
+        sendHornbillTicketReadyMessage(pending.bookingDetails, settled.bookings);
+      }
       return res.json({ status: 'ok', settled: true, alreadyCompleted: settled.alreadyCompleted });
     } catch (settlementError) {
       if (settlementError.terminal) {
