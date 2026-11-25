@@ -30,5 +30,5 @@ export default function Hornbill2026Bookings({ kind }: { kind: "day" | "music" }
     return () => { active = false; };
   }, [kind]);
 
-  return <EventTicketBookings title={kind === "music" ? "Hornbill Music Festival 2026 Tickets" : "Hornbill Festival 2026 Tickets"} eventIds={eventIds} />;
+  return <EventTicketBookings title={kind === "music" ? "Hornbill Music Festival 2026 Tickets" : "Hornbill Festival 2026 Tickets"} eventIds={eventIds} hornbillDateCorrection={kind} />;
 }

@@ -21,6 +21,7 @@ interface Event {
 
 interface BookingVerification {
   bookingId: string;
+  ticketToken?: string;
   eventId?: string;
   checkInRequestId?: string;
   eventDate: string;
@@ -117,6 +118,7 @@ const QrScanner = () => {
       if (parsedData && parsedData.bookingId) {
         const bookingToVerify: BookingVerification = {
           bookingId: parsedData.bookingId,
+          ticketToken: typeof parsedData.ticketToken === 'string' ? parsedData.ticketToken : undefined,
           userId: parsedData.name || 'Unknown',
           ticketType: parsedData.ticketType || 'Unknown',
           eventDate: parsedData.bookingDate || new Date().toISOString(),
@@ -264,7 +266,8 @@ const QrScanner = () => {
         },
         body: JSON.stringify({
           bookingId: bookingData.bookingId,
-          eventId: selectedEvent
+          eventId: selectedEvent,
+          ticketToken: bookingData.ticketToken,
         }),
       });
 
@@ -378,6 +381,7 @@ const QrScanner = () => {
         bookingId: verification.bookingId,
         eventId: verification.eventId,
         requestId: verification.checkInRequestId,
+        ticketToken: verification.ticketToken,
       }, {
         headers: { Authorization: `Bearer ${staffToken}` },
       });

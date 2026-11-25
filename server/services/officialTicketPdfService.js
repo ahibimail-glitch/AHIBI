@@ -162,7 +162,7 @@ function drawMemberTicketPdf(doc, booking, event, qrCodeDataUrl, { includedWith,
   const headerHeight = 186;
   const displayData = ticketDisplayData(booking, { includedWith, attendee });
   const eventTitle = event?.title || booking.eventSnapshot?.title || 'Event Title';
-  const eventDate = event?.startDate || event?.startTime || booking.startTime;
+  const eventDate = booking.selectedDate || event?.startDate || event?.startTime || booking.startTime;
   const venue = event?.location?.address || event?.venue || '-';
   const ticketId = memberTicketId(booking);
   const ticketBenefits = event?.ticketTypes?.find((ticket) => ticket.name === booking.ticketType)?.benefits || [];
@@ -304,6 +304,7 @@ async function createTicketQrDataUrl(booking, event) {
     quantity: booking.quantity,
     ...(booking.nuscGeneralZone && { seatingZone: booking.nuscGeneralZone }),
     ...(booking.selectedDate && { selectedDate: booking.selectedDate }),
+    ...(booking.ticketQrToken && { ticketToken: booking.ticketQrToken }),
   };
   return QRCode.toDataURL(JSON.stringify(payload), {
     errorCorrectionLevel: 'H',

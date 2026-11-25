@@ -26,6 +26,7 @@ interface Booking {
   status?: string;
   paymentId?: string;
   paymentStatus?: string;
+  selectedDate?: string;
   country?: string;
   state?: string;
   modeOfPayment?: string;
@@ -96,16 +97,16 @@ function localDayAfter(value: string) {
   return addDays(new Date(`${value}T00:00:00`), 1).toISOString();
 }
 
-export default function EventTicketBookings({ title, eventIds }: { title: string; eventIds: string[] }) {
+export default function EventTicketBookings({ title, eventIds, hornbillDateCorrection }: { title: string; eventIds: string[]; hornbillDateCorrection?: 'day' | 'music' }) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } }));
   return (
     <QueryClientProvider client={queryClient}>
-      <EventTicketBookingsContent title={title} eventIds={eventIds} />
+      <EventTicketBookingsContent title={title} eventIds={eventIds} hornbillDateCorrection={hornbillDateCorrection} />
     </QueryClientProvider>
   );
 }
 
-function EventTicketBookingsContent({ title, eventIds }: { title: string; eventIds: string[] }) {
+function EventTicketBookingsContent({ title, eventIds, hornbillDateCorrection }: { title: string; eventIds: string[]; hornbillDateCorrection?: 'day' | 'music' }) {
   const queryClient = useQueryClient();
   const isBrowser = typeof window !== "undefined";
   const [page, setPage] = useState(1);
@@ -123,6 +124,8 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
+  const [correctionDate, setCorrectionDate] = useState('');
 
   const eventScope = eventIds.join(",");
   useEffect(() => {
@@ -187,6 +190,22 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
     onError: (error) => toast.error(error instanceof Error ? error.message : "Failed to cancel booking"),
   });
 
+  const dateCorrectionMutation = useMutation({
+    mutationFn: (bookingIds: string[]) => adminJson<{ message: string }>('/api/admin/bookings/hornbill-date-correction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookingIds, selectedDate: correctionDate, kind: hornbillDateCorrection }),
+    }),
+    onSuccess: (result) => {
+      setSelectedBookingIds([]);
+      setCorrectionDate('');
+      queryClient.invalidateQueries({ queryKey: ['admin-ticket-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-ticket-booking-stats'] });
+      toast.success(result.message || 'Festival ticket dates updated.');
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Could not move these tickets.'),
+  });
+
   const bookings = bookingsQuery.data?.bookings || [];
   const total = statsQuery.data?.totalBookings ?? bookingsQuery.data?.pagination.total ?? 0;
   const options = optionQuery.data;
@@ -229,6 +248,13 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
   const cancelBooking = (bookingId: string) => {
     if (!window.confirm("Cancel this booking only if it is unpaid and pending? Booking records and audit history are retained.")) return;
     cancelMutation.mutate(bookingId);
+  };
+
+  const moveSelectedTickets = () => {
+    if (!hornbillDateCorrection || !correctionDate || selectedBookingIds.length === 0) return;
+    const dateLabel = format(new Date(`${correctionDate}T12:00:00`), 'MMMM d, yyyy');
+    if (!window.confirm(`Move ${selectedBookingIds.length} selected paid ticket(s) to ${dateLabel}? This replaces each QR code, keeps the original payment, and updates the customer's dashboard.`)) return;
+    dateCorrectionMutation.mutate(selectedBookingIds);
   };
 
   const handleExport = async () => {
@@ -285,6 +311,23 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {hornbillDateCorrection && (
+              <div className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-1">
+                  <p className="font-semibold text-amber-950">Move paid festival tickets to another date</p>
+                  <p className="text-xs text-amber-900">Select tickets for one customer and event. AHIBI keeps the payment, replaces the QR code, and records the change.</p>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="grid gap-1 text-xs font-medium text-amber-950">
+                    New event date
+                    <Input type="date" min={hornbillDateCorrection === 'music' ? '2026-12-02' : '2026-12-01'} max="2026-12-10" value={correctionDate} onChange={(event) => setCorrectionDate(event.target.value)} />
+                  </label>
+                  <Button type="button" disabled={!selectedBookingIds.length || !correctionDate || dateCorrectionMutation.isPending} onClick={moveSelectedTickets}>
+                    {dateCorrectionMutation.isPending ? 'Updating tickets…' : selectedBookingIds.length ? `Move ${selectedBookingIds.length} selected` : 'Move selected tickets'}
+                  </Button>
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <Input
                 placeholder="Search by event, name, email, phone"
@@ -338,8 +381,10 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
             <Table>
               <TableHeader>
                 <TableRow>
+                  {hornbillDateCorrection && <TableHead className="w-10">Select</TableHead>}
                   <TableHead>Event</TableHead>
                   <TableHead>Ticket Type</TableHead>
+                  {hornbillDateCorrection && <TableHead>Ticket Date</TableHead>}
                   <TableHead>Qty</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
@@ -356,8 +401,10 @@ function EventTicketBookingsContent({ title, eventIds }: { title: string; eventI
               <TableBody>
                 {bookings.map((booking) => (
                   <TableRow key={booking._id}>
+                    {hornbillDateCorrection && <TableCell><input type="checkbox" aria-label={`Select ticket for ${booking.user?.name || 'customer'}`} checked={selectedBookingIds.includes(booking._id)} disabled={booking.status !== 'confirmed' || booking.paymentStatus !== 'completed' || dateCorrectionMutation.isPending} onChange={(event) => setSelectedBookingIds((current) => event.target.checked ? [...new Set([...current, booking._id])] : current.filter((id) => id !== booking._id))} /></TableCell>}
                     <TableCell>{booking.event?.title || booking.eventTitle || booking.eventSnapshot?.title || "Deleted Event"}</TableCell>
                     <TableCell>{booking.ticketType || "-"}</TableCell>
+                    {hornbillDateCorrection && <TableCell>{booking.selectedDate ? format(new Date(booking.selectedDate), 'MMM d, yyyy') : 'Not recorded'}</TableCell>}
                     <TableCell>{booking.quantity ?? "-"}</TableCell>
                     <TableCell>₹{booking.total ?? 0}</TableCell>
                     <TableCell><Badge variant="outline">{booking.status || "Unknown"}</Badge></TableCell>

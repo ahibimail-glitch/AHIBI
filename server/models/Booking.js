@@ -18,6 +18,13 @@ const AdminLifecycleAuditSchema = new mongoose.Schema({
   previousPaymentStatus: String,
 }, { _id: false });
 
+const AdminTicketDateChangeSchema = new mongoose.Schema({
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  at: { type: Date, required: true },
+  previousDate: { type: Date, required: true },
+  selectedDate: { type: Date, required: true },
+}, { _id: false });
+
 const ScannerCheckInRequestSchema = new mongoose.Schema({
   event: {
     type: mongoose.Schema.Types.ObjectId,
@@ -54,6 +61,8 @@ const BookingSchema = new mongoose.Schema({
   selectedDate: {
     type: Date
   },
+  ticketQrToken: { type: String, select: false },
+  adminTicketDateChanges: { type: [AdminTicketDateChangeSchema], default: undefined, select: false },
   // Snapshot of event details at the time of booking to preserve info if the event is later deleted/changed
   eventSnapshot: {
     _id: {

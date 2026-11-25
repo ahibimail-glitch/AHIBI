@@ -207,7 +207,7 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
     if (!booking) return null;
 
     const showEventSerial = shouldShowEventSerial(booking);
-    const startDate = booking.event?.startDate || booking.event?.startTime || booking.startTime;
+    const startDate = booking.selectedDate || booking.event?.startDate || booking.event?.startTime || booking.startTime;
     const displayName = booking.user?.name || user?.name || '—';
     const displayEmail = booking.user?.email || user?.email || '—';
     const displayPhone = booking.user?.phone || user?.phone || '—';
@@ -235,6 +235,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
         ticketId: showEventSerial
             ? `SN-${booking.ticketSerialNumber}`
             : `${booking._id}_ticket_${booking.ticketIndex || ticketIndex}`,
+        ...(booking.selectedDate && { selectedDate: booking.selectedDate }),
+        ...(booking.ticketQrToken && { ticketToken: booking.ticketQrToken }),
     };
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(JSON.stringify(rawDataObject))}&size=160x160&margin=6`;
     const ticketId = showEventSerial

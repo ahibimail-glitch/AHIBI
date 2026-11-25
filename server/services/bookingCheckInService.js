@@ -46,7 +46,7 @@ function createDatabaseTimer(onDatabaseTiming) {
 }
 
 async function checkInBooking(
-  { bookingId, eventId, staffId, scannerStaffId, adminId, canIssueWristbands = false, requestId },
+  { bookingId, eventId, staffId, scannerStaffId, adminId, canIssueWristbands = false, requestId, ticketToken },
   { afterScan = async () => {}, onDatabaseTiming, onTransactionTiming } = {},
 ) {
   if (!mongoose.isValidObjectId(bookingId) || !mongoose.isValidObjectId(eventId)) {
@@ -65,9 +65,12 @@ async function checkInBooking(
       try {
         await session.withTransaction(async () => {
       const booking = await timeDatabase('checkin-booking-read-db', () => Booking.findById(bookingId)
-        .select('+scannerCheckInRequests')
+        .select('+scannerCheckInRequests +ticketQrToken')
         .session(session));
       if (!booking) throw new CheckInError('Booking not found.', 'BOOKING_NOT_FOUND', 404);
+      if (booking.ticketQrToken && booking.ticketQrToken !== ticketToken) {
+        throw new CheckInError('This ticket QR code has been replaced. Use the latest ticket from the customer’s AHIBI dashboard.', 'REPLACED_TICKET_QR', 409);
+      }
       if (!sameId(booking.event, eventId) && !isSeasonPassBooking(booking)) {
         throw new CheckInError('This booking is not for the selected event.', 'EVENT_MISMATCH', 409);
       }
