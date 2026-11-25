@@ -517,10 +517,7 @@
             <SidebarButton icon={DollarSign} label="Hornbill Festival Payment Issues" active={activeView === "hf-payment-issues"} onClick={() => { setActiveView("hf-payment-issues"); setSidebarOpen(false); }} />
             <SidebarButton icon={Music} label="Hornbill Music Bookings" active={activeView === "hmf-tickets"} onClick={() => { setActiveView("hmf-tickets"); setSidebarOpen(false); }} />
             <SidebarButton icon={DollarSign} label="Music Festival Payment Issues" active={activeView === "hmf-payment-issues"} onClick={() => { setActiveView("hmf-payment-issues"); setSidebarOpen(false); }} />
-  <<<<<<< feature/hornbill-payment-recovery
-  =======
             <SidebarButton icon={Package} label="Hornbill Merch Orders" active={activeView === "merch-orders"} onClick={() => { setActiveView("merch-orders"); setSidebarOpen(false); }} />
-  >>>>>>> main
             <SidebarButton icon={Video} label="NWA Wrestling" active={activeView === "nwa-wrestling-bookings"} onClick={() => { setActiveView("nwa-wrestling-bookings"); setSidebarOpen(false); }} />
             <SidebarButton icon={Music} label="Dance League" active={activeView === "dance-league"} onClick={() => { setActiveView("dance-league"); setSidebarOpen(false); }} />
             <SidebarButton icon={CalendarCheck2} label="Workshop RSVP" active={activeView === "workshop-rsvp"} onClick={() => { setActiveView("workshop-rsvp"); setSidebarOpen(false); }} />
