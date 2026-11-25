@@ -1718,6 +1718,13 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                {hornbillFeeSplit && selectedHornbillDate && (
+                  <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-50 px-4 py-3 text-sm">
+                    <span className="font-medium text-gray-700">Visit date</span>
+                    <span className="font-semibold text-gray-900">{new Date(`${selectedHornbillDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                  </div>
+                )}
+
                 {/* Totals */}
                 <div className={isNuscHomeMatchEvent ? "mt-4 space-y-3" : "border-t border-gray-200 mt-6 pt-6 space-y-3"}>
 
