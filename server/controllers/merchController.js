@@ -46,8 +46,16 @@ const computeTotals = (items = []) => {
   };
 };
 
-const validateShippingAddress = (address = {}) => {
+const validateShippingAddress = (address = {}, { requireEmail = false } = {}) => {
   const errors = {};
+
+  if (requireEmail) {
+    if (!address.email?.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address.email.trim())) {
+      errors.email = 'Enter a valid email';
+    }
+  }
 
   if (!address.fullName?.trim()) errors.fullName = 'Full name is required';
   if (!address.phone?.trim()) {
@@ -215,6 +223,15 @@ exports.syncPaymentStatus = async (req, res) => {
       } catch (emailError) {
         console.error('[Merch] Failed to send order confirmation email (sync):', emailError);
       }
+
+      try {
+        const partner = resolvePartner(order.source);
+        if (partner.fulfilmentEmail) {
+          await emailService.sendMerchFulfilmentEmail(order, { to: partner.fulfilmentEmail });
+        }
+      } catch (fulfilError) {
+        console.error('[Merch] Failed to send fulfilment email (sync):', fulfilError);
+      }
     }
 
     return res.json({ success: true, data: order });
@@ -236,7 +253,7 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'sessionId is required' });
     }
 
-    const { isValid, errors } = validateShippingAddress(shippingAddress);
+    const { isValid, errors } = validateShippingAddress(shippingAddress, { requireEmail: !!partner.requireEmail });
     if (!isValid) {
       return res.status(400).json({
         success: false,
@@ -294,7 +311,7 @@ exports.createOrder = async (req, res) => {
       customer: {
         name: shippingAddress.fullName || req.user?.name,
         contact: shippingAddress.phone || req.user?.phone,
-        email: req.user?.email
+        email: shippingAddress.email || req.user?.email
       },
       notes: {
         merchOrderId: order._id.toString(),
@@ -878,6 +895,15 @@ exports.razorpayWebhook = async (req, res) => {
       } catch (emailError) {
         console.error('[Merch] Failed to send order confirmation email:', emailError);
         // Don't fail the webhook if email fails
+      }
+
+      try {
+        const partner = resolvePartner(order.source);
+        if (partner.fulfilmentEmail) {
+          await emailService.sendMerchFulfilmentEmail(order, { to: partner.fulfilmentEmail });
+        }
+      } catch (fulfilError) {
+        console.error('[Merch] Failed to send fulfilment email:', fulfilError);
       }
     }
 

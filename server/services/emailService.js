@@ -783,6 +783,115 @@ class EmailService {
     }
   }
 
+  async sendMerchFulfilmentEmail(order, { to } = {}) {
+    try {
+      const recipient = to || process.env.TOURISM_MERCH_FULFILMENT_EMAIL || 'business@merchland.in';
+      const round2 = (n) => Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+      const orderDate = order.createdAt
+        ? new Date(order.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+        : new Date().toLocaleString('en-IN');
+
+      let gstTotal = 0;
+      let taxableTotal = 0;
+      const itemsHtml = (order.items || []).map((item) => {
+        const qty = Number(item.quantity) || 1;
+        const price = Number(item.price) || 0;
+        const lineTotal = round2(price * qty);
+        const rate = typeof item.gstRate === 'number' ? item.gstRate : null;
+        let taxable = null;
+        let gst = null;
+        if (rate != null && rate >= 0) {
+          taxable = round2(lineTotal / (1 + rate));
+          gst = round2(lineTotal - taxable);
+          taxableTotal = round2(taxableTotal + taxable);
+          gstTotal = round2(gstTotal + gst);
+        }
+        return `
+          <tr style="border-bottom:1px solid #e0e0e0;">
+            <td style="padding:8px;">
+              <div style="font-weight:600;">${item.name || 'Merch Item'}</div>
+              ${item.variant ? `<div style="font-size:12px;color:#666;">${item.variant}</div>` : ''}
+              ${item.sku ? `<div style="font-size:12px;color:#666;">SKU: ${item.sku}</div>` : ''}
+            </td>
+            <td style="padding:8px;text-align:center;">${item.hsn || '-'}</td>
+            <td style="padding:8px;text-align:center;">${rate != null ? (rate * 100).toFixed(0) + '%' : '-'}</td>
+            <td style="padding:8px;text-align:center;">${qty}</td>
+            <td style="padding:8px;text-align:right;">₹${lineTotal.toFixed(2)}</td>
+            <td style="padding:8px;text-align:right;">${taxable != null ? '₹' + taxable.toFixed(2) : '-'}</td>
+            <td style="padding:8px;text-align:right;">${gst != null ? '₹' + gst.toFixed(2) : '-'}</td>
+          </tr>`;
+      }).join('');
+
+      const addr = order.shippingAddress || {};
+      const pay = order.payment || {};
+
+      const html = `
+        <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px;">
+          <h2 style="margin:0 0 4px;">New paid order — fulfilment required</h2>
+          <p style="margin:0 0 16px;color:#666;">Hornbill merch (via AHIBI) · ${orderDate}</p>
+
+          <h3 style="margin:16px 0 8px;">Order</h3>
+          <p style="margin:4px 0;"><strong>Order ID:</strong> ${order._id || order.id}</p>
+          <p style="margin:4px 0;"><strong>Cart/session ID:</strong> ${order.sessionId || '-'}</p>
+          <p style="margin:4px 0;"><strong>Status:</strong> ${order.status || 'paid'}</p>
+
+          <h3 style="margin:16px 0 8px;">Customer</h3>
+          <p style="margin:4px 0;">${addr.fullName || order.user?.name || ''}</p>
+          <p style="margin:4px 0;">Email: ${addr.email || order.user?.email || ''}</p>
+          <p style="margin:4px 0;">Phone: ${addr.phone || ''}</p>
+
+          <h3 style="margin:16px 0 8px;">Shipping address</h3>
+          <p style="margin:4px 0;">${addr.addressLine1 || ''}${addr.addressLine2 ? ', ' + addr.addressLine2 : ''}</p>
+          <p style="margin:4px 0;">${addr.city || ''}, ${addr.state || ''} ${addr.postalCode || ''}</p>
+          <p style="margin:4px 0;">${addr.country || ''}</p>
+
+          <h3 style="margin:16px 0 8px;">Items</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead>
+              <tr style="background:#f5f5f5;border-bottom:2px solid #e0e0e0;">
+                <th style="padding:8px;text-align:left;">Item</th>
+                <th style="padding:8px;">HSN</th>
+                <th style="padding:8px;">GST%</th>
+                <th style="padding:8px;">Qty</th>
+                <th style="padding:8px;text-align:right;">Line (incl GST)</th>
+                <th style="padding:8px;text-align:right;">Taxable</th>
+                <th style="padding:8px;text-align:right;">GST</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+
+          <h3 style="margin:16px 0 8px;">Totals (prices inclusive of GST)</h3>
+          <p style="margin:4px 0;">Subtotal: ₹${(Number(order.subtotal) || 0).toFixed(2)}</p>
+          <p style="margin:4px 0;">Shipping: ${Number(order.shipping) ? '₹' + Number(order.shipping).toFixed(2) : 'Free'}</p>
+          <p style="margin:4px 0;">Taxable value (derived): ₹${taxableTotal.toFixed(2)}</p>
+          <p style="margin:4px 0;">GST (derived): ₹${gstTotal.toFixed(2)}</p>
+          <p style="margin:4px 0;font-size:16px;font-weight:600;">Total paid: ₹${(Number(order.total) || 0).toFixed(2)}</p>
+
+          <h3 style="margin:16px 0 8px;">Payment</h3>
+          <p style="margin:4px 0;">Gateway: Razorpay</p>
+          <p style="margin:4px 0;">Payment ID: ${pay.transactionId || '-'}</p>
+          <p style="margin:4px 0;">Payment Link ID: ${pay.paymentLinkId || '-'}</p>
+          <p style="margin:4px 0;">Gateway Order ID: ${pay.gatewayOrderId || '-'}</p>
+
+          <p style="margin:20px 0 0;font-size:12px;color:#999;">GST split (CGST/SGST vs IGST) to be determined at invoicing based on place of supply. Automated system email.</p>
+        </div>`;
+
+      const result = await this.sendMail({
+        to: recipient,
+        subject: `New paid order ${order._id || order.id} — Hornbill merch fulfilment`,
+        html,
+      });
+      if (result.success) {
+        console.log(`Merch fulfilment email sent to ${recipient} for order ${order._id || order.id}`);
+      }
+      return result;
+    } catch (error) {
+      console.error('Error sending merch fulfilment email:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   /**
    * Send arena partner approval notification
    * @param {Object} partner - ArenaPartner object
