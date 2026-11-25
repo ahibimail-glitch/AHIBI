@@ -452,7 +452,7 @@ export default function ProfilePage() {
                         <div className="mt-3 grid gap-1.5 text-[13px] font-medium leading-5 text-slate-600">
                           <div className="flex items-center justify-between gap-2">
                             <span className="flex items-center gap-2"><Calendar className="h-4 w-4 shrink-0 text-slate-400"/>
-                              {new Date(booking.nuscSeasonPassType ? booking.event?.startDate || booking.bookedAt : booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {new Date(booking.nuscSeasonPassType ? booking.event?.startDate || booking.bookedAt : booking.selectedDate || booking.bookedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                             <span className="shrink-0 text-sm font-bold text-slate-950 lg:hidden">₹{booking.total.toLocaleString()}</span>
                           </div>

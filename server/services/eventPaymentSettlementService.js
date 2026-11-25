@@ -105,10 +105,32 @@ async function buildCanonicalCheckout({ bookingDetails, coupon, authenticatedUse
       throw new PaymentSettlementError('Bookings are closed for this event.', 'BOOKING_CLOSED', 409);
     }
     selectedDate = new Date(selectedDateKey + 'T00:00:00.000Z');
-  } else if (event.bookingEndTime || event.endDate) {
-    const cutoff = new Date(event.bookingEndTime || event.endDate);
-    if (!Number.isNaN(cutoff.getTime()) && cutoff < new Date()) {
-      throw new PaymentSettlementError('Bookings are closed for this event.', 'BOOKING_CLOSED', 409);
+  } else {
+    const eventTitle = String(event.title || '').toLowerCase();
+    const isHornbill2026 = eventTitle.includes('hornbill') &&
+      (eventTitle.includes('2026') || String(event.startDate || '').startsWith('2026-'));
+    if (isHornbill2026) {
+      const isMusicFestival = eventTitle.includes('music');
+      const selectedDateValue = String(bookingDetails?.selectedDate || '').slice(0, 10);
+      const match = /^2026-12-(\d{2})$/.exec(selectedDateValue);
+      const day = match ? Number(match[1]) : 0;
+      const minDay = isMusicFestival ? 2 : 1;
+      if (!match || day < minDay || day > 10) {
+        throw new PaymentSettlementError(
+          isMusicFestival
+            ? 'Choose a Hornbill Music Festival date between December 2 and 10, 2026.'
+            : 'Choose a Hornbill Festival date between December 1 and 10, 2026.',
+          'INVALID_HORNBILL_DATE',
+          400,
+        );
+      }
+      selectedDate = new Date(`${selectedDateValue}T00:00:00.000Z`);
+    }
+    if (event.bookingEndTime || event.endDate) {
+      const cutoff = new Date(event.bookingEndTime || event.endDate);
+      if (!Number.isNaN(cutoff.getTime()) && cutoff < new Date()) {
+        throw new PaymentSettlementError('Bookings are closed for this event.', 'BOOKING_CLOSED', 409);
+      }
     }
   }
 
@@ -256,7 +278,7 @@ async function createPaymentOrder({ razorpay, bookingDetails, coupon, authentica
         eventId: canonical.eventId.toString(),
         eventType: canonical.isDailyEvent ? 'daily_event' : 'event',
         ...(canonical.isDailyEvent && { selectedDate: canonical.bookingDetails.selectedDate.toISOString() }),
-        tickets: JSON.stringify(canonical.bookingDetails.tickets.map(({ ticketType, ticketTypeId, quantity, price }) => ({ ticketType, ticketTypeId: String(ticketTypeId), quantity, price }))),
+        tickets: JSON.stringify(canonical.bookingDetails.tickets.map(({ ticketType, ticketTypeId, quantity, price, selectedDate }) => ({ ticketType, ticketTypeId: String(ticketTypeId), quantity, price, ...(selectedDate && { selectedDate }) }))),
         coupon: canonical.bookingDetails.coupon ? JSON.stringify(canonical.bookingDetails.coupon) : undefined,
       },
     });
@@ -358,6 +380,7 @@ async function recoverCheckoutFromProviderOrder({ razorpay, orderId }) {
     const isDailyEvent = notes.eventType === 'daily_event';
     bookingDetails = {
       ...(isDailyEvent ? { dailyEvent: notes.eventId, selectedDate: notes.selectedDate } : { event: notes.eventId }),
+      ...(!isDailyEvent && tickets[0]?.selectedDate ? { selectedDate: tickets[0].selectedDate } : {}),
       user: { id: user._id },
       tickets,
       ...(coupon && { coupon }),
@@ -893,6 +916,7 @@ async function settleCapturedPayment({ razorpay, orderId, paymentId, orderIntent
               existingBooking.eventSnapshot = currentPending.bookingDetails.dailyEvent;
             } else {
               existingBooking.event = catalog._id;
+              existingBooking.selectedDate = ticket.selectedDate || undefined;
               existingBooking.eventSnapshot = currentPending.bookingDetails.event;
             }
             if (!existingBooking.qrCode) {
@@ -930,7 +954,7 @@ async function settleCapturedPayment({ razorpay, orderId, paymentId, orderIntent
             _id: bookingId,
             ...(isDailyEvent
               ? { dailyEvent: catalog._id, isDailyEvent: true, selectedDate: ticket.selectedDate }
-              : { event: catalog._id }),
+              : { event: catalog._id, ...(ticket.selectedDate ? { selectedDate: ticket.selectedDate } : {}) }),
             eventSnapshot: isDailyEvent ? currentPending.bookingDetails.dailyEvent : currentPending.bookingDetails.event,
             user: currentPending.user,
             ticketType: ticket.ticketType,

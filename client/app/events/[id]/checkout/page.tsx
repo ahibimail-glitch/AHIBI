@@ -148,6 +148,7 @@ export default function CheckoutPage() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [paymentPending, setPaymentPending] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [selectedHornbillDate, setSelectedHornbillDate] = useState("");
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponApplying, setCouponApplying] = useState(false);
@@ -223,6 +224,11 @@ export default function CheckoutPage() {
     : isHornbillDayFestival
       ? { ticketFee: 100, sustainability: 50, total: 150 }
       : null;
+  const hornbillDateOptions = isHornbillMusicFestival
+    ? Array.from({ length: 9 }, (_, index) => `2026-12-${String(index + 2).padStart(2, "0")}`)
+    : isHornbillDayFestival
+      ? Array.from({ length: 10 }, (_, index) => `2026-12-${String(index + 1).padStart(2, "0")}`)
+      : [];
   const isSpecial = eventId === "68c2c33eb6ef88c76f50ce7c";
   const isAdmitEvent = eventId === "6ab29573107ecaa252c1d3be";
   const CHEESE_EVENT_ID = "6a28ecaba70d7b412aa9efb4";
@@ -723,6 +729,10 @@ export default function CheckoutPage() {
       toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket");
       return;
     }
+    if (hornbillFeeSplit && !hornbillDateOptions.includes(selectedHornbillDate)) {
+      toast.error("Please choose the date you want to attend.");
+      return;
+    }
     if (isNuscHomeMatchEvent && !hasRequiredGeneralZones) {
       toast.error("Select an available seating zone for your General Pass before continuing");
       return;
@@ -763,6 +773,10 @@ export default function CheckoutPage() {
     }
     if (selectedTickets.size === 0) {
       toast.error(isFreeEvent ? "Please confirm your RSVP" : "Please select at least one ticket type");
+      return;
+    }
+    if (hornbillFeeSplit && !hornbillDateOptions.includes(selectedHornbillDate)) {
+      toast.error("Please choose the date you want to attend.");
       return;
     }
     if (isNuscHomeMatchEvent && !hasRequiredGeneralZones) {
@@ -929,6 +943,7 @@ export default function CheckoutPage() {
             bookingDetails: {
               event: event,
               user: user,
+              ...(hornbillFeeSplit ? { selectedDate: selectedHornbillDate } : {}),
               tickets: Array.from(selectedTickets.values()).map(item => ({
                 ticketType: item.ticket.name,
                 ticketTypeId: item.ticket._id,
@@ -995,6 +1010,7 @@ export default function CheckoutPage() {
                 bookingDetails: {
                   event: event,
                   user: user,
+                  ...(hornbillFeeSplit ? { selectedDate: selectedHornbillDate } : {}),
                   tickets: Array.from(selectedTickets.values()).map(item => ({
                     ticketType: item.ticket.name,
                     ticketTypeId: item.ticket._id,
@@ -1374,6 +1390,31 @@ export default function CheckoutPage() {
                 <h2 className="text-lg font-bold text-gray-900 mb-2">{isFreeEvent ? 'Confirm RSVP' : 'Select Tickets'}</h2>
                 <p className="text-sm text-gray-600 mb-6">{isFreeEvent ? 'Confirm your attendance for this free event' : 'You can add up to 10 tickets only'}</p>
 
+                {hornbillFeeSplit && (
+                  <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+                    <label htmlFor="hornbill-attendance-date" className="mb-2 block text-sm font-semibold text-gray-900">
+                      Choose your visit date <span className="text-red-600">*</span>
+                    </label>
+                    <p className="mb-3 text-sm text-gray-600">
+                      Your ticket will be valid only for the date you select.
+                    </p>
+                    <select
+                      id="hornbill-attendance-date"
+                      value={selectedHornbillDate}
+                      onChange={(event) => setSelectedHornbillDate(event.target.value)}
+                      required
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base text-gray-900 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
+                    >
+                      <option value="">Select a date</option>
+                      {hornbillDateOptions.map((date) => (
+                        <option key={date} value={date}>
+                          {new Date(`${date}T12:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   {event.ticketTypes && event.ticketTypes.length > 0 ? (
                     event.ticketTypes.map((ticket) => {
@@ -1674,6 +1715,13 @@ export default function CheckoutPage() {
                         Code {appliedCoupon.code} applied
                       </p>
                     )}
+                  </div>
+                )}
+
+                {hornbillFeeSplit && selectedHornbillDate && (
+                  <div className="mt-5 flex items-center justify-between rounded-xl bg-amber-50 px-4 py-3 text-sm">
+                    <span className="font-medium text-gray-700">Visit date</span>
+                    <span className="font-semibold text-gray-900">{new Date(`${selectedHornbillDate}T12:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
                   </div>
                 )}
 
