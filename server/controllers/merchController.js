@@ -4,6 +4,7 @@ const MerchOrder = require('../models/ArtistMerch');
 const MerchProduct = require('../models/MerchProduct');
 const User = require('../models/User');
 const { fetchCartBySession } = require('../services/hornbillMerchService');
+const { resolvePartner } = require('../services/merchPartners');
 const emailService = require('../services/emailService');
 
 const DEFAULT_TAX_RATE = Number(process.env.HORNBILL_MERCH_TAX_RATE ?? 0);
@@ -66,6 +67,7 @@ const validateShippingAddress = (address = {}) => {
 exports.getCartBySession = async (req, res) => {
   try {
     const { sessionId } = req.params;
+    const source = req.query.source;
     
     if (!sessionId) {
       return res.status(400).json({
@@ -74,7 +76,7 @@ exports.getCartBySession = async (req, res) => {
       });
     }
 
-    const cart = await fetchCartBySession(sessionId);
+    const cart = await fetchCartBySession(sessionId, source);
     const totals = computeTotals(cart.items);
 
     return res.json({
@@ -228,6 +230,7 @@ exports.syncPaymentStatus = async (req, res) => {
 exports.createOrder = async (req, res) => {
   try {
     const { sessionId, shippingAddress, source, metadata } = req.body || {};
+    const partner = resolvePartner(source);
 
     if (!sessionId) {
       return res.status(400).json({ success: false, message: 'sessionId is required' });
@@ -242,7 +245,7 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    const cart = await fetchCartBySession(sessionId);
+    const cart = await fetchCartBySession(sessionId, source);
     if (!cart.items.length) {
       return res.status(400).json({ success: false, message: 'Cart is empty. Please add merch items again.' });
     }
@@ -287,7 +290,7 @@ exports.createOrder = async (req, res) => {
     const paymentLink = await razorpay.paymentLink.create({
       amount: Math.round(totals.total * 100),
       currency: cart.currency || 'INR',
-      description: 'Hornbill merch checkout',
+      description: partner.description || 'Hornbill merch checkout',
       customer: {
         name: shippingAddress.fullName || req.user?.name,
         contact: shippingAddress.phone || req.user?.phone,
@@ -301,8 +304,8 @@ exports.createOrder = async (req, res) => {
       },
       reminder_enable: true,
       callback_url:
-        process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL ||
-        `${frontendBaseUrl}/HornbillFestival2026/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
+        partner.callbackUrl ||
+        `${frontendBaseUrl}${partner.successPath}?orderId=${order._id}&accessToken=${accessToken}`,
       callback_method: 'get'
     });
 

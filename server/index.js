@@ -106,6 +106,18 @@ if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_UR
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
+// Additional allowed origins for partner sites (comma-separated), e.g. the
+// Nagaland Tourism domain. Configured via env so no code change per partner.
+if (process.env.ADDITIONAL_CORS_ORIGINS) {
+  process.env.ADDITIONAL_CORS_ORIGINS
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .forEach((o) => {
+      if (!allowedOrigins.includes(o)) allowedOrigins.push(o);
+    });
+}
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
