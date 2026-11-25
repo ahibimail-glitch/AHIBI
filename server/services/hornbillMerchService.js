@@ -65,20 +65,32 @@ hornbillMerchClient.interceptors.response.use(
 
 
 const normalizeItems = (items = []) =>
-  items.map((item, index) => ({
-    itemId: item.id || item.itemId || item.sku || `line-${index}`,
-    name: item.name || item.title || 'Merch item',
-    sku: item.sku || item.sku_code,
-    variant: item.variant || item.option || item.size,
-    quantity: Number(item.quantity) || 1,
-    price: Number(item.price ?? item.unitPrice ?? item.amount ?? 0),
-    taxRate: typeof item.taxRate === 'number'
-      ? item.taxRate
-      : typeof item.tax_rate === 'number'
-        ? item.tax_rate
-        : undefined,
-    image: item.image || item.thumbnail || item.thumbnail_url
-  }));
+  items.map((item, index) => {
+    const variantParts = [
+      item.design,
+      item.colour,
+      item.size ? `Size: ${item.size}` : '',
+      item.packOption
+    ].filter(Boolean);
+    const variant =
+      item.variant ||
+      (variantParts.length > 0 ? variantParts.join(' · ') : (item.option || item.size || ''));
+
+    return {
+      itemId: item.id || item.itemId || item.productId || item.sku || `line-${index}`,
+      name: item.name || item.title || 'Hornbill Merch Item',
+      sku: item.sku || item.sku_code || item.productCode || '',
+      variant: variant || undefined,
+      quantity: Number(item.quantity) || 1,
+      price: Number(item.price ?? item.unitPrice ?? item.amount ?? 0),
+      taxRate: typeof item.taxRate === 'number'
+        ? item.taxRate
+        : typeof item.tax_rate === 'number'
+          ? item.tax_rate
+          : undefined,
+      image: item.image || item.thumbnail || item.thumbnail_url || ''
+    };
+  });
 
 const fetchCartBySession = async (sessionId) => {
   if (!sessionId) {
@@ -90,7 +102,8 @@ const fetchCartBySession = async (sessionId) => {
   }
 
   try {
-    const { data } = await hornbillMerchClient.get(`api/merch/cart/session/${sessionId}`);
+    const endpoint = `api/merch/cart/session/${encodeURIComponent(sessionId)}`;
+    const { data } = await hornbillMerchClient.get(endpoint);
   
     const payload = data?.data || data?.cart || data;
 

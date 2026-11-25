@@ -8,6 +8,7 @@ const NuscHomeMatchOrder = require('../models/NuscHomeMatchOrder');
 const nuscHomeMatchController = require('./nuscHomeMatchController');
 const eventPaymentSettlement = require('../services/eventPaymentSettlementService');
 const paymentFulfillmentAlertService = require('../services/paymentFulfillmentAlertService');
+const whatsappService = require('../services/whatsappService');
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -30,6 +31,40 @@ function verifyPaymentSignature(orderId, paymentId, signature) {
     .digest();
   const received = Buffer.from(signature, 'hex');
   return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+}
+
+function sendHornbillTicketReadyMessage(bookingDetails, bookings) {
+  const eventSnapshot = bookingDetails?.event || {};
+  const eventTitle = String(eventSnapshot.title || '').toLowerCase();
+  const selectedDate = bookingDetails?.selectedDate || bookings?.[0]?.selectedDate;
+  const phone = bookingDetails?.user?.phone;
+  const bookingId = bookings?.[0]?._id;
+  const eventId = eventSnapshot._id || bookingDetails?.event;
+  if (!phone || !bookingId || !eventId || !eventTitle.includes('hornbill') || !selectedDate) return;
+
+  const displayEventDate = new Date(selectedDate).toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  whatsappService.sendTicketReadyTemplate({
+    phone,
+    eventName: eventSnapshot.title,
+    eventDate: displayEventDate,
+    venue: eventSnapshot.location?.address || eventSnapshot.location?.city || 'The Naga Heritage Village, Kohima',
+    bookingId,
+    eventId,
+  }).then((result) => {
+    if (result?.success === false) {
+      console.error('[Hornbill booking] WhatsApp ticket message failed:', result.message || result.error);
+      return;
+    }
+    console.log('[Hornbill booking] WhatsApp ticket message sent');
+  }).catch((error) => {
+    console.error('[Hornbill booking] WhatsApp ticket message failed:', error?.message || error);
+  });
 }
 
 // Debug environment variables
@@ -113,7 +148,14 @@ exports.createOrder = async (req, res) => {
     return res.status(200).json(order);
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
-    res.status(500).send(error.message);
+    const statusCode = Number.isInteger(error?.statusCode) && error.statusCode >= 400 && error.statusCode < 600
+      ? error.statusCode
+      : 500;
+    return res.status(statusCode).json({
+      success: false,
+      code: error?.code || 'PAYMENT_ORDER_CREATION_FAILED',
+      message: error?.message || 'Unable to start payment. Please try again.',
+    });
   }
 };
 
@@ -185,6 +227,10 @@ exports.verifyPayment = async (req, res) => {
           ? 'Payment was received, but ticket issuance needs reconciliation. Please do not pay again.'
           : 'Payment is being checked and ticket issuance will retry. Please do not pay again.',
       });
+    }
+
+    if (!settled.alreadyCompleted) {
+      sendHornbillTicketReadyMessage(savedCheckout.bookingDetails, settled.bookings);
     }
 
     return res.status(201).json({
@@ -491,6 +537,9 @@ exports.razorpayWebhook = async (req, res) => {
         orderIntentId: payment?.notes?.orderIntentId,
         signature,
       });
+      if (!settled.alreadyCompleted) {
+        sendHornbillTicketReadyMessage(pending.bookingDetails, settled.bookings);
+      }
       return res.json({ status: 'ok', settled: true, alreadyCompleted: settled.alreadyCompleted });
     } catch (settlementError) {
       if (settlementError.terminal) {

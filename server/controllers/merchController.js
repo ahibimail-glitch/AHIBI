@@ -302,7 +302,7 @@ exports.createOrder = async (req, res) => {
       reminder_enable: true,
       callback_url:
         process.env.HORNBILL_MERCH_PAYMENT_CALLBACK_URL ||
-        `${frontendBaseUrl}/HornbillFestival2025/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
+        `${frontendBaseUrl}/HornbillFestival2026/merch/success?orderId=${order._id}&accessToken=${accessToken}`,
       callback_method: 'get'
     });
 
@@ -1092,6 +1092,176 @@ exports.deleteProduct = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to delete product'
+    });
+  }
+};
+
+/**
+ * Public Order Tracking Endpoint (No login required)
+ * GET /api/hornbill-merch/track/:orderId
+ */
+exports.getPublicOrderTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+
+    let order = null;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(orderId);
+    if (isObjectId) {
+      order = await MerchOrder.findById(orderId);
+    }
+    if (!order) {
+      order = await MerchOrder.findOne({ sessionId: orderId });
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Build sanitized tracking response safe for public sharing
+    const trackingData = {
+      _id: order._id,
+      orderId: order._id,
+      sessionId: order.sessionId,
+      createdAt: order.createdAt,
+      status: order.status,
+      shippingStatus: order.shippingStatus || 'confirmed',
+      courierName: order.courierName || '',
+      awbNumber: order.awbNumber || '',
+      trackingUrl: order.trackingUrl || '',
+      shippingRemarks: order.shippingRemarks || '',
+      shippedAt: order.shippedAt || null,
+      deliveredAt: order.deliveredAt || null,
+      statusHistory: order.statusHistory || [],
+      items: (order.items || []).map((item) => ({
+        name: item.name,
+        variant: item.variant || '',
+        sku: item.sku || '',
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        image: item.image || ''
+      })),
+      subtotal: order.subtotal || 0,
+      shipping: order.shipping || 0,
+      total: order.total || 0,
+      shippingAddress: {
+        fullName: order.shippingAddress?.fullName || 'Customer',
+        city: order.shippingAddress?.city || '',
+        state: order.shippingAddress?.state || '',
+        postalCode: order.shippingAddress?.postalCode || '',
+        country: order.shippingAddress?.country || 'India'
+      }
+    };
+
+    return res.json({
+      success: true,
+      data: trackingData,
+      order: trackingData
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to fetch public tracking:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch order tracking'
+    });
+  }
+};
+
+/**
+ * Update Hornbill Order Tracking & Fulfillment (Called by Hornbill Admin)
+ * PUT /api/hornbill-merch/orders/:orderId/tracking
+ */
+exports.updateHornbillOrderTracking = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const {
+      shippingStatus,
+      courierName,
+      awbNumber,
+      trackingUrl,
+      shippingRemarks,
+      remarks
+    } = req.body || {};
+
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(orderId);
+    let order = null;
+    if (isObjectId) {
+      order = await MerchOrder.findById(orderId);
+    }
+    if (!order) {
+      order = await MerchOrder.findOne({ sessionId: orderId });
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    const remarksText = shippingRemarks || remarks || '';
+
+    if (shippingStatus) {
+      order.shippingStatus = shippingStatus;
+      if (shippingStatus === 'shipped' && !order.shippedAt) {
+        order.shippedAt = new Date();
+      }
+      if (shippingStatus === 'delivered' && !order.deliveredAt) {
+        order.deliveredAt = new Date();
+      }
+
+      // Sync overall order status if paid or shipping
+      if (shippingStatus === 'shipped' && order.status === 'paid') {
+        order.status = 'shipped';
+      } else if (shippingStatus === 'delivered') {
+        order.status = 'delivered';
+      }
+    }
+
+    if (typeof courierName === 'string') {
+      order.courierName = courierName.trim();
+    }
+    if (typeof awbNumber === 'string') {
+      order.awbNumber = awbNumber.trim();
+    }
+    if (typeof trackingUrl === 'string') {
+      order.trackingUrl = trackingUrl.trim();
+    }
+    if (typeof remarksText === 'string') {
+      order.shippingRemarks = remarksText.trim();
+    }
+
+    // Append to status history if new status or remarks provided
+    if (!Array.isArray(order.statusHistory)) {
+      order.statusHistory = [];
+    }
+    order.statusHistory.push({
+      status: order.shippingStatus || 'confirmed',
+      remarks: remarksText.trim(),
+      updatedAt: new Date()
+    });
+
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: 'Order tracking updated successfully',
+      data: order,
+      order
+    });
+  } catch (error) {
+    console.error('[Merch] Failed to update Hornbill order tracking:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update order tracking'
     });
   }
 };
