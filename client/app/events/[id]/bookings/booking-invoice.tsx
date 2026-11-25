@@ -211,6 +211,16 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
 
     const showEventSerial = shouldShowEventSerial(booking);
     const startDate = booking.selectedDate || booking.event?.startDate || booking.event?.startTime || booking.startTime;
+    const hasExplicitEventTime = Boolean(booking.event?.startTime || booking.event?.endTime || booking.startTime || booking.endTime);
+    const isSelectedDateForMultiDayEvent = Boolean(
+        booking.selectedDate &&
+        booking.event?.startDate &&
+        booking.event?.endDate &&
+        new Date(booking.event.startDate).toISOString().slice(0, 10) !== new Date(booking.event.endDate).toISOString().slice(0, 10)
+    );
+    const ticketTimeLabel = isSelectedDateForMultiDayEvent && !hasExplicitEventTime
+        ? 'Time TBA'
+        : `${formatTime(startDate)} – ${getEndTime(booking)}`;
     const displayName = booking.user?.name || user?.name || '—';
     const displayEmail = booking.user?.email || user?.email || '—';
     const displayPhone = booking.user?.phone || user?.phone || '—';
