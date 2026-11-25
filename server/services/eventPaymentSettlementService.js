@@ -112,7 +112,7 @@ async function buildCanonicalCheckout({ bookingDetails, coupon, authenticatedUse
     if (isHornbill2026) {
       const isMusicFestival = eventTitle.includes('music');
       const selectedDateValue = String(bookingDetails?.selectedDate || '').slice(0, 10);
-      const match = /^2026-12-(\\d{2})$/.exec(selectedDateValue);
+      const match = /^2026-12-(\d{2})$/.exec(selectedDateValue);
       const day = match ? Number(match[1]) : 0;
       const minDay = isMusicFestival ? 2 : 1;
       if (!match || day < minDay || day > 10) {
