@@ -248,6 +248,8 @@ const ModernBookingTicket: React.FC<ModernBookingTicketProps> = ({
         ticketId: showEventSerial
             ? `SN-${booking.ticketSerialNumber}`
             : `${booking._id}_ticket_${booking.ticketIndex || ticketIndex}`,
+        ...(booking.selectedDate && { selectedDate: booking.selectedDate }),
+        ...(booking.ticketQrToken && { ticketToken: booking.ticketQrToken }),
     };
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(JSON.stringify(rawDataObject))}&size=160x160&margin=6`;
     const ticketId = showEventSerial

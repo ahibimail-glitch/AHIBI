@@ -137,16 +137,20 @@ function mergeEventWithSnapshot(eventDoc, eventSnapshot) {
 // @access  Private (Admin)
 router.post("/verify-ticket", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
-    const { bookingId, eventId } = req.body;
+    const { bookingId, eventId, ticketToken } = req.body;
     console.log(req.body);
     if (!bookingId || !eventId) {
       return res.status(400).json({ message: 'Booking ID and Event ID are required' });
     }
 
-    const booking = await Booking.findById(bookingId);
+    const booking = await Booking.findById(bookingId).select('+ticketQrToken');
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found', status: 'INVALID' });
+    }
+
+    if (booking.ticketQrToken && booking.ticketQrToken !== ticketToken) {
+      return res.status(200).json({ message: 'This ticket QR code has been replaced. Please use the latest ticket from your AHIBI dashboard.', status: 'INVALID' });
     }
 
     // Check if this is a season pass ticket
@@ -865,6 +869,7 @@ router.get("/related/:id", auth.protect, async (req, res) => {
 router.get("/:id", auth.protect, async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
+      .select('+ticketQrToken')
       .populate('event', 'title banner startDate endDate location ticketTypes')
       .populate('user', 'name email phone')
       .lean();
@@ -902,7 +907,7 @@ router.get("/:id", auth.protect, async (req, res) => {
 // @access  Private (Admin/Organizer)
 router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), async (req, res) => {
   try {
-    const { bookingId, eventId, requestId } = req.body || {};
+    const { bookingId, eventId, requestId, ticketToken } = req.body || {};
     const idempotencyKey = requestId || req.get('Idempotency-Key');
     if (!bookingId || !eventId) {
       return res.status(400).json({ message: 'Booking ID and event ID are required', code: 'CHECK_IN_IDENTITY_REQUIRED' });
@@ -915,6 +920,7 @@ router.post("/check-in", auth.protect, auth.authorize('admin', 'organizer'), asy
       staffId: req.user?._id,
       adminId: req.user?._id,
       canIssueWristbands: true,
+      ticketToken,
     });
     const remainingEntries = result.remainingEntries;
     return res.status(200).json({
@@ -1270,7 +1276,7 @@ router.get("/:bookingId/ticket", auth.protect, async (req, res) => {
       doc.fontSize(18).font('Helvetica-Bold').text(event.title);
       doc.moveDown(0.5);
 
-      if (booking.isDailyEvent && booking.selectedDate) {
+      if (booking.selectedDate) {
         doc.fontSize(12).font('Helvetica').text(`Date: ${new Date(booking.selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`);
         if (event.startTime) {
           doc.text(`Time: ${event.startTime}`);

@@ -204,15 +204,19 @@ router.get('/check-in-history', async (req, res) => {
 
 router.post('/verify-ticket', async (req, res) => {
   try {
-    const { bookingId, eventId } = req.body || {};
+    const { bookingId, eventId, ticketToken } = req.body || {};
     if (!bookingId || !eventId) {
       return res.status(400).json({ message: 'Booking ID and event ID are required.', status: 'INVALID' });
     }
     if (!permissionFor(req, eventId)) return res.status(403).json({ message: 'You are not assigned to this event.', status: 'FORBIDDEN' });
 
     const booking = await timedDatabase(req, 'verify-booking-db', () => Booking.findById(bookingId)
-      .select('event status ticketType user createdAt checkedInAt'));
+      .select('event status ticketType user createdAt checkedInAt +ticketQrToken'));
     if (!booking) return res.status(404).json({ message: 'Booking not found.', status: 'INVALID' });
+
+    if (booking.ticketQrToken && booking.ticketQrToken !== ticketToken) {
+      return res.status(200).json({ message: 'This ticket QR code has been replaced. Please use the latest ticket from your AHIBI dashboard.', status: 'INVALID' });
+    }
 
     if (!['confirmed', 'checked-in'].includes(booking.status)) {
       return res.status(200).json({ message: 'This ticket is not active for entry.', status: 'INVALID' });
@@ -271,7 +275,7 @@ router.post('/verify-ticket', async (req, res) => {
 
 router.post('/check-in', async (req, res) => {
   try {
-    const { bookingId, eventId, requestId } = req.body || {};
+    const { bookingId, eventId, requestId, ticketToken } = req.body || {};
     const idempotencyKey = requestId || req.get('Idempotency-Key');
     if (!bookingId || !eventId) {
       return res.status(400).json({ message: 'Booking ID and event ID are required.', code: 'CHECK_IN_IDENTITY_REQUIRED' });
@@ -283,6 +287,7 @@ router.post('/check-in', async (req, res) => {
       requestId: idempotencyKey,
       scannerStaffId: String(req.scannerStaff._id),
       canIssueWristbands: permissionFor(req, eventId, 'canIssueWristbands'),
+      ticketToken,
     }, {
       onDatabaseTiming: (name, elapsedMs, startedAt, endedAt) =>
         req.scannerTiming?.recordDatabase(name, elapsedMs, startedAt, endedAt),

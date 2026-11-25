@@ -306,6 +306,7 @@ async function createTicketQrDataUrl(booking, event) {
     quantity: booking.quantity,
     ...(booking.nuscGeneralZone && { seatingZone: booking.nuscGeneralZone }),
     ...(booking.selectedDate && { selectedDate: booking.selectedDate }),
+    ...(booking.ticketQrToken && { ticketToken: booking.ticketQrToken }),
   };
   return QRCode.toDataURL(JSON.stringify(payload), {
     errorCorrectionLevel: 'H',

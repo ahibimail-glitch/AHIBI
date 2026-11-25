@@ -102,7 +102,7 @@ export default function ProfilePage() {
       isUpcomingDate(
         isDailyBooking(booking)
           ? booking.selectedDate || booking.dailyEvent?.startDate || booking.dailyEvent?.date
-          : booking.event?.startDate || booking.event?.date
+          : booking.selectedDate || booking.event?.startDate || booking.event?.date
       )
     ).length +
     artistBookings.filter((booking) => isUpcomingDate(booking.event?.date)).length +

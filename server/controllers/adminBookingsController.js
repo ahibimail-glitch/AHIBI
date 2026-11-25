@@ -4,6 +4,7 @@ const Event = require('../models/Event');
 const User = require('../models/User');
 const adminBookingLifecycleService = require('../services/adminBookingLifecycleService');
 const bookingDeletionService = require('../services/adminBookingDeletionService');
+const adminTicketDateCorrectionService = require('../services/adminTicketDateCorrectionService');
 
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'refunded', 'checked-in'];
 const PAGE_SIZES = new Set([25, 50, 100]);
@@ -24,7 +25,7 @@ const DETAIL_FIELDS = [
   'event eventSnapshot user bookingSource ticketType ticketTypeId quantity price total status paymentStatus',
   'paymentId paymentProvider externalPaymentId nuscOrderId nuscTicketIndex nuscSuiteBoxNumber',
   'nuscSeasonPassType nuscSeasonMatchIndex nuscGeneralZone nuscPartnerTicket',
-  'entryVerified entryVerifiedAt entryVerifiedBy ticketIndex totalTickets',
+  'entryVerified entryVerifiedAt entryVerifiedBy ticketIndex totalTickets selectedDate isDailyEvent',
   'customerName customerPhone customerEmail qrCode country state modeOfPayment visitorType',
   'parentBookingId bookedAt updatedAt onSpotCreatedBy adminLifecycleAudit',
 ].join(' ');
@@ -234,6 +235,7 @@ function rowProjection({ includeTicketFields = false } = {}) {
       phone: { $ifNull: ['$customerPhone', { $ifNull: ['$userDoc.phone', ''] }] },
     },
     bookedAt: 1,
+    selectedDate: 1,
     ticketType: 1,
     nuscSeasonPassType: 1,
     quantity: 1,
@@ -524,6 +526,24 @@ async function deleteBooking(req, res) {
   }
 }
 
+async function correctHornbillTicketDates(req, res) {
+  try {
+    const result = await adminTicketDateCorrectionService.correctDates({
+      bookingIds: req.body?.bookingIds,
+      selectedDate: req.body?.selectedDate,
+      kind: req.body?.kind,
+      adminId: req.user?._id,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, code: error.code || 'TICKET_DATE_CHANGE_BLOCKED', message: error.message });
+    }
+    console.error('[Hornbill ticket date correction] Failed:', error);
+    return res.status(500).json({ success: false, code: 'TICKET_DATE_CHANGE_FAILED', message: 'The ticket dates could not be updated. Refresh the bookings and review each ticket before retrying.' });
+  }
+}
+
 module.exports = {
   listBookings,
   getBookingOptions,
@@ -532,4 +552,5 @@ module.exports = {
   getBookingDetails,
   cancelPendingBooking,
   deleteBooking,
+  correctHornbillTicketDates,
 };

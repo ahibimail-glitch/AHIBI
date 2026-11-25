@@ -177,6 +177,7 @@ router.get('/bookings', adminBookingsController.listBookings);
 router.get('/bookings/options', adminBookingsController.getBookingOptions);
 router.get('/bookings/stats', adminBookingsController.getBookingStats);
 router.get('/bookings/export', adminBookingsController.exportBookings);
+router.post('/bookings/hornbill-date-correction', adminBookingsController.correctHornbillTicketDates);
 
 // Permanently remove only an Admin-confirmed unpaid booking and release its slot.
 router.delete('/bookings/:id', adminBookingsController.deleteBooking);

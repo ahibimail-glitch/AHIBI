@@ -91,7 +91,7 @@ export default function HornbillPaymentIssues({ kind }: { kind: "day" | "music" 
   return (
     <main className="w-full min-w-0 space-y-6 p-4 md:p-6">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Payment monitoring · Hornbill 2026</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Payment monitoring � Hornbill 2026</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-950">{title} payment issues</h1>
         <p className="mt-2 max-w-4xl text-sm text-slate-600">
           Review Razorpay payment attempts and captured payments awaiting ticket issuance. Failed attempts are not proof that no payment was captured; check the captured-payment recovery list before advising a customer to pay again.
@@ -99,14 +99,14 @@ export default function HornbillPaymentIssues({ kind }: { kind: "day" | "music" 
       </header>
 
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        For a captured payment with missing tickets, use <strong>Verify payment &amp; issue tickets</strong> below. AHIBI checks the payment with Razorpay, then creates or restores the booking records so the tickets appear in the customer’s dashboard. Failed or unverified payments cannot be issued this way; the customer must retry payment.
+        For a captured payment with missing tickets, use <strong>Verify payment &amp; issue tickets</strong> below. AHIBI checks the payment with Razorpay, then creates or restores the booking records so the tickets appear in the customer's dashboard. Failed or unverified payments cannot be issued this way; the customer must retry payment.
       </section>
 
       {eventsLoaded && eventIds.length > 0 ? (
         <FailedPayments eventIds={eventIds} title={`${title}: captured payment, tickets pending`} />
       ) : (
         <section className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-          {eventsLoaded ? "No matching approved 2026 festival event was found." : "Loading event records…"}
+          {eventsLoaded ? "No matching approved 2026 festival event was found." : "Loading event records."}
         </section>
       )}
 
@@ -117,7 +117,7 @@ export default function HornbillPaymentIssues({ kind }: { kind: "day" | "music" 
             <p className="text-xs text-slate-500">Failed attempts recorded from signed Razorpay webhooks; a later successful attempt may exist for the same order.</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">{loading ? "Loading…" : `${items.length} order(s)`}</span>
+            <span className="text-sm text-slate-500">{loading ? "Loading." : `${items.length} order(s)`}</span>
             <button type="button" onClick={() => setRefreshCount((count) => count + 1)} disabled={loading || eventIds.length === 0} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50">Refresh</button>
           </div>
         </div>
@@ -139,9 +139,9 @@ export default function HornbillPaymentIssues({ kind }: { kind: "day" | "music" 
                       <td className="px-4 py-3"><div className="font-medium">{item.user?.name || "Unknown"}</div><div className="text-xs text-slate-500">{item.user?.email || item.user?.phone || "No contact saved"}</div></td>
                       <td className="px-4 py-3">{item.currency || "INR"} {Number(item.amount || 0).toFixed(2)}</td>
                       <td className="px-4 py-3"><div>{attempt?.description || "Payment attempt failed"}</div><div className="font-mono text-xs text-slate-500">{attempt?.paymentId || ""}</div></td>
-                      <td className="px-4 py-3">{attempt?.method || "—"}{attempt?.code ? ` · ${attempt.code}` : ""}</td>
+                      <td className="px-4 py-3">{attempt?.method || "-"}{attempt?.code ? ` � ${attempt.code}` : ""}</td>
                       <td className="px-4 py-3 capitalize">{item.status.replace(/_/g, " ")}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{item.orderId || "—"}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{item.orderId || "-"}</td>
                       <td className="px-4 py-3">{attempt?.occurredAt ? new Date(attempt.occurredAt).toLocaleString() : new Date(item.createdAt).toLocaleString()}</td>
                     </tr>
                   );
@@ -154,3 +154,4 @@ export default function HornbillPaymentIssues({ kind }: { kind: "day" | "music" 
     </main>
   );
 }
+

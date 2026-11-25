@@ -263,7 +263,8 @@ export default function CheckoutPage() {
   const availableStates = statesByCountry[selectedCountry] || [];
   const sortedStates = [...availableStates].sort();
 
-  const isFormComplete = !isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''));
+  const isFormComplete = (!isHMFEvent || (selectedCountry !== '' && (availableStates.length === 0 ? selectedState.trim() !== '' : selectedState !== ''))) &&
+    (!(isHFEvent || isHMFEvent) || Boolean(selectedHornbillDate));
 
   const bookingCutoff = (() => {
     if (!event) return null;
@@ -572,7 +573,7 @@ export default function CheckoutPage() {
 
   const handleAddTicket = (ticket: TicketType) => {
     if (!isFormComplete) {
-      toast.error(isHMFEvent ? "Please select your country and state first" : "Please fill in all required fields");
+      toast.error((isHFEvent || isHMFEvent) && !selectedHornbillDate ? "Please select the festival date first" : isHMFEvent ? "Please select your country and state first" : "Please fill in all required fields");
       return;
     }
 
@@ -767,8 +768,10 @@ export default function CheckoutPage() {
       toast.error(msg);
       return;
     }
-    if (isHMFEvent && !isFormComplete) {
-      toast.error("Please select your country and state before booking");
+    if (!isFormComplete) {
+      toast.error((isHFEvent || isHMFEvent) && !selectedHornbillDate
+        ? "Please select your festival date before booking"
+        : "Please select your country and state before booking");
       return;
     }
     if (selectedTickets.size === 0) {
@@ -880,6 +883,7 @@ export default function CheckoutPage() {
                 price: 0,
                 ticketType: ticket.name,
                 ...(isHMFEvent && { country: selectedCountry, state: selectedState }),
+                ...((isHFEvent || isHMFEvent) && { selectedDate: selectedHornbillDate }),
               }),
             });
             const data = await resp.json();
@@ -943,7 +947,7 @@ export default function CheckoutPage() {
             bookingDetails: {
               event: event,
               user: user,
-              ...(hornbillFeeSplit ? { selectedDate: selectedHornbillDate } : {}),
+              ...((isHFEvent || isHMFEvent) && { selectedDate: selectedHornbillDate }),
               tickets: Array.from(selectedTickets.values()).map(item => ({
                 ticketType: item.ticket.name,
                 ticketTypeId: item.ticket._id,
@@ -1010,7 +1014,7 @@ export default function CheckoutPage() {
                 bookingDetails: {
                   event: event,
                   user: user,
-                  ...(hornbillFeeSplit ? { selectedDate: selectedHornbillDate } : {}),
+                  ...((isHFEvent || isHMFEvent) && { selectedDate: selectedHornbillDate }),
                   tickets: Array.from(selectedTickets.values()).map(item => ({
                     ticketType: item.ticket.name,
                     ticketTypeId: item.ticket._id,
@@ -1342,6 +1346,23 @@ export default function CheckoutPage() {
         <div className={`max-w-full mx-auto px-4 py-8 sm:max-w-4xl ${isNuscHomeMatchEvent ? "pb-40 lg:pb-8" : ""}`}>
           {currentStep === 1 && (
             <>
+              {/* HMF Country Selection */}
+              {(isHFEvent || isHMFEvent) && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
+                  <label htmlFor="hornbill-date" className="mb-2 block text-base font-semibold text-gray-900">Choose your festival date *</label>
+                  <p className="mb-3 text-sm text-gray-600">Each ticket is valid for the date selected here.</p>
+                  <Select value={selectedHornbillDate} onValueChange={setSelectedHornbillDate}>
+                    <SelectTrigger id="hornbill-date" className="w-full bg-white"><SelectValue placeholder="Select a date" /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: (isHMFEvent ? 9 : 10) }, (_, index) => index + (isHMFEvent ? 2 : 1)).map((day) => {
+                        const date = `2026-12-${String(day).padStart(2, "0")}`;
+                        return <SelectItem key={date} value={date}>{`December ${day}, 2026`}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* HMF Country Selection */}
               {isHMFEvent && (
                 <div className="mb-8 p-6 bg-gray-50 rounded-lg">
