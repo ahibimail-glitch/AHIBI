@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Event = require('../models/Event');
 const Scan = require('../models/Scan');
+const WristbandAssignment = require('../models/WristbandAssignment');
 const { createTicketQrDataUrl } = require('./officialTicketPdfService');
 
 class TicketDateCorrectionError extends Error {
@@ -37,6 +38,7 @@ async function correctDates({ bookingIds, selectedDate: selectedDateValue, kind,
   const BookingModel = deps.BookingModel || Booking;
   const EventModel = deps.EventModel || Event;
   const ScanModel = deps.ScanModel || Scan;
+  const WristbandAssignmentModel = deps.WristbandAssignmentModel || WristbandAssignment;
   const sessionFactory = deps.sessionFactory || (() => mongoose.startSession());
   if (!['day', 'music'].includes(kind)) throw new TicketDateCorrectionError(400, 'INVALID_FESTIVAL', 'Choose Hornbill Festival or Hornbill Music Festival.');
   if (!mongoose.isValidObjectId(adminId)) throw new TicketDateCorrectionError(401, 'ADMIN_REQUIRED', 'Admin authorization is required.');
@@ -76,8 +78,21 @@ async function correctDates({ bookingIds, selectedDate: selectedDateValue, kind,
       if (bookings.some((booking) => booking.status !== 'confirmed' || booking.paymentStatus !== 'completed')) {
         throw new TicketDateCorrectionError(409, 'PAID_TICKETS_REQUIRED', 'Only confirmed, paid bookings can be moved. Resolve payment issues before changing dates.');
       }
-      if (bookings.some((booking) => booking.bookingSource === 'on-spot' || booking.nuscPartnerTicket || booking.nuscOrderId)) {
-        throw new TicketDateCorrectionError(409, 'SPECIAL_BOOKING', 'A linked or on-spot ticket requires its own inventory workflow.');
+      if (bookings.some((booking) => (
+        booking.nuscPartnerTicket?.partnerId ||
+        booking.nuscPartnerTicket?.memberReferenceHash ||
+        booking.nuscPartnerTicket?.reservationId ||
+        booking.nuscPartnerTicket?.partnerOrderId ||
+        booking.nuscOrderId
+      ))) {
+        throw new TicketDateCorrectionError(409, 'LINKED_TICKET', 'A ticket linked to partner inventory must be moved through that partner inventory workflow.');
+      }
+      const assignedBands = await WristbandAssignmentModel.countDocuments({
+        booking: { $in: bookingIds },
+        status: 'issued',
+      }).session(session);
+      if (assignedBands > 0) {
+        throw new TicketDateCorrectionError(409, 'WRISTBAND_ALREADY_ISSUED', 'At least one selected ticket has an issued wristband. Resolve the wristband assignment before changing its date.');
       }
       if (bookings.some((booking) => dateKey(booking.selectedDate) === selectedDateValue)) {
         throw new TicketDateCorrectionError(409, 'ALREADY_ON_DATE', 'A selected ticket is already assigned to that date. Refresh and select only tickets that need to move.');

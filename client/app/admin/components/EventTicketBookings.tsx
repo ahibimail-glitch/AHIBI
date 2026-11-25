@@ -27,6 +27,7 @@ interface Booking {
   paymentId?: string;
   paymentStatus?: string;
   selectedDate?: string;
+  bookingSource?: "online" | "on-spot";
   country?: string;
   state?: string;
   modeOfPayment?: string;
@@ -408,7 +409,7 @@ function EventTicketBookingsContent({ title, eventIds, hornbillDateCorrection }:
                     <TableCell>{booking.quantity ?? "-"}</TableCell>
                     <TableCell>₹{booking.total ?? 0}</TableCell>
                     <TableCell><Badge variant="outline">{booking.status || "Unknown"}</Badge></TableCell>
-                    <TableCell><Badge variant={booking.paymentId ? "secondary" : "outline"}>{booking.paymentId ? "Online" : "Manual"}</Badge></TableCell>
+                    <TableCell><Badge variant={booking.bookingSource === "on-spot" || (!booking.bookingSource && !booking.paymentId) ? "outline" : "secondary"}>{booking.bookingSource === "on-spot" ? "On spot" : booking.bookingSource === "online" || booking.paymentId ? "Online" : "Manual"}</Badge></TableCell>
                     <TableCell>{booking.country || "-"}</TableCell>
                     <TableCell>{booking.state || "-"}</TableCell>
                     <TableCell>
