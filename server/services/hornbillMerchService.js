@@ -1,68 +1,74 @@
 const axios = require('axios');
+const { resolvePartner } = require('./merchPartners');
 
 const DEFAULT_TIMEOUT = Number(process.env.HORNBILL_MERCH_TIMEOUT || 10000);
 
-const hornbillMerchClient = axios.create({
-  baseURL: process.env.HORNBILL_MERCH_API_BASE_URL,
-  timeout: DEFAULT_TIMEOUT
-});
-
-hornbillMerchClient.interceptors.request.use((config) => {
-  const apiKey = process.env.HORNBILL_MERCH_API_KEY;
-  console.log("[HORNBILL API REQUEST]", {
-    method: config.method,
-    url: `${config.baseURL}${config.url}`,
-    headers: config.headers,
+/**
+ * Build a per-partner axios client. Previously this module held a single client
+ * bound to the Hornbill env vars; it now builds the client from the resolved
+ * partner config so multiple partner sites can be supported. Behaviour for the
+ * Hornbill source is identical to before.
+ */
+const buildClient = (partner) => {
+  const client = axios.create({
+    baseURL: partner.baseURL,
+    timeout: DEFAULT_TIMEOUT,
   });
 
-  if (!config.baseURL) {
-    throw new Error('HORNBILL_MERCH_API_BASE_URL is not configured');
-  }
-
-  if (apiKey) {
-    config.headers['x-api-key'] = apiKey;
-  }
-
-  if (process.env.HORNBILL_MERCH_AUTH_TOKEN) {
-    config.headers.Authorization = `Bearer ${process.env.HORNBILL_MERCH_AUTH_TOKEN}`;
-  }
-
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
-
-// Add response interceptor for better error handling
-hornbillMerchClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
-
-    console.error("[HORNBILL API ERROR]", {
-      url: fullUrl,
-      status: error.response?.status,
-      message: error.response?.data || error.message,
-      headers: error.config?.headers,
+  client.interceptors.request.use((config) => {
+    console.log('[PARTNER MERCH API REQUEST]', {
+      source: partner.source,
+      method: config.method,
+      url: `${config.baseURL}${config.url}`,
     });
 
-    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-      throw new Error(`Cannot connect to Hornbill API: ${error.message} at ${fullUrl}`);
+    if (!config.baseURL) {
+      throw new Error(`Merch cart API base URL is not configured for source "${partner.source}"`);
     }
 
-    if (error.response) {
-      throw new Error(
-        `Hornbill API error: ${error.response.status} - ${error.response.data?.message || error.message} | URL: ${fullUrl}`
-      );
+    if (partner.apiKey) {
+      config.headers['x-api-key'] = partner.apiKey;
     }
 
-    if (error.request) {
-      throw new Error(`No response from Hornbill API | URL: ${fullUrl}`);
+    if (partner.authToken) {
+      config.headers.Authorization = `Bearer ${partner.authToken}`;
     }
 
-    throw error;
-  }
-);
+    return config;
+  }, (error) => Promise.reject(error));
 
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+
+      console.error('[PARTNER MERCH API ERROR]', {
+        source: partner.source,
+        url: fullUrl,
+        status: error.response?.status,
+        message: error.response?.data || error.message,
+      });
+
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        throw new Error(`Cannot connect to merch API: ${error.message} at ${fullUrl}`);
+      }
+
+      if (error.response) {
+        throw new Error(
+          `Merch API error: ${error.response.status} - ${error.response.data?.message || error.message} | URL: ${fullUrl}`
+        );
+      }
+
+      if (error.request) {
+        throw new Error(`No response from merch API | URL: ${fullUrl}`);
+      }
+
+      throw error;
+    }
+  );
+
+  return client;
+};
 
 const normalizeItems = (items = []) =>
   items.map((item, index) => {
@@ -92,23 +98,32 @@ const normalizeItems = (items = []) =>
     };
   });
 
-const fetchCartBySession = async (sessionId) => {
+/**
+ * Fetch a cart for a given sessionId from the partner identified by `source`.
+ * When source is omitted it resolves to the Hornbill partner, matching the
+ * original single-partner behaviour.
+ */
+const fetchCartBySession = async (sessionId, source) => {
   if (!sessionId) {
-    throw new Error('Hornbill sessionId is required');
+    throw new Error('sessionId is required');
   }
 
-  if (!process.env.HORNBILL_MERCH_API_BASE_URL) {
-    throw new Error('HORNBILL_MERCH_API_BASE_URL environment variable is not configured');
+  const partner = resolvePartner(source);
+
+  if (!partner.baseURL) {
+    throw new Error(`Merch cart API base URL is not configured for source "${partner.source}"`);
   }
+
+  const client = buildClient(partner);
+  const path = `${partner.cartPath}/${sessionId}`;
 
   try {
-    const endpoint = `api/merch/cart/session/${encodeURIComponent(sessionId)}`;
-    const { data } = await hornbillMerchClient.get(endpoint);
-  
+    const endpoint = `${partner.cartPath}/${encodeURIComponent(sessionId)}`;
+    const { data } = await client.get(endpoint);
     const payload = data?.data || data?.cart || data;
 
     if (!payload) {
-      throw new Error('Hornbill cart payload is empty');
+      throw new Error('Merch cart payload is empty');
     }
 
     return {
@@ -116,14 +131,16 @@ const fetchCartBySession = async (sessionId) => {
       items: normalizeItems(payload.items || payload.cartItems || []),
       currency: payload.currency || 'INR',
       notes: payload.notes,
-      sessionId: payload.sessionId || sessionId
+      sessionId: payload.sessionId || sessionId,
+      source: partner.source,
     };
   } catch (error) {
-    console.error('[HornbillMerchService] Error fetching cart:', {
+    console.error('[MerchPartnerService] Error fetching cart:', {
+      source: partner.source,
       sessionId,
       message: error.message,
       code: error.code,
-      response: error.response?.data
+      response: error.response?.data,
     });
     throw error;
   }
@@ -131,6 +148,5 @@ const fetchCartBySession = async (sessionId) => {
 
 module.exports = {
   fetchCartBySession,
-  normalizeItems
+  normalizeItems,
 };
-
