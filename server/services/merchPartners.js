@@ -30,6 +30,8 @@ const PARTNERS = {
     source: 'nagaland-tourism',
     requireEmail: true,
     fulfilmentEmail: process.env.TOURISM_MERCH_FULFILMENT_EMAIL || 'business@merchland.in',
+    webhookUrl: process.env.TOURISM_MERCH_WEBHOOK_URL || '',
+    webhookSecret: process.env.TOURISM_MERCH_WEBHOOK_SECRET || '',
     baseURL: process.env.TOURISM_MERCH_API_BASE_URL,
     apiKey: process.env.TOURISM_MERCH_API_KEY,
     authToken: process.env.TOURISM_MERCH_AUTH_TOKEN,

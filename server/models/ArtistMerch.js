@@ -10,6 +10,8 @@ const MerchItemSchema = new mongoose.Schema(
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true, min: 0 },
     taxRate: { type: Number, default: 0 },
+    hsn: { type: String, trim: true },
+    gstRate: { type: Number },
     image: { type: String }
   },
   { _id: false }

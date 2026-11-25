@@ -5,6 +5,7 @@ const MerchProduct = require('../models/MerchProduct');
 const User = require('../models/User');
 const { fetchCartBySession } = require('../services/hornbillMerchService');
 const { resolvePartner } = require('../services/merchPartners');
+const partnerWebhookService = require('../services/partnerWebhookService');
 const emailService = require('../services/emailService');
 
 const DEFAULT_TAX_RATE = Number(process.env.HORNBILL_MERCH_TAX_RATE ?? 0);
@@ -229,8 +230,12 @@ exports.syncPaymentStatus = async (req, res) => {
         if (partner.fulfilmentEmail) {
           await emailService.sendMerchFulfilmentEmail(order, { to: partner.fulfilmentEmail });
         }
+        if (partner.webhookUrl) {
+          partnerWebhookService.sendPaidOrderWebhook(order, partner)
+            .catch((whErr) => console.error('[Merch] Partner webhook error (sync):', whErr));
+        }
       } catch (fulfilError) {
-        console.error('[Merch] Failed to send fulfilment email (sync):', fulfilError);
+        console.error('[Merch] Failed to send fulfilment notifications (sync):', fulfilError);
       }
     }
 
@@ -284,6 +289,8 @@ exports.createOrder = async (req, res) => {
         quantity: item.quantity,
         price: item.price,
         taxRate: typeof item.taxRate === 'number' ? item.taxRate : DEFAULT_TAX_RATE,
+        hsn: item.hsn || '',
+        gstRate: typeof item.gstRate === 'number' ? item.gstRate : undefined,
         image: item.image
       })),
       currency: cart.currency || 'INR',
@@ -902,8 +909,12 @@ exports.razorpayWebhook = async (req, res) => {
         if (partner.fulfilmentEmail) {
           await emailService.sendMerchFulfilmentEmail(order, { to: partner.fulfilmentEmail });
         }
+        if (partner.webhookUrl) {
+          partnerWebhookService.sendPaidOrderWebhook(order, partner)
+            .catch((whErr) => console.error('[Merch] Partner webhook error:', whErr));
+        }
       } catch (fulfilError) {
-        console.error('[Merch] Failed to send fulfilment email:', fulfilError);
+        console.error('[Merch] Failed to send fulfilment notifications:', fulfilError);
       }
     }
 
