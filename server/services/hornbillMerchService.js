@@ -1,7 +1,11 @@
 const axios = require('axios');
 const { resolvePartner } = require('./merchPartners');
 
-const DEFAULT_TIMEOUT = Number(process.env.HORNBILL_MERCH_TIMEOUT || 10000);
+const DEFAULT_TIMEOUT = Number(process.env.HORNBILL_MERCH_TIMEOUT || 20000);
+
+// Join base + path with exactly one slash (for accurate logs/errors).
+const joinUrl = (base, path) =>
+  `${String(base || '').replace(/\/+$/, '')}/${String(path || '').replace(/^\/+/, '')}`;
 
 /**
  * Build a per-partner axios client. Previously this module held a single client
@@ -19,7 +23,7 @@ const buildClient = (partner) => {
     console.log('[PARTNER MERCH API REQUEST]', {
       source: partner.source,
       method: config.method,
-      url: `${config.baseURL}${config.url}`,
+      url: joinUrl(config.baseURL, config.url),
     });
 
     if (!config.baseURL) {
@@ -40,7 +44,7 @@ const buildClient = (partner) => {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      const fullUrl = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+      const fullUrl = joinUrl(error.config?.baseURL, error.config?.url);
 
       console.error('[PARTNER MERCH API ERROR]', {
         source: partner.source,
@@ -94,7 +98,13 @@ const normalizeItems = (items = []) =>
         : typeof item.tax_rate === 'number'
           ? item.tax_rate
           : undefined,
-      image: item.image || item.thumbnail || item.thumbnail_url || ''
+      image: item.image || item.thumbnail || item.thumbnail_url || '',
+      hsn: item.hsn || item.hsn_code || item.hsnCode || '',
+      gstRate: typeof item.gstRate === 'number'
+        ? item.gstRate
+        : typeof item.gst_rate === 'number'
+          ? item.gst_rate
+          : undefined,
     };
   });
 
@@ -115,11 +125,25 @@ const fetchCartBySession = async (sessionId, source) => {
   }
 
   const client = buildClient(partner);
-  const path = `${partner.cartPath}/${sessionId}`;
+  const endpoint = `${partner.cartPath}/${encodeURIComponent(sessionId)}`;
 
   try {
-    const endpoint = `${partner.cartPath}/${encodeURIComponent(sessionId)}`;
-    const { data } = await client.get(endpoint);
+    let data;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        ({ data } = await client.get(endpoint));
+        break;
+      } catch (err) {
+        // Retry only transient failures (no response / timeout), not real HTTP errors.
+        const transient = !err.response &&
+          (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT' || !!err.request);
+        if (attempt < 2 && transient) {
+          await new Promise((r) => setTimeout(r, 800));
+          continue;
+        }
+        throw err;
+      }
+    }
     const payload = data?.data || data?.cart || data;
 
     if (!payload) {

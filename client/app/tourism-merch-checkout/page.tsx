@@ -9,6 +9,16 @@ import Footer from "@/app/Footer";
 
 const DEFAULT_SOURCE = "nagaland-tourism";
 
+const STORE_URL = "https://tourism.nagaland.gov.in/hornbill-merchandise/";
+
+const POLICIES = [
+  { label: "Shipping Policy", href: "https://tourism.nagaland.gov.in/hornbill-store-shipping-policy/" },
+  { label: "Return & Refund Policy", href: "https://tourism.nagaland.gov.in/hornbill-store-return-policy/" },
+  { label: "Privacy Policy", href: "https://tourism.nagaland.gov.in/hornbill-store-privacy-policy/" },
+  { label: "Terms & Conditions", href: "https://tourism.nagaland.gov.in/hornbill-store-terms/" },
+  { label: "Seller & Grievance Details", href: "https://tourism.nagaland.gov.in/hornbill-store-seller-details/" },
+];
+
 interface CartItem {
   itemId: string;
   name: string;
@@ -104,6 +114,8 @@ function TourismCheckout() {
 
   const validateDeliveryDetails = () => {
     if (!shipping.fullName.trim()) return "Full name is required";
+    if (!shipping.email.trim()) return "Email is required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shipping.email.trim())) return "Enter a valid email";
     if (!shipping.phone.trim()) return "Phone number is required";
     if (!/^\+?[0-9]{10,15}$/.test(shipping.phone.trim())) return "Enter a valid phone number";
     if (!shipping.addressLine1.trim()) return "Address line 1 is required";
@@ -178,12 +190,12 @@ function TourismCheckout() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-        <button
-          onClick={() => router.back()}
+        <a
+          href={STORE_URL}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> Back to store
-        </button>
+        </a>
 
         <h1 className="mt-4 text-2xl font-bold font-display text-foreground">Checkout</h1>
         <p className="mt-1 text-sm text-muted-foreground">Secure payment powered by AHIBI</p>
@@ -246,7 +258,7 @@ function TourismCheckout() {
                   type="email"
                   value={shipping.email}
                   onChange={(e) => updateShippingField("email", e.target.value)}
-                  placeholder="Email address (optional)"
+                  placeholder="Email address"
                   className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
                 <input
@@ -348,6 +360,23 @@ function TourismCheckout() {
               )}
               {isSubmitting ? "Starting payment…" : `Pay ${money(displayTotal)}`}
             </button>
+
+            <div className="pt-1 text-center text-xs text-muted-foreground">
+              <p className="mb-1.5">By paying you agree to the store policies:</p>
+              <div className="flex flex-wrap justify-center gap-x-3 gap-y-1">
+                {POLICIES.map((policy) => (
+                  <a
+                    key={policy.href}
+                    href={policy.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    {policy.label}
+                  </a>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </div>
