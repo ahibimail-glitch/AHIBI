@@ -110,8 +110,10 @@ function createGradient(doc, x, y, width, height) {
 }
 
 function formatTimeRange(booking, event) {
-  const start = event?.startDate || event?.startTime || booking.startTime;
-  const end = event?.endDate || event?.endTime || booking.endTime;
+  const multiDayEvent = event?.startDate && event?.endDate && new Date(event.startDate).toISOString().slice(0, 10) !== new Date(event.endDate).toISOString().slice(0, 10);
+  if (booking.selectedDate && multiDayEvent && !event?.startTime && !event?.endTime && !booking.startTime && !booking.endTime) return "Time TBA";
+  const start = event?.startTime || booking.startTime || event?.startDate;
+  const end = event?.endTime || booking.endTime || (multiDayEvent ? null : event?.endDate);
   const startTime = formatDateTime(start, { hour: '2-digit', minute: '2-digit' });
   if (!startTime) return 'Time TBA';
   if (end) return `${startTime} - ${formatDateTime(end, { hour: '2-digit', minute: '2-digit' })}`;
@@ -162,7 +164,7 @@ function drawMemberTicketPdf(doc, booking, event, qrCodeDataUrl, { includedWith,
   const headerHeight = 186;
   const displayData = ticketDisplayData(booking, { includedWith, attendee });
   const eventTitle = event?.title || booking.eventSnapshot?.title || 'Event Title';
-  const eventDate = event?.startDate || event?.startTime || booking.startTime;
+  const eventDate = booking.selectedDate || event?.startDate || event?.startTime || booking.startTime;
   const venue = event?.location?.address || event?.venue || '-';
   const ticketId = memberTicketId(booking);
   const ticketBenefits = event?.ticketTypes?.find((ticket) => ticket.name === booking.ticketType)?.benefits || [];
