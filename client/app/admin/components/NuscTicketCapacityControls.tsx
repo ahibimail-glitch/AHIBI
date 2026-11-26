@@ -57,6 +57,7 @@ function committedCount(row: CapacityRow) {
 export default function NuscTicketCapacityControls() {
   const [overview, setOverview] = useState<CapacityOverview | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [countDrafts, setCountDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export default function NuscTicketCapacityControls() {
       if (!response.ok) throw new Error(body.message || "Unable to load NUSC ticket capacity.");
       setOverview(body.overview as CapacityOverview);
       setDrafts({});
+      setCountDrafts({});
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load NUSC ticket capacity.";
       setLoadError(message);
@@ -90,6 +92,37 @@ export default function NuscTicketCapacityControls() {
   useEffect(() => {
     void loadOverview();
   }, [loadOverview]);
+
+  const saveCounts = async (row: CapacityRow) => {
+    if (!row.matchDate) return;
+    const key = rowKey(row);
+    const sold = Number(countDrafts[key + ':sold'] ?? row.sold ?? 0);
+    const held = Number(countDrafts[key + ':held'] ?? row.held ?? 0);
+    const saleLimit = capacityCount(row.availabilityLimit ?? row.capacity);
+    const reserved = Number(row.offlineReserved || 0);
+    if (!Number.isSafeInteger(sold) || !Number.isSafeInteger(held) || sold < 0 || held < 0 || saleLimit === null || sold + held + reserved > saleLimit) {
+      toast.error('Sold, held, and reserved counts must fit within the current sale limit.');
+      return;
+    }
+    setBusyKey(key + ':counts');
+    try {
+      const response = await fetch(apiUrl + '/api/admin/nusc-home-matches/availability', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ matchDate: row.matchDate, ticketType: row.ticketType, zone: row.zone || null, sold, held }),
+        credentials: 'include',
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || 'Unable to update sold and held counts.');
+      toast.success(row.label + ' counts updated.');
+      await loadOverview();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to update sold and held counts.');
+      await loadOverview();
+    } finally {
+      setBusyKey(null);
+    }
+  };
 
   const saveCapacity = async (row: CapacityRow) => {
     const key = rowKey(row);
@@ -180,8 +213,12 @@ export default function NuscTicketCapacityControls() {
     const currentAvailability = capacityCount(row.availabilityLimit ?? row.capacity);
     const availabilityDraft = drafts[`${key}:availability`] ?? (currentAvailability === null ? "" : String(currentAvailability));
     const availabilityChanged = currentAvailability !== null && Number(availabilityDraft) !== currentAvailability;
+    const soldDraft = countDrafts[key + ':sold'] ?? String(row.sold ?? 0);
+    const heldDraft = countDrafts[key + ':held'] ?? String(row.held ?? 0);
+    const countsChanged = Number(soldDraft) !== Number(row.sold ?? 0) || Number(heldDraft) !== Number(row.held ?? 0);
+    const availablePreview = Math.max(0, Number(availabilityDraft || 0) - Number(soldDraft || 0) - Number(heldDraft || 0) - Number(row.offlineReserved || 0));
     return (
-      <div key={key} className="grid grid-cols-2 gap-3 border-t border-slate-100 py-4 sm:grid-cols-[minmax(150px,1.3fr)_90px_90px_repeat(4,minmax(60px,0.7fr))_92px_92px] sm:items-center sm:gap-3">
+      <div key={key} className="grid grid-cols-2 gap-3 border-t border-slate-100 py-4 sm:grid-cols-[minmax(150px,1.3fr)_90px_90px_repeat(4,minmax(70px,0.7fr))_92px_92px_92px] sm:items-center sm:gap-3">
         <div className="col-span-2 min-w-0 sm:col-span-1">
           <p className="font-medium text-slate-900">{row.label}</p>
           <p className="text-xs text-slate-500">{row.unit}{row.matchDate ? ` · ${row.matchDate}` : " · all matches"}</p>
@@ -216,10 +253,14 @@ export default function NuscTicketCapacityControls() {
           />
           <span>Max {formatCapacityMetric(row.capacity)}</span>
         </label>
-        <Metric label="Sold" value={row.sold} />
-        <Metric label="Held" value={row.held} />
+        {row.matchDate ? (
+          <label className="flex flex-col gap-1 text-xs text-slate-500"><span>Sold</span><input aria-label={row.label + ' sold count'} className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm text-slate-900" type="number" min={0} step={1} value={soldDraft} onChange={(event) => setCountDrafts((current) => ({ ...current, [key + ':sold']: event.target.value }))} /></label>
+        ) : <Metric label="Sold" value={row.sold} />}
+        {row.matchDate ? (
+          <label className="flex flex-col gap-1 text-xs text-slate-500"><span>Held</span><input aria-label={row.label + ' held count'} className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm text-slate-900" type="number" min={0} step={1} value={heldDraft} onChange={(event) => setCountDrafts((current) => ({ ...current, [key + ':held']: event.target.value }))} /></label>
+        ) : <Metric label="Held" value={row.held} />}
         <Metric label="Reserved" value={row.offlineReserved} />
-        <Metric label="Available" value={row.available} strong />
+        <Metric label="Available" value={row.matchDate ? availablePreview : row.available} strong />
         <Button
           type="button"
           size="sm"
@@ -229,6 +270,7 @@ export default function NuscTicketCapacityControls() {
         >
           {busyKey === key ? "Saving…" : "Save capacity"}
         </Button>
+        {row.matchDate && <Button type="button" size="sm" disabled={!countsChanged || busyKey !== null || loading} onClick={() => void saveCounts(row)}>{busyKey === key + ':counts' ? 'Saving…' : 'Save counts'}</Button>}
         <Button
           type="button"
           size="sm"
@@ -270,7 +312,7 @@ export default function NuscTicketCapacityControls() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-950">NUSC ticket availability</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
-            Adjust capacity and the amount released for sale separately. General Pass sale limits are managed by zone. Sold tickets, checkout holds, offline reservations, and season box reservations remain committed.
+            Adjust capacity, sale limits, sold counts, and held counts for each match. Available updates from the sale limit after sold, held, and reserved counts.
           </p>
         </div>
         <div className={`rounded-full px-3 py-1 text-xs font-semibold ${overview.salesEnabled ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>

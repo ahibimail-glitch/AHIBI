@@ -1454,7 +1454,7 @@ async function getCapacityControls(req, res) {
 
 async function updateCapacityControl(req, res) {
   try {
-    const { ticketType, capacity, availability, zone = null } = req.body || {};
+    const { ticketType, capacity, availability, sold, held, zone = null } = req.body || {};
     const matchDate = req.body?.matchDate ? inventory.normalizeMatchDate(req.body.matchDate) : null;
     let soldCount = 0;
     let event = null;
@@ -1467,6 +1467,10 @@ async function updateCapacityControl(req, res) {
     const zoneSoldCounts = matchDate && event
       ? (await inventory.getGeneralZoneSalesByEventIds([event._id]))[String(event._id)] || {}
       : {};
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'sold') || Object.prototype.hasOwnProperty.call(req.body || {}, 'held')) {
+      const override = await inventory.setManualUsageOverride({ matchDate, ticketType, zone, sold, held, adminId: req.user?._id, soldCount, zoneSoldCounts });
+      return res.status(200).json({ success: true, override });
+    }
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'availability')) {
       const override = await inventory.setAvailabilityOverride({
         matchDate,
@@ -1483,8 +1487,8 @@ async function updateCapacityControl(req, res) {
     return res.status(200).json({ success: true, override });
   } catch (error) {
     const status = error.code === 'CAPACITY_BELOW_COMMITTED' ? 409 :
-      error.code === 'AVAILABILITY_BELOW_COMMITTED' ? 409 :
-        ['INVALID_CAPACITY_TYPE', 'INVALID_CAPACITY', 'INVALID_AVAILABILITY_TYPE', 'INVALID_AVAILABILITY', 'INVALID_ZONE', 'INVALID_MATCH_DATE', 'ADMIN_REQUIRED'].includes(error.code) ? 400 : 500;
+      error.code === 'AVAILABILITY_BELOW_COMMITTED' || error.code === 'HELD_BELOW_ACTIVE' ? 409 :
+        ['INVALID_CAPACITY_TYPE', 'INVALID_CAPACITY', 'INVALID_AVAILABILITY_TYPE', 'INVALID_AVAILABILITY', 'INVALID_USAGE_TYPE', 'INVALID_USAGE_COUNT', 'USAGE_EXCEEDS_LIMIT', 'INVALID_ZONE', 'INVALID_MATCH_DATE', 'ADMIN_REQUIRED'].includes(error.code) ? 400 : 500;
     if (status === 500) console.error('[NUSC capacity] Capacity update failed:', error.message);
     return res.status(status).json({ success: false, message: error.message || 'Unable to update NUSC ticket capacity.', code: error.code });
   }

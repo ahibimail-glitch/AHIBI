@@ -134,6 +134,16 @@ const TicketAvailabilityOverrideSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { _id: true });
 
+const ManualUsageOverrideSchema = new mongoose.Schema({
+  matchDate: { type: String, required: true },
+  ticketType: { type: String, required: true },
+  zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'], default: null },
+  soldAdjustment: { type: Number, default: 0 },
+  manualHeldCount: { type: Number, default: 0, min: 0 },
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+  updatedAt: { type: Date, default: Date.now },
+}, { _id: true });
+
 const OfflineSinglePassReleaseSchema = new mongoose.Schema({
   bookingId: { type: mongoose.Schema.Types.ObjectId, required: true },
   matchDate: { type: String, required: true },
@@ -152,6 +162,7 @@ const NuscHomeMatchInventorySchema = new mongoose.Schema({
   seasonReservations: { type: [SeasonReservationSchema], default: [] },
   capacityOverrides: { type: [CapacityOverrideSchema], default: [] },
   availabilityOverrides: { type: [TicketAvailabilityOverrideSchema], default: [] },
+  manualUsageOverrides: { type: [ManualUsageOverrideSchema], default: [] },
   offlineSinglePassReleases: { type: [OfflineSinglePassReleaseSchema], default: [] },
 }, { timestamps: true });
 
