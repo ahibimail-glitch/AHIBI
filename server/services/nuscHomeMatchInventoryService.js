@@ -2336,7 +2336,10 @@ async function setAvailabilityOverride({ matchDate = null, ticketType, zone = nu
     state.availabilityOverrides ||= [];
     const configuredCapacity = normalizedZone
       ? maxAvailability
-      : Math.min(definition.maxCapacity, getInventoryCapacity(state, scopedMatchDate, definition.ticketType));
+      : Math.min(
+          getMatchCapacityLimit(scopedMatchDate, definition.ticketType, definition.maxCapacity),
+          getInventoryCapacity(state, scopedMatchDate, definition.ticketType)
+        );
     if (!reset && nextAvailability > configuredCapacity) {
       throw new InventoryConflict(`Availability cannot exceed the configured capacity of ${configuredCapacity}.`, 'INVALID_AVAILABILITY');
     }
