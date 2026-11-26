@@ -140,6 +140,21 @@ const CAPACITY_CONTROL_DEFINITIONS = [
   { ticketType: SEASON_BOX_CAPACITY_KEY, label: 'United Suite Season Box', group: 'Season passes', unit: 'boxes', scope: 'global', defaultCapacity: SEASON_BOX_COUNT, maxCapacity: SEASON_BOX_COUNT },
 ];
 
+// NUSC vs Dempo SC, 30 November 2026: increase both the Premium inventory
+// ceiling and public sale limit to 350 seats, superseding the prior 250-seat overrides.
+const MATCH_CAPACITY_LIMIT_OVERRIDES = Object.freeze({
+  '2026-11-30': Object.freeze({ 'Premium Pass': 350 }),
+});
+
+function getMatchCapacityLimit(matchDate, ticketType, fallback) {
+  const date = normalizeMatchDate(matchDate);
+  const type = normalizeTicketTypeName(ticketType);
+  const dateOverrides = MATCH_CAPACITY_LIMIT_OVERRIDES[date];
+  if (!dateOverrides) return fallback;
+  const match = Object.entries(dateOverrides).find(([name]) => normalizeTicketTypeName(name) === type);
+  return match ? match[1] : fallback;
+}
+
 function getCapacityDefinition(ticketType) {
   const normalized = normalizeTicketTypeName(ticketType);
   return CAPACITY_CONTROL_DEFINITIONS.find((item) => normalizeTicketTypeName(item.ticketType) === normalized) || null;
@@ -205,6 +220,8 @@ function getCapacityOverride(state, matchDate, ticketType) {
 function getInventoryCapacity(state, matchDate, ticketType) {
   const definition = getCapacityDefinition(ticketType);
   if (!definition) return null;
+  const targetedLimit = getMatchCapacityLimit(matchDate, definition.ticketType, null);
+  if (targetedLimit !== null) return targetedLimit;
   const override = getCapacityOverride(state, matchDate, definition.ticketType);
   return override ? Number(override.capacity) : definition.defaultCapacity;
 }
@@ -213,6 +230,8 @@ function getInventoryAvailabilityLimit(state, matchDate, ticketType, zone = null
   const definition = getCapacityDefinition(ticketType);
   if (!definition) return 0;
   const scopedMatchDate = definition.scope === 'match' ? matchDate : null;
+  const targetedLimit = getMatchCapacityLimit(scopedMatchDate, definition.ticketType, null);
+  if (targetedLimit !== null && !zone) return targetedLimit;
   const zoneCapacity = zone
     ? GENERAL_SEATING_AREAS.find((area) => area.name === zone)?.capacity
     : null;
@@ -2049,9 +2068,9 @@ function getCapacityRowBase(definition, matchDate, state, zone = null) {
     ...(zone && { zone }),
     label: zone ? `${definition.label} · ${zone}` : definition.label,
     unit: definition.unit,
-    capacity: zoneCapacity ?? (override ? Number(override.capacity) : definition.defaultCapacity),
+    capacity: zoneCapacity ?? getInventoryCapacity(state, matchDate, definition.ticketType),
     defaultCapacity: zoneCapacity ?? definition.defaultCapacity,
-    maxCapacity: zoneCapacity ?? definition.maxCapacity,
+    maxCapacity: zoneCapacity ?? getMatchCapacityLimit(matchDate, definition.ticketType, definition.maxCapacity),
     availabilityLimit: getInventoryAvailabilityLimit(state, matchDate, definition.ticketType, zone),
     availabilityOverride: (state.availabilityOverrides || []).some((item) => (
       normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(definition.ticketType) &&
@@ -2244,8 +2263,9 @@ async function setCapacityOverride({ matchDate = null, ticketType, capacity, adm
     throw new InventoryConflict('Choose a valid NUSC match date for this capacity.', 'INVALID_MATCH_DATE');
   }
   const nextCapacity = Number(capacity);
-  if (!Number.isInteger(nextCapacity) || nextCapacity < 0 || nextCapacity > definition.maxCapacity) {
-    throw new InventoryConflict(`Capacity must be a whole number from 0 to ${definition.maxCapacity}.`, 'INVALID_CAPACITY');
+  const maxCapacity = getMatchCapacityLimit(scopedMatchDate, definition.ticketType, definition.maxCapacity);
+  if (!Number.isInteger(nextCapacity) || nextCapacity < 0 || nextCapacity > maxCapacity) {
+    throw new InventoryConflict(`Capacity must be a whole number from 0 to ${maxCapacity}.`, 'INVALID_CAPACITY');
   }
   if (!adminId) throw new InventoryConflict('An admin account is required to change capacity.', 'ADMIN_REQUIRED');
 
@@ -2305,7 +2325,7 @@ async function setAvailabilityOverride({ matchDate = null, ticketType, zone = nu
   const reset = availability === null || availability === '';
   const maxAvailability = normalizedZone
     ? GENERAL_SEATING_AREAS.find((area) => area.name === normalizedZone).capacity
-    : definition.maxCapacity;
+    : getMatchCapacityLimit(scopedMatchDate, definition.ticketType, definition.maxCapacity);
   const nextAvailability = reset ? null : Number(availability);
   if (!reset && (!Number.isSafeInteger(nextAvailability) || nextAvailability < 0 || nextAvailability > maxAvailability)) {
     throw new InventoryConflict(`Availability must be a whole number from 0 to ${maxAvailability}.`, 'INVALID_AVAILABILITY');
