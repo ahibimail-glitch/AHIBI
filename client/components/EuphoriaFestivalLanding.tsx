@@ -160,4 +160,4 @@ export default function EuphoriaFestivalLanding() {
         .euphoria-capacity{display:flex;justify-content:center;align-items:center;gap:8px;color:#4d6759;font-size:12px;font-weight:750;margin:24px 0 0}.euphoria-capacity :global(svg){color:#a33c28}
         .euphoria-booking-status{text-align:center;font-size:12px;color:#65776f;margin:13px 0 0}
         .euphoria-highlights{max-width:1120px;margin:auto;padding:92px 24px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}.euphoria-highlights h2{font-size:clamp(44px,6vw,72px)}
-        .ûá^ÁØvP–»Å<öÆxßÄIÔ€i>∫1»ûÿ¨{^Æ)ûû÷•{^r€azkhrßÅÊ≠j|≠äg
+        .
