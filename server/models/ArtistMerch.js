@@ -54,6 +54,25 @@ const PaymentSnapshotSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const WebhookDeliverySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ['pending', 'delivered', 'exhausted', 'disabled'],
+      index: true,
+    },
+    attemptCount: { type: Number, default: 0 },
+    lastAttemptAt: { type: Date },
+    nextAttemptAt: { type: Date },
+    deliveredAt: { type: Date },
+    lastStatusCode: { type: Number },
+    lastError: { type: String },
+    lastDeliveryId: { type: String },
+    needsAdminIntervention: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
 const MerchOrderSchema = new mongoose.Schema(
   {
     sessionId: { type: String, required: true, index: true },
@@ -101,7 +120,8 @@ const MerchOrderSchema = new mongoose.Schema(
     ],
     metadata: { type: mongoose.Schema.Types.Mixed },
     cartSnapshot: { type: mongoose.Schema.Types.Mixed },
-    payment: { type: PaymentSnapshotSchema }
+    payment: { type: PaymentSnapshotSchema },
+    webhookDelivery: { type: WebhookDeliverySchema }
   },
   {
     timestamps: true
@@ -110,5 +130,6 @@ const MerchOrderSchema = new mongoose.Schema(
 
 MerchOrderSchema.index({ sessionId: 1, user: 1 });
 MerchOrderSchema.index({ 'payment.gatewayOrderId': 1 });
+MerchOrderSchema.index({ 'webhookDelivery.status': 1, 'webhookDelivery.nextAttemptAt': 1 });
 
 module.exports = mongoose.model('MerchOrder', MerchOrderSchema);

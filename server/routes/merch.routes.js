@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const merchController = require('../controllers/merchController');
-const { protect, optionalAuth } = require('../middlewares/auth');
+const { protect, optionalAuth, authorize } = require('../middlewares/auth');
 
 // Cart and Order routes
 router.get('/cart/session/:sessionId', merchController.getCartBySession);
@@ -14,6 +14,7 @@ router.post('/orders/checkout', protect, merchController.createCheckoutOrder);
 router.post('/orders/verify-payment', protect, merchController.verifyCheckoutPayment);
 router.get('/orders/:orderId', optionalAuth, merchController.getOrderById);
 router.post('/orders/:orderId/sync-payment', merchController.syncPaymentStatus);
+router.post('/orders/:orderId/resend-webhook', protect, authorize('admin'), merchController.resendWebhook);
 router.post('/webhook/razorpay', merchController.razorpayWebhook);
 
 // Product routes
