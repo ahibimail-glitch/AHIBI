@@ -199,6 +199,11 @@ export default function EventsPage() {
 
   const currentDate = new Date();
 
+  useEffect(() => {
+    const initialSearch = new URLSearchParams(window.location.search).get("search");
+    if (initialSearch) setSearchQuery(initialSearch);
+  }, []);
+
   // ── Fetch events ───────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -461,6 +466,16 @@ export default function EventsPage() {
 
         {/* ── Mobile quick-search bar ──────────────────────────────────────── */}
         <HornbillFestivalShowcase compact />
+
+        <section className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6 lg:px-8" aria-label="Featured event">
+          <Link href="/euphoria-festival-2026" className="group relative block overflow-hidden rounded-2xl bg-[#123b35] shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#a83c25]/40">
+            <picture>
+              <source media="(max-width: 700px)" srcSet="/euphoria/euphoria-mobile.jpeg" />
+              <img src="/euphoria/euphoria-desktop.jpeg" alt="Euphoria Festival, 11–13 December 2026 at Avora Resort, Nagaland" className="block h-auto max-h-[460px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]" loading="lazy" />
+            </picture>
+            <span className="sr-only">Explore Euphoria Festival 2026 tickets and camping</span>
+          </Link>
+        </section>
 
         <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
           <div className="flex gap-2 max-w-2xl mx-auto">
