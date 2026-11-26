@@ -5,7 +5,7 @@ const MerchProduct = require('../models/MerchProduct');
 const User = require('../models/User');
 const { fetchCartBySession } = require('../services/hornbillMerchService');
 const { resolvePartner } = require('../services/merchPartners');
-const partnerWebhookService = require('../services/partnerWebhookService');
+const partnerWebhookRetryService = require('../services/partnerWebhookRetryService');
 const emailService = require('../services/emailService');
 
 const DEFAULT_TAX_RATE = Number(process.env.HORNBILL_MERCH_TAX_RATE ?? 0);
@@ -231,8 +231,10 @@ exports.syncPaymentStatus = async (req, res) => {
           await emailService.sendMerchFulfilmentEmail(order, { to: partner.fulfilmentEmail });
         }
         if (partner.webhookUrl) {
-          partnerWebhookService.sendPaidOrderWebhook(order, partner)
-            .catch((whErr) => console.error('[Merch] Partner webhook error (sync):', whErr));
+          order.webhookDelivery = { status: 'pending', attemptCount: 0, nextAttemptAt: new Date(), needsAdminIntervention: false };
+          await order.save();
+          partnerWebhookRetryService.enqueueAndTry(order._id)
+            .catch((whErr) => console.error('[Merch] Partner webhook enqueue error (sync):', whErr));
         }
       } catch (fulfilError) {
         console.error('[Merch] Failed to send fulfilment notifications (sync):', fulfilError);
@@ -910,8 +912,10 @@ exports.razorpayWebhook = async (req, res) => {
           await emailService.sendMerchFulfilmentEmail(order, { to: partner.fulfilmentEmail });
         }
         if (partner.webhookUrl) {
-          partnerWebhookService.sendPaidOrderWebhook(order, partner)
-            .catch((whErr) => console.error('[Merch] Partner webhook error:', whErr));
+          order.webhookDelivery = { status: 'pending', attemptCount: 0, nextAttemptAt: new Date(), needsAdminIntervention: false };
+          await order.save();
+          partnerWebhookRetryService.enqueueAndTry(order._id)
+            .catch((whErr) => console.error('[Merch] Partner webhook enqueue error:', whErr));
         }
       } catch (fulfilError) {
         console.error('[Merch] Failed to send fulfilment notifications:', fulfilError);
@@ -922,6 +926,24 @@ exports.razorpayWebhook = async (req, res) => {
   } catch (error) {
     console.error('[Merch] Webhook processing failed', error);
     return res.status(500).send('Server error');
+  }
+};
+
+exports.resendWebhook = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const result = await partnerWebhookRetryService.resend(orderId);
+    if (!result.success && result.error) {
+      return res.status(400).json({ success: false, message: result.error });
+    }
+    return res.json({
+      success: true,
+      message: result.success ? 'Webhook delivered' : 'Webhook re-queued for retry',
+      data: result,
+    });
+  } catch (error) {
+    console.error('[Merch] resendWebhook failed', error);
+    return res.status(500).json({ success: false, message: error.message || 'Resend failed' });
   }
 };
 

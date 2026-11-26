@@ -60,9 +60,13 @@ const expected = 'sha256=' + crypto
 
 ## 5. Retries & idempotency
 
-- Retries on non-2xx/timeout: up to 5 attempts with backoff
-  (~0s, 1m, 5m, 30m, 2h). `x-ahibi-delivery` is identical across retries of the
-  same delivery.
+- Delivery: one immediate attempt when the order is paid, then automatic
+  retries with backoff (~1m, 5m, 15m, 30m, 1h, 2h), up to 8 attempts total.
+  After that the order is flagged for admin and can be re-sent manually from
+  AHIBI. The same details are also emailed to the fulfilment address as a
+  backup, so an order is never lost.
+- Each delivery attempt carries its OWN `x-ahibi-delivery` id (not stable
+  across retries) — so **dedupe on `order.id`**, never on the delivery id.
 - **You must be idempotent**: dedupe on `order.id` (and/or `payment.paymentId`).
   The same paid order may arrive more than once — create the Woo order only
   once; subsequent deliveries should be acked 2xx and ignored.
@@ -145,3 +149,98 @@ Notes:
 2. Confirmation you'll verify `x-api-key` + `x-ahibi-signature`.
 3. Confirm you'll add `hsn` + `gst_rate` per item to your cart API response (for exact GST pass-through).
 Then we set `TOURISM_MERCH_WEBHOOK_URL` + `TOURISM_MERCH_WEBHOOK_SECRET`, share the secret securely, and enable sending.
+
+---
+
+## 9. Sample paid-order payload (exact)
+
+This is the real output of AHIBI's payload builder — the field names, types and
+GST maths are exactly what you'll receive. A mixed cart is shown (5% + 18%) so
+both GST rates are visible.
+
+```json
+{
+  "event": "order.paid",
+  "sentAt": "2026-11-26T04:50:05.000Z",
+  "order": {
+    "id": "6745f1a2b3c4d5e6f7a8b9c0",
+    "source": "nagaland-tourism",
+    "sessionId": "1e802073088f93f872d3614e4eb4c98b392b80f5259a79385d1475318c27fb87",
+    "status": "paid",
+    "currency": "INR",
+    "amounts": {
+      "subtotal": 1034,
+      "tax": 0,
+      "shipping": 0,
+      "total": 1034,
+      "taxableValue": 932.4,
+      "gstTotal": 101.6
+    },
+    "items": [
+      {
+        "itemId": "HBF-RNT-RHODO-WHT-M",
+        "name": "Hornbill Festival - Classic Round-Neck Tee",
+        "sku": "HBF-RNT-RHODO-WHT-M",
+        "variant": "Rhododendron Bloom, White, M",
+        "hsn": "6109",
+        "gstRate": 0.05,
+        "quantity": 1,
+        "price": 535,
+        "lineTotal": 535,
+        "gst": { "taxableValue": 509.52, "gstAmount": 25.48 }
+      },
+      {
+        "itemId": "HBF-BADGE-SINGLE",
+        "name": "Single Badge",
+        "sku": "HBF-BADGE-SINGLE",
+        "variant": "",
+        "hsn": "8308",
+        "gstRate": 0.18,
+        "quantity": 1,
+        "price": 499,
+        "lineTotal": 499,
+        "gst": { "taxableValue": 422.88, "gstAmount": 76.12 }
+      }
+    ],
+    "customer": {
+      "name": "Test Buyer",
+      "email": "buyer@example.com",
+      "phone": "9876543210"
+    },
+    "shippingAddress": {
+      "fullName": "Test Buyer",
+      "phone": "9876543210",
+      "email": "buyer@example.com",
+      "addressLine1": "House 12, Circular Road",
+      "addressLine2": "",
+      "city": "Dimapur",
+      "state": "Nagaland",
+      "postalCode": "797112",
+      "country": "India"
+    },
+    "payment": {
+      "gateway": "razorpay",
+      "paymentId": "pay_PZ1a2b3c4d5e6f",
+      "paymentLinkId": "plink_PZ9x8y7z6w5v",
+      "gatewayOrderId": "order_PZ0a1b2c3d4e",
+      "status": "paid",
+      "paidAt": "2026-11-26T04:50:00.000Z"
+    }
+  }
+}
+```
+
+### Field notes
+- `gstRate` is a fraction (0.05 = 5%, 0.18 = 18%), passed through from your cart's `gst_rate`.
+- Per-line `gst.taxableValue` / `gst.gstAmount` are derived from the GST-inclusive `lineTotal`:
+  `taxableValue = lineTotal / (1 + gstRate)`, `gstAmount = lineTotal − taxableValue`.
+- `order.amounts.taxableValue` / `gstTotal` are the sums across lines.
+- `order.id` is your idempotency key. `payment.paymentId` is the unique Razorpay payment id.
+- CGST/SGST vs IGST split is decided by you at invoicing (place of supply).
+
+### Signature note (critical)
+- The body AHIBI actually POSTs is **compact JSON** (no spaces/newlines) — the pretty
+  version above is only for reading. The example above serializes to **1331 bytes**.
+- `x-ahibi-signature` = `sha256=` + HMAC-SHA256(**raw body bytes**, webhook secret).
+- Verify against the exact bytes you receive, before any parse/re-serialize, or the
+  hash won't match.

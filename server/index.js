@@ -78,6 +78,7 @@ const PendingPaymentSession = require('./models/PendingPaymentSession');
 const PaymentTransaction = require('./models/PaymentTransaction');
 const AdminNotification = require('./models/AdminNotification');
 const paymentReconciliationService = require('./services/paymentReconciliationService');
+const partnerWebhookRetryService = require('./services/partnerWebhookRetryService');
 const { createGracefulShutdown } = require('./services/gracefulShutdownService');
 
 let serverReady = false;
@@ -361,7 +362,7 @@ const connectDB = async () => {
 const shutdownLifecycle = createGracefulShutdown({
   server,
   socketServer: io,
-  stopBackgroundJobs: () => paymentReconciliationService.stop(),
+  stopBackgroundJobs: () => { paymentReconciliationService.stop(); partnerWebhookRetryService.stop(); },
   disconnectDatabase: () => mongoose.disconnect(),
 });
 
@@ -398,6 +399,7 @@ const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
   if (shutdownRequested) return;
   paymentReconciliationService.start();
+  partnerWebhookRetryService.start();
   // // Start the booking cleanup service
   // const bookingCleanupService = require('./services/bookingCleanupService');
   // bookingCleanupService.start();

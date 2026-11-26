@@ -88,13 +88,12 @@ function buildOrderPayload(order) {
 }
 
 /**
- * Deliver a paid-order webhook to a partner.
- * Dormant unless partner.webhookUrl is configured — so leaving
- * TOURISM_MERCH_WEBHOOK_URL unset keeps deliveries OFF.
- * Signs the raw body with HMAC-SHA256 and does a few immediate retries.
- * Intended to be called fire-and-forget (do not block the HTTP response).
+ * Deliver a paid-order webhook to a partner — a SINGLE attempt.
+ * Scheduling and retries are handled by partnerWebhookRetryService.
+ * Dormant unless partner.webhookUrl is configured (so leaving
+ * TOURISM_MERCH_WEBHOOK_URL unset keeps deliveries OFF).
  */
-async function sendPaidOrderWebhook(order, partner) {
+async function deliverOnce(order, partner) {
   if (!partner || !partner.webhookUrl) {
     return { skipped: true };
   }
@@ -114,22 +113,12 @@ async function sendPaidOrderWebhook(order, partner) {
       'sha256=' + crypto.createHmac('sha256', partner.webhookSecret).update(rawBody).digest('hex');
   }
 
-  const maxAttempts = 3;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const res = await axios.post(partner.webhookUrl, rawBody, { headers, timeout: 15000 });
-      console.log(`[PartnerWebhook] delivered order ${payload.order.id} -> ${partner.webhookUrl} (${res.status}) delivery=${deliveryId}`);
-      return { success: true, status: res.status, deliveryId };
-    } catch (err) {
-      const status = err.response?.status;
-      console.error(`[PartnerWebhook] attempt ${attempt}/${maxAttempts} failed for order ${payload.order.id}: ${status || err.code || err.message} delivery=${deliveryId}`);
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, attempt * 1500));
-        continue;
-      }
-      return { success: false, status, error: err.message, deliveryId };
-    }
+  try {
+    const res = await axios.post(partner.webhookUrl, rawBody, { headers, timeout: 15000 });
+    return { success: true, status: res.status, deliveryId };
+  } catch (err) {
+    return { success: false, status: err.response?.status, error: err.code || err.message, deliveryId };
   }
 }
 
-module.exports = { sendPaidOrderWebhook, buildOrderPayload };
+module.exports = { deliverOnce, buildOrderPayload };
