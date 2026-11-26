@@ -9,6 +9,22 @@ const Organizer = require('../models/Organizer');
 const User = require('../models/User');
 const nuscHomeMatchInventory = require('../services/nuscHomeMatchInventoryService');
 
+const withPublicHornbillMusicPricing = (event) => {
+  const value = typeof event?.toObject === 'function' ? event.toObject() : event;
+  const label = `${value?.title || ''} ${value?.slug || ''}`.toLowerCase();
+  const is2026HornbillMusic = label.includes('hornbill') && label.includes('music') &&
+    (label.includes('2026') || String(value?.startDate || '').startsWith('2026-'));
+  if (!is2026HornbillMusic || !Array.isArray(value.ticketTypes)) return value;
+  return {
+    ...value,
+    ticketTypes: value.ticketTypes.map((ticket) => ({
+      ...ticket,
+      price: 200,
+      basePrice: 150,
+    })),
+  };
+};
+
 /**
  * @desc    Create a new event (Admin only)
  * @route   POST /api/admin/events
@@ -433,6 +449,8 @@ const getPublicEvents = async (req, res) => {
       });
     }
 
+    events = events.map(withPublicHornbillMusicPricing);
+
     return ApiResponse.success(res, 'Events fetched successfully', {
       events,
       pagination: {
@@ -634,7 +652,7 @@ const getPublicEventById = async (req, res) => {
         return res.status(200).json(publicEvent);
       }
     }
-    return res.status(200).json(event);
+    return res.status(200).json(withPublicHornbillMusicPricing(event));
   } catch (error) {
     console.error('Error fetching event:', error);
     return ApiResponse.serverError(res, 'Server error while fetching event', error);

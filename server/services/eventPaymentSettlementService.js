@@ -152,8 +152,11 @@ async function buildCanonicalCheckout({ bookingDetails, coupon, authenticatedUse
       throw new PaymentSettlementError('A selected ticket type is no longer available.', 'TICKET_TYPE_NOT_FOUND', 409);
     }
     const ticket = matches[0];
-    const pricePaise = toPaise(ticket.price);
-    if (requested.price != null && toPaise(requested.price) !== pricePaise) {
+    const catalogPricePaise = toPaise(ticket.price);
+    const pricePaise = toPaise(hornbillKind === 'music' ? 200 : ticket.price);
+    if (requested.price != null &&
+        toPaise(requested.price) !== pricePaise &&
+        !(hornbillKind === 'music' && toPaise(requested.price) === catalogPricePaise)) {
       throw new PaymentSettlementError(
         'Ticket prices changed while checkout was open. Refresh checkout and review the updated total before paying.',
         'TICKET_PRICE_CHANGED',

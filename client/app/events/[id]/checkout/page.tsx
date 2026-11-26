@@ -220,7 +220,7 @@ export default function CheckoutPage() {
   const isHMFEvent = HMF_id.includes(eventId) || isHornbillMusicFestival;
   const isHFEvent = HF_id.includes(eventId) || isHornbillDayFestival;
   const hornbillFeeSplit = isHornbillMusicFestival
-    ? { ticketFee: 200, sustainability: 50, total: 250 }
+    ? { ticketFee: 150, sustainability: 50, total: 200 }
     : isHornbillDayFestival
       ? { ticketFee: 100, sustainability: 50, total: 150 }
       : null;
