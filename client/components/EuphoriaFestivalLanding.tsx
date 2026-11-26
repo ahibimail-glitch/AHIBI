@@ -160,4 +160,12 @@ export default function EuphoriaFestivalLanding() {
         .euphoria-capacity{display:flex;justify-content:center;align-items:center;gap:8px;color:#4d6759;font-size:12px;font-weight:750;margin:24px 0 0}.euphoria-capacity :global(svg){color:#a33c28}
         .euphoria-booking-status{text-align:center;font-size:12px;color:#65776f;margin:13px 0 0}
         .euphoria-highlights{max-width:1120px;margin:auto;padding:92px 24px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}.euphoria-highlights h2{font-size:clamp(44px,6vw,72px)}
-        .
+        .euphoria-highlights ul{display:grid;grid-template-columns:1fr 1fr;gap:13px 22px;list-style:none;padding:0;margin:0}.euphoria-highlights li{display:flex;gap:9px;align-items:flex-start;color:#34584d;font-size:13px;line-height:1.45}.euphoria-highlights li :global(svg){color:#a33c28;flex:none}
+        .euphoria-bottom-cta{background:#123b35;color:#fff;text-align:center;padding:75px 20px 84px}.euphoria-bottom-cta h2{font-size:clamp(34px,5vw,58px);margin:17px 0 25px}.euphoria-bottom-cta .euphoria-eyebrow{color:#f3d68a}
+        @keyframes euphoria-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes euphoria-reveal{from{opacity:.7;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
+        @media(max-width:760px){.euphoria-hero{height:calc(100svh - 58px);min-height:660px;max-height:900px;align-items:flex-end}.euphoria-artwork img{object-position:center top}.euphoria-shade{background:linear-gradient(0deg,#082b28e8 0%,#0c38347a 45%,transparent 80%)}.euphoria-hero-copy{padding:42px 23px 52px}.euphoria-hero h1{font-size:clamp(48px,13vw,74px)}.euphoria-date-pill{top:16px;left:18px;right:auto;padding:10px 13px;font-size:11px}.euphoria-intro{padding:58px 22px;display:block}.euphoria-place{margin-top:24px}.euphoria-pricing{padding:62px 18px}.euphoria-cards{grid-template-columns:1fr;max-width:480px}.euphoria-card{min-height:0}.euphoria-highlights{padding:66px 22px;grid-template-columns:1fr;gap:26px}.euphoria-highlights ul{grid-template-columns:1fr 1fr;gap:14px 12px}.euphoria-bottom-cta{padding:62px 22px 68px}}
+        @media(prefers-reduced-motion:reduce){.euphoria-hero-copy,.euphoria-artwork img{animation:none}.euphoria-cta{transition:none}}
+      `}</style>
+    </main>
+  );
+}
