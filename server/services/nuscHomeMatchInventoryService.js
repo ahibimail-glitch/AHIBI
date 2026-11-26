@@ -2225,7 +2225,6 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
     const activeOrders = activeOrdersForDate(state, fixture.date);
     const activeSeasonOrders = activeSeasonPassOrdersForDate(state, fixture.date);
     const zoneSoldCounts = suppliedMatch.zoneSoldCounts || {};
-    const zoneUsage = getGeneralZoneUsage(state, fixture.date, generalTicket?.sold || 0, activeOrders, activeSeasonOrders, zoneSoldCounts);
     const availableZones = getGeneralZoneAvailability(state, fixture.date, generalTicket?.sold || 0, activeOrders, activeSeasonOrders, zoneSoldCounts);
     const generalRow = rows.find((row) => normalizeTicketTypeName(row.ticketType) === normalizeTicketTypeName(GENERAL_TICKET_TYPE));
     if (generalRow) generalRow.available = availableZones.reduce((sum, area) => sum + area.available, 0);
