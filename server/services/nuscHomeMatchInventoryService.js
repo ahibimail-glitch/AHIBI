@@ -230,8 +230,6 @@ function getInventoryAvailabilityLimit(state, matchDate, ticketType, zone = null
   const definition = getCapacityDefinition(ticketType);
   if (!definition) return 0;
   const scopedMatchDate = definition.scope === 'match' ? matchDate : null;
-  const targetedLimit = getMatchCapacityLimit(scopedMatchDate, definition.ticketType, null);
-  if (targetedLimit !== null && !zone) return targetedLimit;
   const zoneCapacity = zone
     ? GENERAL_SEATING_AREAS.find((area) => area.name === zone)?.capacity
     : null;
