@@ -278,7 +278,7 @@ async function loadInventory(session, projection) {
 async function ensureInventory(session, projection) {
   await Inventory.updateOne(
     { key: INVENTORY_KEY },
-    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [], capacityOverrides: [], availabilityOverrides: [], offlineSinglePassReleases: [], seasonPassHistoryInitializedAt: null } },
+    { $setOnInsert: { key: INVENTORY_KEY, orders: [], generalZoneSales: [], seasonPassOrders: [], partnerSeasonPassReservations: [], seasonReservations: [], capacityOverrides: [], availabilityOverrides: [], manualUsageOverrides: [], offlineSinglePassReleases: [], seasonPassHistoryInitializedAt: null } },
     { upsert: true, ...(session ? { session } : {}) }
   );
   return loadInventory(session, projection);
@@ -387,6 +387,7 @@ async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
     state.partnerSeasonPassReservations ||= [];
     state.capacityOverrides ||= [];
     state.availabilityOverrides ||= [];
+    state.manualUsageOverrides ||= [];
     state.offlineSinglePassReleases ||= [];
     if (pruneExpired) pruneExpiredHolds(state);
     const result = await mutator(state);
@@ -401,6 +402,7 @@ async function mutateInventory(mutator, session, { pruneExpired = true } = {}) {
           seasonReservations: state.seasonReservations,
           capacityOverrides: state.capacityOverrides,
           availabilityOverrides: state.availabilityOverrides,
+          manualUsageOverrides: state.manualUsageOverrides,
           offlineSinglePassReleases: state.offlineSinglePassReleases,
           updatedAt: new Date(),
         },
@@ -676,10 +678,13 @@ function getGeneralZoneAvailability(
   activeSeasonOrders = activeSeasonPassOrdersForDate(state, matchDate),
   zoneSoldCounts = {}
 ) {
-  const zones = getGeneralZoneUsage(state, matchDate, ticketSold, activeOrders, activeSeasonOrders, zoneSoldCounts).map((area) => ({
-    ...area,
-    available: Math.max(0, Math.min(area.capacity, getInventoryAvailabilityLimit(state, matchDate, GENERAL_TICKET_TYPE, area.name)) - area.committed),
-  }));
+  const zones = getGeneralZoneUsage(state, matchDate, ticketSold, activeOrders, activeSeasonOrders, zoneSoldCounts).map((area) => {
+    const adjusted = applyManualUsageOverride(state, matchDate, GENERAL_TICKET_TYPE, {
+      ...area,
+      available: Math.max(0, Math.min(area.capacity, getInventoryAvailabilityLimit(state, matchDate, GENERAL_TICKET_TYPE, area.name)) - area.committed),
+    }, area.name);
+    return { ...adjusted, name: area.name, capacity: area.capacity };
+  });
   const physicalAvailable = zones.reduce((sum, area) => sum + area.available, 0);
   const committedTotal = zones.reduce((sum, area) => sum + area.committed, 0);
   let capacityRemaining = Math.min(
@@ -2088,6 +2093,27 @@ function sumOrderTickets(orders, ticketType, { includeStockApplied = false } = {
   }, 0);
 }
 
+function getManualUsageOverride(state, matchDate, ticketType, zone = null) {
+  return (state?.manualUsageOverrides || []).find((item) => (
+    normalizeMatchDate(item.matchDate) === normalizeMatchDate(matchDate) &&
+    normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(ticketType) &&
+    (item.zone || null) === (zone || null)
+  )) || null;
+}
+
+function applyManualUsageOverride(state, matchDate, ticketType, usage, zone = null) {
+  const override = getManualUsageOverride(state, matchDate, ticketType, zone);
+  const sold = Math.max(0, Number(usage.sold || 0) + Number(override?.soldAdjustment || 0));
+  const held = Math.max(0, Number(usage.held || 0) + Number(override?.heldAdjustment || 0));
+  const offlineReserved = Number(usage.offlineReserved || 0);
+  const committed = sold + held + offlineReserved;
+  const limit = Math.min(getInventoryCapacity(state, matchDate, ticketType), getInventoryAvailabilityLimit(state, matchDate, ticketType, zone));
+  const normalizedType = normalizeTicketTypeName(ticketType);
+  const isSuiteInventory = [SUITE_SINGLE, SUITE_SINGLE_MATCH, SUITE_FULL_BOX].some((type) => normalizeTicketTypeName(type) === normalizedType);
+  const available = isSuiteInventory ? Math.min(Number(usage.available ?? limit), limit - committed) : limit - committed;
+  return { ...usage, sold, held, committed, available: Math.max(0, available) };
+}
+
 function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = []) {
   const capacity = getInventoryCapacity(state, matchDate, ticketType);
   const activeOrders = activeOrdersForDate(state, matchDate);
@@ -2105,7 +2131,7 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
     const held = ordersForBox.filter((order) => order.status === 'held')
       .reduce((sum, order) => sum + (order.suiteAllocations || []).filter((allocation) => allocation.boxNumber === SINGLE_PASS_BOX_NUMBER && normalizeTicketTypeName(allocation.ticketType) === normalizedType).length, 0);
     const available = Math.min(getSuiteAvailability(state, matchDate).singleSeats, getInventoryAvailabilityLimit(state, matchDate, ticketType));
-    return { sold, held, offlineReserved, available: Math.max(0, available), committed: sold + held + offlineReserved, blocked: Boolean(box?.seasonReserved || box?.fullBoxReserved) };
+    return applyManualUsageOverride(state, matchDate, ticketType, { sold, held, offlineReserved, available: Math.max(0, available), committed: sold + held + offlineReserved, blocked: Boolean(box?.seasonReserved || box?.fullBoxReserved) });
   }
 
   if (normalizedType === normalizeTicketTypeName(SUITE_SINGLE_MATCH)) {
@@ -2114,7 +2140,7 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
     const held = activeOrders.filter((order) => order.status === 'held')
       .reduce((sum, order) => sum + sumOrderTickets([order], SUITE_SINGLE_MATCH), 0);
     const committed = sold + held;
-    return { sold, held, offlineReserved: 0, available: getSuiteAvailability(state, matchDate).singleMatchBoxes, committed };
+    return applyManualUsageOverride(state, matchDate, ticketType, { sold, held, offlineReserved: 0, available: getSuiteAvailability(state, matchDate).singleMatchBoxes, committed });
   }
 
   if (normalizedType === normalizeTicketTypeName(SUITE_FULL_BOX)) {
@@ -2130,7 +2156,7 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
       )).length, 0);
     const available = Math.min(getSuiteAvailability(state, matchDate).fullBoxes, getInventoryAvailabilityLimit(state, matchDate, ticketType));
     const committed = sold + held + offlineReserved;
-    return { sold, held, offlineReserved, available, committed };
+    return applyManualUsageOverride(state, matchDate, ticketType, { sold, held, offlineReserved, available, committed });
   }
 
   const eventTicket = (eventTicketTypes || []).find((item) => normalizeTicketTypeName(item.name) === normalizedType);
@@ -2138,13 +2164,11 @@ function getMatchCapacityUsage(state, matchDate, ticketType, eventTicketTypes = 
   const held = sumOrderTickets(activeOrders, ticketType) + activeSeasonOrders
     .filter((order) => normalizeTicketTypeName(order.ticketType) === normalizedType)
     .reduce((sum, order) => sum + Number(order.quantity || 0), 0);
-  return {
-    sold,
-    held,
-    offlineReserved: 0,
+  return applyManualUsageOverride(state, matchDate, ticketType, {
+    sold, held, offlineReserved: 0,
     available: Math.max(0, Math.min(capacity, getInventoryAvailabilityLimit(state, matchDate, ticketType)) - sold - held),
     committed: sold + held,
-  };
+  });
 }
 
 function getGlobalSingleMatchUsage(state) {
@@ -2184,6 +2208,7 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
   state.partnerSeasonPassReservations ||= [];
   state.seasonReservations ||= [];
   state.capacityOverrides ||= [];
+  state.manualUsageOverrides ||= [];
   pruneExpiredHolds(state);
 
   const matchByDate = new Map((matches || []).map((match) => [match.matchDate, match]));
@@ -2206,15 +2231,8 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
     if (generalRow) generalRow.available = availableZones.reduce((sum, area) => sum + area.available, 0);
     const generalZones = GENERAL_SEATING_AREAS.map((area) => {
       const capacity = getCapacityRowBase(generalDefinition, fixture.date, state, area.name);
-      const available = availableZones.find((item) => item.name === area.name)?.available || 0;
-      const committed = zoneUsage.find((item) => item.name === area.name)?.committed || 0;
-      return {
-        ...capacity,
-        sold: zoneUsage.find((item) => item.name === area.name)?.sold || 0,
-        held: zoneUsage.find((item) => item.name === area.name)?.held || 0,
-        offlineReserved: 0,
-        available,
-      };
+      const usage = availableZones.find((item) => item.name === area.name);
+      return { ...capacity, sold: usage?.sold || 0, held: usage?.held || 0, offlineReserved: 0, available: usage?.available || 0 };
     });
     return { matchDate: fixture.date, opponent: suppliedMatch.opponent || fixture.opponent, capacities: rows, generalZones };
   }).sort((first, second) => first.matchDate.localeCompare(second.matchDate));
@@ -2309,7 +2327,40 @@ async function setCapacityOverride({ matchDate = null, ticketType, capacity, adm
   });
 }
 
-async function setAvailabilityOverride({ matchDate = null, ticketType, zone = null, availability, adminId, soldCount = 0, zoneSoldCounts = {} }) {
+async function setManualUsageOverride({ matchDate, ticketType, zone = null, sold, held, adminId, soldCount = 0, zoneSoldCounts = {} }) {
+  const definition = getCapacityDefinition(ticketType);
+  const scopedMatchDate = normalizeMatchDate(matchDate);
+  const normalizedZone = zone == null || zone === '' ? null : String(zone).trim().toUpperCase();
+  if (!definition || definition.scope !== 'match' || !FIXTURE_DATES.includes(scopedMatchDate)) throw new InventoryConflict('Choose a supported NUSC match ticket row.', 'INVALID_USAGE_TYPE');
+  if (normalizedZone && (definition.ticketType !== GENERAL_TICKET_TYPE || !GENERAL_SEATING_AREAS.some((area) => area.name === normalizedZone))) throw new InventoryConflict('Choose a valid General seating zone.', 'INVALID_ZONE');
+  const nextSold = Number(sold), nextHeld = Number(held);
+  if (!Number.isSafeInteger(nextSold) || nextSold < 0 || !Number.isSafeInteger(nextHeld) || nextHeld < 0) throw new InventoryConflict('Sold and held counts must be whole numbers greater than or equal to zero.', 'INVALID_USAGE_COUNT');
+  if (!adminId) throw new InventoryConflict('An admin account is required to change ticket counts.', 'ADMIN_REQUIRED');
+  return mutateInventory((state) => {
+    state.manualUsageOverrides ||= [];
+    const activeOrders = activeOrdersForDate(state, scopedMatchDate);
+    const activeSeasonOrders = activeSeasonPassOrdersForDate(state, scopedMatchDate);
+    const existingIndex = state.manualUsageOverrides.findIndex((item) => normalizeMatchDate(item.matchDate) === scopedMatchDate && normalizeTicketTypeName(item.ticketType) === normalizeTicketTypeName(definition.ticketType) && (item.zone || null) === normalizedZone);
+    const existing = existingIndex >= 0 ? state.manualUsageOverrides[existingIndex] : null;
+    let baseline;
+    if (normalizedZone) {
+      baseline = getGeneralZoneUsage(state, scopedMatchDate, soldCount, activeOrders, activeSeasonOrders, zoneSoldCounts).find((item) => item.name === normalizedZone);
+    } else {
+      baseline = getMatchCapacityUsage(state, scopedMatchDate, definition.ticketType, [{ name: definition.ticketType, sold: Math.max(0, Number(soldCount) || 0) }]);
+      baseline = { ...baseline, sold: Math.max(0, Number(baseline.sold || 0) - Number(existing?.soldAdjustment || 0)), held: Math.max(0, Number(baseline.held || 0) - Number(existing?.heldAdjustment || 0)) };
+    }
+    const soldAdjustment = nextSold - Number(baseline?.sold || 0);
+    const heldAdjustment = nextHeld - Number(baseline?.held || 0);
+    const offlineReserved = normalizedZone ? 0 : Number(baseline?.offlineReserved || 0);
+    const limit = Math.min(getInventoryCapacity(state, scopedMatchDate, definition.ticketType), getInventoryAvailabilityLimit(state, scopedMatchDate, definition.ticketType, normalizedZone));
+    if (nextSold + nextHeld + offlineReserved > limit) throw new InventoryConflict('Sold, held, and reserved counts cannot exceed the current sale limit of ' + limit + '.', 'USAGE_EXCEEDS_LIMIT');
+    const updated = { ...(existing || {}), matchDate: scopedMatchDate, ticketType: definition.ticketType, zone: normalizedZone, soldAdjustment, heldAdjustment, updatedBy: adminId, updatedAt: new Date() };
+    if (existing) Object.assign(existing, updated); else state.manualUsageOverrides.push(updated);
+    return { ...updated, sold: nextSold, held: nextHeld, available: Math.max(0, limit - nextSold - nextHeld - offlineReserved) };
+  });
+}
+
+function setAvailabilityOverride({ matchDate = null, ticketType, zone = null, availability, adminId, soldCount = 0, zoneSoldCounts = {} }) {
   const definition = getCapacityDefinition(ticketType);
   if (!definition) throw new InventoryConflict('Choose a supported NUSC ticket availability.', 'INVALID_AVAILABILITY_TYPE');
   const scopedMatchDate = definition.scope === 'match' ? normalizeMatchDate(matchDate) : null;
@@ -2332,6 +2383,7 @@ async function setAvailabilityOverride({ matchDate = null, ticketType, zone = nu
 
   return mutateInventory((state) => {
     state.availabilityOverrides ||= [];
+    state.manualUsageOverrides ||= [];
     const configuredCapacity = normalizedZone
       ? maxAvailability
       : Math.min(
@@ -2345,7 +2397,7 @@ async function setAvailabilityOverride({ matchDate = null, ticketType, zone = nu
     const activeSeasonOrders = scopedMatchDate ? activeSeasonPassOrdersForDate(state, scopedMatchDate) : [];
     let committed = 0;
     if (normalizedZone) {
-      const zoneUsage = getGeneralZoneUsage(state, scopedMatchDate, Math.max(0, Number(soldCount) || 0), activeOrders, activeSeasonOrders, zoneSoldCounts);
+      const zoneUsage = getGeneralZoneUsage(state, scopedMatchDate, Math.max(0, Number(soldCount) || 0), activeOrders, activeSeasonOrders, zoneSoldCounts).map((area) => applyManualUsageOverride(state, scopedMatchDate, definition.ticketType, area, area.name));
       committed = Number(zoneUsage.find((area) => area.name === normalizedZone)?.committed || 0);
     } else if (definition.scope === 'global' && definition.ticketType === SUITE_SINGLE_MATCH) {
       committed = getGlobalSingleMatchUsage(state).committed;
@@ -2539,6 +2591,7 @@ module.exports = {
   isUnitedSuiteMappingConfirmed: () => UNITED_SUITE_MAPPING_CONFIRMED,
   setCapacityOverride,
   setAvailabilityOverride,
+  setManualUsageOverride,
   listSeasonBoxes,
   markTicketStockApplied,
   markSeasonPassStockApplied,
