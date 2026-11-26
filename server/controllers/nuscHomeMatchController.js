@@ -1487,7 +1487,7 @@ async function updateCapacityControl(req, res) {
     return res.status(200).json({ success: true, override });
   } catch (error) {
     const status = error.code === 'CAPACITY_BELOW_COMMITTED' ? 409 :
-      error.code === 'AVAILABILITY_BELOW_COMMITTED' ? 409 :
+      error.code === 'AVAILABILITY_BELOW_COMMITTED' || error.code === 'HELD_BELOW_ACTIVE' ? 409 :
         ['INVALID_CAPACITY_TYPE', 'INVALID_CAPACITY', 'INVALID_AVAILABILITY_TYPE', 'INVALID_AVAILABILITY', 'INVALID_USAGE_TYPE', 'INVALID_USAGE_COUNT', 'USAGE_EXCEEDS_LIMIT', 'INVALID_ZONE', 'INVALID_MATCH_DATE', 'ADMIN_REQUIRED'].includes(error.code) ? 400 : 500;
     if (status === 500) console.error('[NUSC capacity] Capacity update failed:', error.message);
     return res.status(status).json({ success: false, message: error.message || 'Unable to update NUSC ticket capacity.', code: error.code });
