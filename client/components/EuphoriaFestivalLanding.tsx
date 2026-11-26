@@ -45,16 +45,16 @@ export default function EuphoriaFestivalLanding() {
       <section className="euphoria-hero" aria-labelledby="euphoria-title">
         <picture className="euphoria-artwork">
           <source media="(max-width: 700px)" srcSet="/euphoria/euphoria-mobile.jpeg" />
-          <img src="/euphoria/euphoria-desktop.jpeg" alt="Euphoria Festival, 11-13 December 2026 at Avora Resort, Nagaland" fetchPriority="high" />
+          <img src="/euphoria/euphoria-desktop.jpeg" alt="Euphoria Festival, 11‚Äì13 December 2026 at Avora Resort, Nagaland" fetchPriority="high" />
         </picture>
         <div className="euphoria-shade" />
         <div className="euphoria-hero-copy">
-          <span className="euphoria-kicker"><span /> FIRST EDITION ÔøΩ NAGALAND</span>
+          <span className="euphoria-kicker"><span /> FIRST EDITION ¬∑ NAGALAND</span>
           <h1 id="euphoria-title">Three days.<br />One wild escape.</h1>
-          <p>Music ÔøΩ Culture ÔøΩ Sports ÔøΩ Lifestyle</p>
+          <p>Music ¬∑ Culture ¬∑ Sports ¬∑ Lifestyle</p>
           <a className="euphoria-cta" href="#passes">Explore tickets <ArrowDown size={17} /></a>
         </div>
-        <div className="euphoria-date-pill"><CalendarDays size={17} /> 11-13 December 2026</div>
+        <div className="euphoria-date-pill"><CalendarDays size={17} /> 11‚Äì13 December 2026</div>
       </section>
 
       <section className="euphoria-intro">
@@ -63,7 +63,7 @@ export default function EuphoriaFestivalLanding() {
           <h2>Make a weekend of it.</h2>
           <p>Spend three December days at Avora Resort for music, culture, competitions, DJ nights, riverside camping and more.</p>
         </div>
-        <div className="euphoria-place"><MapPin size={19} /><span><strong>Avora Resort</strong><br />Seitheke Basa, ChÔøΩmoukedima, Nagaland</span></div>
+        <div className="euphoria-place"><MapPin size={19} /><span><strong>Avora Resort</strong><br />Seitheke Basa, Ch√ºmoukedima, Nagaland</span></div>
       </section>
 
       <section className="euphoria-pricing" id="passes">
@@ -78,9 +78,9 @@ export default function EuphoriaFestivalLanding() {
             <p className="euphoria-card-label">FESTIVAL ENTRY</p>
             <h3>Day passes</h3>
             <div className="euphoria-price-list">
-              <div><span>1 day</span><strong>?200</strong></div>
-              <div><span>2 consecutive days</span><strong>?400</strong></div>
-              <div><span>All 3 days</span><strong>?600</strong></div>
+              <div><span>1 day</span><strong>‚Çπ200</strong></div>
+              <div><span>2 consecutive days</span><strong>‚Çπ400</strong></div>
+              <div><span>All 3 days</span><strong>‚Çπ600</strong></div>
             </div>
             <p className="euphoria-card-note">Entry pass per person</p>
             <Link href={bookingHref} className="euphoria-card-link">View event & tickets <ArrowRight size={16} /></Link>
@@ -91,7 +91,7 @@ export default function EuphoriaFestivalLanding() {
             <p className="euphoria-card-label">SLEEP UNDER THE STARS</p>
             <h3>Camping without a tent</h3>
             <div className="euphoria-price-list">
-              <div><span>Per person, per night</span><strong>?500</strong></div>
+              <div><span>Per person, per night</span><strong>‚Çπ500</strong></div>
             </div>
             <p className="euphoria-card-note">Choose one, two or three nights. Festival entry is priced separately.</p>
             <div className="euphoria-included"><Check size={15} /> No tent booking required</div>
@@ -102,9 +102,9 @@ export default function EuphoriaFestivalLanding() {
             <p className="euphoria-card-label">TENT CAMPING</p>
             <h3>Book a tent</h3>
             <div className="euphoria-price-list">
-              <div><span>1 night ÔøΩ per tent</span><strong>?1,500</strong></div>
-              <div><span>2 nights ÔøΩ per tent</span><strong>?2,000</strong></div>
-              <div><span>3 nights ÔøΩ per tent</span><strong>?3,000</strong></div>
+              <div><span>1 night ¬∑ per tent</span><strong>‚Çπ1,500</strong></div>
+              <div><span>2 nights ¬∑ per tent</span><strong>‚Çπ2,000</strong></div>
+              <div><span>3 nights ¬∑ per tent</span><strong>‚Çπ3,000</strong></div>
             </div>
             <p className="euphoria-card-note">Anyone can book a tent and camp. Festival entry is priced separately.</p>
             <Link href={bookingHref} className="euphoria-card-link">View event & tickets <ArrowRight size={16} /></Link>
@@ -122,7 +122,7 @@ export default function EuphoriaFestivalLanding() {
       </section>
 
       <section className="euphoria-bottom-cta">
-        <p className="euphoria-eyebrow">11-13 DECEMBER 2026 ÔøΩ AVORA RESORT</p>
+        <p className="euphoria-eyebrow">11‚Äì13 DECEMBER 2026 ¬∑ AVORA RESORT</p>
         <h2>Your December story starts here.</h2>
         <Link href={bookingHref} className="euphoria-cta">{eventId ? "See event details" : "Find Euphoria on AHIBI"}<ArrowRight size={17} /></Link>
       </section>
@@ -160,13 +160,4 @@ export default function EuphoriaFestivalLanding() {
         .euphoria-capacity{display:flex;justify-content:center;align-items:center;gap:8px;color:#4d6759;font-size:12px;font-weight:750;margin:24px 0 0}.euphoria-capacity :global(svg){color:#a33c28}
         .euphoria-booking-status{text-align:center;font-size:12px;color:#65776f;margin:13px 0 0}
         .euphoria-highlights{max-width:1120px;margin:auto;padding:92px 24px;display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}.euphoria-highlights h2{font-size:clamp(44px,6vw,72px)}
-        .euphoria-highlights ul{display:grid;grid-template-columns:1fr 1fr;gap:13px 22px;list-style:none;padding:0;margin:0}.euphoria-highlights li{display:flex;gap:9px;align-items:flex-start;color:#34584d;font-size:13px;line-height:1.45}.euphoria-highlights li :global(svg){color:#a33c28;flex:none}
-        .euphoria-bottom-cta{background:#123b35;color:#fff;text-align:center;padding:75px 20px 84px}.euphoria-bottom-cta h2{font-size:clamp(34px,5vw,58px);margin:17px 0 25px}.euphoria-bottom-cta .euphoria-eyebrow{color:#f3d68a}
-        @keyframes euphoria-rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}@keyframes euphoria-reveal{from{opacity:.7;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}
-        @media(max-width:760px){.euphoria-hero{height:calc(100svh - 58px);min-height:660px;max-height:900px;align-items:flex-end}.euphoria-artwork img{object-position:center top}.euphoria-shade{background:linear-gradient(0deg,#082b28e8 0%,#0c38347a 45%,transparent 80%)}.euphoria-hero-copy{padding:42px 23px 52px}.euphoria-hero h1{font-size:clamp(48px,13vw,74px)}.euphoria-date-pill{top:16px;left:18px;right:auto;padding:10px 13px;font-size:11px}.euphoria-intro{padding:58px 22px;display:block}.euphoria-place{margin-top:24px}.euphoria-pricing{padding:62px 18px}.euphoria-cards{grid-template-columns:1fr;max-width:480px}.euphoria-card{min-height:0}.euphoria-highlights{padding:66px 22px;grid-template-columns:1fr;gap:26px}.euphoria-highlights ul{grid-template-columns:1fr 1fr;gap:14px 12px}.euphoria-bottom-cta{padding:62px 22px 68px}}
-        @media(prefers-reduced-motion:reduce){.euphoria-hero-copy,.euphoria-artwork img{animation:none}.euphoria-cta{transition:none}}
-      `}</style>
-    </main>
-  );
-}
-
+        .ûá^ÁØvP–»Å<öÆxßÄIÔ€i>∫1»ûÿ¨{^Æ)ûû÷•{^r€azkhrßÅÊ≠j|≠äg

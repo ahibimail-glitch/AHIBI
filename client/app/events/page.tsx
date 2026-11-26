@@ -33,7 +33,7 @@ import {
 } from "@/lib/eventsHero";
 import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase";
 
-// ��� Constants ����������������������������������������������������������������
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const CITIES = [
   "Mumbai", "Delhi", "New Delhi", "Bangalore", "Pune", "Chennai", "Hyderabad",
@@ -46,25 +46,25 @@ const GENRES = [
 ];
 
 const GENRE_ICONS: Record<string, string> = {
-  Music: "??", Comedy: "??", Theatre: "??", Dance: "??",
-  Food: "???", Art: "??", Sports: "?", Business: "??",
-  Education: "??", Other: "?",
+  Music: "🎵", Comedy: "😂", Theatre: "🎭", Dance: "💃",
+  Food: "🍽️", Art: "🎨", Sports: "⚽", Business: "💼",
+  Education: "📚", Other: "✨",
 };
 
-// ��� Helpers ������������������������������������������������������������������
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatDayDate = (dateString: string | Date): string => {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "";
   return `${date.toLocaleDateString("en-US", {
     weekday: "short", month: "short", day: "numeric",
-  })} � ${date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+  })} · ${date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
 };
 
 const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
   if (!ticketTypes?.length) return "Free";
   const min = Math.min(...ticketTypes.map((t) => t.price));
-  return min === 0 ? "Free" : `?${min.toLocaleString("en-IN")}`;
+  return min === 0 ? "Free" : `₹${min.toLocaleString("en-IN")}`;
 };
 
 const RSVP_WORKSHOP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
@@ -82,7 +82,7 @@ const getEventHref = (event: Event): string => {
   return `/events/${event._id}`;
 };
 
-// ��� Event Card ���������������������������������������������������������������
+// ─── Event Card ───────────────────────────────────────────────────────────────
 
 interface EventCardProps {
   event: Event;
@@ -101,7 +101,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
       role="article"
       aria-labelledby={`event-title-${event._id}`}
     >
-      {/* Poster - fixed 2:3 so all event cards match (standard Ahibi poster ratio) */}
+      {/* Poster — fixed 2:3 so all event cards match (standard Ahibi poster ratio) */}
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-2xl bg-gray-100 shadow-sm">
         <Image
           src={event.banner || "/placeholder.svg"}
@@ -119,7 +119,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
         {event.category && (
           <div className="absolute top-2 left-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/90 backdrop-blur-sm text-gray-800 shadow-sm">
-              {GENRE_ICONS[event.category] ?? "?"} {event.category}
+              {GENRE_ICONS[event.category] ?? "✨"} {event.category}
             </span>
           </div>
         )}
@@ -168,7 +168,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, index = 0 }) => {
   );
 };
 
-// ��� Section Header �����������������������������������������������������������
+// ─── Section Header ───────────────────────────────────────────────────────────
 
 const SectionHeader: React.FC<{ title: string; count: number; dot?: string }> = ({
   title, count, dot = "bg-blue-500",
@@ -182,7 +182,7 @@ const SectionHeader: React.FC<{ title: string; count: number; dot?: string }> = 
   </div>
 );
 
-// ��� Page ���������������������������������������������������������������������
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery]       = useState("");
@@ -204,7 +204,7 @@ export default function EventsPage() {
     if (initialSearch) setSearchQuery(initialSearch);
   }, []);
 
-  // �� Fetch events �����������������������������������������������������������
+  // ── Fetch events ───────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -220,7 +220,7 @@ export default function EventsPage() {
     })();
   }, []);
 
-  // �� Fetch daily events �����������������������������������������������������
+  // ── Fetch daily events ─────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -235,7 +235,7 @@ export default function EventsPage() {
     })();
   }, []);
 
-  // �� Hero images ������������������������������������������������������������
+  // ── Hero images ────────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -261,7 +261,7 @@ export default function EventsPage() {
     })();
   }, []);
 
-  // �� Filter helpers ���������������������������������������������������������
+  // ── Filter helpers ─────────────────────────────────────────────────────────
   const resetFilters = () => {
     setSearchQuery(""); setSelectedCity("all"); setSelectedGenre("all");
     setIsFilterOpen(false);
@@ -273,7 +273,7 @@ export default function EventsPage() {
 
   const hasActiveFilters = searchQuery !== "" || selectedCity !== "all" || selectedGenre !== "all";
 
-  // �� Filtered & sorted events �����������������������������������������������
+  // ── Filtered & sorted events ───────────────────────────────────────────────
   const cityMatches = (eventCity: string | undefined, selected: string) => {
     if (selected === "all") return true;
     const city = (eventCity || "").toLowerCase().trim();
@@ -320,13 +320,13 @@ export default function EventsPage() {
     })
     .sort((a, b) => +new Date(b.endDate ?? b.startDate) - +new Date(a.endDate ?? a.startDate));
 
-  // �� Loading / error states �������������������������������������������������
+  // ── Loading / error states ─────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-          <p className="text-base font-semibold text-gray-700">Loading Events.</p>
+          <p className="text-base font-semibold text-gray-700">Loading Events…</p>
         </motion.div>
       </div>
     );
@@ -348,10 +348,10 @@ export default function EventsPage() {
     );
   }
 
-  // �� Hero image URL ���������������������������������������������������������
+  // ── Hero image URL ─────────────────────────────────────────────────────────
   const heroSrc = heroImages[heroIdx]?.url || "/images/carausel1.jpg";
 
-  // �� Sidebar / filter panel content (shared) ��������������������������������
+  // ── Sidebar / filter panel content (shared) ────────────────────────────────
   const FilterContent = () => (
     <div className="space-y-4">
       {/* Search */}
@@ -360,7 +360,7 @@ export default function EventsPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search events."
+            placeholder="Search events…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-8 bg-gray-50 border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300"
@@ -420,7 +420,7 @@ export default function EventsPage() {
     <div className="min-h-screen flex flex-col bg-[#f8f8fa]">
       <Navbar />
       <main className="flex-1">
-        {/* �� Hero ����������������������������������������������������������� */}
+        {/* ── Hero ─────────────────────────────────────────────────────────── */}
         <section className="relative w-full overflow-hidden bg-gray-900">
           {loadingHero ? (
             <div className="w-full aspect-[2560/460] bg-gray-800 animate-pulse" />
@@ -464,19 +464,14 @@ export default function EventsPage() {
           )}
         </section>
 
-        {/* �� Mobile quick-search bar ���������������������������������������� */}
+        {/* ── Mobile quick-search bar ──────────────────────────────────────── */}
         <HornbillFestivalShowcase compact />
 
         <section className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6 lg:px-8" aria-label="Featured event">
           <Link href="/euphoria-festival-2026" className="group relative block overflow-hidden rounded-2xl bg-[#123b35] shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#a83c25]/40">
             <picture>
               <source media="(max-width: 700px)" srcSet="/euphoria/euphoria-mobile.jpeg" />
-              <img
-                src="/euphoria/euphoria-desktop.jpeg"
-                alt="Euphoria Festival, 11-13 December 2026 at Avora Resort, Nagaland"
-                className="block h-auto max-h-[460px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
-                loading="lazy"
-              />
+              <img src="/euphoria/euphoria-desktop.jpeg" alt="Euphoria Festival, 11–13 December 2026 at Avora Resort, Nagaland" className="block h-auto max-h-[460px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]" loading="lazy" />
             </picture>
             <span className="sr-only">Explore Euphoria Festival 2026 tickets and camping</span>
           </Link>
@@ -487,7 +482,7 @@ export default function EventsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search events."
+                placeholder="Search events…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-gray-50 border-gray-200 rounded-full text-sm h-9"
@@ -512,11 +507,11 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* �� Main layout ��������������������������������������������������� */}
+        {/* ── Main layout ─────────────────────────────────────────────────── */}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="flex gap-6 lg:gap-8 items-start">
 
-            {/* �� Desktop Sidebar ������������������������������������������ */}
+            {/* ── Desktop Sidebar ────────────────────────────────────────── */}
             <aside className="hidden lg:block w-[260px] xl:w-[280px] flex-shrink-0 sticky top-6">
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-5">
@@ -532,7 +527,7 @@ export default function EventsPage() {
               </div>
             </aside>
 
-            {/* �� Content �������������������������������������������������� */}
+            {/* ── Content ────────────────────────────────────────────────── */}
             <div className="flex-1 min-w-0">
 
               {/* Top bar: title + action buttons */}
@@ -543,7 +538,7 @@ export default function EventsPage() {
                   </h2>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {upcomingSorted.length + currentSorted.length} upcoming
-                    {pastSorted.length > 0 ? ` � ${pastSorted.length} past` : ""}
+                    {pastSorted.length > 0 ? ` · ${pastSorted.length} past` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -556,7 +551,7 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              {/* �� Genre pill row ���������������������������������������� */}
+              {/* ── Genre pill row ──────────────────────────────────────── */}
               <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
                 <button
                   onClick={() => setSelectedGenre(selectedGenre === "Daily" ? "all" : "Daily")}
@@ -566,7 +561,7 @@ export default function EventsPage() {
                       : "bg-white text-gray-600 border-gray-200 hover:border-blue-200 hover:text-blue-600"
                   }`}
                 >
-                  <span>???</span>
+                  <span>🗓️</span>
                   <span>Daily</span>
                 </button>
                 {GENRES.map((genre) => (
@@ -585,7 +580,7 @@ export default function EventsPage() {
                 ))}
               </div>
 
-              {/* �� Events sections ��������������������������������������� */}
+              {/* ── Events sections ─────────────────────────────────────── */}
               <div className="space-y-10">
 
                   {/* Daily Experiences */}
@@ -663,7 +658,7 @@ export default function EventsPage() {
                   {!currentSorted.length && !upcomingSorted.length && !pastSorted.length && !dailyToShow.length && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                       className="flex flex-col items-center justify-center py-20 text-center">
-                      <div className="text-5xl mb-4">??</div>
+                      <div className="text-5xl mb-4">🔍</div>
                       <h3 className="text-lg font-bold text-gray-800 mb-2">No events found</h3>
                       <p className="text-gray-500 text-sm mb-6 max-w-xs">
                         Try adjusting your filters or searching for something different.
@@ -680,7 +675,7 @@ export default function EventsPage() {
         </div>
       </main>
 
-      {/* �� Mobile Filter Modal ����������������������������������������������� */}
+      {/* ── Mobile Filter Modal ─────────────────────────────────────────────── */}
       <AnimatePresence>
         {isFilterOpen && (
           <motion.div
@@ -734,4 +729,3 @@ export default function EventsPage() {
     </div>
   );
 }
-
