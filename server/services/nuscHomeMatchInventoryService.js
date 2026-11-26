@@ -2104,7 +2104,7 @@ function getManualUsageOverride(state, matchDate, ticketType, zone = null) {
 function applyManualUsageOverride(state, matchDate, ticketType, usage, zone = null) {
   const override = getManualUsageOverride(state, matchDate, ticketType, zone);
   const sold = Math.max(0, Number(usage.sold || 0) + Number(override?.soldAdjustment || 0));
-  const held = Math.max(0, Number(usage.held || 0) + Number(override?.heldAdjustment || 0));
+  const held = Math.max(0, Number(usage.held || 0) + Number(override?.manualHeldCount || 0));
   const offlineReserved = Number(usage.offlineReserved || 0);
   const committed = sold + held + offlineReserved;
   const limit = Math.min(getInventoryCapacity(state, matchDate, ticketType), getInventoryAvailabilityLimit(state, matchDate, ticketType, zone));
@@ -2347,14 +2347,16 @@ async function setManualUsageOverride({ matchDate, ticketType, zone = null, sold
       baseline = getGeneralZoneUsage(state, scopedMatchDate, soldCount, activeOrders, activeSeasonOrders, zoneSoldCounts).find((item) => item.name === normalizedZone);
     } else {
       baseline = getMatchCapacityUsage(state, scopedMatchDate, definition.ticketType, [{ name: definition.ticketType, sold: Math.max(0, Number(soldCount) || 0) }]);
-      baseline = { ...baseline, sold: Math.max(0, Number(baseline.sold || 0) - Number(existing?.soldAdjustment || 0)), held: Math.max(0, Number(baseline.held || 0) - Number(existing?.heldAdjustment || 0)) };
+      baseline = { ...baseline, sold: Math.max(0, Number(baseline.sold || 0) - Number(existing?.soldAdjustment || 0)), held: Math.max(0, Number(baseline.held || 0) - Number(existing?.manualHeldCount || 0)) };
     }
     const soldAdjustment = nextSold - Number(baseline?.sold || 0);
-    const heldAdjustment = nextHeld - Number(baseline?.held || 0);
+    const actualHeld = Number(baseline?.held || 0);
+    if (nextHeld < actualHeld) throw new InventoryConflict('Held cannot be lower than active checkout holds (' + actualHeld + ').', 'HELD_BELOW_ACTIVE');
+    const manualHeldCount = nextHeld - actualHeld;
     const offlineReserved = normalizedZone ? 0 : Number(baseline?.offlineReserved || 0);
     const limit = Math.min(getInventoryCapacity(state, scopedMatchDate, definition.ticketType), getInventoryAvailabilityLimit(state, scopedMatchDate, definition.ticketType, normalizedZone));
     if (nextSold + nextHeld + offlineReserved > limit) throw new InventoryConflict('Sold, held, and reserved counts cannot exceed the current sale limit of ' + limit + '.', 'USAGE_EXCEEDS_LIMIT');
-    const updated = { ...(existing || {}), matchDate: scopedMatchDate, ticketType: definition.ticketType, zone: normalizedZone, soldAdjustment, heldAdjustment, updatedBy: adminId, updatedAt: new Date() };
+    const updated = { ...(existing || {}), matchDate: scopedMatchDate, ticketType: definition.ticketType, zone: normalizedZone, soldAdjustment, manualHeldCount, updatedBy: adminId, updatedAt: new Date() };
     if (existing) Object.assign(existing, updated); else state.manualUsageOverrides.push(updated);
     return { ...updated, sold: nextSold, held: nextHeld, available: Math.max(0, limit - nextSold - nextHeld - offlineReserved) };
   });
