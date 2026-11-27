@@ -184,8 +184,25 @@ const NUSC_HOME_MATCH_SERIES: Event = {
   slug: "nusc-home-matches",
 };
 
+const EUPHORIA_FESTIVAL_ID = "euphoria-festival-2026";
+const EUPHORIA_FESTIVAL: Event = {
+  _id: EUPHORIA_FESTIVAL_ID,
+  title: "Euphoria Festival 2026",
+  description: "The first-ever festival in Nagaland \u2014 music, culture, sports & lifestyle. 11\u201313 December, Avora Resort, Ch\u00fcmoukedima.",
+  banner: "/euphoria/euphoria-poster.jpg",
+  category: "Music",
+  startDate: "2026-12-11T10:00:00+05:30",
+  endDate: "2026-12-13T23:00:00+05:30",
+  location: { address: "Avora Resort, Seitheke Basa", city: "Ch\u00fcmoukedima" },
+  ticketTypes: [{ name: "Festival Entry", price: 200, quantity: 1000 }],
+  status: "published",
+  isFeatured: true,
+  slug: "euphoria-festival-2026",
+};
+
 const getEventHref = (event: { _id: string; title?: string; slug?: string; externalBookingUrl?: string }) => {
   if (String(event._id) === NUSC_HOME_MATCH_SERIES_ID) return "/nusc-home-matches";
+  if (String(event._id) === EUPHORIA_FESTIVAL_ID) return "/euphoria-festival-2026";
   if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
   const label = `${event.title || ""} ${event.slug || ""}`.toLowerCase();
   if (label.includes("hornbill") && label.includes("festival") && !label.includes("showcase")) {
@@ -517,7 +534,7 @@ function LegacyHomePage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=100`)
         if (!response.ok) {
-          setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES])
+          setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL])
           return
         }
         const data: EventsResponse = await response.json()
@@ -534,11 +551,11 @@ function LegacyHomePage() {
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
           )
         const uniqueRecommendedEvents = [...new Map(
-          [...festivalEvents, ...normalized, NUSC_HOME_MATCH_SERIES].map((event) => [String(event._id), event])
+          [...festivalEvents, ...normalized, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL].map((event) => [String(event._id), event])
         ).values()]
         setFeaturedEvents(uniqueRecommendedEvents)
       } catch {
-        setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES])
+        setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL])
       } finally {
         setIsLoading(false)
       }

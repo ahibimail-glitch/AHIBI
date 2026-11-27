@@ -70,8 +70,25 @@ const getLowestPrice = (ticketTypes: { price: number }[] = []): string => {
 const RSVP_WORKSHOP_EVENT_ID = "6ac644e31e7f6f9476b839c0";
 const HORNBILL_SHOWCASE_EVENT_ID = "6ab402a990e6bc7f24d420a2";
 
+const EUPHORIA_FESTIVAL_ID = "euphoria-festival-2026";
+const EUPHORIA_FESTIVAL: Event = {
+  _id: EUPHORIA_FESTIVAL_ID,
+  title: "Euphoria Festival 2026",
+  description: "The first-ever festival in Nagaland \u2014 music, culture, sports & lifestyle. 11\u201313 December, Avora Resort, Ch\u00fcmoukedima.",
+  banner: "/euphoria/euphoria-poster.jpg",
+  category: "Music",
+  startDate: "2026-12-11T10:00:00+05:30",
+  endDate: "2026-12-13T23:00:00+05:30",
+  location: { address: "Avora Resort, Seitheke Basa", city: "Ch\u00fcmoukedima" },
+  ticketTypes: [{ name: "Festival Entry", price: 200, quantity: 1000 }],
+  status: "published",
+  isFeatured: true,
+  slug: "euphoria-festival-2026",
+};
+
 const getEventHref = (event: Event): string => {
   if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
+  if (String(event._id) === EUPHORIA_FESTIVAL_ID) return "/euphoria-festival-2026";
   if (
     String(event._id) === HORNBILL_SHOWCASE_EVENT_ID ||
     String((event as any).slug || "") === "ticket-to-hornbill-showcase-day1" ||
@@ -206,7 +223,7 @@ export default function EventsPage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000&includePast=true`);
         if (!res.ok) throw new Error("Failed to fetch events");
         const data: EventsResponse = await res.json();
-        setEvents(data.data.events);
+        setEvents([...(data.data.events || []), EUPHORIA_FESTIVAL]);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load events");
       } finally {

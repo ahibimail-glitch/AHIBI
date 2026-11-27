@@ -40,6 +40,7 @@
   import Dashboard from "./components/Dashboard";
   import UsersComponent from "./components/Users";
   import Bookings from "./components/Bookings";
+  import EuphoriaManagement from "./components/EuphoriaManagement";
   import Artists from "./components/Artists";
   import Events from "./components/Events";
   import DailyEvents from "./components/DailyEvents";
@@ -268,6 +269,8 @@
           return <UsersComponent searchQuery={searchQuery} setSearchQuery={setSearchQuery} users={filteredUsers} />;
         case "bookings":
           return <Bookings />;
+        case "euphoria":
+          return <EuphoriaManagement />;
         case "create-event":
           return <CreateEventForm onSuccess={() => setActiveView("dashboard")} />;
         case "analytics":
@@ -434,6 +437,7 @@
             <SidebarButton icon={LayoutDashboard} label="Dashboard" active={activeView === "dashboard"} onClick={() => { setActiveView("dashboard"); setSidebarOpen(false); }} />
             <SidebarButton icon={Bell} label="Notifications" active={activeView === "notifications"} onClick={() => { setActiveView("notifications"); setSidebarOpen(false); }} />
             <SidebarButton icon={ListOrdered} label="Bookings" active={activeView === "bookings"} onClick={() => { setActiveView("bookings"); setSidebarOpen(false); }} />
+          <SidebarButton icon={Ticket} label="Euphoria Festival" active={activeView === "euphoria"} onClick={() => { setActiveView("euphoria"); setSidebarOpen(false); }} />
             <SidebarButton icon={Users} label="Users" active={activeView === "users"} onClick={() => { setActiveView("users"); setSidebarOpen(false); }} />
             <SidebarButton icon={HeadphonesIcon} label="Support Chat" active={activeView === "support-chat"} onClick={() => { setActiveView("support-chat"); setSidebarOpen(false); }} />
             <SidebarButton icon={QrCode} label="QR Scanner" active={activeView === "qr-scanner"} onClick={() => { setActiveView("qr-scanner"); setSidebarOpen(false); }} />
