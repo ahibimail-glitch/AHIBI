@@ -2105,7 +2105,7 @@ function applyManualUsageOverride(state, matchDate, ticketType, usage, zone = nu
   const override = getManualUsageOverride(state, matchDate, ticketType, zone);
   const sold = Math.max(0, Number(usage.sold || 0) + Number(override?.soldAdjustment || 0));
   const held = Math.max(0, Number(usage.held || 0) + Number(override?.manualHeldCount || 0));
-  const offlineReserved = Number(usage.offlineReserved || 0);
+  const offlineReserved = Number(usage.offlineReserved || 0) + Number(override?.manualReservedCount || 0);
   const committed = sold + held + offlineReserved;
   const limit = Math.min(getInventoryCapacity(state, matchDate, ticketType), getInventoryAvailabilityLimit(state, matchDate, ticketType, zone));
   const normalizedType = normalizeTicketTypeName(ticketType);
@@ -2231,7 +2231,7 @@ async function getAdminCapacityOverview({ matches = [] } = {}) {
     const generalZones = GENERAL_SEATING_AREAS.map((area) => {
       const capacity = getCapacityRowBase(generalDefinition, fixture.date, state, area.name);
       const usage = availableZones.find((item) => item.name === area.name);
-      return { ...capacity, sold: usage?.sold || 0, held: usage?.held || 0, offlineReserved: 0, available: usage?.available || 0 };
+      return { ...capacity, sold: usage?.sold || 0, held: usage?.held || 0, offlineReserved: usage?.offlineReserved || 0, available: usage?.available || 0 };
     });
     return { matchDate: fixture.date, opponent: suppliedMatch.opponent || fixture.opponent, capacities: rows, generalZones };
   }).sort((first, second) => first.matchDate.localeCompare(second.matchDate));
@@ -2326,14 +2326,14 @@ async function setCapacityOverride({ matchDate = null, ticketType, capacity, adm
   });
 }
 
-async function setManualUsageOverride({ matchDate, ticketType, zone = null, sold, held, adminId, soldCount = 0, zoneSoldCounts = {} }) {
+async function setManualUsageOverride({ matchDate, ticketType, zone = null, sold, held, reserved, adminId, soldCount = 0, zoneSoldCounts = {} }) {
   const definition = getCapacityDefinition(ticketType);
   const scopedMatchDate = normalizeMatchDate(matchDate);
   const normalizedZone = zone == null || zone === '' ? null : String(zone).trim().toUpperCase();
   if (!definition || definition.scope !== 'match' || !FIXTURE_DATES.includes(scopedMatchDate)) throw new InventoryConflict('Choose a supported NUSC match ticket row.', 'INVALID_USAGE_TYPE');
   if (normalizedZone && (definition.ticketType !== GENERAL_TICKET_TYPE || !GENERAL_SEATING_AREAS.some((area) => area.name === normalizedZone))) throw new InventoryConflict('Choose a valid General seating zone.', 'INVALID_ZONE');
-  const nextSold = Number(sold), nextHeld = Number(held);
-  if (!Number.isSafeInteger(nextSold) || nextSold < 0 || !Number.isSafeInteger(nextHeld) || nextHeld < 0) throw new InventoryConflict('Sold and held counts must be whole numbers greater than or equal to zero.', 'INVALID_USAGE_COUNT');
+  const nextSold = Number(sold), nextHeld = Number(held), nextReserved = Number(reserved);
+  if (!Number.isSafeInteger(nextSold) || nextSold < 0 || !Number.isSafeInteger(nextHeld) || nextHeld < 0 || !Number.isSafeInteger(nextReserved) || nextReserved < 0) throw new InventoryConflict('Sold, held, and reserved counts must be whole numbers greater than or equal to zero.', 'INVALID_USAGE_COUNT');
   if (!adminId) throw new InventoryConflict('An admin account is required to change ticket counts.', 'ADMIN_REQUIRED');
   return mutateInventory((state) => {
     state.manualUsageOverrides ||= [];
@@ -2346,18 +2346,21 @@ async function setManualUsageOverride({ matchDate, ticketType, zone = null, sold
       baseline = getGeneralZoneUsage(state, scopedMatchDate, soldCount, activeOrders, activeSeasonOrders, zoneSoldCounts).find((item) => item.name === normalizedZone);
     } else {
       baseline = getMatchCapacityUsage(state, scopedMatchDate, definition.ticketType, [{ name: definition.ticketType, sold: Math.max(0, Number(soldCount) || 0) }]);
-      baseline = { ...baseline, sold: Math.max(0, Number(baseline.sold || 0) - Number(existing?.soldAdjustment || 0)), held: Math.max(0, Number(baseline.held || 0) - Number(existing?.manualHeldCount || 0)) };
+      baseline = { ...baseline, sold: Math.max(0, Number(baseline.sold || 0) - Number(existing?.soldAdjustment || 0)), held: Math.max(0, Number(baseline.held || 0) - Number(existing?.manualHeldCount || 0)), offlineReserved: Math.max(0, Number(baseline.offlineReserved || 0) - Number(existing?.manualReservedCount || 0)) };
     }
     const soldAdjustment = nextSold - Number(baseline?.sold || 0);
     const actualHeld = Number(baseline?.held || 0);
     if (nextHeld < actualHeld) throw new InventoryConflict('Held cannot be lower than active checkout holds (' + actualHeld + ').', 'HELD_BELOW_ACTIVE');
     const manualHeldCount = nextHeld - actualHeld;
-    const offlineReserved = normalizedZone ? 0 : Number(baseline?.offlineReserved || 0);
+    const actualReserved = Number(baseline?.offlineReserved || 0);
+    if (nextReserved < actualReserved) throw new InventoryConflict('Reserved cannot be lower than active reservations (' + actualReserved + ').', 'RESERVED_BELOW_ACTIVE');
+    const manualReservedCount = nextReserved - actualReserved;
+    const offlineReserved = nextReserved;
     const limit = Math.min(getInventoryCapacity(state, scopedMatchDate, definition.ticketType), getInventoryAvailabilityLimit(state, scopedMatchDate, definition.ticketType, normalizedZone));
-    if (nextSold + nextHeld + offlineReserved > limit) throw new InventoryConflict('Sold, held, and reserved counts cannot exceed the current sale limit of ' + limit + '.', 'USAGE_EXCEEDS_LIMIT');
-    const updated = { ...(existing || {}), matchDate: scopedMatchDate, ticketType: definition.ticketType, zone: normalizedZone, soldAdjustment, manualHeldCount, updatedBy: adminId, updatedAt: new Date() };
+    if (nextSold + nextHeld + nextReserved > limit) throw new InventoryConflict('Sold, held, and reserved counts cannot exceed the current sale limit of ' + limit + '.', 'USAGE_EXCEEDS_LIMIT');
+    const updated = { ...(existing || {}), matchDate: scopedMatchDate, ticketType: definition.ticketType, zone: normalizedZone, soldAdjustment, manualHeldCount, manualReservedCount, updatedBy: adminId, updatedAt: new Date() };
     if (existing) Object.assign(existing, updated); else state.manualUsageOverrides.push(updated);
-    return { ...updated, sold: nextSold, held: nextHeld, available: Math.max(0, limit - nextSold - nextHeld - offlineReserved) };
+    return { ...updated, sold: nextSold, held: nextHeld, offlineReserved: nextReserved, available: Math.max(0, limit - nextSold - nextHeld - nextReserved) };
   });
 }
 

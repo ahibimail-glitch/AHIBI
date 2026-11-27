@@ -99,7 +99,7 @@ export default function NuscTicketCapacityControls() {
     const sold = Number(countDrafts[key + ':sold'] ?? row.sold ?? 0);
     const held = Number(countDrafts[key + ':held'] ?? row.held ?? 0);
     const saleLimit = capacityCount(row.availabilityLimit ?? row.capacity);
-    const reserved = Number(row.offlineReserved || 0);
+    const reserved = Number(countDrafts[key + ':reserved'] ?? row.offlineReserved ?? 0);
     if (!Number.isSafeInteger(sold) || !Number.isSafeInteger(held) || sold < 0 || held < 0 || saleLimit === null || sold + held + reserved > saleLimit) {
       toast.error('Sold, held, and reserved counts must fit within the current sale limit.');
       return;
@@ -109,7 +109,7 @@ export default function NuscTicketCapacityControls() {
       const response = await fetch(apiUrl + '/api/admin/nusc-home-matches/availability', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ matchDate: row.matchDate, ticketType: row.ticketType, zone: row.zone || null, sold, held }),
+        body: JSON.stringify({ matchDate: row.matchDate, ticketType: row.ticketType, zone: row.zone || null, sold, held, reserved }),
         credentials: 'include',
       });
       const body = await response.json().catch(() => ({}));
@@ -215,8 +215,9 @@ export default function NuscTicketCapacityControls() {
     const availabilityChanged = currentAvailability !== null && Number(availabilityDraft) !== currentAvailability;
     const soldDraft = countDrafts[key + ':sold'] ?? String(row.sold ?? 0);
     const heldDraft = countDrafts[key + ':held'] ?? String(row.held ?? 0);
-    const countsChanged = Number(soldDraft) !== Number(row.sold ?? 0) || Number(heldDraft) !== Number(row.held ?? 0);
-    const availablePreview = Math.max(0, Number(availabilityDraft || 0) - Number(soldDraft || 0) - Number(heldDraft || 0) - Number(row.offlineReserved || 0));
+    const reservedDraft = countDrafts[key + ':reserved'] ?? String(row.offlineReserved ?? 0);
+    const countsChanged = Number(soldDraft) !== Number(row.sold ?? 0) || Number(heldDraft) !== Number(row.held ?? 0) || Number(reservedDraft) !== Number(row.offlineReserved ?? 0);
+    const availablePreview = Math.max(0, Number(availabilityDraft || 0) - Number(soldDraft || 0) - Number(heldDraft || 0) - Number(reservedDraft || 0));
     return (
       <div key={key} className="grid grid-cols-2 gap-3 border-t border-slate-100 py-4 sm:grid-cols-[minmax(150px,1.3fr)_90px_90px_repeat(4,minmax(70px,0.7fr))_92px_92px_92px] sm:items-center sm:gap-3">
         <div className="col-span-2 min-w-0 sm:col-span-1">
@@ -259,7 +260,9 @@ export default function NuscTicketCapacityControls() {
         {row.matchDate ? (
           <label className="flex flex-col gap-1 text-xs text-slate-500"><span>Held</span><input aria-label={row.label + ' held count'} className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm text-slate-900" type="number" min={0} step={1} value={heldDraft} onChange={(event) => setCountDrafts((current) => ({ ...current, [key + ':held']: event.target.value }))} /></label>
         ) : <Metric label="Held" value={row.held} />}
-        <Metric label="Reserved" value={row.offlineReserved} />
+        {row.matchDate ? (
+          <label className="flex flex-col gap-1 text-xs text-slate-500"><span>Reserved</span><input aria-label={row.label + ' reserved count'} className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm text-slate-900" type="number" min={0} step={1} value={reservedDraft} onChange={(event) => setCountDrafts((current) => ({ ...current, [key + ':reserved']: event.target.value }))} /></label>
+        ) : <Metric label="Reserved" value={row.offlineReserved} />}
         <Metric label="Available" value={row.matchDate ? availablePreview : row.available} strong />
         <Button
           type="button"

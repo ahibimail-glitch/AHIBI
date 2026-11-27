@@ -140,6 +140,7 @@ const ManualUsageOverrideSchema = new mongoose.Schema({
   zone: { type: String, enum: ['G-1', 'G-2', 'G-3', 'G-4', 'G-5'], default: null },
   soldAdjustment: { type: Number, default: 0 },
   manualHeldCount: { type: Number, default: 0, min: 0 },
+  manualReservedCount: { type: Number, default: 0, min: 0 },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
   updatedAt: { type: Date, default: Date.now },
 }, { _id: true });
