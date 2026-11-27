@@ -33,6 +33,7 @@ router.post('/bookings/on-spot', protect, authorize('admin'), onSpotBookingContr
 // Scanner accounts can only be created and managed by full administrators.
 router.get('/scanner-staff', scannerStaffController.list);
 router.get('/scanner-staff/activity', scannerStaffController.activity);
+router.delete('/scanner-staff/activity', scannerStaffController.deleteActivity);
 router.post('/scanner-staff', scannerStaffController.create);
 router.patch('/scanner-staff/:id/active', scannerStaffController.setActive);
 router.patch('/scanner-staff/:id/password', scannerStaffController.resetPassword);
