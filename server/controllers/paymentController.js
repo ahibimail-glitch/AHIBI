@@ -11,6 +11,8 @@ const paymentFulfillmentAlertService = require('../services/paymentFulfillmentAl
 const whatsappService = require('../services/whatsappService');
 const EuphoriaBooking = require('../models/EuphoriaBooking');
 const euphoriaController = require('./euphoriaController');
+const HeliBooking = require('../models/HeliBooking');
+const heliBookingController = require('./heliBookingController');
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -452,6 +454,24 @@ exports.razorpayWebhook = async (req, res) => {
         } catch (euErr) {
           if (euErr.code === 'CAMPING_SOLD_OUT') return res.json({ status: 'ok', product: 'euphoria-2026', note: 'camping_sold_out_refunded' });
           console.error('[Razorpay Webhook] Euphoria settlement failed:', euErr && euErr.message);
+          return res.status(500).send('Webhook processing failed');
+        }
+      }
+    }
+
+    // Hornbill Heli Taxi 2026 — isolated settlement path.
+    {
+      const heliBooking = await HeliBooking.findOne({ orderId }).select('_id');
+      if (heliBooking) {
+        try {
+          const hPayment = await razorpay.payments.fetch(paymentId);
+          if (hPayment && hPayment.status === 'captured' && hPayment.captured === true && hPayment.order_id === orderId) {
+            await heliBookingController.settleFromWebhook(orderId, hPayment);
+          }
+          return res.json({ status: 'ok', product: 'heli-2026' });
+        } catch (hErr) {
+          if (hErr.code === 'NO_SEATS') return res.json({ status: 'ok', product: 'heli-2026', note: 'no_seats_refunded' });
+          console.error('[Razorpay Webhook] Heli settlement failed:', hErr && hErr.message);
           return res.status(500).send('Webhook processing failed');
         }
       }

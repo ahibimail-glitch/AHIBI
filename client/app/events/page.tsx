@@ -86,9 +86,26 @@ const EUPHORIA_FESTIVAL: Event = {
   slug: "euphoria-festival-2026",
 };
 
+const HELI_TAXI_2026_ID = "heli-taxi-2026";
+const HELI_TAXI_2026: Event = {
+  _id: HELI_TAXI_2026_ID,
+  title: "Hornbill Heli Taxi 2026",
+  description: "Shuttle flights & aerial joyrides at Hornbill 2026 \u2014 Kohima By Sky, Dzukou Valley By Sky, and the Kohima\u2013Dimapur shuttle. 1\u201310 December.",
+  banner: "/images/HeliTaxii/hero-helicopter.jpg",
+  category: "Other",
+  startDate: "2026-12-01T08:00:00+05:30",
+  endDate: "2026-12-10T16:00:00+05:30",
+  location: { address: "Kohima, Nagaland", city: "Kohima" },
+  ticketTypes: [{ name: "Aerial Joyride", price: 4800, quantity: 100 }],
+  status: "published",
+  isFeatured: true,
+  slug: "heli-taxi-2026",
+};
+
 const getEventHref = (event: Event): string => {
   if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
   if (String(event._id) === EUPHORIA_FESTIVAL_ID) return "/euphoria-festival-2026";
+  if (String(event._id) === HELI_TAXI_2026_ID) return "/HeliTaxii/book";
   if (
     String(event._id) === HORNBILL_SHOWCASE_EVENT_ID ||
     String((event as any).slug || "") === "ticket-to-hornbill-showcase-day1" ||
@@ -223,7 +240,7 @@ export default function EventsPage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/events?limit=1000&includePast=true`);
         if (!res.ok) throw new Error("Failed to fetch events");
         const data: EventsResponse = await res.json();
-        setEvents([...(data.data.events || []), EUPHORIA_FESTIVAL]);
+        setEvents([...(data.data.events || []), EUPHORIA_FESTIVAL, HELI_TAXI_2026]);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load events");
       } finally {

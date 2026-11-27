@@ -200,9 +200,26 @@ const EUPHORIA_FESTIVAL: Event = {
   slug: "euphoria-festival-2026",
 };
 
+const HELI_TAXI_2026_ID = "heli-taxi-2026";
+const HELI_TAXI_2026: Event = {
+  _id: HELI_TAXI_2026_ID,
+  title: "Hornbill Heli Taxi 2026",
+  description: "Shuttle flights & aerial joyrides at Hornbill 2026 \u2014 Kohima By Sky, Dzukou Valley By Sky, and the Kohima\u2013Dimapur shuttle. 1\u201310 December.",
+  banner: "/images/HeliTaxii/hero-helicopter.jpg",
+  category: "Other",
+  startDate: "2026-12-01T08:00:00+05:30",
+  endDate: "2026-12-10T16:00:00+05:30",
+  location: { address: "Kohima, Nagaland", city: "Kohima" },
+  ticketTypes: [{ name: "Aerial Joyride", price: 4800, quantity: 100 }],
+  status: "published",
+  isFeatured: true,
+  slug: "heli-taxi-2026",
+};
+
 const getEventHref = (event: { _id: string; title?: string; slug?: string; externalBookingUrl?: string }) => {
   if (String(event._id) === NUSC_HOME_MATCH_SERIES_ID) return "/nusc-home-matches";
   if (String(event._id) === EUPHORIA_FESTIVAL_ID) return "/euphoria-festival-2026";
+  if (String(event._id) === HELI_TAXI_2026_ID) return "/HeliTaxii/book";
   if (String(event._id) === RSVP_WORKSHOP_EVENT_ID) return "/events/workshop-rsvp";
   const label = `${event.title || ""} ${event.slug || ""}`.toLowerCase();
   if (label.includes("hornbill") && label.includes("festival") && !label.includes("showcase")) {
@@ -534,7 +551,7 @@ function LegacyHomePage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
         const response = await fetch(`${apiUrl}/api/events?isFeatured=true&limit=100`)
         if (!response.ok) {
-          setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL])
+          setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL, HELI_TAXI_2026])
           return
         }
         const data: EventsResponse = await response.json()
@@ -551,11 +568,11 @@ function LegacyHomePage() {
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
           )
         const uniqueRecommendedEvents = [...new Map(
-          [...festivalEvents, ...normalized, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL].map((event) => [String(event._id), event])
+          [...festivalEvents, ...normalized, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL, HELI_TAXI_2026].map((event) => [String(event._id), event])
         ).values()]
         setFeaturedEvents(uniqueRecommendedEvents)
       } catch {
-        setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL])
+        setFeaturedEvents([...festivalEvents, NUSC_HOME_MATCH_SERIES, EUPHORIA_FESTIVAL, HELI_TAXI_2026])
       } finally {
         setIsLoading(false)
       }
