@@ -70,6 +70,7 @@ const EuphoriaBookingSchema = new mongoose.Schema({
   },
 
   test: { type: Boolean, default: false }, // true when created with Razorpay test keys
+  ticketsEmailed: { type: Boolean, default: false },
 
   tickets: { type: [EuphoriaTicketSchema], default: [] },
 

@@ -3,6 +3,8 @@ const Razorpay = require('razorpay');
 const QRCode = require('qrcode');
 const EuphoriaConfig = require('../models/EuphoriaConfig');
 const EuphoriaBooking = require('../models/EuphoriaBooking');
+const emailService = require('../services/emailService');
+const { buildEuphoriaTickets, fmtDay } = require('../services/euphoriaTicketPdfService');
 
 const CONFIG_KEY = 'euphoria-2026';
 const FESTIVAL_NAME = 'Euphoria Festival 2026';
@@ -104,6 +106,34 @@ async function buildTickets(booking, config) {
   return tickets;
 }
 
+async function sendEuphoriaTicketEmail(booking) {
+  if (!booking || !booking.contact || !booking.contact.email) return;
+  const { buffer, qrBuffers } = await buildEuphoriaTickets(booking);
+  const attachments = [{ filename: 'euphoria-festival-2026-tickets.pdf', content: buffer, contentType: 'application/pdf' }];
+  const rows = (booking.tickets || []).map((t, i) => {
+    const cid = `euqr${i}`;
+    const qr = qrBuffers.find((q) => q.ticketNumber === t.ticketNumber);
+    if (qr) attachments.push({ filename: `${t.ticketNumber}.png`, content: qr.buffer, cid });
+    const label = t.type === 'camping' ? `Camping Pass (${t.campingType})` : 'Festival Entry';
+    const days = (t.validDays || []).map(fmtDay).join(', ');
+    return `<tr><td style="padding:12px 0;border-bottom:1px solid #eee;vertical-align:top">`
+      + `<div style="font-weight:700;color:#1C1C1C;font-size:15px">${label}</div>`
+      + `<div style="color:#6b7280;font-size:13px;margin-top:2px">Valid: ${days}</div>`
+      + `<div style="color:#6b7280;font-size:12px;margin-top:2px">${t.ticketNumber}</div></td>`
+      + `<td style="width:120px;text-align:right"><img src="cid:${cid}" width="110" height="110" alt="QR"/></td></tr>`;
+  }).join('');
+  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto">`
+    + `<div style="background:#e31837;color:#fff;padding:20px 24px;border-radius:10px 10px 0 0">`
+    + `<div style="font-size:20px;font-weight:800">EUPHORIA FESTIVAL 2026</div>`
+    + `<div style="font-size:13px;opacity:.9">11\u201313 December \u00b7 Avora Resort, Ch\u00fcmoukedima, Nagaland</div></div>`
+    + `<div style="border:1px solid #eee;border-top:none;border-radius:0 0 10px 10px;padding:24px">`
+    + `<p style="color:#1C1C1C;font-size:15px">Hi ${booking.contact.name}, your tickets are confirmed.</p>`
+    + `<table style="width:100%;border-collapse:collapse">${rows}</table>`
+    + `<p style="color:#6b7280;font-size:13px;margin-top:16px">Your tickets are also attached as a PDF. Show the QR at the gate \u2014 each pass is valid only on the day(s) shown.</p>`
+    + `<p style="color:#9ca3af;font-size:12px;margin-top:16px">Organised by Nova Entertainment Nagaland \u00b7 Powered by AHIBI</p></div></div>`;
+  await emailService.sendMail({ to: booking.contact.email, subject: 'Your Euphoria Festival 2026 tickets', html, attachments });
+}
+
 // Reusable settlement used by both client verify and the webhook. Enforces the
 // atomic shared camping cap, then issues per-person tickets exactly once.
 async function settleEuphoriaOrder({ booking, paymentId, providerPayment }) {
@@ -172,6 +202,15 @@ async function settleEuphoriaOrder({ booking, paymentId, providerPayment }) {
     await EuphoriaBooking.updateOne({ _id: fresh._id }, { $set: { paymentId, status: 'completed' } });
   }
   const settled = await EuphoriaBooking.findById(booking._id);
+  try {
+    const claimEmail = await EuphoriaBooking.updateOne(
+      { _id: settled._id, ticketsEmailed: false, status: 'completed' },
+      { $set: { ticketsEmailed: true } },
+    );
+    if (claimEmail.modifiedCount === 1) {
+      sendEuphoriaTicketEmail(settled).catch((e) => console.error('[Euphoria] ticket email failed', e && e.message));
+    }
+  } catch (e) { console.error('[Euphoria] email claim failed', e && e.message); }
   return { alreadyCompleted: false, booking: settled };
 }
 
@@ -610,6 +649,26 @@ exports.adminStats = async (req, res) => {
   } catch (error) {
     console.error('[Euphoria] adminStats failed', error);
     return res.status(500).json({ success: false, message: 'Unable to load stats.' });
+  }
+};
+
+exports.getTicketPdf = async (req, res) => {
+  try {
+    const booking = await EuphoriaBooking.findOne({ orderId: req.params.orderId });
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
+    if (String(booking.user) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'This booking belongs to a different account.' });
+    }
+    if (booking.status !== 'completed' || !(booking.tickets || []).length) {
+      return res.status(409).json({ success: false, message: 'Tickets are not ready yet.' });
+    }
+    const { buffer } = await buildEuphoriaTickets(booking);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="euphoria-festival-2026-tickets.pdf"');
+    return res.end(buffer);
+  } catch (error) {
+    console.error('[Euphoria] getTicketPdf failed', error);
+    return res.status(500).json({ success: false, message: 'Could not generate tickets PDF.' });
   }
 };
 

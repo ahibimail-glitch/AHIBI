@@ -12,6 +12,7 @@ router.post('/order', protect, controller.createOrder);
 router.post('/verify', protect, controller.verifyPayment);
 router.get('/my-bookings', protect, controller.getMyBookings);
 router.get('/booking/:orderId', protect, controller.getBooking);
+router.get('/booking/:orderId/ticket.pdf', protect, controller.getTicketPdf);
 
 // ---- Scanner (gate staff log in via /api/scanner/login) ----
 router.post('/scan', scannerAuth, controller.scanTicket);

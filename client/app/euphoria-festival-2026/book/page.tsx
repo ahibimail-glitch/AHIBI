@@ -24,6 +24,8 @@ interface IssuedTicket {
   qrCode: string | null;
 }
 
+const RED = "#e31837";
+
 const fmtDay = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 
@@ -53,10 +55,10 @@ export default function EuphoriaBookingPage() {
   const [phone, setPhone] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-  const [issued, setIssued] = useState<IssuedTicket[] | null>(null);
+  const [issued, setIssued] = useState<{ orderId: string; tickets: IssuedTicket[] } | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
-    // prefill from logged-in user if present
     try {
       const raw = localStorage.getItem("user");
       if (raw) {
@@ -153,7 +155,7 @@ export default function EuphoriaBookingPage() {
           void verify(response);
         },
         prefill: d.prefill || { name: name.trim(), email: email.trim(), contact: phone.trim() },
-        theme: { color: "#7c3aed" },
+        theme: { color: RED },
         modal: { ondismiss: () => setSubmitting(false) },
       };
       const rzp = new (window as any).Razorpay(options);
@@ -181,7 +183,7 @@ export default function EuphoriaBookingPage() {
       });
       const json = await res.json();
       if (res.ok && json?.success) {
-        setIssued(json.data.tickets || []);
+        setIssued({ orderId: json.data.orderId, tickets: json.data.tickets || [] });
       } else {
         setError(json?.message || "Payment received — your tickets are being confirmed. Check your email shortly.");
       }
@@ -192,75 +194,117 @@ export default function EuphoriaBookingPage() {
     }
   }
 
-  if (loading) {
-    return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading…</div>;
+  async function downloadTickets(orderId: string) {
+    setDownloading(true);
+    try {
+      const res = await fetch(getApiUrl(`euphoria/booking/${orderId}/ticket.pdf`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "euphoria-festival-2026-tickets.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Couldn't download the PDF just now — your tickets have also been emailed to you.");
+    } finally {
+      setDownloading(false);
+    }
   }
 
+  if (loading) {
+    return <div className="min-h-screen bg-gray-50 text-gray-900 flex items-center justify-center">Loading…</div>;
+  }
+
+  // ---- Success screen ----
   if (issued) {
     return (
-      <div className="min-h-screen bg-black text-white px-4 py-10">
+      <div className="min-h-screen bg-gray-50 text-gray-900 px-4 py-10">
         <div className="max-w-xl mx-auto">
-          <h1 className="text-2xl font-bold text-green-400">You're in! 🎉</h1>
-          <p className="text-white/70 mt-1">Your Euphoria Festival 2026 tickets are confirmed. A copy is in your email.</p>
+          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm p-6">
+            <h1 className="text-2xl font-bold text-emerald-600">You're in! 🎉</h1>
+            <p className="text-gray-600 mt-1">
+              Your Euphoria Festival 2026 tickets are confirmed and have been emailed to <span className="font-medium">{email}</span>.
+            </p>
+            <button
+              onClick={() => downloadTickets(issued.orderId)}
+              disabled={downloading}
+              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold disabled:opacity-50"
+              style={{ backgroundColor: RED }}
+            >
+              {downloading ? "Preparing…" : "Download tickets (PDF)"}
+            </button>
+          </div>
+
           <div className="mt-6 space-y-4">
-            {issued.map((t) => (
-              <div key={t.ticketNumber} className="rounded-xl border border-white/15 bg-white/5 p-4 flex gap-4 items-center">
-                {t.qrCode ? <img src={t.qrCode} alt="QR" className="w-24 h-24 rounded bg-white p-1" /> : null}
+            {issued.tickets.map((t) => (
+              <div key={t.ticketNumber} className="rounded-xl border border-gray-200 bg-white p-4 flex gap-4 items-center">
+                {t.qrCode ? <img src={t.qrCode} alt="QR" className="w-24 h-24 rounded border border-gray-100" /> : null}
                 <div>
-                  <div className="font-semibold">
+                  <div className="font-semibold text-gray-900">
                     {t.type === "camping" ? `Camping (${t.campingType})` : "Festival Entry"}
                   </div>
-                  <div className="text-xs text-white/60 mt-1">{t.ticketNumber}</div>
-                  <div className="text-xs text-white/60 mt-1">Valid: {t.validDays.map(fmtDay).join(", ")}</div>
+                  <div className="text-xs text-gray-500 mt-1">{t.ticketNumber}</div>
+                  <div className="text-xs text-gray-500 mt-1">Valid: {t.validDays.map(fmtDay).join(", ")}</div>
                 </div>
               </div>
             ))}
           </div>
-          <Link href="/euphoria-festival-2026" className="inline-block mt-8 text-violet-400 underline">
-            Back to festival page
+
+          <Link href="/euphoria-festival-2026" className="inline-block mt-8 font-medium" style={{ color: RED }}>
+            ← Back to festival page
           </Link>
         </div>
       </div>
     );
   }
 
+  // ---- Bookings closed ----
   if (config && !config.bookingOpen) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-6 text-center">
+      <div className="min-h-screen bg-gray-50 text-gray-900 flex items-center justify-center px-6 text-center">
         <div>
           <h1 className="text-3xl font-bold">Euphoria Festival 2026</h1>
-          <p className="mt-3 text-white/70">Bookings open soon. Check back shortly.</p>
-          <Link href="/euphoria-festival-2026" className="inline-block mt-6 text-violet-400 underline">Festival details</Link>
+          <p className="mt-3 text-gray-600">Bookings open soon. Check back shortly.</p>
+          <Link href="/euphoria-festival-2026" className="inline-block mt-6 font-medium" style={{ color: RED }}>Festival details</Link>
         </div>
       </div>
     );
   }
 
   const days = config?.festivalDays || [];
+  const chip = (on: boolean) =>
+    `px-4 py-2 rounded-lg border text-sm transition ${on ? "text-white border-transparent" : "border-gray-300 text-gray-700 hover:border-gray-400"}`;
+  const chipStyle = (on: boolean) => (on ? { backgroundColor: RED } : {});
+
   const Counter = ({ value, setValue }: { value: number; setValue: (n: number) => void }) => (
     <div className="flex items-center gap-3">
-      <button type="button" onClick={() => setValue(Math.max(1, value - 1))} className="w-9 h-9 rounded-lg border border-white/20 text-lg">−</button>
+      <button type="button" onClick={() => setValue(Math.max(1, value - 1))} className="w-9 h-9 rounded-lg border border-gray-300 text-lg text-gray-700">−</button>
       <span className="w-8 text-center font-semibold">{value}</span>
-      <button type="button" onClick={() => setValue(Math.min(20, value + 1))} className="w-9 h-9 rounded-lg border border-white/20 text-lg">+</button>
+      <button type="button" onClick={() => setValue(Math.min(20, value + 1))} className="w-9 h-9 rounded-lg border border-gray-300 text-lg text-gray-700">+</button>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 py-10">
+    <div className="min-h-screen bg-gray-50 text-gray-900 px-4 py-10">
       <div className="max-w-xl mx-auto">
         <h1 className="text-3xl font-bold">Book Euphoria Festival 2026</h1>
-        <p className="text-white/60 mt-1">11–13 December · Avora Resort, Chümoukedima</p>
+        <p className="text-gray-500 mt-1">11–13 December · Avora Resort, Chümoukedima</p>
 
         {/* Festival entry */}
-        <section className="mt-8 rounded-2xl border border-white/15 bg-white/5 p-5">
+        <section className="mt-8 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <h2 className="text-lg font-semibold">Festival Entry</h2>
-          <p className="text-sm text-white/60 mt-1">Per person. Pick the days you'll attend.</p>
+          <p className="text-sm text-gray-500 mt-1">Per person. Pick the days you'll attend.</p>
           <div className="flex flex-wrap gap-2 mt-4">
             {days.map((d) => {
               const on = entryDays.has(d);
               return (
-                <button key={d} type="button" onClick={() => setEntryDays(toggle(entryDays, d))}
-                  className={`px-4 py-2 rounded-lg border text-sm ${on ? "bg-violet-600 border-violet-500" : "border-white/20"}`}>
+                <button key={d} type="button" onClick={() => setEntryDays(toggle(entryDays, d))} className={chip(on)} style={chipStyle(on)}>
                   {fmtDay(d)}
                 </button>
               );
@@ -268,45 +312,46 @@ export default function EuphoriaBookingPage() {
           </div>
           {entryDays.size > 0 && (
             <div className="flex items-center justify-between mt-4">
-              <span className="text-sm text-white/70">People</span>
+              <span className="text-sm text-gray-600">People</span>
               <Counter value={entryPeople} setValue={setEntryPeople} />
             </div>
           )}
-          <div className="text-right mt-3 text-sm text-white/80">
+          <div className="text-right mt-3 text-sm text-gray-700">
             {entryDays.size > 0 ? `₹${entryUnit} × ${entryPeople} = ₹${entryAmount}` : "—"}
           </div>
         </section>
 
         {/* Camping */}
-        <section className="mt-5 rounded-2xl border border-white/15 bg-white/5 p-5">
+        <section className="mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <label className="flex items-center justify-between cursor-pointer">
             <span className="text-lg font-semibold">Add Camping</span>
-            <input type="checkbox" checked={wantCamping} onChange={(e) => setWantCamping(e.target.checked)} className="w-5 h-5 accent-violet-600" />
+            <input type="checkbox" checked={wantCamping} onChange={(e) => setWantCamping(e.target.checked)} className="w-5 h-5" style={{ accentColor: RED }} />
           </label>
           {config && (
-            <p className="text-xs text-white/50 mt-1">{config.campingAvailable} of {config.campingCapacity} spots left.</p>
+            <p className="text-xs text-gray-400 mt-1">{config.campingAvailable} of {config.campingCapacity} spots left.</p>
           )}
           {wantCamping && (
             <div className="mt-4 space-y-4">
               {config?.campingIncludesEntry && (
-                <p className="text-xs text-emerald-400">Camping includes festival entry on your camping days.</p>
+                <p className="text-xs text-emerald-600">Camping includes festival entry on your camping days.</p>
               )}
               <div className="flex gap-2">
-                {(["tent", "no-tent"] as const).map((t) => (
-                  <button key={t} type="button" onClick={() => setCampingType(t)}
-                    className={`px-4 py-2 rounded-lg border text-sm capitalize ${campingType === t ? "bg-violet-600 border-violet-500" : "border-white/20"}`}>
-                    {t === "tent" ? "Tent provided" : "No tent (own tent)"}
-                  </button>
-                ))}
+                {(["tent", "no-tent"] as const).map((t) => {
+                  const on = campingType === t;
+                  return (
+                    <button key={t} type="button" onClick={() => setCampingType(t)} className={`${chip(on)} capitalize`} style={chipStyle(on)}>
+                      {t === "tent" ? "Tent provided" : "No tent (own tent)"}
+                    </button>
+                  );
+                })}
               </div>
               <div>
-                <span className="text-sm text-white/70">Nights</span>
+                <span className="text-sm text-gray-600">Nights</span>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {days.map((d) => {
                     const on = campingDays.has(d);
                     return (
-                      <button key={d} type="button" onClick={() => setCampingDays(toggle(campingDays, d))}
-                        className={`px-4 py-2 rounded-lg border text-sm ${on ? "bg-violet-600 border-violet-500" : "border-white/20"}`}>
+                      <button key={d} type="button" onClick={() => setCampingDays(toggle(campingDays, d))} className={chip(on)} style={chipStyle(on)}>
                         Night of {fmtDay(d)}
                       </button>
                     );
@@ -315,11 +360,11 @@ export default function EuphoriaBookingPage() {
               </div>
               {campingDays.size > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">People</span>
+                  <span className="text-sm text-gray-600">People</span>
                   <Counter value={campingPeople} setValue={setCampingPeople} />
                 </div>
               )}
-              <div className="text-right text-sm text-white/80">
+              <div className="text-right text-sm text-gray-700">
                 {campingDays.size > 0 ? `₹${campingUnit} × ${campingPeople} = ₹${campingAmount}` : "—"}
               </div>
             </div>
@@ -327,26 +372,27 @@ export default function EuphoriaBookingPage() {
         </section>
 
         {/* Contact */}
-        <section className="mt-5 rounded-2xl border border-white/15 bg-white/5 p-5 space-y-3">
+        <section className="mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm p-5 space-y-3">
           <h2 className="text-lg font-semibold">Your details</h2>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name"
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 outline-none" />
+            className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 outline-none focus:border-gray-500" />
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email (for your tickets)" type="email"
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 outline-none" />
+            className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 outline-none focus:border-gray-500" />
           <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)"
-            className="w-full rounded-lg bg-black/40 border border-white/20 px-3 py-2 outline-none" />
+            className="w-full rounded-lg bg-white border border-gray-300 px-3 py-2 outline-none focus:border-gray-500" />
         </section>
 
-        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
         <div className="mt-6 flex items-center justify-between">
           <div className="text-2xl font-bold">₹{total}</div>
           <button type="button" onClick={handlePay} disabled={submitting || total <= 0}
-            className="px-8 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 font-semibold">
+            className="px-8 py-3 rounded-xl text-white font-semibold disabled:opacity-40"
+            style={{ backgroundColor: RED }}>
             {submitting ? "Processing…" : token ? "Pay & Book" : "Log in to book"}
           </button>
         </div>
-        <p className="text-xs text-white/40 mt-3">Secure payment via Razorpay. Tickets are emailed and shown in your account.</p>
+        <p className="text-xs text-gray-400 mt-3">Secure payment via Razorpay. Tickets are emailed and downloadable after payment.</p>
       </div>
     </div>
   );
