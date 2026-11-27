@@ -32,6 +32,7 @@ export default function ScannerStaffManagement() {
   const [notice, setNotice] = useState('');
   const [events, setEvents] = useState<EventOption[]>([]);
   const [activity, setActivity] = useState<ActivityReport | null>(null);
+  const [selectedActivityIds, setSelectedActivityIds] = useState<string[]>([]);
 
   const headers = useCallback(() => {
     const token = localStorage.getItem('admin_token');
@@ -65,7 +66,44 @@ export default function ScannerStaffManagement() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.message || 'Unable to load scanner activity.');
     setActivity(result.data);
+    setSelectedActivityIds((selected) => selected.filter((id) => (result.data?.recent || []).some((item: ActivityReport['recent'][number]) => item.id === id)));
   }, [headers]);
+
+  const deleteSelectedActivity = async () => {
+    if (!selectedActivityIds.length) return;
+    const confirmed = window.confirm(`Permanently delete ${selectedActivityIds.length} selected scanner activity record(s)? This only deletes the selected log rows; bookings, tickets, and scanner accounts are not affected.`);
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(`${apiUrl}/api/admin/scanner-staff/activity`, {
+        method: 'DELETE',
+        headers: headers(),
+        body: JSON.stringify({ ids: selectedActivityIds }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Unable to delete selected activity records.');
+      setSelectedActivityIds([]);
+      setNotice(`${result.data?.deletedCount ?? 0} selected activity record(s) deleted.`);
+      await loadActivity();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete selected activity records.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleActivitySelection = (id: string) => {
+    setSelectedActivityIds((selected) => selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
+  };
+
+  const allRecentSelected = Boolean(activity?.recent.length) && activity!.recent.every((item) => selectedActivityIds.includes(item.id));
+  const toggleAllRecent = () => {
+    if (!activity) return;
+    setSelectedActivityIds(allRecentSelected ? [] : activity.recent.map((item) => item.id));
+  };
 
   useEffect(() => {
     void loadStaff().catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Unable to load scanner accounts.'));
@@ -208,7 +246,17 @@ export default function ScannerStaffManagement() {
           <div><h3 className="text-sm font-semibold text-slate-800">By staff member</h3>{activity.byStaff.length ? <ul className="mt-2 divide-y rounded-lg border">{activity.byStaff.map((item) => <li key={item.username} className="flex justify-between gap-3 px-3 py-2 text-sm"><span>{item.username}</span><span className="text-slate-500">{item.total} actions · {item.errors} errors</span></li>)}</ul> : <p className="mt-2 text-sm text-slate-500">No activity recorded yet.</p>}</div>
           <div><h3 className="text-sm font-semibold text-slate-800">By event</h3>{activity.byEvent.length ? <ul className="mt-2 divide-y rounded-lg border">{activity.byEvent.map((item) => <li key={item.title} className="flex justify-between gap-3 px-3 py-2 text-sm"><span className="truncate">{item.title}</span><span className="shrink-0 text-slate-500">{item.total} actions · {item.errors} errors</span></li>)}</ul> : <p className="mt-2 text-sm text-slate-500">No event activity recorded yet.</p>}</div>
         </div>}
-        {activity && <div className="overflow-x-auto"><h3 className="mb-2 text-sm font-semibold text-slate-800">Recent activity and errors</h3>{activity.recent.length ? <table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-slate-600"><tr>{['Time', 'Staff', 'Event', 'Action', 'Result', 'Error / status', 'Time'].map((item) => <th key={item} className="px-3 py-2 font-medium">{item}</th>)}</tr></thead><tbody className="divide-y">{activity.recent.map((item) => <tr key={item.id}><td className="px-3 py-2">{new Date(item.createdAt).toLocaleString()}</td><td className="px-3 py-2">{item.username}</td><td className="px-3 py-2">{item.eventTitle}</td><td className="px-3 py-2 font-mono">{item.action}</td><td className={`px-3 py-2 font-semibold ${item.outcome === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{item.outcome}</td><td className="px-3 py-2">{item.errorCode || item.statusCode}</td><td className="px-3 py-2">{item.durationMs} ms</td></tr>)}</tbody></table> : <p className="rounded-lg border p-4 text-sm text-slate-500">No scanner activity yet. New staff actions and API errors will appear here.</p>}</div>}
+        {activity && <div className="overflow-x-auto">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-800">Recent activity and errors</h3>
+            <div className="flex items-center gap-2">
+              {activity.recent.length > 0 && <button type="button" disabled={busy} onClick={toggleAllRecent} className="rounded-md border px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50">{allRecentSelected ? 'Clear selection' : 'Select all shown'}</button>}
+              <button type="button" disabled={busy || selectedActivityIds.length === 0} onClick={() => void deleteSelectedActivity()} className="rounded-md bg-red-700 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Delete selected{selectedActivityIds.length ? ` (${selectedActivityIds.length})` : ''}</button>
+            </div>
+          </div>
+          <p className="mb-2 text-xs text-slate-500">Select log rows to remove test activity. This does not delete bookings, tickets, scanner accounts, or wristband records.</p>
+          {activity.recent.length ? <table className="w-full min-w-[800px] text-left text-xs"><thead className="bg-slate-50 text-slate-600"><tr><th className="w-9 px-3 py-2"><input aria-label="Select all shown activity records" type="checkbox" checked={allRecentSelected} onChange={toggleAllRecent} disabled={busy} /></th>{['Time', 'Staff', 'Event', 'Action', 'Result', 'Error / status', 'Duration'].map((item) => <th key={item} className="px-3 py-2 font-medium">{item}</th>)}</tr></thead><tbody className="divide-y">{activity.recent.map((item) => <tr key={item.id}><td className="px-3 py-2"><input aria-label={`Select activity from ${item.username} at ${new Date(item.createdAt).toLocaleString()}`} type="checkbox" checked={selectedActivityIds.includes(item.id)} onChange={() => toggleActivitySelection(item.id)} disabled={busy} /></td><td className="px-3 py-2">{new Date(item.createdAt).toLocaleString()}</td><td className="px-3 py-2">{item.username}</td><td className="px-3 py-2">{item.eventTitle}</td><td className="px-3 py-2 font-mono">{item.action}</td><td className={`px-3 py-2 font-semibold ${item.outcome === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{item.outcome}</td><td className="px-3 py-2">{item.errorCode || item.statusCode}</td><td className="px-3 py-2">{item.durationMs} ms</td></tr>)}</tbody></table> : <p className="rounded-lg border p-4 text-sm text-slate-500">No scanner activity yet. New staff actions and API errors will appear here.</p>}
+        </div>}
       </section>
 
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}

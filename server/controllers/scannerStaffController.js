@@ -86,6 +86,21 @@ exports.activity = async (_req, res) => {
   }
 };
 
+exports.deleteActivity = async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids)] : [];
+  if (!ids.length || ids.length > 100 || ids.some((id) => typeof id !== 'string' || !mongoose.isValidObjectId(id))) {
+    return res.status(400).json({ success: false, message: 'Select between 1 and 100 valid activity records.' });
+  }
+
+  try {
+    const result = await ScannerActivity.deleteMany({ _id: { $in: ids } });
+    return res.json({ success: true, data: { deletedCount: result.deletedCount || 0 } });
+  } catch (error) {
+    console.error('Unable to delete selected scanner activity:', error);
+    return res.status(500).json({ success: false, message: 'Unable to delete selected scanner activity.' });
+  }
+};
+
 exports.setAssignments = async (req, res) => {
   const { id } = req.params;
   const assignments = req.body?.eventAssignments;
