@@ -9,6 +9,8 @@ const nuscHomeMatchController = require('./nuscHomeMatchController');
 const eventPaymentSettlement = require('../services/eventPaymentSettlementService');
 const paymentFulfillmentAlertService = require('../services/paymentFulfillmentAlertService');
 const whatsappService = require('../services/whatsappService');
+const EuphoriaBooking = require('../models/EuphoriaBooking');
+const euphoriaController = require('./euphoriaController');
 
 // Per-event purchase limits
 const LIMITED_EVENT_ID = '6a17f0cfcea3b566702e86a9';
@@ -435,6 +437,24 @@ exports.razorpayWebhook = async (req, res) => {
     if (!paymentId || !orderId) {
       if (eventType === 'order.paid') return res.json({ status: 'awaiting_payment_capture_webhook' });
       throw new Error('Captured payment webhook is missing its order or payment ID.');
+    }
+
+    // Euphoria Festival 2026 — settle in its own isolated flow, bypassing event/NUSC machinery.
+    {
+      const euphoriaBooking = await EuphoriaBooking.findOne({ orderId }).select('_id');
+      if (euphoriaBooking) {
+        try {
+          const euPayment = await razorpay.payments.fetch(paymentId);
+          if (euPayment && euPayment.status === 'captured' && euPayment.captured === true && euPayment.order_id === orderId) {
+            await euphoriaController.settleFromWebhook(orderId, euPayment);
+          }
+          return res.json({ status: 'ok', product: 'euphoria-2026' });
+        } catch (euErr) {
+          if (euErr.code === 'CAMPING_SOLD_OUT') return res.json({ status: 'ok', product: 'euphoria-2026', note: 'camping_sold_out_refunded' });
+          console.error('[Razorpay Webhook] Euphoria settlement failed:', euErr && euErr.message);
+          return res.status(500).send('Webhook processing failed');
+        }
+      }
     }
 
     const captureConfirmedByWebhook = payment?.status === 'captured' &&

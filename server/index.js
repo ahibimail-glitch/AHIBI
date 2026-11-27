@@ -34,6 +34,7 @@ const { userRouter: supportChatRoutes, adminRouter: adminSupportChatRoutes } = r
 const qrRoutes = require('./routes/qr.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const merchRoutes = require('./routes/merch.routes');
+const euphoriaRoutes = require('./routes/euphoria.routes');
 const heroImageRoutes = require('./routes/heroImageRoutes');
 const annieMusicalRoutes = require('./routes/annieMusicalRoutes');
 const nisRegistrationRoutes = require('./routes/nisRegistration.routes');
@@ -233,6 +234,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/qrs', qrRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/hornbill-merch', merchRoutes);
+app.use('/api/euphoria', euphoriaRoutes);
 // app.use('/api/tickets', ticketRoutes);
 // app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
