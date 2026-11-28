@@ -1497,7 +1497,11 @@ export default function CheckoutPage() {
 
                             {isExpanded && (
                               <div className="mb-4 text-sm text-gray-700">
-                                <p className="mb-2">{ticket.description}</p>
+                                <p className="mb-2">
+                                  {isHMFEvent && hornbillFeeSplit
+                                    ? `₹${hornbillFeeSplit.ticketFee} ticket fee + ₹${hornbillFeeSplit.sustainability} Festival Sustainability Fund. Total ₹${hornbillFeeSplit.total} per person. One entry.`
+                                    : ticket.description}
+                                </p>
                                 {ticket.benefits && ticket.benefits.length > 0 && (
                                   <ul className="space-y-1">
                                     {ticket.benefits.map((benefit, i) => (
