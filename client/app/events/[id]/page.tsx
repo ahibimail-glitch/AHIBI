@@ -472,8 +472,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     { icon: Ticket, label: priceRange, highlight: true },
   ];
 
-  const descTruncated = event.description.length > 280 ? event.description.slice(0, 280) + "…" : event.description;
-  const showReadMore = event.description.length > 280;
+  const isHornbillMusicEvent = /hornbill music festival/i.test(event.title || "");
+  const eventDescription = isHornbillMusicEvent
+    ? event.description.replace(
+        /Ticket price: ₹200 plus ₹50 Festival Sustainability Fund, total ₹250 per person\./i,
+        "Ticket price: ₹150 plus ₹50 Festival Sustainability Fund, total ₹200 per person.",
+      )
+    : event.description;
+  const descTruncated = eventDescription.length > 280 ? eventDescription.slice(0, 280) + "…" : eventDescription;
+  const showReadMore = eventDescription.length > 280;
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
@@ -615,7 +622,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:py-8">
           <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4">About The Event</h2>
           <p className="text-sm md:text-base text-gray-600 leading-relaxed whitespace-pre-line">
-            {descExpanded ? event.description : descTruncated}
+            {descExpanded ? eventDescription : descTruncated}
           </p>
           {showReadMore && (
             <button
