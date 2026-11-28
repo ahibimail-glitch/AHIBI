@@ -43,6 +43,8 @@ const VipBoxPassSchema = new mongoose.Schema({
   currentBox: { type: Number, default: null }, // where the rep has seated them now
   fixed: { type: Boolean, default: false },
   active: { type: Boolean, default: true },
+  present: { type: Boolean, default: false }, // arrived / checked in
+  isWalkIn: { type: Boolean, default: false },
   scanLog: { type: [ScanLogSchema], default: [] },
 }, { timestamps: true });
 

@@ -3,15 +3,17 @@
 import { useEffect, useState, useCallback } from "react";
 import { getApiUrl } from "@/config";
 
-interface Pass { passRef: string; guestName: string; homeBox: number; currentBox: number | null; active: boolean; fixed: boolean; }
-interface Occupant { passRef: string; guestName: string; homeBox: number; }
-interface Box { number: number; capacity: number; fixed: boolean; occupants: Occupant[]; }
+interface Guest { passRef: string; guestName: string; homeBox: number; currentBox: number | null; present: boolean; isWalkIn: boolean; }
+interface Box { number: number; capacity: number; fixed: boolean; occupants: Guest[]; }
 
 export default function VipBoxManagement() {
   const [token, setToken] = useState<string | null>(null);
-  const [passes, setPasses] = useState<Pass[]>([]);
-  const [boxes, setBoxes] = useState<Box[]>([]);
   const [matchLabel, setMatchLabel] = useState("NUSC vs Dempo");
+  const [masterToken, setMasterToken] = useState("");
+  const [boxes, setBoxes] = useState<Box[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newBox, setNewBox] = useState<number | "">("");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -22,96 +24,92 @@ export default function VipBoxManagement() {
     if (!token) return;
     setErr(null);
     try {
-      const [p, b] = await Promise.all([
-        fetch(getApiUrl("vip-box/admin/passes"), { headers: headers() }).then((r) => r.json()),
-        fetch(getApiUrl("vip-box/admin/board"), { headers: headers() }).then((r) => r.json()),
+      const [cfg, g] = await Promise.all([
+        fetch(getApiUrl("vip-box/admin/config"), { headers: headers() }).then((r) => r.json()),
+        fetch(getApiUrl("vip-box/admin/guests"), { headers: headers() }).then((r) => r.json()),
       ]);
-      if (p?.success) { setPasses(p.data.passes.map((x: any) => ({ ...x })) ); setMatchLabel(p.data.matchLabel || "NUSC vs Dempo"); }
-      else setErr(p?.message || "Could not load passes.");
-      if (b?.success) setBoxes(b.data);
+      if (cfg?.success) { setMasterToken(cfg.data.masterToken || ""); setMatchLabel(cfg.data.matchLabel || "NUSC vs Dempo"); }
+      else setErr(cfg?.message || "Could not load config.");
+      if (g?.success) { setBoxes(g.data.boxes); setGuests(g.data.guests); }
     } catch { setErr("Failed to load VIP box data."); }
   }, [token, headers]);
 
   useEffect(() => { load(); }, [load]);
 
-  async function savePass(p: Pass) {
+  async function api(path: string, method: string, body?: any, ok?: string) {
     setMsg(null); setErr(null);
     try {
-      const res = await fetch(getApiUrl(`vip-box/admin/pass/${encodeURIComponent(p.passRef)}`), {
-        method: "PUT", headers: headers(),
-        body: JSON.stringify({ guestName: p.guestName, homeBox: p.homeBox, active: p.active }),
-      });
+      const res = await fetch(getApiUrl(`vip-box/${path}`), { method, headers: headers(), body: body ? JSON.stringify(body) : undefined });
       const json = await res.json();
-      if (res.ok && json?.success) { setMsg("Saved."); load(); } else setErr(json?.message || "Save failed.");
-    } catch { setErr("Save failed."); }
-  }
-
-  async function reset() {
-    if (!confirm("Reset all allocations back to home boxes?")) return;
-    try {
-      const res = await fetch(getApiUrl("vip-box/admin/reset"), { method: "POST", headers: headers() });
-      const json = await res.json();
-      if (json?.success) { setMsg("Allocations reset."); setBoxes(json.data); load(); } else setErr(json?.message || "Reset failed.");
-    } catch { setErr("Reset failed."); }
+      if (res.ok && json?.success) { if (ok) setMsg(ok); load(); return true; }
+      setErr(json?.message || "Action failed."); return false;
+    } catch { setErr("Action failed."); return false; }
   }
 
   if (!token) return <div className="p-6 text-gray-700">Please sign in to the admin dashboard first.</div>;
-
-  const setPassField = (ref: string, patch: Partial<Pass>) =>
-    setPasses((prev) => prev.map((x) => (x.passRef === ref ? { ...x, ...patch } : x)));
+  const setGuestField = (ref: string, patch: Partial<Guest>) => setGuests((prev) => prev.map((x) => (x.passRef === ref ? { ...x, ...patch } : x)));
 
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900">VIP Boxes — {matchLabel}</h1>
-        <div className="flex gap-2">
-          <a href="/vip-box-passes" target="_blank" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold">Printable passes (QR)</a>
-          <a href="/vip-box-scanner" target="_blank" className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700">Rep scanner</a>
-          <button onClick={reset} className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700">Reset allocations</button>
+        <div className="flex gap-2 flex-wrap">
+          <a href="/vip-box-passes" target="_blank" className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold">Master QR (print)</a>
+          <a href="/vip-box-scanner" target="_blank" className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700">Rep console</a>
+          <button onClick={() => confirm("Reset seating + arrivals for a new match? (roster + QR kept)") && api("admin/reset", "POST", { clearWalkIns: true }, "Reset done")} className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700">Reset for new match</button>
         </div>
       </div>
       {err && <p className="mt-3 text-red-600 text-sm">{err}</p>}
       {msg && <p className="mt-3 text-emerald-600 text-sm">{msg}</p>}
+      {masterToken && <p className="mt-2 text-xs text-gray-400">One master QR for all boxes, reusable every match. Code: <span className="font-mono">{masterToken}</span></p>}
 
       {/* Live board */}
       <h2 className="text-lg font-semibold mt-6 mb-2 text-gray-900">Live allocation</h2>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {boxes.map((b) => (
-          <div key={b.number} className={`rounded-xl border p-3 ${b.fixed ? "border-amber-300 bg-amber-50" : "border-gray-200 bg-white"}`}>
+          <div key={b.number} className={`rounded-xl border p-3 ${b.occupants.length >= b.capacity ? "border-red-300 bg-red-50" : "border-gray-200 bg-white"}`}>
             <div className="flex items-center justify-between">
               <div className="font-bold text-gray-900">Box {b.number}</div>
-              <div className="text-xs text-gray-400">cap {b.capacity}{b.fixed ? " · fixed" : ""}</div>
+              <div className="text-xs text-gray-400">{b.occupants.length}/{b.capacity}{b.fixed ? " · fixed" : ""}</div>
             </div>
-            <div className="mt-2 text-sm text-gray-700 min-h-[20px]">
-              {b.occupants.length ? b.occupants.map((o) => o.guestName).join(", ") : <span className="text-gray-300">—</span>}
-            </div>
+            <div className="mt-2 text-sm text-gray-700 min-h-[20px]">{b.occupants.length ? b.occupants.map((o) => o.guestName).join(", ") : <span className="text-gray-300">empty</span>}</div>
           </div>
         ))}
       </div>
 
-      {/* Passes editor */}
-      <h2 className="text-lg font-semibold mt-8 mb-2 text-gray-900">Passes</h2>
+      {/* Add guest */}
+      <div className="mt-6 flex items-center gap-2 flex-wrap">
+        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New guest name" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+        <select value={newBox} onChange={(e) => setNewBox(e.target.value ? Number(e.target.value) : "")} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
+          <option value="">Home box…</option>
+          {boxes.map((b) => <option key={b.number} value={b.number}>Box {b.number}</option>)}
+        </select>
+        <button onClick={() => { if (newName.trim() && newBox) { api("admin/guest", "POST", { guestName: newName.trim(), homeBox: newBox }, "Guest added"); setNewName(""); setNewBox(""); } }} className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold">Add guest to roster</button>
+      </div>
+
+      {/* Roster */}
+      <h2 className="text-lg font-semibold mt-8 mb-2 text-gray-900">Guest roster ({guests.length})</h2>
       <div className="overflow-x-auto rounded-xl border border-gray-200">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-500"><tr>
-            <th className="text-left p-2">Guest</th><th className="text-left p-2">Home box</th><th className="text-left p-2">Now in</th>
-            <th className="text-left p-2">Active</th><th className="text-left p-2">Pass ref</th><th className="p-2"></th>
+            <th className="text-left p-2">Guest</th><th className="text-left p-2">Home box</th><th className="text-left p-2">Status</th><th className="p-2"></th>
           </tr></thead>
           <tbody>
-            {passes.map((p) => (
-              <tr key={p.passRef} className="border-t border-gray-100">
-                <td className="p-2"><input value={p.guestName} onChange={(e) => setPassField(p.passRef, { guestName: e.target.value })} className="w-44 rounded border border-gray-300 px-2 py-1 text-gray-900" /></td>
-                <td className="p-2"><input type="number" value={p.homeBox} onChange={(e) => setPassField(p.passRef, { homeBox: Number(e.target.value) })} className="w-16 rounded border border-gray-300 px-2 py-1 text-gray-900" /></td>
-                <td className="p-2 text-gray-700">{p.currentBox ? `Box ${p.currentBox}` : "—"}</td>
-                <td className="p-2"><input type="checkbox" checked={p.active} onChange={(e) => setPassField(p.passRef, { active: e.target.checked })} /></td>
-                <td className="p-2 font-mono text-xs text-gray-400">{p.passRef}</td>
-                <td className="p-2"><button onClick={() => savePass(p)} className="px-3 py-1 rounded-lg bg-gray-900 text-white text-xs">Save</button></td>
+            {guests.map((g) => (
+              <tr key={g.passRef} className="border-t border-gray-100">
+                <td className="p-2"><input value={g.guestName} onChange={(e) => setGuestField(g.passRef, { guestName: e.target.value })} className="w-48 rounded border border-gray-300 px-2 py-1 text-gray-900" />{g.isWalkIn ? <span className="text-[10px] text-amber-600 ml-1">walk-in</span> : ""}</td>
+                <td className="p-2"><input type="number" value={g.homeBox} onChange={(e) => setGuestField(g.passRef, { homeBox: Number(e.target.value) })} className="w-16 rounded border border-gray-300 px-2 py-1 text-gray-900" /></td>
+                <td className="p-2 text-gray-700">{g.present && g.currentBox ? `In Box ${g.currentBox}` : "Not arrived"}</td>
+                <td className="p-2 flex gap-1">
+                  <button onClick={() => api(`admin/guest/${encodeURIComponent(g.passRef)}`, "PUT", { guestName: g.guestName, homeBox: g.homeBox }, "Saved")} className="px-3 py-1 rounded-lg bg-gray-900 text-white text-xs">Save</button>
+                  <button onClick={() => confirm(`Delete ${g.guestName}?`) && api(`admin/guest/${encodeURIComponent(g.passRef)}`, "DELETE", undefined, "Deleted")} className="px-3 py-1 rounded-lg border border-gray-300 text-gray-600 text-xs">Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-400 mt-3">Box 2 is fixed (no rotating pass). Reps scan a pass → pick the box to seat that guest's group.</p>
+      <p className="text-xs text-gray-400 mt-3">Reps open the console via the master QR, then check in / move guests across boxes (capacity-enforced). Pre-load the full roster here; walk-ins can be added live.</p>
     </div>
   );
 }

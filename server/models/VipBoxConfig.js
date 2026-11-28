@@ -10,6 +10,7 @@ const BoxSchema = new mongoose.Schema({
 const VipBoxConfigSchema = new mongoose.Schema({
   key: { type: String, default: 'nusc-dempo-vip', unique: true, index: true },
   matchLabel: { type: String, default: 'NUSC vs Dempo' },
+  masterToken: { type: String, default: null }, // single QR for the rep console
   boxes: { type: [BoxSchema], default: DEFAULT_BOXES },
 }, { timestamps: true });
 
