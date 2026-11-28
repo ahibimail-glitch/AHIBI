@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getApiUrl } from "@/config";
+import HeliTaxiPromo from "@/components/HeliTaxiPromo";
 
 const BLUE = "#0b5cab";
 
@@ -200,6 +201,9 @@ export default function HeliBookingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 px-4 py-10">
+      <div className="max-w-6xl mx-auto mb-8">
+        <HeliTaxiPromo linked={false} />
+      </div>
       <div className="max-w-xl mx-auto">
         <h1 className="text-3xl font-bold">Hornbill Heli Taxi 2026</h1>
         <p className="text-gray-500 mt-1">1–10 December · Shuttle & aerial joyrides</p>
