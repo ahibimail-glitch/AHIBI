@@ -22,10 +22,11 @@ function isBookableFestivalEvent(event: FestivalEvent, kind: "day" | "music") {
   const isCorrectFestival = label.includes("hornbill") && (kind === "music"
     ? label.includes("music")
     : label.includes("festival") && !label.includes("music"));
-  const expectedTotal = kind === "music" ? 250 : 150;
   const hasAvailableTicket = (event.ticketTypes || []).some((ticket) => {
     const available = ticket.unlimited === true || ticket.quantity == null || Number(ticket.quantity) > Number(ticket.sold || 0);
-    return Number(ticket.price) === expectedTotal && available;
+    // The configured event price is the source of truth. Avoid hard-coding it
+    // here: the redirect must keep working when the festival price changes.
+    return Number.isFinite(Number(ticket.price)) && Number(ticket.price) >= 0 && available;
   });
 
   return Boolean(event._id && is2026Event && isCorrectFestival && !isLegacyShowcase && hasAvailableTicket);
