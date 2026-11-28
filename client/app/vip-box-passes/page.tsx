@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { QRCodeCanvas } from "qrcode.react";
 import { getApiUrl } from "@/config";
 
-interface Pass { passRef: string; guestName: string; homeBox: number; qrCode: string; active: boolean; }
+interface Pass { passRef: string; guestName: string; homeBox: number; active: boolean; }
+
+const QR_SIZE = 1024; // high-res export size (px)
 
 export default function VipBoxPassesPrintPage() {
   const [token, setToken] = useState<string | null>(null);
@@ -25,43 +28,47 @@ export default function VipBoxPassesPrintPage() {
     })();
   }, [token]);
 
+  const fileName = (p: Pass) => `VIP-Box-${p.homeBox}-${p.guestName.replace(/[^a-zA-Z0-9]+/g, "-")}.png`;
+
+  function downloadOne(p: Pass) {
+    const canvas = document.querySelector(`[data-export="${p.passRef}"] canvas`) as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = fileName(p);
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  async function downloadAll() {
+    for (const p of passes) { downloadOne(p); await new Promise((r) => setTimeout(r, 400)); }
+  }
+
   if (!token) return <div className="p-8 text-gray-800">Sign in to the admin dashboard first.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 print:bg-white print:p-0">
-      <style>{`@media print { .no-print { display:none !important; } .pass-grid { gap:0 !important; } .pass-card { break-inside: avoid; box-shadow:none !important; } }`}</style>
+    <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="no-print flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">VIP Box Passes — {matchLabel}</h1>
-            <p className="text-gray-500 text-sm">{passes.length} passes. Print and attach to each box pass.</p>
+            <h1 className="text-2xl font-bold text-gray-900">VIP Box QR Codes — {matchLabel}</h1>
+            <p className="text-gray-500 text-sm">{passes.length} codes. Download and send straight to the printer — each file is a clean, high-res QR (1024px). No cropping needed.</p>
           </div>
-          <button onClick={() => window.print()} className="px-5 py-2.5 rounded-xl bg-gray-900 text-white font-semibold">Print</button>
+          <button onClick={downloadAll} className="px-5 py-2.5 rounded-xl bg-gray-900 text-white font-semibold">Download all QRs (PNG)</button>
         </div>
-        {err && <p className="no-print text-red-600">{err}</p>}
+        {err && <p className="text-red-600">{err}</p>}
 
-        <div className="pass-grid grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {passes.map((p) => (
-            <div key={p.passRef} className="pass-card bg-white rounded-2xl border-2 border-gray-900 overflow-hidden shadow-sm">
-              <div className="bg-gray-900 text-white px-5 py-3 flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] tracking-[0.2em] text-amber-400 font-semibold">VIP BOX PASS</div>
-                  <div className="text-sm font-bold">{matchLabel}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-white/60">BOX</div>
-                  <div className="text-3xl font-black text-amber-400 leading-none">{p.homeBox}</div>
-                </div>
+            <div key={p.passRef} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col items-center text-center">
+              <div className="text-xs text-gray-400">Box {p.homeBox}</div>
+              <div className="font-semibold text-gray-900 leading-tight mt-0.5 mb-2">{p.guestName}</div>
+              {/* visible preview */}
+              <QRCodeCanvas value={p.passRef} size={160} level="M" marginSize={2} />
+              {/* hidden high-res for export */}
+              <div data-export={p.passRef} style={{ position: "absolute", left: -99999, top: 0, pointerEvents: "none" }} aria-hidden>
+                <QRCodeCanvas value={p.passRef} size={QR_SIZE} level="M" marginSize={4} />
               </div>
-              <div className="p-5 flex items-center gap-4">
-                <img src={p.qrCode} alt="QR" className="w-32 h-32" />
-                <div>
-                  <div className="text-[11px] text-gray-400 uppercase tracking-wide">Guest</div>
-                  <div className="text-xl font-bold text-gray-900 leading-tight">{p.guestName}</div>
-                  <div className="text-[11px] text-gray-400 mt-3 font-mono">{p.passRef}</div>
-                  <div className="text-[11px] text-gray-500 mt-2">Scan at entry for box allocation.</div>
-                </div>
-              </div>
+              <button onClick={() => downloadOne(p)} className="mt-3 w-full px-3 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold">Download QR</button>
             </div>
           ))}
         </div>
