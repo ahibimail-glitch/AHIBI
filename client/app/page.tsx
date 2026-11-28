@@ -15,6 +15,7 @@ import StickyHeroCards from "@/components/StickyHeroCards"
 import { format } from "date-fns"
 import { getNextNuscMatchDate } from "@/lib/nuscHomeMatches"
 import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase"
+import HeliTaxiPromo from "@/components/HeliTaxiPromo"
 
 type PublicArtist = {
   _id: string
@@ -830,6 +831,7 @@ function LegacyHomePage() {
     
 
 
+      <HeliTaxiPromo />
       <HornbillFestivalShowcase />
 
       <section className=" bg-white">
