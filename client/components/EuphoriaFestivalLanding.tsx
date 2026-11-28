@@ -44,7 +44,7 @@ export default function EuphoriaFestivalLanding() {
       <Navbar />
       <section className="euphoria-hero" aria-labelledby="euphoria-title">
         <picture className="euphoria-artwork">
-          <source media="(max-width: 700px)" srcSet="/euphoria/euphoria-mobile.jpeg" />
+          <source media="(max-width: 760px)" srcSet="/euphoria/euphoria-mobile.jpeg" />
           <img src="/euphoria/euphoria-desktop.jpeg" alt="Euphoria Festival, 11–13 December 2026 at Avora Resort, Nagaland" fetchPriority="high" />
         </picture>
         <div className="euphoria-shade" />
