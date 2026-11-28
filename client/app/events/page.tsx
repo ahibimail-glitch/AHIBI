@@ -32,6 +32,7 @@ import {
   EVENTS_HERO_IMAGE_HEIGHT,
 } from "@/lib/eventsHero";
 import HornbillFestivalShowcase from "@/components/HornbillFestivalShowcase";
+import HeliTaxiPromo from "@/components/HeliTaxiPromo";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -494,6 +495,7 @@ export default function EventsPage() {
         </section>
 
         {/* ── Mobile quick-search bar ──────────────────────────────────────── */}
+        <HeliTaxiPromo />
         <HornbillFestivalShowcase compact />
 
         <div className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-100 px-4 py-3">
